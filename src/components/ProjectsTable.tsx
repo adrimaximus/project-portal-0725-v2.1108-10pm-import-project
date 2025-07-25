@@ -63,7 +63,7 @@ const ProjectsTable = () => {
               <TableHead>Payment Status</TableHead>
               <TableHead>Open Tickets</TableHead>
               <TableHead className="text-right">Budget</TableHead>
-              <TableHead>Deadline</TableHead>
+              <TableHead>Project Due Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
