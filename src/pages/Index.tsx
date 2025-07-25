@@ -1,7 +1,6 @@
 import PortalSidebar from "@/components/PortalSidebar";
 import PortalHeader from "@/components/PortalHeader";
 import ProjectsTable from "@/components/ProjectsTable";
-import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const Index = () => {
   return (
@@ -15,9 +14,6 @@ const Index = () => {
           </div>
           <ProjectsTable />
         </main>
-        <footer className="p-4 text-center text-sm text-muted-foreground">
-          <MadeWithDyad />
-        </footer>
       </div>
     </div>
   );

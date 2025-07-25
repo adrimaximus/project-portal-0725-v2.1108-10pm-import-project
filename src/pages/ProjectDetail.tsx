@@ -2,7 +2,6 @@ import { useParams, Link } from "react-router-dom";
 import { dummyProjects, Project } from "@/data/projects";
 import PortalSidebar from "@/components/PortalSidebar";
 import PortalHeader from "@/components/PortalHeader";
-import { MadeWithDyad } from "@/components/made-with-dyad";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -130,9 +129,6 @@ const ProjectDetail = () => {
             </div>
           </div>
         </main>
-        <footer className="p-4 text-center text-sm text-muted-foreground">
-          <MadeWithDyad />
-        </footer>
       </div>
     </div>
   );
