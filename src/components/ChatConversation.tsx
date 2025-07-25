@@ -4,15 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Paperclip, Send, X } from "lucide-react";
 import { Conversation, Message } from "@/data/chat";
-import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
+import MessageAttachment from './MessageAttachment';
 
 interface ChatConversationProps {
   conversation: Conversation | null;
-  onSendMessage: (conversationId: string, text: string) => void;
+  onSendMessage: (conversationId: string, text: string, attachment?: File | null) => void;
 }
 
-// Pengguna saat ini yang di-hardcode untuk demonstrasi, seperti yang terlihat dalam desain
 const currentUser = {
   name: "Alex Ray",
   avatar: "https://i.pravatar.cc/40?u=alexray"
@@ -32,17 +31,10 @@ const ChatConversation = ({ conversation, onSendMessage }: ChatConversationProps
   const handleSendMessage = () => {
     if (!conversation) return;
     const textToSend = message.trim();
-    const hasAttachment = !!attachment;
+    
+    if (!textToSend && !attachment) return;
 
-    if (!textToSend && !hasAttachment) return;
-
-    if (textToSend) {
-      onSendMessage(conversation.id, textToSend);
-    }
-
-    if (hasAttachment) {
-      onSendMessage(conversation.id, `[Lampiran: ${attachment.name}]`);
-    }
+    onSendMessage(conversation.id, textToSend, attachment);
 
     setMessage("");
     setAttachment(null);
@@ -81,7 +73,8 @@ const ChatConversation = ({ conversation, onSendMessage }: ChatConversationProps
                     {formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}
                   </p>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">{msg.text}</p>
+                {msg.text && <p className="text-sm text-muted-foreground mt-1">{msg.text}</p>}
+                {msg.attachment && <MessageAttachment attachment={msg.attachment} />}
               </div>
             </div>
           );

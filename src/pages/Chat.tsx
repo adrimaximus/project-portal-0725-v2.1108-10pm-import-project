@@ -24,15 +24,26 @@ const ChatPage = () => {
     }
   }, [location.state, conversations, selectedConversationId]);
 
-  const handleSendMessage = (conversationId: string, text: string) => {
-    if (!text.trim()) return;
+  const handleSendMessage = (conversationId: string, text: string, attachment?: File | null) => {
+    const hasText = text.trim().length > 0;
+    const hasAttachment = !!attachment;
+
+    if (!hasText && !hasAttachment) return;
 
     const newMessage: Message = {
       id: `msg-${Date.now()}-${Math.random()}`,
-      text,
+      text: text.trim(),
       sender: 'me',
       timestamp: new Date().toISOString(),
     };
+
+    if (attachment) {
+      newMessage.attachment = {
+        name: attachment.name,
+        url: URL.createObjectURL(attachment),
+        type: attachment.type,
+      };
+    }
 
     setConversations(prev => 
       prev.map(convo => 

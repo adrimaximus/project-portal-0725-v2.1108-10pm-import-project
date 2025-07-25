@@ -3,6 +3,11 @@ export type Message = {
   text: string;
   timestamp: string;
   sender: 'me' | 'other';
+  attachment?: {
+    name: string;
+    url: string;
+    type: string;
+  };
 };
 
 export type Conversation = {
