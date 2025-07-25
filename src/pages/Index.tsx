@@ -1,7 +1,7 @@
 import PortalLayout from "@/components/PortalLayout";
 import ProjectsTable from "@/components/ProjectsTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, CreditCard, Activity } from "lucide-react";
+import { Landmark, Users, CreditCard, Activity } from "lucide-react";
 import { dummyProjects } from "@/data/projects";
 
 const Index = () => {
@@ -26,7 +26,7 @@ const Index = () => {
               <CardTitle className="text-sm font-medium">
                 Unpaid Project Value
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <Landmark className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formattedUnpaidValue}</div>
