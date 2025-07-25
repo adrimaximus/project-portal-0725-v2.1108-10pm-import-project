@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { File, Activity, CreditCard, Wallet, CalendarDays } from "lucide-react";
+import { File, Activity, CreditCard, Wallet, CalendarDays, Ticket } from "lucide-react";
 import ProjectComments from "@/components/ProjectComments";
 
 const ProjectDetail = () => {
@@ -53,6 +53,13 @@ const ProjectDetail = () => {
     },
   ];
 
+  // Dummy data for support tickets
+  const supportTickets = [
+    { id: 'TKT-001', title: 'Button color is not updating', status: 'Open' },
+    { id: 'TKT-002', title: 'API integration failing on staging', status: 'In Progress' },
+    { id: 'TKT-003', title: 'Image upload not working on mobile', status: 'Closed' },
+  ];
+
   const formatActivityDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString("en-US", {
@@ -81,6 +88,19 @@ const ProjectDetail = () => {
         return "secondary";
       case "Overdue":
         return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
+  const getTicketStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "Open":
+        return "destructive";
+      case "In Progress":
+        return "secondary";
+      case "Closed":
+        return "default";
       default:
         return "outline";
     }
@@ -238,6 +258,30 @@ const ProjectDetail = () => {
                     <File className="h-4 w-4 text-muted-foreground" />
                     <span className="hover:underline cursor-pointer">design_mockups.zip</span>
                   </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Support Tickets</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3 text-sm">
+                  {supportTickets.map(ticket => (
+                    <li key={ticket.id} className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-3">
+                        <Ticket className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="font-medium hover:underline cursor-pointer">{ticket.title}</p>
+                          <p className="text-xs text-muted-foreground">{ticket.id}</p>
+                        </div>
+                      </div>
+                      <Badge variant={getTicketStatusBadgeVariant(ticket.status)} className="whitespace-nowrap">
+                        {ticket.status}
+                      </Badge>
+                    </li>
+                  ))}
                 </ul>
               </CardContent>
             </Card>
