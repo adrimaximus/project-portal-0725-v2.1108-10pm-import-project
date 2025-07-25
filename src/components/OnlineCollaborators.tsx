@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ type OnlineCollaboratorsProps = {
 };
 
 const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const visibleCollaborators = collaborators.slice(0, 3);
   const remainingCount = collaborators.length - visibleCollaborators.length;
 
@@ -49,31 +51,47 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
       <h3 className="mb-3 px-3 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
         Online
       </h3>
-      <TooltipProvider delayDuration={0}>
-        <div className="flex items-center px-3">
-          {visibleCollaborators.map((collaborator, index) => (
-            <Tooltip key={collaborator.name}>
-              <TooltipTrigger asChild>
-                <Avatar className={cn("h-8 w-8 border-2 border-background", index > 0 && "-ml-3")}>
-                  <AvatarImage src={collaborator.src} alt={collaborator.name} />
-                  <AvatarFallback>{collaborator.fallback}</AvatarFallback>
+      <div className="px-3 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+        {isExpanded ? (
+          <div className="space-y-2">
+            {collaborators.map(c => (
+              <div key={c.name} className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={c.src} alt={c.name} />
+                  <AvatarFallback>{c.fallback}</AvatarFallback>
                 </Avatar>
-              </TooltipTrigger>
-              <TooltipContent side="top">{collaborator.name}</TooltipContent>
-            </Tooltip>
-          ))}
-          {remainingCount > 0 && (
-             <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground -ml-3 border-2 border-background text-xs font-semibold">
-                  +{remainingCount}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top">{remainingCount} more collaborators</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      </TooltipProvider>
+                <span className="text-sm text-muted-foreground font-medium">{c.name}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <TooltipProvider delayDuration={0}>
+            <div className="flex items-center">
+              {visibleCollaborators.map((collaborator, index) => (
+                <Tooltip key={collaborator.name}>
+                  <TooltipTrigger asChild>
+                    <Avatar className={cn("h-8 w-8 border-2 border-background", index > 0 && "-ml-3")}>
+                      <AvatarImage src={collaborator.src} alt={collaborator.name} />
+                      <AvatarFallback>{collaborator.fallback}</AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{collaborator.name}</TooltipContent>
+                </Tooltip>
+              ))}
+              {remainingCount > 0 && (
+                 <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground -ml-3 border-2 border-background text-xs font-semibold">
+                      +{remainingCount}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{remainingCount} more collaborators</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          </TooltipProvider>
+        )}
+      </div>
     </div>
   );
 };
