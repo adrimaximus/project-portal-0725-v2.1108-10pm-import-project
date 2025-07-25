@@ -263,6 +263,13 @@ const ServicesPage = () => {
                       rows={5}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="projectBudget">ETA Budget (IDR)</Label>
+                    <Input
+                      id="projectBudget"
+                      placeholder="e.g., 50,000,000"
+                    />
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="startDate">Start Date</Label>
