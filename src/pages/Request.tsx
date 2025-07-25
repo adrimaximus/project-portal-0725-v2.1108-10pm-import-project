@@ -44,6 +44,7 @@ const RequestPage = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [currentComment, setCurrentComment] = useState("");
   const [commentFile, setCommentFile] = useState<File | null>(null);
+  const [briefFile, setBriefFile] = useState<File | null>(null);
 
   useEffect(() => {
     // Cleanup object URLs on unmount to prevent memory leaks
@@ -331,7 +332,22 @@ const RequestPage = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="briefAttachment">Project Brief</Label>
-                <Input id="briefAttachment" type="file" />
+                <div className="relative">
+                  <Input
+                    id="briefAttachment"
+                    type="file"
+                    className="sr-only"
+                    onChange={(e) => setBriefFile(e.target.files ? e.target.files[0] : null)}
+                  />
+                  <Label htmlFor="briefAttachment" className="w-full">
+                    <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer hover:bg-accent hover:text-accent-foreground">
+                      <span className={cn("truncate", !briefFile && "text-muted-foreground")}>
+                        {briefFile ? briefFile.name : "Attach a file..."}
+                      </span>
+                      <Paperclip className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </Label>
+                </div>
                 <p className="text-sm text-muted-foreground">
                   Attach any relevant documents for the project brief.
                 </p>
