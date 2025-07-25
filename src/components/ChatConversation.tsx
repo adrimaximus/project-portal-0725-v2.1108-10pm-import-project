@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Paperclip, Send, Phone, Video } from "lucide-react";
+import { Paperclip, Send } from "lucide-react";
 import { Conversation, Message } from "@/data/chat";
 import { cn } from "@/lib/utils";
 
@@ -33,14 +33,6 @@ const ChatConversation = ({ conversation }: ChatConversationProps) => {
             <p className="font-semibold">{conversation.userName}</p>
             <p className="text-sm text-muted-foreground">Online</p>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <Phone className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Video className="h-5 w-5" />
-          </Button>
         </div>
       </div>
 
