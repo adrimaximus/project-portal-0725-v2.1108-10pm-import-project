@@ -1,17 +1,24 @@
-// Update this page (the content is just a fallback if you fail to update the page)
-
+import PortalSidebar from "@/components/PortalSidebar";
+import PortalHeader from "@/components/PortalHeader";
+import ProjectsTable from "@/components/ProjectsTable";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">
-          Start building your amazing project here!
-        </p>
+    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+      <PortalSidebar />
+      <div className="flex flex-col">
+        <PortalHeader />
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+          <div className="flex items-center">
+            <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
+          </div>
+          <ProjectsTable />
+        </main>
+        <footer className="p-4 text-center text-sm text-muted-foreground">
+          <MadeWithDyad />
+        </footer>
       </div>
-      <MadeWithDyad />
     </div>
   );
 };
