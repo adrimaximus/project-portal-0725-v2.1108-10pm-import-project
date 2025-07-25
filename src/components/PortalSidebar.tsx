@@ -56,7 +56,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             </span>
           </Link>
         </div>
-        <div className="flex-1 py-2">
+        <div className="flex-1 overflow-y-auto py-2">
           <TooltipProvider delayDuration={0}>
             <nav
               className={cn(
