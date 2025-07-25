@@ -4,14 +4,17 @@ import MessageAttachment from "./MessageAttachment";
 import { currentUser } from "@/data/collaborators";
 import { Collaborator } from "@/types";
 import { cn } from "@/lib/utils";
+import { Project } from "@/data/projects";
 
 interface ChatConversationProps {
   messages: Message[];
   members?: Collaborator[];
+  projects?: Project[];
 }
 
-const ChatConversation = ({ messages, members = [] }: ChatConversationProps) => {
+const ChatConversation = ({ messages, members = [], projects = [] }: ChatConversationProps) => {
   const memberNames = members.map(m => m.name);
+  const projectNames = projects.map(p => p.name);
 
   const renderMessageWithMentions = (text: string) => {
     const words = text.split(/(\s+)/); // Split by space, keeping the space
@@ -22,6 +25,16 @@ const ChatConversation = ({ messages, members = [] }: ChatConversationProps) => 
           return (
             <strong key={index} className="text-blue-600 font-semibold">
               {word}
+            </strong>
+          );
+        }
+      }
+      if (word.startsWith('/')) {
+        const mentionName = word.substring(1);
+        if (projectNames.includes(mentionName)) {
+          return (
+            <strong key={index} className="text-blue-600 font-semibold">
+              {mentionName}
             </strong>
           );
         }

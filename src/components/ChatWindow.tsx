@@ -30,6 +30,7 @@ const ChatWindow = ({ selectedConversation, onSendMessage, projects }: ChatWindo
       <ChatConversation 
         messages={selectedConversation.messages} 
         members={selectedConversation.members}
+        projects={projects}
       />
       <ChatInput 
         onSendMessage={onSendMessage} 
