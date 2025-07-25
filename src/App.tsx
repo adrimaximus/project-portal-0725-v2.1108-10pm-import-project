@@ -1,31 +1,22 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import PortalLayout from "./components/PortalLayout";
 import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import ProjectDetail from "./pages/ProjectDetail";
-import RequestPage from "./pages/Request";
+import RequestPage from "./pages/RequestPage";
+import ChatPage from "./pages/ChatPage";
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+function App() {
+  return (
+    <Router>
+      <PortalLayout>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/project/:projectId" element={<ProjectDetail />} />
+          {/* Anda mungkin perlu membuat halaman-halaman ini jika belum ada */}
           <Route path="/request" element={<RequestPage />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
+          <Route path="/chat" element={<ChatPage />} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+      </PortalLayout>
+    </Router>
+  );
+}
 
 export default App;
