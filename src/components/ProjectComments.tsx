@@ -1,8 +1,17 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
+
+import { useState, useRef, MouseEvent, FormEvent } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import ChatInput from "@/components/ChatInput";
-import { currentUser, collaborators } from "@/data/collaborators";
-import { Paperclip } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Paperclip, Send, X, FileText, Ticket } from "lucide-react";
+
+export interface Attachment {
+  name: string;
+  url: string;
+  type: 'image' | 'file';
+}
 
 export interface Comment {
   id: number;
@@ -12,11 +21,7 @@ export interface Comment {
   };
   text: string;
   timestamp: string;
-  attachment?: {
-    name: string;
-    url: string;
-    type: 'image' | 'file';
-  };
+  attachment?: Attachment;
   isTicket?: boolean;
 }
 
@@ -25,105 +30,164 @@ interface ProjectCommentsProps {
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
 }
 
-const renderMessageWithMentions = (text: string) => {
-  const collaboratorNames = collaborators.map(c => c.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  const allNames = [...collaboratorNames.split('|'), 'You'].join('|');
-  const mentionRegex = new RegExp(`@(${allNames})`, 'g');
-
-  const parts = text.split(mentionRegex);
-
-  return (
-    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-      {parts.map((part, index) => {
-        const isMention = index % 2 === 1;
-        if (isMention) {
-          return (
-            <span key={index} className="text-primary font-semibold bg-primary/10 px-1 rounded-sm">
-              @{part}
-            </span>
-          );
-        }
-        return part;
-      })}
-    </p>
-  );
-};
-
-
 const ProjectComments = ({ comments, setComments }: ProjectCommentsProps) => {
-  const handleSendMessage = (message: string, file?: File) => {
-    const newComment: Comment = {
-      id: Date.now(),
+  const [newComment, setNewComment] = useState("");
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setAttachedFile(e.target.files[0]);
+    }
+  };
+
+  const handleAttachClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleRemoveAttachment = () => {
+    setAttachedFile(null);
+    if(fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const createComment = (isTicket = false) => {
+    if (newComment.trim() === "" && !attachedFile) return;
+
+    const newCommentObject: Comment = {
+      id: comments.length + 1,
       user: {
         name: "You",
-        avatar: currentUser.src,
+        avatar: "https://i.pravatar.cc/150?u=currentuser",
       },
-      text: message,
+      text: newComment,
       timestamp: "Just now",
-      ...(file && {
-        attachment: {
-          name: file.name,
-          url: URL.createObjectURL(file),
-          type: file.type.startsWith("image/") ? "image" : "file",
-        },
-      }),
+      isTicket,
     };
-    setComments((prevComments) => [...prevComments, newComment]);
+
+    if (attachedFile) {
+      newCommentObject.attachment = {
+        name: attachedFile.name,
+        url: URL.createObjectURL(attachedFile),
+        type: attachedFile.type.startsWith('image/') ? 'image' : 'file',
+      };
+    }
+
+    setComments([...comments, newCommentObject]);
+    setNewComment("");
+    handleRemoveAttachment();
+  };
+
+  const handleSendComment = (e: FormEvent) => {
+    e.preventDefault();
+    createComment(false);
+  };
+
+  const handleSendTicket = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    createComment(true);
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Comments & Updates</CardTitle>
+        <CardTitle>Comments</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {comments.length > 0 ? (
-          <ul className="space-y-6">
+      <CardContent>
+        <div className="space-y-6">
+          {/* List of comments */}
+          <div className="space-y-4">
             {comments.map((comment) => (
-              <li key={comment.id} className="flex items-start gap-4">
+              <div key={comment.id} className="flex items-start gap-4">
                 <Avatar className="h-9 w-9 border">
                   <AvatarImage src={comment.user.avatar} alt={comment.user.name} />
                   <AvatarFallback>
-                    {comment.user.name.split(" ").map((n) => n[0]).join("")}
+                    {comment.user.name === "You" ? "ME" : comment.user.name.split(" ").map(n => n[0]).join("")}
                   </AvatarFallback>
                 </Avatar>
-                <div className="grid gap-1 w-full">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold">{comment.user.name}</p>
+                <div className="grid gap-1.5 w-full">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-sm">{comment.user.name}</p>
                     <p className="text-xs text-muted-foreground">{comment.timestamp}</p>
                   </div>
-                  {renderMessageWithMentions(comment.text)}
+                  <div className="flex items-start gap-2">
+                    {comment.isTicket && (
+                      <Ticket className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                    )}
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.text}</p>
+                  </div>
                   {comment.attachment && (
-                     <a
-                        href={comment.attachment.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 flex items-center gap-3 rounded-lg border p-2 transition-colors hover:bg-muted w-fit"
-                      >
-                        {comment.attachment.type === 'image' ? (
-                            <img src={comment.attachment.url} alt={comment.attachment.name} className="h-12 w-12 rounded-md object-cover" />
-                        ) : (
-                            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-secondary">
-                                <Paperclip className="h-6 w-6" />
-                            </div>
-                        )}
-                        <div>
-                            <p className="text-sm font-medium text-primary">{comment.attachment.name}</p>
-                            <p className="text-xs text-muted-foreground">Click to view</p>
+                    <a
+                      href={comment.attachment.url}
+                      download={comment.attachment.name}
+                      className="mt-2 flex items-center gap-3 rounded-lg border p-2 hover:bg-muted transition-colors w-fit"
+                    >
+                      {comment.attachment.type === 'image' ? (
+                        <img
+                          src={comment.attachment.url}
+                          alt={comment.attachment.name}
+                          className="h-12 w-12 rounded-md object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-md bg-secondary">
+                          <FileText className="h-6 w-6 text-secondary-foreground" />
                         </div>
+                      )}
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{comment.attachment.name}</span>
+                        <span className="text-xs text-muted-foreground">Click to download</span>
+                      </div>
                     </a>
                   )}
                 </div>
-              </li>
+              </div>
             ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No comments yet. Start the conversation!
-          </p>
-        )}
+          </div>
+
+          {/* Comment input form */}
+          <form onSubmit={handleSendComment} className="flex w-full items-start space-x-4 pt-6 border-t">
+             <Avatar className="h-9 w-9 border">
+                <AvatarImage src="https://i.pravatar.cc/150?u=currentuser" alt="You" />
+                <AvatarFallback>ME</AvatarFallback>
+            </Avatar>
+            <div className="w-full">
+              <div className="relative">
+                  <Textarea 
+                    placeholder="Type your comment here..." 
+                    className="min-h-[60px] pr-36"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                  />
+                  <div className="absolute top-3 right-2 flex items-center">
+                      <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                      <Button type="button" variant="ghost" size="icon" onClick={handleAttachClick}>
+                          <Paperclip className="h-4 w-4" />
+                          <span className="sr-only">Attach file</span>
+                      </Button>
+                      <Button type="button" variant="ghost" size="icon" onClick={handleSendTicket}>
+                          <Ticket className="h-4 w-4" />
+                          <span className="sr-only">Create ticket</span>
+                      </Button>
+                      <Button type="submit" size="icon">
+                          <Send className="h-4 w-4" />
+                          <span className="sr-only">Send</span>
+                      </Button>
+                  </div>
+              </div>
+              {attachedFile && (
+                <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground bg-muted p-2 rounded-md">
+                  <span className="truncate pr-2">{attachedFile.name}</span>
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={handleRemoveAttachment}>
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Remove attachment</span>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </form>
+        </div>
       </CardContent>
-      <ChatInput onSendMessage={handleSendMessage} />
     </Card>
   );
 };
