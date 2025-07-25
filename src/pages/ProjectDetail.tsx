@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { File, Activity, CreditCard, Wallet, CalendarDays } from "lucide-react";
+import ProjectComments from "@/components/ProjectComments";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -196,6 +197,9 @@ const ProjectDetail = () => {
                 )}
               </CardContent>
             </Card>
+
+            <ProjectComments />
+
           </div>
 
           {/* Sidebar */}
