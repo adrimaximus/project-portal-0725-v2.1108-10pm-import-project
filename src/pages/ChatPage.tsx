@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import ChatList from "@/components/ChatList";
 import ChatWindow from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
@@ -13,11 +13,44 @@ const ChatPage = () => {
     string | null
   >(dummyConversations[0]?.id || null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (location.state?.selectedCollaborator) {
       const collaborator = location.state.selectedCollaborator as Collaborator;
-      handleStartNewChat(collaborator);
+      
+      // Use a functional update to get the latest state and prevent race conditions.
+      setConversations(prevConvos => {
+        const existingConversation = prevConvos.find(
+          (convo) => !convo.isGroup && convo.members?.some(m => m.id === collaborator.id)
+        );
+
+        if (existingConversation) {
+          // If chat exists, we don't need to update the conversations list.
+          return prevConvos;
+        }
+
+        // If chat does not exist, create a new one.
+        const newConversation: Conversation = {
+          id: `conv-${collaborator.id}`, // Use a predictable ID
+          userName: collaborator.name,
+          userAvatar: collaborator.src,
+          lastMessage: "Say hello!",
+          lastMessageTimestamp: "Just now",
+          unreadCount: 0,
+          messages: [],
+          isGroup: false,
+          members: [collaborator]
+        };
+        
+        return [newConversation, ...prevConvos];
+      });
+
+      // After ensuring the conversation exists, select it.
+      // We can find it using the predictable ID.
+      const conversationId = `conv-${collaborator.id}`;
+      setSelectedConversationId(conversationId);
+
       // Clear state to prevent re-triggering on refresh
       window.history.replaceState({}, document.title)
     }
@@ -67,29 +100,9 @@ const ChatPage = () => {
   };
 
   const handleStartNewChat = (collaborator: Collaborator) => {
-    const existingConversation = conversations.find(
-      (convo) => !convo.isGroup && convo.members?.some(m => m.id === collaborator.id)
-    );
-
-    if (existingConversation) {
-      setSelectedConversationId(existingConversation.id);
-      return;
-    }
-
-    const newConversation: Conversation = {
-      id: collaborator.id,
-      userName: collaborator.name,
-      userAvatar: collaborator.src,
-      lastMessage: "Say hello!",
-      lastMessageTimestamp: "Just now",
-      unreadCount: 0,
-      messages: [],
-      isGroup: false,
-      members: [collaborator]
-    };
-
-    setConversations((prev) => [newConversation, ...prev]);
-    setSelectedConversationId(newConversation.id);
+    // Instead of complex logic here, just navigate with state.
+    // The useEffect hook will handle the creation and selection.
+    navigate('/chat', { state: { selectedCollaborator: collaborator } });
   };
 
   const handleStartNewGroupChat = (
