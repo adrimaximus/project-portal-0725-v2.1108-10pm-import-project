@@ -2,26 +2,29 @@ import { useState, useRef, FormEvent } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Paperclip, Send, X } from "lucide-react";
+import { Paperclip, Send, X, Folder } from "lucide-react";
 import { currentUser } from "@/data/collaborators";
 import { Collaborator } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from "@/components/ui/command";
+import { Project } from "@/data/projects";
 
 interface ChatInputProps {
   onSendMessage: (message: string, file?: File) => void;
   members?: Collaborator[];
+  projects?: Project[];
 }
 
-const ChatInput = ({ onSendMessage, members = [] }: ChatInputProps) => {
+const ChatInput = ({ onSendMessage, members = [], projects = [] }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const [showMention, setShowMention] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState("");
-  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+  const [showPopover, setShowPopover] = useState(false);
+  const [query, setQuery] = useState("");
+  const [startIndex, setStartIndex] = useState(-1);
+  const [mentionType, setMentionType] = useState<'user' | 'project' | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -55,44 +58,72 @@ const ChatInput = ({ onSendMessage, members = [] }: ChatInputProps) => {
 
     const cursorPosition = e.target.selectionStart;
     const textBeforeCursor = text.substring(0, cursorPosition);
+    
     const atIndex = textBeforeCursor.lastIndexOf('@');
-    const spaceAfterAtIndex = textBeforeCursor.indexOf(' ', atIndex);
+    const slashIndex = textBeforeCursor.lastIndexOf('/');
 
-    if (atIndex !== -1 && (spaceAfterAtIndex === -1 || spaceAfterAtIndex > cursorPosition)) {
-      const query = textBeforeCursor.substring(atIndex + 1);
-      setMentionQuery(query);
-      setMentionStartIndex(atIndex);
-      setShowMention(true);
-    } else {
-      setMentionQuery("");
-      setShowMention(false);
+    let triggerChar: '@' | '/' | null = null;
+    let triggerIndex = -1;
+
+    if (atIndex > slashIndex) {
+        triggerChar = '@';
+        triggerIndex = atIndex;
+    } else if (slashIndex > -1) {
+        triggerChar = '/';
+        triggerIndex = slashIndex;
     }
+
+    if (triggerChar && triggerIndex !== -1) {
+        const textAfterTrigger = textBeforeCursor.substring(triggerIndex + 1);
+        const spaceAfterTrigger = textAfterTrigger.indexOf(' ');
+
+        if (spaceAfterTrigger === -1) {
+            setQuery(textAfterTrigger);
+            setStartIndex(triggerIndex);
+            setMentionType(triggerChar === '@' ? 'user' : 'project');
+            setShowPopover(true);
+            return;
+        }
+    }
+    
+    setShowPopover(false);
+    setMentionType(null);
   };
 
-  const handleMentionSelect = (name: string) => {
+  const handleSelect = (name: string) => {
     const text = message;
-    const part1 = text.substring(0, mentionStartIndex);
-    const part2 = text.substring(mentionStartIndex + 1 + mentionQuery.length);
-    const newMessage = `${part1}@${name} ${part2}`;
+    const part1 = text.substring(0, startIndex);
+    const part2 = text.substring(startIndex + 1 + query.length);
+    
+    const triggerChar = mentionType === 'user' ? '@' : '/';
+    const newMessage = `${part1}${triggerChar}${name} ${part2}`;
     
     setMessage(newMessage);
-    setShowMention(false);
-    setMentionQuery("");
+    setShowPopover(false);
+    setQuery("");
+    setMentionType(null);
 
     setTimeout(() => {
       textareaRef.current?.focus();
-      const newCursorPos = mentionStartIndex + name.length + 2;
+      const newCursorPos = startIndex + name.length + 2; // +1 for trigger, +1 for space
       textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
     }, 0);
   };
 
   const filteredMembers = members.filter(
-    (member) => member.name.toLowerCase().includes(mentionQuery.toLowerCase())
+    (member) => member.name.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const filteredProjects = projects.filter(
+    (project) => project.name.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
     <div className="p-4 border-t bg-background">
-      <Popover open={showMention && members.length > 0} onOpenChange={setShowMention}>
+      <Popover 
+        open={showPopover && ((mentionType === 'user' && filteredMembers.length > 0) || (mentionType === 'project' && filteredProjects.length > 0))} 
+        onOpenChange={setShowPopover}
+      >
         <PopoverTrigger asChild>
           <div />
         </PopoverTrigger>
@@ -105,12 +136,12 @@ const ChatInput = ({ onSendMessage, members = [] }: ChatInputProps) => {
             <div className="relative">
               <Textarea
                 ref={textareaRef}
-                placeholder="Type your comment here..."
+                placeholder="Type your comment here... (@mention, /project)"
                 className="min-h-[60px] pr-24"
                 value={message}
                 onChange={handleMessageChange}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !showMention) {
+                  if (e.key === 'Enter' && !e.shiftKey && !showPopover) {
                     e.preventDefault();
                     handleSubmit(e);
                   }
@@ -140,21 +171,37 @@ const ChatInput = ({ onSendMessage, members = [] }: ChatInputProps) => {
           </div>
         </form>
         <PopoverContent className="w-72 p-0" side="top" align="start">
-          <Command>
-            <CommandInput placeholder="Mention a team member..." value={mentionQuery} onValueChange={setMentionQuery} />
-            <CommandList>
-              <CommandEmpty>No members found.</CommandEmpty>
-              {filteredMembers.map((member) => (
-                <CommandItem key={member.id} onSelect={() => handleMentionSelect(member.name)}>
-                  <Avatar className="h-8 w-8 mr-2">
-                    <AvatarImage src={member.src} />
-                    <AvatarFallback>{member.fallback}</AvatarFallback>
-                  </Avatar>
-                  <span>{member.name}</span>
-                </CommandItem>
-              ))}
-            </CommandList>
-          </Command>
+          {mentionType === 'user' && (
+            <Command>
+              <CommandInput placeholder="Mention a team member..." value={query} onValueChange={setQuery} />
+              <CommandList>
+                <CommandEmpty>No members found.</CommandEmpty>
+                {filteredMembers.map((member) => (
+                  <CommandItem key={member.id} onSelect={() => handleSelect(member.name)}>
+                    <Avatar className="h-8 w-8 mr-2">
+                      <AvatarImage src={member.src} />
+                      <AvatarFallback>{member.fallback}</AvatarFallback>
+                    </Avatar>
+                    <span>{member.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          )}
+          {mentionType === 'project' && (
+            <Command>
+              <CommandInput placeholder="Mention a project..." value={query} onValueChange={setQuery} />
+              <CommandList>
+                <CommandEmpty>No projects found.</CommandEmpty>
+                {filteredProjects.map((project) => (
+                  <CommandItem key={project.id} onSelect={() => handleSelect(project.name)}>
+                    <Folder className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>{project.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          )}
         </PopoverContent>
       </Popover>
     </div>
