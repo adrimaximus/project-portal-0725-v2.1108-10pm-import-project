@@ -4,11 +4,14 @@ import PortalHeader from "@/components/PortalHeader";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { services } from "@/data/services";
-import { Search, ArrowLeft, LucideIcon } from "lucide-react";
+import { Search, ArrowLeft, LucideIcon, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 // Define the type for a service based on the data structure
 type Service = {
@@ -22,6 +25,8 @@ const ServicesPage = () => {
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
 
   const handleServiceSelect = (service: Service) => {
     const isFeatured = service.title === "End to End Services";
@@ -199,7 +204,7 @@ const ServicesPage = () => {
                 <CardHeader>
                   <CardTitle>Project Details</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="projectName">Project Name</Label>
                     <Input
@@ -216,6 +221,92 @@ const ServicesPage = () => {
                       placeholder="Describe your project goals, target audience, and key features..."
                       rows={5}
                     />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="startDate">Start Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !startDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {startDate ? (
+                              format(startDate, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={startDate}
+                            onSelect={setStartDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endDate">End Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !endDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {endDate ? (
+                              format(endDate, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={endDate}
+                            onSelect={setEndDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="briefAttachment">Project Brief</Label>
+                    <Input id="briefAttachment" type="file" />
+                    <p className="text-sm text-muted-foreground">
+                      Attach any relevant documents for the project brief.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Additional Comments</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="comments">Comments</Label>
+                    <Textarea
+                      id="comments"
+                      placeholder="Any additional notes or specific instructions..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="commentAttachment">Attach File</Label>
+                    <Input id="commentAttachment" type="file" />
                   </div>
                 </CardContent>
               </Card>
