@@ -8,83 +8,73 @@ export interface Project {
   };
   status: "Completed" | "In Progress" | "On Hold";
   paymentStatus: "Paid" | "Pending" | "Overdue";
-  budget: number;
-  deadline: string;
   tickets?: {
     open: number;
     total: number;
   };
+  budget: number;
+  deadline: string;
+  invoiceAttachmentUrl?: string;
 }
 
 export const dummyProjects: Project[] = [
   {
-    id: "prj-001",
+    id: "PROJ-001",
     name: "E-commerce Platform",
-    description: "Developing a full-featured e-commerce platform with a modern tech stack.",
-    assignedTo: {
-      name: "John Doe",
-      avatar: "https://i.pravatar.cc/150?u=john",
-    },
-    status: "In Progress",
-    paymentStatus: "Paid",
-    budget: 150000000,
-    deadline: "2024-12-31",
-    tickets: { open: 3, total: 5 },
-  },
-  {
-    id: "prj-002",
-    name: "Mobile Banking App",
-    description: "Creating a secure and user-friendly mobile banking application for iOS and Android.",
-    assignedTo: {
-      name: "Jane Smith",
-      avatar: "https://i.pravatar.cc/150?u=jane",
-    },
+    description: "Development of a full-featured e-commerce platform with a custom CMS.",
+    assignedTo: { name: "John Doe", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d" },
     status: "Completed",
     paymentStatus: "Paid",
-    budget: 250000000,
-    deadline: "2024-06-30",
-    tickets: { open: 0, total: 8 },
+    tickets: { open: 0, total: 10 },
+    budget: 50000000,
+    deadline: "2024-08-15",
+    invoiceAttachmentUrl: "/invoices/invoice-001.pdf",
   },
   {
-    id: "prj-003",
-    name: "CRM System Integration",
-    description: "Integrating a new CRM system with existing company infrastructure.",
-    assignedTo: {
-      name: "Mike Johnson",
-      avatar: "https://i.pravatar.cc/150?u=mike",
-    },
+    id: "PROJ-002",
+    name: "Mobile Banking App",
+    description: "Create a secure and user-friendly mobile banking application for iOS and Android.",
+    assignedTo: { name: "Jane Smith", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d" },
     status: "In Progress",
     paymentStatus: "Pending",
-    budget: 80000000,
-    deadline: "2024-09-15",
-    tickets: { open: 1, total: 2 },
+    tickets: { open: 3, total: 5 },
+    budget: 75000000,
+    deadline: "2024-09-20",
+    invoiceAttachmentUrl: "/invoices/invoice-002.pdf",
   },
   {
-    id: "prj-004",
-    name: "Website Redesign",
-    description: "A complete overhaul of the corporate website with a focus on UX and performance.",
-    assignedTo: {
-      name: "Emily Davis",
-      avatar: "https://i.pravatar.cc/150?u=emily",
-    },
+    id: "PROJ-003",
+    name: "CRM Integration",
+    description: "Integrate the new CRM system with existing sales and marketing tools.",
+    assignedTo: { name: "Peter Jones", avatar: "https://i.pravatar.cc/150?u=a04258114e29026702d" },
     status: "On Hold",
     paymentStatus: "Overdue",
-    budget: 50000000,
-    deadline: "2024-08-20",
-    tickets: { open: 0, total: 0 },
+    tickets: { open: 1, total: 2 },
+    budget: 30000000,
+    deadline: "2024-07-30",
   },
   {
-    id: "prj-005",
+    id: "PROJ-004",
+    name: "Website Redesign",
+    description: "Complete redesign of the corporate website with a focus on modern UI/UX.",
+    assignedTo: { name: "Mary Johnson", avatar: "https://i.pravatar.cc/150?u=a048581f4e29026701d" },
+    status: "In Progress",
+    paymentStatus: "Paid",
+    tickets: { open: 5, total: 8 },
+    budget: 45000000,
+    deadline: "2024-10-01",
+    invoiceAttachmentUrl: "/invoices/invoice-004.pdf",
+  },
+  {
+    id: "PROJ-005",
     name: "Data Analytics Dashboard",
-    description: "Building a real-time data analytics dashboard for marketing and sales teams.",
-    assignedTo: {
-      name: "Chris Wilson",
-      avatar: "https://i.pravatar.cc/150?u=chris",
-    },
+    description: "Build a real-time data analytics dashboard for tracking key business metrics.",
+    assignedTo: { name: "Chris Lee", avatar: "https://i.pravatar.cc/150?u=a092581f4e29026705d" },
     status: "Completed",
     paymentStatus: "Paid",
-    budget: 120000000,
-    deadline: "2024-05-10",
     tickets: { open: 0, total: 4 },
+    budget: 60000000,
+    deadline: "2024-06-30",
+    invoiceAttachmentUrl: "/invoices/invoice-005.pdf",
   },
 ];
