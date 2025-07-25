@@ -86,7 +86,10 @@ const NewGroupChatDialog = ({ onStartNewGroupChat, setOpen }: NewGroupChatDialog
                     </Avatar>
                     <div className="flex-1">
                       <p className="text-sm font-medium leading-none">{collaborator.name}</p>
-                      <p className="text-sm text-muted-foreground">{collaborator.online ? 'Online' : 'Offline'}</p>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`h-2 w-2 rounded-full ${collaborator.online ? 'bg-green-500' : 'bg-gray-400'}`} />
+                        <p className="text-sm text-muted-foreground">{collaborator.online ? 'Online' : 'Offline'}</p>
+                      </div>
                     </div>
                   </label>
                 </div>
