@@ -33,6 +33,7 @@ type Comment = {
 };
 
 const ServicesPage = () => {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
@@ -113,8 +114,18 @@ const ServicesPage = () => {
   };
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <PortalSidebar />
+    <div
+      className={cn(
+        "grid min-h-screen w-full transition-[grid-template-columns] duration-300 ease-in-out",
+        isSidebarCollapsed
+          ? "md:grid-cols-[72px_1fr]"
+          : "md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]"
+      )}
+    >
+      <PortalSidebar
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
+      />
       <div className="flex flex-col">
         <PortalHeader />
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
