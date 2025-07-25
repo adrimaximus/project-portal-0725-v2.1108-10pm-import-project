@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { services } from "@/data/services";
+import { dummyProjects, Project } from "@/data/projects";
 import { Search, ArrowLeft, LucideIcon, Calendar as CalendarIcon, Paperclip, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -33,18 +35,23 @@ type Comment = {
 };
 
 const RequestPage = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  
+  // Project Details State
+  const [projectName, setProjectName] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [budget, setBudget] = useState<number | undefined>();
-  
-  // State for comments
+  const [briefFile, setBriefFile] = useState<File | null>(null);
+
+  // Comments State
   const [comments, setComments] = useState<Comment[]>([]);
   const [currentComment, setCurrentComment] = useState("");
   const [commentFile, setCommentFile] = useState<File | null>(null);
-  const [briefFile, setBriefFile] = useState<File | null>(null);
 
   useEffect(() => {
     // Cleanup object URLs on unmount to prevent memory leaks
@@ -94,6 +101,36 @@ const RequestPage = () => {
     setComments([...comments, newComment]);
     setCurrentComment("");
     setCommentFile(null);
+  };
+
+  const handleSubmitRequest = () => {
+    // Basic validation
+    if (!projectName || !projectDescription || selectedServices.length === 0 || !endDate || !budget) {
+      alert("Please fill all required fields: Project Name, Description, Services, Due Date, and Budget.");
+      return;
+    }
+
+    const newProject: Project = {
+      id: `proj-${Date.now()}`,
+      name: projectName,
+      description: projectDescription,
+      status: "Pending",
+      progress: 0,
+      deadline: format(endDate, "yyyy-MM-dd"),
+      budget: budget,
+      paymentStatus: "Pending",
+      assignedTo: { // Default assignment
+        name: "Ethan Carter",
+        avatar: "https://i.pravatar.cc/150?u=ethan",
+      },
+      services: selectedServices.map(s => s.title),
+    };
+
+    // Add to the global list (in-memory)
+    dummyProjects.unshift(newProject);
+
+    // Navigate to the new project's detail page
+    navigate(`/portal/projects/${newProject.id}`);
   };
 
   const featuredService = services.find(
@@ -240,6 +277,8 @@ const RequestPage = () => {
                 <Input
                   id="projectName"
                   placeholder="e.g., New Corporate Website"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -250,6 +289,8 @@ const RequestPage = () => {
                   id="projectDescription"
                   placeholder="Describe your project goals, target audience, and key features..."
                   rows={5}
+                  value={projectDescription}
+                  onChange={(e) => setProjectDescription(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -356,7 +397,7 @@ const RequestPage = () => {
           </Card>
 
           <div className="flex justify-end pt-2">
-            <Button>Submit Request</Button>
+            <Button onClick={handleSubmitRequest}>Submit Request</Button>
           </div>
 
           <Card>
