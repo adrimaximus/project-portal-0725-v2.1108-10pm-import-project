@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, UserPlus, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,37 +12,49 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import NewChatDialog from "./NewChatDialog";
+import { Collaborator } from "@/types";
 
 interface ChatListProps {
   conversations: Conversation[];
   selectedConversationId: string | null;
   onConversationSelect: (id: string) => void;
+  onStartNewChat: (collaborator: Collaborator) => void;
 }
 
 const ChatList = ({
   conversations,
   selectedConversationId,
   onConversationSelect,
+  onStartNewChat,
 }: ChatListProps) => {
+  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+
   return (
     <div className="flex flex-col border-r bg-muted/40 h-full">
       <div className="p-4 border-b">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold tracking-tight">Obrolan</h2>
           <div className="flex items-center gap-1">
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <UserPlus className="h-5 w-5" />
-                    <span className="sr-only">New Chat</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>New Chat</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <UserPlus className="h-5 w-5" />
+                        <span className="sr-only">New Chat</span>
+                      </Button>
+                    </DialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>New Chat</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <NewChatDialog onSelectCollaborator={onStartNewChat} setOpen={setIsNewChatOpen} />
+            </Dialog>
             <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>

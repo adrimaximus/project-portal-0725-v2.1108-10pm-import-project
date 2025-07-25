@@ -4,6 +4,7 @@ import PortalLayout from "@/components/PortalLayout";
 import ChatList from "@/components/ChatList";
 import ChatConversation from "@/components/ChatConversation";
 import { dummyConversations, Message, Conversation } from "@/data/chat";
+import { Collaborator } from "@/types";
 
 const ChatPage = () => {
   const location = useLocation();
@@ -11,36 +12,40 @@ const ChatPage = () => {
   const [conversations, setConversations] = useState(dummyConversations);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
+  const startOrSelectConversation = (collaborator: { name: string, avatar: string }) => {
+    const existingConversation = conversations.find(c => c.userName === collaborator.name);
+
+    if (existingConversation) {
+      setSelectedConversationId(existingConversation.id);
+    } else {
+      const newConversation: Conversation = {
+        id: `conv-${Date.now()}`,
+        userName: collaborator.name,
+        userAvatar: collaborator.avatar,
+        lastMessage: '',
+        lastMessageTimestamp: '',
+        unreadCount: 0,
+        messages: [],
+      };
+      setConversations(prev => [newConversation, ...prev]);
+      setSelectedConversationId(newConversation.id);
+    }
+  };
+
   useEffect(() => {
     const { selectedCollaborator } = location.state || {};
 
     if (selectedCollaborator) {
-      const existingConversation = conversations.find(c => c.userName === selectedCollaborator.name);
-
-      if (existingConversation) {
-        setSelectedConversationId(existingConversation.id);
-      } else {
-        // Buat percakapan baru
-        const newConversation: Conversation = {
-          id: `conv-${Date.now()}`,
-          userName: selectedCollaborator.name,
-          userAvatar: selectedCollaborator.avatar,
-          lastMessage: '',
-          lastMessageTimestamp: '',
-          unreadCount: 0,
-          messages: [],
-        };
-        setConversations(prev => [newConversation, ...prev]);
-        setSelectedConversationId(newConversation.id);
-      }
-      // Hapus state lokasi agar tidak memicu pembuatan ulang pada refresh
+      startOrSelectConversation({ name: selectedCollaborator.name, avatar: selectedCollaborator.avatar });
       navigate(location.pathname, { replace: true, state: {} });
-
-    } else if (!selectedConversationId) {
-      // Atur percakapan default jika tidak ada yang dipilih
-      setSelectedConversationId(conversations[0]?.id || null);
+    } else if (!selectedConversationId && conversations.length > 0) {
+      setSelectedConversationId(conversations[0].id);
     }
   }, [location.state, conversations, navigate, selectedConversationId]);
+
+  const handleStartNewChat = (collaborator: Collaborator) => {
+    startOrSelectConversation({ name: collaborator.name, avatar: collaborator.src });
+  };
 
   const handleSendMessage = (conversationId: string, text: string, attachment?: File | null) => {
     const hasText = text.trim().length > 0;
@@ -81,6 +86,7 @@ const ChatPage = () => {
           conversations={conversations}
           selectedConversationId={selectedConversationId}
           onConversationSelect={setSelectedConversationId}
+          onStartNewChat={handleStartNewChat}
         />
         <ChatConversation 
           conversation={selectedConversation}

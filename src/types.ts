@@ -3,4 +3,5 @@ export type Collaborator = {
   name: string;
   src: string;
   fallback: string;
+  online: boolean;
 };
