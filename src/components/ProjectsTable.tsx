@@ -1,3 +1,32 @@
+"use client"
+
+import * as React from "react"
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table"
+import { ArrowUpDown, ChevronDown, MoreHorizontal, Download, Pencil, Trash2 } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -5,156 +34,333 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
-import { dummyProjects, Project } from "@/data/projects";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Button } from "./ui/button";
-import { Paperclip } from "lucide-react";
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Project } from "@/data/projects"
+import { useNavigate } from "react-router-dom"
 
-const ProjectsTable = () => {
-  const navigate = useNavigate();
-  const projects: Project[] = dummyProjects;
+const getStatusBadgeVariant = (status: Project["status"]) => {
+  switch (status) {
+    case "Completed":
+      return "default"
+    case "In Progress":
+      return "secondary"
+    case "On Hold":
+      return "destructive"
+    default:
+      return "outline"
+  }
+}
 
-  const handleRowClick = (projectId: string) => {
-    navigate(`/projects/${projectId}`);
-  };
+export const columns: ColumnDef<Project>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={table.getIsAllPageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    accessorKey: "name",
+    header: "Project Name",
+    cell: ({ row }) => (
+      <div className="font-medium">{row.getValue("name")}</div>
+    ),
+  },
+  {
+    accessorKey: "assignedTo",
+    header: "Assigned To",
+    cell: ({ row }) => {
+      const assignedUsers = row.original.assignedTo;
+      if (!assignedUsers || assignedUsers.length === 0) {
+        return <span className="text-muted-foreground">Unassigned</span>;
+      }
 
-  const getStatusBadgeVariant = (status: Project["status"]) => {
-    switch (status) {
-      case "Completed":
-        return "default";
-      case "In Progress":
-        return "secondary";
-      case "On Hold":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
+      const firstUser = assignedUsers[0];
+      const remainingUsers = assignedUsers.length - 1;
 
-  const getPaymentStatusBadgeVariant = (
-    status: Project["paymentStatus"]
-  ) => {
-    switch (status) {
-      case "Paid":
-        return "default";
-      case "Pending":
-        return "secondary";
-      case "Overdue":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
+      return (
+        <div className="flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={firstUser.avatar} alt={firstUser.name} />
+                  <AvatarFallback>{firstUser.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{firstUser.name}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <div className="flex flex-col">
+            <span className="font-medium truncate max-w-[120px]">{firstUser.name}</span>
+            {remainingUsers > 0 && (
+              <span className="text-xs text-muted-foreground">
+                + {remainingUsers} more
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => (
+      <Badge variant={getStatusBadgeVariant(row.getValue("status"))}>
+        {row.getValue("status")}
+      </Badge>
+    ),
+  },
+  {
+    accessorKey: "progress",
+    header: "Progress",
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <Progress value={row.getValue("progress")} className="w-24" />
+        <span>{row.getValue("progress")}%</span>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "tickets",
+    header: "Tickets",
+    cell: ({ row }) => {
+      const ticketCount = row.original.tickets || 0;
+      return (
+        <div>
+          <div className="font-medium">{ticketCount}</div>
+          <div className="text-xs text-muted-foreground">{ticketCount === 1 ? 'open ticket' : 'open tickets'}</div>
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "budget",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Budget
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      )
+    },
+    cell: ({ row }) => {
+      const amount = parseFloat(row.getValue("budget"))
+      const formatted = new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+      }).format(amount)
+
+      return <div className="text-right font-medium">{formatted}</div>
+    },
+  },
+  {
+    id: "actions",
+    enableHiding: false,
+    cell: ({ row }) => {
+      const project = row.original
+      const navigate = useNavigate();
+
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={!project.invoiceAttachmentUrl}
+              onSelect={() => {
+                if (project.invoiceAttachmentUrl) {
+                  window.open(project.invoiceAttachmentUrl, "_blank");
+                }
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download Invoice
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-red-600">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Project
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    },
+  },
+]
+
+export default function ProjectsTable({ columns, data }: { columns: ColumnDef<Project>[], data: Project[] }) {
+  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({})
+  const [rowSelection, setRowSelection] = React.useState({})
+
+  const table = useReactTable({
+    data,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+    },
+  })
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Projects Overview</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="relative w-full overflow-auto max-h-[600px]">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Project Name</TableHead>
-                <TableHead>Assigned To</TableHead>
-                <TableHead>Project Status</TableHead>
-                <TableHead>Payment Status</TableHead>
-                <TableHead>Open Tickets</TableHead>
-                <TableHead className="text-right">Budget</TableHead>
-                <TableHead>Project Due Date</TableHead>
-                <TableHead>Payment Due Date</TableHead>
-                <TableHead className="text-center">Attachment Invoice</TableHead>
+    <div className="w-full">
+      <div className="flex items-center py-4">
+        <Input
+          placeholder="Filter projects..."
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("name")?.setFilterValue(event.target.value)
+          }
+          className="max-w-sm"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="ml-auto">
+              Columns <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {table
+              .getAllColumns()
+              .filter((column) => column.getCanHide())
+              .map((column) => {
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                )
+              })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  )
+                })}
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {projects.map((project) => (
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
                 <TableRow
-                  key={project.id}
-                  onClick={() => handleRowClick(project.id)}
-                  className="cursor-pointer hover:bg-muted/50"
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
                 >
-                  <TableCell className="font-medium">{project.name}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage
-                          src={project.assignedTo.avatar}
-                          alt={project.assignedTo.name}
-                        />
-                        <AvatarFallback>
-                          {project.assignedTo.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{project.assignedTo.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusBadgeVariant(project.status)}>
-                      {project.status === "In Progress" ? "WIP" : project.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={getPaymentStatusBadgeVariant(
-                        project.paymentStatus
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
                       )}
-                    >
-                      {project.paymentStatus}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {project.tickets && project.tickets.open > 0 ? (
-                      <span>{project.tickets.open}</span>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {new Intl.NumberFormat("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                      minimumFractionDigits: 0,
-                    }).format(project.budget)}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(project.deadline).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    {project.paymentDueDate ? new Date(project.paymentDueDate).toLocaleDateString() : '-'}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {project.invoiceAttachmentUrl ? (
-                      <a
-                        href={project.invoiceAttachmentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-block"
-                      >
-                        <Button variant="outline" size="icon">
-                          <Paperclip className="h-4 w-4" />
-                        </Button>
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
+                    </TableCell>
+                  ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="flex items-center justify-end space-x-2 py-4">
+        <div className="flex-1 text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-export default ProjectsTable;
+        <div className="space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -19,6 +19,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Dummy data for initial comments, one with an attachment
 const initialComments: Comment[] = [
@@ -135,8 +136,8 @@ const ProjectDetail = () => {
     {
       id: 3,
       user: {
-        name: project.assignedTo.name,
-        avatar: project.assignedTo.avatar,
+        name: project.assignedTo[0].name,
+        avatar: project.assignedTo[0].avatar,
       },
       action: "changed the project status to 'In Progress'.",
       timestamp: "2024-07-18T09:00:00Z",
@@ -479,18 +480,32 @@ const ProjectDetail = () => {
                 <CardTitle>Assigned To</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src={project.assignedTo.avatar} />
-                    <AvatarFallback>
-                      {project.assignedTo.name.split(" ").map(n => n[0]).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold">{project.assignedTo.name}</p>
-                    <p className="text-sm text-muted-foreground">Project Manager</p>
+                <TooltipProvider>
+                  <div className="flex items-center -space-x-2">
+                    {project.assignedTo.map((user, index) => (
+                      <Tooltip key={index} delayDuration={100}>
+                        <TooltipTrigger asChild>
+                          <div className="relative">
+                            <Avatar className="h-10 w-10 border-2 border-card">
+                              <AvatarImage src={user.avatar} alt={user.name} />
+                              <AvatarFallback>{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+                            </Avatar>
+                            <span
+                              className={cn(
+                                "absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-card",
+                                user.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
+                              )}
+                              title={user.status === 'online' ? 'Online' : 'Offline'}
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{user.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
                   </div>
-                </div>
+                </TooltipProvider>
               </CardContent>
             </Card>
 

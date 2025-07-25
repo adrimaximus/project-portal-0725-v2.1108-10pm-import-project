@@ -121,10 +121,11 @@ const RequestPage = () => {
       deadline: format(endDate as Date, "yyyy-MM-dd"),
       budget: budget as number,
       paymentStatus: "Pending",
-      assignedTo: { // Default assignment
+      assignedTo: [{ // Default assignment
         name: "Ethan Carter",
         avatar: "https://i.pravatar.cc/150?u=ethan",
-      },
+        status: 'offline'
+      }],
       services: selectedServices.map(s => s.title),
     };
 
