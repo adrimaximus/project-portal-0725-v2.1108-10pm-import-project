@@ -12,25 +12,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+type FilterStatus = Project["status"] | "All Projects";
+
 const Index = () => {
   const projects = dummyProjects;
-  const statuses: Project["status"][] = ["Completed", "In Progress", "On Hold", "Pending"];
-  const [selectedStatus, setSelectedStatus] = useState<Project["status"]>("Completed");
+  const statuses: FilterStatus[] = ["All Projects", "Completed", "In Progress", "On Hold", "Pending"];
+  const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("All Projects");
 
   const totalProjects = projects.length;
   const totalTickets = projects.reduce((acc, project) => acc + (project.tickets || 0), 0);
-  
-  const statusCount = projects.filter(p => p.status === selectedStatus).length;
 
-  const budgetForStatus = projects
-    .filter(p => p.status === selectedStatus)
-    .reduce((acc, project) => acc + project.budget, 0);
+  const filteredProjects = selectedStatus === "All Projects"
+    ? projects
+    : projects.filter(p => p.status === selectedStatus);
+
+  const statusCount = filteredProjects.length;
+
+  const budgetForStatus = filteredProjects.reduce((acc, project) => acc + project.budget, 0);
 
   const budgetForStatusFormatted = new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
   }).format(budgetForStatus);
+
+  const budgetDescription = selectedStatus === "All Projects" ? "for all projects" : `for ${selectedStatus} projects`;
 
   return (
     <PortalLayout>
@@ -54,7 +60,7 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{budgetForStatusFormatted}</div>
-              <p className="text-xs text-muted-foreground">for {selectedStatus} projects</p>
+              <p className="text-xs text-muted-foreground">{budgetDescription}</p>
             </CardContent>
           </Card>
           <Card>
@@ -62,7 +68,7 @@ const Index = () => {
               <CardTitle className="text-sm font-medium">Project Status</CardTitle>
               <Select
                 value={selectedStatus}
-                onValueChange={(value) => setSelectedStatus(value as Project["status"])}
+                onValueChange={(value) => setSelectedStatus(value as FilterStatus)}
               >
                 <SelectTrigger className="h-auto w-auto p-0 text-xs border-0 bg-transparent focus:ring-0 focus:ring-offset-0 text-muted-foreground hover:text-foreground">
                   <SelectValue />
@@ -94,7 +100,7 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
-        <ProjectsTable columns={columns} data={projects} />
+        <ProjectsTable columns={columns} data={filteredProjects} />
       </div>
     </PortalLayout>
   );
