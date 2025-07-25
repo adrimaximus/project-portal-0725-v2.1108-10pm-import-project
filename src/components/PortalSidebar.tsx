@@ -1,4 +1,5 @@
-import { Bell, Home, Package, Settings, LayoutGrid, CircleUser } from "lucide-react";
+import { useState } from "react";
+import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ type PortalSidebarProps = {
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const location = useLocation();
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
   return (
     <div
@@ -110,9 +112,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         </div>
         <div className="mt-auto border-t">
           <div className={cn("p-4", isCollapsed && "p-2")}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                {isCollapsed ? (
+            {isCollapsed ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -124,22 +126,58 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                       <TooltipContent side="right">My Account</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                ) : (
-                  <Button variant="ghost" className="w-full justify-start gap-3 px-3">
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>Settings</DropdownMenuItem>
+                  <DropdownMenuItem>Support</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>Logout</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between gap-3 px-3"
+                  onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                >
+                  <span className="flex items-center gap-3">
                     <CircleUser className="h-5 w-5" />
                     My Account
-                  </Button>
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform",
+                      isAccountMenuOpen && "rotate-180"
+                    )}
+                  />
+                </Button>
+                {isAccountMenuOpen && (
+                  <nav className="grid items-start gap-1 text-sm font-medium mt-2 pl-8">
+                    <Link
+                      to="#"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                      Settings
+                    </Link>
+                    <Link
+                      to="#"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                      Support
+                    </Link>
+                    <Link
+                      to="#"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                      Logout
+                    </Link>
+                  </nav>
                 )}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem>Support</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </div>
+            )}
           </div>
         </div>
       </div>
