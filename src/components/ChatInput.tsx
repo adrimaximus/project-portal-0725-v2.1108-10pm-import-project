@@ -1,4 +1,4 @@
-import { useState, useRef, FormEvent, useEffect } from "react";
+import { useState, useRef, FormEvent } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,14 +22,6 @@ const ChatInput = ({ onSendMessage, members = [] }: ChatInputProps) => {
   const [showMention, setShowMention] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
-
-  useEffect(() => {
-    if (mentionQuery.length > 0) {
-      setShowMention(true);
-    } else {
-      setShowMention(false);
-    }
-  }, [mentionQuery]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -70,6 +62,7 @@ const ChatInput = ({ onSendMessage, members = [] }: ChatInputProps) => {
       const query = textBeforeCursor.substring(atIndex + 1);
       setMentionQuery(query);
       setMentionStartIndex(atIndex);
+      setShowMention(true);
     } else {
       setMentionQuery("");
       setShowMention(false);
@@ -99,7 +92,7 @@ const ChatInput = ({ onSendMessage, members = [] }: ChatInputProps) => {
 
   return (
     <div className="p-4 border-t bg-background">
-      <Popover open={showMention && members.length > 0 && filteredMembers.length > 0} onOpenChange={setShowMention}>
+      <Popover open={showMention && members.length > 0} onOpenChange={setShowMention}>
         <PopoverTrigger asChild>
           <div />
         </PopoverTrigger>
