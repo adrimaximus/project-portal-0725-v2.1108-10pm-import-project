@@ -1,232 +1,127 @@
+import { useState } from "react";
+import PortalLayout from "@/components/PortalLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dummyProjects, Project } from "@/data/projects";
+import { DollarSign, Package, Ticket } from "lucide-react";
+import ProjectsTable, { columns } from "@/components/ProjectsTable";
 import {
-  Activity,
-  ArrowUpRight,
-  CreditCard,
-  DollarSign,
-  Users,
-} from "lucide-react"
-import { addDays } from "date-fns"
-import { DateRange } from "react-day-picker"
-import * as React from "react"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DateRange } from "react-day-picker";
+import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Link } from "react-router-dom"
-import PortalLayout from "@/components/PortalLayout"
-import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange"
+type FilterStatus = Project["status"] | "All Projects";
 
 const Index = () => {
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(),
-    to: addDays(new Date(), 7),
-  })
+  const projects = dummyProjects;
+  const statuses: FilterStatus[] = ["All Projects", "Completed", "In Progress", "On Hold", "Pending"];
+  const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("All Projects");
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
+
+  const dateFilteredProjects = projects.filter(project => {
+    if (!date || !date.from) {
+      return true;
+    }
+    const projectStart = new Date(project.startDate);
+    const projectEnd = new Date(project.deadline);
+    const rangeStart = date.from;
+    const rangeEnd = date.to || new Date(date.from.getTime());
+    rangeEnd.setHours(23, 59, 59, 999);
+
+    return projectStart <= rangeEnd && projectEnd >= rangeStart;
+  });
+
+  const finalFilteredProjects = selectedStatus === "All Projects"
+    ? dateFilteredProjects
+    : dateFilteredProjects.filter(p => p.status === selectedStatus);
+
+  const totalProjectsInPeriod = dateFilteredProjects.length;
+  const totalTicketsInPeriod = dateFilteredProjects.reduce((acc, project) => acc + (project.tickets || 0), 0);
+  
+  const statusCount = finalFilteredProjects.length;
+  const budgetForStatus = finalFilteredProjects.reduce((acc, project) => acc + project.budget, 0);
+
+  const budgetForStatusFormatted = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(budgetForStatus);
+
+  const budgetDescription = selectedStatus === "All Projects" ? "for selected period" : `for ${selectedStatus} projects`;
 
   return (
     <PortalLayout>
-      <div className="flex items-center justify-between space-y-2 mb-6">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground">
-            Here's a summary of your projects and activities.
-          </p>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <DatePickerWithRange date={date} setDate={setDate} />
         </div>
-        <div className="flex items-center space-x-2">
-          <DatePickerWithRange date={date} onDateChange={setDate} />
-          <Button>Download Report</Button>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalProjectsInPeriod}</div>
+              <p className="text-xs text-muted-foreground">in selected period</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Budget for Status</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{budgetForStatusFormatted}</div>
+              <p className="text-xs text-muted-foreground">{budgetDescription}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Project Status</CardTitle>
+              <Select
+                value={selectedStatus}
+                onValueChange={(value) => setSelectedStatus(value as FilterStatus)}
+              >
+                <SelectTrigger className="h-auto w-auto p-0 text-xs border-0 bg-transparent focus:ring-0 focus:ring-offset-0 text-muted-foreground hover:text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{statusCount}</div>
+              <p className="text-xs text-muted-foreground">
+                of {totalProjectsInPeriod} projects
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
+              <Ticket className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalTicketsInPeriod}</div>
+              <p className="text-xs text-muted-foreground">in selected period</p>
+            </CardContent>
+          </Card>
         </div>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Revenue
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Rp 712,543,210</div>
-            <p className="text-xs text-muted-foreground">
-              +20.1% from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Projects
-            </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+12</div>
-            <p className="text-xs text-muted-foreground">
-              +5 since last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue Payments</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+3</div>
-            <p className="text-xs text-muted-foreground">
-              Totaling Rp 45,231,890
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Clients</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+2</div>
-            <p className="text-xs text-muted-foreground">
-              +180% since last month
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3 mt-6">
-        <Card className="xl:col-span-2">
-          <CardHeader className="flex flex-row items-center">
-            <div className="grid gap-2">
-              <CardTitle>Recent Transactions</CardTitle>
-              <CardDescription>
-                Recent transactions from your projects.
-              </CardDescription>
-            </div>
-            <Button asChild size="sm" className="ml-auto gap-1">
-              <Link to="/transactions">
-                View All
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead className="hidden xl:table-column">
-                    Type
-                  </TableHead>
-                  <TableHead className="hidden xl:table-column">
-                    Status
-                  </TableHead>
-                  <TableHead className="hidden xl:table-column">
-                    Date
-                  </TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell>
-                    <div className="font-medium">Liam Johnson</div>
-                    <div className="hidden text-sm text-muted-foreground md:inline">
-                      liam@example.com
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden xl:table-column">
-                    Sale
-                  </TableCell>
-                  <TableCell className="hidden xl:table-column">
-                    <Badge className="text-xs" variant="outline">
-                      Approved
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell lg:hidden xl:table-column">
-                    2023-06-23
-                  </TableCell>
-                  <TableCell className="text-right">Rp 25,000,000</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>
-                    <div className="font-medium">Olivia Smith</div>
-                    <div className="hidden text-sm text-muted-foreground md:inline">
-                      olivia@example.com
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden xl:table-column">
-                    Refund
-                  </TableCell>
-                  <TableCell className="hidden xl:table-column">
-                    <Badge className="text-xs" variant="outline">
-                      Declined
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell lg:hidden xl:table-column">
-                    2023-06-24
-                  </TableCell>
-                  <TableCell className="text-right">Rp 15,000,000</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Signups</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-8">
-            <div className="flex items-center gap-4">
-              <Avatar className="hidden h-9 w-9 sm:flex">
-                <AvatarImage src="https://i.pravatar.cc/150?u=ava" alt="Avatar" />
-                <AvatarFallback>OM</AvatarFallback>
-              </Avatar>
-              <div className="grid gap-1">
-                <p className="text-sm font-medium leading-none">
-                  Olivia Martin
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  olivia.martin@email.com
-                </p>
-              </div>
-              <div className="ml-auto font-medium">+Rp 1,999,000</div>
-            </div>
-            <div className="flex items-center gap-4">
-              <Avatar className="hidden h-9 w-9 sm:flex">
-                <AvatarImage src="https://i.pravatar.cc/150?u=jackson" alt="Avatar" />
-                <AvatarFallback>JL</AvatarFallback>
-              </Avatar>
-              <div className="grid gap-1">
-                <p className="text-sm font-medium leading-none">
-                  Jackson Lee
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  jackson.lee@email.com
-                </p>
-              </div>
-              <div className="ml-auto font-medium">+Rp 3,900,000</div>
-            </div>
-          </CardContent>
-        </Card>
+        <ProjectsTable columns={columns} data={finalFilteredProjects} />
       </div>
     </PortalLayout>
-  )
-}
+  );
+};
 
-export default Index
+export default Index;
