@@ -14,6 +14,8 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { ArrowUpDown, ChevronDown, MoreHorizontal, Download, Pencil, Trash2 } from "lucide-react"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -162,6 +164,53 @@ export const columns: ColumnDef<Project>[] = [
         <span>{row.getValue("progress")}%</span>
       </div>
     ),
+  },
+  {
+    accessorKey: "deadline",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Due Date
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      )
+    },
+    cell: ({ row }) => {
+      const deadline = row.getValue("deadline") as string;
+      if (!deadline) return <span className="text-muted-foreground">-</span>;
+      return <div>{format(new Date(deadline), "dd MMM yyyy")}</div>
+    },
+  },
+  {
+    accessorKey: "paymentDueDate",
+    header: "Payment Due",
+    cell: ({ row }) => {
+      const paymentDueDate = row.getValue("paymentDueDate") as string | undefined;
+      const paymentStatus = row.original.paymentStatus;
+
+      if (paymentStatus === 'Paid') {
+        return <Badge variant="outline">Paid</Badge>
+      }
+
+      if (!paymentDueDate) {
+        return <span className="text-muted-foreground">-</span>
+      }
+      
+      const dueDate = new Date(paymentDueDate);
+      const now = new Date();
+      now.setHours(0,0,0,0);
+      
+      const isOverdue = paymentStatus === 'Overdue' || (paymentStatus === 'Pending' && dueDate < now);
+
+      return (
+        <div className={cn(isOverdue && "text-destructive")}>
+          {format(dueDate, "dd MMM yyyy")}
+        </div>
+      )
+    },
   },
   {
     accessorKey: "tickets",
