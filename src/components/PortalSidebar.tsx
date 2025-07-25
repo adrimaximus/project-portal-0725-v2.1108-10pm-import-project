@@ -108,7 +108,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             </nav>
           </TooltipProvider>
         </div>
-        <div className="mt-auto border-t">
+        <div className="mt-auto border-t bg-background/95 backdrop-blur-sm">
           <div className={cn("p-4", isCollapsed && "p-2")}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
