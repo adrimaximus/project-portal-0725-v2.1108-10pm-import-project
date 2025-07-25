@@ -4,7 +4,7 @@ import PortalHeader from "@/components/PortalHeader";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { services } from "@/data/services";
-import { Search, ArrowLeft, LucideIcon, Calendar as CalendarIcon } from "lucide-react";
+import { Search, ArrowLeft, LucideIcon, Calendar as CalendarIcon, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +27,7 @@ const ServicesPage = () => {
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
+  const [commentFile, setCommentFile] = useState<File | null>(null);
 
   const handleServiceSelect = (service: Service) => {
     const isFeatured = service.title === "End to End Services";
@@ -296,17 +297,33 @@ const ServicesPage = () => {
                 <CardHeader>
                   <CardTitle>Additional Comments</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent>
                   <div className="space-y-2">
                     <Label htmlFor="comments">Comments</Label>
-                    <Textarea
-                      id="comments"
-                      placeholder="Any additional notes or specific instructions..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="commentAttachment">Attach File</Label>
-                    <Input id="commentAttachment" type="file" />
+                    <div className="relative">
+                      <Textarea
+                        id="comments"
+                        placeholder="Any additional notes or specific instructions..."
+                        className="resize-none pr-12"
+                      />
+                      <Input
+                        id="comment-attachment"
+                        type="file"
+                        className="sr-only"
+                        onChange={(e) => setCommentFile(e.target.files ? e.target.files[0] : null)}
+                      />
+                      <Button asChild variant="ghost" size="icon" className="absolute bottom-1 right-1">
+                        <Label htmlFor="comment-attachment" className="cursor-pointer">
+                          <Paperclip className="h-5 w-5 text-muted-foreground" />
+                          <span className="sr-only">Attach file</span>
+                        </Label>
+                      </Button>
+                    </div>
+                    {commentFile && (
+                      <p className="text-sm text-muted-foreground pt-2">
+                        File attached: {commentFile.name}
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
