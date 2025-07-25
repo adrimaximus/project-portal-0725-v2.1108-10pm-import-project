@@ -115,87 +115,81 @@ const RequestPage = () => {
   const renderContent = () => {
     if (step === 1) {
       return (
-        <>
-          {/* Step 1: Service Selection */}
-          <div className="space-y-4 pb-40">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Project Support Request
-            </h1>
-            <p className="text-muted-foreground">
-              Select the services you need for your project. You can select
-              multiple services, or choose our end-to-end package.
-            </p>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search support options..."
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+        // Step 1: Service Selection
+        <div className="space-y-4 pb-40">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Project Support Request
+          </h1>
+          <p className="text-muted-foreground">
+            Select the services you need for your project. You can select
+            multiple services, or choose our end-to-end package.
+          </p>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search support options..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-            {featuredService && (
+          {featuredService && (
+            <Card
+              className={cn(
+                "w-full hover:bg-muted/50 transition-colors cursor-pointer",
+                isSelected(featuredService) && "ring-2 ring-primary"
+              )}
+              onClick={() => handleServiceSelect(featuredService)}
+            >
+              <CardContent className="p-6 flex items-center gap-6">
+                <div
+                  className={cn(
+                    "p-3 rounded-lg",
+                    featuredService.iconColor
+                  )}
+                >
+                  <featuredService.icon className="h-8 w-8" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-lg">
+                    {featuredService.title}
+                  </h2>
+                  <p className="text-muted-foreground">
+                    {featuredService.description}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredServices.map((service) => (
               <Card
+                key={service.title}
                 className={cn(
-                  "w-full hover:bg-muted/50 transition-colors cursor-pointer",
-                  isSelected(featuredService) && "ring-2 ring-primary"
+                  "hover:bg-muted/50 transition-colors cursor-pointer h-full",
+                  isSelected(service) && "ring-2 ring-primary"
                 )}
-                onClick={() => handleServiceSelect(featuredService)}
+                onClick={() => handleServiceSelect(service)}
               >
-                <CardContent className="p-6 flex items-center gap-6">
+                <CardContent className="p-4 flex items-start gap-4">
                   <div
-                    className={cn(
-                      "p-3 rounded-lg",
-                      featuredService.iconColor
-                    )}
+                    className={cn("p-2 rounded-lg", service.iconColor)}
                   >
-                    <featuredService.icon className="h-8 w-8" />
+                    <service.icon className="h-6 w-6" />
                   </div>
                   <div>
-                    <h2 className="font-semibold text-lg">
-                      {featuredService.title}
-                    </h2>
-                    <p className="text-muted-foreground">
-                      {featuredService.description}
+                    <h3 className="font-semibold">{service.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {service.description}
                     </p>
                   </div>
                 </CardContent>
               </Card>
-            )}
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredServices.map((service) => (
-                <Card
-                  key={service.title}
-                  className={cn(
-                    "hover:bg-muted/50 transition-colors cursor-pointer h-full",
-                    isSelected(service) && "ring-2 ring-primary"
-                  )}
-                  onClick={() => handleServiceSelect(service)}
-                >
-                  <CardContent className="p-4 flex items-start gap-4">
-                    <div
-                      className={cn("p-2 rounded-lg", service.iconColor)}
-                    >
-                      <service.icon className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{service.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {service.description}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            ))}
           </div>
-          <SelectedServicesSummary
-            selectedServices={selectedServices}
-            onContinue={() => setStep(2)}
-          />
-        </>
+        </div>
       );
     } else {
       return (
@@ -445,7 +439,15 @@ const RequestPage = () => {
     }
   };
 
-  return <PortalLayout>{renderContent()}</PortalLayout>;
+  const summaryComponent =
+    step === 1 ? (
+      <SelectedServicesSummary
+        selectedServices={selectedServices}
+        onContinue={() => setStep(2)}
+      />
+    ) : null;
+
+  return <PortalLayout summary={summaryComponent}>{renderContent()}</PortalLayout>;
 };
 
 export default RequestPage;

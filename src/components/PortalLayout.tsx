@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 type PortalLayoutProps = {
   children: ReactNode;
   noPadding?: boolean;
+  summary?: ReactNode;
 };
 
-const PortalLayout = ({ children, noPadding = false }: PortalLayoutProps) => {
+const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSidebar = () => {
@@ -42,6 +43,7 @@ const PortalLayout = ({ children, noPadding = false }: PortalLayoutProps) => {
         )}>
           {children}
         </main>
+        {summary}
       </div>
     </div>
   );
