@@ -1,11 +1,41 @@
 import { Collaborator } from "@/types";
 
 export const allCollaborators: Collaborator[] = [
-  { id: "1", name: "Jane Doe", src: "https://i.pravatar.cc/40?u=a042581f4e29026704d", fallback: "JD", online: true },
-  { id: "2", name: "John Smith", src: "https://i.pravatar.cc/40?u=a042581f4e29026705d", fallback: "JS", online: true },
-  { id: "3", name: "Peter Jones", src: "https://i.pravatar.cc/40?u=a042581f4e29026706d", fallback: "PJ", online: true },
-  { id: "4", name: "Sarah Miller", src: "https://i.pravatar.cc/40?u=a042581f4e29026707d", fallback: "SM", online: true },
-  { id: "5", name: "Alex Johnson", src: "https://i.pravatar.cc/40?u=a042581f4e29026708d", fallback: "AJ", online: false },
-  { id: "6", name: "Emily White", src: "https://i.pravatar.cc/40?u=a042581f4e29026709d", fallback: "EW", online: false },
-  { id: "7", name: "Chris Green", src: "https://i.pravatar.cc/40?u=a042581f4e29026710d", fallback: "CG", online: false },
+  {
+    id: "user-0",
+    name: "Olivia Martin",
+    src: "/avatars/01.png",
+    fallback: "OM",
+    online: true,
+  },
+  {
+    id: "collab-1",
+    name: "John Doe",
+    src: "/avatars/02.png",
+    fallback: "JD",
+    online: true,
+  },
+  {
+    id: "collab-2",
+    name: "Jane Smith",
+    src: "/avatars/03.png",
+    fallback: "JS",
+    online: false,
+  },
+  {
+    id: "collab-3",
+    name: "Mike Johnson",
+    src: "/avatars/04.png",
+    fallback: "MJ",
+    online: true,
+  },
+  {
+    id: "collab-4",
+    name: "Emily Davis",
+    src: "/avatars/05.png",
+    fallback: "ED",
+    online: false,
+  },
 ];
+
+export const currentUser: Collaborator = allCollaborators[0];

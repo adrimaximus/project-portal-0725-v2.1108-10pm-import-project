@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Message } from "@/data/chat";
 import MessageAttachment from "./MessageAttachment";
+import { currentUser } from "@/data/collaborators";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -12,7 +13,10 @@ const ChatConversation = ({ messages }: ChatConversationProps) => {
       {messages.map((message) => (
         <div key={message.id} className="flex items-start gap-4">
           <Avatar className="h-9 w-9 border">
-            <AvatarImage src={message.senderAvatar} alt={message.senderName} />
+            <AvatarImage
+              src={message.senderName === "You" ? currentUser.src : message.senderAvatar}
+              alt={message.senderName}
+            />
             <AvatarFallback>
               {message.senderName === "You" ? "ME" : message.senderName.split(" ").map(n => n[0]).join("")}
             </AvatarFallback>
