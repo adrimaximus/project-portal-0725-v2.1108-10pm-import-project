@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import SelectedServicesSummary from "@/components/SelectedServicesSummary";
+import RichTextEditor from "@/components/RichTextEditor";
 
 // Define the type for a service based on the data structure
 type Service = {
@@ -286,12 +287,10 @@ const RequestPage = () => {
                 <Label htmlFor="projectDescription">
                   Project Description
                 </Label>
-                <Textarea
-                  id="projectDescription"
-                  placeholder="Describe your project goals, target audience, and key features..."
-                  rows={5}
+                <RichTextEditor
                   value={projectDescription}
-                  onChange={(e) => setProjectDescription(e.target.value)}
+                  onChange={setProjectDescription}
+                  placeholder="Describe your project goals, target audience, and key features..."
                 />
               </div>
               <div className="space-y-2">
