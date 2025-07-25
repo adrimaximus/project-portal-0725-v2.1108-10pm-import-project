@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 // Define the type for a service based on the data structure
 type Service = {
@@ -37,6 +38,7 @@ const ServicesPage = () => {
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
+  const [budget, setBudget] = useState<number | undefined>();
   
   // State for comments
   const [comments, setComments] = useState<Comment[]>([]);
@@ -265,9 +267,11 @@ const ServicesPage = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="projectBudget">ETA Budget (IDR)</Label>
-                    <Input
+                    <CurrencyInput
                       id="projectBudget"
                       placeholder="e.g., 50,000,000"
+                      value={budget}
+                      onChange={setBudget}
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
