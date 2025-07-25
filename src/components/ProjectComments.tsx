@@ -24,6 +24,7 @@ interface Comment {
   attachment?: Attachment;
 }
 
+// Dummy data for initial comments, one with an attachment
 const initialComments: Comment[] = [
   {
     id: 1,
@@ -50,11 +51,7 @@ const initialComments: Comment[] = [
   },
 ];
 
-interface ProjectCommentsProps {
-  onAddTicket: (ticketText: string) => void;
-}
-
-const ProjectComments = ({ onAddTicket }: ProjectCommentsProps) => {
+const ProjectComments = () => {
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newComment, setNewComment] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
@@ -104,13 +101,6 @@ const ProjectComments = ({ onAddTicket }: ProjectCommentsProps) => {
     handleRemoveAttachment();
   };
 
-  const handleCreateTicket = () => {
-    if (newComment.trim() === "") return;
-    onAddTicket(newComment);
-    setNewComment("");
-    handleRemoveAttachment();
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -118,6 +108,7 @@ const ProjectComments = ({ onAddTicket }: ProjectCommentsProps) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
+          {/* List of comments */}
           <div className="space-y-4">
             {comments.map((comment) => (
               <div key={comment.id} className="flex items-start gap-4">
@@ -161,6 +152,7 @@ const ProjectComments = ({ onAddTicket }: ProjectCommentsProps) => {
             ))}
           </div>
 
+          {/* Comment input form */}
           <form onSubmit={handleSendComment} className="flex w-full items-start space-x-4 pt-6 border-t">
              <Avatar className="h-9 w-9 border">
                 <AvatarImage src="https://i.pravatar.cc/150?u=currentuser" alt="You" />
@@ -180,7 +172,7 @@ const ProjectComments = ({ onAddTicket }: ProjectCommentsProps) => {
                           <Paperclip className="h-4 w-4" />
                           <span className="sr-only">Attach file</span>
                       </Button>
-                      <Button type="button" variant="ghost" size="icon" onClick={handleCreateTicket}>
+                      <Button type="button" variant="ghost" size="icon">
                           <Ticket className="h-4 w-4" />
                           <span className="sr-only">Create ticket</span>
                       </Button>
