@@ -13,6 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import SelectedServicesSummary from "@/components/SelectedServicesSummary";
 
 // Define the type for a service based on the data structure
 type Service = {
@@ -116,7 +117,7 @@ const RequestPage = () => {
       return (
         <>
           {/* Step 1: Service Selection */}
-          <div className="space-y-4 pb-24">
+          <div className="space-y-4 pb-40">
             <h1 className="text-2xl font-bold tracking-tight">
               Project Support Request
             </h1>
@@ -190,16 +191,10 @@ const RequestPage = () => {
               ))}
             </div>
           </div>
-          <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 py-4 px-4 backdrop-blur-sm md:left-[220px] lg:left-[280px]">
-            <div className="flex justify-end">
-              <Button
-                onClick={() => setStep(2)}
-                disabled={selectedServices.length === 0}
-              >
-                Continue
-              </Button>
-            </div>
-          </div>
+          <SelectedServicesSummary
+            selectedServices={selectedServices}
+            onContinue={() => setStep(2)}
+          />
         </>
       );
     } else {
