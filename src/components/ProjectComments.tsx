@@ -7,13 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, X, FileText, Ticket } from "lucide-react";
 
-interface Attachment {
+export interface Attachment {
   name: string;
   url: string;
   type: 'image' | 'file';
 }
 
-interface Comment {
+export interface Comment {
   id: number;
   user: {
     name: string;
@@ -25,35 +25,12 @@ interface Comment {
   isTicket?: boolean;
 }
 
-// Dummy data for initial comments, one with an attachment
-const initialComments: Comment[] = [
-  {
-    id: 1,
-    user: {
-      name: "Sophia Davis",
-      avatar: "https://i.pravatar.cc/150?u=sophia",
-    },
-    text: "Great progress on the mockups! Just one suggestion: can we try a different color palette for the main CTA button?",
-    timestamp: "2 days ago",
-  },
-  {
-    id: 2,
-    user: {
-      name: "Liam Brown",
-      avatar: "https://i.pravatar.cc/150?u=liam",
-    },
-    text: "Sure, I'll prepare a few alternatives. I've also attached the latest wireframes for the user dashboard.",
-    timestamp: "1 day ago",
-    attachment: {
-        name: "dashboard-wireframe.png",
-        url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=2070&auto=format&fit=crop",
-        type: 'image'
-    }
-  },
-];
+interface ProjectCommentsProps {
+  comments: Comment[];
+  setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
+}
 
-const ProjectComments = () => {
-  const [comments, setComments] = useState<Comment[]>(initialComments);
+const ProjectComments = ({ comments, setComments }: ProjectCommentsProps) => {
   const [newComment, setNewComment] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

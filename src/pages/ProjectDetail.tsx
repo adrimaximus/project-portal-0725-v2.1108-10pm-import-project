@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { dummyProjects, Project } from "@/data/projects";
 import PortalLayout from "@/components/PortalLayout";
@@ -6,11 +7,41 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { File, Activity, CreditCard, Wallet, CalendarDays, Ticket } from "lucide-react";
-import ProjectComments from "@/components/ProjectComments";
+import ProjectComments, { Comment } from "@/components/ProjectComments";
+
+// Dummy data for initial comments, one with an attachment
+const initialComments: Comment[] = [
+  {
+    id: 1,
+    user: {
+      name: "Sophia Davis",
+      avatar: "https://i.pravatar.cc/150?u=sophia",
+    },
+    text: "Great progress on the mockups! Just one suggestion: can we try a different color palette for the main CTA button?",
+    timestamp: "2 days ago",
+  },
+  {
+    id: 2,
+    user: {
+      name: "Liam Brown",
+      avatar: "https://i.pravatar.cc/150?u=liam",
+    },
+    text: "Sure, I'll prepare a few alternatives. I've also attached the latest wireframes for the user dashboard.",
+    timestamp: "1 day ago",
+    attachment: {
+        name: "dashboard-wireframe.png",
+        url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=2070&auto=format&fit=crop",
+        type: 'image'
+    }
+  },
+];
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const project = dummyProjects.find((p) => p.id === projectId);
+  const [comments, setComments] = useState<Comment[]>(initialComments);
+
+  const ticketCount = comments.filter(comment => comment.isTicket).length;
 
   if (!project) {
     return (
@@ -135,8 +166,8 @@ const ProjectDetail = () => {
               <Ticket className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">5</div>
-              <p className="text-xs text-muted-foreground">3 open, 2 closed</p>
+              <div className="text-xl font-bold">{ticketCount}</div>
+              <p className="text-xs text-muted-foreground">{ticketCount} tickets created</p>
             </CardContent>
           </Card>
           <Card>
@@ -208,7 +239,7 @@ const ProjectDetail = () => {
               </CardContent>
             </Card>
 
-            <ProjectComments />
+            <ProjectComments comments={comments} setComments={setComments} />
 
           </div>
 
