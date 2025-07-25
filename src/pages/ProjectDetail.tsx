@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { dummyProjects, Project } from "@/data/projects";
+import { dummyProjects } from "@/data/projects";
 import PortalSidebar from "@/components/PortalSidebar";
 import PortalHeader from "@/components/PortalHeader";
 import {
@@ -90,12 +90,16 @@ const ProjectDetail = () => {
                   </CardHeader>
                   <CardContent className="flex items-center gap-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src="https://i.pravatar.cc/150?u=alma" />
-                      <AvatarFallback>AM</AvatarFallback>
+                      <AvatarImage src={project.assignedTo.avatar} alt={project.assignedTo.name} />
+                      <AvatarFallback>
+                        {project.assignedTo.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-semibold">Alma Mahmberg</p>
-                      <p className="text-sm text-muted-foreground">Supervisor</p>
+                      <p className="font-semibold">{project.assignedTo.name}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -106,7 +110,7 @@ const ProjectDetail = () => {
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground">
-                      This project involves a complete redesign of the client's public-facing website. Key objectives include improving user experience, updating the visual design to match new branding guidelines, and migrating to a more robust content management system. The project is currently in the design phase, with development scheduled to begin next month.
+                      {project.description}
                     </p>
                   </CardContent>
                 </Card>
