@@ -1,33 +1,25 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import ProjectDetail from "./pages/ProjectDetail";
-import RequestPage from "./pages/Request";
-import ChatPage from "./pages/Chat";
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { ProjectProvider } from '@/context/ProjectContext';
+import DashboardPage from './pages/Dashboard';
+import NewRequestPage from './pages/NewRequest';
+import ChatPage from './pages/Chat';
+import { Toaster } from "@/components/ui/toaster"
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+function App() {
+  return (
+    <ProjectProvider>
+      <Router>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/project/:projectId" element={<ProjectDetail />} />
-          <Route path="/request" element={<RequestPage />} />
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/dashboard" element={<Navigate to="/" />} />
+          <Route path="/requests/new" element={<NewRequestPage />} />
           <Route path="/chat" element={<ChatPage />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
+          {/* Tambahkan rute lain di sini jika diperlukan */}
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+      </Router>
+      <Toaster />
+    </ProjectProvider>
+  );
+}
 
 export default App;

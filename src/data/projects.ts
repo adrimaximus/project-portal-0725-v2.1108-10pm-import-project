@@ -1,86 +1,62 @@
-export interface Project {
-  id: string;
-  name: string;
-  description: string;
-  assignedTo: {
-    name: string;
-    avatar: string;
-  };
-  status: "Completed" | "In Progress" | "On Hold";
-  paymentStatus: "Paid" | "Pending" | "Overdue";
-  tickets?: {
-    open: number;
-    total: number;
-  };
-  budget: number;
-  deadline: string;
-  paymentDueDate: string;
-  invoiceAttachmentUrl?: string;
-}
+import { Project } from "@/types";
+
+// Mengekspor kembali tipe untuk memperbaiki kesalahan impor di file-file lama.
+export type { Project };
 
 export const dummyProjects: Project[] = [
   {
-    id: "PROJ-001",
-    name: "E-commerce Platform",
-    description: "Development of a full-featured e-commerce platform with a custom CMS.",
-    assignedTo: { name: "John Doe", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d" },
-    status: "Completed",
-    paymentStatus: "Paid",
-    tickets: { open: 0, total: 10 },
-    budget: 50000000,
-    deadline: "2024-08-15",
-    paymentDueDate: "2024-08-20",
-    invoiceAttachmentUrl: "/invoices/invoice-001.pdf",
-  },
-  {
-    id: "PROJ-002",
-    name: "Mobile Banking App",
-    description: "Create a secure and user-friendly mobile banking application for iOS and Android.",
-    assignedTo: { name: "Jane Smith", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d" },
-    status: "In Progress",
-    paymentStatus: "Pending",
-    tickets: { open: 3, total: 5 },
-    budget: 75000000,
-    deadline: "2024-09-20",
-    paymentDueDate: "2024-09-25",
-    invoiceAttachmentUrl: "/invoices/invoice-002.pdf",
-  },
-  {
-    id: "PROJ-003",
-    name: "CRM Integration",
-    description: "Integrate the new CRM system with existing sales and marketing tools.",
-    assignedTo: { name: "Peter Jones", avatar: "https://i.pravatar.cc/150?u=a04258114e29026702d" },
-    status: "On Hold",
-    paymentStatus: "Overdue",
-    tickets: { open: 1, total: 2 },
-    budget: 30000000,
-    deadline: "2024-07-30",
-    paymentDueDate: "2024-08-05",
-  },
-  {
-    id: "PROJ-004",
+    id: "proj-1",
     name: "Website Redesign",
-    description: "Complete redesign of the corporate website with a focus on modern UI/UX.",
-    assignedTo: { name: "Mary Johnson", avatar: "https://i.pravatar.cc/150?u=a048581f4e29026701d" },
-    status: "In Progress",
+    description: "A complete overhaul of the company website to improve user experience and modernize the design.",
+    status: "On Track",
+    team: [
+      { name: "Jane Doe", src: "https://i.pravatar.cc/40?u=a042581f4e29026704d", fallback: "JD" },
+      { name: "John Smith", src: "https://i.pravatar.cc/40?u=a042581f4e29026705d", fallback: "JS" },
+    ],
+    assignedTo: { name: "Jane Doe", src: "https://i.pravatar.cc/40?u=a042581f4e29026704d", fallback: "JD" },
+    progress: 75,
+    lastUpdated: "3 jam yang lalu",
+    budget: 25000,
+    deadline: "2024-08-15",
     paymentStatus: "Paid",
-    tickets: { open: 5, total: 8 },
-    budget: 45000000,
-    deadline: "2024-10-01",
-    paymentDueDate: "2024-10-06",
-    invoiceAttachmentUrl: "/invoices/invoice-004.pdf",
+    paymentDueDate: "2024-07-01",
+    invoiceAttachmentUrl: "/invoices/inv-001.pdf",
+    tickets: { open: 2, total: 10 },
   },
   {
-    id: "PROJ-005",
-    name: "Data Analytics Dashboard",
-    description: "Build a real-time data analytics dashboard for tracking key business metrics.",
-    assignedTo: { name: "Chris Lee", avatar: "https://i.pravatar.cc/150?u=a092581f4e29026705d" },
-    status: "Completed",
-    paymentStatus: "Paid",
-    tickets: { open: 0, total: 4 },
-    budget: 60000000,
-    deadline: "2024-06-30",
-    paymentDueDate: "2024-07-05",
-    invoiceAttachmentUrl: "/invoices/invoice-005.pdf",
+    id: "proj-2",
+    name: "Mobile App Launch",
+    description: "Launch of the new mobile application for iOS and Android platforms.",
+    status: "At Risk",
+    team: [
+        { name: "Peter Jones", src: "https://i.pravatar.cc/40?u=a042581f4e29026706d", fallback: "PJ" },
+    ],
+    assignedTo: { name: "Peter Jones", src: "https://i.pravatar.cc/40?u=a042581f4e29026706d", fallback: "PJ" },
+    progress: 40,
+    lastUpdated: "1 hari yang lalu",
+    budget: 50000,
+    deadline: "2024-09-01",
+    paymentStatus: "Pending",
+    paymentDueDate: "2024-07-20",
+    invoiceAttachmentUrl: null,
+    tickets: { open: 5, total: 8 },
+  },
+  {
+    id: "proj-3",
+    name: "API Integration",
+    description: "Integrating a new third-party API for enhanced functionality.",
+    status: "In Progress",
+    team: [
+      { name: "Sarah Miller", src: "https://i.pravatar.cc/40?u=a042581f4e29026707d", fallback: "SM" },
+    ],
+    assignedTo: { name: "Sarah Miller", src: "https://i.pravatar.cc/40?u=a042581f4e29026707d", fallback: "SM" },
+    progress: 50,
+    lastUpdated: "2 hari yang lalu",
+    budget: 15000,
+    deadline: "2024-07-30",
+    paymentStatus: "Pending",
+    paymentDueDate: "2024-07-15",
+    invoiceAttachmentUrl: null,
+    tickets: { open: 1, total: 3 },
   },
 ];
