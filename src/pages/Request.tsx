@@ -300,7 +300,7 @@ const RequestPage = () => {
                   </Popover>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date</Label>
+                  <Label htmlFor="endDate">Due Date Project</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
