@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PortalSidebar from "@/components/PortalSidebar";
 import PortalHeader from "@/components/PortalHeader";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ type Service = {
 type Comment = {
   text: string;
   file: File | null;
+  fileURL?: string;
   sender: string;
   avatar: string;
 };
@@ -41,6 +42,17 @@ const ServicesPage = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [currentComment, setCurrentComment] = useState("");
   const [commentFile, setCommentFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    // Cleanup object URLs on unmount to prevent memory leaks
+    return () => {
+      comments.forEach(comment => {
+        if (comment.fileURL) {
+          URL.revokeObjectURL(comment.fileURL);
+        }
+      });
+    };
+  }, [comments]);
 
   const handleServiceSelect = (service: Service) => {
     const isFeatured = service.title === "End to End Services";
@@ -71,6 +83,7 @@ const ServicesPage = () => {
     const newComment: Comment = {
       text: currentComment,
       file: commentFile,
+      fileURL: commentFile ? URL.createObjectURL(commentFile) : undefined,
       sender: "You", // Dummy sender
       avatar: "https://github.com/shadcn.png", // Dummy avatar
     };
@@ -326,7 +339,7 @@ const ServicesPage = () => {
                   <CardTitle>Additional Comments</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {comments.map((comment, index) => (
                       <div key={index} className="flex items-start gap-3">
                         <Avatar className="h-8 w-8 border">
@@ -337,11 +350,36 @@ const ServicesPage = () => {
                           <p className="text-sm font-semibold">{comment.sender}</p>
                           <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg mt-1">
                             <p className="whitespace-pre-wrap">{comment.text}</p>
-                            {comment.file && (
-                              <div className="mt-2 flex items-center gap-2 text-xs border-t pt-2">
-                                <Paperclip className="h-3 w-3" />
-                                <span>{comment.file.name}</span>
-                              </div>
+                            {comment.file && comment.fileURL && (
+                              <a
+                                href={comment.fileURL}
+                                download={comment.file.name}
+                                className="mt-2 block rounded-lg border p-2 transition-colors hover:bg-muted"
+                              >
+                                {comment.file.type.startsWith("image/") ? (
+                                  <div className="flex items-center gap-3">
+                                    <img
+                                      src={comment.fileURL}
+                                      alt="Image thumbnail"
+                                      className="h-12 w-12 rounded-md object-cover"
+                                    />
+                                    <div className="text-sm">
+                                      <p className="font-medium text-primary">{comment.file.name}</p>
+                                      <p className="text-xs text-muted-foreground">Click to download</p>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-3 text-sm">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-md bg-background">
+                                      <Paperclip className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-primary">{comment.file.name}</p>
+                                      <p className="text-xs text-muted-foreground">Click to download</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </a>
                             )}
                           </div>
                         </div>
