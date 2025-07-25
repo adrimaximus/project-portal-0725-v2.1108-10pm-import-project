@@ -36,6 +36,7 @@ import {
   Ticket,
   Plane,
   VideoIcon,
+  LayoutGrid,
 } from "lucide-react";
 
 export type Service = {
@@ -261,5 +262,17 @@ export const services: Service[] = [
     description: "Professional event video documentation services",
     icon: VideoIcon,
     iconColor: "text-red-600 bg-red-100",
+  },
+  {
+    title: "VIP Services",
+    description: "Premium guest services",
+    icon: Star,
+    iconColor: "text-purple-600 bg-purple-100",
+  },
+  {
+    title: "Virtual Events",
+    description: "Online event platform solutions",
+    icon: LayoutGrid,
+    iconColor: "text-green-600 bg-green-100",
   },
 ];
