@@ -42,7 +42,7 @@ const ProjectsTable = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Project Name</TableHead>
-              <TableHead>Client</TableHead>
+              <TableHead>Assigned To</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Budget</TableHead>
               <TableHead>Deadline</TableHead>
@@ -56,7 +56,7 @@ const ProjectsTable = () => {
                 className="cursor-pointer hover:bg-muted/50"
               >
                 <TableCell className="font-medium">{project.name}</TableCell>
-                <TableCell>{project.client}</TableCell>
+                <TableCell>{project.assignedTo}</TableCell>
                 <TableCell>
                   <Badge variant={getStatusBadgeVariant(project.status)}>
                     {project.status}
