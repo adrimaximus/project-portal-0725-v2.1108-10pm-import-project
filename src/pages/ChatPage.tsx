@@ -5,6 +5,7 @@ import ChatWindow from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
 import { dummyConversations, Conversation, Message } from "@/data/chat";
 import { Collaborator } from "@/types";
+import { dummyProjects } from "@/data/projects";
 
 const ChatPage = () => {
   const [conversations, setConversations] =
@@ -150,6 +151,7 @@ const ChatPage = () => {
         <ChatWindow
           selectedConversation={selectedConversation}
           onSendMessage={handleSendMessage}
+          projects={dummyProjects}
         />
       </div>
     </PortalLayout>

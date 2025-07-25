@@ -2,13 +2,15 @@ import { Conversation } from "@/data/chat";
 import ChatHeader from "./ChatHeader";
 import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
+import { Project } from "@/data/projects";
 
 interface ChatWindowProps {
   selectedConversation: Conversation | undefined;
   onSendMessage: (message: string, file?: File) => void;
+  projects: Project[];
 }
 
-const ChatWindow = ({ selectedConversation, onSendMessage }: ChatWindowProps) => {
+const ChatWindow = ({ selectedConversation, onSendMessage, projects }: ChatWindowProps) => {
   if (!selectedConversation) {
     return (
       <div className="flex flex-col h-full items-center justify-center bg-muted/40">
@@ -32,6 +34,7 @@ const ChatWindow = ({ selectedConversation, onSendMessage }: ChatWindowProps) =>
       <ChatInput 
         onSendMessage={onSendMessage} 
         members={selectedConversation.isGroup ? selectedConversation.members : []}
+        projects={projects}
       />
     </div>
   );
