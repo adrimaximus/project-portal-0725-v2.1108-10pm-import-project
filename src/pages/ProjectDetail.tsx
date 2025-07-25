@@ -98,7 +98,7 @@ const ProjectDetail = () => {
     setEditedProject({ ...editedProject, [name]: value as any });
   };
 
-  const handleDateChange = (name: 'deadline', date: Date | undefined) => {
+  const handleDateChange = (name: 'deadline' | 'paymentDueDate', date: Date | undefined) => {
     if (!editedProject || !date) return;
     setEditedProject({ ...editedProject, [name]: date.toISOString().split('T')[0] });
   };
@@ -188,12 +188,11 @@ const ProjectDetail = () => {
     year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  const paymentDueDate = new Date(project.deadline);
-  paymentDueDate.setDate(paymentDueDate.getDate() + 7); // Dummy due date: 7 days after project deadline
-
-  const paymentDueDateFormatted = paymentDueDate.toLocaleDateString("en-US", {
-    year: 'numeric', month: 'long', day: 'numeric'
-  });
+  const paymentDueDateFormatted = project.paymentDueDate
+    ? new Date(project.paymentDueDate).toLocaleDateString("en-US", {
+        year: 'numeric', month: 'long', day: 'numeric'
+      })
+    : "Not Set";
 
   return (
     <PortalLayout>
@@ -305,7 +304,32 @@ const ProjectDetail = () => {
               <CalendarClock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
+              {isEditing && editedProject ? (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !editedProject.paymentDueDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {editedProject.paymentDueDate ? format(new Date(editedProject.paymentDueDate), "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={editedProject.paymentDueDate ? new Date(editedProject.paymentDueDate) : undefined}
+                      onSelect={(date) => handleDateChange('paymentDueDate', date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
+              )}
             </CardContent>
           </Card>
           <Card>
