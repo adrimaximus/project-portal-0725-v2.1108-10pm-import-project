@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, X } from "lucide-react";
+import { currentUser } from "@/data/collaborators";
 
 interface ChatInputProps {
   onSendMessage: (message: string, file?: File) => void;
@@ -43,7 +44,7 @@ const ChatInput = ({ onSendMessage }: ChatInputProps) => {
     <div className="p-4 border-t bg-background">
       <form onSubmit={handleSubmit} className="flex w-full items-start space-x-4">
         <Avatar className="h-9 w-9 border">
-          <AvatarImage src="https://i.pravatar.cc/150?u=currentuser" alt="You" />
+          <AvatarImage src={currentUser.src} alt="You" />
           <AvatarFallback>ME</AvatarFallback>
         </Avatar>
         <div className="w-full">
