@@ -113,7 +113,7 @@ const RichTextEditor = ({ value, onChange, placeholder }: RichTextEditorProps) =
     },
     editorProps: {
       attributes: {
-        class: 'min-h-[120px] w-full rounded-b-md border-x border-b border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 prose dark:prose-invert max-w-none',
+        class: 'min-h-[120px] w-full rounded-b-md border-x border-b border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 prose dark:prose-invert max-w-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0',
       },
     },
   })
