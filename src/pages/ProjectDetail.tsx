@@ -7,9 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { File, Activity, CreditCard, Wallet, CalendarDays, Ticket, CalendarClock } from "lucide-react";
+import { File, Activity, CreditCard, Wallet, CalendarDays, Ticket, CalendarClock, Pencil } from "lucide-react";
 import ProjectComments, { Comment } from "@/components/ProjectComments";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 // Dummy data for initial comments, one with an attachment
 const initialComments: Comment[] = [
@@ -40,7 +49,11 @@ const initialComments: Comment[] = [
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const project = dummyProjects.find((p) => p.id === projectId);
+  const projectData = dummyProjects.find((p) => p.id === projectId);
+
+  const [project, setProject] = useState<Project | undefined>(projectData);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProject, setEditedProject] = useState<Project | null>(null);
   const [comments, setComments] = useState<Comment[]>(initialComments);
 
   const ticketCount = comments.filter(comment => comment.isTicket).length;
@@ -54,6 +67,46 @@ const ProjectDetail = () => {
       </PortalLayout>
     );
   }
+
+  const handleEdit = () => {
+    setEditedProject({ ...project });
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditedProject(null);
+  };
+
+  const handleSave = () => {
+    if (editedProject) {
+      setProject(editedProject);
+      // In a real app, you would make an API call here to save the data
+    }
+    setIsEditing(false);
+    setEditedProject(null);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (!editedProject) return;
+    const { name, value } = e.target;
+    setEditedProject({ ...editedProject, [name]: value });
+  };
+
+  const handleSelectChange = (name: 'status' | 'paymentStatus', value: string) => {
+    if (!editedProject) return;
+    setEditedProject({ ...editedProject, [name]: value as any });
+  };
+
+  const handleDateChange = (name: 'deadline', date: Date | undefined) => {
+    if (!editedProject || !date) return;
+    setEditedProject({ ...editedProject, [name]: date.toISOString().split('T')[0] });
+  };
+
+  const handleBudgetChange = (value: number | undefined) => {
+    if (!editedProject) return;
+    setEditedProject({ ...editedProject, budget: value || 0 });
+  };
 
   // Dummy data for project services, assuming this would come from the project object
   const projectServiceNames = ['Web Development', 'UI/UX Design', 'API Integration'];
@@ -146,9 +199,47 @@ const ProjectDetail = () => {
     <PortalLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-          <p className="text-muted-foreground mt-1">{project.description}</p>
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex-grow">
+            {isEditing && editedProject ? (
+              <div className="space-y-2">
+                <Label htmlFor="name" className="sr-only">Project Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={editedProject.name}
+                  onChange={handleInputChange}
+                  className="text-3xl font-bold tracking-tight h-auto p-0 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  placeholder="Project Name"
+                />
+                <Label htmlFor="description" className="sr-only">Project Description</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={editedProject.description}
+                  onChange={handleInputChange}
+                  placeholder="Project description"
+                />
+              </div>
+            ) : (
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+                <p className="text-muted-foreground mt-1">{project.description}</p>
+              </div>
+            )}
+          </div>
+          <div className="flex-shrink-0">
+            {isEditing ? (
+              <div className="flex gap-2">
+                <Button onClick={handleSave}>Save</Button>
+                <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+              </div>
+            ) : (
+              <Button onClick={handleEdit}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit Project
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Key Info Cards */}
@@ -159,9 +250,26 @@ const ProjectDetail = () => {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <Badge variant={getStatusBadgeVariant(project.status)}>
-                {project.status}
-              </Badge>
+              {isEditing && editedProject ? (
+                <Select
+                  value={editedProject.status}
+                  onValueChange={(value) => handleSelectChange('status', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="On Hold">On Hold</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Badge variant={getStatusBadgeVariant(project.status)}>
+                  {project.status}
+                </Badge>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -170,9 +278,25 @@ const ProjectDetail = () => {
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
-                {project.paymentStatus}
-              </Badge>
+              {isEditing && editedProject ? (
+                <Select
+                  value={editedProject.paymentStatus}
+                  onValueChange={(value) => handleSelectChange('paymentStatus', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Overdue">Overdue</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
+                  {project.paymentStatus}
+                </Badge>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -200,7 +324,20 @@ const ProjectDetail = () => {
               <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{budgetFormatted}</div>
+              {isEditing && editedProject ? (
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                    IDR
+                  </span>
+                  <CurrencyInput
+                    value={editedProject.budget}
+                    onChange={handleBudgetChange}
+                    className="pl-12"
+                  />
+                </div>
+              ) : (
+                <div className="text-xl font-bold">{budgetFormatted}</div>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -209,7 +346,32 @@ const ProjectDetail = () => {
               <CalendarDays className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{deadlineFormatted}</div>
+              {isEditing && editedProject ? (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !editedProject.deadline && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {editedProject.deadline ? format(new Date(editedProject.deadline), "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={new Date(editedProject.deadline)}
+                      onSelect={(date) => handleDateChange('deadline', date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <div className="text-xl font-bold">{deadlineFormatted}</div>
+              )}
             </CardContent>
           </Card>
         </div>
