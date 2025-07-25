@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Paperclip, Send, X, FileText } from "lucide-react";
+import { Paperclip, Send, X, FileText, Ticket } from "lucide-react";
 
 interface Attachment {
   name: string;
@@ -162,7 +162,7 @@ const ProjectComments = () => {
               <div className="relative">
                   <Textarea 
                     placeholder="Type your comment here..." 
-                    className="min-h-[60px] pr-28"
+                    className="min-h-[60px] pr-36"
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                   />
@@ -171,6 +171,10 @@ const ProjectComments = () => {
                       <Button type="button" variant="ghost" size="icon" onClick={handleAttachClick}>
                           <Paperclip className="h-4 w-4" />
                           <span className="sr-only">Attach file</span>
+                      </Button>
+                      <Button type="button" variant="ghost" size="icon">
+                          <Ticket className="h-4 w-4" />
+                          <span className="sr-only">Create ticket</span>
                       </Button>
                       <Button type="submit" size="icon">
                           <Send className="h-4 w-4" />
