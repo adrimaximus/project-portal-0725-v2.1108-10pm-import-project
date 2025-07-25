@@ -14,6 +14,7 @@ export interface Project {
   };
   budget: number;
   deadline: string;
+  paymentDueDate: string;
   invoiceAttachmentUrl?: string;
 }
 
@@ -28,6 +29,7 @@ export const dummyProjects: Project[] = [
     tickets: { open: 0, total: 10 },
     budget: 50000000,
     deadline: "2024-08-15",
+    paymentDueDate: "2024-08-20",
     invoiceAttachmentUrl: "/invoices/invoice-001.pdf",
   },
   {
@@ -40,6 +42,7 @@ export const dummyProjects: Project[] = [
     tickets: { open: 3, total: 5 },
     budget: 75000000,
     deadline: "2024-09-20",
+    paymentDueDate: "2024-09-25",
     invoiceAttachmentUrl: "/invoices/invoice-002.pdf",
   },
   {
@@ -52,6 +55,7 @@ export const dummyProjects: Project[] = [
     tickets: { open: 1, total: 2 },
     budget: 30000000,
     deadline: "2024-07-30",
+    paymentDueDate: "2024-08-05",
   },
   {
     id: "PROJ-004",
@@ -63,6 +67,7 @@ export const dummyProjects: Project[] = [
     tickets: { open: 5, total: 8 },
     budget: 45000000,
     deadline: "2024-10-01",
+    paymentDueDate: "2024-10-06",
     invoiceAttachmentUrl: "/invoices/invoice-004.pdf",
   },
   {
@@ -75,6 +80,7 @@ export const dummyProjects: Project[] = [
     tickets: { open: 0, total: 4 },
     budget: 60000000,
     deadline: "2024-06-30",
+    paymentDueDate: "2024-07-05",
     invoiceAttachmentUrl: "/invoices/invoice-005.pdf",
   },
 ];

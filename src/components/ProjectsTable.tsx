@@ -67,6 +67,7 @@ const ProjectsTable = () => {
                 <TableHead>Open Tickets</TableHead>
                 <TableHead className="text-right">Budget</TableHead>
                 <TableHead>Project Due Date</TableHead>
+                <TableHead>Payment Due Date</TableHead>
                 <TableHead className="text-center">Attachment Invoice</TableHead>
               </TableRow>
             </TableHeader>
@@ -125,6 +126,9 @@ const ProjectsTable = () => {
                   </TableCell>
                   <TableCell>
                     {new Date(project.deadline).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(project.paymentDueDate).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-center">
                     {project.invoiceAttachmentUrl ? (
