@@ -331,7 +331,7 @@ const RequestPage = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="briefAttachment">Project Brief</Label>
+                <Label htmlFor="briefAttachment">Brief File</Label>
                 <div className="relative">
                   <Input
                     id="briefAttachment"
