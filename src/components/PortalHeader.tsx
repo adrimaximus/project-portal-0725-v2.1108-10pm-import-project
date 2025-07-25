@@ -1,6 +1,6 @@
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { CircleUser, Menu, Package, Home, Bell, Settings, LayoutGrid } from "lucide-react";
+import { CircleUser, Menu, Package, Home, Bell, Settings, LayoutGrid, MessageSquare } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/request", label: "Request", icon: LayoutGrid },
+  { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "#", label: "Notifications", icon: Bell, badge: 3 },
   { href: "#", label: "Settings", icon: Settings },
 ];

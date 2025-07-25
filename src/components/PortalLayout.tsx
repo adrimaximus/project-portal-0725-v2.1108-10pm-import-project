@@ -9,9 +9,10 @@ import ChatPanel from "./ChatPanel";
 
 type PortalLayoutProps = {
   children: ReactNode;
+  noPadding?: boolean;
 };
 
-const PortalLayout = ({ children }: PortalLayoutProps) => {
+const PortalLayout = ({ children, noPadding = false }: PortalLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedCollaborator, setSelectedCollaborator] = useState<Collaborator | null>(null);
 
@@ -51,7 +52,10 @@ const PortalLayout = ({ children }: PortalLayoutProps) => {
         <header className="sticky top-0 z-10 bg-background">
           <PortalHeader />
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-auto">
+        <main className={cn(
+          "flex flex-1 flex-col overflow-auto",
+          !noPadding && "gap-4 p-4 lg:gap-6 lg:p-6"
+        )}>
           {children}
         </main>
       </div>
