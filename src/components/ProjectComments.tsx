@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, MouseEvent, FormEvent } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,7 @@ interface Comment {
   text: string;
   timestamp: string;
   attachment?: Attachment;
+  isTicket?: boolean;
 }
 
 // Dummy data for initial comments, one with an attachment
@@ -74,8 +75,7 @@ const ProjectComments = () => {
     }
   };
 
-  const handleSendComment = (e: React.FormEvent) => {
-    e.preventDefault();
+  const createComment = (isTicket = false) => {
     if (newComment.trim() === "" && !attachedFile) return;
 
     const newCommentObject: Comment = {
@@ -86,6 +86,7 @@ const ProjectComments = () => {
       },
       text: newComment,
       timestamp: "Just now",
+      isTicket,
     };
 
     if (attachedFile) {
@@ -99,6 +100,16 @@ const ProjectComments = () => {
     setComments([...comments, newCommentObject]);
     setNewComment("");
     handleRemoveAttachment();
+  };
+
+  const handleSendComment = (e: FormEvent) => {
+    e.preventDefault();
+    createComment(false);
+  };
+
+  const handleSendTicket = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    createComment(true);
   };
 
   return (
@@ -123,7 +134,12 @@ const ProjectComments = () => {
                     <p className="font-semibold text-sm">{comment.user.name}</p>
                     <p className="text-xs text-muted-foreground">{comment.timestamp}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.text}</p>
+                  <div className="flex items-start gap-2">
+                    {comment.isTicket && (
+                      <Ticket className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                    )}
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.text}</p>
+                  </div>
                   {comment.attachment && (
                     <a
                       href={comment.attachment.url}
@@ -172,7 +188,7 @@ const ProjectComments = () => {
                           <Paperclip className="h-4 w-4" />
                           <span className="sr-only">Attach file</span>
                       </Button>
-                      <Button type="button" variant="ghost" size="icon">
+                      <Button type="button" variant="ghost" size="icon" onClick={handleSendTicket}>
                           <Ticket className="h-4 w-4" />
                           <span className="sr-only">Create ticket</span>
                       </Button>
