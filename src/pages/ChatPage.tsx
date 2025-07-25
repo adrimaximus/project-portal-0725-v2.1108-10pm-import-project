@@ -16,7 +16,7 @@ const ChatPage = () => {
     setSelectedConversationId(id);
   };
 
-  const handleSendMessage = (messageText: string) => {
+  const handleSendMessage = (messageText: string, file?: File) => {
     if (!selectedConversationId) return;
 
     const newMessage: Message = {
@@ -31,13 +31,23 @@ const ChatPage = () => {
       senderAvatar: "https://i.pravatar.cc/150?u=me",
     };
 
+    if (file) {
+      newMessage.attachment = {
+        name: file.name,
+        url: URL.createObjectURL(file),
+        type: file.type.startsWith('image/') ? 'image' : 'file',
+      };
+    }
+
+    const lastMessage = messageText || `Sent an attachment: ${file?.name}`;
+
     setConversations((prev) =>
       prev.map((convo) =>
         convo.id === selectedConversationId
           ? {
               ...convo,
               messages: [...convo.messages, newMessage],
-              lastMessage: messageText,
+              lastMessage: lastMessage,
               lastMessageTimestamp: newMessage.timestamp,
             }
           : convo
@@ -104,8 +114,8 @@ const ChatPage = () => {
   );
 
   return (
-    <PortalLayout>
-      <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-[calc(100vh-4rem)]">
+    <PortalLayout noPadding>
+      <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full">
         <ChatList
           conversations={conversations}
           selectedConversationId={selectedConversationId}

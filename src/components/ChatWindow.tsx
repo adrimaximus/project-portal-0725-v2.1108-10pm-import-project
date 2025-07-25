@@ -5,7 +5,7 @@ import ChatInput from "./ChatInput";
 
 interface ChatWindowProps {
   selectedConversation: Conversation | undefined;
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, file?: File) => void;
 }
 
 const ChatWindow = ({ selectedConversation, onSendMessage }: ChatWindowProps) => {

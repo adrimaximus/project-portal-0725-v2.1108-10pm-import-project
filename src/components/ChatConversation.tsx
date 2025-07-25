@@ -1,7 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
 import { Message } from "@/data/chat";
-import { File, Image } from "lucide-react";
+import MessageAttachment from "./MessageAttachment";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -11,57 +10,22 @@ const ChatConversation = ({ messages }: ChatConversationProps) => {
   return (
     <div className="flex-1 p-6 space-y-6 overflow-y-auto">
       {messages.map((message) => (
-        <div
-          key={message.id}
-          className={cn(
-            "flex items-start gap-4",
-            message.sender === "me" && "flex-row-reverse"
-          )}
-        >
-          <Avatar className="h-10 w-10 border">
-            <AvatarImage src={message.senderAvatar} />
+        <div key={message.id} className="flex items-start gap-4">
+          <Avatar className="h-9 w-9 border">
+            <AvatarImage src={message.senderAvatar} alt={message.senderName} />
             <AvatarFallback>
-              {message.senderName.charAt(0)}
+              {message.senderName === "You" ? "ME" : message.senderName.split(" ").map(n => n[0]).join("")}
             </AvatarFallback>
           </Avatar>
-          <div
-            className={cn(
-              "max-w-md rounded-lg px-4 py-3",
-              message.sender === "me"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted"
-            )}
-          >
-            <p className="font-semibold text-sm mb-1">{message.senderName}</p>
-            <p className="text-sm">{message.text}</p>
+          <div className="grid gap-1.5 w-full">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-sm">{message.senderName}</p>
+              <p className="text-xs text-muted-foreground">{message.timestamp}</p>
+            </div>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{message.text}</p>
             {message.attachment && (
-              <a
-                href={message.attachment.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "mt-2 flex items-center gap-2 rounded-md p-2",
-                  message.sender === "me" ? "bg-primary-foreground/10 hover:bg-primary-foreground/20" : "bg-background/50 hover:bg-background"
-                )}
-              >
-                {message.attachment.type === 'image' ? (
-                  <Image className="h-5 w-5" />
-                ) : (
-                  <File className="h-5 w-5" />
-                )}
-                <span className="text-sm font-medium truncate">{message.attachment.name}</span>
-              </a>
+              <MessageAttachment attachment={message.attachment} />
             )}
-            <p
-              className={cn(
-                "text-xs mt-2",
-                message.sender === "me"
-                  ? "text-primary-foreground/70"
-                  : "text-muted-foreground"
-              )}
-            >
-              {message.timestamp}
-            </p>
           </div>
         </div>
       ))}

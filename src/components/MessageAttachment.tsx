@@ -4,12 +4,12 @@ interface MessageAttachmentProps {
   attachment: {
     name: string;
     url: string;
-    type: string;
+    type: 'image' | 'file';
   };
 }
 
 const MessageAttachment = ({ attachment }: MessageAttachmentProps) => {
-  const isImage = attachment.type.startsWith('image/');
+  const isImage = attachment.type === 'image';
 
   return (
     <a
