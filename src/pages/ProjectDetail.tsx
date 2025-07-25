@@ -1,21 +1,11 @@
-import { useParams, Link } from "react-router-dom";
-import { dummyProjects } from "@/data/projects";
-import PortalSidebar from "@/components/PortalSidebar";
-import PortalHeader from "@/components/PortalHeader";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { useParams } from "react-router-dom";
+import { dummyProjects, Project } from "@/data/projects";
+import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import ProjectChecklist from "@/components/ProjectChecklist";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectActivity from "@/components/ProjectActivity";
+import { File, Clock } from "lucide-react";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -23,120 +13,171 @@ const ProjectDetail = () => {
 
   if (!project) {
     return (
-      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-        <PortalSidebar />
-        <div className="flex flex-col">
-          <PortalHeader />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Project not found</h1>
-              <Link to="/" className="text-primary hover:underline">
-                Back to Dashboard
-              </Link>
-            </div>
-          </main>
+      <PortalLayout>
+        <div className="flex items-center justify-center h-full">
+          <p className="text-lg text-muted-foreground">Project not found.</p>
         </div>
-      </div>
+      </PortalLayout>
     );
   }
 
-  const progressValue = project.status === "Completed" ? 100 : project.status === "In Progress" ? 66 : 10;
+  const getStatusBadgeVariant = (status: Project["status"]) => {
+    switch (status) {
+      case "Completed":
+        return "default";
+      case "In Progress":
+        return "secondary";
+      case "On Hold":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
+  const getPaymentStatusBadgeVariant = (status: Project["paymentStatus"]) => {
+    switch (status) {
+      case "Paid":
+        return "default";
+      case "Pending":
+        return "secondary";
+      case "Overdue":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
+  const budgetFormatted = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(project.budget);
+
+  const deadlineFormatted = new Date(project.deadline).toLocaleDateString("en-US", {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <PortalSidebar />
-      <div className="flex flex-col">
-        <PortalHeader />
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-          <div className="space-y-4">
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link to="/">Dashboard</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{project.name}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+    <PortalLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+          <p className="text-muted-foreground mt-1">{project.description}</p>
+        </div>
 
-            <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold">{project.name}</h1>
-            </div>
+        {/* Key Info Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Project Status</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <Badge variant={getStatusBadgeVariant(project.status)}>
+                {project.status}
+              </Badge>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Payment Status</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
+                {project.paymentStatus}
+              </Badge>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Budget</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">{budgetFormatted}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Deadline</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">{deadlineFormatted}</div>
+            </CardContent>
+          </Card>
+        </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <div className="lg:col-span-2 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Status</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Tabs defaultValue={project.status.toLowerCase().replace(" ", "")} className="w-full">
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="inprogress">In Progress</TabsTrigger>
-                        <TabsTrigger value="onhold">On Hold</TabsTrigger>
-                        <TabsTrigger value="completed">Completed</TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </CardContent>
-                </Card>
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Main Content */}
+          <div className="md:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Project Progress</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Progress value={65} className="w-full" />
+                  <p className="text-sm text-muted-foreground">65% complete</p>
+                </div>
+              </CardContent>
+            </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Assigned To</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex items-center gap-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={project.assignedTo.avatar} alt={project.assignedTo.name} />
-                      <AvatarFallback>
-                        {project.assignedTo.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold">{project.assignedTo.name}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Description</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">
-                      {project.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Progress</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">Overall Progress</span>
-                      <span className="text-sm font-semibold">{progressValue}%</span>
-                    </div>
-                    <Progress value={progressValue} />
-                  </CardContent>
-                </Card>
-                <ProjectChecklist />
-                <ProjectActivity projectId={project.id} />
-              </div>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">No recent activity.</p>
+              </CardContent>
+            </Card>
           </div>
-        </main>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Assigned To</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarImage src={project.assignedTo.avatar} />
+                    <AvatarFallback>
+                      {project.assignedTo.name.split(" ").map(n => n[0]).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold">{project.assignedTo.name}</p>
+                    <p className="text-sm text-muted-foreground">Project Manager</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Project Files</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <File className="h-4 w-4 text-muted-foreground" />
+                    <span className="hover:underline cursor-pointer">project_brief.pdf</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <File className="h-4 w-4 text-muted-foreground" />
+                    <span className="hover:underline cursor-pointer">design_mockups.zip</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
-    </div>
+    </PortalLayout>
   );
 };
 
