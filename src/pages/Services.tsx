@@ -4,7 +4,7 @@ import PortalHeader from "@/components/PortalHeader";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { services } from "@/data/services";
-import { Search, ArrowLeft, LucideIcon, Calendar as CalendarIcon, Paperclip } from "lucide-react";
+import { Search, ArrowLeft, LucideIcon, Calendar as CalendarIcon, Paperclip, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Define the type for a service based on the data structure
 type Service = {
@@ -21,12 +22,24 @@ type Service = {
   iconColor: string;
 };
 
+// Define the type for a comment
+type Comment = {
+  text: string;
+  file: File | null;
+  sender: string;
+  avatar: string;
+};
+
 const ServicesPage = () => {
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
+  
+  // State for comments
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [currentComment, setCurrentComment] = useState("");
   const [commentFile, setCommentFile] = useState<File | null>(null);
 
   const handleServiceSelect = (service: Service) => {
@@ -36,24 +49,35 @@ const ServicesPage = () => {
     );
 
     if (isFeatured) {
-      // If "End to End" is clicked, it's the only selection or no selection
       setSelectedServices(isAlreadySelected ? [] : [service]);
     } else {
-      // For other services, allow multi-select but deselect "End to End"
       let newSelectedServices = selectedServices.filter(
         (s) => s.title !== "End to End Services"
       );
       if (isAlreadySelected) {
-        // Deselect the service
         newSelectedServices = newSelectedServices.filter(
           (s) => s.title !== service.title
         );
       } else {
-        // Select the service
         newSelectedServices.push(service);
       }
       setSelectedServices(newSelectedServices);
     }
+  };
+
+  const handleSendComment = () => {
+    if (currentComment.trim() === "" && !commentFile) return;
+
+    const newComment: Comment = {
+      text: currentComment,
+      file: commentFile,
+      sender: "You", // Dummy sender
+      avatar: "https://github.com/shadcn.png", // Dummy avatar
+    };
+
+    setComments([...comments, newComment]);
+    setCurrentComment("");
+    setCommentFile(null);
   };
 
   const featuredService = services.find(
@@ -302,30 +326,70 @@ const ServicesPage = () => {
                   <CardTitle>Additional Comments</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    <Label htmlFor="comments">Comments</Label>
+                  <div className="space-y-6">
+                    {comments.map((comment, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <Avatar className="h-8 w-8 border">
+                          <AvatarImage src={comment.avatar} alt={comment.sender} />
+                          <AvatarFallback>{comment.sender.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold">{comment.sender}</p>
+                          <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg mt-1">
+                            <p className="whitespace-pre-wrap">{comment.text}</p>
+                            {comment.file && (
+                              <div className="mt-2 flex items-center gap-2 text-xs border-t pt-2">
+                                <Paperclip className="h-3 w-3" />
+                                <span>{comment.file.name}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t">
                     <div className="relative">
+                      <Label htmlFor="comments" className="sr-only">Add a comment</Label>
                       <Textarea
                         id="comments"
-                        placeholder="Any additional notes or specific instructions..."
-                        className="resize-none pr-12"
+                        placeholder="Type your comment here..."
+                        className="resize-none pr-24 min-h-[80px]"
+                        value={currentComment}
+                        onChange={(e) => setCurrentComment(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendComment();
+                          }
+                        }}
                       />
-                      <Input
-                        id="comment-attachment"
-                        type="file"
-                        className="sr-only"
-                        onChange={(e) => setCommentFile(e.target.files ? e.target.files[0] : null)}
-                      />
-                      <Button asChild variant="ghost" size="icon" className="absolute bottom-1 right-1">
-                        <Label htmlFor="comment-attachment" className="cursor-pointer">
-                          <Paperclip className="h-5 w-5 text-muted-foreground" />
-                          <span className="sr-only">Attach file</span>
-                        </Label>
-                      </Button>
+                      <div className="absolute bottom-2 right-2 flex items-center">
+                        <Input
+                          id="comment-attachment"
+                          type="file"
+                          className="sr-only"
+                          onChange={(e) => {
+                            const file = e.target.files ? e.target.files[0] : null;
+                            setCommentFile(file);
+                          }}
+                        />
+                        <Button asChild variant="ghost" size="icon">
+                          <Label htmlFor="comment-attachment" className="cursor-pointer">
+                            <Paperclip className="h-5 w-5 text-muted-foreground" />
+                            <span className="sr-only">Attach file</span>
+                          </Label>
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={handleSendComment} disabled={!currentComment.trim() && !commentFile}>
+                          <Send className="h-5 w-5" />
+                          <span className="sr-only">Send comment</span>
+                        </Button>
+                      </div>
                     </div>
                     {commentFile && (
                       <p className="text-sm text-muted-foreground pt-2">
-                        File attached: {commentFile.name}
+                        File to attach: {commentFile.name}
                       </p>
                     )}
                   </div>
