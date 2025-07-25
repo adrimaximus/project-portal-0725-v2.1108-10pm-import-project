@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { File, Activity, CreditCard, Wallet, CalendarDays } from "lucide-react";
+import { File, Activity, CreditCard, Wallet, CalendarDays, Ticket } from "lucide-react";
 import ProjectComments from "@/components/ProjectComments";
 
 const ProjectDetail = () => {
@@ -106,7 +106,7 @@ const ProjectDetail = () => {
         </div>
 
         {/* Key Info Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Project Status</CardTitle>
@@ -127,6 +127,16 @@ const ProjectDetail = () => {
               <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
                 {project.paymentStatus}
               </Badge>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Support Tickets</CardTitle>
+              <Ticket className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">5</div>
+              <p className="text-xs text-muted-foreground">3 open, 2 closed</p>
             </CardContent>
           </Card>
           <Card>
