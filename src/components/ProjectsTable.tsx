@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { dummyProjects, Project } from "@/data/projects";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 const ProjectsTable = () => {
   const navigate = useNavigate();
@@ -56,7 +57,23 @@ const ProjectsTable = () => {
                 className="cursor-pointer hover:bg-muted/50"
               >
                 <TableCell className="font-medium">{project.name}</TableCell>
-                <TableCell>{project.assignedTo}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={project.assignedTo.avatar}
+                        alt={project.assignedTo.name}
+                      />
+                      <AvatarFallback>
+                        {project.assignedTo.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{project.assignedTo.name}</span>
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Badge variant={getStatusBadgeVariant(project.status)}>
                     {project.status}

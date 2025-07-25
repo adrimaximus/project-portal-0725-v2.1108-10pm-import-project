@@ -1,7 +1,10 @@
 export type Project = {
   id: string;
   name: string;
-  assignedTo: string;
+  assignedTo: {
+    name: string;
+    avatar: string;
+  };
   status: "Completed" | "In Progress" | "On Hold";
   budget: number;
   deadline: string;
@@ -13,7 +16,10 @@ export const dummyProjects: Project[] = [
   {
     id: "prj-001",
     name: "E-commerce Platform Launch",
-    assignedTo: "John Doe",
+    assignedTo: {
+      name: "John Doe",
+      avatar: "https://i.pravatar.cc/150?u=john.doe",
+    },
     status: "In Progress",
     budget: 75000,
     deadline: "2024-08-15",
@@ -29,7 +35,10 @@ export const dummyProjects: Project[] = [
   {
     id: "prj-002",
     name: "Mobile App for Event Management",
-    assignedTo: "Jane Smith",
+    assignedTo: {
+      name: "Jane Smith",
+      avatar: "https://i.pravatar.cc/150?u=jane.smith",
+    },
     status: "Completed",
     budget: 120000,
     deadline: "2024-05-20",
@@ -44,7 +53,10 @@ export const dummyProjects: Project[] = [
   {
     id: "prj-003",
     name: "Data Analytics Dashboard",
-    assignedTo: "Peter Jones",
+    assignedTo: {
+      name: "Peter Jones",
+      avatar: "https://i.pravatar.cc/150?u=peter.jones",
+    },
     status: "On Hold",
     budget: 50000,
     deadline: "2024-09-30",
@@ -58,7 +70,10 @@ export const dummyProjects: Project[] = [
   {
     id: "prj-004",
     name: "Corporate Website Redesign",
-    assignedTo: "Mary Johnson",
+    assignedTo: {
+      name: "Mary Johnson",
+      avatar: "https://i.pravatar.cc/150?u=mary.johnson",
+    },
     status: "In Progress",
     budget: 45000,
     deadline: "2024-07-01",
