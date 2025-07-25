@@ -4,6 +4,8 @@ import React, { useState, ReactNode } from "react";
 import PortalSidebar from "./PortalSidebar";
 import PortalHeader from "./PortalHeader";
 import { cn } from "@/lib/utils";
+import { Collaborator } from "../types";
+import ChatPanel from "./ChatPanel";
 
 type PortalLayoutProps = {
   children: ReactNode;
@@ -11,21 +13,40 @@ type PortalLayoutProps = {
 
 const PortalLayout = ({ children }: PortalLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [selectedCollaborator, setSelectedCollaborator] = useState<Collaborator | null>(null);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
 
+  const handleCollaboratorSelect = (collaborator: Collaborator) => {
+    setSelectedCollaborator(collaborator);
+  };
+
+  const handleCloseChat = () => {
+    setSelectedCollaborator(null);
+  };
+
+  const baseGridCols = isCollapsed
+    ? "md:grid-cols-[72px_1fr]"
+    : "md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]";
+  
+  const chatOpenGridCols = isCollapsed
+    ? "md:grid-cols-[72px_1fr_340px]"
+    : "md:grid-cols-[280px_1fr_340px]";
+
   return (
     <div
       className={cn(
         "grid min-h-screen w-full transition-[grid-template-columns] duration-300 ease-in-out",
-        isCollapsed
-          ? "md:grid-cols-[72px_1fr]"
-          : "md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]"
+        selectedCollaborator ? chatOpenGridCols : baseGridCols
       )}
     >
-      <PortalSidebar isCollapsed={isCollapsed} onToggle={toggleSidebar} />
+      <PortalSidebar 
+        isCollapsed={isCollapsed} 
+        onToggle={toggleSidebar}
+        onCollaboratorSelect={handleCollaboratorSelect}
+      />
       <div className="flex flex-col h-screen overflow-hidden">
         <header className="sticky top-0 z-10 bg-background">
           <PortalHeader />
@@ -34,6 +55,9 @@ const PortalLayout = ({ children }: PortalLayoutProps) => {
           {children}
         </main>
       </div>
+      {selectedCollaborator && (
+        <ChatPanel collaborator={selectedCollaborator} onClose={handleCloseChat} />
+      )}
     </div>
   );
 };

@@ -3,20 +3,22 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Users } from "lucide-react";
+import { Collaborator } from "../types";
 
 // Data tiruan untuk kolaborator
-const collaborators = [
-  { name: "Jane Doe", src: "https://i.pravatar.cc/40?u=a042581f4e29026704d", fallback: "JD" },
-  { name: "John Smith", src: "https://i.pravatar.cc/40?u=a042581f4e29026705d", fallback: "JS" },
-  { name: "Peter Jones", src: "https://i.pravatar.cc/40?u=a042581f4e29026706d", fallback: "PJ" },
-  { name: "Sarah Miller", src: "https://i.pravatar.cc/40?u=a042581f4e29026707d", fallback: "SM" },
+const collaborators: Collaborator[] = [
+  { id: "1", name: "Jane Doe", src: "https://i.pravatar.cc/40?u=a042581f4e29026704d", fallback: "JD" },
+  { id: "2", name: "John Smith", src: "https://i.pravatar.cc/40?u=a042581f4e29026705d", fallback: "JS" },
+  { id: "3", name: "Peter Jones", src: "https://i.pravatar.cc/40?u=a042581f4e29026706d", fallback: "PJ" },
+  { id: "4", name: "Sarah Miller", src: "https://i.pravatar.cc/40?u=a042581f4e29026707d", fallback: "SM" },
 ];
 
 type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
+  onCollaboratorSelect: (collaborator: Collaborator) => void;
 };
 
-const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
+const OnlineCollaborators = ({ isCollapsed, onCollaboratorSelect }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const visibleCollaborators = collaborators.slice(0, 3);
   const remainingCount = collaborators.length - visibleCollaborators.length;
@@ -37,7 +39,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
             <TooltipContent side="right">
               <p className="font-semibold">{collaborators.length} collaborators online</p>
               <ul className="mt-1 text-sm text-muted-foreground">
-                {collaborators.map(c => <li key={c.name}>{c.name}</li>)}
+                {collaborators.map(c => <li key={c.id}>{c.name}</li>)}
               </ul>
             </TooltipContent>
           </Tooltip>
@@ -48,14 +50,21 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
 
   return (
     <div className="px-4 lg:px-4 py-4">
-      <h3 className="mb-3 px-3 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+      <h3 
+        className="mb-3 px-3 text-xs font-semibold text-muted-foreground tracking-wider uppercase cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
         Online
       </h3>
-      <div className="px-3 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="px-3">
         {isExpanded ? (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {collaborators.map(c => (
-              <div key={c.name} className="flex items-center gap-3">
+              <div 
+                key={c.id} 
+                className="flex items-center gap-3 p-1 rounded-md hover:bg-muted cursor-pointer"
+                onClick={() => onCollaboratorSelect(c)}
+              >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={c.src} alt={c.name} />
                   <AvatarFallback>{c.fallback}</AvatarFallback>
@@ -66,9 +75,9 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
           </div>
         ) : (
           <TooltipProvider delayDuration={0}>
-            <div className="flex items-center">
+            <div className="flex items-center cursor-pointer" onClick={() => setIsExpanded(true)}>
               {visibleCollaborators.map((collaborator, index) => (
-                <Tooltip key={collaborator.name}>
+                <Tooltip key={collaborator.id}>
                   <TooltipTrigger asChild>
                     <Avatar className={cn("h-8 w-8 border-2 border-background", index > 0 && "-ml-3")}>
                       <AvatarImage src={collaborator.src} alt={collaborator.name} />
