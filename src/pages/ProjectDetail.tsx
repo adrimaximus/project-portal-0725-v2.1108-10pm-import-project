@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { File, Activity, CreditCard, Wallet, CalendarDays, Ticket } from "lucide-react";
+import { File, Activity, CreditCard, Wallet, CalendarDays, Ticket, CalendarClock } from "lucide-react";
 import ProjectComments, { Comment } from "@/components/ProjectComments";
 import { cn } from "@/lib/utils";
 
@@ -135,6 +135,13 @@ const ProjectDetail = () => {
     year: 'numeric', month: 'long', day: 'numeric'
   });
 
+  const paymentDueDate = new Date(project.deadline);
+  paymentDueDate.setDate(paymentDueDate.getDate() + 7); // Dummy due date: 7 days after project deadline
+
+  const paymentDueDateFormatted = paymentDueDate.toLocaleDateString("en-US", {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -145,7 +152,7 @@ const ProjectDetail = () => {
         </div>
 
         {/* Key Info Cards */}
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Project Status</CardTitle>
@@ -166,6 +173,15 @@ const ProjectDetail = () => {
               <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
                 {project.paymentStatus}
               </Badge>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Due Date Payment</CardTitle>
+              <CalendarClock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
             </CardContent>
           </Card>
           <Card>
