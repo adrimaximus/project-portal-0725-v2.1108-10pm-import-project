@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
 import OnlineCollaborators from "./OnlineCollaborators";
-import { Collaborator } from "../types";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -32,10 +31,9 @@ const navItems = [
 type PortalSidebarProps = {
   isCollapsed: boolean;
   onToggle: () => void;
-  onCollaboratorSelect: (collaborator: Collaborator) => void;
 };
 
-const PortalSidebar = ({ isCollapsed, onToggle, onCollaboratorSelect }: PortalSidebarProps) => {
+const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const location = useLocation();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
@@ -115,7 +113,7 @@ const PortalSidebar = ({ isCollapsed, onToggle, onCollaboratorSelect }: PortalSi
           </TooltipProvider>
           <div className="flex-grow" />
           <div className="border-t">
-            <OnlineCollaborators isCollapsed={isCollapsed} onCollaboratorSelect={onCollaboratorSelect} />
+            <OnlineCollaborators isCollapsed={isCollapsed} />
           </div>
         </div>
         <div className="mt-auto border-t">
