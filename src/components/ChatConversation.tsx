@@ -3,6 +3,7 @@ import { Message } from "@/data/chat";
 import MessageAttachment from "./MessageAttachment";
 import { currentUser } from "@/data/collaborators";
 import { Collaborator } from "@/types";
+import { cn } from "@/lib/utils";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -31,31 +32,41 @@ const ChatConversation = ({ messages, members = [] }: ChatConversationProps) => 
 
   return (
     <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-      {messages.map((message) => (
-        <div key={message.id} className="flex items-start gap-4">
-          <Avatar className="h-9 w-9 border">
-            <AvatarImage
-              src={message.senderName === "You" ? currentUser.src : message.senderAvatar}
-              alt={message.senderName}
-            />
-            <AvatarFallback>
-              {message.senderName === "You" ? "ME" : message.senderName.split(" ").map(n => n[0]).join("")}
-            </AvatarFallback>
-          </Avatar>
-          <div className="grid gap-1.5 w-full">
-            <div className="flex items-center justify-between">
-              <p className="font-semibold text-sm">{message.senderName}</p>
-              <p className="text-xs text-muted-foreground">{message.timestamp}</p>
-            </div>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {renderMessageWithMentions(message.text)}
-            </p>
-            {message.attachment && (
-              <MessageAttachment attachment={message.attachment} />
+      {messages.map((message) => {
+        const isMentioningCurrentUser = message.text.includes(`@${currentUser.name}`);
+        
+        return (
+          <div 
+            key={message.id} 
+            className={cn(
+              "flex items-start gap-4 transition-colors rounded-lg",
+              isMentioningCurrentUser && "bg-blue-50 dark:bg-blue-950/50 p-3 -m-3"
             )}
+          >
+            <Avatar className="h-9 w-9 border">
+              <AvatarImage
+                src={message.senderName === "You" ? currentUser.src : message.senderAvatar}
+                alt={message.senderName}
+              />
+              <AvatarFallback>
+                {message.senderName === "You" ? "ME" : message.senderName.split(" ").map(n => n[0]).join("")}
+              </AvatarFallback>
+            </Avatar>
+            <div className="grid gap-1.5 w-full">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-sm">{message.senderName}</p>
+                <p className="text-xs text-muted-foreground">{message.timestamp}</p>
+              </div>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {renderMessageWithMentions(message.text)}
+              </p>
+              {message.attachment && (
+                <MessageAttachment attachment={message.attachment} />
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
