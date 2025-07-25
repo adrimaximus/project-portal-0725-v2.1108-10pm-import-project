@@ -18,16 +18,19 @@ const Index = () => {
   const [selectedStatus, setSelectedStatus] = useState<Project["status"]>("Completed");
 
   const totalProjects = projects.length;
-  const totalBudget = projects.reduce((acc, project) => acc + project.budget, 0);
   const totalTickets = projects.reduce((acc, project) => acc + (project.tickets || 0), 0);
   
   const statusCount = projects.filter(p => p.status === selectedStatus).length;
 
-  const budgetFormatted = new Intl.NumberFormat("id-ID", {
+  const budgetForStatus = projects
+    .filter(p => p.status === selectedStatus)
+    .reduce((acc, project) => acc + project.budget, 0);
+
+  const budgetForStatusFormatted = new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
-  }).format(totalBudget);
+  }).format(budgetForStatus);
 
   return (
     <PortalLayout>
@@ -46,12 +49,12 @@ const Index = () => {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Budget</CardTitle>
+              <CardTitle className="text-sm font-medium">Budget for Status</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{budgetFormatted}</div>
-              <p className="text-xs text-muted-foreground">for all projects</p>
+              <div className="text-2xl font-bold">{budgetForStatusFormatted}</div>
+              <p className="text-xs text-muted-foreground">for {selectedStatus} projects</p>
             </CardContent>
           </Card>
           <Card>
