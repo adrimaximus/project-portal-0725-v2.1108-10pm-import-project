@@ -5,6 +5,7 @@ import { currentUser } from "@/data/collaborators";
 import { Collaborator } from "@/types";
 import { cn } from "@/lib/utils";
 import { Project } from "@/data/projects";
+import { Link } from "react-router-dom";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -57,12 +58,33 @@ const ChatConversation = ({ messages, members = [], projects = [] }: ChatConvers
       }
 
       if (matchedName) {
-        const content = isUserMention ? `@${matchedName}` : matchedName;
-        parts.push(
-          <strong key={key++} className="text-blue-600 font-semibold">
-            {content}
-          </strong>
-        );
+        if (isUserMention) {
+          parts.push(
+            <strong key={key++} className="text-blue-600 font-semibold">
+              {`@${matchedName}`}
+            </strong>
+          );
+        } else { // Project mention
+          const project = projects.find(p => p.name === matchedName);
+          if (project) {
+            parts.push(
+              <Link
+                to={`/projects/${project.id}`}
+                key={key++}
+                className="text-blue-600 font-semibold hover:underline"
+              >
+                {matchedName}
+              </Link>
+            );
+          } else {
+            // Fallback if project not found
+            parts.push(
+              <strong key={key++} className="text-blue-600 font-semibold">
+                {matchedName}
+              </strong>
+            );
+          }
+        }
         remainingText = textAfterMentionChar.substring(matchedName.length);
       } else {
         parts.push(mentionAndAfter[0]);
