@@ -21,6 +21,44 @@ const ProjectDetail = () => {
     );
   }
 
+  // Dummy data for recent activity
+  const recentActivity = [
+    {
+      id: 1,
+      user: {
+        name: "Olivia Martin",
+        avatar: "https://i.pravatar.cc/150?u=olivia",
+      },
+      action: "updated the project deadline to December 15, 2024.",
+      timestamp: "2024-07-20T10:30:00Z",
+    },
+    {
+      id: 2,
+      user: {
+        name: "Jackson Lee",
+        avatar: "https://i.pravatar.cc/150?u=jackson",
+      },
+      action: "attached a new file: 'design_mockups_v2.zip'.",
+      timestamp: "2024-07-19T15:00:00Z",
+    },
+    {
+      id: 3,
+      user: {
+        name: project.assignedTo.name,
+        avatar: project.assignedTo.avatar,
+      },
+      action: "changed the project status to 'In Progress'.",
+      timestamp: "2024-07-18T09:00:00Z",
+    },
+  ];
+
+  const formatActivityDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-US", {
+      month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
+    });
+  };
+
   const getStatusBadgeVariant = (status: Project["status"]) => {
     switch (status) {
       case "Completed":
@@ -130,7 +168,32 @@ const ProjectDetail = () => {
                 <CardTitle>Recent Activity</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">No recent activity.</p>
+                {recentActivity.length > 0 ? (
+                  <ul className="space-y-6">
+                    {recentActivity.map((activity) => (
+                      <li key={activity.id} className="flex items-start gap-4">
+                        <Avatar className="h-9 w-9 border">
+                          <AvatarImage src={activity.user.avatar} alt={activity.user.name} />
+                          <AvatarFallback>
+                            {activity.user.name.split(" ").map(n => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="grid gap-1">
+                          <p className="text-sm">
+                            <span className="font-semibold">{activity.user.name}</span>
+                            {' '}
+                            {activity.action}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatActivityDate(activity.timestamp)}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No recent activity.</p>
+                )}
               </CardContent>
             </Card>
           </div>
