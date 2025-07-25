@@ -13,28 +13,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
   date: DateRange | undefined;
   setDate: (date: DateRange | undefined) => void;
-  filterType: string;
-  setFilterType: (type: string) => void;
 }
 
 export function DatePickerWithRange({
   className,
   date,
-  setDate,
-  filterType,
-  setFilterType,
+  setDate
 }: DatePickerWithRangeProps) {
+
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -43,7 +33,7 @@ export function DatePickerWithRange({
             id="date"
             variant={"outline"}
             className={cn(
-              "w-[300px] justify-start text-left font-normal",
+              "w-full sm:w-[300px] justify-start text-left font-normal",
               !date && "text-muted-foreground"
             )}
           >
@@ -58,23 +48,11 @@ export function DatePickerWithRange({
                 format(date.from, "LLL dd, y")
               )
             ) : (
-              <span>Pick a date</span>
+              <span>Pick a date range</span>
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <div className="p-3 border-b">
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[260px] mx-auto">
-                <SelectValue placeholder="Select filter type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="created">Creation Date</SelectItem>
-                <SelectItem value="due">Due Date</SelectItem>
-                <SelectItem value="paymentDue">Payment Due</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <PopoverContent className="w-auto p-0" align="end">
           <Calendar
             initialFocus
             mode="range"
