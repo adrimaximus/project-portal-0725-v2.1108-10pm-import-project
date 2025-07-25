@@ -11,6 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateRange } from "react-day-picker";
+import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
 
 type FilterStatus = Project["status"] | "All Projects";
 
@@ -18,17 +20,30 @@ const Index = () => {
   const projects = dummyProjects;
   const statuses: FilterStatus[] = ["All Projects", "Completed", "In Progress", "On Hold", "Pending"];
   const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("All Projects");
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
 
-  const totalProjects = projects.length;
-  const totalTickets = projects.reduce((acc, project) => acc + (project.tickets || 0), 0);
+  const dateFilteredProjects = projects.filter(project => {
+    if (!date || !date.from) {
+      return true;
+    }
+    const projectStart = new Date(project.startDate);
+    const projectEnd = new Date(project.endDate);
+    const rangeStart = date.from;
+    const rangeEnd = date.to || new Date(date.from.getTime());
+    rangeEnd.setHours(23, 59, 59, 999);
 
-  const filteredProjects = selectedStatus === "All Projects"
-    ? projects
-    : projects.filter(p => p.status === selectedStatus);
+    return projectStart <= rangeEnd && projectEnd >= rangeStart;
+  });
 
-  const statusCount = filteredProjects.length;
+  const finalFilteredProjects = selectedStatus === "All Projects"
+    ? dateFilteredProjects
+    : dateFilteredProjects.filter(p => p.status === selectedStatus);
 
-  const budgetForStatus = filteredProjects.reduce((acc, project) => acc + project.budget, 0);
+  const totalProjectsInPeriod = dateFilteredProjects.length;
+  const totalTicketsInPeriod = dateFilteredProjects.reduce((acc, project) => acc + (project.tickets || 0), 0);
+  
+  const statusCount = finalFilteredProjects.length;
+  const budgetForStatus = finalFilteredProjects.reduce((acc, project) => acc + project.budget, 0);
 
   const budgetForStatusFormatted = new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -36,12 +51,15 @@ const Index = () => {
     minimumFractionDigits: 0,
   }).format(budgetForStatus);
 
-  const budgetDescription = selectedStatus === "All Projects" ? "for all projects" : `for ${selectedStatus} projects`;
+  const budgetDescription = selectedStatus === "All Projects" ? "for selected period" : `for ${selectedStatus} projects`;
 
   return (
     <PortalLayout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <DatePickerWithRange date={date} setDate={setDate} />
+        </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -49,8 +67,8 @@ const Index = () => {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalProjects}</div>
-              <p className="text-xs text-muted-foreground">all-time</p>
+              <div className="text-2xl font-bold">{totalProjectsInPeriod}</div>
+              <p className="text-xs text-muted-foreground">in selected period</p>
             </CardContent>
           </Card>
           <Card>
@@ -85,7 +103,7 @@ const Index = () => {
             <CardContent>
               <div className="text-2xl font-bold">{statusCount}</div>
               <p className="text-xs text-muted-foreground">
-                of {totalProjects} projects
+                of {totalProjectsInPeriod} projects
               </p>
             </CardContent>
           </Card>
@@ -95,12 +113,12 @@ const Index = () => {
               <Ticket className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalTickets}</div>
-              <p className="text-xs text-muted-foreground">across all projects</p>
+              <div className="text-2xl font-bold">{totalTicketsInPeriod}</div>
+              <p className="text-xs text-muted-foreground">in selected period</p>
             </CardContent>
           </Card>
         </div>
-        <ProjectsTable columns={columns} data={filteredProjects} />
+        <ProjectsTable columns={columns} data={finalFilteredProjects} />
       </div>
     </PortalLayout>
   );
