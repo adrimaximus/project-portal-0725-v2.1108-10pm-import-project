@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
+import OnlineCollaborators from "./OnlineCollaborators";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -58,7 +59,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             </span>
           </Link>
         </div>
-        <div className="flex-1 overflow-y-auto py-2">
+        <div className="flex-1 overflow-y-auto py-2 flex flex-col">
           <TooltipProvider delayDuration={0}>
             <nav
               className={cn(
@@ -109,6 +110,10 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
               )}
             </nav>
           </TooltipProvider>
+          <div className="flex-grow" />
+          <div className="border-t">
+            <OnlineCollaborators isCollapsed={isCollapsed} />
+          </div>
         </div>
         <div className="mt-auto border-t">
           <div className={cn("p-4", isCollapsed && "p-2")}>
