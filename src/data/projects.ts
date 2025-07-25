@@ -14,6 +14,7 @@ export type Project = {
   services: string[];
   tickets?: {
     count: number;
+    open: number;
   };
   paymentDueDate?: string; // yyyy-MM-dd
   invoiceAttachmentUrl?: string;
@@ -34,7 +35,7 @@ export const dummyProjects: Project[] = [
       avatar: "https://i.pravatar.cc/150?u=ethan",
     },
     services: ["Web Development", "UI/UX Design", "API Integration"],
-    tickets: { count: 3 },
+    tickets: { count: 3, open: 2 },
     paymentDueDate: "2024-12-22",
     invoiceAttachmentUrl: "/invoices/inv-001.pdf",
   },
@@ -52,7 +53,7 @@ export const dummyProjects: Project[] = [
       avatar: "https://i.pravatar.cc/150?u=ava",
     },
     services: ["Mobile Development", "Security Audit"],
-    tickets: { count: 0 },
+    tickets: { count: 0, open: 0 },
     paymentDueDate: "2024-07-07",
     invoiceAttachmentUrl: "/invoices/inv-002.pdf",
   },
@@ -70,7 +71,7 @@ export const dummyProjects: Project[] = [
       avatar: "https://i.pravatar.cc/150?u=noah",
     },
     services: ["Web Development", "Database Management"],
-    tickets: { count: 1 },
+    tickets: { count: 1, open: 1 },
     paymentDueDate: "2025-03-07",
   },
 ];

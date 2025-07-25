@@ -103,9 +103,10 @@ const RequestPage = () => {
     setCommentFile(null);
   };
 
+  const isSubmitDisabled = !projectName || !projectDescription || selectedServices.length === 0 || !endDate || !budget;
+
   const handleSubmitRequest = () => {
-    // Basic validation
-    if (!projectName || !projectDescription || selectedServices.length === 0 || !endDate || !budget) {
+    if (isSubmitDisabled) {
       alert("Please fill all required fields: Project Name, Description, Services, Due Date, and Budget.");
       return;
     }
@@ -116,8 +117,8 @@ const RequestPage = () => {
       description: projectDescription,
       status: "Pending",
       progress: 0,
-      deadline: format(endDate, "yyyy-MM-dd"),
-      budget: budget,
+      deadline: format(endDate as Date, "yyyy-MM-dd"),
+      budget: budget as number,
       paymentStatus: "Pending",
       assignedTo: { // Default assignment
         name: "Ethan Carter",
@@ -397,7 +398,7 @@ const RequestPage = () => {
           </Card>
 
           <div className="flex justify-end pt-2">
-            <Button onClick={handleSubmitRequest}>Submit Request</Button>
+            <Button onClick={handleSubmitRequest} disabled={isSubmitDisabled}>Submit Request</Button>
           </div>
 
           <Card>
