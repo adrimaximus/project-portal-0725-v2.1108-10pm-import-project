@@ -25,7 +25,14 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const remainingCount = collaborators.length - visibleCollaborators.length;
 
   const handleCollaboratorClick = (collaborator: Collaborator) => {
-    navigate('/chat', { state: { selectedUserName: collaborator.name } });
+    navigate('/chat', { 
+      state: { 
+        selectedCollaborator: { 
+          name: collaborator.name, 
+          avatar: collaborator.src 
+        } 
+      } 
+    });
   };
 
   if (isCollapsed) {
