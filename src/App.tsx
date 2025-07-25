@@ -1,26 +1,36 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Projects from "./pages/Projects";
-import ProjectDetail from "./pages/ProjectDetail";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Navigate,
+} from "react-router-dom";
 import RequestPage from "./pages/Request";
-import ChatPage from "./pages/ChatPage";
-import Settings from "./pages/Settings";
-import Billing from "./pages/Billing";
+import ProjectDetailPage from "./pages/ProjectDetail";
+import Index from "./pages/Index";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Index />,
+  },
+  {
+    path: "/request",
+    element: <RequestPage />,
+  },
+  {
+    path: "/projects/:projectId",
+    element: <ProjectDetailPage />,
+  },
+  // Redirect from a generic path to a specific project for demonstration
+  {
+    path: "/project-detail",
+    element: <Navigate to="/projects/1" replace />,
+  }
+]);
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/projects/:projectId" element={<ProjectDetail />} />
-        <Route path="/request" element={<RequestPage />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/billing" element={<Billing />} />
-      </Routes>
-    </Router>
-  );
+    <RouterProvider router={router} />
+  )
 }
 
 export default App;

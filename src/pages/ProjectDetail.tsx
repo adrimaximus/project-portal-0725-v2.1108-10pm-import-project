@@ -1,337 +1,95 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { dummyProjects, Project } from "@/data/projects";
-import { services as allServices } from "@/data/services";
-import PortalLayout from "@/components/PortalLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { File, Activity, CreditCard, Wallet, CalendarDays, Ticket, CalendarClock } from "lucide-react";
-import ProjectComments, { Comment } from "@/components/ProjectComments";
-import { cn } from "@/lib/utils";
+import React from 'react';
+import PortalLayout from '@/components/PortalLayout';
+import EditProjectDialog from '@/components/EditProjectDialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, DollarSign, Users } from 'lucide-react';
+import { format } from 'date-fns';
 
-// Dummy data for initial comments, one with an attachment
-const initialComments: Comment[] = [
-  {
-    id: 1,
-    user: {
-      name: "Sophia Davis",
-      avatar: "https://i.pravatar.cc/150?u=sophia",
-    },
-    text: "Great progress on the mockups! Just one suggestion: can we try a different color palette for the main CTA button?",
-    timestamp: "2 days ago",
-  },
-  {
-    id: 2,
-    user: {
-      name: "Liam Brown",
-      avatar: "https://i.pravatar.cc/150?u=liam",
-    },
-    text: "Sure, I'll prepare a few alternatives. I've also attached the latest wireframes for the user dashboard.",
-    timestamp: "1 day ago",
-    attachment: {
-        name: "dashboard-wireframe.png",
-        url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=2070&auto=format&fit=crop",
-        type: 'image'
-    }
-  },
-];
+// Dummy data for demonstration
+const project = {
+  name: 'Existing Website Redesign',
+  description: 'We need to refresh our existing corporate website with a new look and feel, focusing on mobile-first design and faster load times.',
+  budget: 75000000,
+  startDate: new Date('2024-08-01'),
+  endDate: new Date('2024-10-31'),
+  status: 'In Progress',
+  services: ['Web Development', 'UI/UX Design', 'SEO Optimization'],
+};
 
-const ProjectDetail = () => {
-  const { projectId } = useParams<{ projectId: string }>();
-  const project = dummyProjects.find((p) => p.id === projectId);
-  const [comments, setComments] = useState<Comment[]>(initialComments);
-
-  const ticketCount = comments.filter(comment => comment.isTicket).length;
-
-  if (!project) {
-    return (
-      <PortalLayout>
-        <div className="flex items-center justify-center h-full">
-          <p className="text-lg text-muted-foreground">Project not found.</p>
-        </div>
-      </PortalLayout>
-    );
-  }
-
-  // Dummy data for project services, assuming this would come from the project object
-  const projectServiceNames = ['Web Development', 'UI/UX Design', 'API Integration'];
-  const projectServices = allServices.filter(service => 
-    projectServiceNames.includes(service.title)
-  );
-
-  // Dummy data for recent activity
-  const recentActivity = [
-    {
-      id: 1,
-      user: {
-        name: "Olivia Martin",
-        avatar: "https://i.pravatar.cc/150?u=olivia",
-      },
-      action: "updated the project deadline to December 15, 2024.",
-      timestamp: "2024-07-20T10:30:00Z",
-    },
-    {
-      id: 2,
-      user: {
-        name: "Jackson Lee",
-        avatar: "https://i.pravatar.cc/150?u=jackson",
-      },
-      action: "attached a new file: 'design_mockups_v2.zip'.",
-      timestamp: "2024-07-19T15:00:00Z",
-    },
-    {
-      id: 3,
-      user: {
-        name: project.assignedTo.name,
-        avatar: project.assignedTo.avatar,
-      },
-      action: "changed the project status to 'In Progress'.",
-      timestamp: "2024-07-18T09:00:00Z",
-    },
-  ];
-
-  const formatActivityDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString("en-US", {
-      month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
-    });
-  };
-
-  const getStatusBadgeVariant = (status: Project["status"]) => {
-    switch (status) {
-      case "Completed":
-        return "default";
-      case "In Progress":
-        return "secondary";
-      case "On Hold":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
-
-  const getPaymentStatusBadgeVariant = (status: Project["paymentStatus"]) => {
-    switch (status) {
-      case "Paid":
-        return "default";
-      case "Pending":
-        return "secondary";
-      case "Overdue":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
-
-  const budgetFormatted = new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(project.budget);
-
-  const deadlineFormatted = new Date(project.deadline).toLocaleDateString("en-US", {
-    year: 'numeric', month: 'long', day: 'numeric'
-  });
-
-  const paymentDueDate = new Date(project.deadline);
-  paymentDueDate.setDate(paymentDueDate.getDate() + 7); // Dummy due date: 7 days after project deadline
-
-  const paymentDueDateFormatted = paymentDueDate.toLocaleDateString("en-US", {
-    year: 'numeric', month: 'long', day: 'numeric'
-  });
-
+const ProjectDetailPage = () => {
   return (
-    <PortalLayout>
+    <PortalLayout pageActions={<EditProjectDialog />}>
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-          <p className="text-muted-foreground mt-1">{project.description}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+            <p className="text-muted-foreground">Project details and status.</p>
+          </div>
+          <Badge variant={project.status === 'In Progress' ? 'default' : 'secondary'}>
+            {project.status}
+          </Badge>
         </div>
 
-        {/* Key Info Cards */}
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Project Status</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <Badge variant={getStatusBadgeVariant(project.status)}>
-                {project.status}
-              </Badge>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Payment Status</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
-                {project.paymentStatus}
-              </Badge>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Due Date Payment</CardTitle>
-              <CalendarClock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Support Tickets</CardTitle>
-              <Ticket className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{ticketCount}</div>
-              <p className="text-xs text-muted-foreground">{ticketCount} tickets created</p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Budget</CardTitle>
-              <Wallet className="h-4 w-4 text-muted-foreground" />
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{budgetFormatted}</div>
+              <div className="text-2xl font-bold">
+                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(project.budget)}
+              </div>
+              <p className="text-xs text-muted-foreground">Total project budget</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Deadline</CardTitle>
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Timeline</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{deadlineFormatted}</div>
+              <div className="text-lg font-bold">
+                {format(project.startDate, 'd MMM yyyy')} - {format(project.endDate, 'd MMM yyyy')}
+              </div>
+              <p className="text-xs text-muted-foreground">Project start and end dates</p>
+            </CardContent>
+          </Card>
+           <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Team Members</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+               <div className="text-lg font-bold">3 Members</div>
+              <p className="text-xs text-muted-foreground">Design, Dev, QA</p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {/* Main Content */}
-          <div className="md:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Progress</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Progress value={65} className="w-full" />
-                  <p className="text-sm text-muted-foreground">65% complete</p>
-                </div>
-              </CardContent>
-            </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Project Description</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">{project.description}</p>
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Selected Services</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-3">
-                  {projectServices.map((service) => (
-                    <div
-                      key={service.title}
-                      className="flex items-center gap-2 rounded-lg bg-muted p-2"
-                    >
-                      <div className={cn("rounded-md p-1", service.iconColor)}>
-                        <service.icon className="h-4 w-4" />
-                      </div>
-                      <span className="text-sm font-medium">{service.title}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {recentActivity.length > 0 ? (
-                  <ul className="space-y-6">
-                    {recentActivity.map((activity) => (
-                      <li key={activity.id} className="flex items-start gap-4">
-                        <Avatar className="h-9 w-9 border">
-                          <AvatarImage src={activity.user.avatar} alt={activity.user.name} />
-                          <AvatarFallback>
-                            {activity.user.name.split(" ").map(n => n[0]).join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="grid gap-1">
-                          <p className="text-sm">
-                            <span className="font-semibold">{activity.user.name}</span>
-                            {' '}
-                            {activity.action}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatActivityDate(activity.timestamp)}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No recent activity.</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <ProjectComments comments={comments} setComments={setComments} />
-
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Assigned To</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src={project.assignedTo.avatar} />
-                    <AvatarFallback>
-                      {project.assignedTo.name.split(" ").map(n => n[0]).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold">{project.assignedTo.name}</p>
-                    <p className="text-sm text-muted-foreground">Project Manager</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Files</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <File className="h-4 w-4 text-muted-foreground" />
-                    <span className="hover:underline cursor-pointer">project_brief.pdf</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <File className="h-4 w-4 text-muted-foreground" />
-                    <span className="hover:underline cursor-pointer">design_mockups.zip</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Services</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {project.services.map(service => (
+              <Badge key={service} variant="secondary">{service}</Badge>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     </PortalLayout>
   );
 };
 
-export default ProjectDetail;
+export default ProjectDetailPage;

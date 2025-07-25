@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SelectedServicesSummary from "@/components/SelectedServicesSummary";
 import ProjectRequestForm from "@/components/ProjectRequestForm";
-import EditProjectDialog from "@/components/EditProjectDialog";
 
 type Service = {
   title: string;
@@ -342,9 +341,7 @@ const RequestPage = () => {
       />
     ) : null;
 
-  const pageActions = step === 2 ? <EditProjectDialog /> : null;
-
-  return <PortalLayout summary={summaryComponent} pageActions={pageActions}>{renderContent()}</PortalLayout>;
+  return <PortalLayout summary={summaryComponent}>{renderContent()}</PortalLayout>;
 };
 
 export default RequestPage;
