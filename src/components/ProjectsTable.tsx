@@ -61,7 +61,7 @@ const ProjectsTable = () => {
               <TableHead>Assigned To</TableHead>
               <TableHead>Project Status</TableHead>
               <TableHead>Payment Status</TableHead>
-              <TableHead>Tickets</TableHead>
+              <TableHead>Open Tickets</TableHead>
               <TableHead className="text-right">Budget</TableHead>
               <TableHead>Deadline</TableHead>
             </TableRow>
