@@ -1,91 +1,62 @@
-import PortalLayout from "@/components/PortalLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { dummyProjects } from "@/data/projects";
-import { Activity, AlertCircle, Briefcase, Ticket } from "lucide-react";
+import { useState } from "react";
+import { DateRange } from "react-day-picker";
+import { DatePickerWithRange, FilterType } from "@/components/ui/DatePickerWithRange";
 import ProjectsTable, { columns } from "@/components/ProjectsTable";
+import { dummyProjects } from "@/data/projects";
+import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { PlusCircle } from "lucide-react";
 
-const DashboardPage = () => {
-  const totalProjects = dummyProjects.length;
-  const inProgressProjects = dummyProjects.filter(p => p.status === 'In Progress').length;
-  const overduePayments = dummyProjects.filter(p => p.paymentStatus === 'Overdue').length;
-  const openTickets = dummyProjects.reduce((sum, p) => sum + (p.tickets || 0), 0);
+const ProjectsPage = () => {
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const [filterType, setFilterType] = useState<FilterType>("Project Running");
 
-  const recentProjects = dummyProjects.slice(0, 5);
+  const filteredProjects = dummyProjects.filter(project => {
+    if (!date?.from) return true; // No date filter applied
 
-  // We need to remove some columns for the dashboard view
-  const dashboardColumns = columns.filter(c => 
-    c.id !== 'select' && 
-    c.id !== 'paymentDueDate' &&
-    c.id !== 'tickets' &&
-    c.id !== 'budget'
-  );
+    const from = new Date(date.from);
+    from.setHours(0, 0, 0, 0);
+    
+    const to = date.to ? new Date(date.to) : new Date(date.from);
+    to.setHours(23, 59, 59, 999);
+
+    if (filterType === 'Project Running') {
+      const projectStart = new Date(project.startDate);
+      const projectDue = new Date(project.deadline);
+      // Check for overlap between project duration and selected range
+      return projectStart <= to && projectDue >= from;
+    }
+
+    if (filterType === 'Payment Due') {
+      if (!project.paymentDueDate) return false;
+      const paymentDue = new Date(project.paymentDueDate);
+      return paymentDue >= from && paymentDue <= to;
+    }
+
+    return true;
+  });
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalProjects}</div>
-              <p className="text-xs text-muted-foreground">All projects in the system</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Projects In Progress</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{inProgressProjects}</div>
-              <p className="text-xs text-muted-foreground">Currently active projects</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Overdue Payments</CardTitle>
-              <AlertCircle className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">{overduePayments}</div>
-              <p className="text-xs text-muted-foreground">Projects with payments past due</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Open Support Tickets</CardTitle>
-              <Ticket className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{openTickets}</div>
-              <p className="text-xs text-muted-foreground">Total unresolved tickets</p>
-            </CardContent>
-          </Card>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Projects</h1>
+        <div className="flex items-center gap-4">
+          <DatePickerWithRange 
+            date={date} 
+            onDateChange={setDate} 
+            filterType={filterType}
+            onFilterTypeChange={setFilterType}
+            className="flex-shrink-0"
+          />
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Project
+          </Button>
         </div>
-
-        {/* Recent Projects Table */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Projects</CardTitle>
-            <Button asChild variant="link" className="pr-0">
-              <Link to="/projects">View all</Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <ProjectsTable columns={dashboardColumns} data={recentProjects} hideFooter />
-          </CardContent>
-        </Card>
       </div>
+      <ProjectsTable columns={columns} data={filteredProjects} />
     </PortalLayout>
   );
 };
 
-export default DashboardPage;
+export default ProjectsPage;
