@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -16,17 +15,13 @@ const collaborators: Collaborator[] = [
 
 type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
+  onCollaboratorSelect: (collaborator: Collaborator) => void;
 };
 
-const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
+const OnlineCollaborators = ({ isCollapsed, onCollaboratorSelect }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const navigate = useNavigate();
   const visibleCollaborators = collaborators.slice(0, 3);
   const remainingCount = collaborators.length - visibleCollaborators.length;
-
-  const handleCollaboratorClick = (collaborator: Collaborator) => {
-    navigate(`/chat?id=${collaborator.id}`);
-  };
 
   if (isCollapsed) {
     return (
@@ -68,7 +63,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
               <div 
                 key={c.id} 
                 className="flex items-center gap-3 p-1 rounded-md hover:bg-muted cursor-pointer"
-                onClick={() => handleCollaboratorClick(c)}
+                onClick={() => onCollaboratorSelect(c)}
               >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={c.src} alt={c.name} />
