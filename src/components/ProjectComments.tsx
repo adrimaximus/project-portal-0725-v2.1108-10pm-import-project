@@ -5,10 +5,27 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Paperclip, Send, X } from "lucide-react";
+import { Paperclip, Send, X, FileText } from "lucide-react";
 
-// Dummy data for initial comments
-const initialComments = [
+interface Attachment {
+  name: string;
+  url: string;
+  type: 'image' | 'file';
+}
+
+interface Comment {
+  id: number;
+  user: {
+    name: string;
+    avatar: string;
+  };
+  text: string;
+  timestamp: string;
+  attachment?: Attachment;
+}
+
+// Dummy data for initial comments, one with an attachment
+const initialComments: Comment[] = [
   {
     id: 1,
     user: {
@@ -26,11 +43,16 @@ const initialComments = [
     },
     text: "Sure, I'll prepare a few alternatives. I've also attached the latest wireframes for the user dashboard.",
     timestamp: "1 day ago",
+    attachment: {
+        name: "dashboard-wireframe.png",
+        url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=2070&auto=format&fit=crop",
+        type: 'image'
+    }
   },
 ];
 
 const ProjectComments = () => {
-  const [comments, setComments] = useState(initialComments);
+  const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newComment, setNewComment] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,20 +78,23 @@ const ProjectComments = () => {
     e.preventDefault();
     if (newComment.trim() === "" && !attachedFile) return;
 
-    let commentText = newComment;
-    if (attachedFile) {
-      commentText += `\n\n📎 Attached: ${attachedFile.name}`;
-    }
-
-    const newCommentObject = {
+    const newCommentObject: Comment = {
       id: comments.length + 1,
       user: {
         name: "You",
         avatar: "https://i.pravatar.cc/150?u=currentuser",
       },
-      text: commentText,
+      text: newComment,
       timestamp: "Just now",
     };
+
+    if (attachedFile) {
+      newCommentObject.attachment = {
+        name: attachedFile.name,
+        url: URL.createObjectURL(attachedFile),
+        type: attachedFile.type.startsWith('image/') ? 'image' : 'file',
+      };
+    }
 
     setComments([...comments, newCommentObject]);
     setNewComment("");
@@ -99,6 +124,29 @@ const ProjectComments = () => {
                     <p className="text-xs text-muted-foreground">{comment.timestamp}</p>
                   </div>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.text}</p>
+                  {comment.attachment && (
+                    <a
+                      href={comment.attachment.url}
+                      download={comment.attachment.name}
+                      className="mt-2 flex items-center gap-3 rounded-lg border p-2 hover:bg-muted transition-colors w-fit"
+                    >
+                      {comment.attachment.type === 'image' ? (
+                        <img
+                          src={comment.attachment.url}
+                          alt={comment.attachment.name}
+                          className="h-12 w-12 rounded-md object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-md bg-secondary">
+                          <FileText className="h-6 w-6 text-secondary-foreground" />
+                        </div>
+                      )}
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{comment.attachment.name}</span>
+                        <span className="text-xs text-muted-foreground">Click to download</span>
+                      </div>
+                    </a>
+                  )}
                 </div>
               </div>
             ))}
