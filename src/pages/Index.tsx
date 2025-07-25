@@ -28,6 +28,11 @@ const Index = () => {
     (project) => project.paymentStatus !== "Paid"
   ).length;
 
+  // Calculate the number of active projects ('In Progress')
+  const activeProjectsCount = dummyProjects.filter(
+    (project) => project.status === "In Progress"
+  ).length;
+
   return (
     <PortalLayout>
       <div className="space-y-4">
@@ -54,7 +59,7 @@ const Index = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">+2</div>
+              <div className="text-2xl font-bold">+{activeProjectsCount}</div>
               <p className="text-xs text-muted-foreground">
                 +180.1% from last month
               </p>
