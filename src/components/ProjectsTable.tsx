@@ -74,12 +74,14 @@ export const columns: ColumnDef<Project>[] = [
       />
     ),
     cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-        className="opacity-100"
-      />
+      <div onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+          className="opacity-100"
+        />
+      </div>
     ),
     enableSorting: false,
     enableHiding: false,
@@ -257,43 +259,46 @@ export const columns: ColumnDef<Project>[] = [
       const navigate = useNavigate();
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={!project.invoiceAttachmentUrl}
-              onSelect={() => {
-                if (project.invoiceAttachmentUrl) {
-                  window.open(project.invoiceAttachmentUrl, "_blank");
-                }
-              }}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Download Invoice
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Project
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!project.invoiceAttachmentUrl}
+                onSelect={() => {
+                  if (project.invoiceAttachmentUrl) {
+                    window.open(project.invoiceAttachmentUrl, "_blank");
+                  }
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Invoice
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Project
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       )
     },
   },
 ]
 
 export default function ProjectsTable({ columns, data }: { columns: ColumnDef<Project>[], data: Project[] }) {
+  const navigate = useNavigate();
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -385,6 +390,8 @@ export default function ProjectsTable({ columns, data }: { columns: ColumnDef<Pr
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => navigate(`/projects/${row.original.id}`)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
