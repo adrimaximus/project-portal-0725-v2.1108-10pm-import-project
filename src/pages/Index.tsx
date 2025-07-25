@@ -27,7 +27,7 @@ const Index = () => {
       return true;
     }
     const projectStart = new Date(project.startDate);
-    const projectEnd = new Date(project.endDate);
+    const projectEnd = new Date(project.deadline);
     const rangeStart = date.from;
     const rangeEnd = date.to || new Date(date.from.getTime());
     rangeEnd.setHours(23, 59, 59, 999);

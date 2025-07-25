@@ -10,6 +10,7 @@ export type Project = {
   description: string;
   status: "Completed" | "In Progress" | "On Hold" | "Pending";
   progress: number;
+  startDate: string; // YYYY-MM-DD
   deadline: string; // YYYY-MM-DD
   budget: number;
   paymentStatus: "Paid" | "Pending" | "Overdue";
@@ -27,10 +28,11 @@ export const dummyProjects: Project[] = [
     description: "Building a full-featured e-commerce website from scratch.",
     status: "In Progress",
     progress: 65,
-    deadline: "2024-12-15",
+    startDate: "2025-06-01",
+    deadline: "2025-12-15",
     budget: 150000000,
     paymentStatus: "Pending",
-    paymentDueDate: "2024-08-30",
+    paymentDueDate: "2025-08-30",
     assignedTo: [
       { name: "Ethan Carter", avatar: "https://i.pravatar.cc/150?u=ethan", status: 'offline' },
       { name: "Olivia Martin", avatar: "https://i.pravatar.cc/150?u=olivia", status: 'online' }
@@ -45,10 +47,11 @@ export const dummyProjects: Project[] = [
     description: "Developing a secure and user-friendly mobile banking application.",
     status: "Completed",
     progress: 100,
-    deadline: "2024-06-30",
+    startDate: "2025-01-15",
+    deadline: "2025-06-30",
     budget: 250000000,
     paymentStatus: "Paid",
-    paymentDueDate: "2024-07-15",
+    paymentDueDate: "2025-07-15",
     assignedTo: [
       { name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia", status: 'offline' },
     ],
@@ -62,7 +65,8 @@ export const dummyProjects: Project[] = [
     description: "Marketing campaign for a new product launch.",
     status: "On Hold",
     progress: 30,
-    deadline: "2024-09-01",
+    startDate: "2025-07-01",
+    deadline: "2025-09-01",
     budget: 50000000,
     paymentStatus: "Pending",
     assignedTo: [
@@ -79,10 +83,11 @@ export const dummyProjects: Project[] = [
     description: "Migrating on-premise servers to AWS.",
     status: "In Progress",
     progress: 80,
-    deadline: "2024-08-20",
+    startDate: "2025-05-15",
+    deadline: "2025-08-20",
     budget: 120000000,
     paymentStatus: "Paid",
-    paymentDueDate: "2024-08-01",
+    paymentDueDate: "2025-08-01",
     assignedTo: [
       { name: "Noah Rodriguez", avatar: "https://i.pravatar.cc/150?u=noah", status: 'online' },
     ],
@@ -96,7 +101,8 @@ export const dummyProjects: Project[] = [
     description: "Complete redesign of the company's brand identity and logo.",
     status: "Pending",
     progress: 10,
-    deadline: "2024-11-10",
+    startDate: "2025-09-01",
+    deadline: "2025-11-10",
     budget: 75000000,
     paymentStatus: "Pending",
     assignedTo: [

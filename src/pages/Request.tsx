@@ -104,11 +104,11 @@ const RequestPage = () => {
     setCommentFile(null);
   };
 
-  const isSubmitDisabled = !projectName || !projectDescription || selectedServices.length === 0 || !endDate || !budget;
+  const isSubmitDisabled = !projectName || !projectDescription || selectedServices.length === 0 || !startDate || !endDate || !budget;
 
   const handleSubmitRequest = () => {
     if (isSubmitDisabled) {
-      alert("Please fill all required fields: Project Name, Description, Services, Due Date, and Budget.");
+      alert("Please fill all required fields: Project Name, Description, Services, Start Date, Due Date, and Budget.");
       return;
     }
 
@@ -118,6 +118,7 @@ const RequestPage = () => {
       description: projectDescription,
       status: "Pending",
       progress: 0,
+      startDate: format(startDate as Date, "yyyy-MM-dd"),
       deadline: format(endDate as Date, "yyyy-MM-dd"),
       budget: budget as number,
       paymentStatus: "Pending",
