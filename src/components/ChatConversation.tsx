@@ -19,7 +19,7 @@ const ChatConversation = ({ messages, members = [] }: ChatConversationProps) => 
         const mentionName = word.substring(1);
         if (memberNames.includes(mentionName)) {
           return (
-            <strong key={index} className="text-primary font-semibold">
+            <strong key={index} className="text-blue-600 font-semibold">
               {word}
             </strong>
           );
