@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ChatConversationList from '../components/ChatConversationList';
 import ChatMessageArea from '../components/ChatMessageArea';
 import { Collaborator } from '../types';
@@ -12,7 +13,19 @@ const conversations: Collaborator[] = [
 ];
 
 const ChatPage = () => {
-  const [selectedConversation, setSelectedConversation] = useState<Collaborator | null>(conversations[0]);
+  const [searchParams] = useSearchParams();
+  const [selectedConversation, setSelectedConversation] = useState<Collaborator | null>(null);
+
+  useEffect(() => {
+    const collaboratorId = searchParams.get('id');
+    if (collaboratorId) {
+      const collaborator = conversations.find(c => c.id === collaboratorId);
+      setSelectedConversation(collaborator || null);
+    } else if (conversations.length > 0 && !selectedConversation) {
+      // Default ke percakapan pertama jika tidak ada ID yang diberikan dan tidak ada yang dipilih
+      setSelectedConversation(conversations[0]);
+    }
+  }, [searchParams, selectedConversation]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(250px,300px)_1fr] h-full border rounded-lg overflow-hidden">
