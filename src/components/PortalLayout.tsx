@@ -26,9 +26,11 @@ const PortalLayout = ({ children }: PortalLayoutProps) => {
       )}
     >
       <PortalSidebar isCollapsed={isCollapsed} onToggle={toggleSidebar} />
-      <div className="flex flex-col">
-        <PortalHeader />
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+      <div className="flex flex-col h-screen">
+        <header className="sticky top-0 z-10 bg-background">
+          <PortalHeader />
+        </header>
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto">
           {children}
         </main>
       </div>
