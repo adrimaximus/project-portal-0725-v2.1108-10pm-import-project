@@ -98,33 +98,49 @@ export const columns: ColumnDef<Project>[] = [
         return <span className="text-muted-foreground">Unassigned</span>;
       }
 
-      const firstUser = assignedUsers[0];
-      const remainingUsers = assignedUsers.length - 1;
+      if (assignedUsers.length === 1) {
+        const user = assignedUsers[0];
+        return (
+          <div className="flex items-center gap-2">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={user.avatar} alt={user.name} />
+              <AvatarFallback>{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+            </Avatar>
+            <span className="font-medium truncate max-w-[120px]">{user.name}</span>
+          </div>
+        );
+      }
+
+      const visibleUsers = assignedUsers.slice(0, 3);
+      const remainingCount = assignedUsers.length - visibleUsers.length;
 
       return (
-        <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={firstUser.avatar} alt={firstUser.name} />
-                  <AvatarFallback>{firstUser.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                </Avatar>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{firstUser.name}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <div className="flex flex-col">
-            <span className="font-medium truncate max-w-[120px]">{firstUser.name}</span>
-            {remainingUsers > 0 && (
-              <span className="text-xs text-muted-foreground">
-                + {remainingUsers} more
-              </span>
-            )}
-          </div>
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center -space-x-2">
+                {visibleUsers.map((user) => (
+                  <Avatar key={user.name} className="h-8 w-8 border-2 border-background">
+                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarFallback>{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+                  </Avatar>
+                ))}
+                {remainingCount > 0 && (
+                  <Avatar className="h-8 w-8 border-2 border-background">
+                    <AvatarFallback>+{remainingCount}</AvatarFallback>
+                  </Avatar>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <ul className="list-none p-0 m-0 space-y-1">
+                {assignedUsers.map((user) => (
+                  <li key={user.name}>{user.name}</li>
+                ))}
+              </ul>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     },
   },
