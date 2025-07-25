@@ -2,8 +2,21 @@ import PortalLayout from "@/components/PortalLayout";
 import ProjectsTable from "@/components/ProjectsTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, CreditCard, Activity } from "lucide-react";
+import { dummyProjects } from "@/data/projects";
 
 const Index = () => {
+  // Calculate the total value of projects with payment status not 'Paid'
+  const unpaidProjectsValue = dummyProjects
+    .filter((project) => project.paymentStatus !== "Paid")
+    .reduce((sum, project) => sum + project.budget, 0);
+
+  // Format the value as IDR currency
+  const formattedUnpaidValue = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(unpaidProjectsValue);
+
   return (
     <PortalLayout>
       <div className="space-y-4">
@@ -11,14 +24,14 @@ const Index = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Total Revenue
+                Unpaid Project Value
               </CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$45,231.89</div>
+              <div className="text-2xl font-bold">{formattedUnpaidValue}</div>
               <p className="text-xs text-muted-foreground">
-                +20.1% from last month
+                Total from pending & overdue projects
               </p>
             </CardContent>
           </Card>
