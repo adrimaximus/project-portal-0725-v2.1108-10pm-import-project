@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import ProjectChecklist from "@/components/ProjectChecklist";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ProjectActivity from "@/components/ProjectActivity";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -125,6 +126,7 @@ const ProjectDetail = () => {
                   </CardContent>
                 </Card>
                 <ProjectChecklist />
+                <ProjectActivity projectId={project.id} />
               </div>
             </div>
           </div>
