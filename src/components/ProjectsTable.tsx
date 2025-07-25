@@ -103,9 +103,10 @@ const ProjectsTable = () => {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  {new Intl.NumberFormat("en-US", {
+                  {new Intl.NumberFormat("id-ID", {
                     style: "currency",
-                    currency: "USD",
+                    currency: "IDR",
+                    minimumFractionDigits: 0,
                   }).format(project.budget)}
                 </TableCell>
                 <TableCell>

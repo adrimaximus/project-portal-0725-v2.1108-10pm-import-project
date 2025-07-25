@@ -24,7 +24,7 @@ export const dummyProjects: Project[] = [
     },
     status: "In Progress",
     paymentStatus: "Paid",
-    budget: 75000,
+    budget: 1125000000,
     deadline: "2024-12-31",
   },
   {
@@ -38,7 +38,7 @@ export const dummyProjects: Project[] = [
     },
     status: "Completed",
     paymentStatus: "Paid",
-    budget: 120000,
+    budget: 1800000000,
     deadline: "2024-09-01",
   },
   {
@@ -52,7 +52,7 @@ export const dummyProjects: Project[] = [
     },
     status: "In Progress",
     paymentStatus: "Pending",
-    budget: 25000,
+    budget: 375000000,
     deadline: "2024-11-15",
   },
   {
@@ -66,7 +66,7 @@ export const dummyProjects: Project[] = [
     },
     status: "On Hold",
     paymentStatus: "Pending",
-    budget: 55000,
+    budget: 825000000,
     deadline: "2025-02-28",
   },
   {
@@ -80,7 +80,7 @@ export const dummyProjects: Project[] = [
     },
     status: "Completed",
     paymentStatus: "Overdue",
-    budget: 95000,
+    budget: 1425000000,
     deadline: "2024-07-20",
   },
 ];
