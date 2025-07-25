@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { dummyProjects, Project } from "@/data/projects";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Ticket } from "lucide-react";
 
 const ProjectsTable = () => {
   const navigate = useNavigate();
@@ -106,10 +105,7 @@ const ProjectsTable = () => {
                 </TableCell>
                 <TableCell>
                   {project.tickets && project.tickets.open > 0 ? (
-                    <Badge variant="outline" className="flex items-center gap-1.5 w-fit">
-                      <Ticket className="h-3 w-3" />
-                      <span>{project.tickets.open} Open</span>
-                    </Badge>
+                    <span>{project.tickets.open}</span>
                   ) : (
                     <span className="text-muted-foreground">-</span>
                   )}
