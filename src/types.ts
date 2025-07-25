@@ -1,7 +1,14 @@
-export type Collaborator = {
+import { LucideIcon } from "lucide-react";
+
+export interface Collaborator {
   id: string;
   name: string;
-  src: string;
-  fallback: string;
-  online: boolean;
-};
+  avatar: string;
+  online?: boolean;
+}
+
+export interface NavItem {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+}

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import NewChatDialog from "./NewChatDialog";
+import NewGroupChatDialog from "./NewGroupChatDialog";
 import { Collaborator } from "@/types";
 
 interface ChatListProps {
@@ -21,6 +22,7 @@ interface ChatListProps {
   selectedConversationId: string | null;
   onConversationSelect: (id: string) => void;
   onStartNewChat: (collaborator: Collaborator) => void;
+  onStartNewGroupChat: (groupName: string, members: Collaborator[]) => void;
 }
 
 const ChatList = ({
@@ -28,8 +30,10 @@ const ChatList = ({
   selectedConversationId,
   onConversationSelect,
   onStartNewChat,
+  onStartNewGroupChat,
 }: ChatListProps) => {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [isNewGroupChatOpen, setIsNewGroupChatOpen] = useState(false);
 
   return (
     <div className="flex flex-col border-r bg-muted/40 h-full">
@@ -55,19 +59,27 @@ const ChatList = ({
               </TooltipProvider>
               <NewChatDialog onSelectCollaborator={onStartNewChat} setOpen={setIsNewChatOpen} />
             </Dialog>
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Users className="h-5 w-5" />
-                    <span className="sr-only">New Group Chat</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>New Group Chat</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Dialog open={isNewGroupChatOpen} onOpenChange={setIsNewGroupChatOpen}>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Users className="h-5 w-5" />
+                        <span className="sr-only">New Group Chat</span>
+                      </Button>
+                    </DialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>New Group Chat</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <NewGroupChatDialog
+                onStartGroupChat={onStartNewGroupChat}
+                setOpen={setIsNewGroupChatOpen}
+              />
+            </Dialog>
           </div>
         </div>
         <div className="relative">

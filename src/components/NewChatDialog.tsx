@@ -1,11 +1,15 @@
-import { useState } from 'react';
-import { DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useState } from "react";
+import {
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { allCollaborators } from "@/data/collaborators";
-import { Collaborator } from '@/types';
-import { cn } from '@/lib/utils';
+import { collaborators } from "@/data/collaborators";
+import { Collaborator } from "@/types";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface NewChatDialogProps {
   onSelectCollaborator: (collaborator: Collaborator) => void;
@@ -13,11 +17,11 @@ interface NewChatDialogProps {
 }
 
 const NewChatDialog = ({ onSelectCollaborator, setOpen }: NewChatDialogProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredCollaborators = allCollaborators
-    .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0));
+  const filteredCollaborators = collaborators.filter((c) =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleSelect = (collaborator: Collaborator) => {
     onSelectCollaborator(collaborator);
@@ -27,47 +31,35 @@ const NewChatDialog = ({ onSelectCollaborator, setOpen }: NewChatDialogProps) =>
   return (
     <DialogContent className="sm:max-w-[425px]">
       <DialogHeader>
-        <DialogTitle>Obrolan Baru</DialogTitle>
+        <DialogTitle>Start a New Chat</DialogTitle>
         <DialogDescription>
-          Pilih seorang kolaborator untuk memulai percakapan baru.
+          Select a collaborator to start a one-on-one conversation.
         </DialogDescription>
       </DialogHeader>
-      <div className="relative my-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="py-4">
         <Input
-          placeholder="Cari kolaborator..."
-          className="pl-9"
+          placeholder="Search collaborators..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          className="mb-4"
         />
-      </div>
-      <div className="flex flex-col gap-1 max-h-[300px] overflow-y-auto pr-2 -mr-2">
-        {filteredCollaborators.length > 0 ? (
-          filteredCollaborators.map(collaborator => (
-            <div
-              key={collaborator.id}
-              className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer"
-              onClick={() => handleSelect(collaborator)}
-            >
-              <div className="relative">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={collaborator.src} alt={collaborator.name} />
-                  <AvatarFallback>{collaborator.fallback}</AvatarFallback>
+        <ScrollArea className="h-[300px] w-full">
+          <div className="space-y-2">
+            {filteredCollaborators.map((collaborator) => (
+              <button
+                key={collaborator.id}
+                onClick={() => handleSelect(collaborator)}
+                className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-muted"
+              >
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={collaborator.avatar} alt={collaborator.name} />
+                  <AvatarFallback>{collaborator.name.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <span className={cn(
-                  "absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background",
-                  collaborator.online ? "bg-green-500" : "bg-gray-400"
-                )} />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium">{collaborator.name}</p>
-                <p className="text-sm text-muted-foreground">{collaborator.online ? 'Online' : 'Offline'}</p>
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-center text-sm text-muted-foreground py-4">Kolaborator tidak ditemukan.</p>
-        )}
+                <span>{collaborator.name}</span>
+              </button>
+            ))}
+          </div>
+        </ScrollArea>
       </div>
     </DialogContent>
   );

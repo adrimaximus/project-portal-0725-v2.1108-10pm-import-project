@@ -1,11 +1,11 @@
 import { useState } from "react";
 import ChatList from "@/components/ChatList";
 import ChatView from "@/components/ChatView";
-import { conversations as initialConversations, Conversation, Message } from "@/data/chat";
+import { conversations as initialConversations, Conversation } from "@/data/chat";
 import { Collaborator } from "@/types";
 import PortalLayout from "@/components/PortalLayout";
 
-const Chat = () => {
+const ChatPage = () => {
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(
     initialConversations.length > 0 ? initialConversations[0].id : null
@@ -77,4 +77,4 @@ const Chat = () => {
   );
 };
 
-export default Chat;
+export default ChatPage;
