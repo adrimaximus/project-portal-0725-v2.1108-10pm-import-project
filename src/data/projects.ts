@@ -83,7 +83,7 @@ export const dummyProjects: Project[] = [
     description: "Migrating on-premise servers to AWS.",
     status: "In Progress",
     progress: 80,
-    startDate: "2025-05-15",
+    startDate: "2025-06-10",
     deadline: "2025-08-20",
     budget: 120000000,
     paymentStatus: "Paid",
