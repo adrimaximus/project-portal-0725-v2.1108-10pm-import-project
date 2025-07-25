@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { dummyProjects, Project } from "@/data/projects";
+import { services as allServices } from "@/data/services";
 import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { File, Activity, CreditCard, Wallet, CalendarDays, Ticket } from "lucide-react";
 import ProjectComments, { Comment } from "@/components/ProjectComments";
+import { cn } from "@/lib/utils";
 
 // Dummy data for initial comments, one with an attachment
 const initialComments: Comment[] = [
@@ -52,6 +54,12 @@ const ProjectDetail = () => {
       </PortalLayout>
     );
   }
+
+  // Dummy data for project services, assuming this would come from the project object
+  const projectServiceNames = ['Web Development', 'UI/UX Design', 'API Integration'];
+  const projectServices = allServices.filter(service => 
+    projectServiceNames.includes(service.title)
+  );
 
   // Dummy data for recent activity
   const recentActivity = [
@@ -201,6 +209,27 @@ const ProjectDetail = () => {
                 <div className="space-y-2">
                   <Progress value={65} className="w-full" />
                   <p className="text-sm text-muted-foreground">65% complete</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Selected Services</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-3">
+                  {projectServices.map((service) => (
+                    <div
+                      key={service.title}
+                      className="flex items-center gap-2 rounded-lg bg-muted p-2"
+                    >
+                      <div className={cn("rounded-md p-1", service.iconColor)}>
+                        <service.icon className="h-4 w-4" />
+                      </div>
+                      <span className="text-sm font-medium">{service.title}</span>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
