@@ -1,4 +1,4 @@
-import { Bell, Home, Package, Settings, LayoutGrid } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, CircleUser } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "./ui/button";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -29,7 +38,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       className="hidden border-r bg-muted/40 md:block transition-all duration-300 ease-in-out"
       onDoubleClick={onToggle}
     >
-      <div className="flex h-full max-h-screen flex-col gap-2">
+      <div className="flex h-full max-h-screen flex-col">
         <div
           className={cn(
             "flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6",
@@ -47,11 +56,11 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             </span>
           </Link>
         </div>
-        <div className="flex-1">
+        <div className="flex-1 overflow-y-auto py-2">
           <TooltipProvider delayDuration={0}>
             <nav
               className={cn(
-                "grid items-start text-sm font-medium",
+                "grid items-start gap-1 text-sm font-medium",
                 isCollapsed ? "px-2" : "px-2 lg:px-4"
               )}
             >
@@ -98,6 +107,40 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
               )}
             </nav>
           </TooltipProvider>
+        </div>
+        <div className="mt-auto border-t">
+          <div className={cn("p-4", isCollapsed && "p-2")}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                {isCollapsed ? (
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="w-full">
+                          <CircleUser className="h-5 w-5" />
+                          <span className="sr-only">My Account</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">My Account</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <Button variant="ghost" className="w-full justify-start gap-3 px-3">
+                    <CircleUser className="h-5 w-5" />
+                    My Account
+                  </Button>
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="end" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuItem>Support</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Logout</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </div>

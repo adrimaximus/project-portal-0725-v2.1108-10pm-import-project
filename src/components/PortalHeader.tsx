@@ -1,11 +1,3 @@
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { CircleUser, Menu, Package, Home, Bell, Settings, LayoutGrid } from "lucide-react";
@@ -60,27 +52,21 @@ const PortalHeader = () => {
               </Link>
             ))}
           </nav>
+          <div className="mt-auto border-t pt-4">
+             <div className="flex items-center gap-4 px-4 py-2 text-lg font-semibold">
+                <CircleUser className="h-5 w-5" />
+                My Account
+             </div>
+             <Link to="#" className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground">Settings</Link>
+             <Link to="#" className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground">Support</Link>
+             <Link to="#" className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground">Logout</Link>
+          </div>
         </SheetContent>
       </Sheet>
 
       <div className="w-full flex-1">{/* Search bar can go here */}</div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="secondary" size="icon" className="rounded-full">
-            <CircleUser className="h-5 w-5" />
-            <span className="sr-only">Toggle user menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Settings</DropdownMenuItem>
-          <DropdownMenuItem>Support</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Logout</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* User menu has been moved to the sidebar for desktop and the sheet for mobile */}
     </header>
   );
 };
