@@ -1,7 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Conversation } from "@/data/chat";
-import { MoreVertical, Phone, Users, Video } from "lucide-react";
+import { MoreVertical } from "lucide-react";
+import StackedAvatar from "./StackedAvatar";
 
 interface ChatHeaderProps {
   selectedConversation: Conversation | null;
@@ -20,18 +21,14 @@ const ChatHeader = ({ selectedConversation }: ChatHeaderProps) => {
 
   return (
     <div className="flex items-center p-4 border-b">
-      <Avatar className="h-10 w-10 border">
-        {isGroup ? (
-          <AvatarFallback>
-            <Users className="h-5 w-5" />
-          </AvatarFallback>
-        ) : (
-          <>
-            <AvatarImage src={userAvatar} alt={userName} />
-            <AvatarFallback>{userName.charAt(0)}</AvatarFallback>
-          </>
-        )}
-      </Avatar>
+      {isGroup && members && members.length > 0 ? (
+        <StackedAvatar members={members} />
+      ) : (
+        <Avatar className="h-10 w-10 border">
+          <AvatarImage src={userAvatar} alt={userName} />
+          <AvatarFallback>{userName.charAt(0)}</AvatarFallback>
+        </Avatar>
+      )}
       <div className="ml-4 flex-1">
         <p className="text-lg font-semibold">{userName}</p>
         {isGroup ? (
@@ -41,12 +38,6 @@ const ChatHeader = ({ selectedConversation }: ChatHeaderProps) => {
         )}
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon">
-          <Phone className="h-5 w-5" />
-        </Button>
-        <Button variant="ghost" size="icon">
-          <Video className="h-5 w-5" />
-        </Button>
         <Button variant="ghost" size="icon">
           <MoreVertical className="h-5 w-5" />
         </Button>
