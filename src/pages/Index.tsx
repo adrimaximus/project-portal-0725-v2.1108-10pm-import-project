@@ -17,6 +17,12 @@ const Index = () => {
     minimumFractionDigits: 0,
   }).format(unpaidProjectsValue);
 
+  // Calculate the total number of open tickets
+  const totalOpenTickets = dummyProjects.reduce(
+    (sum, project) => sum + (project.tickets?.open || 0),
+    0
+  );
+
   return (
     <PortalLayout>
       <div className="space-y-4">
@@ -71,7 +77,7 @@ const Index = () => {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">+5</div>
+              <div className="text-2xl font-bold">{totalOpenTickets}</div>
               <p className="text-xs text-muted-foreground">
                 +2 since last hour
               </p>
