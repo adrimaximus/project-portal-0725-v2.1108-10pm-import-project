@@ -2,12 +2,33 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Message } from "@/data/chat";
 import MessageAttachment from "./MessageAttachment";
 import { currentUser } from "@/data/collaborators";
+import { Collaborator } from "@/types";
 
 interface ChatConversationProps {
   messages: Message[];
+  members?: Collaborator[];
 }
 
-const ChatConversation = ({ messages }: ChatConversationProps) => {
+const ChatConversation = ({ messages, members = [] }: ChatConversationProps) => {
+  const memberNames = members.map(m => m.name);
+
+  const renderMessageWithMentions = (text: string) => {
+    const words = text.split(/(\s+)/); // Split by space, keeping the space
+    return words.map((word, index) => {
+      if (word.startsWith('@')) {
+        const mentionName = word.substring(1);
+        if (memberNames.includes(mentionName)) {
+          return (
+            <strong key={index} className="text-primary font-semibold bg-primary/10 px-1 rounded-sm">
+              {word}
+            </strong>
+          );
+        }
+      }
+      return word;
+    });
+  };
+
   return (
     <div className="flex-1 p-6 space-y-6 overflow-y-auto">
       {messages.map((message) => (
@@ -26,7 +47,9 @@ const ChatConversation = ({ messages }: ChatConversationProps) => {
               <p className="font-semibold text-sm">{message.senderName}</p>
               <p className="text-xs text-muted-foreground">{message.timestamp}</p>
             </div>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{message.text}</p>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              {renderMessageWithMentions(message.text)}
+            </p>
             {message.attachment && (
               <MessageAttachment attachment={message.attachment} />
             )}

@@ -25,8 +25,14 @@ const ChatWindow = ({ selectedConversation, onSendMessage }: ChatWindowProps) =>
   return (
     <div className="flex flex-col h-full">
       <ChatHeader selectedConversation={selectedConversation} />
-      <ChatConversation messages={selectedConversation.messages} />
-      <ChatInput onSendMessage={onSendMessage} />
+      <ChatConversation 
+        messages={selectedConversation.messages} 
+        members={selectedConversation.members}
+      />
+      <ChatInput 
+        onSendMessage={onSendMessage} 
+        members={selectedConversation.isGroup ? selectedConversation.members : []}
+      />
     </div>
   );
 };
