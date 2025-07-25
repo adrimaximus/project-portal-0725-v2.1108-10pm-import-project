@@ -19,7 +19,7 @@ const ProjectsTable = () => {
   const projects: Project[] = dummyProjects;
 
   const handleRowClick = (projectId: string) => {
-    navigate(`/portal/projects/${projectId}`);
+    navigate(`/projects/${projectId}`);
   };
 
   const getStatusBadgeVariant = (status: Project["status"]) => {

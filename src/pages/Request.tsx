@@ -131,7 +131,7 @@ const RequestPage = () => {
     dummyProjects.unshift(newProject);
 
     // Navigate to the new project's detail page
-    navigate(`/portal/projects/${newProject.id}`);
+    navigate(`/projects/${newProject.id}`);
   };
 
   const featuredService = services.find(
