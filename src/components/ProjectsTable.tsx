@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { dummyProjects, Project } from "@/data/projects";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
-import { Download } from "lucide-react";
+import { Paperclip } from "lucide-react";
 
 const ProjectsTable = () => {
   const navigate = useNavigate();
@@ -130,12 +130,13 @@ const ProjectsTable = () => {
                     {project.invoiceAttachmentUrl ? (
                       <a
                         href={project.invoiceAttachmentUrl}
-                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
                         className="inline-block"
                       >
                         <Button variant="outline" size="icon">
-                          <Download className="h-4 w-4" />
+                          <Paperclip className="h-4 w-4" />
                         </Button>
                       </a>
                     ) : (
