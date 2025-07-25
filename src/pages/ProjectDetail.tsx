@@ -257,14 +257,14 @@ const ProjectDetail = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="In Progress">WIP</SelectItem>
                     <SelectItem value="On Hold">On Hold</SelectItem>
                     <SelectItem value="Pending">Pending</SelectItem>
                   </SelectContent>
                 </Select>
               ) : (
                 <Badge variant={getStatusBadgeVariant(project.status)}>
-                  {project.status}
+                  {project.status === "In Progress" ? "WIP" : project.status}
                 </Badge>
               )}
             </CardContent>

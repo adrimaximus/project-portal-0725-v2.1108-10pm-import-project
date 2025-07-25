@@ -19,7 +19,7 @@ const ProjectsTable = () => {
   const projects: Project[] = dummyProjects;
 
   const handleRowClick = (projectId: string) => {
-    navigate(`/projects/${projectId}`);
+    navigate(`/portal/projects/${projectId}`);
   };
 
   const getStatusBadgeVariant = (status: Project["status"]) => {
@@ -98,7 +98,7 @@ const ProjectsTable = () => {
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(project.status)}>
-                      {project.status}
+                      {project.status === "In Progress" ? "WIP" : project.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -128,7 +128,7 @@ const ProjectsTable = () => {
                     {new Date(project.deadline).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    {new Date(project.paymentDueDate).toLocaleDateString()}
+                    {project.paymentDueDate ? new Date(project.paymentDueDate).toLocaleDateString() : '-'}
                   </TableCell>
                   <TableCell className="text-center">
                     {project.invoiceAttachmentUrl ? (
