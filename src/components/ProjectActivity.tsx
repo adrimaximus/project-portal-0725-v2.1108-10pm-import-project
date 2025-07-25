@@ -29,31 +29,33 @@ const ProjectActivity = ({ projectId }: ProjectActivityProps) => {
         <CardTitle>Project Activity</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="relative pl-6">
+        <div className="relative">
           {/* Vertical line */}
-          <div className="absolute left-8 top-0 bottom-0 w-px bg-border -translate-x-1/2"></div>
+          <div className="absolute left-4 top-0 bottom-0 w-px bg-border -translate-x-1/2"></div>
 
-          <div className="space-y-8">
+          <div className="space-y-6">
             {activities.map((activity) => {
               const Icon = activityIcons[activity.type];
               const color = activityColors[activity.type];
               return (
-                <div key={activity.id} className="relative flex items-start gap-4">
-                  <div className={`absolute left-0 top-1 flex h-8 w-8 items-center justify-center rounded-full ${color} -translate-x-1/2`}>
+                <div key={activity.id} className="relative pl-10">
+                  <div className={`absolute left-4 top-1 flex h-8 w-8 items-center justify-center rounded-full ${color} -translate-x-1/2`}>
                     <Icon className="h-4 w-4 text-white" />
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={activity.user.avatar} />
-                        <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <p className="text-sm font-medium">{activity.user.name}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={activity.user.avatar} />
+                          <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <p className="text-sm font-medium">{activity.user.name}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                      </p>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{activity.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
-                    </p>
                   </div>
                 </div>
               );
