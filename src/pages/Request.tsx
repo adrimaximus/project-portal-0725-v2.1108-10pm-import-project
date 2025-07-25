@@ -252,13 +252,22 @@ const RequestPage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="projectBudget">ETA Budget (IDR)</Label>
-                <CurrencyInput
-                  id="projectBudget"
-                  placeholder="e.g., 50,000,000"
-                  value={budget}
-                  onChange={setBudget}
-                />
+                <Label htmlFor="projectBudget">Budget</Label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                    IDR
+                  </span>
+                  <CurrencyInput
+                    id="projectBudget"
+                    placeholder="50,000,000"
+                    value={budget}
+                    onChange={setBudget}
+                    className="pl-12"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Enter your estimated project budget in Indonesian Rupiah.
+                </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
