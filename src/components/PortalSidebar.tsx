@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown, LifeBuoy, LogOut, MessageSquare } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown, LifeBuoy, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,6 @@ import { Collaborator } from "../types";
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/request", label: "Request", icon: LayoutGrid },
-  { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "#", label: "Notifications", icon: Bell, badge: 3 },
   { href: "#", label: "Settings", icon: Settings },
 ];
