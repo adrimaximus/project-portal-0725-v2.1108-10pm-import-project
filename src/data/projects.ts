@@ -1,88 +1,86 @@
 export type Project = {
   id: string;
   name: string;
+  description: string;
   assignedTo: {
     name: string;
     avatar: string;
   };
   status: "Completed" | "In Progress" | "On Hold";
+  paymentStatus: "Paid" | "Pending" | "Overdue";
   budget: number;
   deadline: string;
-  description: string;
-  checklist: { id: string; task: string; completed: boolean }[];
 };
 
 export const dummyProjects: Project[] = [
   {
-    id: "prj-001",
-    name: "E-commerce Platform Launch",
+    id: "PROJ-001",
+    name: "E-commerce Platform",
+    description:
+      "A comprehensive e-commerce platform with features like product management, order processing, and a customer-facing storefront. Built with a modern tech stack for scalability and performance.",
     assignedTo: {
-      name: "John Doe",
-      avatar: "https://i.pravatar.cc/150?u=john.doe",
+      name: "Alice Johnson",
+      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d",
     },
     status: "In Progress",
+    paymentStatus: "Paid",
     budget: 75000,
-    deadline: "2024-08-15",
-    description: "Launch of a new e-commerce platform with a focus on user experience and mobile-first design. The project includes backend development, frontend implementation, and integration with major payment gateways.",
-    checklist: [
-      { id: "task-01", task: "Finalize UI/UX designs", completed: true },
-      { id: "task-02", task: "Develop backend API", completed: true },
-      { id: "task-03", task: "Implement frontend components", completed: false },
-      { id: "task-04", task: "Integrate payment gateway", completed: false },
-      { id: "task-05", task: "User acceptance testing", completed: false },
-    ],
+    deadline: "2024-12-31",
   },
   {
-    id: "prj-002",
-    name: "Mobile App for Event Management",
+    id: "PROJ-002",
+    name: "Mobile App for iOS",
+    description:
+      "A native iOS application for social networking. Includes features like real-time chat, user profiles, and an event feed. Designed with a focus on user experience and a clean interface.",
     assignedTo: {
-      name: "Jane Smith",
-      avatar: "https://i.pravatar.cc/150?u=jane.smith",
+      name: "Bob Williams",
+      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026705d",
     },
     status: "Completed",
+    paymentStatus: "Paid",
     budget: 120000,
-    deadline: "2024-05-20",
-    description: "A comprehensive mobile application for managing large-scale events, including ticketing, scheduling, and attendee engagement features. The app is available on both iOS and Android platforms.",
-    checklist: [
-      { id: "task-01", task: "Requirement gathering", completed: true },
-      { id: "task-02", task: "Cross-platform development", completed: true },
-      { id: "task-03", task: "Real-time notification system", completed: true },
-      { id: "task-04", task: "Deploy to app stores", completed: true },
-    ],
+    deadline: "2024-09-01",
   },
   {
-    id: "prj-003",
-    name: "Data Analytics Dashboard",
+    id: "PROJ-003",
+    name: "Marketing Website",
+    description:
+      "A responsive marketing website to showcase company services and generate leads. Includes a blog, contact forms, and integration with a CRM. Optimized for SEO and fast loading times.",
     assignedTo: {
-      name: "Peter Jones",
-      avatar: "https://i.pravatar.cc/150?u=peter.jones",
-    },
-    status: "On Hold",
-    budget: 50000,
-    deadline: "2024-09-30",
-    description: "A web-based dashboard for visualizing and analyzing sales data from multiple sources. The project is currently on hold pending budget reallocation.",
-    checklist: [
-      { id: "task-01", task: "Define key metrics", completed: true },
-      { id: "task-02", task: "Data source integration", completed: false },
-      { id: "task-03", task: "Dashboard UI development", completed: false },
-    ],
-  },
-  {
-    id: "prj-004",
-    name: "Corporate Website Redesign",
-    assignedTo: {
-      name: "Mary Johnson",
-      avatar: "https://i.pravatar.cc/150?u=mary.johnson",
+      name: "Charlie Brown",
+      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026706d",
     },
     status: "In Progress",
-    budget: 45000,
-    deadline: "2024-07-01",
-    description: "A complete redesign of the corporate website to improve branding, usability, and SEO performance. The new site will be built on a modern CMS for easy content management.",
-    checklist: [
-      { id: "task-01", task: "Content audit and strategy", completed: true },
-      { id: "task-02", task: "Wireframing and prototyping", completed: true },
-      { id: "task-03", task: "CMS implementation", completed: false },
-      { id: "task-04", task: "SEO optimization", completed: false },
-    ],
+    paymentStatus: "Pending",
+    budget: 25000,
+    deadline: "2024-11-15",
+  },
+  {
+    id: "PROJ-004",
+    name: "Data Analytics Dashboard",
+    description:
+      "A web-based dashboard for visualizing key business metrics. Connects to multiple data sources and provides interactive charts and reports to help with data-driven decision making.",
+    assignedTo: {
+      name: "Diana Prince",
+      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026707d",
+    },
+    status: "On Hold",
+    paymentStatus: "Pending",
+    budget: 55000,
+    deadline: "2025-02-28",
+  },
+  {
+    id: "PROJ-005",
+    name: "Internal CRM Tool",
+    description:
+      "A custom Customer Relationship Management (CRM) tool to manage sales pipelines and customer interactions. Tailored to the specific workflow of the sales team to improve efficiency.",
+    assignedTo: {
+      name: "Ethan Hunt",
+      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026708d",
+    },
+    status: "Completed",
+    paymentStatus: "Overdue",
+    budget: 95000,
+    deadline: "2024-07-20",
   },
 ];

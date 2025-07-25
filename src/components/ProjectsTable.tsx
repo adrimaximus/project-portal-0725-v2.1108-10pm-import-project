@@ -33,6 +33,21 @@ const ProjectsTable = () => {
     }
   };
 
+  const getPaymentStatusBadgeVariant = (
+    status: Project["paymentStatus"]
+  ) => {
+    switch (status) {
+      case "Paid":
+        return "default";
+      case "Pending":
+        return "secondary";
+      case "Overdue":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -44,7 +59,8 @@ const ProjectsTable = () => {
             <TableRow>
               <TableHead>Project Name</TableHead>
               <TableHead>Assigned To</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Project Status</TableHead>
+              <TableHead>Payment Status</TableHead>
               <TableHead className="text-right">Budget</TableHead>
               <TableHead>Deadline</TableHead>
             </TableRow>
@@ -77,6 +93,13 @@ const ProjectsTable = () => {
                 <TableCell>
                   <Badge variant={getStatusBadgeVariant(project.status)}>
                     {project.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={getPaymentStatusBadgeVariant(project.paymentStatus)}
+                  >
+                    {project.paymentStatus}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
