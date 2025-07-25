@@ -37,6 +37,8 @@ import {
   Plane,
   VideoIcon,
   LayoutGrid,
+  Zap,
+  Briefcase,
 } from "lucide-react";
 
 export type Service = {
@@ -274,5 +276,29 @@ export const services: Service[] = [
     description: "Online event platform solutions",
     icon: LayoutGrid,
     iconColor: "text-green-600 bg-green-100",
+  },
+  {
+    title: "Awards System",
+    description: "Digital awards presentation",
+    icon: Award,
+    iconColor: "text-orange-600 bg-orange-100",
+  },
+  {
+    title: "Brand Ambassadors",
+    description: "On‑site brand representatives",
+    icon: Users,
+    iconColor: "text-green-600 bg-green-100",
+  },
+  {
+    title: "Electricity & Genset",
+    description: "Comprehensive power supply and generator services",
+    icon: Zap,
+    iconColor: "text-orange-600 bg-orange-100",
+  },
+  {
+    title: "Event Consultation",
+    description: "Professional event planning and strategy support",
+    icon: Briefcase,
+    iconColor: "text-blue-600 bg-blue-100",
   },
 ];
