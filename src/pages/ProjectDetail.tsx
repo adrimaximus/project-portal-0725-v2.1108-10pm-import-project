@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { File, Clock } from "lucide-react";
+import { File, Activity, CreditCard, Wallet, CalendarDays } from "lucide-react";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -71,7 +71,7 @@ const ProjectDetail = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Project Status</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <Badge variant={getStatusBadgeVariant(project.status)}>
@@ -82,7 +82,7 @@ const ProjectDetail = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Payment Status</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
@@ -93,7 +93,7 @@ const ProjectDetail = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Budget</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-xl font-bold">{budgetFormatted}</div>
@@ -102,7 +102,7 @@ const ProjectDetail = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Deadline</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-xl font-bold">{deadlineFormatted}</div>
