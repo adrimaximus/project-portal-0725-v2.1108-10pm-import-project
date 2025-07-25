@@ -9,9 +9,10 @@ type PortalLayoutProps = {
   children: ReactNode;
   noPadding?: boolean;
   summary?: ReactNode;
+  pageActions?: ReactNode;
 };
 
-const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProps) => {
+const PortalLayout = ({ children, noPadding = false, summary, pageActions }: PortalLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSidebar = () => {
@@ -34,9 +35,16 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
         onToggle={toggleSidebar}
       />
       <div className="flex flex-col h-screen overflow-hidden">
-        <header className="sticky top-0 z-10 bg-background">
+        <header className="sticky top-0 z-10 bg-background border-b">
           <PortalHeader />
         </header>
+        
+        {pageActions && (
+          <div className="flex items-center justify-end gap-2 border-b bg-muted/40 px-6 py-3">
+            {pageActions}
+          </div>
+        )}
+
         <main className={cn(
           "flex flex-1 flex-col overflow-auto",
           !noPadding && "gap-4 p-4 lg:gap-6 lg:p-6"
