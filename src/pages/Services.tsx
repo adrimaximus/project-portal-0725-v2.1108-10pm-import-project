@@ -293,6 +293,10 @@ const ServicesPage = () => {
                 </CardContent>
               </Card>
 
+              <div className="flex justify-end pt-2">
+                <Button>Submit Request</Button>
+              </div>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Additional Comments</CardTitle>
@@ -328,9 +332,6 @@ const ServicesPage = () => {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-end pt-2">
-                <Button>Submit Request</Button>
-              </div>
             </div>
           )}
         </main>
