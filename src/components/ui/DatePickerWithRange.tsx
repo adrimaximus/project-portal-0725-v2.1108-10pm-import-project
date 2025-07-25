@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon } from "lucide-react"
+import { Calendar as CalendarIcon, ChevronDown } from "lucide-react"
 import { DateRange } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
@@ -13,27 +13,37 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
-interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
-  date: DateRange | undefined;
-  setDate: (date: DateRange | undefined) => void;
-}
+export type FilterType = "Project Running" | "Payment Due";
 
 export function DatePickerWithRange({
   className,
   date,
-  setDate
-}: DatePickerWithRangeProps) {
-
+  onDateChange,
+  filterType,
+  onFilterTypeChange,
+}: {
+  className?: string;
+  date?: DateRange;
+  onDateChange: (date: DateRange | undefined) => void;
+  filterType: FilterType;
+  onFilterTypeChange: (type: FilterType) => void;
+}) {
   return (
-    <div className={cn("grid gap-2", className)}>
+    <div className={cn("flex items-center gap-2", className)}>
       <Popover>
         <PopoverTrigger asChild>
           <Button
             id="date"
             variant={"outline"}
             className={cn(
-              "w-full sm:w-[300px] justify-start text-left font-normal",
+              "w-[260px] justify-start text-left font-normal",
               !date && "text-muted-foreground"
             )}
           >
@@ -52,17 +62,33 @@ export function DatePickerWithRange({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="end">
+        <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             initialFocus
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={setDate}
+            onSelect={onDateChange}
             numberOfMonths={2}
           />
         </PopoverContent>
       </Popover>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="w-[180px]">
+            {filterType}
+            <ChevronDown className="ml-auto h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => onFilterTypeChange("Project Running")}>
+            Project Running
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onFilterTypeChange("Payment Due")}>
+            Payment Due
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }
