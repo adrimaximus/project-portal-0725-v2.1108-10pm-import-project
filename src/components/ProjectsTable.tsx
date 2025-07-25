@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { dummyProjects, Project } from "@/data/projects";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Ticket } from "lucide-react";
 
 const ProjectsTable = () => {
   const navigate = useNavigate();
@@ -61,6 +62,7 @@ const ProjectsTable = () => {
               <TableHead>Assigned To</TableHead>
               <TableHead>Project Status</TableHead>
               <TableHead>Payment Status</TableHead>
+              <TableHead>Tickets</TableHead>
               <TableHead className="text-right">Budget</TableHead>
               <TableHead>Deadline</TableHead>
             </TableRow>
@@ -101,6 +103,16 @@ const ProjectsTable = () => {
                   >
                     {project.paymentStatus}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  {project.tickets && project.tickets.open > 0 ? (
+                    <Badge variant="outline" className="flex items-center gap-1.5 w-fit">
+                      <Ticket className="h-3 w-3" />
+                      <span>{project.tickets.open} Open</span>
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   {new Intl.NumberFormat("id-ID", {

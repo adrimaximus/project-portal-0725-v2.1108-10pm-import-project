@@ -1,4 +1,4 @@
-export type Project = {
+export interface Project {
   id: string;
   name: string;
   description: string;
@@ -10,77 +10,81 @@ export type Project = {
   paymentStatus: "Paid" | "Pending" | "Overdue";
   budget: number;
   deadline: string;
-};
+  tickets?: {
+    open: number;
+    total: number;
+  };
+}
 
 export const dummyProjects: Project[] = [
   {
-    id: "PROJ-001",
+    id: "prj-001",
     name: "E-commerce Platform",
-    description:
-      "A comprehensive e-commerce platform with features like product management, order processing, and a customer-facing storefront. Built with a modern tech stack for scalability and performance.",
+    description: "Developing a full-featured e-commerce platform with a modern tech stack.",
     assignedTo: {
-      name: "Alice Johnson",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d",
+      name: "John Doe",
+      avatar: "https://i.pravatar.cc/150?u=john",
     },
     status: "In Progress",
     paymentStatus: "Paid",
-    budget: 1125000000,
+    budget: 150000000,
     deadline: "2024-12-31",
+    tickets: { open: 3, total: 5 },
   },
   {
-    id: "PROJ-002",
-    name: "Mobile App for iOS",
-    description:
-      "A native iOS application for social networking. Includes features like real-time chat, user profiles, and an event feed. Designed with a focus on user experience and a clean interface.",
+    id: "prj-002",
+    name: "Mobile Banking App",
+    description: "Creating a secure and user-friendly mobile banking application for iOS and Android.",
     assignedTo: {
-      name: "Bob Williams",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026705d",
+      name: "Jane Smith",
+      avatar: "https://i.pravatar.cc/150?u=jane",
     },
     status: "Completed",
     paymentStatus: "Paid",
-    budget: 1800000000,
-    deadline: "2024-09-01",
+    budget: 250000000,
+    deadline: "2024-06-30",
+    tickets: { open: 0, total: 8 },
   },
   {
-    id: "PROJ-003",
-    name: "Marketing Website",
-    description:
-      "A responsive marketing website to showcase company services and generate leads. Includes a blog, contact forms, and integration with a CRM. Optimized for SEO and fast loading times.",
+    id: "prj-003",
+    name: "CRM System Integration",
+    description: "Integrating a new CRM system with existing company infrastructure.",
     assignedTo: {
-      name: "Charlie Brown",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026706d",
+      name: "Mike Johnson",
+      avatar: "https://i.pravatar.cc/150?u=mike",
     },
     status: "In Progress",
     paymentStatus: "Pending",
-    budget: 375000000,
-    deadline: "2024-11-15",
+    budget: 80000000,
+    deadline: "2024-09-15",
+    tickets: { open: 1, total: 2 },
   },
   {
-    id: "PROJ-004",
-    name: "Data Analytics Dashboard",
-    description:
-      "A web-based dashboard for visualizing key business metrics. Connects to multiple data sources and provides interactive charts and reports to help with data-driven decision making.",
+    id: "prj-004",
+    name: "Website Redesign",
+    description: "A complete overhaul of the corporate website with a focus on UX and performance.",
     assignedTo: {
-      name: "Diana Prince",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026707d",
+      name: "Emily Davis",
+      avatar: "https://i.pravatar.cc/150?u=emily",
     },
     status: "On Hold",
-    paymentStatus: "Pending",
-    budget: 825000000,
-    deadline: "2025-02-28",
+    paymentStatus: "Overdue",
+    budget: 50000000,
+    deadline: "2024-08-20",
+    tickets: { open: 0, total: 0 },
   },
   {
-    id: "PROJ-005",
-    name: "Internal CRM Tool",
-    description:
-      "A custom Customer Relationship Management (CRM) tool to manage sales pipelines and customer interactions. Tailored to the specific workflow of the sales team to improve efficiency.",
+    id: "prj-005",
+    name: "Data Analytics Dashboard",
+    description: "Building a real-time data analytics dashboard for marketing and sales teams.",
     assignedTo: {
-      name: "Ethan Hunt",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026708d",
+      name: "Chris Wilson",
+      avatar: "https://i.pravatar.cc/150?u=chris",
     },
     status: "Completed",
-    paymentStatus: "Overdue",
-    budget: 1425000000,
-    deadline: "2024-07-20",
+    paymentStatus: "Paid",
+    budget: 120000000,
+    deadline: "2024-05-10",
+    tickets: { open: 0, total: 4 },
   },
 ];
