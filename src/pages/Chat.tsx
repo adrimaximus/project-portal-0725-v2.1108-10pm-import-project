@@ -3,11 +3,11 @@ import { useLocation } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import ChatList from "@/components/ChatList";
 import ChatConversation from "@/components/ChatConversation";
-import { dummyConversations } from "@/data/chat";
+import { dummyConversations, Message } from "@/data/chat";
 
 const ChatPage = () => {
   const location = useLocation();
-  const [conversations] = useState(dummyConversations);
+  const [conversations, setConversations] = useState(dummyConversations);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,6 +24,25 @@ const ChatPage = () => {
     }
   }, [location.state, conversations, selectedConversationId]);
 
+  const handleSendMessage = (conversationId: string, text: string) => {
+    if (!text.trim()) return;
+
+    const newMessage: Message = {
+      id: `msg-${Date.now()}-${Math.random()}`,
+      text,
+      sender: 'me',
+      timestamp: new Date().toISOString(),
+    };
+
+    setConversations(prev => 
+      prev.map(convo => 
+        convo.id === conversationId 
+          ? { ...convo, messages: [...convo.messages, newMessage] }
+          : convo
+      )
+    );
+  };
+
   const selectedConversation = conversations.find(c => c.id === selectedConversationId) || null;
 
   return (
@@ -34,7 +53,10 @@ const ChatPage = () => {
           selectedConversationId={selectedConversationId}
           onConversationSelect={setSelectedConversationId}
         />
-        <ChatConversation conversation={selectedConversation} />
+        <ChatConversation 
+          conversation={selectedConversation}
+          onSendMessage={handleSendMessage} 
+        />
       </div>
     </PortalLayout>
   );

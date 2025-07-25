@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 
 interface ChatConversationProps {
   conversation: Conversation | null;
+  onSendMessage: (conversationId: string, text: string) => void;
 }
 
-const ChatConversation = ({ conversation }: ChatConversationProps) => {
+const ChatConversation = ({ conversation, onSendMessage }: ChatConversationProps) => {
   const [message, setMessage] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
 
@@ -18,21 +19,25 @@ const ChatConversation = ({ conversation }: ChatConversationProps) => {
     if (event.target.files && event.target.files[0]) {
       setAttachment(event.target.files[0]);
     }
-    // Reset the input value to allow selecting the same file again
     event.target.value = '';
   };
 
   const handleSendMessage = () => {
-    if (message.trim() === "" && !attachment) return;
+    if (!conversation) return;
+    const textToSend = message.trim();
+    const hasAttachment = !!attachment;
 
-    // Di aplikasi nyata, Anda akan mengirim pesan dan lampiran ke server di sini.
-    console.log("Mengirim pesan:", {
-      text: message,
-      fileName: attachment?.name,
-      fileSize: attachment?.size,
-    });
+    if (!textToSend && !hasAttachment) return;
 
-    // Reset state setelah "mengirim"
+    if (textToSend) {
+      onSendMessage(conversation.id, textToSend);
+    }
+
+    if (hasAttachment) {
+      console.log("Mengirim lampiran:", attachment);
+      onSendMessage(conversation.id, `[Lampiran: ${attachment.name}]`);
+    }
+
     setMessage("");
     setAttachment(null);
   };
