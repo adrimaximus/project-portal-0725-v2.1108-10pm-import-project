@@ -73,10 +73,13 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                 className="flex items-center gap-3 p-1 rounded-md hover:bg-muted cursor-pointer"
                 onClick={() => handleCollaboratorClick(c)}
               >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={c.src} alt={c.name} />
-                  <AvatarFallback>{c.fallback}</AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={c.src} alt={c.name} />
+                    <AvatarFallback>{c.fallback}</AvatarFallback>
+                  </Avatar>
+                  <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-green-500 ring-2 ring-background" />
+                </div>
                 <span className="text-sm text-muted-foreground font-medium">{c.name}</span>
               </div>
             ))}
@@ -87,10 +90,13 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
               {visibleCollaborators.map((collaborator, index) => (
                 <Tooltip key={collaborator.id}>
                   <TooltipTrigger asChild>
-                    <Avatar className={cn("h-8 w-8 border-2 border-background", index > 0 && "-ml-3")}>
-                      <AvatarImage src={collaborator.src} alt={collaborator.name} />
-                      <AvatarFallback>{collaborator.fallback}</AvatarFallback>
-                    </Avatar>
+                    <div className={cn("relative", index > 0 && "-ml-3")}>
+                      <Avatar className="h-8 w-8 border-2 border-background">
+                        <AvatarImage src={collaborator.src} alt={collaborator.name} />
+                        <AvatarFallback>{collaborator.fallback}</AvatarFallback>
+                      </Avatar>
+                      <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-green-500 ring-1 ring-background" />
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent side="top">{collaborator.name}</TooltipContent>
                 </Tooltip>
