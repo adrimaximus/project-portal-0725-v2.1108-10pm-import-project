@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown, LifeBuoy, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -160,18 +160,21 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                       to="#"
                       className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
+                      <Settings className="h-4 w-4" />
                       Settings
                     </Link>
                     <Link
                       to="#"
                       className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
+                      <LifeBuoy className="h-4 w-4" />
                       Support
                     </Link>
                     <Link
                       to="#"
                       className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
+                      <LogOut className="h-4 w-4" />
                       Logout
                     </Link>
                   </nav>
