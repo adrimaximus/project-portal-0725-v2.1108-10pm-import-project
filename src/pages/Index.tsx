@@ -1,15 +1,27 @@
+import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { dummyProjects } from "@/data/projects";
-import { DollarSign, ListChecks, Package, Ticket } from "lucide-react";
+import { dummyProjects, Project } from "@/data/projects";
+import { DollarSign, Package, Ticket } from "lucide-react";
 import ProjectsTable, { columns } from "@/components/ProjectsTable";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Index = () => {
   const projects = dummyProjects;
+  const statuses: Project["status"][] = ["Completed", "In Progress", "On Hold", "Pending"];
+  const [selectedStatus, setSelectedStatus] = useState<Project["status"]>("Completed");
+
   const totalProjects = projects.length;
   const totalBudget = projects.reduce((acc, project) => acc + project.budget, 0);
   const totalTickets = projects.reduce((acc, project) => acc + (project.tickets || 0), 0);
-  const completedProjects = projects.filter(p => p.status === 'Completed').length;
+  
+  const statusCount = projects.filter(p => p.status === selectedStatus).length;
 
   const budgetFormatted = new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -44,12 +56,28 @@ const Index = () => {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed Projects</CardTitle>
-              <ListChecks className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Project Status</CardTitle>
+              <Select
+                value={selectedStatus}
+                onValueChange={(value) => setSelectedStatus(value as Project["status"])}
+              >
+                <SelectTrigger className="h-auto w-auto p-0 text-xs border-0 bg-transparent focus:ring-0 focus:ring-offset-0 text-muted-foreground hover:text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{completedProjects}</div>
-              <p className="text-xs text-muted-foreground">of {totalProjects} projects</p>
+              <div className="text-2xl font-bold">{statusCount}</div>
+              <p className="text-xs text-muted-foreground">
+                of {totalProjects} projects
+              </p>
             </CardContent>
           </Card>
           <Card>
