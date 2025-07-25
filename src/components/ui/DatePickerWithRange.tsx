@@ -16,15 +16,16 @@ import {
 
 interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
   date: DateRange | undefined;
-  setDate: (date: DateRange | undefined) => void;
+  onDateChange: (date: DateRange | undefined) => void;
+  placeholder?: string;
 }
 
 export function DatePickerWithRange({
   className,
   date,
-  setDate
+  onDateChange,
+  placeholder = "Pick a date range",
 }: DatePickerWithRangeProps) {
-
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -33,7 +34,7 @@ export function DatePickerWithRange({
             id="date"
             variant={"outline"}
             className={cn(
-              "w-full sm:w-[300px] justify-start text-left font-normal",
+              "w-[300px] justify-start text-left font-normal",
               !date && "text-muted-foreground"
             )}
           >
@@ -48,17 +49,17 @@ export function DatePickerWithRange({
                 format(date.from, "LLL dd, y")
               )
             ) : (
-              <span>Pick a date range</span>
+              <span>{placeholder}</span>
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="end">
+        <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             initialFocus
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={setDate}
+            onSelect={onDateChange}
             numberOfMonths={2}
           />
         </PopoverContent>
