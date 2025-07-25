@@ -8,63 +8,16 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-// Data moved here to resolve import issue
-export type Project = {
-  id: string;
-  name: string;
-  status: "Completed" | "In Progress" | "On Hold";
-  client: string;
-  budget: number;
-  deadline: string;
-};
-
-export const dummyProjects: Project[] = [
-  {
-    id: "PROJ-001",
-    name: "Website Redesign",
-    status: "In Progress",
-    client: "Innovate Corp",
-    budget: 25000,
-    deadline: "2024-08-30",
-  },
-  {
-    id: "PROJ-002",
-    name: "Mobile App Development",
-    status: "Completed",
-    client: "Tech Solutions Ltd.",
-    budget: 45000,
-    deadline: "2024-07-15",
-  },
-  {
-    id: "PROJ-003",
-    name: "Marketing Campaign",
-    status: "On Hold",
-    client: "Global Goods Inc.",
-    budget: 15000,
-    deadline: "2024-09-20",
-  },
-  {
-    id: "PROJ-004",
-    name: "E-commerce Platform",
-    status: "In Progress",
-    client: "Retail Giant",
-    budget: 75000,
-    deadline: "2024-11-10",
-  },
-  {
-    id: "PROJ-005",
-    name: "Data Analytics Dashboard",
-    status: "Completed",
-    client: "Innovate Corp",
-    budget: 30000,
-    deadline: "2024-06-01",
-  },
-];
-
+import { useNavigate } from "react-router-dom";
+import { dummyProjects, Project } from "@/data/projects";
 
 const ProjectsTable = () => {
+  const navigate = useNavigate();
   const projects: Project[] = dummyProjects;
+
+  const handleRowClick = (projectId: string) => {
+    navigate(`/project/${projectId}`);
+  };
 
   const getStatusBadgeVariant = (status: Project["status"]) => {
     switch (status) {
@@ -97,7 +50,11 @@ const ProjectsTable = () => {
           </TableHeader>
           <TableBody>
             {projects.map((project) => (
-              <TableRow key={project.id}>
+              <TableRow
+                key={project.id}
+                onClick={() => handleRowClick(project.id)}
+                className="cursor-pointer hover:bg-muted/50"
+              >
                 <TableCell className="font-medium">{project.name}</TableCell>
                 <TableCell>{project.client}</TableCell>
                 <TableCell>
