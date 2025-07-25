@@ -19,14 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
 import OnlineCollaborators from "./OnlineCollaborators";
-
-const navItems = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/request", label: "Request", icon: LayoutGrid },
-  { href: "/chat", label: "Chat", icon: MessageSquare },
-  { href: "#", label: "Notifications", icon: Bell, badge: 3 },
-  { href: "#", label: "Settings", icon: Settings },
-];
+import { useChat } from "@/context/ChatContext";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -36,6 +29,15 @@ type PortalSidebarProps = {
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const location = useLocation();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const { totalUnreadCount } = useChat();
+
+  const navItems = [
+    { href: "/", label: "Dashboard", icon: Home },
+    { href: "/request", label: "Request", icon: LayoutGrid },
+    { href: "/chat", label: "Chat", icon: MessageSquare, badge: totalUnreadCount > 0 ? totalUnreadCount : undefined },
+    { href: "#", label: "Notifications", icon: Bell, badge: 3 },
+    { href: "#", label: "Settings", icon: Settings },
+  ];
 
   return (
     <div
