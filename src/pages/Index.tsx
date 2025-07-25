@@ -23,6 +23,11 @@ const Index = () => {
     0
   );
 
+  // Calculate the number of pending invoices (payment status is not 'Paid')
+  const pendingInvoicesCount = dummyProjects.filter(
+    (project) => project.paymentStatus !== "Paid"
+  ).length;
+
   return (
     <PortalLayout>
       <div className="space-y-4">
@@ -63,7 +68,7 @@ const Index = () => {
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">+12</div>
+              <div className="text-2xl font-bold">+{pendingInvoicesCount}</div>
               <p className="text-xs text-muted-foreground">
                 +19% from last month
               </p>
