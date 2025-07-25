@@ -108,10 +108,8 @@ const ProjectDetail = () => {
     setEditedProject({ ...editedProject, budget: value || 0 });
   };
 
-  // Dummy data for project services, assuming this would come from the project object
-  const projectServiceNames = ['Web Development', 'UI/UX Design', 'API Integration'];
   const projectServices = allServices.filter(service => 
-    projectServiceNames.includes(service.title)
+    project.services.includes(service.title)
   );
 
   // Dummy data for recent activity
