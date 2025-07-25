@@ -17,30 +17,60 @@ const ChatConversation = ({ messages, members = [], projects = [] }: ChatConvers
   const projectNames = projects.map(p => p.name);
 
   const renderMessageWithMentions = (text: string) => {
-    const words = text.split(/(\s+)/); // Split by space, keeping the space
-    return words.map((word, index) => {
-      if (word.startsWith('@')) {
-        const mentionName = word.substring(1);
-        if (memberNames.includes(mentionName)) {
-          return (
-            <strong key={index} className="text-blue-600 font-semibold">
-              {word}
-            </strong>
-          );
+    const parts: (string | JSX.Element)[] = [];
+    let remainingText = text;
+    let key = 0;
+
+    while (remainingText.length > 0) {
+      const atIndex = remainingText.indexOf('@');
+      const slashIndex = remainingText.indexOf('/');
+
+      let firstIndex = -1;
+      let isUserMention = false;
+      
+      if (atIndex !== -1 && (slashIndex === -1 || atIndex < slashIndex)) {
+        firstIndex = atIndex;
+        isUserMention = true;
+      } else if (slashIndex !== -1) {
+        firstIndex = slashIndex;
+      } else {
+        parts.push(remainingText);
+        break;
+      }
+
+      if (firstIndex > 0) {
+        parts.push(remainingText.substring(0, firstIndex));
+      }
+
+      const mentionAndAfter = remainingText.substring(firstIndex);
+      const textAfterMentionChar = mentionAndAfter.substring(1);
+      const namesToSearch = isUserMention ? memberNames : projectNames;
+
+      let matchedName: string | null = null;
+      // Find the longest possible name match
+      for (const name of namesToSearch) {
+        if (textAfterMentionChar.startsWith(name)) {
+          if (!matchedName || name.length > matchedName.length) {
+            matchedName = name;
+          }
         }
       }
-      if (word.startsWith('/')) {
-        const mentionName = word.substring(1);
-        if (projectNames.includes(mentionName)) {
-          return (
-            <strong key={index} className="text-blue-600 font-semibold">
-              {mentionName}
-            </strong>
-          );
-        }
+
+      if (matchedName) {
+        const content = isUserMention ? `@${matchedName}` : matchedName;
+        parts.push(
+          <strong key={key++} className="text-blue-600 font-semibold">
+            {content}
+          </strong>
+        );
+        remainingText = textAfterMentionChar.substring(matchedName.length);
+      } else {
+        parts.push(mentionAndAfter[0]);
+        remainingText = textAfterMentionChar;
       }
-      return word;
-    });
+    }
+
+    return parts;
   };
 
   return (
