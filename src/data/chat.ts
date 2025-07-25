@@ -1,68 +1,114 @@
-export type Message = {
+import { Collaborator } from "@/types";
+
+export interface Attachment {
+  name: string;
+  url: string;
+  type: 'image' | 'file';
+}
+
+export interface Message {
   id: string;
   text: string;
   timestamp: string;
-  sender: 'me' | 'other';
-  attachment?: {
-    name: string;
-    url: string;
-    type: string;
-  };
-};
+  sender: "me" | "other";
+  senderName: string;
+  senderAvatar: string;
+  attachment?: Attachment;
+}
 
-export type Conversation = {
-  id:string;
-  userName: string;
-  userAvatar: string;
+export interface Conversation {
+  id: string;
+  userName: string; // For groups, this will be the group name
+  userAvatar?: string; // Optional for groups
   lastMessage: string;
   lastMessageTimestamp: string;
   unreadCount: number;
   messages: Message[];
-};
-
-// Menggunakan tanggal ISO 8601 yang valid untuk stempel waktu
-const today = new Date();
-const yesterday = new Date(today);
-yesterday.setDate(today.getDate() - 1);
-const twoDaysAgo = new Date(today);
-twoDaysAgo.setDate(today.getDate() - 2);
+  isGroup?: boolean;
+  members?: Collaborator[];
+}
 
 export const dummyConversations: Conversation[] = [
   {
-    id: 'conv-1',
-    userName: 'Jane Doe',
-    userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
-    lastMessage: 'Tentu, saya akan segera memberitahu Anda tentang itu.',
-    lastMessageTimestamp: '10:40 AM',
+    id: "1",
+    userName: "John Doe",
+    userAvatar: "https://i.pravatar.cc/150?u=john",
+    lastMessage: "Hey, how's the project going?",
+    lastMessageTimestamp: "10:30 AM",
     unreadCount: 2,
+    isGroup: false,
     messages: [
-      { id: 'msg-1-1', text: 'Hei, bisakah Anda memeriksa desain terbaru?', sender: 'other', timestamp: new Date(new Date().setHours(10, 30, 0)).toISOString() },
-      { id: 'msg-1-2', text: 'Ya, saya sedang mengerjakannya. Akan segera mengirimkan umpan balik.', sender: 'me', timestamp: new Date(new Date().setHours(10, 32, 0)).toISOString() },
-      { id: 'msg-1-3', text: 'Bagus, terima kasih!', sender: 'other', timestamp: new Date(new Date().setHours(10, 33, 0)).toISOString() },
-      { id: 'msg-1-4', text: 'Juga, tolong periksa faktur yang saya kirim kemarin.', sender: 'other', timestamp: new Date(new Date().setHours(10, 39, 0)).toISOString() },
+      {
+        id: 'msg-1',
+        text: "Hey, how's the project going?",
+        timestamp: "10:30 AM",
+        sender: "other",
+        senderName: "John Doe",
+        senderAvatar: "https://i.pravatar.cc/150?u=john",
+      },
+      {
+        id: 'msg-2',
+        text: "Pretty good! I'm almost done with the new feature.",
+        timestamp: "10:31 AM",
+        sender: "me",
+        senderName: "You",
+        senderAvatar: "https://i.pravatar.cc/150?u=me",
+      },
     ],
   },
   {
-    id: 'conv-2',
-    userName: 'John Smith',
-    userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d',
-    lastMessage: 'Anda: Oke, kedengarannya bagus!',
-    lastMessageTimestamp: 'Kemarin',
+    id: "2",
+    userName: "Jane Smith",
+    userAvatar: "https://i.pravatar.cc/150?u=jane",
+    lastMessage: "Can you send me the report?",
+    lastMessageTimestamp: "Yesterday",
     unreadCount: 0,
+    isGroup: false,
     messages: [
-       { id: 'msg-2-1', text: 'Proyek berjalan dengan baik. Kita sesuai jadwal.', sender: 'other', timestamp: yesterday.toISOString() },
-       { id: 'msg-2-2', text: 'Oke, kedengarannya bagus!', sender: 'me', timestamp: yesterday.toISOString() },
+      {
+        id: 'msg-3',
+        text: "Can you send me the report?",
+        timestamp: "Yesterday",
+        sender: "other",
+        senderName: "Jane Smith",
+        senderAvatar: "https://i.pravatar.cc/150?u=jane",
+      },
     ],
   },
   {
-    id: 'conv-3',
-    userName: 'Peter Jones',
-    userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d',
-    lastMessage: 'Bisakah kita menjadwalkan pertemuan besok?',
-    lastMessageTimestamp: 'Selasa',
-    unreadCount: 0,
+    id: "3",
+    userName: "Project Team",
+    lastMessage: "I've attached the agenda.",
+    lastMessageTimestamp: "Yesterday",
+    unreadCount: 5,
+    isGroup: true,
+    members: [
+        { id: '1', name: 'Alex', src: 'https://i.pravatar.cc/150?u=alex', fallback: 'A', online: true },
+        { id: '2', name: 'Beth', src: 'https://i.pravatar.cc/150?u=beth', fallback: 'B', online: false },
+        { id: '3', name: 'Charlie', src: 'https://i.pravatar.cc/150?u=charlie', fallback: 'C', online: true },
+    ],
     messages: [
-        { id: 'msg-3-1', text: 'Bisakah kita menjadwalkan pertemuan besok?', sender: 'other', timestamp: twoDaysAgo.toISOString() },
+      {
+        id: 'msg-4',
+        text: "Don't forget the meeting at 3 PM.",
+        timestamp: "Yesterday",
+        sender: "other",
+        senderName: "Alex",
+        senderAvatar: "https://i.pravatar.cc/150?u=alex",
+      },
+      {
+        id: 'msg-5',
+        text: "I've attached the agenda.",
+        timestamp: "Yesterday",
+        sender: "other",
+        senderName: "Alex",
+        senderAvatar: "https://i.pravatar.cc/150?u=alex",
+        attachment: {
+          name: "meeting-agenda.pdf",
+          url: "#",
+          type: "file"
+        }
+      }
     ],
   },
 ];

@@ -22,6 +22,7 @@ interface ChatListProps {
   selectedConversationId: string | null;
   onConversationSelect: (id: string) => void;
   onStartNewChat: (collaborator: Collaborator) => void;
+  onStartNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
 }
 
 const ChatList = ({
@@ -29,19 +30,10 @@ const ChatList = ({
   selectedConversationId,
   onConversationSelect,
   onStartNewChat,
+  onStartNewGroupChat,
 }: ChatListProps) => {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isNewGroupChatOpen, setIsNewGroupChatOpen] = useState(false);
-
-  const handleStartNewGroupChat = (
-    collaborators: Collaborator[],
-    groupName: string
-  ) => {
-    console.log("Creating new group:", groupName, "with", collaborators);
-    // In a real application, this would likely be passed up to a parent
-    // component to update the global state with the new conversation.
-    // For now, we just log it to the console.
-  };
 
   return (
     <div className="flex flex-col border-r bg-muted/40 h-full">
@@ -90,7 +82,7 @@ const ChatList = ({
                 </Tooltip>
               </TooltipProvider>
               <NewGroupChatDialog
-                onStartNewGroupChat={handleStartNewGroupChat}
+                onStartNewGroupChat={onStartNewGroupChat}
                 setOpen={setIsNewGroupChatOpen}
               />
             </Dialog>
@@ -115,8 +107,16 @@ const ChatList = ({
               )}
             >
               <Avatar className="h-10 w-10 border">
-                <AvatarImage src={convo.userAvatar} alt={convo.userName} />
-                <AvatarFallback>{convo.userName.charAt(0)}</AvatarFallback>
+                {convo.isGroup ? (
+                  <AvatarFallback>
+                    <Users className="h-5 w-5" />
+                  </AvatarFallback>
+                ) : (
+                  <>
+                    <AvatarImage src={convo.userAvatar} alt={convo.userName} />
+                    <AvatarFallback>{convo.userName.charAt(0)}</AvatarFallback>
+                  </>
+                )}
               </Avatar>
               <div className="flex-1 truncate">
                 <p className="font-semibold">{convo.userName}</p>
