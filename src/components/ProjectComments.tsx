@@ -1,13 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send } from "lucide-react";
 
-// Dummy data for comments
-const comments = [
+// Dummy data for initial comments
+const initialComments = [
   {
     id: 1,
     user: {
@@ -29,6 +30,27 @@ const comments = [
 ];
 
 const ProjectComments = () => {
+  const [comments, setComments] = useState(initialComments);
+  const [newComment, setNewComment] = useState("");
+
+  const handleSendComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newComment.trim() === "") return;
+
+    const newCommentObject = {
+      id: comments.length + 1,
+      user: {
+        name: "You",
+        avatar: "https://i.pravatar.cc/150?u=currentuser",
+      },
+      text: newComment,
+      timestamp: "Just now",
+    };
+
+    setComments([...comments, newCommentObject]);
+    setNewComment("");
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -43,7 +65,7 @@ const ProjectComments = () => {
                 <Avatar className="h-9 w-9 border">
                   <AvatarImage src={comment.user.avatar} alt={comment.user.name} />
                   <AvatarFallback>
-                    {comment.user.name.split(" ").map(n => n[0]).join("")}
+                    {comment.user.name === "You" ? "ME" : comment.user.name.split(" ").map(n => n[0]).join("")}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid gap-1.5 w-full">
@@ -58,13 +80,18 @@ const ProjectComments = () => {
           </div>
 
           {/* Comment input form */}
-          <div className="flex w-full items-start space-x-4 pt-6 border-t">
+          <form onSubmit={handleSendComment} className="flex w-full items-start space-x-4 pt-6 border-t">
              <Avatar className="h-9 w-9 border">
                 <AvatarImage src="https://i.pravatar.cc/150?u=currentuser" alt="You" />
                 <AvatarFallback>ME</AvatarFallback>
             </Avatar>
             <div className="relative w-full">
-                <Textarea placeholder="Type your comment here..." className="min-h-[60px] pr-28"/>
+                <Textarea 
+                  placeholder="Type your comment here..." 
+                  className="min-h-[60px] pr-28"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                />
                 <div className="absolute top-3 right-2 flex items-center">
                     <Button type="button" variant="ghost" size="icon">
                         <Paperclip className="h-4 w-4" />
@@ -76,7 +103,7 @@ const ProjectComments = () => {
                     </Button>
                 </div>
             </div>
-          </div>
+          </form>
         </div>
       </CardContent>
     </Card>
