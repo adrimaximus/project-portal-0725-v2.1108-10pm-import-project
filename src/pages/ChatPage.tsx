@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import ChatList from "@/components/ChatList";
 import ChatWindow from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
@@ -11,6 +12,16 @@ const ChatPage = () => {
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
   >(dummyConversations[0]?.id || null);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.selectedCollaborator) {
+      const collaborator = location.state.selectedCollaborator as Collaborator;
+      handleStartNewChat(collaborator);
+      // Clear state to prevent re-triggering on refresh
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state]);
 
   const handleConversationSelect = (id: string) => {
     setSelectedConversationId(id);

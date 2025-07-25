@@ -23,10 +23,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const handleCollaboratorClick = (collaborator: Collaborator) => {
     navigate('/chat', { 
       state: { 
-        selectedCollaborator: { 
-          name: collaborator.name, 
-          avatar: collaborator.src 
-        } 
+        selectedCollaborator: collaborator
       } 
     });
   };
