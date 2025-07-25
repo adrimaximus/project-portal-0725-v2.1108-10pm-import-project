@@ -1,62 +1,68 @@
-import { Collaborator } from "@/types";
-import { collaborators } from "@/data/collaborators";
-
-export interface Message {
+export type Message = {
   id: string;
   text: string;
-  sender: string;
   timestamp: string;
-  avatar: string;
+  sender: 'me' | 'other';
   attachment?: {
-    name:string;
+    name: string;
     url: string;
-    type: 'image' | 'file';
+    type: string;
   };
-}
+};
 
-export interface Conversation {
-  id: string;
+export type Conversation = {
+  id:string;
   userName: string;
   userAvatar: string;
   lastMessage: string;
   lastMessageTimestamp: string;
   unreadCount: number;
   messages: Message[];
-  isGroup?: boolean;
-  members?: Collaborator[];
-}
+};
 
-export const conversations: Conversation[] = [
+// Menggunakan tanggal ISO 8601 yang valid untuk stempel waktu
+const today = new Date();
+const yesterday = new Date(today);
+yesterday.setDate(today.getDate() - 1);
+const twoDaysAgo = new Date(today);
+twoDaysAgo.setDate(today.getDate() - 2);
+
+export const dummyConversations: Conversation[] = [
   {
-    id: "conv-1",
-    userName: "Olivia Martin",
-    userAvatar: "https://i.pravatar.cc/150?u=olivia",
-    lastMessage: "Hey, how's it going? Did you see the latest designs?",
-    lastMessageTimestamp: "10:42 AM",
+    id: 'conv-1',
+    userName: 'Jane Doe',
+    userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
+    lastMessage: 'Tentu, saya akan segera memberitahu Anda tentang itu.',
+    lastMessageTimestamp: '10:40 AM',
     unreadCount: 2,
     messages: [
-      { id: 'msg-1', text: "Hey, how's it going? Did you see the latest designs?", sender: 'Olivia Martin', timestamp: '10:42 AM', avatar: 'https://i.pravatar.cc/150?u=olivia' },
-      { id: 'msg-2', text: "I did! They look great. I have a few minor suggestions.", sender: 'You', timestamp: '10:43 AM', avatar: 'https://github.com/shadcn.png' },
+      { id: 'msg-1-1', text: 'Hei, bisakah Anda memeriksa desain terbaru?', sender: 'other', timestamp: new Date(new Date().setHours(10, 30, 0)).toISOString() },
+      { id: 'msg-1-2', text: 'Ya, saya sedang mengerjakannya. Akan segera mengirimkan umpan balik.', sender: 'me', timestamp: new Date(new Date().setHours(10, 32, 0)).toISOString() },
+      { id: 'msg-1-3', text: 'Bagus, terima kasih!', sender: 'other', timestamp: new Date(new Date().setHours(10, 33, 0)).toISOString() },
+      { id: 'msg-1-4', text: 'Juga, tolong periksa faktur yang saya kirim kemarin.', sender: 'other', timestamp: new Date(new Date().setHours(10, 39, 0)).toISOString() },
     ],
   },
   {
-    id: "conv-2",
-    userName: "Jackson Lee",
-    userAvatar: "https://i.pravatar.cc/150?u=jackson",
-    lastMessage: "Can you send over the project brief again? I can't find it.",
-    lastMessageTimestamp: "9:15 AM",
+    id: 'conv-2',
+    userName: 'John Smith',
+    userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d',
+    lastMessage: 'Anda: Oke, kedengarannya bagus!',
+    lastMessageTimestamp: 'Kemarin',
     unreadCount: 0,
-    messages: [],
+    messages: [
+       { id: 'msg-2-1', text: 'Proyek berjalan dengan baik. Kita sesuai jadwal.', sender: 'other', timestamp: yesterday.toISOString() },
+       { id: 'msg-2-2', text: 'Oke, kedengarannya bagus!', sender: 'me', timestamp: yesterday.toISOString() },
+    ],
   },
   {
-    id: "conv-3",
-    userName: "Project Alpha Team",
-    userAvatar: "https://api.dicebear.com/7.x/identicon/svg?seed=Project%20Alpha%20Team",
-    lastMessage: "Liam: Don't forget our sync-up call at 3 PM today.",
-    lastMessageTimestamp: "Yesterday",
+    id: 'conv-3',
+    userName: 'Peter Jones',
+    userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d',
+    lastMessage: 'Bisakah kita menjadwalkan pertemuan besok?',
+    lastMessageTimestamp: 'Selasa',
     unreadCount: 0,
-    isGroup: true,
-    messages: [],
-    members: collaborators.filter(c => ['Ethan Carter', 'Liam Goldberg'].includes(c.name))
+    messages: [
+        { id: 'msg-3-1', text: 'Bisakah kita menjadwalkan pertemuan besok?', sender: 'other', timestamp: twoDaysAgo.toISOString() },
+    ],
   },
 ];

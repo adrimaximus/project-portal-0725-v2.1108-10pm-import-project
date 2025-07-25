@@ -1,80 +1,100 @@
-import { useState } from "react";
-import ChatList from "@/components/ChatList";
-import ChatView from "@/components/ChatView";
-import { conversations as initialConversations, Conversation, Message } from "@/data/chat";
-import { Collaborator } from "@/types";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
+import ChatList from "@/components/ChatList";
+import ChatConversation from "@/components/ChatConversation";
+import { dummyConversations, Message, Conversation } from "@/data/chat";
+import { Collaborator } from "@/types";
 
-const Chat = () => {
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(
-    initialConversations.length > 0 ? initialConversations[0].id : null
-  );
+const ChatPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [conversations, setConversations] = useState(dummyConversations);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
-  const handleConversationSelect = (id: string) => {
-    setSelectedConversationId(id);
-  };
-
-  const handleStartNewChat = (collaborator: Collaborator) => {
-    const existingConversation = conversations.find(
-      (c) => c.userName === collaborator.name && !c.isGroup
-    );
+  const startOrSelectConversation = (collaborator: { name: string, avatar: string }) => {
+    const existingConversation = conversations.find(c => c.userName === collaborator.name);
 
     if (existingConversation) {
       setSelectedConversationId(existingConversation.id);
-      return;
+    } else {
+      const newConversation: Conversation = {
+        id: `conv-${Date.now()}`,
+        userName: collaborator.name,
+        userAvatar: collaborator.avatar,
+        lastMessage: '',
+        lastMessageTimestamp: '',
+        unreadCount: 0,
+        messages: [],
+      };
+      setConversations(prev => [newConversation, ...prev]);
+      setSelectedConversationId(newConversation.id);
+    }
+  };
+
+  useEffect(() => {
+    const { selectedCollaborator } = location.state || {};
+
+    if (selectedCollaborator) {
+      startOrSelectConversation({ name: selectedCollaborator.name, avatar: selectedCollaborator.avatar });
+      navigate(location.pathname, { replace: true, state: {} });
+    } else if (!selectedConversationId && conversations.length > 0) {
+      setSelectedConversationId(conversations[0].id);
+    }
+  }, [location.state, conversations, navigate, selectedConversationId]);
+
+  const handleStartNewChat = (collaborator: Collaborator) => {
+    startOrSelectConversation({ name: collaborator.name, avatar: collaborator.src });
+  };
+
+  const handleSendMessage = (conversationId: string, text: string, attachment?: File | null) => {
+    const hasText = text.trim().length > 0;
+    const hasAttachment = !!attachment;
+
+    if (!hasText && !hasAttachment) return;
+
+    const newMessage: Message = {
+      id: `msg-${Date.now()}-${Math.random()}`,
+      text: text.trim(),
+      sender: 'me',
+      timestamp: new Date().toISOString(),
+    };
+
+    if (attachment) {
+      newMessage.attachment = {
+        name: attachment.name,
+        url: URL.createObjectURL(attachment),
+        type: attachment.type,
+      };
     }
 
-    const newConversation: Conversation = {
-      id: `conv-${Date.now()}`,
-      userName: collaborator.name,
-      userAvatar: collaborator.avatar,
-      lastMessage: "You can now start the conversation.",
-      lastMessageTimestamp: "Just now",
-      unreadCount: 0,
-      messages: [],
-      isGroup: false,
-    };
-
-    setConversations([newConversation, ...conversations]);
-    setSelectedConversationId(newConversation.id);
+    setConversations(prev => 
+      prev.map(convo => 
+        convo.id === conversationId 
+          ? { ...convo, messages: [...convo.messages, newMessage] }
+          : convo
+      )
+    );
   };
 
-  const handleStartNewGroupChat = (groupName: string, members: Collaborator[]) => {
-    const newGroupConversation: Conversation = {
-      id: `group-${Date.now()}`,
-      userName: groupName,
-      userAvatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(groupName)}`,
-      lastMessage: `Group created with ${members.length} members.`,
-      lastMessageTimestamp: "Just now",
-      unreadCount: 0,
-      messages: [],
-      isGroup: true,
-      members: members,
-    };
-
-    setConversations([newGroupConversation, ...conversations]);
-    setSelectedConversationId(newGroupConversation.id);
-  };
-
-  const selectedConversation = conversations.find(
-    (c) => c.id === selectedConversationId
-  );
+  const selectedConversation = conversations.find(c => c.id === selectedConversationId) || null;
 
   return (
     <PortalLayout noPadding>
-      <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] lg:grid-cols-[380px_1fr] h-full">
+      <div className="grid grid-cols-[300px_1fr] h-full w-full">
         <ChatList
           conversations={conversations}
           selectedConversationId={selectedConversationId}
-          onConversationSelect={handleConversationSelect}
+          onConversationSelect={setSelectedConversationId}
           onStartNewChat={handleStartNewChat}
-          onStartNewGroupChat={handleStartNewGroupChat}
         />
-        <ChatView conversation={selectedConversation} />
+        <ChatConversation 
+          conversation={selectedConversation}
+          onSendMessage={handleSendMessage} 
+        />
       </div>
     </PortalLayout>
   );
 };
 
-export default Chat;
+export default ChatPage;
