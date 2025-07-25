@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Users } from "lucide-react";
 import { Collaborator } from "../types";
-import { useChat } from "@/context/ChatContext";
 
+// Data tiruan untuk kolaborator
 const collaborators: Collaborator[] = [
   { id: "1", name: "Jane Doe", src: "https://i.pravatar.cc/40?u=a042581f4e29026704d", fallback: "JD" },
   { id: "2", name: "John Smith", src: "https://i.pravatar.cc/40?u=a042581f4e29026705d", fallback: "JS" },
@@ -19,14 +20,18 @@ type OnlineCollaboratorsProps = {
 
 const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { selectConversation } = useChat();
+  const navigate = useNavigate();
   const visibleCollaborators = collaborators.slice(0, 3);
   const remainingCount = collaborators.length - visibleCollaborators.length;
 
   const handleCollaboratorClick = (collaborator: Collaborator) => {
-    selectConversation({ 
-      name: collaborator.name, 
-      avatar: collaborator.src 
+    navigate('/chat', { 
+      state: { 
+        selectedCollaborator: { 
+          name: collaborator.name, 
+          avatar: collaborator.src 
+        } 
+      } 
     });
   };
 
