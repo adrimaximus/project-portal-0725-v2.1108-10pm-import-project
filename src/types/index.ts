@@ -1,6 +1,6 @@
-export type Collaborator = {
+export interface Collaborator {
   id: string;
   name: string;
-  src: string;
-  fallback: string;
-};
+  avatar: string;
+  role: string;
+}
