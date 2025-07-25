@@ -31,7 +31,7 @@ type Comment = {
   avatar: string;
 };
 
-const ServicesPage = () => {
+const RequestPage = () => {
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
@@ -118,7 +118,7 @@ const ServicesPage = () => {
           {/* Step 1: Service Selection */}
           <div className="space-y-4 pb-24">
             <h1 className="text-2xl font-bold tracking-tight">
-              Project Support
+              Project Support Request
             </h1>
             <p className="text-muted-foreground">
               Select the services you need for your project. You can select
@@ -453,4 +453,4 @@ const ServicesPage = () => {
   return <PortalLayout>{renderContent()}</PortalLayout>;
 };
 
-export default ServicesPage;
+export default RequestPage;
