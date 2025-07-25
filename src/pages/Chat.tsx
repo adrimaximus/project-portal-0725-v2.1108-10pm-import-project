@@ -14,15 +14,13 @@ const ChatPage = () => {
     const selectedUserName = location.state?.selectedUserName;
     if (selectedUserName) {
       const conversation = conversations.find(c => c.userName === selectedUserName);
-      if (conversation) {
-        setSelectedConversationId(conversation.id);
-      } else {
-        setSelectedConversationId(conversations[0]?.id || null);
-      }
-    } else if (!selectedConversationId) {
-      setSelectedConversationId(conversations[0]?.id || null);
+      setSelectedConversationId(conversation?.id || conversations[0]?.id || null);
+    } else {
+      // Hanya atur percakapan awal jika belum ada yang dipilih.
+      // Ini mencegah pembatalan pilihan pengguna.
+      setSelectedConversationId(currentId => currentId || conversations[0]?.id || null);
     }
-  }, [location.state, conversations, selectedConversationId]);
+  }, [location.state, conversations]);
 
   const handleSendMessage = (conversationId: string, text: string, attachment?: File | null) => {
     const hasText = text.trim().length > 0;
