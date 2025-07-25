@@ -1,75 +1,63 @@
-import { useState } from 'react';
-import { DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Dispatch, SetStateAction } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { allCollaborators } from "@/data/collaborators";
-import { Collaborator } from '@/types';
-import { cn } from '@/lib/utils';
+import { collaborators, Collaborator } from "@/data/collaborators";
+import { PlusCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface NewChatDialogProps {
+  open: boolean;
+  setOpen: Dispatch<SetStateAction<boolean>>;
   onSelectCollaborator: (collaborator: Collaborator) => void;
-  setOpen: (open: boolean) => void;
+  isCollapsed?: boolean;
 }
 
-const NewChatDialog = ({ onSelectCollaborator, setOpen }: NewChatDialogProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredCollaborators = allCollaborators
-    .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0));
-
+const NewChatDialog = ({ open, setOpen, onSelectCollaborator, isCollapsed }: NewChatDialogProps) => {
   const handleSelect = (collaborator: Collaborator) => {
     onSelectCollaborator(collaborator);
     setOpen(false);
   };
 
   return (
-    <DialogContent className="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle>Obrolan Baru</DialogTitle>
-        <DialogDescription>
-          Pilih seorang kolaborator untuk memulai percakapan baru.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="relative my-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Cari kolaborator..."
-          className="pl-9"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-      <div className="flex flex-col gap-1 max-h-[300px] overflow-y-auto pr-2 -mr-2">
-        {filteredCollaborators.length > 0 ? (
-          filteredCollaborators.map(collaborator => (
-            <div
-              key={collaborator.id}
-              className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer"
-              onClick={() => handleSelect(collaborator)}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size={isCollapsed ? "icon" : "sm"} className={cn(!isCollapsed && "w-full justify-start")}>
+          <PlusCircle className={cn("h-4 w-4", !isCollapsed && "mr-2")} />
+          {!isCollapsed && "New Chat"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Start a new chat</DialogTitle>
+          <DialogDescription>
+            Select a collaborator to start a one-on-one conversation.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2 py-4 max-h-[300px] overflow-y-auto">
+          {collaborators.map((c) => (
+            <button
+              key={c.name}
+              className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-muted"
+              onClick={() => handleSelect(c)}
             >
-              <div className="relative">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={collaborator.src} alt={collaborator.name} />
-                  <AvatarFallback>{collaborator.fallback}</AvatarFallback>
-                </Avatar>
-                <span className={cn(
-                  "absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background",
-                  collaborator.online ? "bg-green-500" : "bg-gray-400"
-                )} />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium">{collaborator.name}</p>
-                <p className="text-sm text-muted-foreground">{collaborator.online ? 'Online' : 'Offline'}</p>
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-center text-sm text-muted-foreground py-4">Kolaborator tidak ditemukan.</p>
-        )}
-      </div>
-    </DialogContent>
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={c.src} alt={c.name} />
+                <AvatarFallback>{c.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+              </Avatar>
+              <span className="font-medium">{c.name}</span>
+            </button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

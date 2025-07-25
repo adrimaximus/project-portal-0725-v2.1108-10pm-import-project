@@ -1,112 +1,114 @@
-import { useState } from "react";
+import { useState, Dispatch, SetStateAction } from "react";
 import {
+  Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { allCollaborators as collaborators } from "@/data/collaborators";
-import { Collaborator } from "@/types";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { collaborators, Collaborator } from "@/data/collaborators";
+import { Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface NewGroupChatDialogProps {
+  open: boolean;
+  setOpen: Dispatch<SetStateAction<boolean>>;
   onStartNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
-  setOpen: (open: boolean) => void;
+  isCollapsed?: boolean;
 }
 
-const NewGroupChatDialog = ({ onStartNewGroupChat, setOpen }: NewGroupChatDialogProps) => {
+const NewGroupChatDialog = ({ open, setOpen, onStartNewGroupChat, isCollapsed }: NewGroupChatDialogProps) => {
+  const [selected, setSelected] = useState<Collaborator[]>([]);
   const [groupName, setGroupName] = useState("");
-  const [selectedCollaborators, setSelectedCollaborators] = useState<Collaborator[]>([]);
 
-  const handleSelectCollaborator = (collaborator: Collaborator) => {
-    setSelectedCollaborators((prev) =>
-      prev.some((c) => c.id === collaborator.id)
-        ? prev.filter((c) => c.id !== collaborator.id)
-        : [...prev, collaborator]
-    );
+  const handleSelect = (collaborator: Collaborator, isChecked: boolean) => {
+    if (isChecked) {
+      setSelected([...selected, collaborator]);
+    } else {
+      setSelected(selected.filter(c => c.name !== collaborator.name));
+    }
   };
 
   const handleCreateGroup = () => {
-    if (groupName.trim() && selectedCollaborators.length > 0) {
-      onStartNewGroupChat(selectedCollaborators, groupName);
+    if (selected.length > 0 && groupName.trim()) {
+      onStartNewGroupChat(selected, groupName);
       setOpen(false);
+      setSelected([]);
+      setGroupName("");
     }
   };
 
   return (
-    <DialogContent className="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle>Create a new group chat</DialogTitle>
-        <DialogDescription>
-          Select members and give your group a name.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-4">
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="group-name" className="text-right">
-            Group Name
-          </Label>
-          <Input
-            id="group-name"
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
-            className="col-span-3"
-            placeholder="e.g., Project Alpha Team"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Select Members</Label>
-          <ScrollArea className="h-[200px] w-full rounded-md border p-2">
-            <div className="space-y-2">
-              {collaborators.map((collaborator) => (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size={isCollapsed ? "icon" : "sm"} className={cn(!isCollapsed && "w-full justify-start")}>
+          <Users className={cn("h-4 w-4", !isCollapsed && "mr-2")} />
+          {!isCollapsed && "New Group"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create a group chat</DialogTitle>
+          <DialogDescription>
+            Select members and give your group a name.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="group-name">Group Name</Label>
+            <Input
+              id="group-name"
+              placeholder="e.g. Project Phoenix Team"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Members</Label>
+            <div className="space-y-1 max-h-[200px] overflow-y-auto border rounded-md p-2">
+              {collaborators.map((c) => (
                 <div
-                  key={collaborator.id}
-                  className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted"
-                  onClick={() => handleSelectCollaborator(collaborator)}
+                  key={c.name}
+                  className="flex items-center gap-3 p-2 rounded-md hover:bg-muted"
                 >
                   <Checkbox
-                    id={`collaborator-${collaborator.id}`}
-                    checked={selectedCollaborators.some((c) => c.id === collaborator.id)}
-                    onCheckedChange={() => handleSelectCollaborator(collaborator)}
-                    className="cursor-pointer"
+                    id={`member-${c.name}-${open}`}
+                    onCheckedChange={(checked) => handleSelect(c, !!checked)}
+                    checked={selected.some(s => s.name === c.name)}
                   />
-                  <label
-                    htmlFor={`collaborator-${collaborator.id}`}
+                  <Label
+                    htmlFor={`member-${c.name}-${open}`}
                     className="flex-1 flex items-center gap-3 cursor-pointer"
                   >
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={collaborator.src} alt={collaborator.name} />
-                      <AvatarFallback>{collaborator.fallback}</AvatarFallback>
+                      <AvatarImage src={c.src} alt={c.name} />
+                      <AvatarFallback>{c.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                     </Avatar>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium leading-none">{collaborator.name}</p>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`h-2 w-2 rounded-full ${collaborator.online ? 'bg-green-500' : 'bg-gray-400'}`} />
-                        <p className="text-sm text-muted-foreground">{collaborator.online ? 'Online' : 'Offline'}</p>
-                      </div>
-                    </div>
-                  </label>
+                    <span className="font-medium">{c.name}</span>
+                  </Label>
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         </div>
-      </div>
-      <DialogFooter>
-        <Button
-          onClick={handleCreateGroup}
-          disabled={!groupName.trim() || selectedCollaborators.length === 0}
-        >
-          Create Group
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+        <DialogFooter>
+          <Button
+            type="submit"
+            onClick={handleCreateGroup}
+            disabled={selected.length === 0 || !groupName.trim()}
+          >
+            Create Group
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
