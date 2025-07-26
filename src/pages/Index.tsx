@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/select";
 
 export default function Index() {
+  const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
@@ -74,7 +76,7 @@ export default function Index() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button>
+          <Button onClick={() => navigate("/request")}>
             <PlusCircle className="mr-2 h-4 w-4" />
             New Project
           </Button>
