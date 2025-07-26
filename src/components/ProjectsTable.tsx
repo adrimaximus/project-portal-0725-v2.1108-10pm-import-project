@@ -230,7 +230,7 @@ export const columns: ColumnDef<Project>[] = [
 
       const getPaymentStatusBadgeVariant = (s: typeof displayStatus) => {
         switch (s) {
-          case "paid": return "outline";
+          case "paid": return "default";
           case "pending": return "secondary";
           case "overdue": return "destructive";
           case "proposed": return "outline";
