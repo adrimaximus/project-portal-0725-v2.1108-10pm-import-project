@@ -1,61 +1,60 @@
 import { Project } from "@/data/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { File } from "lucide-react";
+
+const getStatusBadgeVariant = (status: Project["status"]) => {
+  switch (status) {
+    case "Completed":
+      return "default";
+    case "Billed":
+    case "Pending":
+      return "outline";
+    case "In Progress":
+      return "secondary";
+    case "On Hold":
+      return "destructive";
+    default:
+      return "outline";
+  }
+};
 
 interface ProjectSidebarProps {
   project: Project;
 }
 
-const ProjectSidebar = ({ project }: ProjectSidebarProps) => {
+export default function ProjectSidebar({ project }: ProjectSidebarProps) {
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader><CardTitle>Assigned To</CardTitle></CardHeader>
-        <CardContent>
-          <TooltipProvider>
-            <div className="flex items-center -space-x-2">
-              {project.assignedTo.map((user, index) => (
-                <Tooltip key={index} delayDuration={100}>
-                  <TooltipTrigger asChild>
-                    <div className="relative">
-                      <Avatar className="h-10 w-10 border-2 border-card">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                      </Avatar>
-                      <span
-                        className={cn("absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-card", user.status === 'online' ? 'bg-green-500' : 'bg-gray-400')}
-                        title={user.status === 'online' ? 'Online' : 'Offline'}
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent><p>{user.name}</p></TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
-          </TooltipProvider>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>Project Files</CardTitle></CardHeader>
-        <CardContent>
-          <ul className="space-y-2 text-sm">
-            <li className="flex items-center gap-2">
-              <File className="h-4 w-4 text-muted-foreground" />
-              <span className="hover:underline cursor-pointer">project_brief.pdf</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <File className="h-4 w-4 text-muted-foreground" />
-              <span className="hover:underline cursor-pointer">design_mockups.zip</span>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>About Project</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <h4 className="text-sm font-semibold mb-2">Status</h4>
+          <Badge variant={getStatusBadgeVariant(project.status)}>
+            {project.status}
+          </Badge>
+        </div>
+        <div>
+          <h4 className="text-sm font-semibold mb-2">Assigned To</h4>
+          <div className="space-y-2">
+            {project.assignedTo.length > 0 ? (
+              project.assignedTo.map((user) => (
+                <div key={user.name} className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarFallback>{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium text-sm">{user.name}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">Unassigned</p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
-};
-
-export default ProjectSidebar;
+}

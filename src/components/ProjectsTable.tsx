@@ -50,6 +50,8 @@ const getStatusBadgeVariant = (status: Project["status"]) => {
   switch (status) {
     case "Completed":
       return "default"
+    case "Billed":
+      return "outline"
     case "In Progress":
       return "secondary"
     case "On Hold":

@@ -87,6 +87,7 @@ export default function Index() {
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="In Progress">In Progress</SelectItem>
             <SelectItem value="Completed">Completed</SelectItem>
+            <SelectItem value="Billed">Billed</SelectItem>
             <SelectItem value="On Hold">On Hold</SelectItem>
           </SelectContent>
         </Select>
