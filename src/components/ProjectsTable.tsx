@@ -211,31 +211,54 @@ export const columns: ColumnDef<Project>[] = [
     },
   },
   {
+    accessorKey: "paymentStatus",
+    header: "Payment Status",
+    cell: ({ row }) => {
+      const paymentStatus = row.original.paymentStatus;
+      const paymentDueDate = row.original.paymentDueDate;
+      
+      let displayStatus: Project["paymentStatus"] | 'Overdue' = paymentStatus;
+      
+      if (paymentStatus === 'Pending' && paymentDueDate) {
+        const dueDate = new Date(paymentDueDate);
+        const now = new Date();
+        now.setHours(0,0,0,0);
+        if (dueDate < now) {
+          displayStatus = 'Overdue';
+        }
+      }
+
+      const getPaymentStatusBadgeVariant = (s: typeof displayStatus) => {
+        switch (s) {
+          case "Paid":
+            return "outline"
+          case "Pending":
+            return "secondary"
+          case "Overdue":
+            return "destructive"
+          default:
+            return "outline"
+        }
+      }
+
+      return (
+        <Badge variant={getPaymentStatusBadgeVariant(displayStatus)}>
+          {displayStatus}
+        </Badge>
+      )
+    },
+  },
+  {
     accessorKey: "paymentDueDate",
     header: "Payment Due",
     cell: ({ row }) => {
       const paymentDueDate = row.getValue("paymentDueDate") as string | undefined;
-      const paymentStatus = row.original.paymentStatus;
-
-      if (paymentStatus === 'Paid') {
-        return <Badge variant="outline">Paid</Badge>
-      }
-
       if (!paymentDueDate) {
         return <span className="text-muted-foreground">-</span>
       }
       
       const dueDate = new Date(paymentDueDate);
-      const now = new Date();
-      now.setHours(0,0,0,0);
-      
-      const isOverdue = paymentStatus === 'Overdue' || (paymentStatus === 'Pending' && dueDate < now);
-
-      return (
-        <div className={cn(isOverdue && "text-destructive")}>
-          {format(dueDate, "dd MMM yyyy")}
-        </div>
-      )
+      return <div>{format(dueDate, "dd MMM yyyy")}</div>
     },
   },
   {
