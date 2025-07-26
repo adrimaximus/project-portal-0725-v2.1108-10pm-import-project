@@ -37,14 +37,13 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
         <header className="sticky top-0 z-10 bg-background flex-shrink-0">
           <PortalHeader />
         </header>
-        <div className="flex-1 overflow-y-auto">
-          <main className={cn(
-            noPadding ? "" : "p-4 lg:p-6"
-          )}>
-            {children}
-          </main>
-          {summary && <div className="flex-shrink-0">{summary}</div>}
-        </div>
+        <main className={cn(
+          "flex-1 overflow-y-auto",
+          noPadding ? "" : "p-4 lg:p-6"
+        )}>
+          {children}
+        </main>
+        {summary && <div className="flex-shrink-0">{summary}</div>}
       </div>
     </div>
   );
