@@ -1,18 +1,15 @@
-export type User = {
-  id: string;
-  name: string;
-  avatar: string;
-  status: 'Online' | 'Offline';
-};
+import { AssignedUser } from "./projects";
+
+export type User = Omit<AssignedUser, 'status'>;
 
 export const allUsers: User[] = [
-  { id: 'user-1', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=alice', status: 'Online' },
-  { id: 'user-2', name: 'Bob Williams', avatar: 'https://i.pravatar.cc/150?u=bob', status: 'Offline' },
-  { id: 'user-3', name: 'Charlie Brown', avatar: 'https://i.pravatar.cc/150?u=charlie', status: 'Online' },
-  { id: 'user-4', name: 'Diana Prince', avatar: 'https://i.pravatar.cc/150?u=diana', status: 'Online' },
-  { id: 'user-5', name: 'Ethan Hunt', avatar: 'https://i.pravatar.cc/150?u=ethan', status: 'Offline' },
-  { id: 'user-6', name: 'Fiona Glenanne', avatar: 'https://i.pravatar.cc/150?u=fiona', status: 'Online' },
-  { id: 'user-7', name: 'Sam Axe', avatar: 'https://i.pravatar.cc/150?u=sam', status: 'Offline' },
-  { id: 'user-8', name: 'Grace O\'Malley', avatar: 'https://i.pravatar.cc/150?u=grace', status: 'Online' },
-  { id: 'user-9', name: 'Michael Westen', avatar: 'https://i.pravatar.cc/150?u=michael', status: 'Online' },
+  { id: 'user-1', name: "Ethan Carter", avatar: "https://i.pravatar.cc/150?u=ethan" },
+  { id: 'user-2', name: "Olivia Martin", avatar: "https://i.pravatar.cc/150?u=olivia" },
+  { id: 'user-3', name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia" },
+  { id: 'user-4', name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam" },
+  { id: 'user-5', name: "Ava Garcia", avatar: "https://i.pravatar.cc/150?u=ava" },
+  { id: 'user-6', name: "Jackson Lee", avatar: "https://i.pravatar.cc/150?u=jackson" },
+  { id: 'user-7', name: "Noah Rodriguez", avatar: "https://i.pravatar.cc/150?u=noah" },
+  { id: 'user-8', name: "Isabella Wilson", avatar: "https://i.pravatar.cc/150?u=isabella" },
+  { id: 'user-9', name: "Mason Moore", avatar: "https://i.pravatar.cc/150?u=mason" },
 ];

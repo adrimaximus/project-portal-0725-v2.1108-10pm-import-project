@@ -66,9 +66,9 @@ const ProjectDetail = () => {
     }
   };
 
-  const handleProjectValueChange = (value: number | undefined) => {
+  const handleBudgetChange = (value: number | undefined) => {
     if (editedProject) {
-      setEditedProject({ ...editedProject, projectValue: value || 0 });
+      setEditedProject({ ...editedProject, budget: value || 0 });
     }
   };
 
@@ -103,7 +103,7 @@ const ProjectDetail = () => {
           editedProject={editedProject}
           onSelectChange={handleSelectChange}
           onDateChange={handleDateChange}
-          onProjectValueChange={handleProjectValueChange}
+          onBudgetChange={handleBudgetChange}
         />
         <ProjectMainContent
           project={editedProject}

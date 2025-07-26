@@ -1,7 +1,9 @@
 import { Project } from "@/data/projects";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { File } from "lucide-react";
 
 interface ProjectSidebarProps {
   project: Project;
@@ -9,38 +11,50 @@ interface ProjectSidebarProps {
 
 const ProjectSidebar = ({ project }: ProjectSidebarProps) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Project Team</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Progress</h4>
-          <Progress value={project.progress} />
-          <p className="text-xs text-muted-foreground">{project.progress}% complete</p>
-        </div>
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Assigned Team</h4>
-          <div className="space-y-3">
-            {project.assignedTo.map((user) => (
-              <div key={user.id} className="flex items-center gap-3">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.name.slice(0, 2)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <p className="text-sm font-medium leading-none">{user.name}</p>
-                  <div className="flex items-center gap-1.5">
-                    <span className={cn("h-2 w-2 rounded-full", user.status === 'Online' ? 'bg-green-500' : 'bg-gray-400')} />
-                    <p className="text-xs text-muted-foreground">{user.status === 'Online' ? 'Online' : 'Offline'}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader><CardTitle>Assigned To</CardTitle></CardHeader>
+        <CardContent>
+          <TooltipProvider>
+            <div className="flex items-center -space-x-2">
+              {project.assignedTo.map((user, index) => (
+                <Tooltip key={index} delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <div className="relative">
+                      <Avatar className="h-10 w-10 border-2 border-card">
+                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarFallback>{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+                      </Avatar>
+                      <span
+                        className={cn("absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-card", user.status === 'online' ? 'bg-green-500' : 'bg-gray-400')}
+                        title={user.status === 'online' ? 'Online' : 'Offline'}
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent><p>{user.name}</p></TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Project Files</CardTitle></CardHeader>
+        <CardContent>
+          <ul className="space-y-2 text-sm">
+            <li className="flex items-center gap-2">
+              <File className="h-4 w-4 text-muted-foreground" />
+              <span className="hover:underline cursor-pointer">project_brief.pdf</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <File className="h-4 w-4 text-muted-foreground" />
+              <span className="hover:underline cursor-pointer">design_mockups.zip</span>
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
