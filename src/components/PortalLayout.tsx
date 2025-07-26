@@ -9,9 +9,10 @@ type PortalLayoutProps = {
   children: ReactNode;
   noPadding?: boolean;
   summary?: ReactNode;
+  disableMainScroll?: boolean;
 };
 
-const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProps) => {
+const PortalLayout = ({ children, noPadding = false, summary, disableMainScroll = false }: PortalLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSidebar = () => {
@@ -43,7 +44,8 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
           <PortalHeader />
         </header>
         <main className={cn(
-          "flex flex-1 flex-col overflow-auto",
+          "flex flex-1 flex-col",
+          !disableMainScroll && "overflow-auto",
           !noPadding && "gap-2 px-4 py-2 lg:gap-4 lg:px-6 lg:py-4"
         )}>
           {children}

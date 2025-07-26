@@ -61,7 +61,11 @@ const RequestPage = () => {
       />
     ) : null;
 
-  return <PortalLayout summary={summaryComponent}>{renderContent()}</PortalLayout>;
+  return (
+    <PortalLayout summary={summaryComponent} disableMainScroll={step === 2}>
+      {renderContent()}
+    </PortalLayout>
+  );
 };
 
 export default RequestPage;
