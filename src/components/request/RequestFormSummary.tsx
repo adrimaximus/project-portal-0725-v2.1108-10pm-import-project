@@ -7,7 +7,7 @@ interface RequestFormSummaryProps {
 
 const RequestFormSummary = ({ onSubmit, isDisabled }: RequestFormSummaryProps) => {
   return (
-    <div className="border-t bg-background/95 backdrop-blur-sm">
+    <div className="sticky bottom-0 z-10 border-t bg-background/95 backdrop-blur-sm">
       <div className="flex items-center justify-end gap-6 p-4">
         <Button onClick={onSubmit} disabled={isDisabled}>
           Submit Request
