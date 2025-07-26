@@ -16,7 +16,7 @@ interface ProjectInfoCardsProps {
   editedProject: Project | null;
   onSelectChange: (name: 'status' | 'paymentStatus', value: string) => void;
   onDateChange: (name: 'deadline' | 'paymentDueDate', date: Date | undefined) => void;
-  onBudgetChange: (value: number | undefined) => void;
+  onProjectValueChange: (value: number | undefined) => void;
 }
 
 const ProjectInfoCards = ({
@@ -25,7 +25,7 @@ const ProjectInfoCards = ({
   editedProject,
   onSelectChange,
   onDateChange,
-  onBudgetChange,
+  onProjectValueChange,
 }: ProjectInfoCardsProps) => {
   const getStatusBadgeVariant = (status: Project["status"]) => {
     switch (status) {
@@ -52,9 +52,9 @@ const ProjectInfoCards = ({
     }
   };
 
-  const budgetFormatted = new Intl.NumberFormat("id-ID", {
+  const projectValueFormatted = new Intl.NumberFormat("id-ID", {
     style: "currency", currency: "IDR", minimumFractionDigits: 0,
-  }).format(project.budget);
+  }).format(project.projectValue);
 
   const deadlineFormatted = new Date(project.deadline).toLocaleDateString("en-US", {
     year: 'numeric', month: 'long', day: 'numeric'
@@ -141,17 +141,17 @@ const ProjectInfoCards = ({
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Budget</CardTitle>
+          <CardTitle className="text-sm font-medium">Project Value</CardTitle>
           <Wallet className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           {isEditing && editedProject ? (
             <div className="relative">
               <span className="absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">IDR</span>
-              <CurrencyInput value={editedProject.budget} onChange={onBudgetChange} className="pl-12" />
+              <CurrencyInput value={editedProject.projectValue} onChange={onProjectValueChange} className="pl-12" />
             </div>
           ) : (
-            <div className="text-xl font-bold">{budgetFormatted}</div>
+            <div className="text-xl font-bold">{projectValueFormatted}</div>
           )}
         </CardContent>
       </Card>

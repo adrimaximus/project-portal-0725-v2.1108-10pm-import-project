@@ -252,20 +252,20 @@ export const columns: ColumnDef<Project>[] = [
     },
   },
   {
-    accessorKey: "budget",
+    accessorKey: "projectValue",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Budget
+          Project Value
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )
     },
     cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("budget"))
+      const amount = parseFloat(row.getValue("projectValue"))
       const formatted = new Intl.NumberFormat("id-ID", {
         style: "currency",
         currency: "IDR",
@@ -381,8 +381,8 @@ export default function ProjectsTable({ columns, data }: { columns: ColumnDef<Pr
                         <span className="text-xs">Due: {format(new Date(project.deadline), "dd MMM yyyy")}</span>
                       </div>
                       <div className="text-sm pt-1">
-                        <span className="font-medium">Budget: </span>
-                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(project.budget)}
+                        <span className="font-medium">Project Value: </span>
+                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(project.projectValue)}
                       </div>
                     </div>
                     <div onClick={(e) => e.stopPropagation()}>
