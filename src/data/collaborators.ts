@@ -1,41 +1,61 @@
-import { Collaborator } from "@/types";
+import { Collaborator } from "../types";
 
 export const allCollaborators: Collaborator[] = [
   {
-    id: "user-0",
-    name: "Olivia Martin",
-    src: "/avatars/01.png",
-    fallback: "OM",
+    id: "usr_1",
+    name: "Andi Wijaya",
+    fallback: "AW",
     online: true,
+    src: "https://i.pravatar.cc/150?u=usr_1",
   },
   {
-    id: "collab-1",
-    name: "John Doe",
-    src: "/avatars/02.png",
-    fallback: "JD",
+    id: "usr_2",
+    name: "Bunga Citra",
+    fallback: "BC",
     online: true,
+    src: "https://i.pravatar.cc/150?u=usr_2",
   },
   {
-    id: "collab-2",
-    name: "Jane Smith",
-    src: "/avatars/03.png",
-    fallback: "JS",
+    id: "usr_3",
+    name: "Cahyo Nugroho",
+    fallback: "CN",
+    online: true,
+    src: "https://i.pravatar.cc/150?u=usr_3",
+  },
+  {
+    id: "usr_4",
+    name: "Dewi Lestari",
+    fallback: "DL",
+    online: true,
+    src: "https://i.pravatar.cc/150?u=usr_4",
+  },
+  {
+    id: "usr_5",
+    name: "Eko Prasetyo",
+    fallback: "EP",
     online: false,
+    src: "https://i.pravatar.cc/150?u=usr_5",
   },
   {
-    id: "collab-3",
-    name: "Mike Johnson",
-    src: "/avatars/04.png",
-    fallback: "MJ",
+    id: "usr_6",
+    name: "Fitriani",
+    fallback: "F",
     online: true,
+    src: "https://i.pravatar.cc/150?u=usr_6",
   },
   {
-    id: "collab-4",
-    name: "Emily Davis",
-    src: "/avatars/05.png",
-    fallback: "ED",
+    id: "usr_7",
+    name: "Gilang Ramadhan",
+    fallback: "GR",
     online: false,
+    src: "https://i.pravatar.cc/150?u=usr_7",
   },
 ];
 
-export const currentUser: Collaborator = allCollaborators[0];
+export const currentUser: Collaborator = {
+  id: "usr_0",
+  name: "You",
+  fallback: "Y",
+  online: true,
+  src: "https://i.pravatar.cc/150?u=usr_0",
+};

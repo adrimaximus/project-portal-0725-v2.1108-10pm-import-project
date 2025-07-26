@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { Users } from "lucide-react";
 import { Collaborator } from "../types";
 import { allCollaborators } from "@/data/collaborators";
@@ -74,7 +73,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                 <div className="relative">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={c.src || `https://avatar.vercel.sh/${c.id}.png`} alt={c.name} />
-                    <AvatarFallback className="bg-muted-foreground/20 text-muted-foreground font-semibold">{c.fallback}</AvatarFallback>
+                    <AvatarFallback className="bg-muted-foreground text-muted font-semibold">{c.fallback}</AvatarFallback>
                   </Avatar>
                   <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
                 </div>
@@ -84,19 +83,19 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
           </div>
         ) : (
           <TooltipProvider delayDuration={0}>
-            <div className="flex items-center cursor-pointer" onClick={() => setIsExpanded(true)}>
+            <div className="flex items-center cursor-pointer -space-x-3" onClick={() => setIsExpanded(true)}>
               {visibleCollaborators.map((collaborator, index) => (
                 <Tooltip key={collaborator.id}>
                   <TooltipTrigger asChild>
-                    <div className={cn(
-                      "relative transition-all duration-300 hover:z-10 hover:scale-110", 
-                      index > 0 && "-ml-3"
-                    )}>
-                      <Avatar className="h-9 w-9 border-2 border-background">
+                    <div
+                      className="relative transition-all duration-300 hover:z-40 hover:scale-110"
+                      style={{ zIndex: index }}
+                    >
+                      <Avatar className="h-9 w-9 border-2 border-background bg-background">
                         <AvatarImage src={collaborator.src || `https://avatar.vercel.sh/${collaborator.id}.png`} alt={collaborator.name} />
-                        <AvatarFallback className="bg-muted-foreground/20 text-muted-foreground font-semibold">{collaborator.fallback}</AvatarFallback>
+                        <AvatarFallback className="bg-muted-foreground text-muted font-semibold">{collaborator.fallback}</AvatarFallback>
                       </Avatar>
-                      {index === visibleCollaborators.length - 1 && (
+                      {index === visibleCollaborators.length - 1 && remainingCount === 0 && (
                         <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
                       )}
                     </div>
@@ -109,8 +108,12 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
               {remainingCount > 0 && (
                  <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground -ml-3 border-2 border-background text-xs font-semibold hover:z-10 hover:scale-110 transition-transform">
+                    <div 
+                      className="relative flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground border-2 border-background text-xs font-semibold hover:z-40 hover:scale-110 transition-transform"
+                      style={{ zIndex: visibleCollaborators.length }}
+                    >
                       +{remainingCount}
+                      <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="bg-primary text-primary-foreground">
