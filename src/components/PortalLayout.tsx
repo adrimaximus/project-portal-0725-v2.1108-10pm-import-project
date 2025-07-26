@@ -33,17 +33,17 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
         isCollapsed={isCollapsed} 
         onToggle={toggleSidebar}
       />
-      <div className="flex flex-col overflow-hidden">
-        <header className="sticky top-0 z-10 bg-background">
+      <div className="flex flex-col h-screen">
+        <header className="sticky top-0 z-10 bg-background flex-shrink-0">
           <PortalHeader />
         </header>
         <main className={cn(
-          "flex flex-1 flex-col overflow-auto",
+          "flex-1 overflow-y-auto",
           !noPadding && "gap-4 p-4 lg:gap-6 lg:p-6"
         )}>
           {children}
         </main>
-        {summary}
+        {summary && <div className="flex-shrink-0">{summary}</div>}
       </div>
     </div>
   );
