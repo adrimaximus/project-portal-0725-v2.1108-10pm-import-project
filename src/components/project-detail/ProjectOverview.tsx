@@ -9,9 +9,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { services as allServices, type Service } from "@/data/services";
+import { Separator } from "../ui/separator";
 
 interface AssignedTeamProps {
   users: AssignedUser[];
@@ -187,6 +188,44 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
                 className="prose prose-sm max-w-none text-muted-foreground"
                 dangerouslySetInnerHTML={{ __html: project.description }}
               />
+            )}
+            {project.briefFiles && project.briefFiles.length > 0 && !isEditing && (
+              <>
+                <Separator className="my-6" />
+                <div>
+                  <h4 className="text-sm font-medium mb-3 text-foreground">Brief Files</h4>
+                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                    {project.briefFiles.map((file, index) => (
+                      <a
+                        key={index}
+                        href={URL.createObjectURL(file)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="relative group border rounded-lg overflow-hidden aspect-square"
+                        title={file.name}
+                      >
+                        {file.type.startsWith("image/") ? (
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-muted flex flex-col items-center justify-center p-2">
+                            <FileText className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                          <p className="text-xs text-white truncate">
+                            {file.name}
+                          </p>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
