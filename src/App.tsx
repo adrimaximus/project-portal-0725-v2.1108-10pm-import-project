@@ -1,20 +1,24 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import ProjectsDashboard from "./pages/ProjectsDashboard";
+import Index from "./pages/Index";
+import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
-import NewRequest from "./pages/NewRequest";
-import Layout from "./components/Layout";
+import RequestPage from "./pages/Request";
+import ChatPage from "./pages/ChatPage";
+import Settings from "./pages/Settings";
+import Billing from "./pages/Billing";
 
 function App() {
   return (
     <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<ProjectsDashboard />} />
-          <Route path="/projects" element={<ProjectsDashboard />} />
-          <Route path="/projects/:projectId" element={<ProjectDetail />} />
-          <Route path="/request" element={<NewRequest />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/projects/:projectId" element={<ProjectDetail />} />
+        <Route path="/request" element={<RequestPage />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/billing" element={<Billing />} />
+      </Routes>
     </Router>
   );
 }
