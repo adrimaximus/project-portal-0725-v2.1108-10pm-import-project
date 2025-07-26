@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Service } from "@/data/services";
 import { dummyProjects, Project, AssignedUser } from "@/data/projects";
-import { ArrowLeft, Calendar as CalendarIcon, Paperclip, Wallet, CalendarDays, CalendarClock } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Paperclip, Wallet, CalendarDays, CalendarClock, FileText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -29,10 +29,21 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const [endDate, setEndDate] = useState<Date>();
   const [paymentDueDate, setPaymentDueDate] = useState<Date>();
   const [budget, setBudget] = useState<number | undefined>();
-  const [briefFile, setBriefFile] = useState<File | null>(null);
+  const [briefFiles, setBriefFiles] = useState<File[]>([]);
   const [assignedTeam, setAssignedTeam] = useState<AssignedUser[]>([]);
 
   const isSubmitDisabled = !projectName || !projectDescription || selectedServices.length === 0 || !startDate || !endDate || !budget || assignedTeam.length === 0;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setBriefFiles((prevFiles) => [...prevFiles, ...newFiles]);
+    }
+  };
+
+  const handleRemoveFile = (indexToRemove: number) => {
+    setBriefFiles((prevFiles) => prevFiles.filter((_, index) => index !== indexToRemove));
+  };
 
   const handleSubmitRequest = () => {
     if (isSubmitDisabled) {
@@ -200,28 +211,54 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
 
       <Card>
         <CardHeader>
-          <CardTitle>Brief File</CardTitle>
+          <CardTitle>Brief Files</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative">
-            <Input
-              id="briefAttachment"
-              type="file"
-              className="sr-only"
-              onChange={(e) => setBriefFile(e.target.files ? e.target.files[0] : null)}
-            />
-            <Label htmlFor="briefAttachment" className="w-full">
-              <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer hover:bg-accent hover:text-accent-foreground">
-                <span className={cn("truncate", !briefFile && "text-muted-foreground")}>
-                  {briefFile ? briefFile.name : "Attach a file..."}
-                </span>
-                <Paperclip className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </Label>
-          </div>
-          <p className="text-sm text-muted-foreground mt-2">
-            Attach any relevant documents for the project brief.
-          </p>
+          {briefFiles.length > 0 && (
+            <div className="mb-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {briefFiles.map((file, index) => (
+                <div key={index} className="relative group border rounded-lg overflow-hidden aspect-square">
+                  {file.type.startsWith("image/") ? (
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-muted flex flex-col items-center justify-center p-2">
+                      <FileText className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                    <p className="text-xs text-white truncate">{file.name}</p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    onClick={() => handleRemoveFile(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <Input
+            id="briefAttachment"
+            type="file"
+            multiple
+            className="sr-only"
+            onChange={handleFileChange}
+          />
+          <Label htmlFor="briefAttachment" className="w-full cursor-pointer">
+            <div className="flex flex-col items-center justify-center w-full p-6 border-2 border-dashed rounded-lg border-input bg-background hover:bg-accent">
+              <Paperclip className="w-8 h-8 mb-3 text-muted-foreground" />
+              <p className="mb-1 text-sm text-foreground font-semibold">Click to upload files</p>
+              <p className="text-xs text-muted-foreground">You can attach multiple documents</p>
+            </div>
+          </Label>
         </CardContent>
       </Card>
 
