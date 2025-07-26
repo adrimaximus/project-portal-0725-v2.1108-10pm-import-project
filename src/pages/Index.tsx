@@ -85,9 +85,13 @@ export default function Index() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="Requested">Requested</SelectItem>
             <SelectItem value="In Progress">In Progress</SelectItem>
             <SelectItem value="Completed">Completed</SelectItem>
+            <SelectItem value="Billed">Billed</SelectItem>
             <SelectItem value="On Hold">On Hold</SelectItem>
+            <SelectItem value="Cancelled">Cancelled</SelectItem>
+            <SelectItem value="Done">Done</SelectItem>
           </SelectContent>
         </Select>
         <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
