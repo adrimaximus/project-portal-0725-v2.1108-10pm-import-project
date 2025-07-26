@@ -35,7 +35,7 @@ const ServiceSelection = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-40">
       <h1 className="text-2xl font-bold tracking-tight">
         Project Support Request
       </h1>

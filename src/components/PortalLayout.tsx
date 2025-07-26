@@ -25,7 +25,7 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
   return (
     <div
       className={cn(
-        "grid h-screen w-full overflow-hidden transition-[grid-template-columns] duration-300 ease-in-out",
+        "grid min-h-screen w-full transition-[grid-template-columns] duration-300 ease-in-out",
         gridCols
       )}
     >
@@ -33,23 +33,17 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
         isCollapsed={isCollapsed} 
         onToggle={toggleSidebar}
       />
-      <div className="flex flex-col relative"> {/* Removed overflow-hidden, added relative */}
-        <header className="sticky top-0 z-10 bg-background flex-shrink-0">
+      <div className="flex flex-col h-screen overflow-hidden">
+        <header className="sticky top-0 z-10 bg-background">
           <PortalHeader />
         </header>
         <main className={cn(
-          "flex-1 overflow-y-auto",
-          noPadding ? "" : "p-4 lg:p-6",
-          // Add padding to bottom if summary exists to prevent content from being hidden underneath it
-          summary ? "pb-28" : "" 
+          "flex flex-1 flex-col overflow-auto",
+          !noPadding && "gap-4 p-4 lg:gap-6 lg:p-6"
         )}>
           {children}
         </main>
-        {summary && (
-          <div className="absolute bottom-0 w-full z-10">
-            {summary}
-          </div>
-        )}
+        {summary}
       </div>
     </div>
   );

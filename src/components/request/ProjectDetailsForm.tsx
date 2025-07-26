@@ -1,8 +1,9 @@
-import React from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Service } from "@/data/services";
-import { AssignedUser } from "@/data/projects";
+import { dummyProjects, Project, AssignedUser } from "@/data/projects";
 import { ArrowLeft, Calendar as CalendarIcon, Paperclip, Wallet, CalendarDays, CalendarClock, FileText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,66 +19,66 @@ import TeamSelector from "./TeamSelector";
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
   onBack: () => void;
-  projectName: string;
-  setProjectName: (value: string) => void;
-  projectDescription: string;
-  setProjectDescription: (value: string) => void;
-  startDate?: Date;
-  setStartDate: (date?: Date) => void;
-  endDate?: Date;
-  setEndDate: (date?: Date) => void;
-  paymentDueDate?: Date;
-  setPaymentDueDate: (date?: Date) => void;
-  budget?: number;
-  setBudget: (value?: number) => void;
-  briefFiles: File[];
-  setBriefFiles: (files: File[]) => void;
-  assignedTeam: AssignedUser[];
-  setAssignedTeam: (team: AssignedUser[]) => void;
 }
 
-const ProjectDetailsForm = ({
-  selectedServices,
-  onBack,
-  projectName,
-  setProjectName,
-  projectDescription,
-  setProjectDescription,
-  startDate,
-  setStartDate,
-  endDate,
-  setEndDate,
-  paymentDueDate,
-  setPaymentDueDate,
-  budget,
-  setBudget,
-  briefFiles,
-  setBriefFiles,
-  assignedTeam,
-  setAssignedTeam,
-}: ProjectDetailsFormProps) => {
+const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
+  const navigate = useNavigate();
+  const [projectName, setProjectName] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
+  const [paymentDueDate, setPaymentDueDate] = useState<Date>();
+  const [budget, setBudget] = useState<number | undefined>();
+  const [briefFiles, setBriefFiles] = useState<File[]>([]);
+  const [assignedTeam, setAssignedTeam] = useState<AssignedUser[]>([]);
+
+  const isSubmitDisabled = !projectName || !projectDescription || selectedServices.length === 0 || !startDate || !endDate || !budget || assignedTeam.length === 0;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      setBriefFiles([...briefFiles, ...newFiles]);
+      setBriefFiles((prevFiles) => [...prevFiles, ...newFiles]);
     }
   };
 
   const handleRemoveFile = (indexToRemove: number) => {
-    setBriefFiles(briefFiles.filter((_, index) => index !== indexToRemove));
+    setBriefFiles((prevFiles) => prevFiles.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleSubmitRequest = () => {
+    if (isSubmitDisabled) {
+      alert("Please fill all required fields.");
+      return;
+    }
+
+    const newProject: Project = {
+      id: `proj-${Date.now()}`,
+      name: projectName,
+      description: projectDescription,
+      status: "Requested",
+      progress: 0,
+      startDate: format(startDate as Date, "yyyy-MM-dd"),
+      deadline: format(endDate as Date, "yyyy-MM-dd"),
+      paymentDueDate: paymentDueDate ? format(paymentDueDate, "yyyy-MM-dd") : undefined,
+      budget: budget as number,
+      paymentStatus: "pending",
+      assignedTo: assignedTeam,
+      services: selectedServices.map(s => s.title),
+      briefFiles: briefFiles,
+    };
+
+    dummyProjects.unshift(newProject);
+    navigate(`/projects/${newProject.id}`);
   };
 
   return (
-    <div className="space-y-6 pb-24">
-      <div>
-        <Button variant="ghost" onClick={onBack} className="-ml-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Services
-        </Button>
-        <h1 className="text-2xl font-bold tracking-tight mt-2">
-          Tell us about your project
-        </h1>
-      </div>
+    <div className="space-y-6">
+      <Button variant="ghost" onClick={onBack} className="pl-0">
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Services
+      </Button>
+      <h1 className="text-2xl font-bold tracking-tight">
+        Tell us about your project
+      </h1>
 
       <Card>
         <CardHeader>
@@ -261,6 +262,10 @@ const ProjectDetailsForm = ({
           </Label>
         </CardContent>
       </Card>
+
+      <div className="flex justify-end pt-2">
+        <Button onClick={handleSubmitRequest} disabled={isSubmitDisabled}>Submit Request</Button>
+      </div>
 
       <RequestComments />
     </div>
