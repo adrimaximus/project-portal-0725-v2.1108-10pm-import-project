@@ -1,60 +1,64 @@
-import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectOverview from "@/components/project-detail/ProjectOverview";
+import React from "react";
+import { Project, AssignedUser } from "@/data/projects";
+import ProjectOverview from "./ProjectOverview";
 import ProjectComments, { Comment } from "@/components/ProjectComments";
-import { Project, AssignedUser } from '@/data/projects';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 interface ProjectMainContentProps {
-  project: Project;
-  isEditing: boolean;
-  onDescriptionChange: (value: string) => void;
-  onTeamChange: (selectedUsers: AssignedUser[]) => void;
-  comments: Comment[];
-  setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
-  projectId: string;
-  ticketCount: number;
+    project: Project;
+    isEditing: boolean;
+    onDescriptionChange: (value: string) => void;
+    onTeamChange: (selectedUsers: AssignedUser[]) => void;
+    onServicesChange: (selectedServices: string[]) => void;
+    comments: Comment[];
+    setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
+    projectId: string;
+    ticketCount: number;
 }
 
 const ProjectMainContent = ({
-  project,
-  isEditing,
-  onDescriptionChange,
-  onTeamChange,
-  comments,
-  setComments,
-  projectId,
-  ticketCount,
+    project,
+    isEditing,
+    onDescriptionChange,
+    onTeamChange,
+    onServicesChange,
+    comments,
+    setComments,
+    projectId,
+    ticketCount,
 }: ProjectMainContentProps) => {
-  return (
-    <Tabs defaultValue="overview" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 sm:w-[400px]">
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="comments" className="flex items-center justify-center gap-2">
-          Comments & Tickets
-          {ticketCount > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
-              {ticketCount}
-            </span>
-          )}
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="overview" className="mt-4">
-        <ProjectOverview 
-          project={project} 
-          isEditing={isEditing}
-          onDescriptionChange={onDescriptionChange}
-          onTeamChange={onTeamChange}
-        />
-      </TabsContent>
-      <TabsContent value="comments" className="mt-4">
-        <ProjectComments 
-          comments={comments} 
-          setComments={setComments} 
-          projectId={projectId}
-        />
-      </TabsContent>
-    </Tabs>
-  );
+    return (
+        <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="comments">
+                    Comments & Tickets
+                    {ticketCount > 0 && (
+                        <Badge variant="secondary" className="ml-2 rounded-full px-2">
+                            {ticketCount}
+                        </Badge>
+                    )}
+                </TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview" className="mt-6">
+                <ProjectOverview
+                    project={project}
+                    isEditing={isEditing}
+                    onDescriptionChange={onDescriptionChange}
+                    onTeamChange={onTeamChange}
+                    onServicesChange={onServicesChange}
+                />
+            </TabsContent>
+            <TabsContent value="comments" className="mt-6">
+                <ProjectComments
+                    comments={comments}
+                    setComments={setComments}
+                    projectId={projectId}
+                />
+            </TabsContent>
+        </Tabs>
+    );
 };
 
 export default ProjectMainContent;

@@ -58,9 +58,9 @@ const ProjectDetailPage = () => {
     }
   };
 
-  const handleDateChange = (name: 'deadline' | 'paymentDueDate', date: Date | undefined) => {
+  const handleDateChange = (name: 'deadline' | 'paymentDueDate' | 'startDate', date: Date | undefined) => {
     if (editedProject) {
-      const originalDate = project[name];
+      const originalDate = (project as any)[name];
       const dateString = date ? format(date, 'yyyy-MM-dd') : originalDate;
       setEditedProject({ ...editedProject, [name]: dateString });
     }
@@ -81,6 +81,12 @@ const ProjectDetailPage = () => {
   const handleTeamChange = (selectedUsers: AssignedUser[]) => {
     if (editedProject) {
       setEditedProject({ ...editedProject, assignedTo: selectedUsers });
+    }
+  };
+
+  const handleServicesChange = (selectedServices: string[]) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, services: selectedServices });
     }
   };
 
@@ -110,6 +116,7 @@ const ProjectDetailPage = () => {
           isEditing={isEditing}
           onDescriptionChange={handleDescriptionChange}
           onTeamChange={handleTeamChange}
+          onServicesChange={handleServicesChange}
           comments={projectComments}
           setComments={setComments}
           projectId={project.id}
