@@ -74,7 +74,7 @@ export default function Index() {
       </div>
 
       <div className="mb-6">
-        <ProjectStats projects={filteredProjects} />
+        <ProjectStats projects={filteredProjects} statusFilter={statusFilter} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-6">
