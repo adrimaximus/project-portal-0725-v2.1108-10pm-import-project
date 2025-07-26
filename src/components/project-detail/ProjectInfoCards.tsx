@@ -8,13 +8,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Activity, CreditCard, Wallet, CalendarDays, Ticket, CalendarClock } from "lucide-react";
+import { Activity, CreditCard, Wallet, CalendarDays, CalendarClock } from "lucide-react";
 
 interface ProjectInfoCardsProps {
   project: Project;
   isEditing: boolean;
   editedProject: Project | null;
-  ticketCount: number;
   onSelectChange: (name: 'status' | 'paymentStatus', value: string) => void;
   onDateChange: (name: 'deadline' | 'paymentDueDate', date: Date | undefined) => void;
   onBudgetChange: (value: number | undefined) => void;
@@ -24,7 +23,6 @@ const ProjectInfoCards = ({
   project,
   isEditing,
   editedProject,
-  ticketCount,
   onSelectChange,
   onDateChange,
   onBudgetChange,
@@ -69,7 +67,7 @@ const ProjectInfoCards = ({
     : "Not Set";
 
   return (
-    <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Project Status</CardTitle>
@@ -139,16 +137,6 @@ const ProjectInfoCards = ({
           ) : (
             <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
           )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Support Tickets</CardTitle>
-          <Ticket className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-xl font-bold">{ticketCount}</div>
-          <p className="text-xs text-muted-foreground">{ticketCount} tickets created</p>
         </CardContent>
       </Card>
       <Card>

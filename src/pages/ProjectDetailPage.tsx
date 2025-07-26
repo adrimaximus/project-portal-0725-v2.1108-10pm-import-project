@@ -101,7 +101,6 @@ const ProjectDetailPage = () => {
           project={project}
           isEditing={isEditing}
           editedProject={editedProject}
-          ticketCount={ticketCount}
           onSelectChange={handleSelectChange}
           onDateChange={handleDateChange}
           onBudgetChange={handleBudgetChange}
