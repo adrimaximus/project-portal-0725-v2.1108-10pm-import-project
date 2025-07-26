@@ -8,7 +8,7 @@ export type Project = {
   id: string;
   name: string;
   description: string;
-  status: "Completed" | "In Progress" | "On Hold" | "Pending";
+  status: "Requested" | "In Progress" | "Completed" | "Billed" | "On Hold" | "Cancelled" | "Done";
   progress: number;
   startDate: string; // YYYY-MM-DD
   deadline: string; // YYYY-MM-DD
@@ -99,7 +99,7 @@ export const dummyProjects: Project[] = [
     id: "proj-5",
     name: "Brand Identity Redesign",
     description: "Complete redesign of the company's brand identity and logo.",
-    status: "Pending",
+    status: "Requested",
     progress: 10,
     startDate: "2025-09-01",
     deadline: "2025-11-10",

@@ -116,7 +116,7 @@ const RequestPage = () => {
       id: `proj-${Date.now()}`,
       name: projectName,
       description: projectDescription,
-      status: "Pending",
+      status: "Requested",
       progress: 0,
       startDate: format(startDate as Date, "yyyy-MM-dd"),
       deadline: format(endDate as Date, "yyyy-MM-dd"),

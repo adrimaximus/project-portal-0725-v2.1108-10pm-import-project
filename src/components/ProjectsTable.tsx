@@ -49,10 +49,13 @@ import { Card } from "@/components/ui/card"
 const getStatusBadgeVariant = (status: Project["status"]) => {
   switch (status) {
     case "Completed":
+    case "Done":
+    case "Billed":
       return "default"
     case "In Progress":
       return "secondary"
     case "On Hold":
+    case "Cancelled":
       return "destructive"
     default:
       return "outline"
