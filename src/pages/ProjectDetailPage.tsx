@@ -22,7 +22,7 @@ const ProjectDetailPage = () => {
     const foundProject = dummyProjects.find(p => p.id === projectId);
     if (foundProject) {
       setProject(foundProject);
-      setEditedProject(JSON.parse(JSON.stringify(foundProject)));
+      setEditedProject(structuredClone(foundProject));
     } else {
       navigate('/');
     }
@@ -48,7 +48,9 @@ const ProjectDetailPage = () => {
   };
 
   const handleCancelChanges = () => {
-    setEditedProject(JSON.parse(JSON.stringify(project)));
+    if (project) {
+      setEditedProject(structuredClone(project));
+    }
     setIsEditing(false);
   };
 
@@ -58,9 +60,9 @@ const ProjectDetailPage = () => {
     }
   };
 
-  const handleDateChange = (name: 'deadline' | 'paymentDueDate', date: Date | undefined) => {
+  const handleDateChange = (name: 'deadline' | 'paymentDueDate' | 'startDate', date: Date | undefined) => {
     if (editedProject) {
-      const originalDate = project[name];
+      const originalDate = (project as any)[name];
       const dateString = date ? format(date, 'yyyy-MM-dd') : originalDate;
       setEditedProject({ ...editedProject, [name]: dateString });
     }

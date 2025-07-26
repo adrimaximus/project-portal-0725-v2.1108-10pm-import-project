@@ -22,7 +22,7 @@ const ProjectDetail = () => {
     const foundProject = dummyProjects.find(p => p.id === projectId);
     if (foundProject) {
       setProject(foundProject);
-      setEditedProject(JSON.parse(JSON.stringify(foundProject)));
+      setEditedProject(structuredClone(foundProject));
     } else {
       navigate('/');
     }
@@ -48,7 +48,9 @@ const ProjectDetail = () => {
   };
 
   const handleCancelChanges = () => {
-    setEditedProject(JSON.parse(JSON.stringify(project)));
+    if (project) {
+      setEditedProject(structuredClone(project));
+    }
     setIsEditing(false);
   };
 
