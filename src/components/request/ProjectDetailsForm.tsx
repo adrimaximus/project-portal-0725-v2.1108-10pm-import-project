@@ -72,7 +72,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full p-4 lg:p-6">
       {/* Header Section (non-scrollable) */}
       <div className="flex-shrink-0">
         <Button variant="ghost" onClick={onBack} className="pl-0">
@@ -84,7 +84,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       </div>
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 space-y-6 overflow-y-auto py-6">
+      <div className="flex-1 space-y-6 overflow-y-auto py-6 pr-2 -mr-2">
         <Card>
           <CardHeader>
             <CardTitle>Project Name</CardTitle>

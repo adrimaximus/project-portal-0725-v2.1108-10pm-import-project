@@ -38,8 +38,8 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
           <PortalHeader />
         </header>
         <main className={cn(
-          "flex-1 overflow-y-auto",
-          !noPadding && "gap-4 p-4 lg:gap-6 lg:p-6"
+          "flex-1",
+          noPadding ? "overflow-hidden" : "overflow-y-auto p-4 lg:p-6"
         )}>
           {children}
         </main>
