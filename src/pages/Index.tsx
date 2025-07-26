@@ -5,6 +5,7 @@ import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectsTable, { columns } from "@/components/ProjectsTable";
 import { dummyProjects } from "@/data/projects";
+import { initialComments } from "@/data/comments";
 import { PlusCircle } from "lucide-react";
 import ProjectStats from "@/components/ProjectStats";
 import {
@@ -24,7 +25,14 @@ export default function Index() {
     new Set(dummyProjects.flatMap((p) => p.assignedTo.map((a) => a.name)))
   );
 
-  const filteredProjects = dummyProjects
+  const projectsWithTicketCounts = dummyProjects.map(project => {
+    const ticketCount = initialComments.filter(comment => 
+      comment.projectId === project.id && comment.isTicket
+    ).length;
+    return { ...project, tickets: ticketCount };
+  });
+
+  const filteredProjects = projectsWithTicketCounts
     .filter(project => {
       if (!dateRange || !dateRange.from) {
         const defaultFrom = new Date(new Date().getFullYear(), 0, 1);

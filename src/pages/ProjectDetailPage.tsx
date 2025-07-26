@@ -5,9 +5,8 @@ import { dummyProjects, Project } from "@/data/projects";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
-import ProjectTabs from "@/components/project-detail/ProjectTabs";
-import ProjectOverview from "@/components/project-detail/ProjectOverview";
-import ProjectComments, { Comment } from "@/components/ProjectComments";
+import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
+import { Comment } from "@/components/ProjectComments";
 import { initialComments } from "@/data/comments";
 
 const ProjectDetailPage = () => {
@@ -79,7 +78,8 @@ const ProjectDetailPage = () => {
     }
   };
 
-  const ticketCount = comments.filter(c => c.isTicket).length;
+  const projectComments = comments.filter(c => c.projectId === projectId);
+  const ticketCount = projectComments.filter(c => c.isTicket).length;
 
   return (
     <PortalLayout>
@@ -100,14 +100,14 @@ const ProjectDetailPage = () => {
           onDateChange={handleDateChange}
           onBudgetChange={handleBudgetChange}
         />
-        <ProjectTabs>
-          <ProjectOverview 
-            project={editedProject} 
-            isEditing={isEditing}
-            onDescriptionChange={handleDescriptionChange}
-          />
-          <ProjectComments comments={comments} setComments={setComments} />
-        </ProjectTabs>
+        <ProjectMainContent
+          project={editedProject}
+          isEditing={isEditing}
+          onDescriptionChange={handleDescriptionChange}
+          comments={projectComments}
+          setComments={setComments}
+          projectId={project.id}
+        />
       </div>
     </PortalLayout>
   );

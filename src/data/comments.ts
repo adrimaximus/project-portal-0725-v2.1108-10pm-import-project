@@ -3,6 +3,7 @@ import { Comment } from "@/components/ProjectComments";
 export const initialComments: Comment[] = [
   {
     id: 1,
+    projectId: "proj-1",
     user: {
       name: "Olivia Martin",
       avatar: "https://i.pravatar.cc/150?u=olivia",
@@ -12,6 +13,7 @@ export const initialComments: Comment[] = [
   },
   {
     id: 2,
+    projectId: "proj-1",
     user: {
       name: "Ethan Carter",
       avatar: "https://i.pravatar.cc/150?u=ethan",
@@ -22,6 +24,7 @@ export const initialComments: Comment[] = [
   },
   {
     id: 3,
+    projectId: "proj-1",
     user: {
       name: "You",
       avatar: "https://i.pravatar.cc/150?u=currentuser",
@@ -31,6 +34,7 @@ export const initialComments: Comment[] = [
   },
   {
     id: 4,
+    projectId: "proj-2",
     user: {
       name: "Sophia Davis",
       avatar: "https://i.pravatar.cc/150?u=sophia",
@@ -43,5 +47,16 @@ export const initialComments: Comment[] = [
       url: "#",
       type: 'file',
     }
+  },
+  {
+    id: 5,
+    projectId: "proj-3",
+    user: {
+      name: "Liam Brown",
+      avatar: "https://i.pravatar.cc/150?u=liam",
+    },
+    text: "The campaign is underperforming. We need to rethink the ad copy. Ticket raised.",
+    timestamp: "5 hours ago",
+    isTicket: true,
   },
 ];

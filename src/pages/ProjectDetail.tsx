@@ -1,97 +1,97 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { dummyProjects, Project } from "@/data/projects";
 import PortalLayout from "@/components/PortalLayout";
-import { Comment } from "@/components/ProjectComments";
-import ProjectDetailHeader from "@/components/project-detail/ProjectDetailHeader";
+import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
-import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
-
-const initialComments: Comment[] = [
-  { id: 1, user: { name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia" }, text: "Great progress on the mockups! Just one suggestion: can we try a different color palette for the main CTA button?", timestamp: "2 days ago" },
-  { id: 2, user: { name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam" }, text: "Sure, I'll prepare a few alternatives. I've also attached the latest wireframes for the user dashboard.", timestamp: "1 day ago", attachment: { name: "dashboard-wireframe.png", url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=2070&auto=format&fit=crop", type: 'image' } },
-];
+import { Comment } from "@/components/ProjectComments";
+import { initialComments } from "@/data/comments";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const projectData = dummyProjects.find((p) => p.id === projectId);
-
-  const [project, setProject] = useState<Project | undefined>(projectData);
+  const navigate = useNavigate();
+  
+  const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
   const [comments, setComments] = useState<Comment[]>(initialComments);
 
-  const ticketCount = comments.filter(comment => comment.isTicket).length;
+  useEffect(() => {
+    const foundProject = dummyProjects.find(p => p.id === projectId);
+    if (foundProject) {
+      setProject(foundProject);
+      setEditedProject(JSON.parse(JSON.stringify(foundProject)));
+    } else {
+      navigate('/');
+    }
+  }, [projectId, navigate]);
 
-  if (!project) {
+  if (!project || !editedProject) {
     return (
       <PortalLayout>
         <div className="flex items-center justify-center h-full">
-          <p className="text-lg text-muted-foreground">Project not found.</p>
+          <p>Loading project...</p>
         </div>
       </PortalLayout>
     );
   }
 
-  const handleEdit = () => {
-    setEditedProject({ ...project });
-    setIsEditing(true);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedProject(null);
-  };
-
-  const handleSave = () => {
-    if (editedProject) {
+  const handleSaveChanges = () => {
+    const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
+    if (projectIndex !== -1 && editedProject) {
+      dummyProjects[projectIndex] = editedProject;
       setProject(editedProject);
-      // In a real app, you would make an API call here to save the data
-      const projectIndex = dummyProjects.findIndex(p => p.id === editedProject.id);
-      if (projectIndex !== -1) {
-        dummyProjects[projectIndex] = editedProject;
-      }
     }
     setIsEditing(false);
-    setEditedProject(null);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    if (!editedProject) return;
-    const { name, value } = e.target;
-    setEditedProject({ ...editedProject, [name]: value });
+  const handleCancelChanges = () => {
+    setEditedProject(JSON.parse(JSON.stringify(project)));
+    setIsEditing(false);
   };
 
   const handleSelectChange = (name: 'status' | 'paymentStatus', value: string) => {
-    if (!editedProject) return;
-    setEditedProject({ ...editedProject, [name]: value as any });
+    if (editedProject) {
+      setEditedProject({ ...editedProject, [name]: value as any });
+    }
   };
 
   const handleDateChange = (name: 'deadline' | 'paymentDueDate', date: Date | undefined) => {
-    if (!editedProject || !date) return;
-    setEditedProject({ ...editedProject, [name]: date.toISOString().split('T')[0] });
+    if (editedProject) {
+      const originalDate = project[name];
+      const dateString = date ? format(date, 'yyyy-MM-dd') : originalDate;
+      setEditedProject({ ...editedProject, [name]: dateString });
+    }
   };
 
   const handleBudgetChange = (value: number | undefined) => {
-    if (!editedProject) return;
-    setEditedProject({ ...editedProject, budget: value || 0 });
+    if (editedProject) {
+      setEditedProject({ ...editedProject, budget: value || 0 });
+    }
   };
+
+  const handleDescriptionChange = (value: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, description: value });
+    }
+  };
+
+  const projectComments = comments.filter(c => c.projectId === projectId);
+  const ticketCount = projectComments.filter(c => c.isTicket).length;
 
   return (
     <PortalLayout>
       <div className="space-y-6">
-        <ProjectDetailHeader
-          project={project}
+        <ProjectHeader 
+          project={project} 
           isEditing={isEditing}
-          editedProject={editedProject}
-          onEdit={handleEdit}
-          onSave={handleSave}
-          onCancel={handleCancel}
-          onInputChange={handleInputChange}
+          onEditToggle={() => setIsEditing(!isEditing)}
+          onSaveChanges={handleSaveChanges}
+          onCancelChanges={handleCancelChanges}
         />
-
-        <ProjectInfoCards
+        <ProjectInfoCards 
           project={project}
           isEditing={isEditing}
           editedProject={editedProject}
@@ -100,15 +100,14 @@ const ProjectDetail = () => {
           onDateChange={handleDateChange}
           onBudgetChange={handleBudgetChange}
         />
-
-        <div className="grid gap-6 md:grid-cols-3">
-          <ProjectMainContent
-            project={project}
-            comments={comments}
-            setComments={setComments}
-          />
-          <ProjectSidebar project={project} />
-        </div>
+        <ProjectMainContent
+          project={editedProject}
+          isEditing={isEditing}
+          onDescriptionChange={handleDescriptionChange}
+          comments={projectComments}
+          setComments={setComments}
+          projectId={project.id}
+        />
       </div>
     </PortalLayout>
   );
