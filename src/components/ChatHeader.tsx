@@ -1,14 +1,15 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Conversation } from "@/data/chat";
-import { MoreVertical } from "lucide-react";
+import { ArrowLeft, MoreVertical } from "lucide-react";
 import StackedAvatar from "./StackedAvatar";
 
 interface ChatHeaderProps {
   selectedConversation: Conversation | null;
+  onBack?: () => void;
 }
 
-const ChatHeader = ({ selectedConversation }: ChatHeaderProps) => {
+const ChatHeader = ({ selectedConversation, onBack }: ChatHeaderProps) => {
   if (!selectedConversation) {
     return (
       <div className="flex items-center justify-center p-4 border-b h-[81px]">
@@ -21,6 +22,12 @@ const ChatHeader = ({ selectedConversation }: ChatHeaderProps) => {
 
   return (
     <div className="flex items-center p-4 border-b">
+      {onBack && (
+        <Button variant="ghost" size="icon" className="mr-2 md:hidden" onClick={onBack}>
+          <ArrowLeft className="h-5 w-5" />
+          <span className="sr-only">Back</span>
+        </Button>
+      )}
       {isGroup && members && members.length > 0 ? (
         <StackedAvatar members={members} />
       ) : (

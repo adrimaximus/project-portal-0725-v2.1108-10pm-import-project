@@ -43,6 +43,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Project } from "@/data/projects"
 import { useNavigate } from "react-router-dom"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { Card } from "@/components/ui/card"
 
 const getStatusBadgeVariant = (status: Project["status"]) => {
   switch (status) {
@@ -318,6 +320,7 @@ export const columns: ColumnDef<Project>[] = [
 
 export default function ProjectsTable({ columns, data }: { columns: ColumnDef<Project>[], data: Project[] }) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -344,6 +347,87 @@ export default function ProjectsTable({ columns, data }: { columns: ColumnDef<Pr
       rowSelection,
     },
   })
+
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        <Input
+          placeholder="Filter projects..."
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("name")?.setFilterValue(event.target.value)
+          }
+          className="w-full"
+        />
+        <div className="space-y-3">
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => {
+              const project = row.original;
+              return (
+                <Card 
+                  key={project.id} 
+                  className="w-full"
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                >
+                  <div className="flex items-start p-4">
+                    <div className="flex-grow space-y-2">
+                      <h3 className="font-semibold leading-snug">{project.name}</h3>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Badge variant={getStatusBadgeVariant(project.status)}>{project.status}</Badge>
+                        <span className="text-xs">•</span>
+                        <span className="text-xs">Due: {format(new Date(project.deadline), "dd MMM yyyy")}</span>
+                      </div>
+                      <div className="text-sm pt-1">
+                        <span className="font-medium">Budget: </span>
+                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(project.budget)}
+                      </div>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!project.invoiceAttachmentUrl}
+                            onSelect={() => {
+                              if (project.invoiceAttachmentUrl) {
+                                window.open(project.invoiceAttachmentUrl, "_blank");
+                              }
+                            }}
+                          >
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Invoice
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-600">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Project
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })
+          ) : (
+            <div className="text-center text-muted-foreground py-10">
+              No results.
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full">

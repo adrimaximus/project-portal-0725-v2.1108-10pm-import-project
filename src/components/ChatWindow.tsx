@@ -8,9 +8,10 @@ interface ChatWindowProps {
   selectedConversation: Conversation | undefined;
   onSendMessage: (message: string, file?: File) => void;
   projects: Project[];
+  onBack?: () => void;
 }
 
-const ChatWindow = ({ selectedConversation, onSendMessage, projects }: ChatWindowProps) => {
+const ChatWindow = ({ selectedConversation, onSendMessage, projects, onBack }: ChatWindowProps) => {
   if (!selectedConversation) {
     return (
       <div className="flex flex-col h-full items-center justify-center bg-muted/40">
@@ -26,7 +27,7 @@ const ChatWindow = ({ selectedConversation, onSendMessage, projects }: ChatWindo
 
   return (
     <div className="flex flex-col h-full">
-      <ChatHeader selectedConversation={selectedConversation} />
+      <ChatHeader selectedConversation={selectedConversation} onBack={onBack} />
       <ChatConversation 
         messages={selectedConversation.messages} 
         members={selectedConversation.members}

@@ -6,34 +6,39 @@ import PortalLayout from "@/components/PortalLayout";
 import { dummyConversations, Conversation, Message } from "@/data/chat";
 import { Collaborator } from "@/types";
 import { dummyProjects } from "@/data/projects";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const ChatPage = () => {
   const [conversations, setConversations] =
     useState<Conversation[]>(dummyConversations);
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
-  >(dummyConversations[0]?.id || null);
+  >(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (!isMobile) {
+      setSelectedConversationId(dummyConversations[0]?.id || null);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     if (location.state?.selectedCollaborator) {
       const collaborator = location.state.selectedCollaborator as Collaborator;
       
-      // Use a functional update to get the latest state and prevent race conditions.
       setConversations(prevConvos => {
         const existingConversation = prevConvos.find(
           (convo) => !convo.isGroup && convo.members?.some(m => m.id === collaborator.id)
         );
 
         if (existingConversation) {
-          // If chat exists, we don't need to update the conversations list.
           return prevConvos;
         }
 
-        // If chat does not exist, create a new one.
         const newConversation: Conversation = {
-          id: `conv-${collaborator.id}`, // Use a predictable ID
+          id: `conv-${collaborator.id}`,
           userName: collaborator.name,
           userAvatar: collaborator.src,
           lastMessage: "Say hello!",
@@ -47,12 +52,9 @@ const ChatPage = () => {
         return [newConversation, ...prevConvos];
       });
 
-      // After ensuring the conversation exists, select it.
-      // We can find it using the predictable ID.
       const conversationId = `conv-${collaborator.id}`;
       setSelectedConversationId(conversationId);
 
-      // Clear state to prevent re-triggering on refresh
       window.history.replaceState({}, document.title)
     }
   }, [location.state]);
@@ -101,8 +103,6 @@ const ChatPage = () => {
   };
 
   const handleStartNewChat = (collaborator: Collaborator) => {
-    // Instead of complex logic here, just navigate with state.
-    // The useEffect hook will handle the creation and selection.
     navigate('/chat', { state: { selectedCollaborator: collaborator } });
   };
 
@@ -137,6 +137,31 @@ const ChatPage = () => {
   const selectedConversation = conversations.find(
     (c) => c.id === selectedConversationId
   );
+
+  if (isMobile) {
+    return (
+      <PortalLayout noPadding>
+        <div className="h-full">
+          {!selectedConversation ? (
+            <ChatList
+              conversations={conversations}
+              selectedConversationId={selectedConversationId}
+              onConversationSelect={handleConversationSelect}
+              onStartNewChat={handleStartNewChat}
+              onStartNewGroupChat={handleStartNewGroupChat}
+            />
+          ) : (
+            <ChatWindow
+              selectedConversation={selectedConversation}
+              onSendMessage={handleSendMessage}
+              projects={dummyProjects}
+              onBack={() => setSelectedConversationId(null)}
+            />
+          )}
+        </div>
+      </PortalLayout>
+    );
+  }
 
   return (
     <PortalLayout noPadding>
