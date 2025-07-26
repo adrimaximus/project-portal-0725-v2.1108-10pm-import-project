@@ -18,24 +18,27 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
     setIsCollapsed(!isCollapsed);
   };
 
-  const gridCols = isCollapsed
-    ? "md:grid-cols-[72px_1fr]"
-    : "md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]";
+  const sidebarContainerWidth = isCollapsed ? "md:w-[72px]" : "md:w-[220px] lg:w-[280px]";
+  const mainContentMargin = isCollapsed ? "md:ml-[72px]" : "md:ml-[220px] lg:ml-[280px]";
 
   return (
-    <div
-      className={cn(
-        "grid min-h-screen w-full transition-[grid-template-columns] duration-300 ease-in-out",
-        gridCols
-      )}
-    >
-      <div className="h-screen overflow-y-auto">
+    <div className="min-h-screen w-full">
+      <div
+        className={cn(
+          "fixed top-0 left-0 h-full z-20 transition-all duration-300 ease-in-out",
+          sidebarContainerWidth
+        )}
+      >
         <PortalSidebar 
           isCollapsed={isCollapsed} 
           onToggle={toggleSidebar}
         />
       </div>
-      <div className="flex flex-col h-screen overflow-hidden">
+      
+      <div className={cn(
+        "flex flex-col h-screen transition-[margin-left] duration-300 ease-in-out",
+        mainContentMargin
+      )}>
         <header className="sticky top-0 z-10 bg-background">
           <PortalHeader />
         </header>
