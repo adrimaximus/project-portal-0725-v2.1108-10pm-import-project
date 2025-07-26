@@ -8,6 +8,7 @@ import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import { Comment } from "@/components/ProjectComments";
 import { initialComments } from "@/data/comments";
+import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -85,6 +86,12 @@ const ProjectDetail = () => {
       setEditedProject({ ...editedProject, assignedTo: selectedUsers });
     }
   };
+  
+  const handleFilesChange = (files: File[]) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, briefFiles: files });
+    }
+  };
 
   const projectComments = comments.filter(c => c.projectId === projectId);
   const ticketCount = projectComments.filter(c => c.isTicket).length;
@@ -99,19 +106,25 @@ const ProjectDetail = () => {
           onSaveChanges={handleSaveChanges}
           onCancelChanges={handleCancelChanges}
         />
-        <ProjectInfoCards 
-          project={project}
-          isEditing={isEditing}
-          editedProject={editedProject}
-          onSelectChange={handleSelectChange}
-          onDateChange={handleDateChange}
-          onBudgetChange={handleBudgetChange}
-        />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="lg:col-span-3">
+            <ProjectInfoCards 
+              project={project}
+              isEditing={isEditing}
+              editedProject={editedProject}
+              onSelectChange={handleSelectChange}
+              onDateChange={handleDateChange}
+              onBudgetChange={handleBudgetChange}
+            />
+          </div>
+          <ProjectProgressCard project={project} />
+        </div>
         <ProjectMainContent
           project={editedProject}
           isEditing={isEditing}
           onDescriptionChange={handleDescriptionChange}
           onTeamChange={handleTeamChange}
+          onFilesChange={handleFilesChange}
           comments={projectComments}
           setComments={setComments}
           projectId={project.id}
