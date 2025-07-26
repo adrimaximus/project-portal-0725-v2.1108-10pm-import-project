@@ -45,9 +45,10 @@ const ProjectInfoCards = ({
 
   const getPaymentStatusBadgeVariant = (status: Project["paymentStatus"]) => {
     switch (status) {
-      case "Paid": return "default";
-      case "Pending": return "secondary";
-      case "Overdue": return "destructive";
+      case "paid": return "default";
+      case "pending": return "secondary";
+      case "overdue": return "destructive";
+      case "proposed": return "outline";
       default: return "outline";
     }
   };
@@ -110,14 +111,15 @@ const ProjectInfoCards = ({
             <Select value={editedProject.paymentStatus} onValueChange={(value) => onSelectChange('paymentStatus', value)}>
               <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Paid">Paid</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Overdue">Overdue</SelectItem>
+                <SelectItem value="proposed">Proposed</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
             </Select>
           ) : (
             <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
-              {project.paymentStatus}
+              {project.paymentStatus.charAt(0).toUpperCase() + project.paymentStatus.slice(1)}
             </Badge>
           )}
         </CardContent>

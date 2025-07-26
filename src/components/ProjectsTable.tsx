@@ -217,33 +217,30 @@ export const columns: ColumnDef<Project>[] = [
       const paymentStatus = row.original.paymentStatus;
       const paymentDueDate = row.original.paymentDueDate;
       
-      let displayStatus: Project["paymentStatus"] | 'Overdue' = paymentStatus;
+      let displayStatus: Project["paymentStatus"] = paymentStatus;
       
-      if (paymentStatus === 'Pending' && paymentDueDate) {
+      if (paymentStatus === 'pending' && paymentDueDate) {
         const dueDate = new Date(paymentDueDate);
         const now = new Date();
         now.setHours(0,0,0,0);
         if (dueDate < now) {
-          displayStatus = 'Overdue';
+          displayStatus = 'overdue';
         }
       }
 
       const getPaymentStatusBadgeVariant = (s: typeof displayStatus) => {
         switch (s) {
-          case "Paid":
-            return "outline"
-          case "Pending":
-            return "secondary"
-          case "Overdue":
-            return "destructive"
-          default:
-            return "outline"
+          case "paid": return "outline";
+          case "pending": return "secondary";
+          case "overdue": return "destructive";
+          case "proposed": return "outline";
+          default: return "outline";
         }
       }
 
       return (
         <Badge variant={getPaymentStatusBadgeVariant(displayStatus)}>
-          {displayStatus}
+          {displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)}
         </Badge>
       )
     },

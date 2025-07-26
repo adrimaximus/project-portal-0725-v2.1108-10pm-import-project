@@ -50,7 +50,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       deadline: format(endDate as Date, "yyyy-MM-dd"),
       paymentDueDate: paymentDueDate ? format(paymentDueDate, "yyyy-MM-dd") : undefined,
       budget: budget as number,
-      paymentStatus: "Pending",
+      paymentStatus: "pending",
       assignedTo: assignedTeam,
       services: selectedServices.map(s => s.title),
     };

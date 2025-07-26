@@ -17,7 +17,7 @@ export interface Project {
   deadline: string;
   paymentDueDate?: string;
   budget: number;
-  paymentStatus: 'Paid' | 'Pending' | 'Overdue';
+  paymentStatus: 'proposed' | 'pending' | 'paid' | 'overdue';
   assignedTo: AssignedUser[];
   services: string[];
   tickets?: number;
@@ -35,7 +35,7 @@ export const dummyProjects: Project[] = [
     deadline: '2025-12-15',
     paymentDueDate: '2025-08-30',
     budget: 150000000,
-    paymentStatus: 'Pending',
+    paymentStatus: 'pending',
     assignedTo: [
       { id: 'user-1', name: 'Ethan Carter', avatar: 'https://i.pravatar.cc/150?u=ethan', status: 'online' },
       { id: 'user-2', name: 'Olivia Chen', avatar: 'https://i.pravatar.cc/150?u=olivia', status: 'offline' },
@@ -54,7 +54,7 @@ export const dummyProjects: Project[] = [
     deadline: '2025-07-20',
     paymentDueDate: '2025-07-25',
     budget: 250000000,
-    paymentStatus: 'Paid',
+    paymentStatus: 'paid',
     assignedTo: [
       { id: 'user-3', name: 'Liam Goldberg', avatar: 'https://i.pravatar.cc/150?u=liam', status: 'online' },
       { id: 'user-4', name: 'Sophia Rodriguez', avatar: 'https://i.pravatar.cc/150?u=sophia', status: 'online' },
@@ -72,7 +72,7 @@ export const dummyProjects: Project[] = [
     startDate: '2025-08-01',
     deadline: '2025-11-30',
     budget: 80000000,
-    paymentStatus: 'Pending',
+    paymentStatus: 'pending',
     assignedTo: [
       { id: 'user-1', name: 'Ethan Carter', avatar: 'https://i.pravatar.cc/150?u=ethan', status: 'online' },
     ],
@@ -88,7 +88,7 @@ export const dummyProjects: Project[] = [
     startDate: '2025-09-15',
     deadline: '2025-12-01',
     budget: 50000000,
-    paymentStatus: 'Pending',
+    paymentStatus: 'pending',
     assignedTo: [
       { id: 'user-2', name: 'Olivia Chen', avatar: 'https://i.pravatar.cc/150?u=olivia', status: 'offline' },
     ],
