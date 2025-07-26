@@ -31,18 +31,10 @@ const ProjectInfoCards = ({
 }: ProjectInfoCardsProps) => {
   const getStatusBadgeVariant = (status: Project["status"]) => {
     switch (status) {
-      case "Completed":
-      case "Billed":
-      case "Done":
-        return "default";
-      case "In Progress":
-        return "secondary";
-      case "On Hold":
-      case "Cancelled":
-        return "destructive";
-      case "Requested":
-      default:
-        return "outline";
+      case "Completed": return "default";
+      case "In Progress": return "secondary";
+      case "On Hold": return "destructive";
+      default: return "outline";
     }
   };
 
@@ -81,18 +73,15 @@ const ProjectInfoCards = ({
             <Select value={editedProject.status} onValueChange={(value) => onSelectChange('status', value)}>
               <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Requested">Requested</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
                 <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Billed">Billed</SelectItem>
+                <SelectItem value="In Progress">WIP</SelectItem>
                 <SelectItem value="On Hold">On Hold</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-                <SelectItem value="Done">Done</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
               </SelectContent>
             </Select>
           ) : (
             <Badge variant={getStatusBadgeVariant(project.status)}>
-              {project.status}
+              {project.status === "In Progress" ? "WIP" : project.status}
             </Badge>
           )}
         </CardContent>

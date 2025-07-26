@@ -1,136 +1,115 @@
-export type Assignee = {
+export type AssignedUser = {
   name: string;
-  avatar?: string;
-  status?: 'Online' | 'Offline';
+  avatar: string;
+  status: 'online' | 'offline';
 };
-
-export type ProjectStatus =
-  | "Requested"
-  | "In Progress"
-  | "Completed"
-  | "Billed"
-  | "On Hold"
-  | "Cancelled"
-  | "Done";
-
-export type PaymentStatus = "Paid" | "Pending" | "Overdue";
 
 export type Project = {
   id: string;
   name: string;
-  client: string;
-  startDate: string;
-  deadline: string;
-  status: ProjectStatus;
+  description: string;
+  status: "Completed" | "In Progress" | "On Hold" | "Pending";
+  progress: number;
+  startDate: string; // YYYY-MM-DD
+  deadline: string; // YYYY-MM-DD
   budget: number;
-  paymentStatus: PaymentStatus;
-  paymentDueDate?: string;
-  assignedTo: Assignee[];
+  paymentStatus: "Paid" | "Pending" | "Overdue";
+  paymentDueDate?: string; // YYYY-MM-DD
+  assignedTo: AssignedUser[];
+  services: string[];
   tickets?: number;
-  description?: string;
-  services?: string[];
   invoiceAttachmentUrl?: string;
 };
 
 export const dummyProjects: Project[] = [
   {
-    id: "PRJ-001",
-    name: "E-commerce Platform",
-    client: "Tech Solutions Inc.",
-    startDate: "2023-01-15",
-    deadline: "2023-08-30",
-    status: "Completed",
-    budget: 50000000,
-    paymentStatus: "Paid",
-    paymentDueDate: "2023-09-15",
-    assignedTo: [{ name: "Alice", status: 'Online' }, { name: "Bob", status: 'Offline' }],
+    id: "proj-1",
+    name: "E-commerce Platform Development",
+    description: "Building a full-featured e-commerce website from scratch.",
+    status: "In Progress",
+    progress: 65,
+    startDate: "2025-06-01",
+    deadline: "2025-12-15",
+    budget: 150000000,
+    paymentStatus: "Pending",
+    paymentDueDate: "2025-08-30",
+    assignedTo: [
+      { name: "Ethan Carter", avatar: "https://i.pravatar.cc/150?u=ethan", status: 'offline' },
+      { name: "Olivia Martin", avatar: "https://i.pravatar.cc/150?u=olivia", status: 'online' }
+    ],
+    services: ["Web Development", "UI/UX Design", "SEO Optimization"],
     tickets: 3,
-    description: "Development of a full-featured e-commerce platform with a custom CMS.",
-    services: ["Web Development", "UI/UX Design", "CMS Integration"],
+    invoiceAttachmentUrl: "/invoices/inv-001.pdf",
   },
   {
-    id: "PRJ-002",
+    id: "proj-2",
     name: "Mobile Banking App",
-    client: "Global Bank",
-    startDate: "2023-03-01",
-    deadline: "2023-12-31",
+    description: "Developing a secure and user-friendly mobile banking application.",
+    status: "Completed",
+    progress: 100,
+    startDate: "2025-01-15",
+    deadline: "2025-06-30",
+    budget: 250000000,
+    paymentStatus: "Paid",
+    paymentDueDate: "2025-07-15",
+    assignedTo: [
+      { name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia", status: 'offline' },
+    ],
+    services: ["Mobile App Development", "API Integration"],
+    tickets: 0,
+    invoiceAttachmentUrl: "/invoices/inv-002.pdf",
+  },
+  {
+    id: "proj-3",
+    name: "Social Media Campaign",
+    description: "Marketing campaign for a new product launch.",
+    status: "On Hold",
+    progress: 30,
+    startDate: "2025-07-01",
+    deadline: "2025-09-01",
+    budget: 50000000,
+    paymentStatus: "Pending",
+    assignedTo: [
+      { name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam", status: 'online' },
+      { name: "Ava Garcia", avatar: "https://i.pravatar.cc/150?u=ava", status: 'offline' },
+      { name: "Jackson Lee", avatar: "https://i.pravatar.cc/150?u=jackson", status: 'online' },
+    ],
+    services: ["Digital Marketing", "Content Creation"],
+    tickets: 5,
+  },
+  {
+    id: "proj-4",
+    name: "Cloud Migration",
+    description: "Migrating on-premise servers to AWS.",
     status: "In Progress",
+    progress: 80,
+    startDate: "2025-06-10",
+    deadline: "2025-08-20",
+    budget: 120000000,
+    paymentStatus: "Paid",
+    paymentDueDate: "2025-08-01",
+    assignedTo: [
+      { name: "Noah Rodriguez", avatar: "https://i.pravatar.cc/150?u=noah", status: 'online' },
+    ],
+    services: ["Cloud Services"],
+    tickets: 1,
+    invoiceAttachmentUrl: "/invoices/inv-004.pdf",
+  },
+  {
+    id: "proj-5",
+    name: "Brand Identity Redesign",
+    description: "Complete redesign of the company's brand identity and logo.",
+    status: "Pending",
+    progress: 10,
+    startDate: "2025-09-01",
+    deadline: "2025-11-10",
     budget: 75000000,
     paymentStatus: "Pending",
-    assignedTo: [{ name: "Charlie", status: 'Online' }],
-    tickets: 5,
-    description: "A native mobile application for iOS and Android for online banking services.",
-    services: ["Mobile App Development", "API Integration", "Security Auditing"],
-  },
-  {
-    id: "PRJ-003",
-    name: "Data Analytics Dashboard",
-    client: "Data Insights LLC",
-    startDate: "2023-05-20",
-    deadline: "2023-11-20",
-    status: "On Hold",
-    budget: 30000000,
-    paymentStatus: "Pending",
-    assignedTo: [{ name: "David", status: 'Offline' }, { name: "Eve", status: 'Online' }],
-    tickets: 1,
-    description: "A web-based dashboard for visualizing sales and marketing data.",
-    services: ["Data Visualization", "Backend Development"],
-  },
-  {
-    id: "PRJ-004",
-    name: "New Website Design",
-    client: "Creative Co.",
-    startDate: "2023-09-01",
-    deadline: "2023-10-15",
-    status: "Requested",
-    budget: 15000000,
-    paymentStatus: "Pending",
-    assignedTo: [{ name: "Frank", status: 'Online' }],
-    description: "A complete redesign of the corporate website.",
-    services: ["UI/UX Design", "Branding"],
-  },
-  {
-    id: "PRJ-005",
-    name: "Marketing Campaign",
-    client: "AdWorks",
-    startDate: "2023-06-10",
-    deadline: "2023-07-30",
-    status: "Done",
-    budget: 20000000,
-    paymentStatus: "Paid",
-    paymentDueDate: "2023-08-10",
-    assignedTo: [{ name: "Grace", status: 'Offline' }],
-    tickets: 0,
-    description: "Digital marketing campaign for a new product launch.",
-    services: ["Social Media Marketing", "Content Creation"],
-  },
-  {
-    id: "PRJ-006",
-    name: "Internal CRM Tool",
-    client: "Internal",
-    startDate: "2023-04-01",
-    deadline: "2023-09-01",
-    status: "Cancelled",
-    budget: 40000000,
-    paymentStatus: "Pending",
-    assignedTo: [{ name: "Heidi", status: 'Offline' }],
-    description: "Development of an internal tool for managing customer relationships.",
-    services: ["Web Development"],
-  },
-  {
-    id: "PRJ-007",
-    name: "API Integration",
-    client: "ConnectApp",
-    startDate: "2023-08-15",
-    deadline: "2023-10-30",
-    status: "Billed",
-    budget: 25000000,
-    paymentStatus: "Pending",
-    paymentDueDate: "2023-11-15",
-    assignedTo: [{ name: "Ivan", status: 'Online' }, { name: "Judy", status: 'Online' }],
+    assignedTo: [
+      { name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia", status: 'offline' },
+      { name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam", status: 'online' },
+    ],
+    services: ["UI/UX Design", "Content Creation"],
     tickets: 2,
-    description: "Integration with third-party payment and shipping APIs.",
-    services: ["API Integration", "Backend Development"],
-    invoiceAttachmentUrl: "/invoices/inv-007.pdf",
   },
 ];
