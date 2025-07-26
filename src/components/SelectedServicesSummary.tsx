@@ -1,67 +1,48 @@
-"use client";
-
-import { type Service } from "@/data/services";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { Service } from "@/data/services";
 import { cn } from "@/lib/utils";
+import { Button } from "./ui/button";
 
 interface SelectedServicesSummaryProps {
   selectedServices: Service[];
-  onServiceRemove: (service: Service) => void;
-  onStepChange: (step: number) => void;
+  onContinue: () => void;
 }
 
-export default function SelectedServicesSummary({
-  selectedServices,
-  onServiceRemove,
-  onStepChange,
-}: SelectedServicesSummaryProps) {
-  if (selectedServices.length === 0) {
-    return (
-      <Card className="text-center">
-        <CardHeader>
-          <CardTitle>No Services Selected</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Please go back and select at least one service.
-          </p>
-          <Button onClick={() => onStepChange(0)} className="mt-4">
-            Select Services
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
+const SelectedServicesSummary = ({ selectedServices, onContinue }: SelectedServicesSummaryProps) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Selected Services</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ul className="space-y-3">
-          {selectedServices.map((service) => (
-            <li
-              key={service.name}
-              className="flex items-center justify-between p-3 rounded-md border"
-            >
-              <div className="flex items-center gap-3">
-                <service.icon className={cn("h-5 w-5", service.color)} />
-                <span className="font-medium">{service.name}</span>
+    <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur-sm md:left-[220px] lg:left-[280px] z-10">
+      <div className="flex items-center justify-between gap-6 p-4">
+        <div className="flex-1">
+          {selectedServices.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-base mb-2">Selected Services</h3>
+              <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto pr-2">
+                {selectedServices.map((service) => (
+                  <div
+                    key={service.title}
+                    className="flex items-center gap-2 bg-muted p-2 rounded-lg"
+                  >
+                    <div
+                      className={cn("p-1 rounded-md", service.iconColor)}
+                    >
+                      <service.icon className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-medium">
+                      {service.title}
+                    </span>
+                  </div>
+                ))}
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onServiceRemove(service)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+            </div>
+          )}
+        </div>
+        <div className="flex-shrink-0">
+          <Button onClick={onContinue} disabled={selectedServices.length === 0}>
+            Continue
+          </Button>
+        </div>
+      </div>
+    </div>
   );
-}
+};
+
+export default SelectedServicesSummary;

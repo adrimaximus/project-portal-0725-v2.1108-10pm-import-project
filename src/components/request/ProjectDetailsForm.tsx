@@ -1,225 +1,237 @@
-"use client";
-
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { type Service } from "@/data/services";
-
-const formSchema = z.object({
-  projectName: z.string().min(2, "Project name must be at least 2 characters."),
-  companyName: z.string().optional(),
-  contactPerson: z.string().min(2, "Contact person is required."),
-  email: z.string().email("Invalid email address."),
-  phone: z.string().optional(),
-  eventDate: z.date().optional(),
-  projectBrief: z.string().min(10, "Project brief must be at least 10 characters."),
-});
+import { Service } from "@/data/services";
+import { dummyProjects, Project, AssignedUser } from "@/data/projects";
+import { ArrowLeft, Calendar as CalendarIcon, Paperclip, Wallet, CalendarDays, CalendarClock } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import RichTextEditor from "@/components/RichTextEditor";
+import RequestComments from "@/components/request/RequestComments";
+import TeamSelector from "./TeamSelector";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
-  onSubmit: (values: z.infer<typeof formSchema>) => void;
+  onBack: () => void;
 }
 
-export default function ProjectDetailsForm({
-  selectedServices,
-  onSubmit,
-}: ProjectDetailsFormProps) {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      projectName: "",
-      companyName: "",
-      contactPerson: "",
-      email: "",
-      phone: "",
-      projectBrief: "",
-    },
-  });
+const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
+  const navigate = useNavigate();
+  const [projectName, setProjectName] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
+  const [paymentDueDate, setPaymentDueDate] = useState<Date>();
+  const [budget, setBudget] = useState<number | undefined>();
+  const [briefFile, setBriefFile] = useState<File | null>(null);
+  const [assignedTeam, setAssignedTeam] = useState<AssignedUser[]>([]);
+
+  const isSubmitDisabled = !projectName || !projectDescription || selectedServices.length === 0 || !startDate || !endDate || !budget || assignedTeam.length === 0;
+
+  const handleSubmitRequest = () => {
+    if (isSubmitDisabled) {
+      alert("Please fill all required fields.");
+      return;
+    }
+
+    const newProject: Project = {
+      id: `proj-${Date.now()}`,
+      name: projectName,
+      description: projectDescription,
+      status: "Requested",
+      progress: 0,
+      startDate: format(startDate as Date, "yyyy-MM-dd"),
+      deadline: format(endDate as Date, "yyyy-MM-dd"),
+      paymentDueDate: paymentDueDate ? format(paymentDueDate, "yyyy-MM-dd") : undefined,
+      budget: budget as number,
+      paymentStatus: "pending",
+      assignedTo: assignedTeam,
+      services: selectedServices.map(s => s.title),
+    };
+
+    dummyProjects.unshift(newProject);
+    navigate(`/projects/${newProject.id}`);
+  };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2">
+    <div className="space-y-6">
+      <Button variant="ghost" onClick={onBack} className="pl-0">
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Services
+      </Button>
+      <h1 className="text-2xl font-bold tracking-tight">
+        Tell us about your project
+      </h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Project Name</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Input
+            id="projectName"
+            placeholder="e.g., New Corporate Website"
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+          />
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Project Details</CardTitle>
-            <p className="text-muted-foreground">
-              Please provide the details for your project request.
-            </p>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Project Value</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="projectName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Project Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Annual Company Gala" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="companyName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company Name (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Acme Corporation" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="contactPerson"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Person</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., John Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., john.doe@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., +1 234 567 890" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="eventDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Estimated Event Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="projectBrief"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Brief</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Describe your project requirements..."
-                          className="resize-y min-h-[120px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full">Submit Request</Button>
-              </form>
-            </Form>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">IDR</span>
+              <CurrencyInput
+                id="projectBudget"
+                placeholder="50,000,000"
+                value={budget}
+                onChange={setBudget}
+                className="pl-12"
+              />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Project Start Date</CardTitle>
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+              </PopoverContent>
+            </Popover>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Project Due Date</CardTitle>
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+              </PopoverContent>
+            </Popover>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Payment Due</CardTitle>
+            <CalendarClock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !paymentDueDate && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {paymentDueDate ? format(paymentDueDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={paymentDueDate} onSelect={setPaymentDueDate} initialFocus />
+              </PopoverContent>
+            </Popover>
           </CardContent>
         </Card>
       </div>
-      <div className="lg:col-span-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Selected Services</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {selectedServices.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {selectedServices.map((service) => (
-                  <Badge key={service.name} variant="secondary" className="flex items-center gap-2">
-                    <service.icon className={cn("h-4 w-4", service.color)} />
-                    <span>{service.name}</span>
-                  </Badge>
-                ))}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Project Description</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RichTextEditor
+            value={projectDescription}
+            onChange={setProjectDescription}
+            placeholder="Describe your project goals, target audience, and key features..."
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Assigned Team</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TeamSelector selectedUsers={assignedTeam} onTeamChange={setAssignedTeam} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Selected Services</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          {selectedServices.map((service) => (
+            <div key={service.title} className="flex items-center gap-2 bg-muted py-1 px-2 rounded-md">
+              <div className={cn("p-1 rounded-sm", service.iconColor)}>
+                <service.icon className="h-4 w-4" />
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No services selected.</p>
-            )}
-          </CardContent>
-        </Card>
+              <span className="text-sm font-medium">{service.title}</span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Brief File</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Input
+              id="briefAttachment"
+              type="file"
+              className="sr-only"
+              onChange={(e) => setBriefFile(e.target.files ? e.target.files[0] : null)}
+            />
+            <Label htmlFor="briefAttachment" className="w-full">
+              <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer hover:bg-accent hover:text-accent-foreground">
+                <span className={cn("truncate", !briefFile && "text-muted-foreground")}>
+                  {briefFile ? briefFile.name : "Attach a file..."}
+                </span>
+                <Paperclip className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </Label>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Attach any relevant documents for the project brief.
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end pt-2">
+        <Button onClick={handleSubmitRequest} disabled={isSubmitDisabled}>Submit Request</Button>
       </div>
+
+      <RequestComments />
     </div>
   );
-}
+};
+
+export default ProjectDetailsForm;

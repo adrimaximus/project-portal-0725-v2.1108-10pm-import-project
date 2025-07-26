@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { allServices, type Service } from "@/data/services";
 
 interface AssignedTeamProps {
   users: AssignedUser[];
@@ -132,33 +131,20 @@ const AssignedTeam = ({ users, isEditing, onTeamChange }: AssignedTeamProps) => 
   );
 };
 
-const ProjectServices = ({ services }: { services: string[] }) => {
-  const serviceDetails = services
-    .map((serviceName) => allServices.find((s) => s.name === serviceName))
-    .filter((s): s is Service => s !== undefined);
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Services</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
-          {serviceDetails.map((service) => (
-            <Badge
-              key={service.name}
-              variant="outline"
-              className="flex items-center gap-2 p-2"
-            >
-              <service.icon className={cn("h-4 w-4", service.color)} />
-              <span className="font-medium">{service.name}</span>
-            </Badge>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
+const ProjectServices = ({ services }: { services: string[] }) => (
+  <Card>
+    <CardHeader>
+      <CardTitle>Services</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="flex flex-wrap gap-2">
+        {services.map(service => (
+          <Badge key={service} variant="secondary">{service}</Badge>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
 
 interface ProjectOverviewProps {
   project: Project;
