@@ -1,14 +1,14 @@
-import { Project, AssignedUser } from "@/data/projects";
+import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectOverview from "./ProjectOverview";
+import ProjectOverview from "@/components/project-detail/ProjectOverview";
 import ProjectComments, { Comment } from "@/components/ProjectComments";
+import { Project, AssignedUser } from '@/data/projects';
 
 interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
   onTeamChange: (selectedUsers: AssignedUser[]) => void;
-  onServicesChange: (selectedServices: string[]) => void;
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
   projectId: string;
@@ -20,7 +20,6 @@ const ProjectMainContent = ({
   isEditing,
   onDescriptionChange,
   onTeamChange,
-  onServicesChange,
   comments,
   setComments,
   projectId,
@@ -28,30 +27,29 @@ const ProjectMainContent = ({
 }: ProjectMainContentProps) => {
   return (
     <Tabs defaultValue="overview" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-2 sm:w-[400px]">
         <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="activity">
-          Activity & Tickets
+        <TabsTrigger value="comments" className="flex items-center justify-center gap-2">
+          Comments & Tickets
           {ticketCount > 0 && (
-            <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
               {ticketCount}
             </span>
           )}
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="overview" className="mt-6">
-        <ProjectOverview
-          project={project}
+      <TabsContent value="overview" className="mt-4">
+        <ProjectOverview 
+          project={project} 
           isEditing={isEditing}
           onDescriptionChange={onDescriptionChange}
           onTeamChange={onTeamChange}
-          onServicesChange={onServicesChange}
         />
       </TabsContent>
-      <TabsContent value="activity" className="mt-6">
-        <ProjectComments
-          comments={comments}
-          setComments={setComments}
+      <TabsContent value="comments" className="mt-4">
+        <ProjectComments 
+          comments={comments} 
+          setComments={setComments} 
           projectId={projectId}
         />
       </TabsContent>
