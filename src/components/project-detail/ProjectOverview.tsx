@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Link } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AssignedTeamProps {
@@ -169,10 +169,22 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
                 placeholder="Enter project description..."
               />
             ) : (
-              <div
-                className="prose prose-sm max-w-none text-muted-foreground"
-                dangerouslySetInnerHTML={{ __html: project.description }}
-              />
+              <>
+                <div
+                  className="prose prose-sm max-w-none text-muted-foreground"
+                  dangerouslySetInnerHTML={{ __html: project.description }}
+                />
+                {project.invoiceAttachmentUrl && (
+                  <div className="mt-4">
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={project.invoiceAttachmentUrl} target="_blank" rel="noopener noreferrer">
+                        <Link className="mr-2 h-4 w-4" />
+                        Invoice Link
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
