@@ -1,6 +1,6 @@
 import { Project } from "@/data/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ListChecks } from "lucide-react";
+import { DollarSign, ListChecks, Ticket } from "lucide-react";
 import { useMemo } from "react";
 
 interface ProjectStatsProps {
@@ -37,16 +37,19 @@ const ProjectStats = ({ projects, statusFilter }: ProjectStatsProps) => {
       minimumFractionDigits: 0,
     }).format(totalValue);
     
+    const activeTickets = projects.reduce((sum, p) => sum + (p.tickets || 0), 0);
+
     return {
       totalProjects: projects.length,
       totalValue: formattedTotalValue,
+      activeTickets,
     };
   }, [projects]);
 
   const statusDescription = statusFilter === "all" ? "All Statuses" : statusFilter;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <StatCard 
         title="Total Projects" 
         value={String(stats.totalProjects)} 
@@ -54,6 +57,7 @@ const ProjectStats = ({ projects, statusFilter }: ProjectStatsProps) => {
         description={statusDescription}
       />
       <StatCard title="Total Value" value={stats.totalValue} icon={DollarSign} />
+      <StatCard title="Active Tickets" value={String(stats.activeTickets)} icon={Ticket} />
     </div>
   );
 };

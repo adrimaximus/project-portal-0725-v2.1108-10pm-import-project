@@ -239,6 +239,19 @@ export const columns: ColumnDef<Project>[] = [
     },
   },
   {
+    accessorKey: "tickets",
+    header: "Tickets",
+    cell: ({ row }) => {
+      const ticketCount = row.original.tickets || 0;
+      return (
+        <div>
+          <div className="font-medium">{ticketCount}</div>
+          <div className="text-xs text-muted-foreground">{ticketCount === 1 ? 'open ticket' : 'open tickets'}</div>
+        </div>
+      );
+    },
+  },
+  {
     accessorKey: "budget",
     header: ({ column }) => {
       return (
