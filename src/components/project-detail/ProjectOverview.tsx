@@ -137,26 +137,26 @@ const ProjectServices = ({ services }: { services: string[] }) => {
     .map((serviceName) => allServices.find((s) => s.name === serviceName))
     .filter((s): s is Service => s !== undefined);
 
+  if (serviceDetails.length === 0) {
+    return null;
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Services</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
-          {serviceDetails.map((service) => (
-            <Badge
-              key={service.name}
-              variant="outline"
-              className="flex items-center gap-2 p-2"
-            >
-              <service.icon className={cn("h-4 w-4", service.color)} />
-              <span className="font-medium">{service.name}</span>
-            </Badge>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="pt-6 mt-6 border-t">
+      <h4 className="text-base font-semibold mb-4">Services</h4>
+      <div className="flex flex-wrap gap-2">
+        {serviceDetails.map((service) => (
+          <Badge
+            key={service.name}
+            variant="outline"
+            className="flex items-center gap-2 p-2"
+          >
+            <service.icon className={cn("h-4 w-4", service.color)} />
+            <span className="font-medium">{service.name}</span>
+          </Badge>
+        ))}
+      </div>
+    </div>
   );
 };
 
@@ -188,6 +188,7 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
                 dangerouslySetInnerHTML={{ __html: project.description }}
               />
             )}
+            <ProjectServices services={project.services} />
           </CardContent>
         </Card>
       </div>
@@ -197,7 +198,6 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
           isEditing={isEditing}
           onTeamChange={onTeamChange}
         />
-        <ProjectServices services={project.services} />
       </div>
     </div>
   );
