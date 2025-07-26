@@ -72,9 +72,9 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   };
 
   return (
-    <div className="flex flex-col h-full p-4 lg:p-6">
+    <div className="flex flex-col h-full">
       {/* Header Section (non-scrollable) */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 p-4 lg:p-6">
         <Button variant="ghost" onClick={onBack} className="pl-0">
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Services
         </Button>
@@ -84,7 +84,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       </div>
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 space-y-6 overflow-y-auto py-6 pr-2 -mr-2">
+      <div className="flex-1 space-y-6 overflow-y-auto p-4 lg:p-6 pt-0">
         <Card>
           <CardHeader>
             <CardTitle>Project Name</CardTitle>
@@ -272,7 +272,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       </div>
 
       {/* Footer Section (non-scrollable) */}
-      <div className="flex-shrink-0 flex justify-end pt-6 border-t">
+      <div className="flex-shrink-0 flex justify-end p-4 lg:p-6 border-t">
         <Button onClick={handleSubmitRequest} disabled={isSubmitDisabled}>Submit Request</Button>
       </div>
     </div>
