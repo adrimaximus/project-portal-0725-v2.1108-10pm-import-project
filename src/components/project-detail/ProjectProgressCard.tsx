@@ -16,12 +16,12 @@ const ProjectProgressCard = ({ project }: ProjectProgressCardProps) => {
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-muted-foreground">Penyelesaian</span>
+          <span className="text-sm text-muted-foreground">Completion</span>
           <span className="text-sm font-medium">{progress}%</span>
         </div>
         <Progress value={progress} className="w-full" />
         <p className="text-xs text-muted-foreground mt-2">
-          {progress === 100 ? "Proyek selesai! 🎉" : `Penyelesaian tugas berada di ${progress}%.`}
+          {progress === 100 ? "Project complete! 🎉" : `Task completion is at ${progress}%.`}
         </p>
       </CardContent>
     </Card>
