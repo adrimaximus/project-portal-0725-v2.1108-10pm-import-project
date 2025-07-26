@@ -3,4 +3,5 @@ export interface AssignedUser {
   name: string;
   avatar: string;
   email: string;
+  status?: 'online' | 'offline';
 }

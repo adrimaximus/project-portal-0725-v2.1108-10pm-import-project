@@ -1,4 +1,4 @@
-import { dummyUsers } from './users';
+import { allUsers } from './users';
 import { AssignedUser } from './types';
 
 export type { AssignedUser };
@@ -33,7 +33,7 @@ export const dummyProjects: Project[] = [
     paymentDueDate: "2024-10-15",
     budget: 120000000,
     paymentStatus: "pending",
-    assignedTo: [dummyUsers[0], dummyUsers[2]],
+    assignedTo: [allUsers[0], allUsers[2]],
     services: ["Web Development", "UI/UX Design"],
   },
   {
@@ -47,7 +47,7 @@ export const dummyProjects: Project[] = [
     paymentDueDate: "2024-08-05",
     budget: 250000000,
     paymentStatus: "paid",
-    assignedTo: [dummyUsers[1], dummyUsers[3], dummyUsers[4]],
+    assignedTo: [allUsers[1], allUsers[3], allUsers[4]],
     services: ["Mobile App Development", "API Integration"],
   },
   {
@@ -60,7 +60,7 @@ export const dummyProjects: Project[] = [
     deadline: "2024-08-31",
     budget: 50000000,
     paymentStatus: "pending",
-    assignedTo: [dummyUsers[5]],
+    assignedTo: [allUsers[5]],
     services: ["Digital Marketing"],
   },
   {
@@ -73,7 +73,7 @@ export const dummyProjects: Project[] = [
     deadline: "2024-11-25",
     budget: 85000000,
     paymentStatus: "pending",
-    assignedTo: [dummyUsers[0], dummyUsers[5]],
+    assignedTo: [allUsers[0], allUsers[5]],
     services: ["Branding", "Graphic Design"],
   },
   {
@@ -87,7 +87,7 @@ export const dummyProjects: Project[] = [
     paymentDueDate: "2024-07-15",
     budget: 150000000,
     paymentStatus: "overdue",
-    assignedTo: [dummyUsers[1], dummyUsers[6]],
+    assignedTo: [allUsers[1], allUsers[6]],
     services: ["System Integration", "Consulting"],
   },
 ];

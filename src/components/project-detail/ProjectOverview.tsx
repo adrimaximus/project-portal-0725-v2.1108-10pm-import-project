@@ -1,6 +1,6 @@
 import React from "react";
 import { Project, AssignedUser } from "@/data/projects";
-import { allUsers, User } from "@/data/users";
+import { allUsers } from "@/data/users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,7 +22,7 @@ interface AssignedTeamProps {
 const AssignedTeam = ({ users, isEditing, onTeamChange }: AssignedTeamProps) => {
   const [open, setOpen] = React.useState(false);
 
-  const handleSelect = (currentUser: User) => {
+  const handleSelect = (currentUser: AssignedUser) => {
     const isSelected = users.some(u => u.id === currentUser.id);
     let newSelectedUsers: AssignedUser[];
     if (isSelected) {
