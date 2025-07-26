@@ -33,7 +33,7 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
         isCollapsed={isCollapsed} 
         onToggle={toggleSidebar}
       />
-      <div className="flex flex-col h-screen overflow-hidden">
+      <div className="flex flex-col overflow-hidden">
         <header className="sticky top-0 z-10 bg-background">
           <PortalHeader />
         </header>
