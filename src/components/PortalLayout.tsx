@@ -29,10 +29,12 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
         gridCols
       )}
     >
-      <PortalSidebar 
-        isCollapsed={isCollapsed} 
-        onToggle={toggleSidebar}
-      />
+      <div className="h-screen overflow-y-auto">
+        <PortalSidebar 
+          isCollapsed={isCollapsed} 
+          onToggle={toggleSidebar}
+        />
+      </div>
       <div className="flex flex-col h-screen overflow-hidden">
         <header className="sticky top-0 z-10 bg-background">
           <PortalHeader />
