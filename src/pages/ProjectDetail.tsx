@@ -1,114 +1,118 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { dummyProjects, Project } from "@/data/projects";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
-import { Comment } from "@/components/ProjectComments";
-import ProjectDetailHeader from "@/components/project-detail/ProjectDetailHeader";
+import { dummyProjects, Project } from "@/data/projects";
+import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
-import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
-import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
-
-const initialComments: Comment[] = [
-  { id: 1, user: { name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia" }, text: "Great progress on the mockups! Just one suggestion: can we try a different color palette for the main CTA button?", timestamp: "2 days ago" },
-  { id: 2, user: { name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam" }, text: "Sure, I'll prepare a few alternatives. I've also attached the latest wireframes for the user dashboard.", timestamp: "1 day ago", attachment: { name: "dashboard-wireframe.png", url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=2070&auto=format&fit=crop", type: 'image' } },
-];
+import ProjectComments, { Comment } from "@/components/project-detail/ProjectComments";
+import { useToast } from "@/components/ui/use-toast";
 
 const ProjectDetail = () => {
-  const { projectId } = useParams<{ projectId: string }>();
-  const projectData = dummyProjects.find((p) => p.id === projectId);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const [project, setProject] = useState<Project | undefined>(projectData);
+  const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
-  const [comments, setComments] = useState<Comment[]>(initialComments);
+  const [comments, setComments] = useState<Comment[]>([]);
 
-  const ticketCount = comments.filter(comment => comment.isTicket).length;
+  useEffect(() => {
+    const foundProject = dummyProjects.find((p) => p.id === id);
+    if (foundProject) {
+      setProject(foundProject);
+      setEditedProject({ ...foundProject });
+      // Initialize with some dummy comments for demonstration
+      setComments([
+        { id: 'c1', author: 'Client', avatar: 'https://i.pravatar.cc/150?u=client', text: 'Can we get an update on the homepage design?', timestamp: '2 hours ago' },
+        { id: 'c2', author: 'Ethan Carter', avatar: 'https://i.pravatar.cc/150?u=ethan', text: 'Sure, I\'ve just pushed the latest version. Please check the staging link.', timestamp: '1 hour ago' },
+        { id: 'c3', author: 'Client', avatar: 'https://i.pravatar.cc/150?u=client', text: 'Looks great! One small feedback, can we make the logo bigger?', timestamp: '30 minutes ago' },
+      ]);
+    } else {
+      navigate("/projects");
+    }
+  }, [id, navigate]);
 
-  if (!project) {
+  const handleSaveChanges = () => {
+    if (editedProject) {
+      const projectIndex = dummyProjects.findIndex(p => p.id === editedProject.id);
+      if (projectIndex !== -1) {
+        dummyProjects[projectIndex] = editedProject;
+        setProject(editedProject);
+      }
+      setIsEditing(false);
+      toast({
+        title: "Project Updated",
+        description: "Your project details have been saved.",
+      });
+    }
+  };
+
+  const handleSelectChange = (name: 'status' | 'paymentStatus', value: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, [name]: value as any });
+    }
+  };
+
+  const handleDateChange = (name: 'deadline' | 'paymentDueDate', date: Date | undefined) => {
+    if (editedProject && date) {
+      setEditedProject({ ...editedProject, [name]: date.toISOString().split('T')[0] });
+    }
+  };
+
+  const handleBudgetChange = (value: number | undefined) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, budget: value || 0 });
+    }
+  };
+
+  const handleAddComment = (text: string) => {
+    const newComment: Comment = {
+      id: `c${Date.now()}`,
+      author: 'You',
+      avatar: 'https://github.com/shadcn.png',
+      text,
+      timestamp: 'Just now',
+    };
+    setComments(prevComments => [...prevComments, newComment]);
+  };
+
+  if (!project || !editedProject) {
     return (
       <PortalLayout>
-        <div className="flex items-center justify-center h-full">
-          <p className="text-lg text-muted-foreground">Project not found.</p>
-        </div>
+        <div className="text-center py-10">Loading project...</div>
       </PortalLayout>
     );
   }
 
-  const handleEdit = () => {
-    setEditedProject({ ...project });
-    setIsEditing(true);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedProject(null);
-  };
-
-  const handleSave = () => {
-    if (editedProject) {
-      setProject(editedProject);
-      // In a real app, you would make an API call here to save the data
-      const projectIndex = dummyProjects.findIndex(p => p.id === editedProject.id);
-      if (projectIndex !== -1) {
-        dummyProjects[projectIndex] = editedProject;
-      }
-    }
-    setIsEditing(false);
-    setEditedProject(null);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    if (!editedProject) return;
-    const { name, value } = e.target;
-    setEditedProject({ ...editedProject, [name]: value });
-  };
-
-  const handleSelectChange = (name: 'status' | 'paymentStatus', value: string) => {
-    if (!editedProject) return;
-    setEditedProject({ ...editedProject, [name]: value as any });
-  };
-
-  const handleDateChange = (name: 'deadline' | 'paymentDueDate', date: Date | undefined) => {
-    if (!editedProject || !date) return;
-    setEditedProject({ ...editedProject, [name]: date.toISOString().split('T')[0] });
-  };
-
-  const handleBudgetChange = (value: number | undefined) => {
-    if (!editedProject) return;
-    setEditedProject({ ...editedProject, budget: value || 0 });
-  };
-
   return (
     <PortalLayout>
-      <div className="space-y-6">
-        <ProjectDetailHeader
-          project={project}
-          isEditing={isEditing}
-          editedProject={editedProject}
-          onEdit={handleEdit}
-          onSave={handleSave}
-          onCancel={handleCancel}
-          onInputChange={handleInputChange}
-        />
-
+      <ProjectHeader 
+        project={project} 
+        isEditing={isEditing}
+        onEditToggle={() => setIsEditing(!isEditing)}
+        onSaveChanges={handleSaveChanges}
+        onCancel={() => {
+          setEditedProject({ ...project });
+          setIsEditing(false);
+        }}
+      />
+      <div className="mt-6">
         <ProjectInfoCards
           project={project}
           isEditing={isEditing}
           editedProject={editedProject}
-          ticketCount={ticketCount}
+          ticketCount={comments.length}
           onSelectChange={handleSelectChange}
           onDateChange={handleDateChange}
           onBudgetChange={handleBudgetChange}
         />
-
-        <div className="grid gap-6 md:grid-cols-3">
-          <ProjectMainContent
-            project={project}
-            comments={comments}
-            setComments={setComments}
-          />
-          <ProjectSidebar project={project} />
-        </div>
+      </div>
+      <div className="mt-6">
+        <ProjectComments 
+          comments={comments}
+          onAddComment={handleAddComment}
+        />
       </div>
     </PortalLayout>
   );

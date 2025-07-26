@@ -17,7 +17,6 @@ export type Project = {
   paymentDueDate?: string; // YYYY-MM-DD
   assignedTo: AssignedUser[];
   services: string[];
-  tickets?: number;
   invoiceAttachmentUrl?: string;
 };
 
@@ -38,7 +37,6 @@ export const dummyProjects: Project[] = [
       { name: "Olivia Martin", avatar: "https://i.pravatar.cc/150?u=olivia", status: 'online' }
     ],
     services: ["Web Development", "UI/UX Design", "SEO Optimization"],
-    tickets: 3,
     invoiceAttachmentUrl: "/invoices/inv-001.pdf",
   },
   {
@@ -56,7 +54,6 @@ export const dummyProjects: Project[] = [
       { name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia", status: 'offline' },
     ],
     services: ["Mobile App Development", "API Integration"],
-    tickets: 0,
     invoiceAttachmentUrl: "/invoices/inv-002.pdf",
   },
   {
@@ -75,7 +72,6 @@ export const dummyProjects: Project[] = [
       { name: "Jackson Lee", avatar: "https://i.pravatar.cc/150?u=jackson", status: 'online' },
     ],
     services: ["Digital Marketing", "Content Creation"],
-    tickets: 5,
   },
   {
     id: "proj-4",
@@ -92,7 +88,6 @@ export const dummyProjects: Project[] = [
       { name: "Noah Rodriguez", avatar: "https://i.pravatar.cc/150?u=noah", status: 'online' },
     ],
     services: ["Cloud Services"],
-    tickets: 1,
     invoiceAttachmentUrl: "/invoices/inv-004.pdf",
   },
   {
@@ -110,6 +105,5 @@ export const dummyProjects: Project[] = [
       { name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam", status: 'online' },
     ],
     services: ["UI/UX Design", "Content Creation"],
-    tickets: 2,
   },
 ];

@@ -148,7 +148,9 @@ const ProjectInfoCards = ({
         </CardHeader>
         <CardContent>
           <div className="text-xl font-bold">{ticketCount}</div>
-          <p className="text-xs text-muted-foreground">{ticketCount} tickets created</p>
+          <p className="text-xs text-muted-foreground">
+            {ticketCount === 1 ? "1 ticket created" : `${ticketCount} tickets created`}
+          </p>
         </CardContent>
       </Card>
       <Card>
