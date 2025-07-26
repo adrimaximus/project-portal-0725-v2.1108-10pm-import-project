@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { allServices, Service } from "@/data/services";
 
 interface AssignedTeamProps {
   users: AssignedUser[];
@@ -132,112 +131,29 @@ const AssignedTeam = ({ users, isEditing, onTeamChange }: AssignedTeamProps) => 
   );
 };
 
-interface ProjectServicesProps {
-  services: string[];
-  isEditing: boolean;
-  onServicesChange: (selectedServices: string[]) => void;
-}
-
-const ProjectServices = ({ services, isEditing, onServicesChange }: ProjectServicesProps) => {
-  const [open, setOpen] = React.useState(false);
-
-  const handleSelect = (currentService: Service) => {
-    const isSelected = services.includes(currentService.title);
-    let newSelectedServices: string[];
-    if (isSelected) {
-      newSelectedServices = services.filter(s => s !== currentService.title);
-    } else {
-      newSelectedServices = [...services, currentService.title];
-    }
-    onServicesChange(newSelectedServices);
-  };
-
-  if (!isEditing) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Services</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {services && services.length > 0 ? (
-              services.map(service => (
-                <Badge key={service} variant="secondary">{service}</Badge>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">No services assigned.</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Services</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={open}
-              className="w-full justify-between"
-            >
-              <span className="truncate">
-                {services.length > 0 ? `${services.length} service(s) selected` : "Select services..."}
-              </span>
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
-              <CommandInput placeholder="Search services..." />
-              <CommandList>
-                <CommandEmpty>No services found.</CommandEmpty>
-                <CommandGroup>
-                  {allServices.map((service) => (
-                    <CommandItem
-                      key={service.id}
-                      value={service.title}
-                      onSelect={() => handleSelect(service)}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          services.includes(service.title) ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      {service.title}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {services.map(service => (
-            <Badge key={service} variant="secondary">{service}</Badge>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
+const ProjectServices = ({ services }: { services: string[] }) => (
+  <Card>
+    <CardHeader>
+      <CardTitle>Services</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="flex flex-wrap gap-2">
+        {services.map(service => (
+          <Badge key={service} variant="secondary">{service}</Badge>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
 
 interface ProjectOverviewProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
   onTeamChange: (selectedUsers: AssignedUser[]) => void;
-  onServicesChange: (selectedServices: string[]) => void;
 }
 
-const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange, onServicesChange }: ProjectOverviewProps) => {
+const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange }: ProjectOverviewProps) => {
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-6">
@@ -267,11 +183,7 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
           isEditing={isEditing}
           onTeamChange={onTeamChange}
         />
-        <ProjectServices 
-          services={project.services} 
-          isEditing={isEditing}
-          onServicesChange={onServicesChange}
-        />
+        <ProjectServices services={project.services} />
       </div>
     </div>
   );

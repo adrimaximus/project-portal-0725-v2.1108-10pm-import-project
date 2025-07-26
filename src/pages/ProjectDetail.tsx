@@ -84,12 +84,6 @@ const ProjectDetail = () => {
     }
   };
 
-  const handleServicesChange = (selectedServices: string[]) => {
-    if (editedProject) {
-      setEditedProject({ ...editedProject, services: selectedServices });
-    }
-  };
-
   const projectComments = comments.filter(c => c.projectId === projectId);
   const ticketCount = projectComments.filter(c => c.isTicket).length;
 
@@ -116,7 +110,6 @@ const ProjectDetail = () => {
           isEditing={isEditing}
           onDescriptionChange={handleDescriptionChange}
           onTeamChange={handleTeamChange}
-          onServicesChange={handleServicesChange}
           comments={projectComments}
           setComments={setComments}
           projectId={project.id}
