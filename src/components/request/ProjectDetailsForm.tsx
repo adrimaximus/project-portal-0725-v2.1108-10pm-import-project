@@ -64,6 +64,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       paymentStatus: "pending",
       assignedTo: assignedTeam,
       services: selectedServices.map(s => s.title),
+      briefFiles: briefFiles,
     };
 
     dummyProjects.unshift(newProject);

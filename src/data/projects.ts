@@ -1,98 +1,93 @@
-export interface AssignedUser {
-  id: string;
-  name: string;
-  avatar: string;
-  status: 'online' | 'offline';
-  src?: string;
-  fallback?: string;
-}
+import { dummyUsers } from './users';
+import { AssignedUser } from './types';
+
+export type { AssignedUser };
 
 export interface Project {
   id: string;
-  name:string;
+  name: string;
   description: string;
-  status: 'Requested' | 'In Progress' | 'Completed' | 'Billed' | 'On Hold' | 'Cancelled' | 'Done';
+  status: "Requested" | "In Progress" | "Completed" | "Billed" | "On Hold" | "Cancelled" | "Done";
   progress: number;
   startDate: string;
   deadline: string;
   paymentDueDate?: string;
   budget: number;
-  paymentStatus: 'proposed' | 'pending' | 'paid' | 'overdue';
+  paymentStatus: "pending" | "paid" | "overdue" | "proposed";
   assignedTo: AssignedUser[];
   services: string[];
+  briefFiles?: File[];
   tickets?: number;
   invoiceAttachmentUrl?: string;
 }
 
 export const dummyProjects: Project[] = [
   {
-    id: 'proj-1',
-    name: 'E-commerce Platform Development',
-    description: 'Building a full-featured e-commerce website from scratch.',
-    status: 'In Progress',
-    progress: 60,
-    startDate: '2025-06-01',
-    deadline: '2025-12-15',
-    paymentDueDate: '2025-08-30',
-    budget: 150000000,
-    paymentStatus: 'pending',
-    assignedTo: [
-      { id: 'user-1', name: 'Ethan Carter', avatar: 'https://i.pravatar.cc/150?u=ethan', status: 'online' },
-      { id: 'user-2', name: 'Olivia Chen', avatar: 'https://i.pravatar.cc/150?u=olivia', status: 'offline' },
-    ],
-    services: ['Web Development', 'UI/UX Design', 'SEO Optimization'],
-    tickets: 5,
-    invoiceAttachmentUrl: '/attachments/invoice-proj-1.pdf',
+    id: "proj-1",
+    name: "E-commerce Platform",
+    description: "Developing a new e-commerce platform with a focus on user experience and scalability. The platform will feature a modern design, easy navigation, and a secure checkout process.",
+    status: "In Progress",
+    progress: 65,
+    startDate: "2024-05-15",
+    deadline: "2024-09-30",
+    paymentDueDate: "2024-10-15",
+    budget: 120000000,
+    paymentStatus: "pending",
+    assignedTo: [dummyUsers[0], dummyUsers[2]],
+    services: ["Web Development", "UI/UX Design"],
   },
   {
-    id: 'proj-2',
-    name: 'Mobile Banking App',
-    description: 'Developing a secure and user-friendly mobile banking application for iOS and Android.',
-    status: 'Completed',
+    id: "proj-2",
+    name: "Mobile Banking App",
+    description: "Creating a secure and user-friendly mobile banking application for iOS and Android. Key features include fund transfers, bill payments, and account statement viewing.",
+    status: "Completed",
     progress: 100,
-    startDate: '2025-01-10',
-    deadline: '2025-07-20',
-    paymentDueDate: '2025-07-25',
+    startDate: "2024-03-01",
+    deadline: "2024-07-20",
+    paymentDueDate: "2024-08-05",
     budget: 250000000,
-    paymentStatus: 'paid',
-    assignedTo: [
-      { id: 'user-3', name: 'Liam Goldberg', avatar: 'https://i.pravatar.cc/150?u=liam', status: 'online' },
-      { id: 'user-4', name: 'Sophia Rodriguez', avatar: 'https://i.pravatar.cc/150?u=sophia', status: 'online' },
-    ],
-    services: ['Mobile App Development', 'UI/UX Design', 'API Integration'],
-    tickets: 2,
-    invoiceAttachmentUrl: '/attachments/invoice-proj-2.pdf',
+    paymentStatus: "paid",
+    assignedTo: [dummyUsers[1], dummyUsers[3], dummyUsers[4]],
+    services: ["Mobile App Development", "API Integration"],
   },
   {
-    id: 'proj-3',
-    name: 'Cloud Migration Strategy',
-    description: 'Consulting services to plan and execute a full-scale migration to a cloud-based infrastructure.',
-    status: 'On Hold',
+    id: "proj-3",
+    name: "Social Media Campaign",
+    description: "Launching a comprehensive social media campaign to increase brand awareness and engagement. The campaign will run on major platforms like Instagram, Facebook, and Twitter.",
+    status: "On Hold",
     progress: 20,
-    startDate: '2025-08-01',
-    deadline: '2025-11-30',
-    budget: 80000000,
-    paymentStatus: 'pending',
-    assignedTo: [
-      { id: 'user-1', name: 'Ethan Carter', avatar: 'https://i.pravatar.cc/150?u=ethan', status: 'online' },
-    ],
-    services: ['Cloud Services', 'IT Consulting'],
-    tickets: 0,
+    startDate: "2024-06-01",
+    deadline: "2024-08-31",
+    budget: 50000000,
+    paymentStatus: "pending",
+    assignedTo: [dummyUsers[5]],
+    services: ["Digital Marketing"],
   },
   {
-    id: 'proj-4',
-    name: 'Brand Identity Redesign',
-    description: 'A complete overhaul of the company\'s brand identity, including logo, color palette, and typography.',
-    status: 'Requested',
+    id: "proj-4",
+    name: "Corporate Rebranding",
+    description: "Complete corporate rebranding including a new logo, brand guidelines, and marketing materials. The goal is to modernize the brand image and appeal to a younger demographic.",
+    status: "Requested",
     progress: 0,
-    startDate: '2025-09-15',
-    deadline: '2025-12-01',
-    budget: 50000000,
-    paymentStatus: 'pending',
-    assignedTo: [
-      { id: 'user-2', name: 'Olivia Chen', avatar: 'https://i.pravatar.cc/150?u=olivia', status: 'offline' },
-    ],
-    services: ['Branding', 'Graphic Design'],
-    tickets: 1,
+    startDate: "2024-07-10",
+    deadline: "2024-11-25",
+    budget: 85000000,
+    paymentStatus: "pending",
+    assignedTo: [dummyUsers[0], dummyUsers[5]],
+    services: ["Branding", "Graphic Design"],
+  },
+  {
+    id: "proj-5",
+    name: "CRM System Implementation",
+    description: "Implementing a new CRM system to streamline sales and customer service processes. This includes data migration, user training, and system customization.",
+    status: "Billed",
+    progress: 100,
+    startDate: "2024-02-10",
+    deadline: "2024-06-30",
+    paymentDueDate: "2024-07-15",
+    budget: 150000000,
+    paymentStatus: "overdue",
+    assignedTo: [dummyUsers[1], dummyUsers[6]],
+    services: ["System Integration", "Consulting"],
   },
 ];
