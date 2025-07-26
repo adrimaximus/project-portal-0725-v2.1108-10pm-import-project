@@ -11,9 +11,10 @@ interface StatCardProps {
   title: string;
   value: string;
   icon: React.ElementType;
+  description?: string;
 }
 
-const StatCard = ({ title, value, icon: Icon }: StatCardProps) => (
+const StatCard = ({ title, value, icon: Icon, description }: StatCardProps) => (
   <Card>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium">{title}</CardTitle>
@@ -21,6 +22,7 @@ const StatCard = ({ title, value, icon: Icon }: StatCardProps) => (
     </CardHeader>
     <CardContent>
       <div className="text-2xl font-bold">{value}</div>
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
     </CardContent>
   </Card>
 );
@@ -53,9 +55,24 @@ const ProjectStats = ({ projects }: ProjectStatsProps) => {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       <StatCard title="Total Projects" value={String(stats.totalProjects)} icon={ListChecks} />
       <StatCard title="Total Value" value={stats.totalValue} icon={DollarSign} />
-      <StatCard title="In Progress" value={String(stats.inProgress)} icon={Loader2} />
-      <StatCard title="Completed" value={String(stats.completed)} icon={CheckCircle} />
-      <StatCard title="On Hold" value={String(stats.onHold)} icon={PauseCircle} />
+      <StatCard 
+        title="Projects by Status" 
+        value={String(stats.inProgress)} 
+        icon={Loader2} 
+        description="In Progress" 
+      />
+      <StatCard 
+        title="Projects by Status" 
+        value={String(stats.completed)} 
+        icon={CheckCircle} 
+        description="Completed" 
+      />
+      <StatCard 
+        title="Projects by Status" 
+        value={String(stats.onHold)} 
+        icon={PauseCircle} 
+        description="On Hold" 
+      />
       <StatCard title="Active Tickets" value={String(stats.activeTickets)} icon={Ticket} />
     </div>
   );
