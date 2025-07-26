@@ -1,105 +1,90 @@
 import { Project } from "@/data/projects";
+import { services as allServices } from "@/data/services";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Comment } from "@/data/comments";
-import { Dispatch, SetStateAction, useState } from "react";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+import ProjectComments, { Comment } from "@/components/ProjectComments";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { formatDistanceToNow } from "date-fns";
 
 interface ProjectMainContentProps {
   project: Project;
   comments: Comment[];
-  setComments: Dispatch<SetStateAction<Comment[]>>;
+  setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
 }
 
-export default function ProjectMainContent({ project, comments, setComments }: ProjectMainContentProps) {
-  const [newComment, setNewComment] = useState("");
+const ProjectMainContent = ({ project, comments, setComments }: ProjectMainContentProps) => {
+  const projectServices = allServices.filter(service => 
+    project.services.includes(service.title)
+  );
 
-  const handleAddComment = () => {
-    if (newComment.trim() === "") return;
+  const recentActivity = [
+    { id: 1, user: { name: "Olivia Martin", avatar: "https://i.pravatar.cc/150?u=olivia" }, action: "updated the project deadline to December 15, 2024.", timestamp: "2024-07-20T10:30:00Z" },
+    { id: 2, user: { name: "Jackson Lee", avatar: "https://i.pravatar.cc/150?u=jackson" }, action: "attached a new file: 'design_mockups_v2.zip'.", timestamp: "2024-07-19T15:00:00Z" },
+    { id: 3, user: { name: project.assignedTo[0].name, avatar: project.assignedTo[0].avatar }, action: "changed the project status to 'In Progress'.", timestamp: "2024-07-18T09:00:00Z" },
+  ];
 
-    const commentToAdd: Comment = {
-      id: `COMMENT-${Date.now()}`,
-      author: {
-        name: "You", // Assuming the current user
-        avatar: "https://i.pravatar.cc/150?u=currentUser",
-      },
-      timestamp: new Date().toISOString(),
-      content: newComment,
-    };
-
-    setComments([commentToAdd, ...comments]);
-    setNewComment("");
+  const formatActivityDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-US", { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
   return (
-    <div className="space-y-6">
+    <div className="md:col-span-2 space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Project Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h3 className="font-semibold mb-2">Services</h3>
-            <div className="flex flex-wrap gap-2">
-              {project.services?.length ? (
-                project.services.map((service) => (
-                  <Badge key={service} variant="secondary">{service}</Badge>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No services listed.</p>
-              )}
-            </div>
+        <CardHeader><CardTitle>Project Progress</CardTitle></CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Progress value={65} className="w-full" />
+            <p className="text-sm text-muted-foreground">65% complete</p>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Comments</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Selected Services</CardTitle></CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <Avatar>
-                <AvatarImage src="https://i.pravatar.cc/150?u=currentUser" />
-                <AvatarFallback>YOU</AvatarFallback>
-              </Avatar>
-              <div className="w-full space-y-2">
-                <Textarea
-                  placeholder="Add a comment..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                />
-                <Button onClick={handleAddComment} disabled={!newComment.trim()}>
-                  Add Comment
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-6 pt-4">
-              {comments.map((comment) => (
-                <div key={comment.id} className="flex items-start gap-4">
-                  <Avatar>
-                    <AvatarImage src={comment.author.avatar} alt={comment.author.name} />
-                    <AvatarFallback>{comment.author.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold">{comment.author.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
-                      </p>
-                    </div>
-                    <p className="text-muted-foreground">{comment.content}</p>
-                  </div>
+          <div className="flex flex-wrap gap-3">
+            {projectServices.map((service) => (
+              <div key={service.title} className="flex items-center gap-2 rounded-lg bg-muted p-2">
+                <div className={cn("rounded-md p-1", service.iconColor)}>
+                  <service.icon className="h-4 w-4" />
                 </div>
-              ))}
-            </div>
+                <span className="text-sm font-medium">{service.title}</span>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Recent Activity</CardTitle></CardHeader>
+        <CardContent>
+          {recentActivity.length > 0 ? (
+            <ul className="space-y-6">
+              {recentActivity.map((activity) => (
+                <li key={activity.id} className="flex items-start gap-4">
+                  <Avatar className="h-9 w-9 border">
+                    <AvatarImage src={activity.user.avatar} alt={activity.user.name} />
+                    <AvatarFallback>{activity.user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+                  </Avatar>
+                  <div className="grid gap-1">
+                    <p className="text-sm">
+                      <span className="font-semibold">{activity.user.name}</span>{' '}{activity.action}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{formatActivityDate(activity.timestamp)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">No recent activity.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <ProjectComments comments={comments} setComments={setComments} />
     </div>
   );
-}
+};
+
+export default ProjectMainContent;

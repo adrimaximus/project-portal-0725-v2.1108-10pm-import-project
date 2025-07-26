@@ -1,111 +1,115 @@
+export type AssignedUser = {
+  name: string;
+  avatar: string;
+  status: 'online' | 'offline';
+};
+
 export type Project = {
   id: string;
   name: string;
-  description?: string;
-  services?: string[];
-  assignedTo: {
-    name: string;
-    avatar: string;
-  }[];
-  status: "In Progress" | "Completed" | "Billed" | "On Hold" | "Pending";
+  description: string;
+  status: "Completed" | "In Progress" | "On Hold" | "Pending";
   progress: number;
-  startDate: string;
-  deadline: string;
-  paymentDueDate?: string;
-  paymentStatus?: 'Paid' | 'Overdue' | 'Pending';
-  tickets?: number;
+  startDate: string; // YYYY-MM-DD
+  deadline: string; // YYYY-MM-DD
   budget: number;
+  paymentStatus: "Paid" | "Pending" | "Overdue";
+  paymentDueDate?: string; // YYYY-MM-DD
+  assignedTo: AssignedUser[];
+  services: string[];
+  tickets?: number;
   invoiceAttachmentUrl?: string;
 };
 
 export const dummyProjects: Project[] = [
   {
-    id: "PROJ-001",
+    id: "proj-1",
     name: "E-commerce Platform Development",
-    description: "Building a full-featured e-commerce platform from scratch for a leading retail client.",
-    services: ["Web Development", "UI/UX Design", "Backend API", "QA Testing"],
-    assignedTo: [
-      { name: "Alice Johnson", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d" },
-      { name: "Bob Williams", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026705d" },
-    ],
+    description: "Building a full-featured e-commerce website from scratch.",
     status: "In Progress",
-    progress: 75,
-    startDate: "2023-01-15",
-    deadline: "2023-06-30",
-    paymentDueDate: "2023-07-15",
+    progress: 65,
+    startDate: "2025-06-01",
+    deadline: "2025-12-15",
+    budget: 150000000,
     paymentStatus: "Pending",
+    paymentDueDate: "2025-08-30",
+    assignedTo: [
+      { name: "Ethan Carter", avatar: "https://i.pravatar.cc/150?u=ethan", status: 'offline' },
+      { name: "Olivia Martin", avatar: "https://i.pravatar.cc/150?u=olivia", status: 'online' }
+    ],
+    services: ["Web Development", "UI/UX Design", "SEO Optimization"],
     tickets: 3,
-    budget: 50000000,
-    invoiceAttachmentUrl: "/invoices/PROJ-001.pdf",
+    invoiceAttachmentUrl: "/invoices/inv-001.pdf",
   },
   {
-    id: "PROJ-002",
+    id: "proj-2",
     name: "Mobile Banking App",
-    description: "Developing a secure and user-friendly mobile banking application for iOS and Android.",
-    services: ["Mobile App Development", "Security Auditing"],
-    assignedTo: [
-      { name: "Charlie Brown", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026706d" },
-    ],
+    description: "Developing a secure and user-friendly mobile banking application.",
     status: "Completed",
     progress: 100,
-    startDate: "2023-02-01",
-    deadline: "2023-05-31",
-    paymentDueDate: "2023-06-15",
+    startDate: "2025-01-15",
+    deadline: "2025-06-30",
+    budget: 250000000,
     paymentStatus: "Paid",
+    paymentDueDate: "2025-07-15",
+    assignedTo: [
+      { name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia", status: 'offline' },
+    ],
+    services: ["Mobile App Development", "API Integration"],
     tickets: 0,
-    budget: 75000000,
-    invoiceAttachmentUrl: "/invoices/PROJ-002.pdf",
+    invoiceAttachmentUrl: "/invoices/inv-002.pdf",
   },
   {
-    id: "PROJ-003",
-    name: "CRM System Integration",
-    description: "Integrating a new CRM system with existing sales and marketing tools.",
-    services: ["API Integration", "Data Migration"],
-    assignedTo: [
-      { name: "Diana Prince", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026707d" },
-      { name: "Eve Adams", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026708d" },
-      { name: "Frank Miller", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026709d" },
-    ],
-    status: "Billed",
-    progress: 100,
-    startDate: "2023-03-10",
-    deadline: "2023-07-20",
-    paymentDueDate: "2023-08-01",
-    paymentStatus: "Pending",
-    tickets: 1,
-    budget: 40000000,
-    invoiceAttachmentUrl: "/invoices/PROJ-003.pdf",
-  },
-  {
-    id: "PROJ-004",
-    name: "Website Redesign",
-    description: "A complete overhaul of the corporate website with a modern design and improved user experience.",
-    services: ["UI/UX Design", "Frontend Development"],
-    assignedTo: [
-      { name: "Grace Hopper", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026710d" },
-    ],
+    id: "proj-3",
+    name: "Social Media Campaign",
+    description: "Marketing campaign for a new product launch.",
     status: "On Hold",
-    progress: 20,
-    startDate: "2023-04-05",
-    deadline: "2023-08-31",
-    budget: 25000000,
+    progress: 30,
+    startDate: "2025-07-01",
+    deadline: "2025-09-01",
+    budget: 50000000,
+    paymentStatus: "Pending",
+    assignedTo: [
+      { name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam", status: 'online' },
+      { name: "Ava Garcia", avatar: "https://i.pravatar.cc/150?u=ava", status: 'offline' },
+      { name: "Jackson Lee", avatar: "https://i.pravatar.cc/150?u=jackson", status: 'online' },
+    ],
+    services: ["Digital Marketing", "Content Creation"],
+    tickets: 5,
   },
   {
-    id: "PROJ-005",
-    name: "Data Analytics Dashboard",
-    description: "Creating a real-time data analytics dashboard for business intelligence.",
-    services: ["Data Visualization", "Backend Development"],
-    assignedTo: [
-      { name: "Heidi Lamar", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026711d" },
-      { name: "Ivan Petrov", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026712d" },
-    ],
+    id: "proj-4",
+    name: "Cloud Migration",
+    description: "Migrating on-premise servers to AWS.",
     status: "In Progress",
-    progress: 40,
-    startDate: "2023-05-20",
-    deadline: "2023-09-30",
-    paymentDueDate: "2023-10-15",
+    progress: 80,
+    startDate: "2025-06-10",
+    deadline: "2025-08-20",
+    budget: 120000000,
+    paymentStatus: "Paid",
+    paymentDueDate: "2025-08-01",
+    assignedTo: [
+      { name: "Noah Rodriguez", avatar: "https://i.pravatar.cc/150?u=noah", status: 'online' },
+    ],
+    services: ["Cloud Services"],
+    tickets: 1,
+    invoiceAttachmentUrl: "/invoices/inv-004.pdf",
+  },
+  {
+    id: "proj-5",
+    name: "Brand Identity Redesign",
+    description: "Complete redesign of the company's brand identity and logo.",
+    status: "Pending",
+    progress: 10,
+    startDate: "2025-09-01",
+    deadline: "2025-11-10",
+    budget: 75000000,
     paymentStatus: "Pending",
-    tickets: 5,
-    budget: 60000000,
+    assignedTo: [
+      { name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia", status: 'offline' },
+      { name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam", status: 'online' },
+    ],
+    services: ["UI/UX Design", "Content Creation"],
+    tickets: 2,
   },
 ];

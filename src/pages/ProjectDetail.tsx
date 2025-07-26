@@ -1,84 +1,86 @@
-import { useState, useEffect, ChangeEvent } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import PortalLayout from "@/components/PortalLayout";
+import { useState } from "react";
+import { useParams } from "react-router-dom";
 import { dummyProjects, Project } from "@/data/projects";
-import { Comment, dummyComments } from "@/data/comments";
+import PortalLayout from "@/components/PortalLayout";
+import { Comment } from "@/components/ProjectComments";
 import ProjectDetailHeader from "@/components/project-detail/ProjectDetailHeader";
-import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
+import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
-import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
 
-export default function ProjectDetail() {
+const initialComments: Comment[] = [
+  { id: 1, user: { name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia" }, text: "Great progress on the mockups! Just one suggestion: can we try a different color palette for the main CTA button?", timestamp: "2 days ago" },
+  { id: 2, user: { name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam" }, text: "Sure, I'll prepare a few alternatives. I've also attached the latest wireframes for the user dashboard.", timestamp: "1 day ago", attachment: { name: "dashboard-wireframe.png", url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=2070&auto=format&fit=crop", type: 'image' } },
+];
+
+const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const projectData = dummyProjects.find((p) => p.id === projectId);
 
-  const [project, setProject] = useState<Project | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [project, setProject] = useState<Project | undefined>(projectData);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
+  const [comments, setComments] = useState<Comment[]>(initialComments);
 
-  useEffect(() => {
-    const foundProject = dummyProjects.find((p) => p.id === projectId);
-    if (foundProject) {
-      setProject(foundProject);
-      setEditedProject(foundProject);
-      // In a real app, you'd fetch comments for this project
-      setComments(dummyComments);
-    } else {
-      navigate("/"); // Or a 404 page
-    }
-  }, [projectId, navigate]);
+  const ticketCount = comments.filter(comment => comment.isTicket).length;
+
+  if (!project) {
+    return (
+      <PortalLayout>
+        <div className="flex items-center justify-center h-full">
+          <p className="text-lg text-muted-foreground">Project not found.</p>
+        </div>
+      </PortalLayout>
+    );
+  }
 
   const handleEdit = () => {
+    setEditedProject({ ...project });
     setIsEditing(true);
   };
 
   const handleCancel = () => {
     setIsEditing(false);
-    setEditedProject(project); // Reset changes
+    setEditedProject(null);
   };
 
   const handleSave = () => {
     if (editedProject) {
-      // In a real app, you'd send this to an API
+      setProject(editedProject);
+      // In a real app, you would make an API call here to save the data
       const projectIndex = dummyProjects.findIndex(p => p.id === editedProject.id);
       if (projectIndex !== -1) {
         dummyProjects[projectIndex] = editedProject;
       }
-      setProject(editedProject);
-      setIsEditing(false);
-      toast({
-        title: "Project Updated",
-        description: "Your changes have been saved successfully.",
-      });
     }
+    setIsEditing(false);
+    setEditedProject(null);
   };
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    if (editedProject) {
-      const { name, value } = e.target;
-      setEditedProject({ ...editedProject, [name]: value });
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (!editedProject) return;
+    const { name, value } = e.target;
+    setEditedProject({ ...editedProject, [name]: value });
   };
 
-  if (!project || !editedProject) {
-    return (
-      <PortalLayout>
-        <div>Loading...</div>
-      </PortalLayout>
-    );
-  }
+  const handleSelectChange = (name: 'status' | 'paymentStatus', value: string) => {
+    if (!editedProject) return;
+    setEditedProject({ ...editedProject, [name]: value as any });
+  };
+
+  const handleDateChange = (name: 'deadline' | 'paymentDueDate', date: Date | undefined) => {
+    if (!editedProject || !date) return;
+    setEditedProject({ ...editedProject, [name]: date.toISOString().split('T')[0] });
+  };
+
+  const handleBudgetChange = (value: number | undefined) => {
+    if (!editedProject) return;
+    setEditedProject({ ...editedProject, budget: value || 0 });
+  };
 
   return (
     <PortalLayout>
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Projects
-        </Button>
+      <div className="space-y-6">
         <ProjectDetailHeader
           project={project}
           isEditing={isEditing}
@@ -88,20 +90,28 @@ export default function ProjectDetail() {
           onCancel={handleCancel}
           onInputChange={handleInputChange}
         />
-      </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
+        <ProjectInfoCards
+          project={project}
+          isEditing={isEditing}
+          editedProject={editedProject}
+          ticketCount={ticketCount}
+          onSelectChange={handleSelectChange}
+          onDateChange={handleDateChange}
+          onBudgetChange={handleBudgetChange}
+        />
+
+        <div className="grid gap-6 md:grid-cols-3">
           <ProjectMainContent
             project={project}
             comments={comments}
             setComments={setComments}
           />
-        </div>
-        <div className="md:col-span-1">
           <ProjectSidebar project={project} />
         </div>
       </div>
     </PortalLayout>
   );
-}
+};
+
+export default ProjectDetail;
