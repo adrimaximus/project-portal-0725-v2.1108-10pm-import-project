@@ -315,7 +315,7 @@ export const columns: ColumnDef<Project>[] = [
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
                 <Pencil className="mr-2 h-4 w-4" />
-                View Details
+                Takeout
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!project.invoiceAttachmentUrl}
@@ -326,7 +326,7 @@ export const columns: ColumnDef<Project>[] = [
                 }}
               >
                 <Download className="mr-2 h-4 w-4" />
-                Download Invoice
+                Invoice Link
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-red-600">
@@ -417,7 +417,7 @@ export default function ProjectsTable({ columns, data }: { columns: ColumnDef<Pr
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            View Details
+                            Takeout
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             disabled={!project.invoiceAttachmentUrl}
@@ -428,7 +428,7 @@ export default function ProjectsTable({ columns, data }: { columns: ColumnDef<Pr
                             }}
                           >
                             <Download className="mr-2 h-4 w-4" />
-                            Download Invoice
+                            Invoice Link
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600">
