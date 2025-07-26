@@ -69,7 +69,7 @@ const ProjectDetailsForm = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="h-full overflow-y-auto space-y-6">
       <div>
         <Button variant="ghost" onClick={onBack} className="-ml-4">
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Services
