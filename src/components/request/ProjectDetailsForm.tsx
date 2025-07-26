@@ -109,24 +109,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Project Value</CardTitle>
-              <Wallet className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">IDR</span>
-                <CurrencyInput
-                  id="projectBudget"
-                  placeholder="50,000,000"
-                  value={budget}
-                  onChange={setBudget}
-                  className="pl-12"
-                />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Project Start Date</CardTitle>
               <CalendarDays className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -161,6 +143,24 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
                   <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
                 </PopoverContent>
               </Popover>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Project Value</CardTitle>
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">IDR</span>
+                <CurrencyInput
+                  id="projectBudget"
+                  placeholder="50,000,000"
+                  value={budget}
+                  onChange={setBudget}
+                  className="pl-12"
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
