@@ -54,12 +54,13 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   }
 
   return (
-    <div className="px-4 lg:px-4 py-4">
+    <div className="px-4 lg:px-4 py-4 transition-all duration-300">
       <h3 
-        className="mb-3 px-3 text-xs font-semibold text-muted-foreground tracking-wider uppercase cursor-pointer"
+        className="mb-3 px-3 text-xs font-semibold text-muted-foreground tracking-wider uppercase cursor-pointer flex items-center justify-between"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        Online
+        <span>Online</span>
+        <span className="text-primary font-bold">{onlineCollaborators.length}</span>
       </h3>
       <div className="px-3">
         {isExpanded ? (
@@ -67,17 +68,17 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
             {onlineCollaborators.map(c => (
               <div 
                 key={c.id} 
-                className="flex items-center gap-3 p-1 rounded-md hover:bg-muted cursor-pointer"
+                className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-muted cursor-pointer transition-colors"
                 onClick={() => handleCollaboratorClick(c)}
               >
                 <div className="relative">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={c.src} alt={c.name} />
-                    <AvatarFallback>{c.fallback}</AvatarFallback>
+                    <AvatarImage src={c.src || `https://avatar.vercel.sh/${c.id}.png`} alt={c.name} />
+                    <AvatarFallback className="bg-muted-foreground/20 text-muted-foreground font-semibold">{c.fallback}</AvatarFallback>
                   </Avatar>
-                  <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-green-500 ring-2 ring-background" />
+                  <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
                 </div>
-                <span className="text-sm text-muted-foreground font-medium">{c.name}</span>
+                <span className="text-sm text-foreground font-medium">{c.name}</span>
               </div>
             ))}
           </div>
@@ -87,25 +88,34 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
               {visibleCollaborators.map((collaborator, index) => (
                 <Tooltip key={collaborator.id}>
                   <TooltipTrigger asChild>
-                    <div className={cn("relative", index > 0 && "-ml-3")}>
-                      <Avatar className="h-8 w-8 border-2 border-background">
-                        <AvatarImage src={collaborator.src} alt={collaborator.name} />
-                        <AvatarFallback>{collaborator.fallback}</AvatarFallback>
+                    <div className={cn(
+                      "relative transition-all duration-300 hover:z-10 hover:scale-110", 
+                      index > 0 && "-ml-3"
+                    )}>
+                      <Avatar className="h-9 w-9 border-2 border-background">
+                        <AvatarImage src={collaborator.src || `https://avatar.vercel.sh/${collaborator.id}.png`} alt={collaborator.name} />
+                        <AvatarFallback className="bg-muted-foreground/20 text-muted-foreground font-semibold">{collaborator.fallback}</AvatarFallback>
                       </Avatar>
-                      <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-green-500 ring-1 ring-background" />
+                      {index === visibleCollaborators.length - 1 && (
+                        <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
+                      )}
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top">{collaborator.name}</TooltipContent>
+                  <TooltipContent side="top" className="bg-primary text-primary-foreground">
+                    <p>{collaborator.name}</p>
+                  </TooltipContent>
                 </Tooltip>
               ))}
               {remainingCount > 0 && (
                  <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground -ml-3 border-2 border-background text-xs font-semibold">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground -ml-3 border-2 border-background text-xs font-semibold hover:z-10 hover:scale-110 transition-transform">
                       +{remainingCount}
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top">{remainingCount} more collaborators</TooltipContent>
+                  <TooltipContent side="top" className="bg-primary text-primary-foreground">
+                    <p>{remainingCount} more online</p>
+                  </TooltipContent>
                 </Tooltip>
               )}
             </div>
