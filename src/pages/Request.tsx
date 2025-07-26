@@ -1,521 +1,96 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import PortalLayout from "@/components/PortalLayout";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { services } from "@/data/services";
-import { dummyProjects, Project } from "@/data/projects";
-import { Search, ArrowLeft, LucideIcon, Calendar as CalendarIcon, Paperclip, Send } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CurrencyInput } from "@/components/ui/currency-input";
-import SelectedServicesSummary from "@/components/SelectedServicesSummary";
-import RichTextEditor from "@/components/RichTextEditor";
+import { Textarea } from "@/components/ui/textarea";
+import { dummyProjects, Project } from "@/data/projects";
+import { FormEvent, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
-// Define the type for a service based on the data structure
-type Service = {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  iconColor: string;
-};
-
-// Define the type for a comment
-type Comment = {
-  text: string;
-  file: File | null;
-  fileURL?: string;
-  sender: string;
-  avatar: string;
-};
-
-const RequestPage = () => {
+const Request = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
-  
-  // Project Details State
-  const [projectName, setProjectName] = useState("");
-  const [projectDescription, setProjectDescription] = useState("");
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
-  const [budget, setBudget] = useState<number | undefined>();
-  const [briefFile, setBriefFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Comments State
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [currentComment, setCurrentComment] = useState("");
-  const [commentFile, setCommentFile] = useState<File | null>(null);
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
 
-  useEffect(() => {
-    // Cleanup object URLs on unmount to prevent memory leaks
-    return () => {
-      comments.forEach(comment => {
-        if (comment.fileURL) {
-          URL.revokeObjectURL(comment.fileURL);
-        }
-      });
-    };
-  }, [comments]);
+    const formData = new FormData(event.currentTarget);
+    const projectName = formData.get("projectName");
+    const clientName = formData.get("clientName");
+    const deadline = formData.get("deadline");
+    const budget = formData.get("budget");
 
-  const handleServiceSelect = (service: Service) => {
-    const isFeatured = service.title === "End to End Services";
-    const isAlreadySelected = selectedServices.some(
-      (s) => s.title === service.title
-    );
-
-    if (isFeatured) {
-      setSelectedServices(isAlreadySelected ? [] : [service]);
-    } else {
-      let newSelectedServices = selectedServices.filter(
-        (s) => s.title !== "End to End Services"
-      );
-      if (isAlreadySelected) {
-        newSelectedServices = newSelectedServices.filter(
-          (s) => s.title !== service.title
-        );
-      } else {
-        newSelectedServices.push(service);
-      }
-      setSelectedServices(newSelectedServices);
-    }
-  };
-
-  const handleSendComment = () => {
-    if (currentComment.trim() === "" && !commentFile) return;
-
-    const newComment: Comment = {
-      text: currentComment,
-      file: commentFile,
-      fileURL: commentFile ? URL.createObjectURL(commentFile) : undefined,
-      sender: "You", // Dummy sender
-      avatar: "https://github.com/shadcn.png", // Dummy avatar
-    };
-
-    setComments([...comments, newComment]);
-    setCurrentComment("");
-    setCommentFile(null);
-  };
-
-  const isSubmitDisabled = !projectName || !projectDescription || selectedServices.length === 0 || !startDate || !endDate || !budget;
-
-  const handleSubmitRequest = () => {
-    if (isSubmitDisabled) {
-      alert("Please fill all required fields: Project Name, Description, Services, Start Date, Due Date, and Budget.");
+    if (!projectName || !clientName || !deadline || !budget) {
+      setError("Please fill out all required fields.");
       return;
     }
 
     const newProject: Project = {
-      id: `proj-${Date.now()}`,
-      name: projectName,
-      description: projectDescription,
-      status: "Pending",
-      progress: 0,
-      startDate: format(startDate as Date, "yyyy-MM-dd"),
-      deadline: format(endDate as Date, "yyyy-MM-dd"),
-      budget: budget as number,
+      id: `PRJ-${String(dummyProjects.length + 1).padStart(3, '0')}`,
+      name: projectName as string,
+      client: clientName as string,
+      startDate: new Date().toISOString().split('T')[0],
+      deadline: deadline as string,
+      status: "Requested",
+      budget: Number(budget),
       paymentStatus: "Pending",
-      assignedTo: [{ // Default assignment
-        name: "Ethan Carter",
-        avatar: "https://i.pravatar.cc/150?u=ethan",
-        status: 'offline'
-      }],
-      services: selectedServices.map(s => s.title),
+      assignedTo: [
+        { name: "Frank", status: 'Online' },
+        { name: "Grace", status: 'Offline' }
+      ],
+      description: formData.get("description") as string,
+      services: (formData.get("services") as string).split(',').map(s => s.trim()),
     };
 
-    // Add to the global list (in-memory)
-    dummyProjects.unshift(newProject);
-
-    // Navigate to the new project's detail page
-    navigate(`/projects/${newProject.id}`);
+    dummyProjects.push(newProject);
+    toast.success("New project request has been submitted successfully!");
+    navigate("/");
   };
 
-  const featuredService = services.find(
-    (s) => s.title === "End to End Services"
-  );
-  const otherServices = services.filter(
-    (s) => s.title !== "End to End Services"
-  );
-
-  const filteredServices = otherServices.filter(
-    (service) =>
-      service.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const isSelected = (service: Service) => {
-    return selectedServices.some((s) => s.title === service.title);
-  };
-
-  const renderContent = () => {
-    if (step === 1) {
-      return (
-        // Step 1: Service Selection
-        <div className="space-y-4 pb-40">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Project Support Request
-          </h1>
-          <p className="text-muted-foreground">
-            Select the services you need for your project. You can select
-            multiple services, or choose our end-to-end package.
-          </p>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search support options..."
-              className="pl-9"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          {featuredService && (
-            <Card
-              className={cn(
-                "w-full hover:bg-muted/50 transition-colors cursor-pointer",
-                isSelected(featuredService) && "ring-2 ring-primary"
-              )}
-              onClick={() => handleServiceSelect(featuredService)}
-            >
-              <CardContent className="p-6 flex items-center gap-6">
-                <div
-                  className={cn(
-                    "p-3 rounded-lg",
-                    featuredService.iconColor
-                  )}
-                >
-                  <featuredService.icon className="h-8 w-8" />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-lg">
-                    {featuredService.title}
-                  </h2>
-                  <p className="text-muted-foreground">
-                    {featuredService.description}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredServices.map((service) => (
-              <Card
-                key={service.title}
-                className={cn(
-                  "hover:bg-muted/50 transition-colors cursor-pointer h-full",
-                  isSelected(service) && "ring-2 ring-primary"
-                )}
-                onClick={() => handleServiceSelect(service)}
-              >
-                <CardContent className="p-4 flex items-start gap-4">
-                  <div
-                    className={cn("p-2 rounded-lg", service.iconColor)}
-                  >
-                    <service.icon className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{service.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {service.description}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="w-full max-w-2xl p-8 space-y-8 bg-card text-card-foreground rounded-lg shadow-lg">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold">Submit a Project Request</h1>
+          <p className="text-muted-foreground">Fill out the form below to get started.</p>
         </div>
-      );
-    } else {
-      return (
-        // Step 2: Project Details
-        <div className="space-y-6">
-          <Button
-            variant="ghost"
-            onClick={() => setStep(1)}
-            className="pl-0"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Services
-          </Button>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Tell us about your project
-          </h1>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Selected Services</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              {selectedServices.map((service) => (
-                <div
-                  key={service.title}
-                  className="flex items-center gap-2 bg-muted py-1 px-2 rounded-md"
-                >
-                  <div
-                    className={cn("p-1 rounded-sm", service.iconColor)}
-                  >
-                    <service.icon className="h-4 w-4" />
-                  </div>
-                  <span className="text-sm font-medium">
-                    {service.title}
-                  </span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Project Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="projectName">Project Name</Label>
-                <Input
-                  id="projectName"
-                  placeholder="e.g., New Corporate Website"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="projectDescription">
-                  Project Description
-                </Label>
-                <RichTextEditor
-                  value={projectDescription}
-                  onChange={setProjectDescription}
-                  placeholder="Describe your project goals, target audience, and key features..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="projectBudget">Budget</Label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                    IDR
-                  </span>
-                  <CurrencyInput
-                    id="projectBudget"
-                    placeholder="50,000,000"
-                    value={budget}
-                    onChange={setBudget}
-                    className="pl-12"
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Enter your estimated project budget in Indonesian Rupiah.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? (
-                          format(startDate, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={setStartDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">Due Date Project</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !endDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? (
-                          format(endDate, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={setEndDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="briefAttachment">Brief File</Label>
-                <div className="relative">
-                  <Input
-                    id="briefAttachment"
-                    type="file"
-                    className="sr-only"
-                    onChange={(e) => setBriefFile(e.target.files ? e.target.files[0] : null)}
-                  />
-                  <Label htmlFor="briefAttachment" className="w-full">
-                    <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer hover:bg-accent hover:text-accent-foreground">
-                      <span className={cn("truncate", !briefFile && "text-muted-foreground")}>
-                        {briefFile ? briefFile.name : "Attach a file..."}
-                      </span>
-                      <Paperclip className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </Label>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Attach any relevant documents for the project brief.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end pt-2">
-            <Button onClick={handleSubmitRequest} disabled={isSubmitDisabled}>Submit Request</Button>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="projectName">Project Name</Label>
+              <Input id="projectName" name="projectName" placeholder="e.g., E-commerce Website" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="clientName">Client Name</Label>
+              <Input id="clientName" name="clientName" placeholder="e.g., Tech Solutions Inc." required />
+            </div>
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Additional Comments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {comments.map((comment, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8 border">
-                      <AvatarImage src={comment.avatar} alt={comment.sender} />
-                      <AvatarFallback>{comment.sender.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold">{comment.sender}</p>
-                      <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg mt-1">
-                        <p className="whitespace-pre-wrap">{comment.text}</p>
-                        {comment.file && comment.fileURL && (
-                          <a
-                            href={comment.fileURL}
-                            download={comment.file.name}
-                            className="mt-2 block rounded-lg border p-2 transition-colors hover:bg-muted"
-                          >
-                            {comment.file.type.startsWith("image/") ? (
-                              <div className="flex items-center gap-3">
-                                <img
-                                  src={comment.fileURL}
-                                  alt="Image thumbnail"
-                                  className="h-12 w-12 rounded-md object-cover"
-                                />
-                                <div className="text-sm">
-                                  <p className="font-medium text-primary">{comment.file.name}</p>
-                                  <p className="text-xs text-muted-foreground">Click to download</p>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-3 text-sm">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-md bg-background">
-                                  <Paperclip className="h-6 w-6" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-primary">{comment.file.name}</p>
-                                  <p className="text-xs text-muted-foreground">Click to download</p>
-                                </div>
-                              </div>
-                            )}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 pt-6 border-t">
-                <div className="relative">
-                  <Label htmlFor="comments" className="sr-only">Add a comment</Label>
-                  <Textarea
-                    id="comments"
-                    placeholder="Type your comment here..."
-                    className="resize-none pr-24 min-h-[80px]"
-                    value={currentComment}
-                    onChange={(e) => setCurrentComment(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendComment();
-                      }
-                    }}
-                  />
-                  <div className="absolute bottom-2 right-2 flex items-center">
-                    <Input
-                      id="comment-attachment"
-                      type="file"
-                      className="sr-only"
-                      onChange={(e) => {
-                        const file = e.target.files ? e.target.files[0] : null;
-                        setCommentFile(file);
-                      }}
-                    />
-                    <Button asChild variant="ghost" size="icon">
-                      <Label htmlFor="comment-attachment" className="cursor-pointer">
-                        <Paperclip className="h-5 w-5 text-muted-foreground" />
-                        <span className="sr-only">Attach file</span>
-                      </Label>
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={handleSendComment} disabled={!currentComment.trim() && !commentFile}>
-                      <Send className="h-5 w-5" />
-                      <span className="sr-only">Send comment</span>
-                    </Button>
-                  </div>
-                </div>
-                {commentFile && (
-                  <p className="text-sm text-muted-foreground pt-2">
-                    File to attach: {commentFile.name}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-        </div>
-      );
-    }
-  };
-
-  const summaryComponent =
-    step === 1 ? (
-      <SelectedServicesSummary
-        selectedServices={selectedServices}
-        onContinue={() => setStep(2)}
-      />
-    ) : null;
-
-  return <PortalLayout summary={summaryComponent}>{renderContent()}</PortalLayout>;
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="deadline">Deadline</Label>
+              <Input id="deadline" name="deadline" type="date" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="budget">Budget (IDR)</Label>
+              <Input id="budget" name="budget" type="number" placeholder="e.g., 50000000" required />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="services">Services Needed</Label>
+            <Input id="services" name="services" placeholder="e.g., Web Development, UI/UX Design" />
+            <p className="text-sm text-muted-foreground">Separate services with a comma.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Project Description</Label>
+            <Textarea id="description" name="description" placeholder="Provide a brief overview of the project." />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" className="w-full">Submit Request</Button>
+        </form>
+      </div>
+    </div>
+  );
 };
 
-export default RequestPage;
+export default Request;

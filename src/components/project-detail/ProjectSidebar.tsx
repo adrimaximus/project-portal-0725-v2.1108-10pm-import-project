@@ -1,9 +1,7 @@
 import { Project } from "@/data/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { File } from "lucide-react";
 
 interface ProjectSidebarProps {
   project: Project;
@@ -13,44 +11,26 @@ const ProjectSidebar = ({ project }: ProjectSidebarProps) => {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader><CardTitle>Assigned To</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Assigned Team</CardTitle>
+        </CardHeader>
         <CardContent>
-          <TooltipProvider>
-            <div className="flex items-center -space-x-2">
-              {project.assignedTo.map((user, index) => (
-                <Tooltip key={index} delayDuration={100}>
-                  <TooltipTrigger asChild>
-                    <div className="relative">
-                      <Avatar className="h-10 w-10 border-2 border-card">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                      </Avatar>
-                      <span
-                        className={cn("absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-card", user.status === 'online' ? 'bg-green-500' : 'bg-gray-400')}
-                        title={user.status === 'online' ? 'Online' : 'Offline'}
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent><p>{user.name}</p></TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
-          </TooltipProvider>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>Project Files</CardTitle></CardHeader>
-        <CardContent>
-          <ul className="space-y-2 text-sm">
-            <li className="flex items-center gap-2">
-              <File className="h-4 w-4 text-muted-foreground" />
-              <span className="hover:underline cursor-pointer">project_brief.pdf</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <File className="h-4 w-4 text-muted-foreground" />
-              <span className="hover:underline cursor-pointer">design_mockups.zip</span>
-            </li>
+          <ul className="space-y-4">
+            {project.assignedTo.map((assignee) => (
+              <li key={assignee.name} className="flex items-center space-x-3">
+                <Avatar>
+                  <AvatarImage src={assignee.avatar} />
+                  <AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="font-medium">{assignee.name}</p>
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <span className={cn("h-2 w-2 rounded-full mr-2", assignee.status === 'Online' ? "bg-green-500" : "bg-gray-400")} />
+                    <span>{assignee.status}</span>
+                  </div>
+                </div>
+              </li>
+            ))}
           </ul>
         </CardContent>
       </Card>
