@@ -55,11 +55,10 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   return (
     <div className="px-4 lg:px-4 py-4 transition-all duration-300">
       <h3 
-        className="mb-3 px-3 text-xs font-semibold text-muted-foreground tracking-wider uppercase cursor-pointer flex items-center justify-between"
+        className="mb-3 px-3 text-xs font-semibold text-muted-foreground tracking-wider uppercase cursor-pointer flex items-center"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <span>Online</span>
-        <span className="text-primary font-bold">{onlineCollaborators.length}</span>
       </h3>
       <div className="px-3">
         {isExpanded ? (
