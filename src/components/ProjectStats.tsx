@@ -1,7 +1,8 @@
 import { Project } from "@/data/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ListChecks, Loader2, CheckCircle, PauseCircle, Ticket } from "lucide-react";
-import { useMemo } from "react";
+import { DollarSign, ListChecks, Ticket } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ProjectStatsProps {
   projects: Project[];
@@ -13,6 +14,8 @@ interface StatCardProps {
   icon: React.ElementType;
   description?: string;
 }
+
+type StatusView = "All" | "In Progress" | "Completed" | "On Hold";
 
 const StatCard = ({ title, value, icon: Icon, description }: StatCardProps) => (
   <Card>
@@ -28,6 +31,8 @@ const StatCard = ({ title, value, icon: Icon, description }: StatCardProps) => (
 );
 
 const ProjectStats = ({ projects }: ProjectStatsProps) => {
+  const [statusView, setStatusView] = useState<StatusView>("All");
+
   const stats = useMemo(() => {
     const totalValue = projects.reduce((sum, project) => sum + project.budget, 0);
     const formattedTotalValue = new Intl.NumberFormat("id-ID", {
@@ -51,28 +56,43 @@ const ProjectStats = ({ projects }: ProjectStatsProps) => {
     };
   }, [projects]);
 
+  const statusDisplay = useMemo(() => {
+    switch (statusView) {
+      case "In Progress":
+        return { value: stats.inProgress, description: "In Progress" };
+      case "Completed":
+        return { value: stats.completed, description: "Completed" };
+      case "On Hold":
+        return { value: stats.onHold, description: "On Hold" };
+      case "All":
+      default:
+        return { value: stats.totalProjects, description: "All Projects" };
+    }
+  }, [statusView, stats]);
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-      <StatCard title="Total Projects" value={String(stats.totalProjects)} icon={ListChecks} />
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Projects by Status</CardTitle>
+          <Select value={statusView} onValueChange={(value) => setStatusView(value as StatusView)}>
+            <SelectTrigger className="w-[120px] h-8 text-xs focus:ring-0 border-input">
+              <SelectValue placeholder="Select Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All</SelectItem>
+              <SelectItem value="In Progress">In Progress</SelectItem>
+              <SelectItem value="Completed">Completed</SelectItem>
+              <SelectItem value="On Hold">On Hold</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{statusDisplay.value}</div>
+          <p className="text-xs text-muted-foreground">{statusDisplay.description}</p>
+        </CardContent>
+      </Card>
       <StatCard title="Total Value" value={stats.totalValue} icon={DollarSign} />
-      <StatCard 
-        title="Projects by Status" 
-        value={String(stats.inProgress)} 
-        icon={Loader2} 
-        description="In Progress" 
-      />
-      <StatCard 
-        title="Projects by Status" 
-        value={String(stats.completed)} 
-        icon={CheckCircle} 
-        description="Completed" 
-      />
-      <StatCard 
-        title="Projects by Status" 
-        value={String(stats.onHold)} 
-        icon={PauseCircle} 
-        description="On Hold" 
-      />
       <StatCard title="Active Tickets" value={String(stats.activeTickets)} icon={Ticket} />
     </div>
   );
