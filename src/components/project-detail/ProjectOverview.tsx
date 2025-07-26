@@ -13,6 +13,7 @@ import { Check, ChevronsUpDown, FileText, Download, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { services as allServices, type Service } from "@/data/services";
 import { Separator } from "../ui/separator";
+import FileUpload from "./FileUpload";
 
 interface AssignedTeamProps {
   users: AssignedUser[];
@@ -166,9 +167,10 @@ interface ProjectOverviewProps {
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
   onTeamChange: (selectedUsers: AssignedUser[]) => void;
+  onFilesChange: (files: File[]) => void;
 }
 
-const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange }: ProjectOverviewProps) => {
+const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesChange }: ProjectOverviewProps) => {
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-6">
@@ -189,56 +191,69 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
                 dangerouslySetInnerHTML={{ __html: project.description }}
               />
             )}
-            {project.briefFiles && project.briefFiles.length > 0 && !isEditing && (
+            
+            {(isEditing || (project.briefFiles && project.briefFiles.length > 0)) && (
               <>
                 <Separator className="my-6" />
                 <div>
-                  <h4 className="text-sm font-medium mb-3 text-foreground">Brief Files</h4>
-                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                    {project.briefFiles.map((file, index) => (
-                      <div
-                        key={index}
-                        className="relative group border rounded-lg overflow-hidden aspect-square"
-                        title={file.name}
-                      >
-                        {file.type.startsWith("image/") ? (
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt={file.name}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="h-full w-full bg-muted flex flex-col items-center justify-center p-2">
-                            <FileText className="h-8 w-8 text-muted-foreground" />
+                  {isEditing ? (
+                    <>
+                      <h4 className="text-sm font-medium mb-3 text-foreground">Attach Brief Files</h4>
+                      <FileUpload 
+                        files={project.briefFiles || []}
+                        onFilesChange={onFilesChange}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="text-sm font-medium mb-3 text-foreground">Brief Files</h4>
+                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                        {project.briefFiles.map((file, index) => (
+                          <div
+                            key={index}
+                            className="relative group border rounded-lg overflow-hidden aspect-square"
+                            title={file.name}
+                          >
+                            {file.type.startsWith("image/") ? (
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={file.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full bg-muted flex flex-col items-center justify-center p-2">
+                                <FileText className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              <a
+                                href={URL.createObjectURL(file)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+                                title="Preview file"
+                              >
+                                <Eye className="h-5 w-5" />
+                              </a>
+                              <a
+                                href={URL.createObjectURL(file)}
+                                download={file.name}
+                                className="text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+                                title="Download file"
+                              >
+                                <Download className="h-5 w-5" />
+                              </a>
+                            </div>
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 pointer-events-none">
+                              <p className="text-xs text-white truncate">
+                                {file.name}
+                              </p>
+                            </div>
                           </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <a
-                            href={URL.createObjectURL(file)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-                            title="Preview file"
-                          >
-                            <Eye className="h-5 w-5" />
-                          </a>
-                          <a
-                            href={URL.createObjectURL(file)}
-                            download={file.name}
-                            className="text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-                            title="Download file"
-                          >
-                            <Download className="h-5 w-5" />
-                          </a>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 pointer-events-none">
-                          <p className="text-xs text-white truncate">
-                            {file.name}
-                          </p>
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
                 </div>
               </>
             )}

@@ -86,6 +86,12 @@ const ProjectDetailPage = () => {
     }
   };
 
+  const handleFilesChange = (files: File[]) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, briefFiles: files });
+    }
+  };
+
   const projectComments = comments.filter(c => c.projectId === projectId);
   const ticketCount = projectComments.filter(c => c.isTicket).length;
 
@@ -112,6 +118,7 @@ const ProjectDetailPage = () => {
           isEditing={isEditing}
           onDescriptionChange={handleDescriptionChange}
           onTeamChange={handleTeamChange}
+          onFilesChange={handleFilesChange}
           comments={projectComments}
           setComments={setComments}
           projectId={project.id}
