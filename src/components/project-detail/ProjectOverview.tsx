@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown, FileText } from "lucide-react";
+import { Check, ChevronsUpDown, FileText, Download, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { services as allServices, type Service } from "@/data/services";
 import { Separator } from "../ui/separator";
@@ -196,11 +196,8 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
                   <h4 className="text-sm font-medium mb-3 text-foreground">Brief Files</h4>
                   <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
                     {project.briefFiles.map((file, index) => (
-                      <a
+                      <div
                         key={index}
-                        href={URL.createObjectURL(file)}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="relative group border rounded-lg overflow-hidden aspect-square"
                         title={file.name}
                       >
@@ -215,13 +212,31 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
                             <FileText className="h-8 w-8 text-muted-foreground" />
                           </div>
                         )}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <a
+                            href={URL.createObjectURL(file)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+                            title="Preview file"
+                          >
+                            <Eye className="h-5 w-5" />
+                          </a>
+                          <a
+                            href={URL.createObjectURL(file)}
+                            download={file.name}
+                            className="text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+                            title="Download file"
+                          >
+                            <Download className="h-5 w-5" />
+                          </a>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 pointer-events-none">
                           <p className="text-xs text-white truncate">
                             {file.name}
                           </p>
                         </div>
-                      </a>
+                      </div>
                     ))}
                   </div>
                 </div>
