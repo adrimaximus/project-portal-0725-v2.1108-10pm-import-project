@@ -72,7 +72,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 h-fit">
       <Button variant="ghost" onClick={onBack} className="pl-0">
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Services
       </Button>
