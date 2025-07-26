@@ -159,8 +159,7 @@ StepLabel.displayName = "StepLabel";
 
 const StepContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ children, className, ...props }, ref) => {
-    const { isActive } = useStepContext();
-    const { orientation } = useStepperContext();
+    const { isActive, orientation } = useStepContext();
     
     if (!isActive) {
       return null;
