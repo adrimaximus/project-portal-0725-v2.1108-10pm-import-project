@@ -114,6 +114,7 @@ const ProjectDetailPage = () => {
           comments={projectComments}
           setComments={setComments}
           projectId={project.id}
+          ticketCount={ticketCount}
         />
       </div>
     </PortalLayout>

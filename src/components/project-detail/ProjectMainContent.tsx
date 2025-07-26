@@ -12,6 +12,7 @@ interface ProjectMainContentProps {
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
   projectId: string;
+  ticketCount: number;
 }
 
 const ProjectMainContent = ({
@@ -22,12 +23,20 @@ const ProjectMainContent = ({
   comments,
   setComments,
   projectId,
+  ticketCount,
 }: ProjectMainContentProps) => {
   return (
     <Tabs defaultValue="overview" className="w-full">
       <TabsList className="grid w-full grid-cols-2 sm:w-[400px]">
         <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="comments">Comments & Tickets</TabsTrigger>
+        <TabsTrigger value="comments" className="flex items-center justify-center gap-2">
+          Comments & Tickets
+          {ticketCount > 0 && (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
+              {ticketCount}
+            </span>
+          )}
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="overview" className="mt-4">
         <ProjectOverview 
