@@ -25,7 +25,7 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
   return (
     <div
       className={cn(
-        "grid min-h-screen w-full transition-[grid-template-columns] duration-300 ease-in-out",
+        "grid h-screen w-full overflow-hidden transition-[grid-template-columns] duration-300 ease-in-out",
         gridCols
       )}
     >
@@ -33,7 +33,7 @@ const PortalLayout = ({ children, noPadding = false, summary }: PortalLayoutProp
         isCollapsed={isCollapsed} 
         onToggle={toggleSidebar}
       />
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col overflow-hidden">
         <header className="sticky top-0 z-10 bg-background flex-shrink-0">
           <PortalHeader />
         </header>
