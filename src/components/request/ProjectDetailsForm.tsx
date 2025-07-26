@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Service } from "@/data/services";
 import { dummyProjects, Project, AssignedUser } from "@/data/projects";
-import { ArrowLeft, Calendar as CalendarIcon, Paperclip, Activity, CreditCard, Wallet, CalendarDays, CalendarClock } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Paperclip, Wallet, CalendarDays, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,6 @@ import { format } from "date-fns";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import RichTextEditor from "@/components/RichTextEditor";
 import RequestComments from "@/components/request/RequestComments";
-import { Badge } from "@/components/ui/badge";
 import TeamSelector from "./TeamSelector";
 
 interface ProjectDetailsFormProps {
@@ -83,25 +82,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Project Status</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <Badge variant="outline">Requested</Badge>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Payment Status</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <Badge variant="secondary">Pending</Badge>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Project Value</CardTitle>
