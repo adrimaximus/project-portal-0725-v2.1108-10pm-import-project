@@ -215,7 +215,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         </CardHeader>
         <CardContent>
           {briefFiles.length > 0 && (
-            <div className="mb-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="mb-4 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
               {briefFiles.map((file, index) => (
                 <div key={index} className="relative group border rounded-lg overflow-hidden aspect-square">
                   {file.type.startsWith("image/") ? (
