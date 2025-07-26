@@ -2,12 +2,13 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectOverview from "@/components/project-detail/ProjectOverview";
 import ProjectComments, { Comment } from "@/components/ProjectComments";
-import { Project } from '@/data/projects';
+import { Project, AssignedUser } from '@/data/projects';
 
 interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
+  onTeamChange: (selectedUsers: AssignedUser[]) => void;
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
   projectId: string;
@@ -17,6 +18,7 @@ const ProjectMainContent = ({
   project,
   isEditing,
   onDescriptionChange,
+  onTeamChange,
   comments,
   setComments,
   projectId,
@@ -32,6 +34,7 @@ const ProjectMainContent = ({
           project={project} 
           isEditing={isEditing}
           onDescriptionChange={onDescriptionChange}
+          onTeamChange={onTeamChange}
         />
       </TabsContent>
       <TabsContent value="comments" className="mt-4">

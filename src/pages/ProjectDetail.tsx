@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { dummyProjects, Project } from "@/data/projects";
+import { dummyProjects, Project, AssignedUser } from "@/data/projects";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
@@ -78,6 +78,12 @@ const ProjectDetail = () => {
     }
   };
 
+  const handleTeamChange = (selectedUsers: AssignedUser[]) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, assignedTo: selectedUsers });
+    }
+  };
+
   const projectComments = comments.filter(c => c.projectId === projectId);
   const ticketCount = projectComments.filter(c => c.isTicket).length;
 
@@ -104,6 +110,7 @@ const ProjectDetail = () => {
           project={editedProject}
           isEditing={isEditing}
           onDescriptionChange={handleDescriptionChange}
+          onTeamChange={handleTeamChange}
           comments={projectComments}
           setComments={setComments}
           projectId={project.id}

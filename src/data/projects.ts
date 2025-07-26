@@ -1,4 +1,5 @@
 export type AssignedUser = {
+  id: string;
   name: string;
   avatar: string;
   status: 'online' | 'offline';
@@ -34,8 +35,8 @@ export const dummyProjects: Project[] = [
     paymentStatus: "Pending",
     paymentDueDate: "2025-08-30",
     assignedTo: [
-      { name: "Ethan Carter", avatar: "https://i.pravatar.cc/150?u=ethan", status: 'offline' },
-      { name: "Olivia Martin", avatar: "https://i.pravatar.cc/150?u=olivia", status: 'online' }
+      { id: 'user-1', name: "Ethan Carter", avatar: "https://i.pravatar.cc/150?u=ethan", status: 'offline' },
+      { id: 'user-2', name: "Olivia Martin", avatar: "https://i.pravatar.cc/150?u=olivia", status: 'online' }
     ],
     services: ["Web Development", "UI/UX Design", "SEO Optimization"],
     tickets: 3,
@@ -53,7 +54,7 @@ export const dummyProjects: Project[] = [
     paymentStatus: "Paid",
     paymentDueDate: "2025-07-15",
     assignedTo: [
-      { name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia", status: 'offline' },
+      { id: 'user-3', name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia", status: 'offline' },
     ],
     services: ["Mobile App Development", "API Integration"],
     tickets: 0,
@@ -70,9 +71,9 @@ export const dummyProjects: Project[] = [
     budget: 50000000,
     paymentStatus: "Pending",
     assignedTo: [
-      { name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam", status: 'online' },
-      { name: "Ava Garcia", avatar: "https://i.pravatar.cc/150?u=ava", status: 'offline' },
-      { name: "Jackson Lee", avatar: "https://i.pravatar.cc/150?u=jackson", status: 'online' },
+      { id: 'user-4', name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam", status: 'online' },
+      { id: 'user-5', name: "Ava Garcia", avatar: "https://i.pravatar.cc/150?u=ava", status: 'offline' },
+      { id: 'user-6', name: "Jackson Lee", avatar: "https://i.pravatar.cc/150?u=jackson", status: 'online' },
     ],
     services: ["Digital Marketing", "Content Creation"],
     tickets: 5,
@@ -89,7 +90,7 @@ export const dummyProjects: Project[] = [
     paymentStatus: "Paid",
     paymentDueDate: "2025-08-01",
     assignedTo: [
-      { name: "Noah Rodriguez", avatar: "https://i.pravatar.cc/150?u=noah", status: 'online' },
+      { id: 'user-7', name: "Noah Rodriguez", avatar: "https://i.pravatar.cc/150?u=noah", status: 'online' },
     ],
     services: ["Cloud Services"],
     tickets: 1,
@@ -106,8 +107,8 @@ export const dummyProjects: Project[] = [
     budget: 75000000,
     paymentStatus: "Pending",
     assignedTo: [
-      { name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia", status: 'offline' },
-      { name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam", status: 'online' },
+      { id: 'user-3', name: "Sophia Davis", avatar: "https://i.pravatar.cc/150?u=sophia", status: 'offline' },
+      { id: 'user-4', name: "Liam Brown", avatar: "https://i.pravatar.cc/150?u=liam", status: 'online' },
     ],
     services: ["UI/UX Design", "Content Creation"],
     tickets: 2,
