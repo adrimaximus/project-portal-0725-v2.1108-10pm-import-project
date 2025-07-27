@@ -1,4 +1,4 @@
-import { Textarea } from "@/components/ui/textarea";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface ProjectDescriptionProps {
   description: string;
@@ -10,16 +10,16 @@ const ProjectDescription = ({ description, isEditing, onDescriptionChange }: Pro
   return (
     <>
       {isEditing ? (
-        <Textarea
+        <RichTextEditor
           value={description}
-          onChange={(e) => onDescriptionChange(e.target.value)}
-          className="min-h-[120px]"
+          onChange={onDescriptionChange}
           placeholder="Enter project description..."
         />
       ) : (
-        <p className="whitespace-pre-wrap min-h-[40px]">
-          {description || "No description provided."}
-        </p>
+        <div
+          className="prose prose-sm dark:prose-invert max-w-none min-h-[40px] text-sm text-muted-foreground"
+          dangerouslySetInnerHTML={{ __html: description || "No description provided." }}
+        />
       )}
     </>
   );
