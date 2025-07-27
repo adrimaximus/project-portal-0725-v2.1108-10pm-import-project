@@ -1,62 +1,58 @@
-import { Comment } from "@/components/ProjectComments";
+export type Comment = {
+  id: number;
+  projectId: string;
+  user: {
+    name: string;
+    avatar: string;
+  };
+  text: string;
+  timestamp: string;
+  isTicket?: boolean;
+  attachment?: {
+    name: string;
+    url: string;
+    type: 'image' | 'file';
+  };
+};
 
-export const initialComments: Comment[] = [
+export const dummyComments: Comment[] = [
   {
     id: 1,
     projectId: "proj-1",
-    user: {
-      name: "Olivia Martin",
-      avatar: "https://i.pravatar.cc/150?u=olivia",
-    },
-    text: "Just a heads up, the latest designs for the user dashboard are ready for review. I've attached the Figma link.",
+    user: { name: "Alice Johnson", avatar: "https://i.pravatar.cc/150?u=alice" },
+    text: "Can we get an update on the payment gateway integration?",
     timestamp: "2 days ago",
   },
   {
     id: 2,
     projectId: "proj-1",
-    user: {
-      name: "Ethan Carter",
-      avatar: "https://i.pravatar.cc/150?u=ethan",
-    },
-    text: "I'm encountering a bug on the staging server where the login button is unresponsive. I've raised a ticket for this.",
+    user: { name: "Bob Williams", avatar: "https://i.pravatar.cc/150?u=bob" },
+    text: "The new designs for the product page are ready for review.",
     timestamp: "1 day ago",
-    isTicket: true,
+    attachment: {
+      name: "product-page-v2.jpg",
+      url: "/placeholder.svg",
+      type: "image",
+    },
   },
   {
     id: 3,
     projectId: "proj-1",
-    user: {
-      name: "You",
-      avatar: "https://i.pravatar.cc/150?u=currentuser",
-    },
-    text: "Thanks for the update, Olivia. I'll take a look at the designs today.",
-    timestamp: "1 day ago",
+    user: { name: "Charlie Brown", avatar: "https://i.pravatar.cc/150?u=charlie" },
+    text: "I've found a bug in the checkout process. The shipping cost is not being calculated correctly. I'm creating a ticket for this.",
+    timestamp: "3 hours ago",
+    isTicket: true,
   },
   {
     id: 4,
     projectId: "proj-2",
-    user: {
-      name: "Sophia Davis",
-      avatar: "https://i.pravatar.cc/150?u=sophia",
-    },
-    text: "The client has requested a new feature: the ability to export reports as CSV files. I've created a ticket to track this request.",
-    timestamp: "3 hours ago",
-    isTicket: true,
+    user: { name: "Diana Prince", avatar: "https://i.pravatar.cc/150?u=diana" },
+    text: "The final QA report is attached. We are good to go for launch!",
+    timestamp: "4 days ago",
     attachment: {
-      name: "feature-request.pdf",
+      name: "QA-Report-Final.pdf",
       url: "#",
-      type: 'file',
-    }
-  },
-  {
-    id: 5,
-    projectId: "proj-3",
-    user: {
-      name: "Liam Brown",
-      avatar: "https://i.pravatar.cc/150?u=liam",
+      type: "file",
     },
-    text: "The campaign is underperforming. We need to rethink the ad copy. Ticket raised.",
-    timestamp: "5 hours ago",
-    isTicket: true,
   },
 ];

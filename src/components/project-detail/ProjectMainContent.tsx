@@ -1,35 +1,27 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectOverview from "./ProjectOverview";
-import ProjectComments, { Comment } from "@/components/ProjectComments";
 import { Project, AssignedUser } from "@/data/projects";
-import { Badge } from "../ui/badge";
+import { Comment } from "@/data/comments";
+import ProjectComments from "../ProjectComments";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface ProjectMainContentProps {
+export interface ProjectMainContentProps {
   project: Project;
-  isEditing: boolean;
-  onDescriptionChange: (value: string) => void;
-  onTeamChange: (selectedUsers: AssignedUser[]) => void;
-  onFilesChange: (files: File[]) => void;
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
-  projectId: string;
-  ticketCount: number;
+  isEditing: boolean;
+  editedProject: Project | null;
+  onDescriptionChange: (value: string) => void;
+  onTeamChange: (users: AssignedUser[]) => void;
+  onFilesChange: (files: File[]) => void;
 }
 
-const ProjectMainContent = ({
-  project,
-  isEditing,
-  onDescriptionChange,
-  onTeamChange,
-  onFilesChange,
-  comments,
-  setComments,
-  projectId,
-  ticketCount,
-}: ProjectMainContentProps) => {
+const ProjectMainContent = ({ project, comments, setComments }: ProjectMainContentProps) => {
+  const ticketCount = comments.filter(c => c.isTicket).length;
+
   return (
-    <Tabs defaultValue="overview" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
+    <Tabs defaultValue="overview" className="space-y-4">
+      <TabsList>
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="comments">
           Comments & Tickets
@@ -38,20 +30,21 @@ const ProjectMainContent = ({
           )}
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="overview" className="mt-6">
-        <ProjectOverview
-          project={project}
-          isEditing={isEditing}
-          onDescriptionChange={onDescriptionChange}
-          onTeamChange={onTeamChange}
-          onFilesChange={onFilesChange}
-        />
+      <TabsContent value="overview" className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Description</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">{project.description}</p>
+          </CardContent>
+        </Card>
       </TabsContent>
-      <TabsContent value="comments" className="mt-6">
+      <TabsContent value="comments">
         <ProjectComments
           comments={comments}
           setComments={setComments}
-          projectId={projectId}
+          projectId={project.id}
         />
       </TabsContent>
     </Tabs>
