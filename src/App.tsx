@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Projects from "./pages/Projects";
-import ProjectDetailPage from "./pages/ProjectDetailPage";
+import ProjectDetail from "./pages/ProjectDetail";
 import RequestPage from "./pages/Request";
 import ChatPage from "./pages/ChatPage";
 import Settings from "./pages/Settings";
@@ -13,7 +13,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/projects" element={<Projects />} />
-        <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+        <Route path="/projects/:projectId" element={<ProjectDetail />} />
         <Route path="/request" element={<RequestPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/settings" element={<Settings />} />
