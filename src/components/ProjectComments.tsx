@@ -8,6 +8,9 @@ import { Paperclip, Send, Ticket, File, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { dummyProjects } from '@/data/projects';
+import { AssignedUser } from '@/data/types';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 
 export type Comment = {
   id: number;
@@ -30,21 +33,49 @@ interface ProjectCommentsProps {
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
   projectId: string;
+  taggableUsers: AssignedUser[];
 }
 
-const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments, projectId }) => {
+const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments, projectId, taggableUsers }) => {
   const [newComment, setNewComment] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleAttachmentClick = () => {
-    fileInputRef.current?.click();
+  const [showMentionPopover, setShowMentionPopover] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionStartIndex, setMentionStartIndex] = useState(0);
+
+  const handleTextChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = event.target.value;
+    setNewComment(text);
+
+    const cursorPosition = event.target.selectionStart;
+    const textBeforeCursor = text.slice(0, cursorPosition);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+
+    if (mentionMatch) {
+      setMentionQuery(mentionMatch[1]);
+      setMentionStartIndex(mentionMatch.index || 0);
+      setShowMentionPopover(true);
+    } else {
+      setShowMentionPopover(false);
+    }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setAttachmentFile(event.target.files[0]);
-    }
+  const handleMentionSelect = (user: AssignedUser) => {
+    const text = newComment;
+    const textAfterMention = text.slice(mentionStartIndex + 1 + mentionQuery.length);
+    const newText = `${text.slice(0, mentionStartIndex)}@${user.name} ${textAfterMention}`;
+    
+    setNewComment(newText);
+    setShowMentionPopover(false);
+
+    setTimeout(() => {
+      const newCursorPosition = mentionStartIndex + user.name.length + 2; // for '@' and space
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(newCursorPosition, newCursorPosition);
+    }, 0);
   };
 
   const handleSendComment = (isTicket = false) => {
@@ -69,7 +100,6 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
 
     setComments(prev => [...prev, comment]);
 
-    // If it's a ticket, update the master project list
     if (isTicket) {
       const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
       if (projectIndex !== -1) {
@@ -86,6 +116,20 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
   };
 
   const handleSendTicket = () => handleSendComment(true);
+
+  const renderTextWithMentions = (text: string) => {
+    const taggableNames = taggableUsers.map(u => u.name);
+    const regex = new RegExp(`@(${taggableNames.join('|')})`, 'g');
+    
+    const parts = text.split(regex);
+
+    return parts.map((part, index) => {
+      if (index % 2 === 1 && taggableNames.includes(part)) { // Matched mentions are at odd indices
+        return <strong key={index} className="text-primary font-medium">@{part}</strong>;
+      }
+      return part;
+    });
+  };
 
   return (
     <Card>
@@ -108,7 +152,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
                   </div>
                   <p className="text-xs text-muted-foreground">{comment.timestamp}</p>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">{comment.text}</p>
+                <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{renderTextWithMentions(comment.text)}</p>
                 {comment.attachment && (
                   <div className="mt-2">
                     <a
@@ -133,48 +177,58 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
           ))}
         </div>
         <div className="mt-6 pt-6 border-t">
-          <div className="relative">
-            <Textarea
-              placeholder="Add a comment or create a ticket..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              className="pr-36"
-            />
-            <div className="absolute top-2 right-2 flex items-center gap-1">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <Button type="button" variant="ghost" size="icon" onClick={handleAttachmentClick}>
-                <Paperclip className="h-4 w-4" />
-                <span className="sr-only">Attach file</span>
-              </Button>
-              <Button type="button" variant="ghost" size="icon" onClick={handleSendTicket}>
-                  <Ticket className="h-4 w-4" />
-                  <span className="sr-only">Create ticket</span>
-              </Button>
-              <Button type="button" size="sm" onClick={() => handleSendComment(false)}>
-                Send
-              </Button>
-            </div>
-          </div>
+          <Popover open={showMentionPopover} onOpenChange={setShowMentionPopover}>
+            <PopoverTrigger asChild>
+              <div className="relative">
+                <Textarea
+                  ref={textareaRef}
+                  placeholder="Add a comment or create a ticket... Type '@' to mention a user."
+                  value={newComment}
+                  onChange={handleTextChange}
+                  className="pr-36"
+                />
+                <div className="absolute top-2 right-2 flex items-center gap-1">
+                  <input type="file" ref={fileInputRef} onChange={(e) => setAttachmentFile(e.target.files ? e.target.files[0] : null)} className="hidden" />
+                  <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={handleSendTicket}>
+                      <Ticket className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" size="sm" onClick={() => handleSendComment(false)}>
+                    Send
+                  </Button>
+                </div>
+              </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Mention user..." value={mentionQuery} onValueChange={setMentionQuery} />
+                <CommandList>
+                  <CommandEmpty>No user found.</CommandEmpty>
+                  <CommandGroup>
+                    {taggableUsers
+                      .filter(user => user.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+                      .map(user => (
+                      <CommandItem key={user.id} onSelect={() => handleMentionSelect(user)} value={user.name}>
+                        <Avatar className="mr-2 h-6 w-6">
+                          <AvatarImage src={user.avatar} />
+                          <AvatarFallback>{user.name.slice(0,2)}</AvatarFallback>
+                        </Avatar>
+                        {user.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           {attachmentFile && (
             <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2 bg-muted p-2 rounded-md">
               <File className="h-4 w-4" />
               <span className="flex-1 truncate">{attachmentFile.name}</span>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6" 
-                onClick={() => {
-                  setAttachmentFile(null);
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
-              >
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAttachmentFile(null)}>
                 <X className="h-4 w-4" />
-                <span className="sr-only">Remove attachment</span>
               </Button>
             </div>
           )}

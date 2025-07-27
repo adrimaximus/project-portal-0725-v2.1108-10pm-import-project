@@ -114,6 +114,11 @@ const ProjectDetail = () => {
   const projectComments = comments.filter(c => c.projectId === projectId);
   const ticketCount = projectComments.filter(c => c.isTicket).length;
 
+  const userMap = new Map<string, AssignedUser>();
+  userMap.set(project.createdBy.id, project.createdBy);
+  project.assignedTo.forEach(user => userMap.set(user.id, user));
+  const taggableUsers = Array.from(userMap.values());
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -144,6 +149,7 @@ const ProjectDetail = () => {
               setComments={setComments}
               projectId={project.id}
               ticketCount={ticketCount}
+              taggableUsers={taggableUsers}
             />
           </div>
           <div className="lg:col-span-1 space-y-6">
