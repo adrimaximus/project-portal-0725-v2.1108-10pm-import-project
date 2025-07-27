@@ -7,10 +7,11 @@ export interface Task {
   id: string;
   text: string;
   completed: boolean;
+  assignedTo?: string[];
 }
 
 export interface Project {
-  id: string;
+  id:string;
   name: string;
   description: string;
   status: "Requested" | "In Progress" | "Completed" | "Billed" | "On Hold" | "Cancelled" | "Done";
@@ -35,7 +36,7 @@ export const dummyProjects: Project[] = [
     name: "E-commerce Platform",
     description: "Developing a new e-commerce platform with a focus on user experience and scalability. The platform will feature a modern design, easy navigation, and a secure checkout process.",
     status: "In Progress",
-    progress: 65,
+    progress: 60,
     startDate: "2024-05-15",
     deadline: "2024-09-30",
     paymentDueDate: "2024-10-15",
@@ -46,10 +47,10 @@ export const dummyProjects: Project[] = [
     services: ["Web Development", "UI/UX Design"],
     tickets: 5,
     tasks: [
-      { id: "task-1", text: "Design homepage mockups", completed: true },
-      { id: "task-2", text: "Develop user authentication", completed: true },
-      { id: "task-3", text: "Set up product database schema", completed: true },
-      { id: "task-4", text: "Implement shopping cart feature", completed: false },
+      { id: "task-1", text: "Design homepage mockups", completed: true, assignedTo: ['user-3'] },
+      { id: "task-2", text: "Develop user authentication", completed: true, assignedTo: ['user-1'] },
+      { id: "task-3", text: "Set up product database schema", completed: true, assignedTo: ['user-1'] },
+      { id: "task-4", text: "Implement shopping cart feature", completed: false, assignedTo: ['user-1', 'user-3'] },
       { id: "task-5", text: "Integrate payment gateway", completed: false },
     ],
   },
@@ -69,10 +70,10 @@ export const dummyProjects: Project[] = [
     services: ["Mobile App Development", "API Integration"],
     tickets: 2,
     tasks: [
-        { id: "task-6", text: "Plan app architecture", completed: true },
-        { id: "task-7", text: "Design UI/UX", completed: true },
-        { id: "task-8", text: "Develop core features", completed: true },
-        { id: "task-9", text: "Perform security audit", completed: true },
+        { id: "task-6", text: "Plan app architecture", completed: true, assignedTo: ['user-2', 'user-4'] },
+        { id: "task-7", text: "Design UI/UX", completed: true, assignedTo: ['user-5'] },
+        { id: "task-8", text: "Develop core features", completed: true, assignedTo: ['user-2', 'user-4'] },
+        { id: "task-9", text: "Perform security audit", completed: true, assignedTo: ['user-4'] },
     ]
   },
   {
@@ -80,7 +81,7 @@ export const dummyProjects: Project[] = [
     name: "Social Media Campaign",
     description: "Launching a comprehensive social media campaign to increase brand awareness and engagement. The campaign will run on major platforms like Instagram, Facebook, and Twitter.",
     status: "On Hold",
-    progress: 20,
+    progress: 25,
     startDate: "2024-06-01",
     deadline: "2024-08-31",
     budget: 50000000,
@@ -90,7 +91,7 @@ export const dummyProjects: Project[] = [
     services: ["Digital Marketing"],
     tickets: 0,
     tasks: [
-        { id: "task-10", text: "Define campaign goals", completed: true },
+        { id: "task-10", text: "Define campaign goals", completed: true, assignedTo: ['user-6'] },
         { id: "task-11", text: "Create content calendar", completed: false },
         { id: "task-12", text: "Design ad creatives", completed: false },
         { id: "task-13", text: "Schedule posts", completed: false },
@@ -128,9 +129,9 @@ export const dummyProjects: Project[] = [
     services: ["System Integration", "Consulting"],
     tickets: 1,
     tasks: [
-        { id: "task-14", text: "Migrate customer data", completed: true },
-        { id: "task-15", text: "Customize sales pipeline", completed: true },
-        { id: "task-16", text: "Train sales team", completed: true },
+        { id: "task-14", text: "Migrate customer data", completed: true, assignedTo: ['user-2', 'user-7'] },
+        { id: "task-15", text: "Customize sales pipeline", completed: true, assignedTo: ['user-7'] },
+        { id: "task-16", text: "Train sales team", completed: true, assignedTo: ['user-2'] },
     ]
   },
 ];
