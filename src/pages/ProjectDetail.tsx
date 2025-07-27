@@ -144,6 +144,7 @@ const ProjectDetail = () => {
               setComments={setComments}
               projectId={project.id}
               ticketCount={ticketCount}
+              allProjects={dummyProjects}
             />
           </div>
           <div className="lg:col-span-1 space-y-6">

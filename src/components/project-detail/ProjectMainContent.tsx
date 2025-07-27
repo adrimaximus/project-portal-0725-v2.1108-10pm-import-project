@@ -1,19 +1,22 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectOverview from "./ProjectOverview";
-import ProjectComments, { Comment } from "@/components/ProjectComments";
-import { Project, AssignedUser } from "@/data/projects";
-import { Badge } from "../ui/badge";
+import { Project } from "@/data/projects";
+import { Comment } from "../ProjectComments";
+import ProjectDescription from "./ProjectDescription";
+import ProjectTeam from "./ProjectTeam";
+import ProjectBrief from "./ProjectBrief";
+import ProjectComments from "../ProjectComments";
 
 interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
-  onTeamChange: (selectedUsers: AssignedUser[]) => void;
+  onTeamChange: (selectedUsers: Project['assignedTo']) => void;
   onFilesChange: (files: File[]) => void;
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
   projectId: string;
   ticketCount: number;
+  allProjects?: Project[];
 }
 
 const ProjectMainContent = ({
@@ -26,32 +29,51 @@ const ProjectMainContent = ({
   setComments,
   projectId,
   ticketCount,
+  allProjects = [],
 }: ProjectMainContentProps) => {
   return (
-    <Tabs defaultValue="overview" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="overview">Overview</TabsTrigger>
+    <Tabs defaultValue="description">
+      <TabsList className="grid w-full grid-cols-4">
+        <TabsTrigger value="description">Description</TabsTrigger>
+        <TabsTrigger value="team">Team</TabsTrigger>
+        <TabsTrigger value="brief">Brief</TabsTrigger>
         <TabsTrigger value="comments">
-          Comments & Tickets
+          Comments
           {ticketCount > 0 && (
-            <Badge variant="secondary" className="ml-2">{ticketCount}</Badge>
+            <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-medium text-destructive-foreground">
+              {ticketCount}
+            </span>
           )}
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="overview" className="mt-6">
-        <ProjectOverview
-          project={project}
+      <TabsContent value="description">
+        <ProjectDescription
+          description={project.description}
           isEditing={isEditing}
           onDescriptionChange={onDescriptionChange}
+        />
+      </TabsContent>
+      <TabsContent value="team">
+        <ProjectTeam
+          assignedTo={project.assignedTo}
+          isEditing={isEditing}
           onTeamChange={onTeamChange}
+        />
+      </TabsContent>
+      <TabsContent value="brief">
+        <ProjectBrief
+          files={project.briefFiles || []}
+          isEditing={isEditing}
           onFilesChange={onFilesChange}
         />
       </TabsContent>
-      <TabsContent value="comments" className="mt-6">
+      <TabsContent value="comments">
         <ProjectComments
           comments={comments}
           setComments={setComments}
           projectId={projectId}
+          assignableUsers={project.assignedTo}
+          allProjects={allProjects}
         />
       </TabsContent>
     </Tabs>
