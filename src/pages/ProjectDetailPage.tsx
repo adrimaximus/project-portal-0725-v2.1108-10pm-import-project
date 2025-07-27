@@ -7,7 +7,7 @@ import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import ProjectProgressAndTasksCard from "@/components/project-detail/ProjectProgressAndTasksCard";
 import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
-import { dummyComments, Comment } from "@/data/comments";
+import { initialComments, Comment } from "@/data/comments";
 
 const ProjectDetailPage = () => {
   const { projectId } = useParams();
@@ -24,7 +24,7 @@ const ProjectDetailPage = () => {
         tasks: foundProject.tasks || [],
       };
       setProject(projectWithTasks);
-      const projectComments = dummyComments.filter(c => c.projectId === projectId);
+      const projectComments = initialComments.filter(c => c.projectId === projectId);
       setComments(projectComments);
     }
   }, [projectId]);
