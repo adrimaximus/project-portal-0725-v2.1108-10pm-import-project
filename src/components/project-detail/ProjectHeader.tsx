@@ -1,53 +1,64 @@
-import { Project } from "@/data/projects";
-import { Button } from "@/components/ui/button";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Pencil, Save, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import React from 'react';
+import { Project } from '@/data/projects';
+import { Button } from '@/components/ui/button';
+import { Trash2, Pencil, Save, X } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ProjectHeaderProps {
   project: Project;
   isEditing: boolean;
-  onEditToggle: () => void;
-  onSaveChanges: () => void;
-  onCancelChanges: () => void;
+  onEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onDelete: () => void;
 }
 
-const ProjectHeader = ({ project, isEditing, onEditToggle, onSaveChanges, onCancelChanges }: ProjectHeaderProps) => {
+const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project, isEditing, onEdit, onSave, onCancel, onDelete }) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="flex items-center justify-between space-y-2">
       <div>
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/">Projects</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{project.name}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        <h1 className="text-2xl font-bold tracking-tight mt-2">{project.name}</h1>
+        <h2 className="text-2xl font-bold tracking-tight">{project.name}</h2>
+        <p className="text-muted-foreground">Manage project details, team, and comments.</p>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center space-x-2">
         {isEditing ? (
           <>
-            <Button variant="outline" onClick={onCancelChanges}>
-              <X className="mr-2 h-4 w-4" />
-              Cancel
-            </Button>
-            <Button onClick={onSaveChanges}>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </Button>
+            <Button variant="outline" onClick={onCancel}><X className="mr-2 h-4 w-4" /> Cancel</Button>
+            <Button onClick={onSave}><Save className="mr-2 h-4 w-4" /> Save</Button>
           </>
         ) : (
-          <Button onClick={onEditToggle}>
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit Project
-          </Button>
+          <>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon"><Trash2 className="h-4 w-4" /></Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the project.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Button onClick={onEdit}><Pencil className="mr-2 h-4 w-4" /> Edit Project</Button>
+          </>
         )}
       </div>
     </div>

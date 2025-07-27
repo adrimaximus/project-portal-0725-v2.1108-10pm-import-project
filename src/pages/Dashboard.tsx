@@ -1,15 +1,32 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectsTable, { columns } from "@/components/ProjectsTable";
-import { dummyProjects, Project } from "@/data/projects";
+import { Project } from "@/data/projects";
 import { Button } from "@/components/ui/button";
 import { DollarSign, CreditCard, Activity, Ticket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const Dashboard = () => {
+interface DashboardProps {
+  projects: Project[];
+}
+
+const Dashboard = ({ projects }: DashboardProps) => {
   const navigate = useNavigate();
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>(dummyProjects);
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>(projects);
+
+  useEffect(() => {
+    // When the master list of projects changes (e.g., a ticket is added),
+    // update the local filtered list to reflect this change.
+    // This keeps the stats cards in sync.
+    const currentFilter = (document.querySelector('input[placeholder="Filter projects..."]') as HTMLInputElement)?.value || '';
+    if (currentFilter) {
+       setFilteredProjects(projects.filter(p => p.name.toLowerCase().includes(currentFilter.toLowerCase())));
+    } else {
+       setFilteredProjects(projects);
+    }
+  }, [projects]);
+
 
   const stats = useMemo(() => {
     const totalRevenue = filteredProjects
@@ -91,7 +108,7 @@ const Dashboard = () => {
               <Button onClick={() => navigate('/request')}>+ Add Project</Button>
             </div>
           </div>
-          <ProjectsTable columns={columns} data={dummyProjects} onFilteredDataChange={setFilteredProjects} />
+          <ProjectsTable columns={columns} data={projects} onFilteredDataChange={setFilteredProjects} />
         </TabsContent>
       </Tabs>
     </div>
