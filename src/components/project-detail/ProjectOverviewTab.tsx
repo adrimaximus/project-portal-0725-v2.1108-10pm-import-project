@@ -4,7 +4,7 @@ import ProjectTeam from "./ProjectTeam";
 import ProjectBrief from "./ProjectBrief";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { differenceInDays, parseISO, isBefore, isAfter } from 'date-fns';
+import { differenceInDays, parseISO, isBefore, isAfter, isToday, isTomorrow } from 'date-fns';
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -25,26 +25,31 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
   const getStatusBadge = () => {
     try {
       const now = new Date();
-      // This assumes `project.startDate` exists in your project data
       const startDate = parseISO(project.startDate);
       const deadline = parseISO(project.deadline);
 
-      // Case 1: Current date is before the project start date.
-      if (isBefore(now, startDate)) {
-        const daysUntilStart = differenceInDays(startDate, now);
-        return <Badge variant="secondary">{daysUntilStart} day{daysUntilStart !== 1 ? 's' : ''} to go</Badge>;
-      }
-
-      // Case 3: Current date is after the project due date.
+      // Case 1: After deadline
       if (isAfter(now, deadline)) {
         return <Badge className="bg-black text-white hover:bg-black/80">Done</Badge>;
       }
 
-      // Case 2: Current date is within the project's date range (ongoing).
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">On Going</Badge>;
+      // Case 2: On or after start date (but not after deadline)
+      if (isToday(startDate) || isAfter(now, startDate)) {
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">On Going</Badge>;
+      }
+
+      // Case 3: Before start date
+      if (isBefore(now, startDate)) {
+        if (isTomorrow(startDate)) {
+          return <Badge variant="secondary">Tomorrow</Badge>;
+        }
+        const daysUntilStart = differenceInDays(startDate, now);
+        return <Badge variant="secondary">{daysUntilStart} day{daysUntilStart !== 1 ? 's' : ''} to go</Badge>;
+      }
+
+      return null; // Should not be reached if dates are valid
 
     } catch (error) {
-      // Fallback if dates are invalid or missing
       return null;
     }
   };
