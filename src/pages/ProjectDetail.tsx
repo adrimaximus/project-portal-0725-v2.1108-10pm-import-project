@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { dummyProjects, Project, AssignedUser } from "@/data/projects";
+import { dummyProjects, Project, AssignedUser, Task } from "@/data/projects";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
@@ -22,8 +22,12 @@ const ProjectDetail = () => {
   useEffect(() => {
     const foundProject = dummyProjects.find(p => p.id === projectId);
     if (foundProject) {
-      setProject(foundProject);
-      setEditedProject(structuredClone(foundProject));
+      const projectWithTasks = {
+        ...foundProject,
+        tasks: foundProject.tasks || [],
+      };
+      setProject(projectWithTasks);
+      setEditedProject(structuredClone(projectWithTasks));
     } else {
       navigate('/');
     }
@@ -93,6 +97,20 @@ const ProjectDetail = () => {
     }
   };
 
+  const handleTasksUpdate = (updatedTasks: Task[]) => {
+    if (editedProject) {
+      const completedTasks = updatedTasks.filter(task => task.completed).length;
+      const totalTasks = updatedTasks.length;
+      const newProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      setEditedProject({
+        ...editedProject,
+        tasks: updatedTasks,
+        progress: newProgress,
+      });
+    }
+  };
+
   const projectComments = comments.filter(c => c.projectId === projectId);
   const ticketCount = projectComments.filter(c => c.isTicket).length;
 
@@ -117,7 +135,10 @@ const ProjectDetail = () => {
               onBudgetChange={handleBudgetChange}
             />
           </div>
-          <ProjectProgressCard project={project} />
+          <ProjectProgressCard 
+            project={editedProject}
+            onTasksUpdate={handleTasksUpdate}
+          />
         </div>
         <ProjectMainContent
           project={editedProject}
