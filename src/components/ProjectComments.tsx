@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, Ticket, File, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { dummyProjects, Project, AssignedUser } from '@/data/projects';
+import { dummyProjects, Project, AssignedUser, Task } from '@/data/projects';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 
 export type Comment = {
@@ -150,7 +150,28 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
     if (isTicket) {
       const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
       if (projectIndex !== -1) {
+        // Increment ticket count
         dummyProjects[projectIndex].tickets = (dummyProjects[projectIndex].tickets || 0) + 1;
+
+        // Create a new task from the ticket
+        const mentionRegex = /@([a-zA-Z0-9\s._-]+)/g;
+        const mentions = [...newComment.matchAll(mentionRegex)].map(match => match[1].trim());
+        
+        const assignedToTask: AssignedUser[] = assignableUsers.filter(user => 
+            mentions.includes(user.name)
+        );
+
+        const newTask: Task = {
+            id: `task-${Date.now()}`,
+            name: newComment.replace(mentionRegex, '').trim(), // Use comment text as task name
+            status: 'To Do',
+            assignedTo: assignedToTask.map(user => user.name),
+        };
+
+        if (!dummyProjects[projectIndex].tasks) {
+            dummyProjects[projectIndex].tasks = [];
+        }
+        dummyProjects[projectIndex].tasks?.push(newTask);
       }
     }
 
