@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import ServiceSelectionForm from "@/components/request/ServiceSelectionForm";
 import ProjectDetailsForm from "@/components/request/ProjectDetailsForm";
 import RequestSummary from "@/components/request/RequestSummary";
-import { allUsers, Project } from "@/data/projects";
+import { Project } from "@/data/projects";
+import { allUsers } from "@/data/users";
 import { services, Service } from "@/data/services";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 
 const steps = [
@@ -21,7 +22,7 @@ const RequestPage = () => {
   const [step, setStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [formData, setFormData] = useState<Partial<Project>>({});
-  const router = useRouter();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleNext = () => {
@@ -46,7 +47,7 @@ const RequestPage = () => {
       title: "Request Submitted!",
       description: "Your project request has been successfully submitted.",
     });
-    router.push("/projects");
+    navigate("/projects");
   };
 
   const renderStep = () => {
