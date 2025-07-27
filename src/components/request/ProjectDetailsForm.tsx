@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Service } from "@/data/services";
 import { dummyProjects, Project, AssignedUser } from "@/data/projects";
-import { ArrowLeft, Calendar as CalendarIcon, Paperclip, Wallet, CalendarDays, FileText, X } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Paperclip, Wallet, CalendarDays, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import RequestComments from "@/components/request/RequestComments";
 import TeamSelector from "./TeamSelector";
 import { allUsers } from "@/data/users";
+import FileIcon from "@/components/FileIcon";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -203,7 +204,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
                         />
                       ) : (
                         <div className="h-full w-full bg-muted flex flex-col items-center justify-center p-2">
-                          <FileText className="h-8 w-8 text-muted-foreground" />
+                          <FileIcon fileType={file.type} className="h-8 w-8 text-muted-foreground" />
                         </div>
                       )}
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
