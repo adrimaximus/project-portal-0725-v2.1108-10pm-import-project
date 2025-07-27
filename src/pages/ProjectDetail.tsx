@@ -59,6 +59,12 @@ const ProjectDetail = () => {
     setIsEditing(false);
   };
 
+  const handleProjectNameChange = (name: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, name });
+    }
+  };
+
   const handleSelectChange = (name: 'status' | 'paymentStatus', value: string) => {
     if (editedProject) {
       setEditedProject({ ...editedProject, [name]: value as any });
@@ -120,6 +126,8 @@ const ProjectDetail = () => {
         <ProjectHeader 
           project={project} 
           isEditing={isEditing}
+          projectName={editedProject.name}
+          onProjectNameChange={handleProjectNameChange}
           onEditToggle={() => setIsEditing(!isEditing)}
           onSaveChanges={handleSaveChanges}
           onCancelChanges={handleCancelChanges}

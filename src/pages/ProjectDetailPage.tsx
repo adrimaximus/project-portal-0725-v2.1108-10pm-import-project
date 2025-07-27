@@ -35,11 +35,13 @@ const ProjectDetailPage = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [editedProject, setEditedProject] = useState<Project | null>(null);
 
   useEffect(() => {
     const foundProject = dummyProjects.find((p) => p.id === id);
     if (foundProject) {
       setProject({ ...foundProject });
+      setEditedProject({ ...foundProject });
       setComments(generateInitialComments(foundProject.id));
     } else {
       setProject(null);
@@ -54,33 +56,53 @@ const ProjectDetailPage = () => {
     }
   };
 
-  const handleTasksUpdate = (tasks: Task[]) => {
+  const handleSaveChanges = () => {
+    if (editedProject) {
+      handleProjectUpdate(editedProject);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancelChanges = () => {
     if (project) {
+      setEditedProject({ ...project });
+    }
+    setIsEditing(false);
+  };
+
+  const handleProjectNameChange = (name: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, name });
+    }
+  };
+
+  const handleTasksUpdate = (tasks: Task[]) => {
+    if (editedProject) {
       const newProgress = tasks.length > 0 ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) : 0;
-      handleProjectUpdate({ ...project, tasks, progress: newProgress });
+      setEditedProject({ ...editedProject, tasks, progress: newProgress });
     }
   };
 
   const handleTaskCreate = (task: Task) => {
-    if (project) {
-      const newTasks = [...(project.tasks || []), task];
+    if (editedProject) {
+      const newTasks = [...(editedProject.tasks || []), task];
       handleTasksUpdate(newTasks);
     }
   };
 
   const handleBriefFilesChange = (files: File[]) => {
-    if (project) {
-      handleProjectUpdate({ ...project, briefFiles: files });
+    if (editedProject) {
+      setEditedProject({ ...editedProject, briefFiles: files });
     }
   };
 
   const handleTeamChange = (team: AssignedUser[]) => {
-    if (project) {
-      handleProjectUpdate({ ...project, assignedTo: team });
+    if (editedProject) {
+      setEditedProject({ ...editedProject, assignedTo: team });
     }
   };
 
-  if (!project) {
+  if (!project || !editedProject) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
         <h1 className="text-2xl font-bold">Project Not Found</h1>
@@ -96,11 +118,19 @@ const ProjectDetailPage = () => {
 
   return (
     <div className="flex h-full flex-col gap-6">
-      <ProjectHeader project={project} onProjectUpdate={handleProjectUpdate} />
+      <ProjectHeader
+        project={project}
+        isEditing={isEditing}
+        projectName={editedProject.name}
+        onProjectNameChange={handleProjectNameChange}
+        onEditToggle={() => setIsEditing(!isEditing)}
+        onSaveChanges={handleSaveChanges}
+        onCancelChanges={handleCancelChanges}
+      />
       <main className="flex-1 space-y-6">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <ProjectProgressCard project={project} onTasksUpdate={handleTasksUpdate} />
+            <ProjectProgressCard project={editedProject} onTasksUpdate={handleTasksUpdate} />
             <ProjectComments
               comments={comments}
               setComments={setComments}
