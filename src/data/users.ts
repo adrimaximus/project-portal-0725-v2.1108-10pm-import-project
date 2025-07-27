@@ -1,11 +1,13 @@
-import { AssignedUser } from './types';
+import { AssignedUser } from './projects';
 
 export const allUsers: AssignedUser[] = [
-  { id: 'user-1', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=alice', email: 'alice@example.com', status: 'online', role: 'Developer' },
-  { id: 'user-2', name: 'Bob Williams', avatar: 'https://i.pravatar.cc/150?u=bob', email: 'bob@example.com', status: 'online', role: 'Designer' },
-  { id: 'user-3', name: 'Charlie Brown', avatar: 'https://i.pravatar.cc/150?u=charlie', email: 'charlie@example.com', status: 'offline', role: 'Project Manager' },
-  { id: 'user-4', name: 'Diana Miller', avatar: 'https://i.pravatar.cc/150?u=diana', email: 'diana@example.com', status: 'online', role: 'Developer' },
-  { id: 'user-5', name: 'Ethan Davis', avatar: 'https://i.pravatar.cc/150?u=ethan', email: 'ethan@example.com', status: 'offline', role: 'QA Tester' },
-  { id: 'user-6', name: 'Fiona Garcia', avatar: 'https://i.pravatar.cc/150?u=fiona', email: 'fiona@example.com', status: 'online', role: 'Marketing' },
-  { id: 'user-7', name: 'George Rodriguez', avatar: 'https://i.pravatar.cc/150?u=george', email: 'george@example.com', status: 'offline', role: 'Developer' },
+  { id: 'user-1', name: 'Dan', email: 'dan@example.com', status: 'online', avatar: 'https://i.pravatar.cc/150?u=dan', role: 'Project Manager' },
+  { id: 'user-2', name: 'Sarah', email: 'sarah@example.com', status: 'online', avatar: 'https://i.pravatar.cc/150?u=sarah', role: 'Lead Designer' },
+  { id: 'user-3', name: 'Michael', email: 'michael@example.com', status: 'online', avatar: 'https://i.pravatar.cc/150?u=michael', role: 'Lead Developer' },
+  { id: 'user-4', name: 'Emily Johnson', email: 'emily@example.com', status: 'online', avatar: 'https://i.pravatar.cc/150?u=emily', role: 'UX Researcher' },
+  { id: 'user-5', name: 'David Chen', email: 'david@example.com', status: 'online', avatar: 'https://i.pravatar.cc/150?u=david', role: 'Frontend Developer' },
+  { id: 'user-6', name: 'Jessica Williams', email: 'jessica@example.com', status: 'online', avatar: 'https://i.pravatar.cc/150?u=jessica', role: 'Backend Developer' },
+  { id: 'user-7', name: 'Chris Lee', email: 'chris@example.com', status: 'online', avatar: 'https://i.pravatar.cc/150?u=chris', role: 'QA Tester' },
+  { id: 'user-8', name: 'Alex Chen', email: 'alex@example.com', status: 'online', avatar: 'https://i.pravatar.cc/150?u=alex', role: 'DevOps Engineer' },
+  { id: 'user-9', name: 'Olivia Martinez', email: 'olivia@example.com', status: 'online', avatar: 'https://i.pravatar.cc/150?u=olivia', role: 'Data Scientist' },
 ];
