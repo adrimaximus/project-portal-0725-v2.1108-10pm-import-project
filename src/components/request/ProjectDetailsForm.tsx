@@ -13,6 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, addDays } from "date-fns";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import RichTextEditor from "@/components/RichTextEditor";
+import RequestComments from "@/components/request/RequestComments";
 import TeamSelector from "./TeamSelector";
 
 interface ProjectDetailsFormProps {
@@ -73,7 +74,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       assignedTo: assignedTeam,
       services: selectedServices.map(s => s.title),
       briefFiles: briefFiles,
-      comments: [],
     };
 
     dummyProjects.unshift(newProject);
@@ -256,6 +256,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </CardContent>
         </Card>
 
+        <RequestComments />
       </div>
 
       {/* This footer will stick to the bottom of the container */}

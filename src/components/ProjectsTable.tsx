@@ -265,10 +265,10 @@ export const columns: ColumnDef<Project>[] = [
     },
   },
   {
-    accessorKey: "comments",
+    accessorKey: "tickets",
     header: "Tickets",
     cell: ({ row }) => {
-      const ticketCount = row.original.comments?.length || 0;
+      const ticketCount = row.original.tickets || 0;
       return (
         <div>
           <div className="font-medium">{ticketCount}</div>
