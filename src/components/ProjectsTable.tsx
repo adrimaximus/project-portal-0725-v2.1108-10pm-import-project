@@ -347,7 +347,13 @@ export const columns: ColumnDef<Project>[] = [
   },
 ]
 
-export default function ProjectsTable({ columns, data }: { columns: ColumnDef<Project>[], data: Project[] }) {
+interface ProjectsTableProps {
+  columns: ColumnDef<Project>[];
+  data: Project[];
+  onFilteredDataChange?: (filteredData: Project[]) => void;
+}
+
+export default function ProjectsTable({ columns, data, onFilteredDataChange }: ProjectsTableProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -376,6 +382,14 @@ export default function ProjectsTable({ columns, data }: { columns: ColumnDef<Pr
       rowSelection,
     },
   })
+
+  React.useEffect(() => {
+    if (onFilteredDataChange) {
+      const filteredRows = table.getFilteredRowModel().rows;
+      const filteredData = filteredRows.map(row => row.original);
+      onFilteredDataChange(filteredData);
+    }
+  }, [table.getFilteredRowModel().rows, onFilteredDataChange, table]);
 
   if (isMobile) {
     return (

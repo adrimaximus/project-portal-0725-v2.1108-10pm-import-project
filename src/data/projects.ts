@@ -35,6 +35,7 @@ export const dummyProjects: Project[] = [
     paymentStatus: "pending",
     assignedTo: [allUsers[0], allUsers[2]],
     services: ["Web Development", "UI/UX Design"],
+    tickets: 5,
   },
   {
     id: "proj-2",
@@ -49,6 +50,7 @@ export const dummyProjects: Project[] = [
     paymentStatus: "paid",
     assignedTo: [allUsers[1], allUsers[3], allUsers[4]],
     services: ["Mobile App Development", "API Integration"],
+    tickets: 2,
   },
   {
     id: "proj-3",
@@ -62,6 +64,7 @@ export const dummyProjects: Project[] = [
     paymentStatus: "pending",
     assignedTo: [allUsers[5]],
     services: ["Digital Marketing"],
+    tickets: 0,
   },
   {
     id: "proj-4",
@@ -75,6 +78,7 @@ export const dummyProjects: Project[] = [
     paymentStatus: "proposed",
     assignedTo: [allUsers[0], allUsers[5]],
     services: ["Branding", "Graphic Design"],
+    tickets: 8,
   },
   {
     id: "proj-5",
@@ -89,5 +93,6 @@ export const dummyProjects: Project[] = [
     paymentStatus: "paid",
     assignedTo: [allUsers[1], allUsers[6]],
     services: ["System Integration", "Consulting"],
+    tickets: 1,
   },
 ];
