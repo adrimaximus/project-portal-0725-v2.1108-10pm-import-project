@@ -22,17 +22,22 @@ const Section = ({ title, children }: { title: string, children: React.ReactNode
 );
 
 const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesChange }: ProjectOverviewTabProps) => {
-  const getDaysBadge = () => {
+  const getStatusBadge = () => {
+    if (project.status === 'Done') {
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Done</Badge>;
+    }
+    if (project.status === 'In Progress') {
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">On Going</Badge>;
+    }
+
     try {
       const deadline = parseISO(project.deadline);
       if (isPast(deadline)) {
         return <Badge variant="destructive">Overdue</Badge>;
       }
       const daysLeft = differenceInDays(deadline, new Date());
-      if (daysLeft <= 7) {
-        return <Badge variant="destructive">{daysLeft} day{daysLeft !== 1 ? 's' : ''} left</Badge>;
-      }
-      return <Badge variant="secondary">{daysLeft} day{daysLeft !== 1 ? 's' : ''} left</Badge>;
+      const variant = daysLeft <= 7 ? "destructive" : "secondary";
+      return <Badge variant={variant}>{daysLeft} day{daysLeft !== 1 ? 's' : ''} to go</Badge>;
     } catch (error) {
       return null;
     }
@@ -53,7 +58,7 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
             </div>
           </div>
         </Section>
-        {getDaysBadge()}
+        {getStatusBadge()}
       </div>
 
       <Section title="Description">
