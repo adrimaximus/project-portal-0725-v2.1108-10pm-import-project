@@ -124,8 +124,8 @@ const ProjectDetail = () => {
           onSaveChanges={handleSaveChanges}
           onCancelChanges={handleCancelChanges}
         />
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <div className="lg:col-span-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
             <ProjectInfoCards 
               project={project}
               isEditing={isEditing}
@@ -134,23 +134,25 @@ const ProjectDetail = () => {
               onDateChange={handleDateChange}
               onBudgetChange={handleBudgetChange}
             />
+            <ProjectMainContent
+              project={editedProject}
+              isEditing={isEditing}
+              onDescriptionChange={handleDescriptionChange}
+              onTeamChange={handleTeamChange}
+              onFilesChange={handleFilesChange}
+              comments={projectComments}
+              setComments={setComments}
+              projectId={project.id}
+              ticketCount={ticketCount}
+            />
           </div>
-          <ProjectProgressCard 
-            project={editedProject}
-            onTasksUpdate={handleTasksUpdate}
-          />
+          <div className="lg:col-span-1 space-y-6">
+            <ProjectProgressCard 
+              project={editedProject}
+              onTasksUpdate={handleTasksUpdate}
+            />
+          </div>
         </div>
-        <ProjectMainContent
-          project={editedProject}
-          isEditing={isEditing}
-          onDescriptionChange={handleDescriptionChange}
-          onTeamChange={handleTeamChange}
-          onFilesChange={handleFilesChange}
-          comments={projectComments}
-          setComments={setComments}
-          projectId={project.id}
-          ticketCount={ticketCount}
-        />
       </div>
     </PortalLayout>
   );
