@@ -1,10 +1,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import { Project } from "@/data/projects";
 import { Comment } from "../ProjectComments";
-import ProjectDescription from "./ProjectDescription";
-import ProjectTeam from "./ProjectTeam";
-import ProjectBrief from "./ProjectBrief";
 import ProjectComments from "../ProjectComments";
+import ProjectOverviewTab from "./ProjectOverviewTab";
 
 interface ProjectMainContentProps {
   project: Project;
@@ -32,11 +31,9 @@ const ProjectMainContent = ({
   allProjects = [],
 }: ProjectMainContentProps) => {
   return (
-    <Tabs defaultValue="description">
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="description">Description</TabsTrigger>
-        <TabsTrigger value="team">Team</TabsTrigger>
-        <TabsTrigger value="brief">Brief</TabsTrigger>
+    <Tabs defaultValue="overview" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="comments">
           Comments
           {ticketCount > 0 && (
@@ -46,26 +43,18 @@ const ProjectMainContent = ({
           )}
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="description">
-        <ProjectDescription
-          description={project.description}
-          isEditing={isEditing}
-          onDescriptionChange={onDescriptionChange}
-        />
-      </TabsContent>
-      <TabsContent value="team">
-        <ProjectTeam
-          assignedTo={project.assignedTo}
-          isEditing={isEditing}
-          onTeamChange={onTeamChange}
-        />
-      </TabsContent>
-      <TabsContent value="brief">
-        <ProjectBrief
-          files={project.briefFiles || []}
-          isEditing={isEditing}
-          onFilesChange={onFilesChange}
-        />
+      <TabsContent value="overview">
+        <Card>
+          <CardContent className="pt-6">
+            <ProjectOverviewTab
+              project={project}
+              isEditing={isEditing}
+              onDescriptionChange={onDescriptionChange}
+              onTeamChange={onTeamChange}
+              onFilesChange={onFilesChange}
+            />
+          </CardContent>
+        </Card>
       </TabsContent>
       <TabsContent value="comments">
         <ProjectComments
