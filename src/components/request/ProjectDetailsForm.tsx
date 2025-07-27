@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/datepicker";
-import { usersData as users } from "@/data/users";
+import { allUsers as users } from "@/data/users";
 import { UserSelect } from "@/components/UserSelect";
 
 interface ProjectDetailsFormProps {
