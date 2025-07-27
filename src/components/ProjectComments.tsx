@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, Ticket, File, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
+import { dummyProjects } from '@/data/projects';
 
 export type Comment = {
   id: number;
@@ -67,6 +68,16 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
     }
 
     setComments(prev => [...prev, comment]);
+
+    // If it's a ticket, update the master project list
+    if (isTicket) {
+      const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
+      if (projectIndex !== -1) {
+        const currentTickets = dummyProjects[projectIndex].tickets || 0;
+        dummyProjects[projectIndex].tickets = currentTickets + 1;
+      }
+    }
+
     setNewComment("");
     setAttachmentFile(null);
     if (fileInputRef.current) {
