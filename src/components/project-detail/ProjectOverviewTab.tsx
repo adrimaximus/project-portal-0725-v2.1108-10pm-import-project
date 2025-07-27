@@ -36,8 +36,14 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
         return <Badge variant="destructive">Overdue</Badge>;
       }
       const daysLeft = differenceInDays(deadline, new Date());
-      const variant = daysLeft <= 7 ? "destructive" : "secondary";
-      return <Badge variant={variant}>{daysLeft} day{daysLeft !== 1 ? 's' : ''} to go</Badge>;
+      
+      if (daysLeft <= 7) {
+        return <Badge variant="destructive">{daysLeft} day{daysLeft !== 1 ? 's' : ''} to go</Badge>;
+      } else if (daysLeft <= 30) {
+        return <Badge className="bg-yellow-200 text-yellow-900 hover:bg-yellow-200/80">{daysLeft} day{daysLeft !== 1 ? 's' : ''} to go</Badge>;
+      } else {
+        return <Badge variant="secondary">{daysLeft} day{daysLeft !== 1 ? 's' : ''} to go</Badge>;
+      }
     } catch (error) {
       return null;
     }
