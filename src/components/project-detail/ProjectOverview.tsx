@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { services as allServices, type Service } from "@/data/services";
 import { Separator } from "../ui/separator";
 import FileUpload from "./FileUpload";
+import { differenceInDays, isFuture, isPast, parseISO } from "date-fns";
 
 interface AssignedTeamProps {
   users: AssignedUser[];
@@ -171,13 +172,49 @@ interface ProjectOverviewProps {
 }
 
 const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesChange }: ProjectOverviewProps) => {
+  const getStatusBadge = () => {
+    const today = new Date();
+    const startDate = parseISO(project.startDate);
+    const deadline = parseISO(project.deadline);
+
+    if (isFuture(startDate)) {
+      const daysUntilStart = differenceInDays(startDate, today);
+      return (
+        <Badge variant="outline" className="ml-3 font-normal">
+          Starts in {daysUntilStart} day{daysUntilStart !== 1 ? 's' : ''}
+        </Badge>
+      );
+    }
+
+    if (isPast(deadline)) {
+      return (
+        <Badge variant="secondary" className="ml-3 font-normal bg-green-100 text-green-800 border-green-200">
+          Done
+        </Badge>
+      );
+    }
+
+    if (isPast(startDate) && isFuture(deadline)) {
+      return (
+        <Badge variant="secondary" className="ml-3 font-normal bg-blue-100 text-blue-800 border-blue-200">
+          On Going
+        </Badge>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardHeader className="flex flex-row items-start justify-between space-y-0">
             <div>
-              <CardTitle>Project Description</CardTitle>
+              <CardTitle className="flex items-center">
+                Project Description
+                {getStatusBadge()}
+              </CardTitle>
             </div>
             <TooltipProvider>
               <Tooltip>
