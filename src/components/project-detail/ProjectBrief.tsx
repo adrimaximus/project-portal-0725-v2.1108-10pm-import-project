@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { File as FileIcon, Plus, Trash2, Download } from "lucide-react";
+import { Plus, Trash2, Download } from "lucide-react";
 import React, { useRef } from "react";
+import FileIcon from "../FileIcon";
 
 interface ProjectBriefProps {
   files: File[];
@@ -33,7 +34,7 @@ const ProjectBrief = ({ files, isEditing, onFilesChange }: ProjectBriefProps) =>
           {files.map((file, index) => (
             <li key={index} className="flex items-center justify-between p-2 rounded-md border bg-background">
               <div className="flex items-center gap-3 truncate">
-                <FileIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                <FileIcon fileType={file.type} className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                 <span className="truncate text-sm font-medium">{file.name}</span>
               </div>
               <div className="flex items-center flex-shrink-0">
@@ -61,19 +62,21 @@ const ProjectBrief = ({ files, isEditing, onFilesChange }: ProjectBriefProps) =>
         <p className="text-sm text-muted-foreground text-center py-4">No files attached.</p>
       )}
 
-      <>
-        <input
-          type="file"
-          multiple
-          ref={fileInputRef}
-          onChange={handleFileAdd}
-          className="hidden"
-        />
-        <Button variant="outline" className="w-full" onClick={handleAddClick}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Files
-        </Button>
-      </>
+      {isEditing && (
+        <>
+          <input
+            type="file"
+            multiple
+            ref={fileInputRef}
+            onChange={handleFileAdd}
+            className="hidden"
+          />
+          <Button variant="outline" className="w-full" onClick={handleAddClick}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Files
+          </Button>
+        </>
+      )}
     </div>
   );
 };
