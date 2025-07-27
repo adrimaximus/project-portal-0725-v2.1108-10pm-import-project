@@ -1,71 +1,67 @@
-import { useState } from "react";
-import PortalLayout from "@/components/PortalLayout";
-import { Service } from "@/data/services";
-import SelectedServicesSummary from "@/components/SelectedServicesSummary";
-import ServiceSelection from "@/components/request/ServiceSelection";
-import ProjectDetailsForm from "@/components/request/ProjectDetailsForm";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ProjectDetailsForm } from "@/components/request/ProjectDetailsForm";
+import { FileUploadForm } from "@/components/request/FileUploadForm";
+import { Form } from "@/components/ui/form";
+import { toast } from "sonner";
 
-const RequestPage = () => {
-  const [step, setStep] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+const formSchema = z.object({
+  projectName: z.string().min(1, "Project name is required"),
+  projectDescription: z.string().min(1, "Project description is required"),
+  projectOwner: z.string().min(1, "Project owner is required"),
+  deadline: z.date({ required_error: "Deadline is required." }),
+  assignedTo: z.array(z.string()).min(1, "At least one person must be assigned"),
+  files: z.array(z.instanceof(File)).optional(),
+});
 
-  const handleServiceSelect = (service: Service) => {
-    const isFeatured = service.title === "End to End Services";
-    const isAlreadySelected = selectedServices.some(
-      (s) => s.title === service.title
-    );
+export default function RequestPage() {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      projectName: "",
+      projectDescription: "",
+      assignedTo: [],
+      files: [],
+    },
+  });
 
-    if (isFeatured) {
-      setSelectedServices(isAlreadySelected ? [] : [service]);
-    } else {
-      let newSelectedServices = selectedServices.filter(
-        (s) => s.title !== "End to End Services"
-      );
-      if (isAlreadySelected) {
-        newSelectedServices = newSelectedServices.filter(
-          (s) => s.title !== service.title
-        );
-      } else {
-        newSelectedServices.push(service);
-      }
-      setSelectedServices(newSelectedServices);
-    }
-  };
-
-  const renderContent = () => {
-    if (step === 1) {
-      return (
-        <ServiceSelection
-          searchTerm={searchTerm}
-          onSearchTermChange={setSearchTerm}
-          selectedServices={selectedServices}
-          onServiceSelect={handleServiceSelect}
-        />
-      );
-    } else {
-      return (
-        <ProjectDetailsForm
-          selectedServices={selectedServices}
-          onBack={() => setStep(1)}
-        />
-      );
-    }
-  };
-
-  const summaryComponent =
-    step === 1 ? (
-      <SelectedServicesSummary
-        selectedServices={selectedServices}
-        onContinue={() => setStep(2)}
-      />
-    ) : null;
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log(values);
+    toast.success("Project request submitted successfully!");
+    form.reset();
+  }
 
   return (
-    <PortalLayout summary={summaryComponent} disableMainScroll={step === 2}>
-      {renderContent()}
-    </PortalLayout>
-  );
-};
+    <div className="container mx-auto max-w-3xl py-10">
+      <h1 className="text-3xl font-bold mb-6">New Project Request</h1>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProjectDetailsForm control={form.control} />
+            </CardContent>
+          </Card>
 
-export default RequestPage;
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Brief</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FileUploadForm control={form.control} />
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button type="submit">Submit Request</Button>
+          </div>
+        </form>
+      </Form>
+    </div>
+  );
+}
