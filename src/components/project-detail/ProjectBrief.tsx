@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { File as FileIcon, Plus, Trash2 } from "lucide-react";
+import { File as FileIcon, Plus, Trash2, Download } from "lucide-react";
 import React, { useRef } from "react";
 
 interface ProjectBriefProps {
@@ -36,36 +36,44 @@ const ProjectBrief = ({ files, isEditing, onFilesChange }: ProjectBriefProps) =>
                 <FileIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                 <span className="truncate text-sm font-medium">{file.name}</span>
               </div>
-              {isEditing && (
-                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleFileRemove(file)}>
-                  <Trash2 className="h-4 w-4" />
-                  <span className="sr-only">Remove file</span>
-                </Button>
-              )}
+              <div className="flex items-center flex-shrink-0">
+                <a
+                  href={URL.createObjectURL(file)}
+                  download={file.name}
+                  title={`Download ${file.name}`}
+                >
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Download className="h-4 w-4" />
+                    <span className="sr-only">Download file</span>
+                  </Button>
+                </a>
+                {isEditing && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleFileRemove(file)}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Remove file</span>
+                  </Button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
       ) : (
-        !isEditing && (
-          <p className="text-sm text-muted-foreground">No files attached.</p>
-        )
+        <p className="text-sm text-muted-foreground text-center py-4">No files attached.</p>
       )}
 
-      {isEditing && (
-        <>
-          <input
-            type="file"
-            multiple
-            ref={fileInputRef}
-            onChange={handleFileAdd}
-            className="hidden"
-          />
-          <Button variant="outline" className="w-full" onClick={handleAddClick}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Files
-          </Button>
-        </>
-      )}
+      <>
+        <input
+          type="file"
+          multiple
+          ref={fileInputRef}
+          onChange={handleFileAdd}
+          className="hidden"
+        />
+        <Button variant="outline" className="w-full" onClick={handleAddClick}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Files
+        </Button>
+      </>
     </div>
   );
 };
