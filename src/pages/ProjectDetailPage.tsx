@@ -8,11 +8,14 @@ import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard
 import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
 import ProjectTasksCard from "@/components/project-detail/ProjectTasksCard";
+import { initialComments } from "@/data/comments";
+import { type Comment } from "@/components/ProjectComments";
 
 const ProjectDetailPage = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
+  const [comments, setComments] = useState<Comment[]>(initialComments);
   const [isEditing, setIsEditing] = useState(false); // To satisfy ProjectMainContent props
 
   useEffect(() => {
@@ -56,6 +59,9 @@ const ProjectDetailPage = () => {
     );
   }
 
+  const projectComments = comments.filter(c => c.projectId === project.id);
+  const ticketCount = projectComments.filter(c => c.isTicket).length;
+
   return (
     <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
       <div className="flex items-center justify-between space-y-2">
@@ -74,6 +80,10 @@ const ProjectDetailPage = () => {
             onDescriptionChange={(value) => handleProjectUpdate({ description: value })}
             onTeamChange={(value) => handleProjectUpdate({ assignedTo: value as AssignedUser[] })}
             onFilesChange={(value) => handleProjectUpdate({ briefFiles: value })}
+            comments={projectComments}
+            setComments={setComments}
+            projectId={project.id}
+            ticketCount={ticketCount}
           />
           <ProjectTasksCard project={project} onTasksUpdate={handleTasksUpdate} />
         </div>
