@@ -215,32 +215,38 @@ export const columns: ColumnDef<Project>[] = [
     header: "Payment Status",
     cell: ({ row }) => {
       const paymentStatus = row.original.paymentStatus;
-      const paymentDueDate = row.original.paymentDueDate;
       
-      let displayStatus: Project["paymentStatus"] = paymentStatus;
-      
-      if (paymentStatus === 'pending' && paymentDueDate) {
-        const dueDate = new Date(paymentDueDate);
-        const now = new Date();
-        now.setHours(0,0,0,0);
-        if (dueDate < now) {
-          displayStatus = 'overdue';
-        }
-      }
-
-      const getPaymentStatusBadgeVariant = (s: typeof displayStatus) => {
+      const getPaymentStatusBadgeVariant = (s: Project["paymentStatus"]) => {
         switch (s) {
           case "paid": return "default";
-          case "pending": return "secondary";
-          case "overdue": return "destructive";
-          case "proposed": return "outline";
-          default: return "outline";
+          case "approved":
+          case "po_created":
+          case "on_process":
+          case "pending": 
+            return "secondary";
+          case "cancelled": 
+            return "destructive";
+          case "proposed": 
+            return "outline";
+          default: 
+            return "outline";
         }
       }
 
+      const formatPaymentStatus = (status: Project["paymentStatus"]) => {
+        switch (status) {
+          case "po_created":
+            return "PO Created";
+          case "on_process":
+            return "On Process";
+          default:
+            return status.charAt(0).toUpperCase() + status.slice(1);
+        }
+      };
+
       return (
-        <Badge variant={getPaymentStatusBadgeVariant(displayStatus)}>
-          {displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)}
+        <Badge variant={getPaymentStatusBadgeVariant(paymentStatus)}>
+          {formatPaymentStatus(paymentStatus)}
         </Badge>
       )
     },

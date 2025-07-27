@@ -13,7 +13,7 @@ export interface Project {
   deadline: string;
   paymentDueDate?: string;
   budget: number;
-  paymentStatus: "pending" | "paid" | "overdue" | "proposed";
+  paymentStatus: "proposed" | "approved" | "po_created" | "on_process" | "pending" | "paid" | "cancelled";
   assignedTo: AssignedUser[];
   services: string[];
   briefFiles?: File[];
@@ -72,7 +72,7 @@ export const dummyProjects: Project[] = [
     startDate: "2024-07-10",
     deadline: "2024-11-25",
     budget: 85000000,
-    paymentStatus: "pending",
+    paymentStatus: "proposed",
     assignedTo: [allUsers[0], allUsers[5]],
     services: ["Branding", "Graphic Design"],
   },
@@ -86,7 +86,7 @@ export const dummyProjects: Project[] = [
     deadline: "2024-06-30",
     paymentDueDate: "2024-07-15",
     budget: 150000000,
-    paymentStatus: "overdue",
+    paymentStatus: "paid",
     assignedTo: [allUsers[1], allUsers[6]],
     services: ["System Integration", "Consulting"],
   },

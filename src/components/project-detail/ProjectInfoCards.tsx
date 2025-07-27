@@ -46,10 +46,28 @@ const ProjectInfoCards = ({
   const getPaymentStatusBadgeVariant = (status: Project["paymentStatus"]) => {
     switch (status) {
       case "paid": return "default";
-      case "pending": return "secondary";
-      case "overdue": return "destructive";
-      case "proposed": return "outline";
-      default: return "outline";
+      case "approved":
+      case "po_created":
+      case "on_process":
+      case "pending": 
+        return "secondary";
+      case "cancelled": 
+        return "destructive";
+      case "proposed": 
+        return "outline";
+      default: 
+        return "outline";
+    }
+  };
+
+  const formatPaymentStatus = (status: Project["paymentStatus"]) => {
+    switch (status) {
+      case "po_created":
+        return "PO Created";
+      case "on_process":
+        return "On Process";
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
@@ -108,18 +126,21 @@ const ProjectInfoCards = ({
         </CardHeader>
         <CardContent>
           {isEditing && editedProject ? (
-            <Select value={editedProject.paymentStatus} onValueChange={(value) => onSelectChange('paymentStatus', value)}>
+            <Select value={editedProject.paymentStatus} onValueChange={(value) => onSelectChange('paymentStatus', value as Project["paymentStatus"])}>
               <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="proposed">Proposed</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="po_created">PO Created</SelectItem>
+                <SelectItem value="on_process">On Process</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           ) : (
             <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
-              {project.paymentStatus.charAt(0).toUpperCase() + project.paymentStatus.slice(1)}
+              {formatPaymentStatus(project.paymentStatus)}
             </Badge>
           )}
         </CardContent>
