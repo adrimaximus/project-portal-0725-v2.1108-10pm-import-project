@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { projects as initialProjects, Project, AssignedUser } from "@/data/projects";
+import { dummyProjects as initialProjects, Project, AssignedUser } from "@/data/projects";
 import { PageHeader, PageHeaderHeading, PageHeaderDescription } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
