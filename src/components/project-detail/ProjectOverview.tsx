@@ -1,274 +1,153 @@
-import React from "react";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Project, AssignedUser } from "@/data/projects";
 import { allUsers } from "@/data/users";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import RichTextEditor from "@/components/RichTextEditor";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown, FileText, Download, Eye } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { services as allServices, type Service } from "@/data/services";
-import { Separator } from "../ui/separator";
-import FileUpload from "./FileUpload";
-
-interface AssignedTeamProps {
-  users: AssignedUser[];
-  isEditing: boolean;
-  onTeamChange: (selectedUsers: AssignedUser[]) => void;
-}
-
-const AssignedTeam = ({ users, isEditing, onTeamChange }: AssignedTeamProps) => {
-  const [open, setOpen] = React.useState(false);
-
-  const handleSelect = (currentUser: AssignedUser) => {
-    const isSelected = users.some(u => u.id === currentUser.id);
-    let newSelectedUsers: AssignedUser[];
-    if (isSelected) {
-      newSelectedUsers = users.filter(u => u.id !== currentUser.id);
-    } else {
-      const newUserToAdd: AssignedUser = { ...currentUser, status: 'offline' };
-      newSelectedUsers = [...users, newUserToAdd];
-    }
-    onTeamChange(newSelectedUsers);
-  };
-
-  if (!isEditing) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Assigned Team</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-4">
-            <div className="flex -space-x-2 overflow-hidden">
-              {users.map(user => (
-                <TooltipProvider key={user.id}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Avatar className="inline-block h-10 w-10 rounded-full ring-2 ring-background">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{user.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
-            </div>
-            <p className="text-sm text-muted-foreground">{users.length} members</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Assigned Team</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={open}
-              className="w-full justify-between"
-            >
-              <span className="truncate">
-                {users.length > 0 ? `${users.length} member(s) selected` : "Select team members..."}
-              </span>
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
-              <CommandInput placeholder="Search members..." />
-              <CommandList>
-                <CommandEmpty>No members found.</CommandEmpty>
-                <CommandGroup>
-                  {allUsers.map((user) => (
-                    <CommandItem
-                      key={user.id}
-                      value={user.name}
-                      onSelect={() => handleSelect(user)}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          users.some(u => u.id === user.id) ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      <Avatar className="mr-2 h-6 w-6">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.name.slice(0,2)}</AvatarFallback>
-                      </Avatar>
-                      {user.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {users.map(user => (
-            <Badge key={user.id} variant="secondary" className="flex items-center gap-1 p-1 pr-2">
-              <Avatar className="h-5 w-5">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback>{user.name.slice(0,2)}</AvatarFallback>
-              </Avatar>
-              <span className="text-sm">{user.name}</span>
-            </Badge>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-const ProjectServices = ({ services }: { services: string[] }) => {
-  const serviceDetails = services
-    .map((serviceName) => allServices.find((s) => s.title === serviceName))
-    .filter((s): s is Service => s !== undefined);
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Services</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
-          {serviceDetails.map((service) => (
-            <Badge
-              key={service.title}
-              variant="secondary"
-              className="flex items-center gap-2"
-            >
-              <service.icon className={cn("h-4 w-4", service.iconColor)} />
-              <span>{service.title}</span>
-            </Badge>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
+import { format } from "date-fns";
+import { CalendarIcon, Edit, FileText, Paperclip, Plus, Trash2, X } from "lucide-react";
+import { cn } from '@/lib/utils';
+import RichTextEditor from '../RichTextEditor';
+import TeamSelector from '../request/TeamSelector';
 
 interface ProjectOverviewProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
-  onTeamChange: (selectedUsers: AssignedUser[]) => void;
+  onTeamChange: (team: AssignedUser[]) => void;
   onFilesChange: (files: File[]) => void;
 }
 
 const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesChange }: ProjectOverviewProps) => {
+  const [newComment, setNewComment] = useState('');
+  const [comments, setComments] = useState([
+    { id: 1, user: { id: 'user-1', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=alice' }, text: 'Can we get an update on the timeline?', timestamp: '2 hours ago' },
+    { id: 2, user: { id: 'user-2', name: 'Bob Williams', avatar: 'https://i.pravatar.cc/150?u=bob' }, text: 'I\'ve pushed the latest changes to the dev branch.', timestamp: '1 hour ago' },
+  ]);
+
+  const handleAddComment = () => {
+    if (newComment.trim()) {
+      const newCommentObj = {
+        id: Date.now(),
+        user: { id: 'current-user', name: 'You', avatar: 'https://i.pravatar.cc/150?u=current', status: 'Offline' },
+        text: newComment,
+        timestamp: 'Just now',
+      };
+      // This type assertion is a bit of a hack for the demo data structure
+      setComments([...comments, newCommentObj as any]);
+      setNewComment('');
+    }
+  };
+
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-2 space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Project Description</CardTitle>
-          </CardHeader>
-          <CardContent>
+    <Card>
+      <CardHeader>
+        <CardTitle>Project Overview</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          <div>
+            <h3 className="font-semibold mb-2">Description</h3>
             {isEditing ? (
-              <RichTextEditor
-                value={project.description}
-                onChange={onDescriptionChange}
-                placeholder="Enter project description..."
-              />
+              <RichTextEditor value={project.description} onChange={onDescriptionChange} />
             ) : (
-              <div
-                className="prose prose-sm max-w-none text-muted-foreground"
-                dangerouslySetInnerHTML={{ __html: project.description }}
-              />
+              <div className="prose prose-sm max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: project.description }} />
             )}
-            
-            {(isEditing || (project.briefFiles && project.briefFiles.length > 0)) && (
-              <>
-                <Separator className="my-6" />
-                <div>
-                  {isEditing ? (
-                    <>
-                      <h4 className="text-sm font-medium mb-3 text-foreground">Attach Brief Files</h4>
-                      <FileUpload 
-                        files={project.briefFiles || []}
-                        onFilesChange={onFilesChange}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <h4 className="text-sm font-medium mb-3 text-foreground">Brief Files</h4>
-                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                        {project.briefFiles.map((file, index) => (
-                          <div
-                            key={index}
-                            className="relative group border rounded-lg overflow-hidden aspect-square"
-                            title={file.name}
-                          >
-                            {file.type.startsWith("image/") ? (
-                              <img
-                                src={URL.createObjectURL(file)}
-                                alt={file.name}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="h-full w-full bg-muted flex flex-col items-center justify-center p-2">
-                                <FileText className="h-8 w-8 text-muted-foreground" />
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                              <a
-                                href={URL.createObjectURL(file)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-                                title="Preview file"
-                              >
-                                <Eye className="h-5 w-5" />
-                              </a>
-                              <a
-                                href={URL.createObjectURL(file)}
-                                download={file.name}
-                                className="text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-                                title="Download file"
-                              >
-                                <Download className="h-5 w-5" />
-                              </a>
-                            </div>
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 pointer-events-none">
-                              <p className="text-xs text-white truncate">
-                                {file.name}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
+          </div>
+
+          <div>
+            <h3 className="font-semibold mb-2">Assigned Team</h3>
+            {isEditing ? (
+              <TeamSelector selectedUsers={project.assignedTo} onTeamChange={onTeamChange} />
+            ) : (
+              <div className="flex flex-wrap gap-4">
+                {project.assignedTo.map(user => (
+                  <div key={user.id} className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.avatar} alt={user.name} />
+                      <AvatarFallback>{user.name.slice(0, 2)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{user.name}</p>
+                      <p className="text-xs text-muted-foreground">{user.role}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h3 className="font-semibold mb-2">Brief Files</h3>
+            {isEditing ? (
+              <div>
+                {/* File upload logic would go here */}
+                <p className="text-sm text-muted-foreground">File editing is not implemented in this view.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {project.briefFiles?.map((file, index) => (
+                  <a key={index} href={URL.createObjectURL(file)} target="_blank" rel="noopener noreferrer" className="group relative block border rounded-lg overflow-hidden">
+                    <div className="aspect-w-1 aspect-h-1">
+                      {file.type.startsWith('image/') ? (
+                        <img src={URL.createObjectURL(file)} alt={file.name} className="object-cover w-full h-full" />
+                      ) : (
+                        <div className="bg-muted flex items-center justify-center h-full">
+                          <FileText className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all" />
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
+                      <p className="text-xs font-medium text-white truncate">{file.name}</p>
+                    </div>
+                  </a>
+                ))}
+                {(!project.briefFiles || project.briefFiles.length === 0) && (
+                  <p className="text-sm text-muted-foreground col-span-full">No brief files attached.</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t pt-6">
+            <h3 className="font-semibold mb-4">Activity & Comments</h3>
+            <div className="space-y-4">
+              {comments.map(comment => (
+                <div key={comment.id} className="flex items-start gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={comment.user.avatar} alt={comment.user.name} />
+                    <AvatarFallback>{comment.user.name.slice(0, 2)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold">{comment.user.name}</p>
+                      <p className="text-xs text-muted-foreground">{comment.timestamp}</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{comment.text}</p>
+                  </div>
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <div className="lg:col-span-1 space-y-6">
-        <AssignedTeam 
-          users={project.assignedTo} 
-          isEditing={isEditing}
-          onTeamChange={onTeamChange}
-        />
-        <ProjectServices services={project.services} />
-      </div>
-    </div>
+              ))}
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <Input
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Add a comment..."
+                onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+              />
+              <Button onClick={handleAddComment}>Send</Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
