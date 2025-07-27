@@ -7,14 +7,13 @@ import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
 import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
-import { Comment } from "@/components/ProjectComments";
+import ProjectTasksCard from "@/components/project-detail/ProjectTasksCard";
 
 const ProjectDetailPage = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [isEditing, setIsEditing] = useState(false); // To satisfy ProjectMainContent props
 
   useEffect(() => {
     const foundProject = dummyProjects.find((p) => p.id === projectId);
@@ -24,9 +23,6 @@ const ProjectDetailPage = () => {
         tasks: foundProject.tasks || [],
       };
       setProject(projectWithTasks);
-      // In a real app, you'd fetch comments for the project.
-      // For now, we'll initialize with an empty array.
-      setComments([]);
     }
   }, [projectId]);
 
@@ -52,15 +48,13 @@ const ProjectDetailPage = () => {
     handleProjectUpdate({ tasks: updatedTasks, progress: newProgress });
   };
 
-  if (!project || !projectId) {
+  if (!project) {
     return (
       <div className="flex-1 p-4 pt-6 md:p-8 flex items-center justify-center">
         <p>Project not found.</p>
       </div>
     );
   }
-
-  const ticketCount = comments.filter(c => c.isTicket).length + (project.tickets || 0);
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
@@ -80,14 +74,11 @@ const ProjectDetailPage = () => {
             onDescriptionChange={(value) => handleProjectUpdate({ description: value })}
             onTeamChange={(value) => handleProjectUpdate({ assignedTo: value as AssignedUser[] })}
             onFilesChange={(value) => handleProjectUpdate({ briefFiles: value })}
-            comments={comments}
-            setComments={setComments}
-            projectId={projectId}
-            ticketCount={ticketCount}
           />
+          <ProjectTasksCard project={project} onTasksUpdate={handleTasksUpdate} />
         </div>
         <div className="space-y-4 md:space-y-8">
-          <ProjectProgressCard project={project} onTasksUpdate={handleTasksUpdate} />
+          <ProjectProgressCard project={project} />
           <ProjectTeamCard project={project} />
           <ProjectDetailsCard project={project} />
         </div>
