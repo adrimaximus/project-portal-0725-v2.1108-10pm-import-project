@@ -4,7 +4,7 @@ import ProjectTeam from "./ProjectTeam";
 import ProjectBrief from "./ProjectBrief";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { differenceInDays, parseISO, isPast } from 'date-fns';
+import { differenceInDays, parseISO, isBefore, isAfter } from 'date-fns';
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -23,28 +23,28 @@ const Section = ({ title, children }: { title: string, children: React.ReactNode
 
 const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesChange }: ProjectOverviewTabProps) => {
   const getStatusBadge = () => {
-    if (project.status === 'Done') {
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Done</Badge>;
-    }
-    if (project.status === 'In Progress') {
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">On Going</Badge>;
-    }
-
     try {
+      const now = new Date();
+      // This assumes `project.startDate` exists in your project data
+      const startDate = parseISO(project.startDate);
       const deadline = parseISO(project.deadline);
-      if (isPast(deadline)) {
+
+      // Case 1: Current date is before the project start date.
+      if (isBefore(now, startDate)) {
+        const daysUntilStart = differenceInDays(startDate, now);
+        return <Badge variant="secondary">{daysUntilStart} day{daysUntilStart !== 1 ? 's' : ''} to go</Badge>;
+      }
+
+      // Case 3: Current date is after the project due date.
+      if (isAfter(now, deadline)) {
         return <Badge className="bg-black text-white hover:bg-black/80">Done</Badge>;
       }
-      const daysLeft = differenceInDays(deadline, new Date());
-      
-      if (daysLeft <= 7) {
-        return <Badge variant="destructive">{daysLeft} day{daysLeft !== 1 ? 's' : ''} to go</Badge>;
-      } else if (daysLeft <= 30) {
-        return <Badge className="bg-yellow-200 text-yellow-900 hover:bg-yellow-200/80">{daysLeft} day{daysLeft !== 1 ? 's' : ''} to go</Badge>;
-      } else {
-        return <Badge variant="secondary">{daysLeft} day{daysLeft !== 1 ? 's' : ''} to go</Badge>;
-      }
+
+      // Case 2: Current date is within the project's date range (ongoing).
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">On Going</Badge>;
+
     } catch (error) {
+      // Fallback if dates are invalid or missing
       return null;
     }
   };
