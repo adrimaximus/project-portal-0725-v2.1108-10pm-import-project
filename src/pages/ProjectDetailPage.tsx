@@ -1,98 +1,137 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
 import { dummyProjects, Project, Task, AssignedUser } from "@/data/projects";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
+import { Comment } from "@/components/ProjectComments";
+import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
 import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
-import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
-import ProjectTasksCard from "@/components/project-detail/ProjectTasksCard";
-import { initialComments } from "@/data/comments";
-import { type Comment } from "@/components/ProjectComments";
+import ProjectBrief from "@/components/project-detail/ProjectBrief";
+import ProjectComments from "@/components/ProjectComments";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+// Mock comments data, as it's not stored globally
+const generateInitialComments = (projectId: string): Comment[] => {
+  return [
+    {
+      id: 1,
+      projectId: projectId,
+      user: { name: "Emily Johnson", avatar: "https://i.pravatar.cc/150?u=emily" },
+      text: "Just reviewed the initial designs. Looking great!",
+      timestamp: "2 days ago",
+    },
+    {
+      id: 2,
+      projectId: projectId,
+      user: { name: "Alex Chen", avatar: "https://i.pravatar.cc/150?u=alex" },
+      text: "Hey @Dan, can you please check the latest API documentation?",
+      timestamp: "1 day ago",
+    },
+  ];
+};
 
 const ProjectDetailPage = () => {
-  const { projectId } = useParams();
-  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
-  const [comments, setComments] = useState<Comment[]>(initialComments);
-  const [isEditing, setIsEditing] = useState(false); // To satisfy ProjectMainContent props
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    const foundProject = dummyProjects.find((p) => p.id === projectId);
+    const foundProject = dummyProjects.find((p) => p.id === id);
     if (foundProject) {
-      const projectWithTasks = {
-        ...foundProject,
-        tasks: foundProject.tasks || [],
-      };
-      setProject(projectWithTasks);
+      setProject({ ...foundProject });
+      setComments(generateInitialComments(foundProject.id));
+    } else {
+      setProject(null);
     }
-  }, [projectId]);
+  }, [id]);
 
-  const handleProjectUpdate = (updatedData: Partial<Project>) => {
-    if (!project) return;
-
-    const updatedProject = { ...project, ...updatedData };
+  const handleProjectUpdate = (updatedProject: Project) => {
     setProject(updatedProject);
-
-    const projectIndex = dummyProjects.findIndex(p => p.id === project.id);
+    const projectIndex = dummyProjects.findIndex((p) => p.id === id);
     if (projectIndex !== -1) {
       dummyProjects[projectIndex] = updatedProject;
     }
   };
 
-  const handleTasksUpdate = (updatedTasks: Task[]) => {
-    if (!project) return;
+  const handleTasksUpdate = (tasks: Task[]) => {
+    if (project) {
+      const newProgress = tasks.length > 0 ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) : 0;
+      handleProjectUpdate({ ...project, tasks, progress: newProgress });
+    }
+  };
 
-    const completedTasks = updatedTasks.filter(task => task.completed).length;
-    const totalTasks = updatedTasks.length;
-    const newProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const handleTaskCreate = (task: Task) => {
+    if (project) {
+      const newTasks = [...(project.tasks || []), task];
+      handleTasksUpdate(newTasks);
+    }
+  };
 
-    handleProjectUpdate({ tasks: updatedTasks, progress: newProgress });
+  const handleBriefFilesChange = (files: File[]) => {
+    if (project) {
+      handleProjectUpdate({ ...project, briefFiles: files });
+    }
+  };
+
+  const handleTeamChange = (team: AssignedUser[]) => {
+    if (project) {
+      handleProjectUpdate({ ...project, assignedTo: team });
+    }
   };
 
   if (!project) {
     return (
-      <div className="flex-1 p-4 pt-6 md:p-8 flex items-center justify-center">
-        <p>Project not found.</p>
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+        <h1 className="text-2xl font-bold">Project Not Found</h1>
+        <p className="text-muted-foreground">
+          We couldn't find the project you're looking for.
+        </p>
+        <Button asChild>
+          <Link to="/projects">Back to Projects</Link>
+        </Button>
       </div>
     );
   }
 
-  const projectComments = comments.filter(c => c.projectId === project.id);
-  const ticketCount = projectComments.filter(c => c.isTicket).length;
-
   return (
-    <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
-      <div className="flex items-center justify-between space-y-2">
-        <div>
-          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-2">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Projects
-          </Button>
-          <h2 className="text-3xl font-bold tracking-tight">{project.name}</h2>
+    <div className="flex h-full flex-col gap-6">
+      <ProjectHeader project={project} onProjectUpdate={handleProjectUpdate} />
+      <main className="flex-1 space-y-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <ProjectProgressCard project={project} onTasksUpdate={handleTasksUpdate} />
+            <ProjectComments
+              comments={comments}
+              setComments={setComments}
+              projectId={project.id}
+              assignableUsers={project.assignedTo}
+              allProjects={dummyProjects}
+              onTaskCreate={handleTaskCreate}
+            />
+          </div>
+          <div className="space-y-6">
+            <ProjectTeamCard
+              team={project.assignedTo}
+              creator={project.createdBy}
+              isEditing={isEditing}
+              onTeamChange={handleTeamChange}
+            />
+            <Card>
+              <CardHeader>
+                <CardTitle>Brief & Files</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ProjectBrief
+                  files={project.briefFiles || []}
+                  isEditing={isEditing}
+                  onFilesChange={handleBriefFilesChange}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
-      <div className="grid gap-4 md:gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4 md:space-y-8">
-          <ProjectMainContent
-            project={project}
-            isEditing={isEditing}
-            onDescriptionChange={(value) => handleProjectUpdate({ description: value })}
-            onTeamChange={(value) => handleProjectUpdate({ assignedTo: value as AssignedUser[] })}
-            onFilesChange={(value) => handleProjectUpdate({ briefFiles: value })}
-            comments={projectComments}
-            setComments={setComments}
-            projectId={project.id}
-            ticketCount={ticketCount}
-          />
-          <ProjectTasksCard project={project} onTasksUpdate={handleTasksUpdate} />
-        </div>
-        <div className="space-y-4 md:space-y-8">
-          <ProjectProgressCard project={project} />
-          <ProjectTeamCard project={project} />
-          <ProjectDetailsCard project={project} />
-        </div>
-      </div>
+      </main>
     </div>
   );
 };

@@ -1,32 +1,46 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Project } from "@/data/projects";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AssignedUser } from "@/data/projects";
+import { Crown } from "lucide-react";
 
 interface ProjectTeamCardProps {
-  project: Project;
+  team: AssignedUser[];
+  creator: AssignedUser;
+  isEditing: boolean;
+  onTeamChange: (team: AssignedUser[]) => void;
 }
 
-const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
+const ProjectTeamCard = ({ team, creator }: ProjectTeamCardProps) => {
+  const teamMembers = [creator, ...team.filter(u => u.id !== creator.id)];
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Assigned Team</CardTitle>
+        <CardTitle>Team</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {project.assignedTo.map((user) => (
-            <div key={user.name} className="flex items-center gap-4">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback>{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-semibold">{user.name}</p>
-                <p className="text-sm text-muted-foreground">{user.role}</p>
+        <ul className="space-y-4">
+          {teamMembers.map((user, index) => (
+            <li key={user.id} className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar>
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback>{user.name.slice(0, 2)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{user.name}</p>
+                  <p className="text-sm text-muted-foreground">{user.role}</p>
+                </div>
               </div>
-            </div>
+              {index === 0 && (
+                <div className="flex items-center gap-1 text-xs text-amber-600">
+                  <Crown className="h-4 w-4" />
+                  <span>Creator</span>
+                </div>
+              )}
+            </li>
           ))}
-        </div>
+        </ul>
       </CardContent>
     </Card>
   );

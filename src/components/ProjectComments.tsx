@@ -33,6 +33,7 @@ interface ProjectCommentsProps {
   projectId: string;
   assignableUsers: AssignedUser[];
   allProjects: Project[];
+  onTaskCreate?: (task: Task) => void;
 }
 
 const renderWithMentions = (text: string) => {
@@ -52,7 +53,7 @@ const renderWithMentions = (text: string) => {
   });
 };
 
-const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments, projectId, assignableUsers, allProjects }) => {
+const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments, projectId, assignableUsers, allProjects, onTaskCreate }) => {
   const [newComment, setNewComment] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -147,31 +148,26 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
 
     setComments(prev => [...prev, comment]);
 
-    if (isTicket) {
+    if (isTicket && onTaskCreate) {
+      const mentionRegex = /@([a-zA-Z0-9\s._-]+)/g;
+      const mentions = [...newComment.matchAll(mentionRegex)].map(match => match[1].trim());
+      
+      const assignedToTaskUsers = assignableUsers.filter(user => 
+          mentions.includes(user.name)
+      );
+
+      const newTask: Task = {
+          id: `task-${Date.now()}`,
+          text: newComment.replace(mentionRegex, '').trim(),
+          completed: false,
+          assignedTo: assignedToTaskUsers.map(user => user.id),
+      };
+      
+      onTaskCreate(newTask);
+
       const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
       if (projectIndex !== -1) {
-        // Increment ticket count
         dummyProjects[projectIndex].tickets = (dummyProjects[projectIndex].tickets || 0) + 1;
-
-        // Create a new task from the ticket
-        const mentionRegex = /@([a-zA-Z0-9\s._-]+)/g;
-        const mentions = [...newComment.matchAll(mentionRegex)].map(match => match[1].trim());
-        
-        const assignedToTask: AssignedUser[] = assignableUsers.filter(user => 
-            mentions.includes(user.name)
-        );
-
-        const newTask: Task = {
-            id: `task-${Date.now()}`,
-            name: newComment.replace(mentionRegex, '').trim(), // Use comment text as task name
-            status: 'To Do',
-            assignedTo: assignedToTask.map(user => user.name),
-        };
-
-        if (!dummyProjects[projectIndex].tasks) {
-            dummyProjects[projectIndex].tasks = [];
-        }
-        dummyProjects[projectIndex].tasks?.push(newTask);
       }
     }
 
