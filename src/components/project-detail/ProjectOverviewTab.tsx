@@ -33,7 +33,7 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
     try {
       const deadline = parseISO(project.deadline);
       if (isPast(deadline)) {
-        return <Badge variant="destructive">Overdue</Badge>;
+        return <Badge className="bg-black text-white hover:bg-black/80">Done</Badge>;
       }
       const daysLeft = differenceInDays(deadline, new Date());
       
