@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, Ticket, File, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
+import { dummyProjects } from '@/data/projects';
 
 export type Comment = {
   id: number;
@@ -27,11 +28,11 @@ export type Comment = {
 
 interface ProjectCommentsProps {
   comments: Comment[];
-  onAddComment: (comment: Omit<Comment, 'id' | 'timestamp'>) => void;
+  setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
   projectId: string;
 }
 
-const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, onAddComment, projectId }) => {
+const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments, projectId }) => {
   const [newComment, setNewComment] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,22 +50,33 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, onAddCommen
   const handleSendComment = (isTicket = false) => {
     if (newComment.trim() === "" && !attachmentFile) return;
 
-    const commentData: Omit<Comment, 'id' | 'timestamp'> = {
+    const comment: Comment = {
+      id: Date.now(),
       projectId: projectId,
       user: { name: "You", avatar: "https://i.pravatar.cc/150?u=currentuser" },
       text: newComment,
+      timestamp: "Just now",
       isTicket: isTicket,
     };
 
     if (attachmentFile) {
-      commentData.attachment = {
+      comment.attachment = {
         name: attachmentFile.name,
         url: URL.createObjectURL(attachmentFile),
         type: attachmentFile.type.startsWith('image/') ? 'image' : 'file',
       };
     }
 
-    onAddComment(commentData);
+    setComments(prev => [...prev, comment]);
+
+    // If it's a ticket, update the master project list
+    if (isTicket) {
+      const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
+      if (projectIndex !== -1) {
+        const currentTickets = dummyProjects[projectIndex].tickets || 0;
+        dummyProjects[projectIndex].tickets = currentTickets + 1;
+      }
+    }
 
     setNewComment("");
     setAttachmentFile(null);
