@@ -173,26 +173,17 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Project Description</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RichTextEditor
-              value={projectDescription}
-              onChange={setProjectDescription}
-              placeholder="Describe your project goals, target audience, and key features..."
-            />
-          </CardContent>
-        </Card>
-
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Assigned Team</CardTitle>
+              <CardTitle>Project Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <TeamSelector selectedUsers={assignedTeam} onTeamChange={setAssignedTeam} />
+              <RichTextEditor
+                value={projectDescription}
+                onChange={setProjectDescription}
+                placeholder="Describe your project goals, target audience, and key features..."
+              />
             </CardContent>
           </Card>
           <Card>
@@ -249,21 +240,31 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Selected Services</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {selectedServices.map((service) => (
-              <div key={service.title} className="flex items-center gap-2 bg-muted py-1 px-2 rounded-md">
-                <div className={cn("p-1 rounded-sm", service.iconColor)}>
-                  <service.icon className="h-4 w-4" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Assigned Team</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TeamSelector selectedUsers={assignedTeam} onTeamChange={setAssignedTeam} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Selected Services</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {selectedServices.map((service) => (
+                <div key={service.title} className="flex items-center gap-2 bg-muted py-1 px-2 rounded-md">
+                  <div className={cn("p-1 rounded-sm", service.iconColor)}>
+                    <service.icon className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-medium">{service.title}</span>
                 </div>
-                <span className="text-sm font-medium">{service.title}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
 
         <RequestComments />
       </div>
