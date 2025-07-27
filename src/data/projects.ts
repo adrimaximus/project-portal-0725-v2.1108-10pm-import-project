@@ -3,6 +3,12 @@ import { AssignedUser } from './types';
 
 export type { AssignedUser };
 
+export interface Task {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -19,6 +25,7 @@ export interface Project {
   briefFiles?: File[];
   tickets?: number;
   invoiceAttachmentUrl?: string;
+  tasks?: Task[];
 }
 
 export const dummyProjects: Project[] = [
@@ -36,6 +43,13 @@ export const dummyProjects: Project[] = [
     assignedTo: [allUsers[0], allUsers[2]],
     services: ["Web Development", "UI/UX Design"],
     tickets: 5,
+    tasks: [
+      { id: "task-1", text: "Design homepage mockups", completed: true },
+      { id: "task-2", text: "Develop user authentication", completed: true },
+      { id: "task-3", text: "Set up product database schema", completed: true },
+      { id: "task-4", text: "Implement shopping cart feature", completed: false },
+      { id: "task-5", text: "Integrate payment gateway", completed: false },
+    ],
   },
   {
     id: "proj-2",
@@ -51,6 +65,12 @@ export const dummyProjects: Project[] = [
     assignedTo: [allUsers[1], allUsers[3], allUsers[4]],
     services: ["Mobile App Development", "API Integration"],
     tickets: 2,
+    tasks: [
+        { id: "task-6", text: "Plan app architecture", completed: true },
+        { id: "task-7", text: "Design UI/UX", completed: true },
+        { id: "task-8", text: "Develop core features", completed: true },
+        { id: "task-9", text: "Perform security audit", completed: true },
+    ]
   },
   {
     id: "proj-3",
@@ -65,6 +85,12 @@ export const dummyProjects: Project[] = [
     assignedTo: [allUsers[5]],
     services: ["Digital Marketing"],
     tickets: 0,
+    tasks: [
+        { id: "task-10", text: "Define campaign goals", completed: true },
+        { id: "task-11", text: "Create content calendar", completed: false },
+        { id: "task-12", text: "Design ad creatives", completed: false },
+        { id: "task-13", text: "Schedule posts", completed: false },
+    ]
   },
   {
     id: "proj-4",
@@ -79,6 +105,7 @@ export const dummyProjects: Project[] = [
     assignedTo: [allUsers[0], allUsers[5]],
     services: ["Branding", "Graphic Design"],
     tickets: 8,
+    tasks: [],
   },
   {
     id: "proj-5",
@@ -94,5 +121,10 @@ export const dummyProjects: Project[] = [
     assignedTo: [allUsers[1], allUsers[6]],
     services: ["System Integration", "Consulting"],
     tickets: 1,
+    tasks: [
+        { id: "task-14", text: "Migrate customer data", completed: true },
+        { id: "task-15", text: "Customize sales pipeline", completed: true },
+        { id: "task-16", text: "Train sales team", completed: true },
+    ]
   },
 ];
