@@ -10,11 +10,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface ProjectTeamProps {
   assignedTo: AssignedUser[];
-  isEditing: boolean;
   onTeamChange: (selectedUsers: AssignedUser[]) => void;
 }
 
-const ProjectTeam = ({ assignedTo, isEditing, onTeamChange }: ProjectTeamProps) => {
+const ProjectTeam = ({ assignedTo, onTeamChange }: ProjectTeamProps) => {
   const [open, setOpen] = useState(false);
 
   const handleSelect = (user: AssignedUser) => {
@@ -49,54 +48,50 @@ const ProjectTeam = ({ assignedTo, isEditing, onTeamChange }: ProjectTeamProps) 
                 <p className="text-xs text-muted-foreground">{user.role}</p>
               </TooltipContent>
             </Tooltip>
-            {isEditing && (
-              <button
-                onClick={() => handleRemove(user)}
-                className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label={`Remove ${user.name}`}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
+            <button
+              onClick={() => handleRemove(user)}
+              className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              aria-label={`Remove ${user.name}`}
+            >
+              <X className="h-3 w-3" />
+            </button>
           </div>
         ))}
 
-        {isEditing && (
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" className="rounded-full w-10 h-10">
-                <Plus className="h-4 w-4" />
-                <span className="sr-only">Add team member</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="p-0 w-64" align="start">
-              <Command>
-                <CommandInput placeholder="Search users..." />
-                <CommandList>
-                  <CommandEmpty>No users found.</CommandEmpty>
-                  <CommandGroup>
-                    {unassignedUsers.map((user) => (
-                      <CommandItem
-                        key={user.id}
-                        onSelect={() => handleSelect(user)}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatar} alt={user.name} />
-                          <AvatarFallback>{user.name.slice(0, 2)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p>{user.name}</p>
-                          <p className="text-xs text-muted-foreground">{user.role}</p>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        )}
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="icon" className="rounded-full w-10 h-10">
+              <Plus className="h-4 w-4" />
+              <span className="sr-only">Add team member</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="p-0 w-64" align="start">
+            <Command>
+              <CommandInput placeholder="Search users..." />
+              <CommandList>
+                <CommandEmpty>No users found.</CommandEmpty>
+                <CommandGroup>
+                  {unassignedUsers.map((user) => (
+                    <CommandItem
+                      key={user.id}
+                      onSelect={() => handleSelect(user)}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarFallback>{user.name.slice(0, 2)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p>{user.name}</p>
+                        <p className="text-xs text-muted-foreground">{user.role}</p>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
     </TooltipProvider>
   );

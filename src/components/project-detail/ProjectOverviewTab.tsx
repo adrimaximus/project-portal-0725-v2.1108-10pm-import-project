@@ -83,7 +83,6 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
       <Section title="Assigned Team">
         <ProjectTeam
           assignedTo={project.assignedTo}
-          isEditing={isEditing}
           onTeamChange={onTeamChange}
         />
       </Section>
