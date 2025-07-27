@@ -3,6 +3,14 @@ import { AssignedUser } from './types';
 
 export type { AssignedUser };
 
+export interface Comment {
+  id: string;
+  author: AssignedUser;
+  timestamp: Date;
+  content: string;
+  isInternal: boolean;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -17,7 +25,7 @@ export interface Project {
   assignedTo: AssignedUser[];
   services: string[];
   briefFiles?: File[];
-  tickets?: number;
+  comments?: Comment[];
   invoiceAttachmentUrl?: string;
 }
 
@@ -35,6 +43,22 @@ export const dummyProjects: Project[] = [
     paymentStatus: "pending",
     assignedTo: [allUsers[0], allUsers[2]],
     services: ["Web Development", "UI/UX Design"],
+    comments: [
+      {
+        id: 'comment-1-1',
+        author: allUsers[0],
+        timestamp: new Date('2024-07-29T10:00:00Z'),
+        content: "Initial project brief is uploaded. Please review.",
+        isInternal: false,
+      },
+      {
+        id: 'comment-1-2',
+        author: allUsers[2],
+        timestamp: new Date('2024-07-29T14:30:00Z'),
+        content: "Reviewed. Looks good. Let's schedule a kickoff meeting.",
+        isInternal: true,
+      }
+    ]
   },
   {
     id: "proj-2",
@@ -49,6 +73,15 @@ export const dummyProjects: Project[] = [
     paymentStatus: "paid",
     assignedTo: [allUsers[1], allUsers[3], allUsers[4]],
     services: ["Mobile App Development", "API Integration"],
+    comments: [
+        {
+            id: 'comment-2-1',
+            author: allUsers[1],
+            timestamp: new Date('2024-07-28T10:30:00Z'),
+            content: "The final version has been deployed to production.",
+            isInternal: false,
+        }
+    ]
   },
   {
     id: "proj-3",
@@ -62,6 +95,7 @@ export const dummyProjects: Project[] = [
     paymentStatus: "pending",
     assignedTo: [allUsers[5]],
     services: ["Digital Marketing"],
+    comments: [],
   },
   {
     id: "proj-4",
@@ -75,6 +109,15 @@ export const dummyProjects: Project[] = [
     paymentStatus: "proposed",
     assignedTo: [allUsers[0], allUsers[5]],
     services: ["Branding", "Graphic Design"],
+    comments: [
+        {
+            id: 'comment-4-1',
+            author: allUsers[5],
+            timestamp: new Date('2024-07-25T09:00:00Z'),
+            content: "Can we get the new logo concepts by end of week?",
+            isInternal: false,
+        }
+    ],
   },
   {
     id: "proj-5",
@@ -89,5 +132,6 @@ export const dummyProjects: Project[] = [
     paymentStatus: "paid",
     assignedTo: [allUsers[1], allUsers[6]],
     services: ["System Integration", "Consulting"],
+    comments: [],
   },
 ];
