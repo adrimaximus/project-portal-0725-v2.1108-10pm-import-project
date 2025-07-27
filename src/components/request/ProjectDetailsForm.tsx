@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { DateRange } from "react-day-picker";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Service } from "@/data/services";
 import { dummyProjects, Project, AssignedUser } from "@/data/projects";
-import { ArrowLeft, Calendar as CalendarIcon, Paperclip, Wallet, CalendarDays, CalendarClock, FileText, X } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Paperclip, Wallet, CalendarDays, FileText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -25,23 +26,22 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const navigate = useNavigate();
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
+  const [date, setDate] = useState<DateRange | undefined>();
   const [paymentDueDate, setPaymentDueDate] = useState<Date>();
   const [budget, setBudget] = useState<number | undefined>();
   const [briefFiles, setBriefFiles] = useState<File[]>([]);
   const [assignedTeam, setAssignedTeam] = useState<AssignedUser[]>([]);
 
-  const isSubmitDisabled = !projectName || !projectDescription || selectedServices.length === 0 || !startDate || !endDate || !budget || assignedTeam.length === 0;
+  const isSubmitDisabled = !projectName || !projectDescription || selectedServices.length === 0 || !date?.from || !date?.to || !budget || assignedTeam.length === 0;
 
   useEffect(() => {
-    if (endDate) {
-      const newPaymentDueDate = addDays(endDate, 45);
+    if (date?.to) {
+      const newPaymentDueDate = addDays(date.to, 45);
       setPaymentDueDate(newPaymentDueDate);
     } else {
       setPaymentDueDate(undefined);
     }
-  }, [endDate]);
+  }, [date]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -55,7 +55,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   };
 
   const handleSubmitRequest = () => {
-    if (isSubmitDisabled) {
+    if (isSubmitDisabled || !date?.from || !date?.to) {
       alert("Please fill all required fields.");
       return;
     }
@@ -66,11 +66,11 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       description: projectDescription,
       status: "Requested",
       progress: 0,
-      startDate: format(startDate as Date, "yyyy-MM-dd"),
-      deadline: format(endDate as Date, "yyyy-MM-dd"),
+      startDate: format(date.from, "yyyy-MM-dd"),
+      deadline: format(date.to, "yyyy-MM-dd"),
       paymentDueDate: paymentDueDate ? format(paymentDueDate, "yyyy-MM-dd") : undefined,
       budget: budget as number,
-      paymentStatus: "pending",
+      paymentStatus: "proposed",
       assignedTo: assignedTeam,
       services: selectedServices.map(s => s.title),
       briefFiles: briefFiles,
@@ -109,38 +109,44 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Project Start Date</CardTitle>
+              <CardTitle className="text-sm font-medium">Project Timeline</CardTitle>
               <CalendarDays className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                  <Button
+                    id="date"
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                    {date?.from ? (
+                      date.to ? (
+                        <>
+                          {format(date.from, "LLL dd, y")} -{" "}
+                          {format(date.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(date.from, "LLL dd, y")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Project Due Date</CardTitle>
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={date?.from}
+                    selected={date}
+                    onSelect={setDate}
+                    numberOfMonths={2}
+                  />
                 </PopoverContent>
               </Popover>
             </CardContent>
