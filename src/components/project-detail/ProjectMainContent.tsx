@@ -1,27 +1,35 @@
-import { Project, AssignedUser } from "@/data/projects";
-import { Comment } from "@/data/comments";
-import ProjectComments from "../ProjectComments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import ProjectOverview from "./ProjectOverview";
+import ProjectComments, { Comment } from "@/components/ProjectComments";
+import { Project, AssignedUser } from "@/data/projects";
+import { Badge } from "../ui/badge";
 
-export interface ProjectMainContentProps {
+interface ProjectMainContentProps {
   project: Project;
+  isEditing: boolean;
+  onDescriptionChange: (value: string) => void;
+  onTeamChange: (selectedUsers: AssignedUser[]) => void;
+  onFilesChange: (files: File[]) => void;
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
-  isEditing: boolean;
-  editedProject: Project | null;
-  onDescriptionChange: (value: string) => void;
-  onTeamChange: (users: AssignedUser[]) => void;
-  onFilesChange: (files: File[]) => void;
+  projectId: string;
+  ticketCount: number;
 }
 
-const ProjectMainContent = ({ project, comments, setComments }: ProjectMainContentProps) => {
-  const ticketCount = comments.filter(c => c.isTicket).length;
-
+const ProjectMainContent = ({
+  project,
+  isEditing,
+  onDescriptionChange,
+  onTeamChange,
+  onFilesChange,
+  comments,
+  setComments,
+  projectId,
+  ticketCount,
+}: ProjectMainContentProps) => {
   return (
-    <Tabs defaultValue="overview" className="space-y-4">
-      <TabsList>
+    <Tabs defaultValue="overview" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="comments">
           Comments & Tickets
@@ -30,21 +38,20 @@ const ProjectMainContent = ({ project, comments, setComments }: ProjectMainConte
           )}
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="overview" className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Description</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">{project.description}</p>
-          </CardContent>
-        </Card>
+      <TabsContent value="overview" className="mt-6">
+        <ProjectOverview
+          project={project}
+          isEditing={isEditing}
+          onDescriptionChange={onDescriptionChange}
+          onTeamChange={onTeamChange}
+          onFilesChange={onFilesChange}
+        />
       </TabsContent>
-      <TabsContent value="comments">
+      <TabsContent value="comments" className="mt-6">
         <ProjectComments
           comments={comments}
           setComments={setComments}
-          projectId={project.id}
+          projectId={projectId}
         />
       </TabsContent>
     </Tabs>

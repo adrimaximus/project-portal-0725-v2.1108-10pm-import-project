@@ -8,7 +8,23 @@ import { Paperclip, Send, Ticket, File, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { dummyProjects } from '@/data/projects';
-import { Comment, dummyComments } from '@/data/comments';
+
+export type Comment = {
+  id: number;
+  projectId: string;
+  user: {
+    name: string;
+    avatar: string;
+  };
+  text: string;
+  timestamp: string;
+  isTicket?: boolean;
+  attachment?: {
+    name: string;
+    url: string;
+    type: 'image' | 'file';
+  };
+};
 
 interface ProjectCommentsProps {
   comments: Comment[];
@@ -51,10 +67,6 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
       };
     }
 
-    // Save the comment to the central data source
-    dummyComments.push(comment);
-
-    // Update the UI immediately
     setComments(prev => [...prev, comment]);
 
     // If it's a ticket, update the master project list

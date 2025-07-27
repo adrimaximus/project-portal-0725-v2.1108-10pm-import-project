@@ -1,101 +1,123 @@
-import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectsTable, { columns } from "@/components/ProjectsTable";
-import { dummyProjects, Project } from "@/data/projects";
-import { Button } from "@/components/ui/button";
-import { DollarSign, CreditCard, Activity, Ticket } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { DateRange } from "react-day-picker";
+import { Button } from "@/components/ui/button";
+import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
+import PortalLayout from "@/components/PortalLayout";
+import ProjectsTable, { columns } from "@/components/ProjectsTable";
+import { dummyProjects } from "@/data/projects";
+import { initialComments } from "@/data/comments";
+import { PlusCircle } from "lucide-react";
+import ProjectStats from "@/components/ProjectStats";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const IndexPage = () => {
+export default function Index() {
   const navigate = useNavigate();
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>(dummyProjects);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
 
-  const stats = useMemo(() => {
-    const totalRevenue = filteredProjects
-      .filter(p => p.paymentStatus === 'paid')
-      .reduce((sum, p) => sum + p.budget, 0);
+  const allAssignees = Array.from(
+    new Set(dummyProjects.flatMap((p) => p.assignedTo.map((a) => a.name)))
+  );
 
-    const pendingPayments = filteredProjects
-      .filter(p => ["pending", "on_process", "po_created", "approved", "proposed"].includes(p.paymentStatus))
-      .reduce((sum, p) => sum + p.budget, 0);
-    
-    const activeProjects = filteredProjects.filter(p => p.status === 'In Progress').length;
+  const projectsWithTicketCounts = dummyProjects.map(project => {
+    const ticketCount = initialComments.filter(comment => 
+      comment.projectId === project.id && comment.isTicket
+    ).length;
+    return { ...project, tickets: ticketCount };
+  });
 
-    const activeTickets = filteredProjects.reduce((sum, p) => sum + (p.tickets || 0), 0);
+  const filteredProjects = projectsWithTicketCounts
+    .filter(project => {
+      if (!dateRange || !dateRange.from) {
+        const defaultFrom = new Date(new Date().getFullYear(), 0, 1);
+        const defaultTo = new Date(new Date().getFullYear(), 11, 31);
+        const projectStartDate = new Date(project.startDate);
+        return projectStartDate >= defaultFrom && projectStartDate <= defaultTo;
+      }
+      
+      const projectStartDate = new Date(project.startDate);
+      const from = dateRange.from;
+      const to = dateRange.to;
 
-    return { totalRevenue, pendingPayments, activeProjects, activeTickets };
-  }, [filteredProjects]);
+      if (from && to) {
+        return projectStartDate >= from && projectStartDate <= to;
+      }
+      
+      if (from) {
+        return projectStartDate >= from;
+      }
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(amount);
+      return true;
+    })
+    .filter(project => {
+      if (statusFilter === "all") return true;
+      return project.status === statusFilter;
+    })
+    .filter(project => {
+      if (assigneeFilter === "all") return true;
+      return project.assignedTo.some(a => a.name === assigneeFilter);
+    });
 
   return (
-    <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
-                <p className="text-xs text-muted-foreground">Based on filtered projects</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
-                <CreditCard className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(stats.pendingPayments)}</div>
-                 <p className="text-xs text-muted-foreground">Based on filtered projects</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">+{stats.activeProjects}</div>
-                 <p className="text-xs text-muted-foreground">Currently in progress</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Tickets</CardTitle>
-                <Ticket className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.activeTickets}</div>
-                <p className="text-xs text-muted-foreground">Total open tickets</p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        <TabsContent value="projects" className="space-y-4">
-          <div className="flex items-center justify-between space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight">Projects</h2>
-            <div className="flex items-center space-x-2">
-              <Button onClick={() => navigate('/request')}>+ Add Project</Button>
-            </div>
-          </div>
-          <ProjectsTable columns={columns} data={dummyProjects} onFilteredDataChange={setFilteredProjects} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-};
+    <PortalLayout>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
+          <p className="text-muted-foreground">
+            Here&apos;s a list of your projects.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => navigate("/request")}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            New Project
+          </Button>
+        </div>
+      </div>
 
-export default IndexPage;
+      <div className="mb-6">
+        <ProjectStats projects={filteredProjects} statusFilter={statusFilter} />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        <DatePickerWithRange onDateChange={setDateRange} />
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="Requested">Requested</SelectItem>
+            <SelectItem value="In Progress">In Progress</SelectItem>
+            <SelectItem value="Completed">Completed</SelectItem>
+            <SelectItem value="Billed">Billed</SelectItem>
+            <SelectItem value="On Hold">On Hold</SelectItem>
+            <SelectItem value="Cancelled">Cancelled</SelectItem>
+            <SelectItem value="Done">Done</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Filter by assignee" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Assignees</SelectItem>
+            {allAssignees.map(name => (
+              <SelectItem key={name} value={name}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <ProjectsTable columns={columns} data={filteredProjects} />
+    </PortalLayout>
+  );
+}
