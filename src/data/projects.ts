@@ -20,6 +20,7 @@ export interface Project {
   paymentDueDate?: string;
   budget: number;
   paymentStatus: "proposed" | "approved" | "po_created" | "on_process" | "pending" | "paid" | "cancelled";
+  createdBy: AssignedUser;
   assignedTo: AssignedUser[];
   services: string[];
   briefFiles?: File[];
@@ -40,6 +41,7 @@ export const dummyProjects: Project[] = [
     paymentDueDate: "2024-10-15",
     budget: 120000000,
     paymentStatus: "pending",
+    createdBy: allUsers[2],
     assignedTo: [allUsers[0], allUsers[2]],
     services: ["Web Development", "UI/UX Design"],
     tickets: 5,
@@ -62,6 +64,7 @@ export const dummyProjects: Project[] = [
     paymentDueDate: "2024-08-05",
     budget: 250000000,
     paymentStatus: "paid",
+    createdBy: allUsers[0],
     assignedTo: [allUsers[1], allUsers[3], allUsers[4]],
     services: ["Mobile App Development", "API Integration"],
     tickets: 2,
@@ -82,6 +85,7 @@ export const dummyProjects: Project[] = [
     deadline: "2024-08-31",
     budget: 50000000,
     paymentStatus: "pending",
+    createdBy: allUsers[5],
     assignedTo: [allUsers[5]],
     services: ["Digital Marketing"],
     tickets: 0,
@@ -102,6 +106,7 @@ export const dummyProjects: Project[] = [
     deadline: "2024-11-25",
     budget: 85000000,
     paymentStatus: "proposed",
+    createdBy: allUsers[1],
     assignedTo: [allUsers[0], allUsers[5]],
     services: ["Branding", "Graphic Design"],
     tickets: 8,
@@ -118,6 +123,7 @@ export const dummyProjects: Project[] = [
     paymentDueDate: "2024-07-15",
     budget: 150000000,
     paymentStatus: "paid",
+    createdBy: allUsers[6],
     assignedTo: [allUsers[1], allUsers[6]],
     services: ["System Integration", "Consulting"],
     tickets: 1,

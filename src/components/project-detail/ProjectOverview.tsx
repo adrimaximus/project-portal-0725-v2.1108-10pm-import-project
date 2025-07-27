@@ -175,8 +175,29 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Project Description</CardTitle>
+          <CardHeader className="flex flex-row items-start justify-between space-y-0">
+            <div>
+              <CardTitle>Project Description</CardTitle>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-2 text-right">
+                    <div className="not-sr-only">
+                      <p className="text-sm font-medium">{project.createdBy.name}</p>
+                      <p className="text-xs text-muted-foreground">Project Creator</p>
+                    </div>
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={project.createdBy.avatar} alt={project.createdBy.name} />
+                      <AvatarFallback>{project.createdBy.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+                    </Avatar>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{project.createdBy.name} ({project.createdBy.email})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardHeader>
           <CardContent>
             {isEditing ? (

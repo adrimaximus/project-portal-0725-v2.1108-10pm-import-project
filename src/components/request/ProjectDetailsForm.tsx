@@ -16,6 +16,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import RichTextEditor from "@/components/RichTextEditor";
 import RequestComments from "@/components/request/RequestComments";
 import TeamSelector from "./TeamSelector";
+import { allUsers } from "@/data/users";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -71,6 +72,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       paymentDueDate: paymentDueDate ? format(paymentDueDate, "yyyy-MM-dd") : undefined,
       budget: budget as number,
       paymentStatus: "proposed",
+      createdBy: allUsers[0], // Assume the first user is the creator for new projects
       assignedTo: assignedTeam,
       services: selectedServices.map(s => s.title),
       briefFiles: briefFiles,
