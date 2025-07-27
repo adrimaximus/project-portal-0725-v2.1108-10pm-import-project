@@ -4,17 +4,16 @@ import { dummyProjects, Project, Task, AssignedUser } from "@/data/projects";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
-import ProjectProgressAndTasksCard from "@/components/project-detail/ProjectProgressAndTasksCard";
+import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
 import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
-import { dummyComments, Comment } from "@/data/comments";
+import ProjectTasksCard from "@/components/project-detail/ProjectTasksCard";
 
 const ProjectDetailPage = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [isEditing, setIsEditing] = useState(false); // To satisfy ProjectMainContent props
 
   useEffect(() => {
     const foundProject = dummyProjects.find((p) => p.id === projectId);
@@ -24,8 +23,6 @@ const ProjectDetailPage = () => {
         tasks: foundProject.tasks || [],
       };
       setProject(projectWithTasks);
-      const projectComments = dummyComments.filter(c => c.projectId === projectId);
-      setComments(projectComments);
     }
   }, [projectId]);
 
@@ -77,14 +74,11 @@ const ProjectDetailPage = () => {
             onDescriptionChange={(value) => handleProjectUpdate({ description: value })}
             onTeamChange={(value) => handleProjectUpdate({ assignedTo: value as AssignedUser[] })}
             onFilesChange={(value) => handleProjectUpdate({ briefFiles: value })}
-            comments={comments}
-            setComments={setComments}
-            projectId={project.id}
-            ticketCount={project.tickets || 0}
           />
+          <ProjectTasksCard project={project} onTasksUpdate={handleTasksUpdate} />
         </div>
         <div className="space-y-4 md:space-y-8">
-          <ProjectProgressAndTasksCard project={project} onTasksUpdate={handleTasksUpdate} />
+          <ProjectProgressCard project={project} />
           <ProjectTeamCard project={project} />
           <ProjectDetailsCard project={project} />
         </div>

@@ -1,49 +1,62 @@
-export type Comment = {
-  id: number;
-  projectId: string;
-  user: {
-    name: string;
-    avatar: string;
-  };
-  text: string;
-  timestamp: string;
-  isTicket?: boolean;
-  attachment?: {
-    name: string;
-    url: string;
-    type: 'image' | 'file';
-  };
-};
+import { Comment } from "@/components/ProjectComments";
 
-export let initialComments: Comment[] = [
+export const initialComments: Comment[] = [
   {
     id: 1,
     projectId: "proj-1",
-    user: { name: "Alice Johnson", avatar: "https://i.pravatar.cc/150?u=alice" },
-    text: "Initial kickoff meeting scheduled for tomorrow. Please review the project brief.",
+    user: {
+      name: "Olivia Martin",
+      avatar: "https://i.pravatar.cc/150?u=olivia",
+    },
+    text: "Just a heads up, the latest designs for the user dashboard are ready for review. I've attached the Figma link.",
     timestamp: "2 days ago",
   },
   {
     id: 2,
     projectId: "proj-1",
-    user: { name: "Bob Williams", avatar: "https://i.pravatar.cc/150?u=bob" },
-    text: "The database schema is ready for review. I've attached the ERD diagram.",
+    user: {
+      name: "Ethan Carter",
+      avatar: "https://i.pravatar.cc/150?u=ethan",
+    },
+    text: "I'm encountering a bug on the staging server where the login button is unresponsive. I've raised a ticket for this.",
     timestamp: "1 day ago",
-    attachment: { name: "ERD_v1.pdf", url: "#", type: "file" },
+    isTicket: true,
   },
   {
     id: 3,
     projectId: "proj-1",
-    user: { name: "Charlie Brown", avatar: "https://i.pravatar.cc/150?u=charlie" },
-    text: "I'm having trouble accessing the staging server. Can someone help?",
-    timestamp: "3 hours ago",
-    isTicket: true,
+    user: {
+      name: "You",
+      avatar: "https://i.pravatar.cc/150?u=currentuser",
+    },
+    text: "Thanks for the update, Olivia. I'll take a look at the designs today.",
+    timestamp: "1 day ago",
   },
   {
     id: 4,
     projectId: "proj-2",
-    user: { name: "Diana Miller", avatar: "https://i.pravatar.cc/150?u=diana" },
-    text: "The final version of the app has been submitted to the App Store.",
-    timestamp: "1 week ago",
+    user: {
+      name: "Sophia Davis",
+      avatar: "https://i.pravatar.cc/150?u=sophia",
+    },
+    text: "The client has requested a new feature: the ability to export reports as CSV files. I've created a ticket to track this request.",
+    timestamp: "3 hours ago",
+    isTicket: true,
+    attachment: {
+      name: "feature-request.pdf",
+      url: "#",
+      type: 'file',
+    }
+  },
+  {
+    id: 5,
+    projectId: "proj-3",
+    user: {
+      name: "Liam Brown",
+      avatar: "https://i.pravatar.cc/150?u=liam",
+    },
+    text: "The campaign is underperforming. We need to rethink the ad copy. Ticket raised.",
+    timestamp: "5 hours ago",
+    isTicket: true,
   },
 ];
