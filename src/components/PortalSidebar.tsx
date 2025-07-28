@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown, LifeBuoy, LogOut, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -35,6 +35,7 @@ type NavItem = {
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
   const totalUnreadChatCount = dummyConversations.reduce(
@@ -154,10 +155,19 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                 <DropdownMenuContent side="right" align="end" className="w-56">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Settings</DropdownMenuItem>
-                  <DropdownMenuItem>Support</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => navigate('/profile')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <LifeBuoy className="mr-2 h-4 w-4" />
+                    <span>Support</span>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Logout</DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
@@ -181,11 +191,11 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                 {isAccountMenuOpen && (
                   <nav className="grid items-start gap-1 text-sm font-medium mt-2 pl-8">
                     <Link
-                      to="#"
+                      to="/profile"
                       className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
                       <Settings className="h-4 w-4" />
-                      Settings
+                      Profile
                     </Link>
                     <Link
                       to="#"
