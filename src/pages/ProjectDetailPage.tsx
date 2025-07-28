@@ -19,11 +19,14 @@ const ProjectDetailPage = () => {
   // Helper to clone project state while preserving File objects
   const cloneProject = (p: Project | null): Project | null => {
     if (!p) return null;
-    const cloned = JSON.parse(JSON.stringify(p));
-    // Restore File objects that are lost during JSON serialization
-    if (p.briefFiles) {
-      cloned.briefFiles = p.briefFiles;
-    }
+    // A more robust clone that preserves File objects by not using JSON.stringify on them.
+    const cloned = { ...p };
+    cloned.tasks = p.tasks ? JSON.parse(JSON.stringify(p.tasks)) : undefined;
+    cloned.comments = p.comments ? JSON.parse(JSON.stringify(p.comments)) : undefined;
+    cloned.assignedTo = p.assignedTo ? JSON.parse(JSON.stringify(p.assignedTo)) : undefined;
+    cloned.createdBy = p.createdBy ? JSON.parse(JSON.stringify(p.createdBy)) : undefined;
+    // File objects are not serializable, so we create a shallow copy of the array.
+    cloned.briefFiles = p.briefFiles ? [...p.briefFiles] : undefined;
     return cloned;
   };
 
