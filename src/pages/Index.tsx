@@ -95,7 +95,7 @@ export default function Index() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
           <p className="text-muted-foreground">
-            Here&apos;s a list of your projects.
+            Hi Alex, have a good day ! 👋
           </p>
         </div>
         <div className="flex items-center gap-2">
