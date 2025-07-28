@@ -29,9 +29,9 @@ const ProjectHeader = ({
     <header className="flex flex-col gap-4">
       <div>
         <Button variant="ghost" asChild className="-ml-4">
-          <Link to="/projects">
+          <Link to="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Projects
+            Back to Dashboard
           </Link>
         </Button>
       </div>
