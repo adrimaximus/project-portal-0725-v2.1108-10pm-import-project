@@ -122,7 +122,7 @@ const ProjectDetail = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
+      <div className="h-full overflow-y-auto space-y-6 p-4 lg:p-6">
         <ProjectHeader 
           project={project} 
           isEditing={isEditing}
