@@ -4,8 +4,9 @@ import { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
 import PortalLayout from "@/components/PortalLayout";
-import ProjectsTable from "@/components/ProjectsTable";
+import ProjectsTable, { columns } from "@/components/ProjectsTable";
 import { dummyProjects } from "@/data/projects";
+import { initialComments } from "@/data/comments";
 import { PlusCircle } from "lucide-react";
 import ProjectStats from "@/components/ProjectStats";
 import {
@@ -21,13 +22,19 @@ export default function Index() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
-  const [projects, setProjects] = useState(dummyProjects);
 
   const allAssignees = Array.from(
     new Set(dummyProjects.flatMap((p) => p.assignedTo.map((a) => a.name)))
   );
 
-  const filteredProjects = projects
+  const projectsWithTicketCounts = dummyProjects.map(project => {
+    const ticketCount = initialComments.filter(comment => 
+      comment.projectId === project.id && comment.isTicket
+    ).length;
+    return { ...project, tickets: ticketCount };
+  });
+
+  const filteredProjects = projectsWithTicketCounts
     .filter(project => {
       if (!dateRange || !dateRange.from) {
         const defaultFrom = new Date(new Date().getFullYear(), 0, 1);
@@ -58,10 +65,6 @@ export default function Index() {
       if (assigneeFilter === "all") return true;
       return project.assignedTo.some(a => a.name === assigneeFilter);
     });
-  
-  const handleDeleteProject = (projectId: string) => {
-    setProjects(projects.filter(p => p.id !== projectId));
-  };
 
   return (
     <PortalLayout>
@@ -81,7 +84,7 @@ export default function Index() {
       </div>
 
       <div className="mb-6">
-        <ProjectStats projects={filteredProjects} />
+        <ProjectStats projects={filteredProjects} statusFilter={statusFilter} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-6">
@@ -114,7 +117,7 @@ export default function Index() {
         </Select>
       </div>
 
-      <ProjectsTable projects={filteredProjects} onDelete={handleDeleteProject} />
+      <ProjectsTable columns={columns} data={filteredProjects} />
     </PortalLayout>
   );
 }

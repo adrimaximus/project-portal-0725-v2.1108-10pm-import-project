@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge, BadgeProps } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, FileText, CheckCircle, Clock, XCircle, FileClock, BadgeDollarSign, FileCheck, FileX, Download, Trash2, Pencil } from "lucide-react";
 import { Project } from "@/data/projects";
@@ -28,13 +28,6 @@ interface ProjectsTableProps {
   projects: Project[];
   onDelete: (projectId: string) => void;
 }
-
-type PaymentStatusInfo = {
-  icon: JSX.Element;
-  label: string;
-  variant: BadgeProps["variant"];
-  className?: string;
-};
 
 const getStatusIcon = (status: Project["status"]) => {
   switch (status) {
@@ -55,7 +48,7 @@ const getStatusIcon = (status: Project["status"]) => {
   }
 };
 
-const getPaymentStatusInfo = (status: Project["paymentStatus"]): PaymentStatusInfo => {
+const getPaymentStatusInfo = (status: Project["paymentStatus"]) => {
   switch (status) {
     case "paid":
       return {

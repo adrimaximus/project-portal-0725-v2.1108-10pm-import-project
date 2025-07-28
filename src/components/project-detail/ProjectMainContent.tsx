@@ -1,7 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Project, Comment } from "@/data/projects";
-import ProjectComments from "@/components/ProjectComments";
+import { Project } from "@/data/projects";
+import { Comment } from "../ProjectComments";
+import ProjectComments from "../ProjectComments";
 import ProjectOverviewTab from "./ProjectOverviewTab";
 
 interface ProjectMainContentProps {
@@ -26,20 +27,18 @@ const ProjectMainContent = ({
   comments,
   setComments,
   projectId,
+  ticketCount,
+  allProjects = [],
 }: ProjectMainContentProps) => {
-  const handleCommentPost = (newComment: Comment) => {
-    setComments((prevComments) => [...prevComments, newComment]);
-  };
-
   return (
     <Tabs defaultValue="overview" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="comments">
           Comments
-          {project.comments && project.comments.length > 0 && (
+          {ticketCount > 0 && (
             <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-medium text-destructive-foreground">
-              {project.comments.length}
+              {ticketCount}
             </span>
           )}
         </TabsTrigger>
@@ -59,9 +58,11 @@ const ProjectMainContent = ({
       </TabsContent>
       <TabsContent value="comments">
         <ProjectComments
-          projectId={projectId}
           comments={comments}
-          onCommentPost={handleCommentPost}
+          setComments={setComments}
+          projectId={projectId}
+          assignableUsers={project.assignedTo}
+          allProjects={allProjects}
         />
       </TabsContent>
     </Tabs>

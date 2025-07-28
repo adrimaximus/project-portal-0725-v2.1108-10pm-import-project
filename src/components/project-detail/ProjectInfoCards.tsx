@@ -1,18 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project } from "@/data/projects";
-import { Badge, BadgeProps } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, FileCheck, FileClock, FileText, FileX, XCircle, BadgeDollarSign } from "lucide-react";
 
 interface ProjectInfoCardsProps {
   project: Project;
 }
-
-type PaymentStatusInfo = {
-  icon: JSX.Element;
-  label: string;
-  variant: BadgeProps["variant"];
-  className?: string;
-};
 
 const getStatusInfo = (status: Project["status"]) => {
   switch (status) {
@@ -33,7 +26,7 @@ const getStatusInfo = (status: Project["status"]) => {
   }
 };
 
-const getPaymentStatusInfo = (status: Project["paymentStatus"]): PaymentStatusInfo => {
+const getPaymentStatusInfo = (status: Project["paymentStatus"]) => {
     switch (status) {
       case "paid":
         return { icon: <CheckCircle className="h-4 w-4 text-green-500" />, label: "Paid", variant: "default", className: "bg-green-100 text-green-800" };

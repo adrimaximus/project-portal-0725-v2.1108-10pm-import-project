@@ -80,7 +80,6 @@ const ProjectDetails = () => {
 
         <div className="col-span-3 lg:col-span-2">
           <ProjectComments
-            projectId={project.id}
             comments={project.comments || []}
             onCommentPost={handleCommentPost}
           />
