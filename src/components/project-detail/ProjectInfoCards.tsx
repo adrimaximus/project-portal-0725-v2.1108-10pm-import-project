@@ -91,7 +91,7 @@ const ProjectInfoCards = ({
       })
     : "Not Set";
 
-  const isPaymentOverdue = project.paymentDueDate && isPast(new Date(project.paymentDueDate)) && project.paymentStatus !== 'paid';
+  const isPaymentOverdue = project.paymentDueDate && isPast(new Date(project.paymentDueDate)) && !['paid', 'cancelled'].includes(project.paymentStatus);
   const paymentOverdueDays = project.paymentDueDate && isPaymentOverdue ? differenceInDays(new Date(), new Date(project.paymentDueDate)) : 0;
 
   return (
