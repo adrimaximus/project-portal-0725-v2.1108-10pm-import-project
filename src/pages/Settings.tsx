@@ -1,19 +1,19 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import PortalLayout from "@/components/PortalLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const SettingsPage = () => {
+const Settings = () => {
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8">
+    <PortalLayout>
       <Card>
         <CardHeader>
           <CardTitle>Settings</CardTitle>
-          <CardDescription>Manage your account settings and preferences.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p>This page is under construction.</p>
+          <p>Halaman pengaturan sedang dalam pengembangan.</p>
         </CardContent>
       </Card>
-    </div>
+    </PortalLayout>
   );
 };
 
-export default SettingsPage;
+export default Settings;
