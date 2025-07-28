@@ -16,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ProjectCalendarView from "@/components/ProjectCalendarView";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -84,7 +86,6 @@ export default function Index() {
 
   const billingColumnIds = ['name', 'assignedTo', 'paymentStatus', 'paymentDueDate', 'budget'];
   const billingColumns = columns.filter(column => {
-    // The 'id' is manually set in ProjectsTable.tsx for each column
     const columnId = (column as any).id;
     return billingColumnIds.includes(columnId);
   });
@@ -110,49 +111,59 @@ export default function Index() {
         <ProjectStats projects={filteredProjects} statusFilter={statusFilter} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        <Button
-          variant={isBillingFilterActive ? "secondary" : "outline"}
-          onClick={handleBillingFilterToggle}
-          className="flex items-center gap-2"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          <span>Billing View</span>
-        </Button>
-        {!isBillingFilterActive && (
-          <>
-            <DatePickerWithRange onDateChange={setDateRange} />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="Requested">Requested</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Billed">Billed</SelectItem>
-                <SelectItem value="On Hold">On Hold</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-                <SelectItem value="Done">Done</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by assignee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Assignees</SelectItem>
-                {allAssignees.map(name => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        )}
-      </div>
-
-      <ProjectsTable columns={isBillingFilterActive ? billingColumns : columns} data={filteredProjects} />
+      <Tabs defaultValue="table" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="table">Table View</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+        </TabsList>
+        <TabsContent value="table">
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <Button
+              variant={isBillingFilterActive ? "secondary" : "outline"}
+              onClick={handleBillingFilterToggle}
+              className="flex items-center gap-2"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              <span>Billing View</span>
+            </Button>
+            {!isBillingFilterActive && (
+              <>
+                <DatePickerWithRange onDateChange={setDateRange} />
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="Requested">Requested</SelectItem>
+                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectItem value="Billed">Billed</SelectItem>
+                    <SelectItem value="On Hold">On Hold</SelectItem>
+                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    <SelectItem value="Done">Done</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Assignees</SelectItem>
+                    {allAssignees.map(name => (
+                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+          </div>
+          <ProjectsTable columns={isBillingFilterActive ? billingColumns : columns} data={filteredProjects} />
+        </TabsContent>
+        <TabsContent value="calendar">
+          <ProjectCalendarView projects={filteredProjects} />
+        </TabsContent>
+      </Tabs>
     </PortalLayout>
   );
 }
