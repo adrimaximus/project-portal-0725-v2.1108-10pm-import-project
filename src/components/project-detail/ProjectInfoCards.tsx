@@ -91,8 +91,8 @@ const ProjectInfoCards = ({
       })
     : "Not Set";
 
-  const isOverdue = isPast(new Date(project.deadline)) && !["Completed", "Done", "Billed"].includes(project.status);
-  const overdueDays = isOverdue ? differenceInDays(new Date(), new Date(project.deadline)) : 0;
+  const isPaymentOverdue = project.paymentDueDate && isPast(new Date(project.paymentDueDate)) && project.paymentStatus !== 'paid';
+  const paymentOverdueDays = project.paymentDueDate && isPaymentOverdue ? differenceInDays(new Date(), new Date(project.paymentDueDate)) : 0;
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -208,11 +208,6 @@ const ProjectInfoCards = ({
           ) : (
             <div>
               <div className="text-xl font-bold">{deadlineFormatted}</div>
-              {isOverdue && (
-                <p className="text-xs text-red-500 mt-1">
-                  Overdue by {overdueDays} day{overdueDays !== 1 ? 's' : ''}
-                </p>
-              )}
             </div>
           )}
         </CardContent>
@@ -236,7 +231,14 @@ const ProjectInfoCards = ({
               </PopoverContent>
             </Popover>
           ) : (
-            <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
+            <div>
+              <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
+              {isPaymentOverdue && (
+                <p className="text-xs text-red-500 mt-1">
+                  Overdue by {paymentOverdueDays} day{paymentOverdueDays !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
