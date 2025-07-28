@@ -1,23 +1,25 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import PortalLayout from "./components/PortalLayout";
 import Index from "./pages/Index";
-import Projects from "./pages/Projects";
-import ProjectDetail from "./pages/ProjectDetail";
-import RequestPage from "./pages/Request";
+import RequestPage from "./pages/RequestPage";
 import ChatPage from "./pages/ChatPage";
-import Settings from "./pages/Settings";
-import Billing from "./pages/Billing";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
+import NotificationsPage from "./pages/Notifications";
+import SettingsPage from "./pages/Settings";
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/projects/:projectId" element={<ProjectDetail />} />
-        <Route path="/request" element={<RequestPage />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/billing" element={<Billing />} />
+        <Route element={<PortalLayout />}>
+          <Route path="/" element={<Index />} />
+          <Route path="/request" element={<RequestPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:conversationId" element={<ChatPage />} />
+          <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
       </Routes>
     </Router>
   );
