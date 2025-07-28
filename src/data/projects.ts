@@ -1,7 +1,11 @@
-import { allUsers } from './users';
-import { AssignedUser } from './types';
-
-export type { AssignedUser };
+export interface AssignedUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  email?: string;
+  role?: string;
+  status?: 'Online' | 'Offline';
+}
 
 export interface Task {
   id: string;
@@ -10,128 +14,69 @@ export interface Task {
   assignedTo?: string[];
 }
 
+export interface Activity {
+  id: string;
+  text: string;
+  timestamp: string;
+  user: {
+    name: string;
+    avatar?: string;
+  };
+}
+
 export interface Project {
-  id:string;
+  id: string;
   name: string;
   description: string;
-  status: "Requested" | "In Progress" | "Completed" | "Billed" | "On Hold" | "Cancelled" | "Done";
+  status: "Requested" | "In Progress" | "Completed" | "On Hold" | "Cancelled" | "Done" | "Billed";
   progress: number;
   startDate: string;
   deadline: string;
   paymentDueDate?: string;
   budget: number;
-  paymentStatus: "proposed" | "approved" | "po_created" | "on_process" | "pending" | "paid" | "cancelled";
+  paymentStatus: "proposed" | "pending" | "paid" | "overdue" | "approved" | "po_created" | "on_process" | "cancelled";
   createdBy: AssignedUser;
   assignedTo: AssignedUser[];
   services: string[];
   briefFiles?: File[];
+  tasks?: Task[];
+  activityFeed?: Activity[];
   tickets?: number;
   invoiceAttachmentUrl?: string;
-  tasks?: Task[];
 }
 
+// Data dummy untuk memastikan aplikasi dapat berjalan
 export const dummyProjects: Project[] = [
   {
     id: "proj-1",
-    name: "E-commerce Platform",
-    description: "Developing a new e-commerce platform with a focus on user experience and scalability. The platform will feature a modern design, easy navigation, and a secure checkout process.",
+    name: "E-commerce Platform Development",
+    description: "Building a full-featured e-commerce platform for a client, including a customer-facing storefront and an admin panel for managing products, orders, and customers.",
     status: "In Progress",
-    progress: 60,
-    startDate: "2024-05-15",
+    progress: 65,
+    startDate: "2024-05-01",
     deadline: "2024-09-30",
-    paymentDueDate: "2024-10-15",
-    budget: 120000000,
+    budget: 750000000,
     paymentStatus: "pending",
-    createdBy: allUsers[2],
-    assignedTo: [allUsers[0], allUsers[2]],
-    services: ["Web Development", "UI/UX Design"],
-    tickets: 5,
-    tasks: [
-      { id: "task-1", text: "Design homepage mockups", completed: true, assignedTo: ['user-3'] },
-      { id: "task-2", text: "Develop user authentication", completed: true, assignedTo: ['user-1'] },
-      { id: "task-3", text: "Set up product database schema", completed: true, assignedTo: ['user-1'] },
-      { id: "task-4", text: "Implement shopping cart feature", completed: false, assignedTo: ['user-1', 'user-3'] },
-      { id: "task-5", text: "Integrate payment gateway", completed: false },
+    createdBy: { id: "user-1", name: "Alice Johnson", avatar: "https://i.pravatar.cc/150?u=alice" },
+    assignedTo: [
+      { id: "user-2", name: "Bob Williams", avatar: "https://i.pravatar.cc/150?u=bob" },
+      { id: "user-3", name: "Charlie Brown", avatar: "https://i.pravatar.cc/150?u=charlie" },
+      { id: "user-4", name: "Diana Prince", avatar: "https://i.pravatar.cc/150?u=diana" },
     ],
-  },
-  {
-    id: "proj-2",
-    name: "Mobile Banking App",
-    description: "Creating a secure and user-friendly mobile banking application for iOS and Android. Key features include fund transfers, bill payments, and account statement viewing.",
-    status: "Completed",
-    progress: 100,
-    startDate: "2024-03-01",
-    deadline: "2024-07-20",
-    paymentDueDate: "2024-08-05",
-    budget: 250000000,
-    paymentStatus: "paid",
-    createdBy: allUsers[0],
-    assignedTo: [allUsers[1], allUsers[3], allUsers[4]],
-    services: ["Mobile App Development", "API Integration"],
-    tickets: 2,
+    services: ["Web Development", "UI/UX Design", "API Integration"],
     tasks: [
-        { id: "task-6", text: "Plan app architecture", completed: true, assignedTo: ['user-2', 'user-4'] },
-        { id: "task-7", text: "Design UI/UX", completed: true, assignedTo: ['user-5'] },
-        { id: "task-8", text: "Develop core features", completed: true, assignedTo: ['user-2', 'user-4'] },
-        { id: "task-9", text: "Perform security audit", completed: true, assignedTo: ['user-4'] },
-    ]
-  },
-  {
-    id: "proj-3",
-    name: "Social Media Campaign",
-    description: "Launching a comprehensive social media campaign to increase brand awareness and engagement. The campaign will run on major platforms like Instagram, Facebook, and Twitter.",
-    status: "On Hold",
-    progress: 25,
-    startDate: "2024-06-01",
-    deadline: "2024-08-31",
-    budget: 50000000,
-    paymentStatus: "pending",
-    createdBy: allUsers[5],
-    assignedTo: [allUsers[5]],
-    services: ["Digital Marketing"],
-    tickets: 0,
-    tasks: [
-        { id: "task-10", text: "Define campaign goals", completed: true, assignedTo: ['user-6'] },
-        { id: "task-11", text: "Create content calendar", completed: false },
-        { id: "task-12", text: "Design ad creatives", completed: false },
-        { id: "task-13", text: "Schedule posts", completed: false },
-    ]
-  },
-  {
-    id: "proj-4",
-    name: "Corporate Rebranding",
-    description: "Complete corporate rebranding including a new logo, brand guidelines, and marketing materials. The goal is to modernize the brand image and appeal to a younger demographic.",
-    status: "Requested",
-    progress: 0,
-    startDate: "2024-07-10",
-    deadline: "2024-11-25",
-    budget: 85000000,
-    paymentStatus: "proposed",
-    createdBy: allUsers[1],
-    assignedTo: [allUsers[0], allUsers[5]],
-    services: ["Branding", "Graphic Design"],
-    tickets: 8,
-    tasks: [],
-  },
-  {
-    id: "proj-5",
-    name: "CRM System Implementation",
-    description: "Implementing a new CRM system to streamline sales and customer service processes. This includes data migration, user training, and system customization.",
-    status: "Billed",
-    progress: 100,
-    startDate: "2024-02-10",
-    deadline: "2024-06-30",
-    paymentDueDate: "2024-07-15",
-    budget: 150000000,
-    paymentStatus: "paid",
-    createdBy: allUsers[6],
-    assignedTo: [allUsers[1], allUsers[6]],
-    services: ["System Integration", "Consulting"],
-    tickets: 1,
-    tasks: [
-        { id: "task-14", text: "Migrate customer data", completed: true, assignedTo: ['user-2', 'user-7'] },
-        { id: "task-15", text: "Customize sales pipeline", completed: true, assignedTo: ['user-7'] },
-        { id: "task-16", text: "Train sales team", completed: true, assignedTo: ['user-2'] },
-    ]
+      { id: "task-1", text: "Design homepage and product pages", completed: true, assignedTo: ["user-3"] },
+      { id: "task-2", text: "Set up PostgreSQL database schema", completed: true, assignedTo: ["user-2"] },
+      { id: "task-3", text: "Develop REST API for products and orders", completed: true, assignedTo: ["user-2"] },
+      { id: "task-4", text: "Implement user authentication", completed: false, assignedTo: ["user-4"] },
+      { id: "task-5", text: "Build frontend for product catalog", completed: false, assignedTo: ["user-3"] },
+    ],
+    activityFeed: [
+      { id: 'act-1', text: 'Bob completed "Develop REST API for products and orders"', timestamp: '2024-06-20T14:00:00Z', user: { name: 'Bob Williams' } },
+      { id: 'act-2', text: 'Alice added a new file "project-brief-v2.pdf"', timestamp: '2024-06-19T11:30:00Z', user: { name: 'Alice Johnson' } }
+    ],
+    briefFiles: [],
+    tickets: 5,
+    invoiceAttachmentUrl: "https://example.com/invoice.pdf",
   },
 ];

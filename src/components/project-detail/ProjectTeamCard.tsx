@@ -1,46 +1,46 @@
+import { Project } from "@/data/projects";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AssignedUser } from "@/data/projects";
-import { Crown } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProjectTeamCardProps {
-  team: AssignedUser[];
-  creator: AssignedUser;
-  isEditing: boolean;
-  onTeamChange: (team: AssignedUser[]) => void;
+  project: Project;
 }
 
-const ProjectTeamCard = ({ team, creator }: ProjectTeamCardProps) => {
-  const teamMembers = [creator, ...team.filter(u => u.id !== creator.id)];
-
+const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Team</CardTitle>
+        <CardDescription>People assigned to this project.</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ul className="space-y-4">
-          {teamMembers.map((user, index) => (
-            <li key={user.id} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.name.slice(0, 2)}</AvatarFallback>
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <Avatar className="h-9 w-9">
+                    <AvatarImage src={project.createdBy.avatar} />
+                    <AvatarFallback>{project.createdBy.name.slice(0, 2)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium">{user.name}</p>
-                  <p className="text-sm text-muted-foreground">{user.role}</p>
+                    <p className="text-sm font-medium">{project.createdBy.name}</p>
+                    <p className="text-xs text-muted-foreground">Project Owner</p>
                 </div>
-              </div>
-              {index === 0 && (
-                <div className="flex items-center gap-1 text-xs text-amber-600">
-                  <Crown className="h-4 w-4" />
-                  <span>Creator</span>
+            </div>
+        </div>
+        {project.assignedTo.map(member => (
+          <div key={member.id} className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <Avatar className="h-9 w-9">
+                    <AvatarImage src={member.avatar} />
+                    <AvatarFallback>{member.name.slice(0, 2)}</AvatarFallback>
+                </Avatar>
+                <div>
+                    <p className="text-sm font-medium">{member.name}</p>
+                    <p className="text-xs text-muted-foreground">Team Member</p>
                 </div>
-              )}
-            </li>
-          ))}
-        </ul>
+            </div>
+          </div>
+        ))}
       </CardContent>
     </Card>
   );

@@ -64,6 +64,10 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
   const tasks = project.tasks || [];
   const assignableUsers = project.assignedTo || [];
 
+  const completedTasks = tasks.filter(task => task.completed).length;
+  const totalTasks = tasks.length;
+  const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
   const handleToggleTask = (taskId: string) => {
     if (!onTasksUpdate) return;
     const updatedTasks = tasks.map(task =>
@@ -109,9 +113,6 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
     setNewTaskAssignees([]);
   };
 
-  const completedTasks = tasks.filter(task => task.completed).length;
-  const totalTasks = tasks.length;
-
   const getAssigneeDetails = (userId: string) => {
     return assignableUsers.find(u => u.id === userId) || project.createdBy;
   };
@@ -130,9 +131,9 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
       <CardContent>
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm text-muted-foreground">Overall Progress</span>
-          <span className="text-sm font-bold">{project.progress}%</span>
+          <span className="text-sm font-bold">{onTasksUpdate ? progressPercentage : project.progress}%</span>
         </div>
-        <Progress value={project.progress} className={onTasksUpdate ? "mb-6" : ""} />
+        <Progress value={onTasksUpdate ? progressPercentage : project.progress} className={onTasksUpdate ? "mb-6" : ""} />
         
         {onTasksUpdate && (
           <>
