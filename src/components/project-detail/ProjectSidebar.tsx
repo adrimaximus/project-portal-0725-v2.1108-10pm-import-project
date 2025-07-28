@@ -26,8 +26,8 @@ const ProjectSidebar = ({ project }: ProjectSidebarProps) => {
                         <AvatarFallback>{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                       </Avatar>
                       <span
-                        className={cn("absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-card", user.status === 'online' ? 'bg-green-500' : 'bg-gray-400')}
-                        title={user.status === 'online' ? 'Online' : 'Offline'}
+                        className={cn("absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-card", user.status === 'Online' ? 'bg-green-500' : 'bg-gray-400')}
+                        title={user.status === 'Online' ? 'Online' : 'Offline'}
                       />
                     </div>
                   </TooltipTrigger>

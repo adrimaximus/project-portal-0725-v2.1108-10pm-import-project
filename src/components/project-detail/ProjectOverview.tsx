@@ -31,7 +31,7 @@ const AssignedTeam = ({ users, isEditing, onTeamChange }: AssignedTeamProps) => 
     if (isSelected) {
       newSelectedUsers = users.filter(u => u.id !== currentUser.id);
     } else {
-      const newUserToAdd: AssignedUser = { ...currentUser, status: 'offline' };
+      const newUserToAdd: AssignedUser = { ...currentUser, status: 'Offline' };
       newSelectedUsers = [...users, newUserToAdd];
     }
     onTeamChange(newSelectedUsers);
