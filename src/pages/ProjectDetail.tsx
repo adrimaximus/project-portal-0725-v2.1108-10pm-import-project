@@ -1,56 +1,87 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { dummyProjects, Project, Task, AssignedUser, Comment } from "@/data/projects";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Save, X } from "lucide-react";
+import { format } from "date-fns";
+import { dummyProjects, Project, AssignedUser, Task } from "@/data/projects";
+import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
-import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
-import ProjectOverview from "@/components/project-detail/ProjectOverview";
-import ProjectComments from "@/components/project-detail/ProjectComments";
+import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
+import { Comment } from "@/components/ProjectComments";
+import { initialComments } from "@/data/comments";
+import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
 
 const ProjectDetail = () => {
-  const { projectId } = useParams();
+  const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  
   const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
+  const [comments, setComments] = useState<Comment[]>(initialComments);
 
   useEffect(() => {
-    const foundProject = dummyProjects.find((p) => p.id === projectId);
+    const foundProject = dummyProjects.find(p => p.id === projectId);
     if (foundProject) {
-      const projectCopy = JSON.parse(JSON.stringify(foundProject));
-      setProject(projectCopy);
-      setEditedProject(projectCopy);
+      const projectWithTasks = {
+        ...foundProject,
+        tasks: foundProject.tasks || [],
+      };
+      setProject(projectWithTasks);
+      setEditedProject(structuredClone(projectWithTasks));
+    } else {
+      navigate('/');
     }
-  }, [projectId]);
+  }, [projectId, navigate]);
 
-  const handleEditToggle = () => {
-    if (isEditing) {
-      handleCancelChanges();
-    }
-    setIsEditing(!isEditing);
-  };
+  if (!project || !editedProject) {
+    return (
+      <PortalLayout>
+        <div className="flex items-center justify-center h-full">
+          <p>Loading project...</p>
+        </div>
+      </PortalLayout>
+    );
+  }
 
   const handleSaveChanges = () => {
-    if (editedProject) {
-      const projectIndex = dummyProjects.findIndex(p => p.id === editedProject.id);
-      if (projectIndex !== -1) {
-        dummyProjects[projectIndex] = editedProject;
-      }
+    const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
+    if (projectIndex !== -1 && editedProject) {
+      dummyProjects[projectIndex] = editedProject;
       setProject(editedProject);
-      setIsEditing(false);
     }
+    setIsEditing(false);
   };
 
   const handleCancelChanges = () => {
-    setEditedProject(JSON.parse(JSON.stringify(project)));
+    if (project) {
+      setEditedProject(structuredClone(project));
+    }
     setIsEditing(false);
   };
 
   const handleProjectNameChange = (name: string) => {
     if (editedProject) {
       setEditedProject({ ...editedProject, name });
+    }
+  };
+
+  const handleSelectChange = (name: 'status' | 'paymentStatus', value: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, [name]: value as any });
+    }
+  };
+
+  const handleDateChange = (name: 'deadline' | 'paymentDueDate' | 'startDate', date: Date | undefined) => {
+    if (editedProject) {
+      const originalDate = (project as any)[name];
+      const dateString = date ? format(date, 'yyyy-MM-dd') : originalDate;
+      setEditedProject({ ...editedProject, [name]: dateString });
+    }
+  };
+
+  const handleBudgetChange = (value: number | undefined) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, budget: value || 0 });
     }
   };
 
@@ -65,112 +96,74 @@ const ProjectDetail = () => {
       setEditedProject({ ...editedProject, assignedTo: selectedUsers });
     }
   };
-
+  
   const handleFilesChange = (files: File[]) => {
     if (editedProject) {
       setEditedProject({ ...editedProject, briefFiles: files });
     }
   };
 
-  const handleTasksUpdate = (tasks: Task[]) => {
+  const handleTasksUpdate = (updatedTasks: Task[]) => {
     if (editedProject) {
-      const completedTasks = tasks.filter(task => task.completed).length;
-      const totalTasks = tasks.length;
-      const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-      const updatedProject = { ...editedProject, tasks, progress };
-      setEditedProject(updatedProject);
-      setProject(updatedProject);
-      const projectIndex = dummyProjects.findIndex(p => p.id === editedProject.id);
-      if (projectIndex !== -1) {
-        dummyProjects[projectIndex] = updatedProject;
-      }
+      const completedTasks = updatedTasks.filter(task => task.completed).length;
+      const totalTasks = updatedTasks.length;
+      const newProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      setEditedProject({
+        ...editedProject,
+        tasks: updatedTasks,
+        progress: newProgress,
+      });
     }
   };
 
-  const handleCommentPost = (newComment: Comment) => {
-    if (editedProject) {
-      const updatedComments = [...(editedProject.comments || []), newComment];
-      const updatedProject = { ...editedProject, comments: updatedComments };
-      setEditedProject(updatedProject);
-      setProject(updatedProject);
-      const projectIndex = dummyProjects.findIndex(p => p.id === editedProject.id);
-      if (projectIndex !== -1) {
-        dummyProjects[projectIndex] = updatedProject;
-      }
-    }
-  };
-
-  const handleCreateTicket = (taskText: string) => {
-    if (editedProject) {
-      const newTask: Task = {
-        id: `task-${Date.now()}`,
-        text: taskText,
-        completed: false,
-        assignedTo: [],
-      };
-      const updatedTasks = [...(editedProject.tasks || []), newTask];
-      handleTasksUpdate(updatedTasks);
-    }
-  };
-
-  if (!project || !editedProject) {
-    return <div>Loading...</div>;
-  }
+  const projectComments = comments.filter(c => c.projectId === projectId);
+  const ticketCount = projectComments.filter(c => c.isTicket).length;
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="pl-0">
-          <ArrowLeft className="mr-2 h-4 w-4" /> All Projects
-        </Button>
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <Button variant="outline" onClick={handleCancelChanges}>
-                <X className="mr-2 h-4 w-4" /> Cancel
-              </Button>
-              <Button onClick={handleSaveChanges}>
-                <Save className="mr-2 h-4 w-4" /> Save Changes
-              </Button>
-            </>
-          ) : (
-            <Button onClick={handleEditToggle}>
-              <Edit className="mr-2 h-4 w-4" /> Edit Project
-            </Button>
-          )}
+    <PortalLayout>
+      <div className="space-y-6">
+        <ProjectHeader 
+          project={project} 
+          isEditing={isEditing}
+          projectName={editedProject.name}
+          onProjectNameChange={handleProjectNameChange}
+          onEditToggle={() => setIsEditing(!isEditing)}
+          onSaveChanges={handleSaveChanges}
+          onCancelChanges={handleCancelChanges}
+        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <ProjectInfoCards 
+              project={project}
+              isEditing={isEditing}
+              editedProject={editedProject}
+              onSelectChange={handleSelectChange}
+              onDateChange={handleDateChange}
+              onBudgetChange={handleBudgetChange}
+            />
+            <ProjectMainContent
+              project={editedProject}
+              isEditing={isEditing}
+              onDescriptionChange={handleDescriptionChange}
+              onTeamChange={handleTeamChange}
+              onFilesChange={handleFilesChange}
+              comments={projectComments}
+              setComments={setComments}
+              projectId={project.id}
+              ticketCount={ticketCount}
+              allProjects={dummyProjects}
+            />
+          </div>
+          <div className="lg:col-span-1 space-y-6">
+            <ProjectProgressCard 
+              project={editedProject}
+              onTasksUpdate={handleTasksUpdate}
+            />
+          </div>
         </div>
       </div>
-
-      <ProjectHeader
-        project={project}
-        isEditing={isEditing}
-        editedName={editedProject.name}
-        onNameChange={handleProjectNameChange}
-      />
-
-      <ProjectInfoCards project={project} />
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <ProjectOverview
-            project={editedProject}
-            isEditing={isEditing}
-            onDescriptionChange={handleDescriptionChange}
-            onTeamChange={handleTeamChange}
-            onFilesChange={handleFilesChange}
-            onTasksUpdate={handleTasksUpdate}
-          />
-          <ProjectComments
-            comments={project.comments || []}
-            onCommentPost={handleCommentPost}
-            onTicketCreate={handleCreateTicket}
-          />
-        </div>
-        <div className="lg:col-span-1">
-          <ProjectSidebar project={project} />
-        </div>
-      </div>
-    </main>
+    </PortalLayout>
   );
 };
 
