@@ -1,44 +1,47 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Project, Task } from "@/data/projects";
+import { dummyProjects, Project, Task } from "@/data/projects";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCard from "@/components/project-detail/ProjectInfoCard";
 import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
 import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectActivityFeed from "@/components/project-detail/ProjectActivityFeed";
 import ProjectDetailsTabs from "@/components/project-detail/ProjectDetailsTabs";
-import { useProjects } from "@/contexts/ProjectContext";
 
 const ProjectDetailPage = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { projectId } = useParams();
   const navigate = useNavigate();
-  const { getProjectById, updateProject } = useProjects();
-
   const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editableProject, setEditableProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    if (!projectId) return;
-    const foundProject = getProjectById(projectId);
+    const foundProject = dummyProjects.find((p) => p.id === projectId);
     if (foundProject) {
       setProject(foundProject);
-      setEditableProject(JSON.parse(JSON.stringify(foundProject)));
+      setEditableProject(JSON.parse(JSON.stringify(foundProject))); // Deep copy for editing
     } else {
       navigate("/404");
     }
-  }, [projectId, getProjectById, navigate]);
+  }, [projectId, navigate]);
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
     if (project) {
+      // Reset changes if canceling
       setEditableProject(JSON.parse(JSON.stringify(project)));
     }
   };
 
   const handleSaveChanges = () => {
     if (editableProject) {
-      updateProject(editableProject);
+      // Find the index of the project in the main array
+      const projectIndex = dummyProjects.findIndex(p => p.id === editableProject.id);
+      if (projectIndex !== -1) {
+        // Update the main array
+        dummyProjects[projectIndex] = editableProject;
+      }
+      // Update the state
       setProject(editableProject);
       setIsEditing(false);
     }
@@ -80,7 +83,7 @@ const ProjectDetailPage = () => {
           onProjectNameChange={handleProjectNameChange}
           onEditToggle={handleEditToggle}
           onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleEditToggle}
+          onCancelChanges={handleEditToggle} // Cancel is the same as toggling off
         />
         <div className="grid gap-6 md:grid-cols-3">
           <div className="space-y-6 md:col-span-2">
