@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import PortalSidebar from "./PortalSidebar";
 import PortalHeader from "./PortalHeader";
 import { cn } from "@/lib/utils";
@@ -12,8 +13,12 @@ type PortalLayoutProps = {
   disableMainScroll?: boolean;
 };
 
-const PortalLayout = ({ children, noPadding = false, summary, disableMainScroll = false }: PortalLayoutProps) => {
+const PortalLayout = ({ children, noPadding: noPaddingProp = false, summary, disableMainScroll: disableMainScrollProp = false }: PortalLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const location = useLocation();
+
+  // Menonaktifkan scroll dan padding untuk halaman detail
+  const isDetailPage = location.pathname.startsWith('/projects/') || location.pathname.startsWith('/requests/');
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -21,6 +26,9 @@ const PortalLayout = ({ children, noPadding = false, summary, disableMainScroll 
 
   const sidebarContainerWidth = isCollapsed ? "md:w-[72px]" : "md:w-[220px] lg:w-[280px]";
   const mainContentMargin = isCollapsed ? "md:ml-[72px]" : "md:ml-[220px] lg:ml-[280px]";
+
+  const disableMainScroll = disableMainScrollProp || isDetailPage;
+  const noPadding = noPaddingProp || isDetailPage;
 
   return (
     <div className="min-h-screen w-full">
