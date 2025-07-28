@@ -16,12 +16,22 @@ const ProjectDetailPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
 
+  // Helper to clone project state while preserving File objects
+  const cloneProject = (p: Project | null): Project | null => {
+    if (!p) return null;
+    const cloned = JSON.parse(JSON.stringify(p));
+    // Restore File objects that are lost during JSON serialization
+    if (p.briefFiles) {
+      cloned.briefFiles = p.briefFiles;
+    }
+    return cloned;
+  };
+
   useEffect(() => {
     const foundProject = dummyProjects.find((p) => p.id === projectId);
     if (foundProject) {
-      const projectCopy = JSON.parse(JSON.stringify(foundProject));
-      setProject(projectCopy);
-      setEditedProject(projectCopy);
+      setProject(cloneProject(foundProject));
+      setEditedProject(cloneProject(foundProject));
     }
   }, [projectId]);
 
@@ -44,7 +54,7 @@ const ProjectDetailPage = () => {
   };
 
   const handleCancelChanges = () => {
-    setEditedProject(JSON.parse(JSON.stringify(project)));
+    setEditedProject(cloneProject(project));
     setIsEditing(false);
   };
 
