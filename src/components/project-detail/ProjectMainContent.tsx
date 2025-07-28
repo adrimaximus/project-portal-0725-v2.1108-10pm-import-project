@@ -25,6 +25,7 @@ const ProjectMainContent = ({
   onFilesChange,
   comments,
   setComments,
+  projectId,
 }: ProjectMainContentProps) => {
   const handleCommentPost = (newComment: Comment) => {
     setComments((prevComments) => [...prevComments, newComment]);
@@ -58,6 +59,7 @@ const ProjectMainContent = ({
       </TabsContent>
       <TabsContent value="comments">
         <ProjectComments
+          projectId={projectId}
           comments={comments}
           onCommentPost={handleCommentPost}
         />
