@@ -52,7 +52,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       ...(totalUnreadChatCount > 0 && { badge: totalUnreadChatCount }) 
     },
     { href: "#", label: "Notifications", icon: Bell, badge: 3 },
-    { href: "/profile", label: "Settings", icon: Settings },
+    { href: "#", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -154,7 +154,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                 <DropdownMenuContent side="right" align="end" className="w-56">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild><Link to="/profile">Settings</Link></DropdownMenuItem>
+                  <DropdownMenuItem>Settings</DropdownMenuItem>
                   <DropdownMenuItem>Support</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>Logout</DropdownMenuItem>
@@ -181,7 +181,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                 {isAccountMenuOpen && (
                   <nav className="grid items-start gap-1 text-sm font-medium mt-2 pl-8">
                     <Link
-                      to="/profile"
+                      to="#"
                       className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
                       <Settings className="h-4 w-4" />
