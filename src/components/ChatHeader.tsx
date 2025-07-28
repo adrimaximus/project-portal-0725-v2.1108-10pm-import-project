@@ -1,7 +1,13 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Conversation } from "@/data/chat";
-import { ArrowLeft, MoreVertical } from "lucide-react";
+import { ArrowLeft, MoreVertical, Trash2, UserX, Users } from "lucide-react";
 import StackedAvatar from "./StackedAvatar";
 
 interface ChatHeaderProps {
@@ -45,9 +51,38 @@ const ChatHeader = ({ selectedConversation, onBack }: ChatHeaderProps) => {
         )}
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon">
-          <MoreVertical className="h-5 w-5" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {isGroup ? (
+              <>
+                <DropdownMenuItem onClick={() => console.log("View Members")}>
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>View Members</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-red-500 focus:text-red-500" onClick={() => console.log("Leave Group")}>
+                  <UserX className="mr-2 h-4 w-4" />
+                  <span>Leave Group</span>
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <>
+                <DropdownMenuItem onClick={() => console.log("View Profile")}>
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>View Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-red-500 focus:text-red-500" onClick={() => console.log("Clear Chat")}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Clear Chat</span>
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
