@@ -7,7 +7,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, isPast, differenceInDays } from "date-fns";
 import { Activity, CreditCard, Wallet, CalendarDays, CalendarClock } from "lucide-react";
 
 interface ProjectInfoCardsProps {
@@ -90,6 +90,9 @@ const ProjectInfoCards = ({
         year: 'numeric', month: 'long', day: 'numeric'
       })
     : "Not Set";
+
+  const isOverdue = isPast(new Date(project.deadline)) && !["Completed", "Done", "Billed"].includes(project.status);
+  const overdueDays = isOverdue ? differenceInDays(new Date(), new Date(project.deadline)) : 0;
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -203,7 +206,14 @@ const ProjectInfoCards = ({
               </PopoverContent>
             </Popover>
           ) : (
-            <div className="text-xl font-bold">{deadlineFormatted}</div>
+            <div>
+              <div className="text-xl font-bold">{deadlineFormatted}</div>
+              {isOverdue && (
+                <p className="text-xs text-red-500 mt-1">
+                  Overdue by {overdueDays} day{overdueDays !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
