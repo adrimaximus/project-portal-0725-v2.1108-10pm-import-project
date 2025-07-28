@@ -9,12 +9,13 @@ import { Ticket, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ProjectCommentsProps {
+  projectId: string;
   comments: Comment[];
   onCommentPost: (newComment: Comment) => void;
   onTicketCreate?: (taskText: string) => void;
 }
 
-const ProjectComments = ({ comments, onCommentPost, onTicketCreate }: ProjectCommentsProps) => {
+const ProjectComments = ({ projectId, comments, onCommentPost, onTicketCreate }: ProjectCommentsProps) => {
   const [newComment, setNewComment] = useState("");
   const [isTicket, setIsTicket] = useState(false);
   const currentUser = allUsers[0]; // Assuming the current user is the first one
@@ -24,6 +25,7 @@ const ProjectComments = ({ comments, onCommentPost, onTicketCreate }: ProjectCom
 
     const comment: Comment = {
       id: `comment-${Date.now()}`,
+      projectId: projectId,
       user: currentUser,
       text: newComment,
       timestamp: new Date().toISOString(),

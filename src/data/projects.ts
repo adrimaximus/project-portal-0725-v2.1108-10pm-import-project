@@ -11,6 +11,7 @@ export interface Task {
 
 export interface Comment {
   id: string;
+  projectId: string;
   user: AssignedUser;
   text: string;
   timestamp: string;
@@ -24,7 +25,7 @@ export interface Ticket {
 }
 
 export interface Project {
-  id: string;
+  id:string;
   name: string;
   description: string;
   status: "Requested" | "On Going" | "Completed" | "Cancelled" | "Done" | "Billed" | "In Progress" | "On Hold";
@@ -46,7 +47,7 @@ export interface Project {
 
 export const dummyProjects: Project[] = [
   {
-    id: 'proj-1689342090443',
+    id: 'proj-1',
     name: 'New Branding for "Innovate Inc."',
     description: '<p>Complete rebranding strategy for a tech startup. Includes new logo, color palette, and brand guidelines.</p>',
     status: 'In Progress',
@@ -66,8 +67,8 @@ export const dummyProjects: Project[] = [
       { id: 'task-4', text: 'Create social media templates', completed: false, assignedTo: [allUsers[1].id, allUsers[2].id] },
     ],
     comments: [
-      { id: 'comment-1', user: allUsers[1], text: 'The client loves the new logo direction!', timestamp: new Date(Date.now() - 86400000 * 2).toISOString(), isTicket: false },
-      { id: 'comment-2', user: allUsers[0], text: 'We need to schedule a review for the website mockups by the end of the week.', timestamp: new Date(Date.now() - 86400000).toISOString(), isTicket: true },
+      { id: 'comment-1', projectId: 'proj-1', user: allUsers[1], text: 'The client loves the new logo direction!', timestamp: new Date(Date.now() - 86400000 * 2).toISOString(), isTicket: false },
+      { id: 'comment-2', projectId: 'proj-1', user: allUsers[0], text: 'We need to schedule a review for the website mockups by the end of the week.', timestamp: new Date(Date.now() - 86400000).toISOString(), isTicket: true },
     ],
     tickets: [
         { id: 'ticket-1', text: 'Review website mockups', status: 'Open' }

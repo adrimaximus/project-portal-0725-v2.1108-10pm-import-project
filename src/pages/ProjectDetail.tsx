@@ -161,6 +161,7 @@ const ProjectDetail = () => {
             onTasksUpdate={handleTasksUpdate}
           />
           <ProjectComments
+            projectId={project.id}
             comments={project.comments || []}
             onCommentPost={handleCommentPost}
             onTicketCreate={handleCreateTicket}
