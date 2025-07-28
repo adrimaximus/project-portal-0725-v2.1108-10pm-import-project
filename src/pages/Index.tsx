@@ -7,7 +7,7 @@ import PortalLayout from "@/components/PortalLayout";
 import ProjectsTable, { columns } from "@/components/ProjectsTable";
 import { dummyProjects } from "@/data/projects";
 import { initialComments } from "@/data/comments";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, SlidersHorizontal } from "lucide-react";
 import ProjectStats from "@/components/ProjectStats";
 import {
   Select,
@@ -22,6 +22,7 @@ export default function Index() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const [isBillingFilterActive, setIsBillingFilterActive] = useState(false);
 
   const allAssignees = Array.from(
     new Set(dummyProjects.flatMap((p) => p.assignedTo.map((a) => a.name)))
@@ -36,6 +37,8 @@ export default function Index() {
 
   const filteredProjects = projectsWithTicketCounts
     .filter(project => {
+      if (isBillingFilterActive) return true; // Bypass date filter in billing mode
+
       if (!dateRange || !dateRange.from) {
         const defaultFrom = new Date(new Date().getFullYear(), 0, 1);
         const defaultTo = new Date(new Date().getFullYear(), 11, 31);
@@ -58,13 +61,33 @@ export default function Index() {
       return true;
     })
     .filter(project => {
+      if (isBillingFilterActive) return true; // Bypass status filter in billing mode
       if (statusFilter === "all") return true;
       return project.status === statusFilter;
     })
     .filter(project => {
+      if (isBillingFilterActive) return true; // Bypass assignee filter in billing mode
       if (assigneeFilter === "all") return true;
       return project.assignedTo.some(a => a.name === assigneeFilter);
     });
+
+  const handleBillingFilterToggle = () => {
+    const nextState = !isBillingFilterActive;
+    setIsBillingFilterActive(nextState);
+    if (nextState) {
+      // Reset other filters when activating
+      setDateRange(undefined);
+      setStatusFilter("all");
+      setAssigneeFilter("all");
+    }
+  };
+
+  const billingColumnIds = ['name', 'assignedTo', 'paymentStatus', 'paymentDueDate', 'budget'];
+  const billingColumns = columns.filter(column => {
+    // The 'id' is manually set in ProjectsTable.tsx for each column
+    const columnId = (column as any).id;
+    return billingColumnIds.includes(columnId);
+  });
 
   return (
     <PortalLayout>
@@ -88,36 +111,48 @@ export default function Index() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-6">
-        <DatePickerWithRange onDateChange={setDateRange} />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="Requested">Requested</SelectItem>
-            <SelectItem value="In Progress">In Progress</SelectItem>
-            <SelectItem value="Completed">Completed</SelectItem>
-            <SelectItem value="Billed">Billed</SelectItem>
-            <SelectItem value="On Hold">On Hold</SelectItem>
-            <SelectItem value="Cancelled">Cancelled</SelectItem>
-            <SelectItem value="Done">Done</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Filter by assignee" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Assignees</SelectItem>
-            {allAssignees.map(name => (
-              <SelectItem key={name} value={name}>{name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Button
+          variant={isBillingFilterActive ? "secondary" : "outline"}
+          onClick={handleBillingFilterToggle}
+          className="flex items-center gap-2"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          <span>Billing View</span>
+        </Button>
+        {!isBillingFilterActive && (
+          <>
+            <DatePickerWithRange onDateChange={setDateRange} />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="Requested">Requested</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="Billed">Billed</SelectItem>
+                <SelectItem value="On Hold">On Hold</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                <SelectItem value="Done">Done</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filter by assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Assignees</SelectItem>
+                {allAssignees.map(name => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        )}
       </div>
 
-      <ProjectsTable columns={columns} data={filteredProjects} />
+      <ProjectsTable columns={isBillingFilterActive ? billingColumns : columns} data={filteredProjects} />
     </PortalLayout>
   );
 }
