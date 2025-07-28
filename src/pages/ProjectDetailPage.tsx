@@ -1,73 +1,48 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { dummyProjects, Project, Task, AssignedUser } from "@/data/projects";
-import { Comment } from "@/components/ProjectComments";
-import ProjectHeader from "@/components/project-detail/ProjectHeader";
-import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
-import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
-import ProjectBrief from "@/components/project-detail/ProjectBrief";
-import ProjectComments from "@/components/ProjectComments";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useParams, useNavigate } from "react-router-dom";
+import { dummyProjects, Project, Task, AssignedUser, Comment } from "@/data/projects";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-
-// Mock comments data, as it's not stored globally
-const generateInitialComments = (projectId: string): Comment[] => {
-  return [
-    {
-      id: 1,
-      projectId: projectId,
-      user: { name: "Emily Johnson", avatar: "https://i.pravatar.cc/150?u=emily" },
-      text: "Just reviewed the initial designs. Looking great!",
-      timestamp: "2 days ago",
-    },
-    {
-      id: 2,
-      projectId: projectId,
-      user: { name: "Alex Chen", avatar: "https://i.pravatar.cc/150?u=alex" },
-      text: "Hey @Dan, can you please check the latest API documentation?",
-      timestamp: "1 day ago",
-    },
-  ];
-};
+import { ArrowLeft, Edit, Save, X } from "lucide-react";
+import ProjectHeader from "@/components/project-detail/ProjectHeader";
+import ProjectOverviewTab from "@/components/project-detail/ProjectOverviewTab";
+import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
+import ProjectComments from "@/components/project-detail/ProjectComments";
 
 const ProjectDetailPage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { projectId } = useParams();
+  const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    const foundProject = dummyProjects.find((p) => p.id === id);
+    const foundProject = dummyProjects.find((p) => p.id === projectId);
     if (foundProject) {
-      setProject({ ...foundProject });
-      setEditedProject({ ...foundProject });
-      setComments(generateInitialComments(foundProject.id));
+      const projectCopy = JSON.parse(JSON.stringify(foundProject));
+      setProject(projectCopy);
+      setEditedProject(projectCopy);
     } else {
-      setProject(null);
+      // Handle project not found
     }
-  }, [id]);
+  }, [projectId]);
 
-  const handleProjectUpdate = (updatedProject: Project) => {
-    setProject(updatedProject);
-    const projectIndex = dummyProjects.findIndex((p) => p.id === id);
-    if (projectIndex !== -1) {
-      dummyProjects[projectIndex] = updatedProject;
+  const handleEditToggle = () => {
+    if (isEditing) {
+      setEditedProject(JSON.parse(JSON.stringify(project)));
     }
+    setIsEditing(!isEditing);
   };
 
   const handleSaveChanges = () => {
     if (editedProject) {
-      handleProjectUpdate(editedProject);
+      const projectIndex = dummyProjects.findIndex(p => p.id === editedProject.id);
+      if (projectIndex !== -1) {
+        dummyProjects[projectIndex] = editedProject;
+      }
+      setProject(editedProject);
+      setIsEditing(false);
     }
-    setIsEditing(false);
-  };
-
-  const handleCancelChanges = () => {
-    if (project) {
-      setEditedProject({ ...project });
-    }
-    setIsEditing(false);
   };
 
   const handleProjectNameChange = (name: string) => {
@@ -76,93 +51,137 @@ const ProjectDetailPage = () => {
     }
   };
 
-  const handleTasksUpdate = (tasks: Task[]) => {
+  const handleDescriptionChange = (value: string) => {
     if (editedProject) {
-      const newProgress = tasks.length > 0 ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) : 0;
-      setEditedProject({ ...editedProject, tasks, progress: newProgress });
+      setEditedProject({ ...editedProject, description: value });
     }
   };
 
-  const handleTaskCreate = (task: Task) => {
-    if (editedProject) {
-      const newTasks = [...(editedProject.tasks || []), task];
-      handleTasksUpdate(newTasks);
+  const handleTeamChange = (selectedUsers: AssignedUser[]) => {
+     if (editedProject) {
+      setEditedProject({ ...editedProject, assignedTo: selectedUsers });
     }
   };
-
-  const handleBriefFilesChange = (files: File[]) => {
+  
+  const handleFilesChange = (files: File[]) => {
     if (editedProject) {
       setEditedProject({ ...editedProject, briefFiles: files });
     }
   };
 
-  const handleTeamChange = (team: AssignedUser[]) => {
+  const handleTasksUpdate = (tasks: Task[]) => {
     if (editedProject) {
-      setEditedProject({ ...editedProject, assignedTo: team });
+      const completedTasks = tasks.filter(task => task.completed).length;
+      const totalTasks = tasks.length;
+      const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+      
+      const updatedProject = { ...editedProject, tasks, progress };
+      setEditedProject(updatedProject);
+      setProject(updatedProject);
+
+      const projectIndex = dummyProjects.findIndex(p => p.id === editedProject.id);
+      if (projectIndex !== -1) {
+        dummyProjects[projectIndex] = updatedProject;
+      }
+    }
+  };
+
+  const handleCommentPost = (newComment: Comment) => {
+    if (editedProject) {
+      const updatedComments = [...(editedProject.comments || []), newComment];
+      const updatedProject = { ...editedProject, comments: updatedComments };
+      setEditedProject(updatedProject);
+      setProject(updatedProject);
+
+      const projectIndex = dummyProjects.findIndex(p => p.id === editedProject.id);
+      if (projectIndex !== -1) {
+        dummyProjects[projectIndex] = updatedProject;
+      }
+    }
+  };
+
+  const handleCreateTicket = (taskText: string) => {
+    if (editedProject) {
+      const newTask: Task = {
+        id: `task-${Date.now()}`,
+        text: taskText,
+        completed: false,
+        assignedTo: [],
+      };
+      const updatedTasks = [...(editedProject.tasks || []), newTask];
+      handleTasksUpdate(updatedTasks);
     }
   };
 
   if (!project || !editedProject) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-        <h1 className="text-2xl font-bold">Project Not Found</h1>
-        <p className="text-muted-foreground">
-          We couldn't find the project you're looking for.
-        </p>
-        <Button asChild>
-          <Link to="/projects">Back to Projects</Link>
-        </Button>
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
   return (
-    <div className="flex h-full flex-col gap-6">
+    <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="pl-0">
+          <ArrowLeft className="mr-2 h-4 w-4" /> All Projects
+        </Button>
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <>
+              <Button variant="outline" onClick={handleEditToggle}>
+                <X className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveChanges}>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </Button>
+            </>
+          ) : (
+            <Button onClick={handleEditToggle}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Project
+            </Button>
+          )}
+        </div>
+      </div>
+
       <ProjectHeader
         project={project}
         isEditing={isEditing}
-        projectName={editedProject.name}
-        onProjectNameChange={handleProjectNameChange}
-        onEditToggle={() => setIsEditing(!isEditing)}
-        onSaveChanges={handleSaveChanges}
-        onCancelChanges={handleCancelChanges}
+        editedName={editedProject.name}
+        onNameChange={handleProjectNameChange}
       />
-      <main className="flex-1 space-y-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
-            <ProjectProgressCard project={editedProject} onTasksUpdate={handleTasksUpdate} />
-            <ProjectComments
-              comments={comments}
-              setComments={setComments}
-              projectId={project.id}
-              assignableUsers={project.assignedTo}
-              allProjects={dummyProjects}
-              onTaskCreate={handleTaskCreate}
-            />
-          </div>
-          <div className="space-y-6">
-            <ProjectTeamCard
-              team={project.assignedTo}
-              creator={project.createdBy}
-              isEditing={isEditing}
-              onTeamChange={handleTeamChange}
-            />
-            <Card>
-              <CardHeader>
-                <CardTitle>Brief & Files</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProjectBrief
-                  files={project.briefFiles || []}
-                  isEditing={isEditing}
-                  onFilesChange={handleBriefFilesChange}
-                />
-              </CardContent>
-            </Card>
-          </div>
+
+      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
+        <div className="md:col-span-2 lg:col-span-3 space-y-6">
+          <Tabs defaultValue="overview">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
+              <TabsTrigger value="files">Files</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview" className="mt-4">
+              <ProjectOverviewTab
+                project={editedProject}
+                isEditing={isEditing}
+                onDescriptionChange={handleDescriptionChange}
+                onTeamChange={handleTeamChange}
+                onFilesChange={handleFilesChange}
+              />
+            </TabsContent>
+          </Tabs>
+          
+          <ProjectComments 
+            comments={project.comments || []}
+            onCommentPost={handleCommentPost}
+            onTicketCreate={handleCreateTicket}
+          />
+
         </div>
-      </main>
-    </div>
+        <div className="md:col-span-1 lg:col-span-1">
+          <ProjectProgressCard project={project} onTasksUpdate={handleTasksUpdate} />
+        </div>
+      </div>
+    </main>
   );
 };
 

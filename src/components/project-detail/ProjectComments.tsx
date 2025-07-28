@@ -1,86 +1,118 @@
-import { useState } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatDistanceToNow } from 'date-fns';
-
-interface User {
-    name: string;
-    avatar: string;
-}
-
-interface Comment {
-    id: number;
-    user: User;
-    timestamp: string;
-    text: string;
-    isTicket?: boolean;
-    projectId: string;
-}
+import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { allUsers } from "@/data/users";
+import { Comment } from "@/data/projects";
+import { formatDistanceToNow } from "date-fns";
+import { Ticket, Send } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ProjectCommentsProps {
-    initialComments: Comment[];
+  comments: Comment[];
+  onCommentPost: (newComment: Comment) => void;
+  onTicketCreate?: (taskText: string) => void;
 }
 
-const ProjectComments = ({ initialComments }: ProjectCommentsProps) => {
-    const [comments, setComments] = useState<Comment[]>(initialComments);
-    const [newComment, setNewComment] = useState('');
+const ProjectComments = ({ comments, onCommentPost, onTicketCreate }: ProjectCommentsProps) => {
+  const [newComment, setNewComment] = useState("");
+  const [isTicket, setIsTicket] = useState(false);
+  const currentUser = allUsers[0]; // Assuming the current user is the first one
 
-    const handleAddComment = () => {
-        if (newComment.trim()) {
-            const comment: Comment = {
-                id: Date.now(),
-                user: { name: 'Current User', avatar: 'https://github.com/shadcn.png' },
-                timestamp: new Date().toISOString(),
-                text: newComment,
-                projectId: initialComments[0]?.projectId || ''
-            };
-            setComments([comment, ...comments]);
-            setNewComment('');
-        }
+  const handlePostComment = () => {
+    if (newComment.trim() === "") return;
+
+    const comment: Comment = {
+      id: `comment-${Date.now()}`,
+      user: currentUser,
+      text: newComment,
+      timestamp: new Date().toISOString(),
+      isTicket: isTicket,
     };
 
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Project Feed & Tickets</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-6">
-                    <div>
-                        <Textarea
-                            placeholder="Add a comment or create a ticket..."
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                        />
-                        <div className="mt-2 flex justify-end">
-                            <Button onClick={handleAddComment}>Post Comment</Button>
-                        </div>
-                    </div>
-                    <div className="space-y-4">
-                        {comments.map((comment) => (
-                            <div key={comment.id} className="flex items-start gap-4">
-                                <Avatar>
-                                    <AvatarImage src={comment.user.avatar} />
-                                    <AvatarFallback>{comment.user.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div className="w-full">
-                                    <div className="flex items-center justify-between">
-                                        <p className="font-semibold">{comment.user.name}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
-                                        </p>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">{comment.text}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+    onCommentPost(comment);
+
+    if (isTicket && onTicketCreate) {
+      onTicketCreate(newComment);
+    }
+
+    setNewComment("");
+    setIsTicket(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">Comments & Tickets</h3>
+        <p className="text-sm text-muted-foreground">
+          Discuss the project or create tasks from comments.
+        </p>
+      </div>
+
+      <div className="flex items-start space-x-4">
+        <Avatar>
+          <AvatarImage src={currentUser.avatar} />
+          <AvatarFallback>{currentUser.name.slice(0, 2)}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <Textarea
+            placeholder="Write a comment or create a new ticket..."
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            className="mb-2"
+          />
+          <div className="flex justify-between items-center">
+            <Button
+              variant={isTicket ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setIsTicket(!isTicket)}
+              className={cn(
+                "gap-2",
+                isTicket && "bg-amber-500 hover:bg-amber-600 text-white"
+              )}
+            >
+              <Ticket className="h-4 w-4" />
+              <span>{isTicket ? "Ticket Created on Post" : "Create Ticket"}</span>
+            </Button>
+            <Button size="sm" onClick={handlePostComment} disabled={!newComment.trim()}>
+              <Send className="h-4 w-4 mr-2" />
+              Post
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {comments.length > 0 ? (
+          comments.map((comment) => (
+            <div key={comment.id} className="flex items-start space-x-4">
+              <Avatar>
+                <AvatarImage src={comment.user.avatar} />
+                <AvatarFallback>{comment.user.name.slice(0, 2)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-baseline space-x-2">
+                  <p className="font-semibold">{comment.user.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
+                  </p>
+                  {comment.isTicket && (
+                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                      <Ticket className="mr-1.5 h-3 w-3" />
+                      Ticket
+                    </span>
+                  )}
                 </div>
-            </CardContent>
-        </Card>
-    );
+                <p className="text-sm text-muted-foreground">{comment.text}</p>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-4">No comments yet.</p>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default ProjectComments;
