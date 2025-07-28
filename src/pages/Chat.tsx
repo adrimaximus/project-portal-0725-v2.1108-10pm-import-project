@@ -6,20 +6,20 @@ import {
     CardTitle,
   } from "@/components/ui/card"
   
-  const IndexPage = () => {
+  const ChatPage = () => {
     return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <Card>
           <CardHeader>
-            <CardTitle>Dashboard</CardTitle>
-            <CardDescription>Welcome to your client portal.</CardDescription>
+            <CardTitle>Chat</CardTitle>
+            <CardDescription>This is the chat page.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p>This is the main dashboard. More widgets and information will be added here soon.</p>
+            <p>Chat interface will be here.</p>
           </CardContent>
         </Card>
       </div>
     )
   }
   
-  export default IndexPage
+  export default ChatPage
