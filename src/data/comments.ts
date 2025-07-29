@@ -1,62 +1,50 @@
-import { Comment } from "@/components/ProjectComments";
+export interface Comment {
+  id: string;
+  projectId: string;
+  user: {
+    name: string;
+    avatar: string;
+  };
+  timestamp: string;
+  text: string;
+  isTicket?: boolean;
+}
 
 export const initialComments: Comment[] = [
   {
-    id: 1,
-    projectId: "proj-1",
-    user: {
-      name: "Olivia Martin",
-      avatar: "https://i.pravatar.cc/150?u=olivia",
-    },
-    text: "Just a heads up, the latest designs for the user dashboard are ready for review. I've attached the Figma link.",
-    timestamp: "2 days ago",
+    id: 'c1',
+    projectId: 'proj-1',
+    user: { name: 'Jane Doe', avatar: 'https://i.pravatar.cc/150?u=jane' },
+    timestamp: '2023-10-26T10:00:00Z',
+    text: 'Initial brief and assets uploaded.',
   },
   {
-    id: 2,
-    projectId: "proj-1",
-    user: {
-      name: "Ethan Carter",
-      avatar: "https://i.pravatar.cc/150?u=ethan",
-    },
-    text: "I'm encountering a bug on the staging server where the login button is unresponsive. I've raised a ticket for this.",
-    timestamp: "1 day ago",
+    id: 'c2',
+    projectId: 'proj-1',
+    user: { name: 'John Smith', avatar: 'https://i.pravatar.cc/150?u=john' },
+    timestamp: '2023-10-26T11:30:00Z',
+    text: 'Can we get a revision on the logo? The color is a bit off.',
     isTicket: true,
   },
   {
-    id: 3,
-    projectId: "proj-1",
-    user: {
-      name: "You",
-      avatar: "https://i.pravatar.cc/150?u=currentuser",
-    },
-    text: "Thanks for the update, Olivia. I'll take a look at the designs today.",
-    timestamp: "1 day ago",
+    id: 'c3',
+    projectId: 'proj-2',
+    user: { name: 'Alex Johnson', avatar: 'https://i.pravatar.cc/150?u=alex' },
+    timestamp: '2023-10-25T14:00:00Z',
+    text: 'The development for the homepage is complete. Awaiting review.',
   },
   {
-    id: 4,
-    projectId: "proj-2",
-    user: {
-      name: "Sophia Davis",
-      avatar: "https://i.pravatar.cc/150?u=sophia",
-    },
-    text: "The client has requested a new feature: the ability to export reports as CSV files. I've created a ticket to track this request.",
-    timestamp: "3 hours ago",
-    isTicket: true,
-    attachment: {
-      name: "feature-request.pdf",
-      url: "#",
-      type: 'file',
-    }
+    id: 'c4',
+    projectId: 'proj-3',
+    user: { name: 'Emily White', avatar: 'https://i.pravatar.cc/150?u=emily' },
+    timestamp: '2023-10-27T09:00:00Z',
+    text: 'Marketing campaign draft #1 is ready for feedback.',
   },
   {
-    id: 5,
-    projectId: "proj-3",
-    user: {
-      name: "Liam Brown",
-      avatar: "https://i.pravatar.cc/150?u=liam",
-    },
-    text: "The campaign is underperforming. We need to rethink the ad copy. Ticket raised.",
-    timestamp: "5 hours ago",
-    isTicket: true,
+    id: 'c5',
+    projectId: 'proj-1',
+    user: { name: 'Jane Doe', avatar: 'https://i.pravatar.cc/150?u=jane' },
+    timestamp: '2023-10-27T15:00:00Z',
+    text: 'Logo revision is complete and uploaded.',
   },
 ];

@@ -1,74 +1,51 @@
-import { Link } from "react-router-dom";
 import { Project } from "@/data/projects";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Save, X } from "lucide-react";
-import { Input } from "../ui/input";
-import { getStatusClass } from "@/lib/utils";
+import { ArrowLeft, Edit, Trash2, Save } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface ProjectHeaderProps {
   project: Project;
   isEditing: boolean;
-  projectName: string;
-  onProjectNameChange: (name: string) => void;
   onEditToggle: () => void;
   onSaveChanges: () => void;
-  onCancelChanges: () => void;
+  onDelete: () => void;
 }
 
-const ProjectHeader = ({
-  project,
-  isEditing,
-  projectName,
-  onProjectNameChange,
-  onEditToggle,
-  onSaveChanges,
-  onCancelChanges,
-}: ProjectHeaderProps) => {
+const ProjectHeader = ({ project, isEditing, onEditToggle, onSaveChanges, onDelete }: ProjectHeaderProps) => {
+  const navigate = useNavigate();
+
   return (
-    <header className="flex flex-col gap-4">
-      <div>
-        <Button variant="ghost" asChild className="-ml-4">
-          <Link to="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Link>
-        </Button>
-      </div>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {isEditing ? (
-            <Input
-              value={projectName}
-              onChange={(e) => onProjectNameChange(e.target.value)}
-              className="text-2xl font-bold h-auto p-0 border-0 focus-visible:ring-0"
-            />
-          ) : (
-            <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
-          )}
-          <Badge className={getStatusClass(project.status)}>{project.status}</Badge>
+    <div>
+      <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Projects
+      </Button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+          <p className="text-muted-foreground">
+            Tracking project progress and details.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {isEditing ? (
-            <>
-              <Button onClick={onSaveChanges}>
-                <Save className="mr-2 h-4 w-4" />
-                Save
-              </Button>
-              <Button variant="outline" onClick={onCancelChanges}>
-                <X className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-            </>
+            <Button onClick={onSaveChanges}>
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </Button>
           ) : (
-            <Button variant="outline" onClick={onEditToggle}>
+            <Button onClick={onEditToggle}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Project
             </Button>
           )}
+          <Button variant="destructive" onClick={onDelete}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </Button>
         </div>
       </div>
-    </header>
+    </div>
   );
 };
 
