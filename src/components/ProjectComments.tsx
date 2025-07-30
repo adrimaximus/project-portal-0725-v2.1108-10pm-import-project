@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,7 +37,7 @@ interface ProjectCommentsProps {
   onTaskCreate?: (task: Task) => void;
 }
 
-const renderWithMentions = (text: string) => {
+const renderWithMentions = (text: string, allProjects: Project[]) => {
   const mentionRegex = /(@[a-zA-Z0-9\s._-]+|#\/[a-zA-Z0-9\s._-]+)/g;
   const parts = text.split(mentionRegex);
 
@@ -46,7 +47,21 @@ const renderWithMentions = (text: string) => {
         return <strong key={index} className="text-primary font-medium">{part}</strong>;
       }
       if (part.startsWith('#/')) {
-        return <strong key={index} className="text-blue-600 font-semibold">{part.substring(2)}</strong>;
+        const projectName = part.substring(2);
+        const project = allProjects.find(p => p.name === projectName);
+        if (project) {
+          return (
+            <Link
+              to={`/projects/${project.id}`}
+              key={index}
+              className="text-blue-600 font-semibold hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {projectName}
+            </Link>
+          );
+        }
+        return <strong key={index} className="text-blue-600 font-semibold">{projectName}</strong>;
       }
     }
     return part;
@@ -195,7 +210,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
                   <div className="flex items-center gap-2"><p className="font-semibold">{comment.user.name}</p>{comment.isTicket && <Badge variant="destructive">Ticket</Badge>}</div>
                   <p className="text-xs text-muted-foreground">{comment.timestamp}</p>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{renderWithMentions(comment.text)}</p>
+                <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{renderWithMentions(comment.text, allProjects)}</p>
                 {comment.attachment && (
                   <div className="mt-2">
                     <a href={comment.attachment.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md border p-2 text-sm text-muted-foreground transition-colors hover:bg-accent">
