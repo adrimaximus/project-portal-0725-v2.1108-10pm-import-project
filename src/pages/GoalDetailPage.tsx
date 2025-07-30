@@ -70,7 +70,7 @@ const GoalDetailPage = () => {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/goals">Goals</Link>
+              <Link to="/productivity/goals">Goals</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

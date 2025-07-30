@@ -1,27 +1,37 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+} from "react-router-dom";
 import Index from "./pages/Index";
-import Request from "./pages/Request";
+import RequestPage from "./pages/RequestPage";
 import ChatPage from "./pages/ChatPage";
-import Profile from "./pages/Profile";
-import ProjectDetail from "./pages/ProjectDetail";
-import NotFound from "./pages/NotFound";
-import MoodTracker from "./pages/MoodTracker";
+import ChatDetailPage from "./pages/ChatDetailPage";
+import MoodTrackerPage from "./pages/MoodTrackerPage";
 import GoalsPage from "./pages/GoalsPage";
 import GoalDetailPage from "./pages/GoalDetailPage";
+import ProfilePage from "./pages/ProfilePage";
+import NotFound from "./pages/NotFound";
+import ProductivityPage from "./pages/ProductivityPage";
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/request" element={<Request />} />
+        <Route path="/request" element={<RequestPage />} />
         <Route path="/chat" element={<ChatPage />} />
-        <Route path="/chat/:conversationId" element={<ChatPage />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/projects/:projectId" element={<ProjectDetail />} />
-        <Route path="/mood-tracker" element={<MoodTracker />} />
-        <Route path="/goals" element={<GoalsPage />} />
+        <Route path="/chat/:chatId" element={<ChatDetailPage />} />
+        
+        <Route path="/productivity" element={<ProductivityPage />}>
+          <Route path="mood-tracker" element={<MoodTrackerPage />} />
+          <Route path="goals" element={<GoalsPage />} />
+        </Route>
+
+        {/* The detail page for a goal should remain a top-level route */}
         <Route path="/goals/:goalId" element={<GoalDetailPage />} />
+
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
