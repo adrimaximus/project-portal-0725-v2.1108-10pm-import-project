@@ -73,6 +73,30 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
   const freqNum = parseInt(frequencyValue.toString(), 10) || 1;
   const durNum = parseInt(durationValue.toString(), 10) || 1;
 
+  const handleFrequencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === '') {
+      setFrequencyValue('');
+    } else {
+      let num = parseInt(val, 10);
+      if (num > 7) num = 7;
+      if (num < 1 && val !== '') num = 1;
+      setFrequencyValue(num);
+    }
+  };
+
+  const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === '') {
+      setDurationValue('');
+    } else {
+      let num = parseInt(val, 10);
+      if (num > 4) num = 4;
+      if (num < 1 && val !== '') num = 1;
+      setDurationValue(num);
+    }
+  };
+
   return (
     <div className="grid gap-4 py-4">
       <div className="grid gap-2">
@@ -126,8 +150,9 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
             id="frequency"
             type="number"
             min="1"
+            max="7"
             value={frequencyValue}
-            onChange={(e) => setFrequencyValue(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+            onChange={handleFrequencyChange}
             className="w-20"
             placeholder="e.g. 1"
           />
@@ -139,8 +164,9 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
             id="duration"
             type="number"
             min="1"
+            max="4"
             value={durationValue}
-            onChange={(e) => setDurationValue(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+            onChange={handleDurationChange}
             className="w-20"
             placeholder="e.g. 1"
           />
