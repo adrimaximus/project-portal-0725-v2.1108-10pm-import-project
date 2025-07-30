@@ -8,9 +8,8 @@ interface GoalCardProps {
 }
 
 const GoalCard = ({ goal }: GoalCardProps) => {
-  const { title, icon: Icon, frequency, color, completions } = goal;
+  const { title, icon: Icon, color, completions } = goal;
 
-  // Filter completions to only include the last 3 months
   const today = startOfToday();
   const threeMonthsAgo = subMonths(today, 3);
 
@@ -19,26 +18,25 @@ const GoalCard = ({ goal }: GoalCardProps) => {
     return isAfter(completionDate, threeMonthsAgo);
   });
 
-  const formatFrequency = (freq: string) => {
-    // Handle "Every X day(s)..." format to match the editor's options
-    const daysMatch = freq.match(/Every (\d+)/);
-    if (daysMatch) {
-      const days = parseInt(daysMatch[1], 10);
-      if (days === 1) return 'Every day';
-      if (days === 7) return 'Once a week';
-      return `Every ${days} days`;
+  const formatFrequency = (g: Goal) => {
+    if (g.specificDays && g.specificDays.length > 0) {
+      if (g.specificDays.length === 7) return 'Every day';
+      if (g.specificDays.length === 1) return 'Once a week';
+      
+      const dayOrder: { [key: string]: number } = { Su: 0, Mo: 1, Tu: 2, We: 3, Th: 4, Fr: 5, Sa: 6 };
+      const sortedDays = [...g.specificDays].sort((a, b) => dayOrder[a] - dayOrder[b]);
+      
+      if (g.specificDays.length > 3) {
+        return `${g.specificDays.length} days a week`;
+      }
+      return sortedDays.join(', ');
     }
-
-    // Handle simple legacy formats for backward compatibility
-    if (freq.toLowerCase() === 'daily') {
+    
+    if (g.frequency.startsWith('Every 1 day')) {
       return 'Every day';
     }
-    if (freq.toLowerCase() === 'weekly') {
-      return 'Once a week';
-    }
 
-    // Fallback for any other unexpected format
-    return freq;
+    return g.frequency;
   };
 
   return (
@@ -50,7 +48,7 @@ const GoalCard = ({ goal }: GoalCardProps) => {
           </div>
           <CardTitle className="text-lg font-semibold">{title}</CardTitle>
         </div>
-        <p className="text-sm text-muted-foreground">{formatFrequency(frequency)}</p>
+        <p className="text-sm text-muted-foreground">{formatFrequency(goal)}</p>
       </CardHeader>
       <CardContent>
         <GoalProgressGrid completions={recentCompletions} color={color} />

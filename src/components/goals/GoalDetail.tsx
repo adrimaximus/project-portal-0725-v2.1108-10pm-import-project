@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, ChevronDown } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import IconPicker from './IconPicker';
 import { CustomColorPicker } from './CustomColorPicker';
+import DayOfWeekPicker from './DayOfWeekPicker';
 
 interface GoalDetailProps {
   goal: Goal;
@@ -19,47 +21,57 @@ interface GoalDetailProps {
 const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetailProps) => {
   const [editedGoal, setEditedGoal] = useState<Goal>(goal);
 
-  // Helper function to parse frequency string.
-  const parseFrequency = (freq: string): { days: string } => {
-    const daysMatch = freq.match(/Every (\d+)/);
-
-    let days = "1";
-    if (daysMatch) {
-      days = daysMatch[1];
-    } else if (freq.toLowerCase().includes('week')) {
-      days = "7";
-    } else if (freq.toLowerCase().includes('daily')) {
-      days = "1";
+  const getInitialFrequencyType = (g: Goal) => {
+    if (g.specificDays && g.specificDays.length > 0) {
+      return 'specific_days';
     }
-
-    return { days };
+    if (g.frequency.startsWith('Every 1 day')) {
+      return 'daily';
+    }
+    // Fallback for other formats to ensure they can be edited
+    if (g.frequency) {
+        return 'specific_days';
+    }
+    return 'daily';
   };
 
-  const initialFrequency = parseFrequency(goal.frequency);
-  const [frequencyValue, setFrequencyValue] = useState<string>(initialFrequency.days);
+  const [frequencyType, setFrequencyType] = useState<'daily' | 'specific_days'>(getInitialFrequencyType(goal));
+  const [selectedDays, setSelectedDays] = useState<string[]>(goal.specificDays || []);
 
   const handleSave = () => {
-    const finalDays = parseInt(frequencyValue, 10) || 1;
+    let finalFrequency = '';
+    let finalSpecificDays: string[] | undefined = undefined;
 
-    // Duration is now fixed to 1 week and not shown in the UI.
-    const newFrequencyString = `Every ${finalDays} day${finalDays > 1 ? 's' : ''} for 1 week`;
+    if (frequencyType === 'daily') {
+      finalFrequency = 'Every 1 day for 1 week';
+      finalSpecificDays = undefined;
+    } else {
+      finalFrequency = `On ${selectedDays.length} specific day(s) for 1 week`;
+      finalSpecificDays = selectedDays;
+    }
     
-    onUpdate({ ...editedGoal, frequency: newFrequencyString });
+    onUpdate({ ...editedGoal, frequency: finalFrequency, specificDays: finalSpecificDays });
   };
 
   const handleIconSelect = (icon: React.ElementType) => {
-    setEditedGoal({ ...editedGoal, icon });
+    setEditedGoal({ ...editedGoal, icon: icon as LucideIcon });
+  };
+
+  const handleDayToggle = (dayKey: string) => {
+    setSelectedDays(prev => 
+      prev.includes(dayKey) ? prev.filter(d => d !== dayKey) : [...prev, dayKey]
+    );
   };
 
   const getIconBackgroundColor = () => {
     const color = editedGoal.color;
     if (color.startsWith('#')) {
       let fullHex = color;
-      if (color.length === 4) { // expand shorthand hex #RGB -> #RRGGBB
+      if (color.length === 4) {
         fullHex = `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
       }
       if (fullHex.length === 7) {
-        return `${fullHex}33`; // Append alpha for ~20% opacity
+        return `${fullHex}33`;
       }
     }
     return 'rgba(128, 128, 128, 0.2)';
@@ -112,21 +124,23 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
 
       <div className="grid gap-2">
         <Label htmlFor="frequency">Frequency</Label>
-        <Select value={frequencyValue} onValueChange={setFrequencyValue}>
+        <Select value={frequencyType} onValueChange={(value) => setFrequencyType(value as 'daily' | 'specific_days')}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select frequency" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="1">Every day</SelectItem>
-            <SelectItem value="2">Every 2 days</SelectItem>
-            <SelectItem value="3">Every 3 days</SelectItem>
-            <SelectItem value="4">Every 4 days</SelectItem>
-            <SelectItem value="5">Every 5 days</SelectItem>
-            <SelectItem value="6">Every 6 days</SelectItem>
-            <SelectItem value="7">Once a week</SelectItem>
+            <SelectItem value="daily">Every day</SelectItem>
+            <SelectItem value="specific_days">Specific days of the week</SelectItem>
           </SelectContent>
         </Select>
       </div>
+
+      {frequencyType === 'specific_days' && (
+        <div className="grid gap-2 pt-2">
+            <Label className="text-center mb-2">On which days?</Label>
+            <DayOfWeekPicker selectedDays={selectedDays} onDayToggle={handleDayToggle} />
+        </div>
+      )}
 
       <div className="flex justify-between items-center pt-4 mt-4 border-t">
         <div>
@@ -139,7 +153,7 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
         </div>
         <div className="flex gap-2">
           {onClose && <Button variant="ghost" onClick={onClose}>Cancel</Button>}
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} disabled={frequencyType === 'specific_days' && selectedDays.length === 0}>
             {isCreateMode ? 'Create Goal' : 'Save Changes'}
           </Button>
         </div>
