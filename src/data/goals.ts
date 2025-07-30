@@ -1,75 +1,54 @@
-import { Activity, Dumbbell, Target, BookOpen, Leaf, HeartPulse } from 'lucide-react';
-import { eachDayOfInterval, startOfYear, getDay, subDays } from 'date-fns';
+import { Book, Dumbbell, Droplets } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-export const dummyIcons = {
-  Activity,
-  Dumbbell,
-  Target,
-  BookOpen,
-  Leaf,
-  HeartPulse,
-};
+export interface GoalCompletion {
+  date: string; // ISO 8601 format: "YYYY-MM-DD"
+  completed: boolean;
+}
 
-export type Goal = {
+export interface Goal {
   id: string;
   title: string;
-  frequency: string; // e.g., "Daily", "Specific Days"
-  specificDays?: string[]; // e.g., ["Mo", "We", "Fr"]
+  icon: LucideIcon;
   color: string;
-  icon: React.ElementType;
-  iconName: keyof typeof dummyIcons;
-  completions: {
-    date: string; // ISO string
-    completed: boolean;
-  }[];
-};
-
-const generateCompletions = (endDate: Date, daysToGoBack: number, specificDays?: string[]): Goal['completions'] => {
-  const dayKeys = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-  const startDate = subDays(endDate, daysToGoBack);
-  const days = eachDayOfInterval({ start: startDate, end: endDate });
-  
-  return days
-    .filter(day => {
-      if (!specificDays || specificDays.length === 0 || specificDays.length === 7) return true; // Daily
-      const dayKey = dayKeys[getDay(day)];
-      return specificDays.includes(dayKey);
-    })
-    .map(date => ({
-      date: date.toISOString(),
-      completed: Math.random() > 0.4, // Randomly mark as completed
-    }));
-};
-
-const today = new Date();
+  frequency: string; // e.g., "daily", "specific_days"
+  specificDays?: string[]; // e.g., ["Mo", "We", "Fr"]
+  completions: GoalCompletion[];
+}
 
 export const dummyGoals: Goal[] = [
   {
-    id: 'g1',
+    id: '1',
     title: 'Read 10 pages',
-    frequency: 'Daily',
-    color: '#4ECDC4',
-    icon: BookOpen,
-    iconName: 'BookOpen',
-    completions: generateCompletions(today, 365),
+    icon: Book,
+    color: '#4A90E2',
+    frequency: 'Every 1 day for 1 week',
+    completions: [
+      { date: '2024-07-20', completed: true },
+      { date: '2024-07-21', completed: true },
+    ],
   },
   {
-    id: 'g2',
-    title: '30-minute workout',
-    frequency: 'Specific Days',
-    specificDays: ['Mo', 'We', 'Fr'],
-    color: '#FF6B6B',
+    id: '2',
+    title: 'Workout for 30 mins',
     icon: Dumbbell,
-    iconName: 'Dumbbell',
-    completions: generateCompletions(today, 365, ['Mo', 'We', 'Fr']),
+    color: '#D0021B',
+    frequency: 'On 3 specific day(s) for 1 week',
+    specificDays: ['Mo', 'We', 'Fr'],
+    completions: [
+      { date: '2024-07-22', completed: true },
+    ],
   },
   {
-    id: 'g3',
-    title: 'Meditate',
-    frequency: 'Daily',
-    color: '#45B7D1',
-    icon: Leaf,
-    iconName: 'Leaf',
-    completions: generateCompletions(today, 365),
+    id: '3',
+    title: 'Drink 8 glasses of water',
+    icon: Droplets,
+    color: '#50E3C2',
+    frequency: 'Every 1 day for 1 week',
+    completions: [
+      { date: '2024-07-20', completed: true },
+      { date: '2024-07-21', completed: false },
+      { date: '2024-07-22', completed: true },
+    ],
   },
 ];

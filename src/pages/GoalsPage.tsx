@@ -1,79 +1,72 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import PortalLayout from '@/components/PortalLayout';
 import { dummyGoals, Goal } from '@/data/goals';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle } from 'lucide-react';
+import GoalCard from '@/components/goals/GoalCard';
 import GoalDetail from '@/components/goals/GoalDetail';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
-import { parseISO, isToday } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Plus, Target } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 
 const GoalsPage = () => {
-  const [goals, setGoals] = useState(dummyGoals);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [goals, setGoals] = useState<Goal[]>(dummyGoals);
+  const [isNewGoalModalOpen, setIsNewGoalModalOpen] = useState(false);
 
-  const handleCreateGoal = (newGoal: Goal) => {
-    setGoals(prev => [...prev, { ...newGoal, id: `g${prev.length + 1}` }]);
-    setIsCreateModalOpen(false);
+  const defaultNewGoal: Goal = {
+    id: '',
+    title: '',
+    icon: Target,
+    color: '#3B82F6',
+    frequency: 'Everyday',
+    completions: [],
   };
 
-  const handleUpdateGoal = (updatedGoal: Goal) => {
-    setGoals(prev => prev.map(g => g.id === updatedGoal.id ? updatedGoal : g));
+  const handleCreateGoal = (newGoal: Goal) => {
+    const goalToAdd = { ...newGoal, id: (goals.length + 1).toString() };
+    setGoals([goalToAdd, ...goals]);
+    setIsNewGoalModalOpen(false);
   };
 
   return (
-    <>
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Your Goals</h2>
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+    <PortalLayout>
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">My Goals</h1>
+          <p className="text-muted-foreground">Track your habits and stay consistent.</p>
+        </div>
+        <Dialog open={isNewGoalModalOpen} onOpenChange={setIsNewGoalModalOpen}>
           <DialogTrigger asChild>
             <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 h-4 w-4" />
               New Goal
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Create New Goal</DialogTitle>
+              <DialogTitle>Create a New Goal</DialogTitle>
+              <DialogDescription>
+                Set up a new goal to track your progress. What do you want to achieve?
+              </DialogDescription>
             </DialogHeader>
-            <GoalDetail onUpdate={handleCreateGoal} onClose={() => setIsCreateModalOpen(false)} />
+            <GoalDetail 
+              goal={defaultNewGoal}
+              onUpdate={handleCreateGoal}
+              onClose={() => setIsNewGoalModalOpen(false)}
+              isCreateMode
+            />
           </DialogContent>
         </Dialog>
+      </header>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
+        {goals.map(goal => (
+          <Link to={`/goals/${goal.id}`} key={goal.id} className="no-underline h-full">
+            <GoalCard 
+              goal={goal} 
+            />
+          </Link>
+        ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
-        {goals.map(goal => {
-          const Icon = goal.icon;
-          const todaysCompletion = goal.completions.find(c => isToday(parseISO(c.date)));
-          const progress = Math.round((goal.completions.filter(c => c.completed).length / goal.completions.length) * 100);
-
-          return (
-            <Link to={`/goals/${goal.id}`} key={goal.id}>
-              <Card className="hover:bg-muted/50 transition-colors">
-                <CardHeader>
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: `${goal.color}20` }}>
-                      <Icon className="h-6 w-6" style={{ color: goal.color }} />
-                    </div>
-                    <CardTitle className="text-lg">{goal.title}</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>{goal.frequency}</CardDescription>
-                  <div className="mt-4">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-medium">Progress</span>
-                      <span className="text-sm font-bold">{progress}%</span>
-                    </div>
-                    <Progress value={progress} indicatorStyle={{ backgroundColor: goal.color }} />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
-    </>
+    </PortalLayout>
   );
 };
 
