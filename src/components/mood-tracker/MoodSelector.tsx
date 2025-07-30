@@ -21,17 +21,14 @@ const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
       {moods.map((mood) => (
         <Button
           key={mood.id}
-          variant={selectedMoodId === mood.id ? 'secondary' : 'ghost'}
+          variant="ghost"
           onClick={() => onSelectMood(mood.id)}
-          className={cn(
-            'w-full justify-start h-auto p-2 border',
-            selectedMoodId === mood.id ? 'border-primary' : 'border-transparent'
-          )}
+          className="w-full justify-start h-auto p-2"
         >
           <div
             className={cn(
-              'w-10 h-10 flex items-center justify-center rounded-lg mr-3',
-              moodColors[mood.id] || 'bg-gray-100'
+              'w-10 h-10 flex items-center justify-center rounded-lg mr-3 transition-colors',
+              selectedMoodId === mood.id ? moodColors[mood.id] : 'bg-gray-100'
             )}
           >
             <span className="text-2xl">{mood.emoji}</span>
