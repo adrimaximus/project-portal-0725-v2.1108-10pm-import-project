@@ -65,7 +65,7 @@ const MoodOverview = ({ history }: MoodOverviewProps) => {
                 data={moodCounts}
                 cx="50%"
                 cy="50%"
-                innerRadius="60%"
+                innerRadius="50%"
                 outerRadius="100%"
                 dataKey="value"
                 nameKey="label"
