@@ -1,4 +1,4 @@
-import { users } from './users';
+import { allUsers } from './users';
 
 export interface AssignedUser {
   id: string;
@@ -6,14 +6,14 @@ export interface AssignedUser {
   avatar: string;
   role?: string;
   email?: string;
+  status?: 'Online' | 'Offline';
 }
 
 export interface Task {
   id: string;
-  title: string;
-  status: 'To Do' | 'In Progress' | 'Done';
-  assignee?: AssignedUser;
-  dueDate?: string;
+  text: string;
+  completed: boolean;
+  assignedTo?: string[];
 }
 
 export interface Activity {
@@ -50,29 +50,29 @@ export const dummyProjects: Project[] = [
   {
     id: "PROJ-001",
     name: "E-commerce Platform",
-    assignedTo: [users[0], users[1], users[2]],
+    assignedTo: [allUsers[0], allUsers[1], allUsers[2]],
     status: "In Progress",
     progress: 75,
     startDate: "2023-01-15",
     deadline: "2024-08-30",
     paymentStatus: "pending",
     budget: 50000000,
-    createdBy: users[0],
+    createdBy: allUsers[0],
     description: "A full-featured e-commerce platform with a modern UI.",
     rating: 0,
     tasks: [
-      { id: 'task-1', title: 'Setup database schema', status: 'Done', assignee: users[1] },
-      { id: 'task-2', title: 'Design product page UI', status: 'In Progress', assignee: users[2] },
+      { id: 'task-1', text: 'Setup database schema', completed: true, assignedTo: [allUsers[1].id] },
+      { id: 'task-2', text: 'Design product page UI', completed: false, assignedTo: [allUsers[2].id] },
     ],
     activityFeed: [
-      { id: 'act-1', user: users[0], action: 'created', target: 'the project', timestamp: '2023-01-15T09:00:00Z' }
+      { id: 'act-1', user: allUsers[0], action: 'created', target: 'the project', timestamp: '2023-01-15T09:00:00Z' }
     ],
     services: ['Web Development', 'UI/UX Design']
   },
   {
     id: "PROJ-002",
     name: "Mobile Banking App",
-    assignedTo: [users[1], users[4]],
+    assignedTo: [allUsers[1], allUsers[4]],
     status: "Completed",
     progress: 100,
     startDate: "2023-03-01",
@@ -80,7 +80,7 @@ export const dummyProjects: Project[] = [
     paymentStatus: "paid",
     paymentDueDate: "2023-09-15",
     budget: 75000000,
-    createdBy: users[0],
+    createdBy: allUsers[0],
     description: "A secure and user-friendly mobile banking application.",
     invoiceAttachmentUrl: "https://example.com/invoice.pdf",
     rating: 5,
@@ -91,14 +91,14 @@ export const dummyProjects: Project[] = [
   {
     id: "PROJ-003",
     name: "CRM System",
-    assignedTo: [users[0], users[3], users[4]],
+    assignedTo: [allUsers[0], allUsers[3], allUsers[4]],
     status: "On Hold",
     progress: 30,
     startDate: "2023-05-20",
     deadline: "2024-12-31",
     paymentStatus: "proposed",
     budget: 120000000,
-    createdBy: users[0],
+    createdBy: allUsers[0],
     description: "Customer Relationship Management system for sales team.",
     rating: 0,
     tasks: [],
@@ -108,7 +108,7 @@ export const dummyProjects: Project[] = [
   {
     id: "PROJ-004",
     name: "Website Redesign",
-    assignedTo: [users[2]],
+    assignedTo: [allUsers[2]],
     status: "Completed",
     progress: 100,
     startDate: "2023-08-10",
@@ -116,7 +116,7 @@ export const dummyProjects: Project[] = [
     paymentStatus: "paid",
     paymentDueDate: "2023-11-01",
     budget: 25000000,
-    createdBy: users[0],
+    createdBy: allUsers[0],
     description: "A complete redesign of the company's public-facing website.",
     rating: 4,
     tasks: [],
@@ -126,14 +126,14 @@ export const dummyProjects: Project[] = [
   {
     id: "PROJ-005",
     name: "Data Analytics Dashboard",
-    assignedTo: [users[1], users[4]],
+    assignedTo: [allUsers[1], allUsers[4]],
     status: "In Progress",
     progress: 50,
     startDate: "2023-09-01",
     deadline: "2024-07-15",
     paymentStatus: "on_process",
     budget: 60000000,
-    createdBy: users[0],
+    createdBy: allUsers[0],
     description: "A dashboard for visualizing key business metrics.",
     tickets: 3,
     rating: 0,

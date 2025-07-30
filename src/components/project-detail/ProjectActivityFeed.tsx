@@ -24,7 +24,7 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
                 </Avatar>
                 <div className="text-sm">
                   <p className="text-muted-foreground">
-                    <span className="font-semibold text-foreground">{activity.user.name}</span> {activity.text.toLowerCase()}
+                    <span className="font-semibold text-foreground">{activity.user.name}</span> {activity.action} {activity.target}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
