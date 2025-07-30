@@ -66,7 +66,7 @@ const MoodOverview = ({ history, period }: MoodOverviewProps) => {
     : null;
 
   return (
-    <div className="w-full h-48 relative pt-4">
+    <div className="w-full h-40 relative pt-4">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Tooltip 
