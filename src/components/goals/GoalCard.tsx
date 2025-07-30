@@ -19,6 +19,34 @@ const GoalCard = ({ goal }: GoalCardProps) => {
     return isAfter(completionDate, threeMonthsAgo);
   });
 
+  const formatFrequency = (freq: string) => {
+    const daysMatch = freq.match(/Every (\d+)/);
+    const weeksMatch = freq.match(/for (\d+)/);
+
+    if (!daysMatch) {
+      return freq; // Fallback for old formats
+    }
+
+    const days = parseInt(daysMatch[1], 10);
+    const weeks = weeksMatch ? parseInt(weeksMatch[1], 10) : 1;
+
+    let dayPart = '';
+    if (days === 1) {
+      dayPart = 'Setiap hari';
+    } else if (days === 7) {
+      dayPart = 'Seminggu sekali';
+    } else {
+      dayPart = `Setiap ${days} hari`;
+    }
+
+    let weekPart = '';
+    if (weeks > 1) {
+      weekPart = ` selama ${weeks} minggu`;
+    }
+
+    return `${dayPart}${weekPart}`;
+  };
+
   return (
     <Card className="h-full transition-all hover:shadow-md hover:-translate-y-1">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -28,7 +56,7 @@ const GoalCard = ({ goal }: GoalCardProps) => {
           </div>
           <CardTitle className="text-lg font-semibold">{title}</CardTitle>
         </div>
-        <p className="text-sm text-muted-foreground">{frequency}</p>
+        <p className="text-sm text-muted-foreground">{formatFrequency(frequency)}</p>
       </CardHeader>
       <CardContent>
         <GoalProgressGrid completions={recentCompletions} color={color} />
