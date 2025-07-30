@@ -5,6 +5,7 @@ import ProjectBrief from "./ProjectBrief";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { differenceInDays, parseISO, isBefore, isAfter, isToday, isTomorrow } from 'date-fns';
+import ProjectRating from "./ProjectRating";
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -22,6 +23,17 @@ const Section = ({ title, children }: { title: string, children: React.ReactNode
 );
 
 const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesChange }: ProjectOverviewTabProps) => {
+  const projectIsDone = (() => {
+    try {
+      const now = new Date();
+      const deadline = parseISO(project.deadline);
+      return isAfter(now, deadline);
+    } catch (error) {
+      console.error("Invalid date format for project deadline:", project.deadline);
+      return false;
+    }
+  })();
+
   const getStatusBadge = () => {
     try {
       const now = new Date();
@@ -94,6 +106,12 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
           onFilesChange={onFilesChange}
         />
       </Section>
+
+      {projectIsDone && (
+        <Section title="Rating">
+          <ProjectRating />
+        </Section>
+      )}
     </div>
   );
 };
