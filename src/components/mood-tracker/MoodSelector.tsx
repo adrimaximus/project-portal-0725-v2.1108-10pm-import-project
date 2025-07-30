@@ -16,11 +16,18 @@ const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
           variant={selectedMoodId === mood.id ? 'secondary' : 'ghost'}
           onClick={() => onSelectMood(mood.id)}
           className={cn(
-            'w-full justify-start h-auto p-2 border',
+            'w-full justify-start h-auto p-2 border flex items-center',
             selectedMoodId === mood.id ? 'border-primary' : 'border-transparent'
           )}
         >
-          <span className="text-2xl mr-3">{mood.emoji}</span>
+          <div
+            className={cn(
+              'w-9 h-9 rounded-full flex items-center justify-center mr-3',
+              mood.color
+            )}
+          >
+            <span className="text-2xl">{mood.emoji}</span>
+          </div>
           <span className="font-semibold">{mood.label}</span>
         </Button>
       ))}
