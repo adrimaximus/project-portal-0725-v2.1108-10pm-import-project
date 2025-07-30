@@ -3,17 +3,47 @@ import PortalLayout from '@/components/PortalLayout';
 import MoodSelector from '@/components/mood-tracker/MoodSelector';
 import MoodOverview from '@/components/mood-tracker/MoodOverview';
 import MoodHistory from '@/components/mood-tracker/MoodHistory';
-import { moods, dummyHistory, Mood } from '@/data/mood';
+import { moods, dummyHistory, Mood, MoodHistoryEntry } from '@/data/mood';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
 
 const MoodTracker = () => {
   const [selectedMoodId, setSelectedMoodId] = useState<Mood['id']>(moods[0].id);
+  const [history, setHistory] = useState<MoodHistoryEntry[]>(dummyHistory);
 
   const handleSubmit = () => {
     const selectedMood = moods.find(mood => mood.id === selectedMoodId);
-    console.log('Mood submitted:', selectedMood);
-    alert(`You submitted: ${selectedMood?.label}`);
+    if (!selectedMood) return;
+
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+    const existingEntryIndex = history.findIndex(entry => entry.date === todayString);
+
+    const newEntry: MoodHistoryEntry = {
+      id: existingEntryIndex !== -1 ? history[existingEntryIndex].id : Date.now(),
+      date: todayString,
+      moodId: selectedMoodId,
+    };
+
+    let updatedHistory;
+    if (existingEntryIndex !== -1) {
+      // Perbarui entri yang ada untuk hari ini
+      updatedHistory = history.map((entry, index) =>
+        index === existingEntryIndex ? newEntry : entry
+      );
+    } else {
+      // Tambahkan entri baru
+      updatedHistory = [...history, newEntry];
+    }
+
+    // Urutkan riwayat berdasarkan tanggal secara menurun
+    updatedHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    setHistory(updatedHistory);
+
+    toast.success(`Mood Anda telah direkam: ${selectedMood.label} ${selectedMood.emoji}`);
   };
 
   return (
@@ -42,7 +72,7 @@ const MoodTracker = () => {
               <CardTitle>This Week's Overview</CardTitle>
             </CardHeader>
             <CardContent>
-              <MoodOverview history={dummyHistory} />
+              <MoodOverview history={history} />
             </CardContent>
           </Card>
 
@@ -51,7 +81,7 @@ const MoodTracker = () => {
               <CardTitle>Your Mood History</CardTitle>
             </CardHeader>
             <CardContent>
-              <MoodHistory history={dummyHistory} />
+              <MoodHistory history={history} />
             </CardContent>
           </Card>
         </div>
