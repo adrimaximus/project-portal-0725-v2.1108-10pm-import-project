@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { moods, MoodHistoryEntry } from '@/data/mood';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { cn } from '@/lib/utils';
 
 interface MoodOverviewProps {
   history: MoodHistoryEntry[];
@@ -10,16 +11,18 @@ interface MoodOverviewProps {
 
 type Period = 'month' | 'year';
 
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload, isHoverOnRight }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="rounded-lg border bg-background p-2 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{data.emoji}</span>
-          <p className="text-sm text-muted-foreground">
-            <span className="font-bold" style={{ color: data.color }}>{data.label}</span>: {data.value} hari
-          </p>
+      <div className={cn(isHoverOnRight && '-translate-x-full')}>
+        <div className="rounded-lg border bg-background p-2 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{data.emoji}</span>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-bold" style={{ color: data.color }}>{data.label}</span>: {data.value} hari
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -29,6 +32,20 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 const MoodOverview = ({ history }: MoodOverviewProps) => {
   const [period, setPeriod] = useState<Period>('month');
+  const [isHoverOnRight, setIsHoverOnRight] = useState(false);
+
+  const handleMouseMove = (state: any) => {
+    if (state.isTooltipActive && state.activePayload && state.activePayload.length) {
+      const sliceData = state.activePayload[0];
+      const midAngle = sliceData.startAngle + (sliceData.endAngle - sliceData.startAngle) / 2;
+      
+      // Angles in recharts: 0 is at 3 o'clock. Right half is from 270 to 90 degrees.
+      // Cosine is positive for angles in the 1st and 4th quadrants (-90 to 90 deg).
+      const cosAngle = Math.cos(midAngle * (Math.PI / 180));
+      
+      setIsHoverOnRight(cosAngle > 0);
+    }
+  };
 
   const now = new Date();
   const filteredHistory = history.filter(entry => {
@@ -77,8 +94,12 @@ const MoodOverview = ({ history }: MoodOverviewProps) => {
       <CardContent>
         <div className="w-full h-40 relative">
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
+            <PieChart onMouseMove={handleMouseMove}>
+              <Tooltip 
+                content={<CustomTooltip isHoverOnRight={isHoverOnRight} />} 
+                cursor={{ fill: 'transparent' }}
+                wrapperStyle={{ zIndex: 50 }}
+              />
               <Pie
                 data={moodCounts}
                 cx="50%"
