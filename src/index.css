@@ -74,9 +74,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-@layer components {
-  .mood-progress > div {
-    background-color: var(--progress-color);
-  }
-}

@@ -30,7 +30,7 @@ const MoodStats = ({ data }: MoodStatsProps) => {
               <span className="text-muted-foreground">{mood.value} day{mood.value !== 1 ? 's' : ''}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Progress value={percentage} className="h-2 w-full mood-progress" style={{'--progress-color': mood.color} as React.CSSProperties} />
+              <Progress value={percentage} className="h-2 w-full" style={{ backgroundColor: mood.color }} />
               <span className="text-xs font-semibold w-10 text-right">{percentage}%</span>
             </div>
           </div>
