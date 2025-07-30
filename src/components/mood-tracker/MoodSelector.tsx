@@ -8,7 +8,7 @@ interface MoodSelectorProps {
 
 const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
   return (
-    <div className="flex items-center gap-2 sm:gap-4">
+    <div className="flex items-center gap-4 sm:gap-8">
       {moods.map((mood) => (
         <button
           key={mood.id}
@@ -19,7 +19,7 @@ const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
           )}
           aria-label={`Select mood: ${mood.label}`}
         >
-          <mood.Icon className={cn('h-12 w-12 sm:h-14 sm:w-14', mood.color)} />
+          <mood.Icon className={cn('h-16 w-16 sm:h-20 sm:w-20', mood.color)} />
         </button>
       ))}
     </div>
