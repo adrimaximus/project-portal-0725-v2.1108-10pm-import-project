@@ -8,9 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 
+type Period = 'week' | 'month' | 'year';
+
 const MoodTracker = () => {
   const [selectedMoodId, setSelectedMoodId] = useState<Mood['id']>(moods[0].id);
   const [history, setHistory] = useState<MoodHistoryEntry[]>(dummyHistory);
+  const [period, setPeriod] = useState<Period>('week');
   const user = { name: 'Alex' }; // Data pengguna tiruan
 
   const handleSubmit = () => {
@@ -30,21 +33,28 @@ const MoodTracker = () => {
 
     let updatedHistory;
     if (existingEntryIndex !== -1) {
-      // Perbarui entri yang ada untuk hari ini
       updatedHistory = history.map((entry, index) =>
         index === existingEntryIndex ? newEntry : entry
       );
     } else {
-      // Tambahkan entri baru
       updatedHistory = [...history, newEntry];
     }
 
-    // Urutkan riwayat berdasarkan tanggal secara menurun
     updatedHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
     setHistory(updatedHistory);
-
     toast.success(`Mood Anda telah direkam: ${selectedMood.label} ${selectedMood.emoji}`);
+  };
+
+  const getOverviewTitle = () => {
+    switch (period) {
+      case 'month':
+        return "This Month's Overview";
+      case 'year':
+        return "This Year's Overview";
+      case 'week':
+      default:
+        return "This Week's Overview";
+    }
   };
 
   return (
@@ -69,11 +79,37 @@ const MoodTracker = () => {
           </Card>
 
           <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>This Week's Overview</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle>{getOverviewTitle()}</CardTitle>
+              <div className="flex items-center gap-1 rounded-md bg-secondary p-1">
+                <Button
+                  variant={period === 'week' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setPeriod('week')}
+                  className="h-7"
+                >
+                  This Week
+                </Button>
+                <Button
+                  variant={period === 'month' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setPeriod('month')}
+                  className="h-7"
+                >
+                  This Month
+                </Button>
+                <Button
+                  variant={period === 'year' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setPeriod('year')}
+                  className="h-7"
+                >
+                  This Year
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <MoodOverview history={history} />
+              <MoodOverview history={history} period={period} />
             </CardContent>
           </Card>
 
