@@ -18,25 +18,35 @@ interface GoalDetailProps {
 const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetailProps) => {
   const [editedGoal, setEditedGoal] = useState<Goal>(goal);
 
-  // Helper function to parse frequency string into a number for the input field.
-  const parseFrequencyToNumber = (freq: string): number => {
-    const match = freq.match(/(\d+)/);
-    if (match) {
-      return parseInt(match[0], 10);
+  // Helper function to parse frequency string.
+  const parseFrequency = (freq: string): { days: number, weeks: number } => {
+    const daysMatch = freq.match(/Every (\d+)/);
+    const weeksMatch = freq.match(/for (\d+)/);
+
+    let days = 1;
+    if (daysMatch) {
+      days = parseInt(daysMatch[1], 10);
+    } else if (freq === 'Once a week') {
+      days = 7;
     }
-    // Handle legacy values
-    if (freq === 'Everyday') return 1;
-    if (freq === 'Once a week') return 7;
-    // Default for other unhandled legacy values like "X days per week"
-    return 1;
+
+    const weeks = weeksMatch ? parseInt(weeksMatch[1], 10) : 1;
+
+    return { days, weeks };
   };
 
-  const [frequencyValue, setFrequencyValue] = useState<number | string>(() => parseFrequencyToNumber(goal.frequency));
+  const initialFrequency = parseFrequency(goal.frequency);
+  const [frequencyValue, setFrequencyValue] = useState<number | string>(initialFrequency.days);
+  const [durationValue, setDurationValue] = useState<number | string>(initialFrequency.weeks);
 
   const handleSave = () => {
-    const num = typeof frequencyValue === 'number' ? frequencyValue : parseInt(frequencyValue as string, 10);
-    const finalFrequencyValue = !isNaN(num) && num > 0 ? num : 1;
-    const newFrequencyString = `Every ${finalFrequencyValue} day${finalFrequencyValue > 1 ? 's' : ''}`;
+    const numDays = typeof frequencyValue === 'number' ? frequencyValue : parseInt(frequencyValue as string, 10);
+    const finalDays = !isNaN(numDays) && numDays > 0 ? numDays : 1;
+
+    const numWeeks = typeof durationValue === 'number' ? durationValue : parseInt(durationValue as string, 10);
+    const finalWeeks = !isNaN(numWeeks) && numWeeks > 0 ? numWeeks : 1;
+
+    const newFrequencyString = `Every ${finalDays} day${finalDays > 1 ? 's' : ''} for ${finalWeeks} week${finalWeeks > 1 ? 's' : ''}`;
     
     onUpdate({ ...editedGoal, frequency: newFrequencyString });
   };
@@ -59,6 +69,9 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
     // Fallback for invalid hex or other formats during input
     return 'rgba(128, 128, 128, 0.2)';
   }
+
+  const freqNum = parseInt(frequencyValue.toString(), 10) || 1;
+  const durNum = parseInt(durationValue.toString(), 10) || 1;
 
   return (
     <div className="grid gap-4 py-4">
@@ -107,7 +120,7 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
 
       <div className="grid gap-2">
         <Label htmlFor="frequency">Frequency</Label>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-muted-foreground">Every</span>
           <Input
             id="frequency"
@@ -115,10 +128,25 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
             min="1"
             value={frequencyValue}
             onChange={(e) => setFrequencyValue(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
-            className="w-24"
+            className="w-20"
             placeholder="e.g. 1"
           />
-          <span className="text-sm text-muted-foreground">day(s)</span>
+          <span className="text-sm text-muted-foreground">
+            {freqNum === 1 ? 'day' : 'days'}
+          </span>
+          <span className="text-sm text-muted-foreground">for</span>
+          <Input
+            id="duration"
+            type="number"
+            min="1"
+            value={durationValue}
+            onChange={(e) => setDurationValue(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+            className="w-20"
+            placeholder="e.g. 1"
+          />
+          <span className="text-sm text-muted-foreground">
+            {durNum === 1 ? 'week' : 'weeks'}
+          </span>
         </div>
       </div>
 
