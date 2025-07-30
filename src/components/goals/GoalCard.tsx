@@ -20,41 +20,25 @@ const GoalCard = ({ goal }: GoalCardProps) => {
   });
 
   const formatFrequency = (freq: string) => {
-    // Handle simple legacy formats
+    // Handle "Every X day(s)..." format to match the editor's options
+    const daysMatch = freq.match(/Every (\d+)/);
+    if (daysMatch) {
+      const days = parseInt(daysMatch[1], 10);
+      if (days === 1) return 'Every day';
+      if (days === 7) return 'Once a week';
+      return `Every ${days} days`;
+    }
+
+    // Handle simple legacy formats for backward compatibility
     if (freq.toLowerCase() === 'daily') {
-      return 'Daily';
+      return 'Every day';
     }
     if (freq.toLowerCase() === 'weekly') {
-      return 'Weekly';
+      return 'Once a week';
     }
-
-    // Handle "Every X day(s) for Y week(s)" format
-    const daysMatch = freq.match(/Every (\d+)/);
-    const weeksMatch = freq.match(/for (\d+)/);
 
     // Fallback for any other unexpected format
-    if (!daysMatch) {
-      return freq;
-    }
-
-    const days = parseInt(daysMatch[1], 10);
-    const weeks = weeksMatch ? parseInt(weeksMatch[1], 10) : 1;
-
-    let dayPart = '';
-    if (days === 1) {
-      dayPart = 'Daily';
-    } else if (days === 7) {
-      return 'Weekly';
-    } else {
-      dayPart = `Every ${days} days`;
-    }
-
-    let weekPart = '';
-    if (weeksMatch && weeks > 1) {
-      weekPart = ` for ${weeks} weeks`;
-    }
-
-    return `${dayPart}${weekPart}`;
+    return freq;
   };
 
   return (
