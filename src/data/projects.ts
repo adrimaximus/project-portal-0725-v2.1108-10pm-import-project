@@ -1,82 +1,144 @@
+import { users } from './users';
+
 export interface AssignedUser {
   id: string;
   name: string;
-  avatar?: string;
-  email?: string;
+  avatar: string;
   role?: string;
-  status?: 'Online' | 'Offline';
+  email?: string;
 }
 
 export interface Task {
   id: string;
-  text: string;
-  completed: boolean;
-  assignedTo?: string[];
+  title: string;
+  status: 'To Do' | 'In Progress' | 'Done';
+  assignee?: AssignedUser;
+  dueDate?: string;
 }
 
 export interface Activity {
   id: string;
-  text: string;
+  user: AssignedUser;
+  action: string;
+  target: string;
   timestamp: string;
-  user: {
-    name: string;
-    avatar?: string;
-  };
 }
 
 export interface Project {
   id: string;
   name: string;
-  description: string;
-  status: "Requested" | "In Progress" | "Completed" | "On Hold" | "Cancelled" | "Done" | "Billed";
+  assignedTo: AssignedUser[];
+  status: "Completed" | "In Progress" | "On Hold" | "Cancelled" | "Done" | "Billed" | "Requested";
   progress: number;
   startDate: string;
   deadline: string;
+  paymentStatus: "paid" | "approved" | "po_created" | "on_process" | "pending" | "cancelled" | "proposed";
   paymentDueDate?: string;
+  tickets?: number;
   budget: number;
-  paymentStatus: "proposed" | "pending" | "paid" | "overdue" | "approved" | "po_created" | "on_process" | "cancelled";
+  invoiceAttachmentUrl?: string;
   createdBy: AssignedUser;
-  assignedTo: AssignedUser[];
-  services: string[];
-  briefFiles?: File[];
+  description: string;
+  briefFiles?: any[];
+  rating?: number;
   tasks?: Task[];
   activityFeed?: Activity[];
-  tickets?: number;
-  invoiceAttachmentUrl?: string;
+  services?: string[];
 }
 
-// Data dummy untuk memastikan aplikasi dapat berjalan
 export const dummyProjects: Project[] = [
   {
-    id: "proj-1",
-    name: "E-commerce Platform Development",
-    description: "Building a full-featured e-commerce platform for a client, including a customer-facing storefront and an admin panel for managing products, orders, and customers.",
+    id: "PROJ-001",
+    name: "E-commerce Platform",
+    assignedTo: [users[0], users[1], users[2]],
     status: "In Progress",
-    progress: 65,
-    startDate: "2024-05-01",
-    deadline: "2024-09-30",
-    budget: 750000000,
+    progress: 75,
+    startDate: "2023-01-15",
+    deadline: "2024-08-30",
     paymentStatus: "pending",
-    createdBy: { id: "user-1", name: "Alice Johnson", avatar: "https://i.pravatar.cc/150?u=alice" },
-    assignedTo: [
-      { id: "user-2", name: "Bob Williams", avatar: "https://i.pravatar.cc/150?u=bob" },
-      { id: "user-3", name: "Charlie Brown", avatar: "https://i.pravatar.cc/150?u=charlie" },
-      { id: "user-4", name: "Diana Prince", avatar: "https://i.pravatar.cc/150?u=diana" },
-    ],
-    services: ["Web Development", "UI/UX Design", "API Integration"],
+    budget: 50000000,
+    createdBy: users[0],
+    description: "A full-featured e-commerce platform with a modern UI.",
+    rating: 0,
     tasks: [
-      { id: "task-1", text: "Design homepage and product pages", completed: true, assignedTo: ["user-3"] },
-      { id: "task-2", text: "Set up PostgreSQL database schema", completed: true, assignedTo: ["user-2"] },
-      { id: "task-3", text: "Develop REST API for products and orders", completed: true, assignedTo: ["user-2"] },
-      { id: "task-4", text: "Implement user authentication", completed: false, assignedTo: ["user-4"] },
-      { id: "task-5", text: "Build frontend for product catalog", completed: false, assignedTo: ["user-3"] },
+      { id: 'task-1', title: 'Setup database schema', status: 'Done', assignee: users[1] },
+      { id: 'task-2', title: 'Design product page UI', status: 'In Progress', assignee: users[2] },
     ],
     activityFeed: [
-      { id: 'act-1', text: 'Bob completed "Develop REST API for products and orders"', timestamp: '2024-06-20T14:00:00Z', user: { name: 'Bob Williams' } },
-      { id: 'act-2', text: 'Alice added a new file "project-brief-v2.pdf"', timestamp: '2024-06-19T11:30:00Z', user: { name: 'Alice Johnson' } }
+      { id: 'act-1', user: users[0], action: 'created', target: 'the project', timestamp: '2023-01-15T09:00:00Z' }
     ],
-    briefFiles: [],
-    tickets: 5,
+    services: ['Web Development', 'UI/UX Design']
+  },
+  {
+    id: "PROJ-002",
+    name: "Mobile Banking App",
+    assignedTo: [users[1], users[4]],
+    status: "Completed",
+    progress: 100,
+    startDate: "2023-03-01",
+    deadline: "2023-09-01",
+    paymentStatus: "paid",
+    paymentDueDate: "2023-09-15",
+    budget: 75000000,
+    createdBy: users[0],
+    description: "A secure and user-friendly mobile banking application.",
     invoiceAttachmentUrl: "https://example.com/invoice.pdf",
+    rating: 5,
+    tasks: [],
+    activityFeed: [],
+    services: ['Mobile App Development']
+  },
+  {
+    id: "PROJ-003",
+    name: "CRM System",
+    assignedTo: [users[0], users[3], users[4]],
+    status: "On Hold",
+    progress: 30,
+    startDate: "2023-05-20",
+    deadline: "2024-12-31",
+    paymentStatus: "proposed",
+    budget: 120000000,
+    createdBy: users[0],
+    description: "Customer Relationship Management system for sales team.",
+    rating: 0,
+    tasks: [],
+    activityFeed: [],
+    services: ['Backend Development', 'QA']
+  },
+  {
+    id: "PROJ-004",
+    name: "Website Redesign",
+    assignedTo: [users[2]],
+    status: "Completed",
+    progress: 100,
+    startDate: "2023-08-10",
+    deadline: "2023-10-25",
+    paymentStatus: "paid",
+    paymentDueDate: "2023-11-01",
+    budget: 25000000,
+    createdBy: users[0],
+    description: "A complete redesign of the company's public-facing website.",
+    rating: 4,
+    tasks: [],
+    activityFeed: [],
+    services: ['UI/UX Design']
+  },
+  {
+    id: "PROJ-005",
+    name: "Data Analytics Dashboard",
+    assignedTo: [users[1], users[4]],
+    status: "In Progress",
+    progress: 50,
+    startDate: "2023-09-01",
+    deadline: "2024-07-15",
+    paymentStatus: "on_process",
+    budget: 60000000,
+    createdBy: users[0],
+    description: "A dashboard for visualizing key business metrics.",
+    tickets: 3,
+    rating: 0,
+    tasks: [],
+    activityFeed: [],
+    services: ['Data Science', 'Backend Development']
   },
 ];

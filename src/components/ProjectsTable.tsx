@@ -45,6 +45,7 @@ import { Project } from "@/data/projects"
 import { useNavigate } from "react-router-dom"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Card } from "@/components/ui/card"
+import StarRatingDisplay from "./project-detail/StarRatingDisplay"
 
 const getStatusBadgeVariant = (status: Project["status"]) => {
   switch (status) {
@@ -161,6 +162,17 @@ export const columns: ColumnDef<Project>[] = [
         {row.getValue("status")}
       </Badge>
     ),
+  },
+  {
+    accessorKey: "rating",
+    header: "Rating",
+    cell: ({ row }) => {
+      const rating = row.original.rating;
+      if (typeof rating !== 'number' || rating === 0) {
+        return <span className="text-muted-foreground">-</span>;
+      }
+      return <StarRatingDisplay rating={rating} />;
+    },
   },
   {
     accessorKey: "progress",
@@ -420,6 +432,11 @@ export default function ProjectsTable({ columns, data, onFilteredDataChange }: P
                         <span className="text-xs">•</span>
                         <span className="text-xs">Due: {format(new Date(project.deadline), "dd MMM yyyy")}</span>
                       </div>
+                      {project.rating && project.rating > 0 && (
+                        <div className="pt-1">
+                          <StarRatingDisplay rating={project.rating} />
+                        </div>
+                      )}
                       <div className="text-sm pt-1">
                         <span className="font-medium">Budget: </span>
                         {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(project.budget)}
