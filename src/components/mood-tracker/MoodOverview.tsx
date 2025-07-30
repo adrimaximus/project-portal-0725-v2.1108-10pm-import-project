@@ -1,32 +1,96 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { moods, MoodHistoryEntry } from '@/data/mood';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 interface MoodOverviewProps {
   history: MoodHistoryEntry[];
 }
 
+type Period = 'month' | 'year';
+
 const MoodOverview = ({ history }: MoodOverviewProps) => {
+  const [period, setPeriod] = useState<Period>('month');
+
+  const now = new Date();
+  const filteredHistory = history.filter(entry => {
+    const entryDate = new Date(entry.date);
+    if (period === 'month') {
+      return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
+    }
+    if (period === 'year') {
+      return entryDate.getFullYear() === now.getFullYear();
+    }
+    return true;
+  });
+
   const moodCounts = moods.map(mood => ({
     ...mood,
-    count: history.filter(entry => entry.moodId === mood.id).length,
-  }));
+    value: filteredHistory.filter(entry => entry.moodId === mood.id).length,
+  })).filter(mood => mood.value > 0);
+
+  const mostFrequentMood = moodCounts.length > 0 
+    ? moodCounts.reduce((prev, current) => (prev.value > current.value) ? prev : current)
+    : null;
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Mood Overview</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle>Overview</CardTitle>
+        <div className="flex items-center gap-1 rounded-md bg-secondary p-1">
+          <Button
+            variant={period === 'month' ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => setPeriod('month')}
+            className="h-7"
+          >
+            This Month
+          </Button>
+          <Button
+            variant={period === 'year' ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => setPeriod('year')}
+            className="h-7"
+          >
+            This Year
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {moodCounts.map(mood => (
-            <div key={mood.id} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{mood.emoji}</span>
-                <span className="font-medium">{mood.label}</span>
-              </div>
-              <span className="text-muted-foreground">{mood.count} days</span>
-            </div>
-          ))}
+        <div className="w-full h-64 relative">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={moodCounts}
+                cx="50%"
+                cy="50%"
+                innerRadius="60%"
+                outerRadius="80%"
+                dataKey="value"
+                nameKey="label"
+                paddingAngle={moodCounts.length > 1 ? 5 : 0}
+                startAngle={90}
+                endAngle={450}
+              >
+                {moodCounts.map((entry) => (
+                  <Cell key={`cell-${entry.id}`} fill={entry.color} stroke="hsl(var(--background))" strokeWidth={2} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+            {mostFrequentMood ? (
+              <>
+                <span className="text-4xl">{mostFrequentMood.emoji}</span>
+                <p className="text-sm text-muted-foreground mt-2 max-w-[150px]">
+                  You have been mostly feeling <span className="font-bold text-primary">{mostFrequentMood.label.toLowerCase()}</span>
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">No data for this period.</p>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
