@@ -6,6 +6,7 @@ import Profile from "./pages/Profile";
 import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
 import MoodTracker from "./pages/MoodTracker";
+import GoalsPage from "./pages/GoalsPage";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/projects/:projectId" element={<ProjectDetail />} />
         <Route path="/mood-tracker" element={<MoodTracker />} />
+        <Route path="/goals" element={<GoalsPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
