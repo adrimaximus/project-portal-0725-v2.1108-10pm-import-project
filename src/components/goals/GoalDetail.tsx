@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Goal } from '@/data/goals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,6 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
     if (g.frequency.startsWith('Every 1 day')) {
       return 'daily';
     }
-    // Fallback for other formats to ensure they can be edited
     if (g.frequency) {
         return 'specific_days';
     }
@@ -37,6 +36,21 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
 
   const [frequencyType, setFrequencyType] = useState<'daily' | 'specific_days'>(getInitialFrequencyType(goal));
   const [selectedDays, setSelectedDays] = useState<string[]>(goal.specificDays || []);
+
+  useEffect(() => {
+    if (selectedDays.length === 7) {
+      setFrequencyType('daily');
+    }
+  }, [selectedDays]);
+
+  const handleFrequencyChange = (value: string) => {
+    const newFrequencyType = value as 'daily' | 'specific_days';
+    setFrequencyType(newFrequencyType);
+
+    if (newFrequencyType === 'specific_days' && selectedDays.length === 7) {
+      setSelectedDays([]);
+    }
+  };
 
   const handleSave = () => {
     let finalFrequency = '';
@@ -124,7 +138,7 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
 
       <div className="grid gap-2">
         <Label htmlFor="frequency">Frequency</Label>
-        <Select value={frequencyType} onValueChange={(value) => setFrequencyType(value as 'daily' | 'specific_days')}>
+        <Select value={frequencyType} onValueChange={handleFrequencyChange}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select frequency" />
           </SelectTrigger>
