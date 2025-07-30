@@ -13,7 +13,7 @@ import { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format, isWithinInterval, parseISO, endOfDay } from 'date-fns';
+import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-fns';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -26,6 +26,27 @@ const GoalDetailPage = () => {
   const handleUpdateGoal = (updatedGoal: Goal) => {
     setGoal(updatedGoal);
     setIsEditModalOpen(false);
+  };
+
+  const handleToggleCompletion = (date: Date) => {
+    if (!goal) return;
+
+    const dateString = format(startOfDay(date), 'yyyy-MM-dd');
+    const existingCompletion = goal.completions.find(c => format(parseISO(c.date), 'yyyy-MM-dd') === dateString);
+
+    let newCompletions;
+    if (existingCompletion) {
+      newCompletions = goal.completions.map(c => 
+        format(parseISO(c.date), 'yyyy-MM-dd') === dateString 
+          ? { ...c, completed: !c.completed } 
+          : c
+      );
+    } else {
+      newCompletions = [...goal.completions, { date: date.toISOString(), completed: true }];
+    }
+
+    const updatedGoal = { ...goal, completions: newCompletions };
+    setGoal(updatedGoal);
   };
 
   if (!goal) {
@@ -127,7 +148,11 @@ const GoalDetailPage = () => {
           </div>
         </div>
         
-        <GoalYearlyProgress completions={filteredCompletions} color={goal.color} />
+        <GoalYearlyProgress 
+          completions={filteredCompletions} 
+          color={goal.color}
+          onToggleCompletion={handleToggleCompletion}
+        />
       </div>
     </PortalLayout>
   );
