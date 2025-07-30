@@ -47,7 +47,7 @@ const renderWithMentions = (text: string, allProjects: Project[]) => {
         return <strong key={index} className="text-primary font-medium">{part}</strong>;
       }
       if (part.startsWith('#/')) {
-        const projectName = part.substring(2);
+        const projectName = part.substring(2).trim();
         const project = allProjects.find(p => p.name === projectName);
         if (project) {
           return (
