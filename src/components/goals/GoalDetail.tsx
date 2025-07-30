@@ -3,7 +3,6 @@ import { Goal } from '@/data/goals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, ChevronDown } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import IconPicker from './IconPicker';
@@ -19,8 +18,27 @@ interface GoalDetailProps {
 const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetailProps) => {
   const [editedGoal, setEditedGoal] = useState<Goal>(goal);
 
+  // Helper function to parse frequency string into a number for the input field.
+  const parseFrequencyToNumber = (freq: string): number => {
+    const match = freq.match(/(\d+)/);
+    if (match) {
+      return parseInt(match[0], 10);
+    }
+    // Handle legacy values
+    if (freq === 'Everyday') return 1;
+    if (freq === 'Once a week') return 7;
+    // Default for other unhandled legacy values like "X days per week"
+    return 1;
+  };
+
+  const [frequencyValue, setFrequencyValue] = useState<number | string>(() => parseFrequencyToNumber(goal.frequency));
+
   const handleSave = () => {
-    onUpdate(editedGoal);
+    const num = typeof frequencyValue === 'number' ? frequencyValue : parseInt(frequencyValue as string, 10);
+    const finalFrequencyValue = !isNaN(num) && num > 0 ? num : 1;
+    const newFrequencyString = `Every ${finalFrequencyValue} day${finalFrequencyValue > 1 ? 's' : ''}`;
+    
+    onUpdate({ ...editedGoal, frequency: newFrequencyString });
   };
 
   const handleIconSelect = (icon: React.ElementType) => {
@@ -89,20 +107,19 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
 
       <div className="grid gap-2">
         <Label htmlFor="frequency">Frequency</Label>
-        <Select
-          value={editedGoal.frequency}
-          onValueChange={(value) => setEditedGoal({ ...editedGoal, frequency: value })}
-        >
-          <SelectTrigger id="frequency">
-            <SelectValue placeholder="Select frequency" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Everyday">Everyday</SelectItem>
-            <SelectItem value="5 days per week">5 days per week</SelectItem>
-            <SelectItem value="3 days per week">3 days per week</SelectItem>
-            <SelectItem value="Once a week">Once a week</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Every</span>
+          <Input
+            id="frequency"
+            type="number"
+            min="1"
+            value={frequencyValue}
+            onChange={(e) => setFrequencyValue(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+            className="w-24"
+            placeholder="e.g. 1"
+          />
+          <span className="text-sm text-muted-foreground">day(s)</span>
+        </div>
       </div>
 
       <div className="flex justify-between items-center pt-4 mt-4 border-t">
