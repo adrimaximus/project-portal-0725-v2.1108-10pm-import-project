@@ -1,158 +1,89 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { DateRange } from "react-day-picker";
-import { Button } from "@/components/ui/button";
-import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
-import PortalLayout from "@/components/PortalLayout";
-import ProjectsTable, { columns } from "@/components/ProjectsTable";
-import { dummyProjects } from "@/data/projects";
-import { initialComments } from "@/data/comments";
-import { PlusCircle, SlidersHorizontal } from "lucide-react";
-import ProjectStats from "@/components/ProjectStats";
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { dummyGoals, Goal } from '@/data/goals';
+import GoalCard from '@/components/goals/GoalCard';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import GoalDetail from '@/components/goals/GoalDetail';
+import { Book } from 'lucide-react';
 
-export default function Index() {
-  const navigate = useNavigate();
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
-  const [isBillingFilterActive, setIsBillingFilterActive] = useState(false);
+const Index = () => {
+  const [goals, setGoals] = useState<Goal[]>(dummyGoals);
+  const [isCreateModalOpen, setCreateModalOpen] = useState(false);
 
-  const allAssignees = Array.from(
-    new Set(dummyProjects.flatMap((p) => p.assignedTo.map((a) => a.name)))
-  );
-
-  const projectsWithTicketCounts = dummyProjects.map(project => {
-    const ticketCount = initialComments.filter(comment => 
-      comment.projectId === project.id && comment.isTicket
-    ).length;
-    return { ...project, tickets: ticketCount };
-  });
-
-  const filteredProjects = projectsWithTicketCounts
-    .filter(project => {
-      if (isBillingFilterActive) return true; // Bypass date filter in billing mode
-
-      if (!dateRange || !dateRange.from) {
-        const defaultFrom = new Date(new Date().getFullYear(), 0, 1);
-        const defaultTo = new Date(new Date().getFullYear(), 11, 31);
-        const projectStartDate = new Date(project.startDate);
-        return projectStartDate >= defaultFrom && projectStartDate <= defaultTo;
-      }
-      
-      const projectStartDate = new Date(project.startDate);
-      const from = dateRange.from;
-      const to = dateRange.to;
-
-      if (from && to) {
-        return projectStartDate >= from && projectStartDate <= to;
-      }
-      
-      if (from) {
-        return projectStartDate >= from;
-      }
-
-      return true;
-    })
-    .filter(project => {
-      if (isBillingFilterActive) return true; // Bypass status filter in billing mode
-      if (statusFilter === "all") return true;
-      return project.status === statusFilter;
-    })
-    .filter(project => {
-      if (isBillingFilterActive) return true; // Bypass assignee filter in billing mode
-      if (assigneeFilter === "all") return true;
-      return project.assignedTo.some(a => a.name === assigneeFilter);
-    });
-
-  const handleBillingFilterToggle = () => {
-    const nextState = !isBillingFilterActive;
-    setIsBillingFilterActive(nextState);
-    if (nextState) {
-      // Reset other filters when activating
-      setDateRange(undefined);
-      setStatusFilter("all");
-      setAssigneeFilter("all");
-    }
+  const handleUpdateGoal = (updatedGoal: Goal) => {
+    setGoals(currentGoals =>
+      currentGoals.map(g => (g.id === updatedGoal.id ? updatedGoal : g))
+    );
+    // In a real app, you would also close the modal here.
   };
 
-  const billingColumnIds = ['name', 'assignedTo', 'paymentStatus', 'paymentDueDate', 'budget'];
-  const billingColumns = columns.filter(column => {
-    // The 'id' is manually set in ProjectsTable.tsx for each column
-    const columnId = (column as any).id;
-    return billingColumnIds.includes(columnId);
-  });
+  const handleCreateGoal = (newGoal: Goal) => {
+    setGoals(currentGoals => [
+      ...currentGoals,
+      { ...newGoal, id: String(Date.now()) }, // Assign a simple unique ID
+    ]);
+    setCreateModalOpen(false);
+  };
+
+  const newGoalTemplate: Goal = {
+    id: '',
+    title: '',
+    icon: Book,
+    color: '#4A90E2',
+    frequency: 'Every 1 day for 1 week',
+    completions: [],
+    specificDays: [],
+  };
 
   return (
-    <PortalLayout>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
-          <p className="text-muted-foreground">
-            Hi Alex, have a good day ! 👋
-          </p>
+    <div className="container mx-auto p-4 sm:p-6 md:p-8">
+      <header className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">My Goals</h1>
+        <Dialog open={isCreateModalOpen} onOpenChange={setCreateModalOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              New Goal
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create a New Goal</DialogTitle>
+            </DialogHeader>
+            <GoalDetail 
+              goal={newGoalTemplate} 
+              onUpdate={handleCreateGoal}
+              onClose={() => setCreateModalOpen(false)}
+              isCreateMode
+            />
+          </DialogContent>
+        </Dialog>
+      </header>
+
+      {goals.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {goals.map(goal => (
+            <Link to={`/goal/${goal.id}`} key={goal.id} className="no-underline text-current block">
+              <GoalCard goal={goal} />
+            </Link>
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => navigate("/request")}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Project
-          </Button>
+      ) : (
+        <div className="text-center py-16 border-2 border-dashed rounded-lg">
+          <h2 className="text-xl font-semibold text-muted-foreground">No goals yet!</h2>
+          <p className="text-muted-foreground mt-2">Click "New Goal" to get started.</p>
         </div>
-      </div>
-
-      <div className="mb-6">
-        <ProjectStats projects={filteredProjects} statusFilter={statusFilter} />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        <Button
-          variant={isBillingFilterActive ? "secondary" : "outline"}
-          onClick={handleBillingFilterToggle}
-          className="flex items-center gap-2"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          <span>Billing View</span>
-        </Button>
-        {!isBillingFilterActive && (
-          <>
-            <DatePickerWithRange onDateChange={setDateRange} />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="Requested">Requested</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Billed">Billed</SelectItem>
-                <SelectItem value="On Hold">On Hold</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-                <SelectItem value="Done">Done</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by assignee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Assignees</SelectItem>
-                {allAssignees.map(name => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        )}
-      </div>
-
-      <ProjectsTable columns={isBillingFilterActive ? billingColumns : columns} data={filteredProjects} />
-    </PortalLayout>
+      )}
+    </div>
   );
-}
+};
+
+export default Index;
