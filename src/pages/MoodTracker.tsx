@@ -58,7 +58,7 @@ const MoodTracker = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <Card className="lg:col-span-1">
             <CardHeader>
-              <CardTitle>How are you feeling, {user.name}?</CardTitle>
+              <CardTitle>How are you feeling today, {user.name}?</CardTitle>
             </CardHeader>
             <CardContent>
               <MoodSelector selectedMoodId={selectedMoodId} onSelectMood={setSelectedMoodId} />
