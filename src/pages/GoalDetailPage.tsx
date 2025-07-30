@@ -152,6 +152,8 @@ const GoalDetailPage = () => {
           completions={filteredCompletions} 
           color={goal.color}
           onToggleCompletion={handleToggleCompletion}
+          frequency={goal.frequency}
+          specificDays={goal.specificDays}
         />
       </div>
     </PortalLayout>

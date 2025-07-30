@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Goal } from '@/data/goals';
-import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay } from 'date-fns';
+import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -13,9 +13,11 @@ interface GoalYearlyProgressProps {
   completions: Goal['completions'];
   color: string;
   onToggleCompletion: (date: Date) => void;
+  frequency: string;
+  specificDays?: string[];
 }
 
-const GoalYearlyProgress = ({ completions, color, onToggleCompletion }: GoalYearlyProgressProps) => {
+const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency, specificDays }: GoalYearlyProgressProps) => {
   const today = new Date();
   const currentYear = getYear(today);
   const [displayYear, setDisplayYear] = useState(currentYear);
@@ -40,6 +42,15 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion }: GoalYear
 
   const months = Array.from({ length: 12 }).map((_, i) => startOfMonth(new Date(displayYear, i, 1)));
 
+  const dayKeys = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const isDaily = !specificDays || specificDays.length === 0 || specificDays.length === 7;
+
+  const isDayValidForGoal = (date: Date): boolean => {
+    if (isDaily) return true;
+    const dayKey = dayKeys[getDay(date)];
+    return specificDays!.includes(dayKey);
+  };
+
   const monthlyData = months.map(monthDate => {
     const monthCompletions = relevantCompletions.filter(c => isSameMonth(parseISO(c.date), monthDate));
     const completedCount = monthCompletions.filter(c => c.completed).length;
@@ -56,7 +67,7 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion }: GoalYear
       days: daysInMonth.map(day => {
         const dayStr = format(day, 'yyyy-MM-dd');
         let isCompleted: boolean | undefined = completionMap.get(dayStr);
-        if (isCompleted === undefined && isBefore(day, todayStart)) {
+        if (isCompleted === undefined && isBefore(day, todayStart) && isDayValidForGoal(day)) {
           isCompleted = false;
         }
         return { date: day, isCompleted };
@@ -115,20 +126,33 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion }: GoalYear
                 {Array.from({ length: (month.days[0].date.getDay() + 6) % 7 }).map((_, i) => <div key={`empty-${i}`} />)}
                 {month.days.map(day => {
                   const isFutureDay = isAfter(day.date, todayStart);
+                  const isValidDay = isDayValidForGoal(day.date);
+                  const isDisabled = isFutureDay || !isValidDay;
+
+                  let bgColor = '#E5E7EB'; // Default for non-valid past days
+                  if (isValidDay) {
+                    bgColor = day.isCompleted === undefined ? '#E5E7EB' : (day.isCompleted ? color : '#6B7280');
+                  }
+
                   return (
                     <TooltipProvider key={day.date.toString()} delayDuration={100}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => handleDayClick(day.date)}
-                            disabled={isFutureDay}
-                            className="w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            style={{ backgroundColor: day.isCompleted === undefined ? '#E5E7EB' : (day.isCompleted ? color : '#6B7280') }}
+                            disabled={isDisabled}
+                            className="w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed"
+                            style={{ 
+                              backgroundColor: bgColor,
+                              opacity: isFutureDay ? 0.2 : 1,
+                            }}
                           />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>{format(day.date, 'PPP', { locale: id })}</p>
-                          {isFutureDay ? <p>Tanggal mendatang</p> : day.isCompleted !== undefined ? <p>{day.isCompleted ? 'Selesai' : 'Tidak selesai'}</p> : <p>Lacak sekarang</p>}
+                          {isFutureDay ? <p>Tanggal mendatang</p> : 
+                           !isValidDay ? <p>Bukan hari yang dijadwalkan</p> :
+                           day.isCompleted !== undefined ? <p>{day.isCompleted ? 'Selesai' : 'Tidak selesai'}</p> : <p>Lacak sekarang</p>}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
