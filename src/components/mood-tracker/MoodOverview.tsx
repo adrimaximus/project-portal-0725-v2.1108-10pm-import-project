@@ -9,12 +9,11 @@ interface MoodOverviewProps {
   history: MoodHistoryEntry[];
 }
 
-type Period = 'month' | 'year';
+type Period = 'week' | 'month' | 'year';
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    // Selalu pindahkan tooltip ke kiri untuk mood 'Happy' dan 'Good'
     const shouldMoveLeft = data.label === 'Happy' || data.label === 'Good';
 
     return (
@@ -34,16 +33,30 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 const MoodOverview = ({ history }: MoodOverviewProps) => {
-  const [period, setPeriod] = useState<Period>('month');
+  const [period, setPeriod] = useState<Period>('week');
 
   const now = new Date();
   const filteredHistory = history.filter(entry => {
     const entryDate = new Date(entry.date);
+    const today = new Date();
+
+    if (period === 'week') {
+      const dayOfWeek = today.getDay(); // 0 (Sun) - 6 (Sat)
+      const firstDay = new Date(today);
+      firstDay.setDate(today.getDate() - dayOfWeek);
+      firstDay.setHours(0, 0, 0, 0);
+
+      const lastDay = new Date(firstDay);
+      lastDay.setDate(firstDay.getDate() + 6);
+      lastDay.setHours(23, 59, 59, 999);
+
+      return entryDate >= firstDay && entryDate <= lastDay;
+    }
     if (period === 'month') {
-      return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
+      return entryDate.getMonth() === today.getMonth() && entryDate.getFullYear() === today.getFullYear();
     }
     if (period === 'year') {
-      return entryDate.getFullYear() === now.getFullYear();
+      return entryDate.getFullYear() === today.getFullYear();
     }
     return true;
   });
@@ -62,6 +75,14 @@ const MoodOverview = ({ history }: MoodOverviewProps) => {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle>Overview</CardTitle>
         <div className="flex items-center gap-1 rounded-md bg-secondary p-1">
+          <Button
+            variant={period === 'week' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setPeriod('week')}
+            className="h-7"
+          >
+            This Week
+          </Button>
           <Button
             variant={period === 'month' ? 'default' : 'ghost'}
             size="sm"
