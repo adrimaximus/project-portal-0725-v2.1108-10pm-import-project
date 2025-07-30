@@ -15,14 +15,14 @@ const MoodTracker = () => {
           <h1 className="text-2xl font-bold tracking-tight">Mood tracker</h1>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 space-y-2">
+        <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
+          <div className="xl:col-span-7 space-y-2">
             <section className="max-w-md">
               <h2 className="text-lg font-semibold mb-2">Bagaimana perasaanmu hari ini?</h2>
               <MoodSelector selectedMoodId={selectedMoodId} onSelectMood={setSelectedMoodId} />
             </section>
           </div>
-          <div className="xl:col-span-1">
+          <div className="xl:col-span-3">
             <MoodOverview history={dummyHistory} />
           </div>
         </div>
