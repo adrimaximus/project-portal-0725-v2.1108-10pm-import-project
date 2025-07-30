@@ -27,9 +27,8 @@ const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
         >
           <div
             className={cn(
-              'w-10 h-10 flex items-center justify-center rounded-lg mr-3 transition-opacity',
-              moodColors[mood.id],
-              selectedMoodId !== mood.id && 'opacity-50'
+              'w-10 h-10 flex items-center justify-center rounded-lg mr-3 transition-colors',
+              selectedMoodId === mood.id ? moodColors[mood.id] : 'bg-gray-100'
             )}
           >
             <span className="text-2xl">{mood.emoji}</span>
