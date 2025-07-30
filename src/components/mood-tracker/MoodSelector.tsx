@@ -7,14 +7,6 @@ interface MoodSelectorProps {
   onSelectMood: (id: Mood['id']) => void;
 }
 
-const moodColors: { [key: string]: string } = {
-  great: 'bg-green-100',
-  good: 'bg-sky-100',
-  okay: 'bg-yellow-100',
-  bad: 'bg-orange-100',
-  awful: 'bg-red-100',
-};
-
 const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
   return (
     <div className="grid grid-cols-1 gap-1">
@@ -28,7 +20,7 @@ const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
           <div
             className={cn(
               'w-10 h-10 flex items-center justify-center rounded-lg mr-3 transition-colors',
-              selectedMoodId === mood.id ? moodColors[mood.id] : 'bg-gray-100'
+              selectedMoodId === mood.id ? mood.pastelColor : 'bg-gray-100'
             )}
           >
             <span className="text-2xl">{mood.emoji}</span>
