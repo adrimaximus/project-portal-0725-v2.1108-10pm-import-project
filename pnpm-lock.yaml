@@ -116,6 +116,9 @@ importers:
       '@types/recharts':
         specifier: ^2.0.1
         version: 2.0.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@uiw/color-convert':
+        specifier: ^2.7.3
+        version: 2.7.3(@babel/runtime@7.27.0)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -143,6 +146,9 @@ importers:
       react:
         specifier: ^18.3.1
         version: 18.3.1
+      react-colorful:
+        specifier: ^5.6.1
+        version: 5.6.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-day-picker:
         specifier: ^8.10.1
         version: 8.10.1(date-fns@3.6.0)(react@18.3.1)
@@ -1615,6 +1621,11 @@ packages:
     resolution: {integrity: sha512-aEhgas7aJ6vZnNFC7K4/vMGDGyOiqWcYZPpIWrTKuTAlsvDNKy2GFDqh9smL+iq069ZvR0YzEeq0B8NJlLzjFA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
+  '@uiw/color-convert@2.7.3':
+    resolution: {integrity: sha512-34JxiQkDrw14EpBukiAO/E+GddbIWxhaXzZj202lT+olyjr/47RWu6cxJAdy0Nvg7ujfBxPbDqT22qtcwE4mYQ==}
+    peerDependencies:
+      '@babel/runtime': '>=7.19.0'
+
   '@vitejs/plugin-react-swc@3.9.0':
     resolution: {integrity: sha512-jYFUSXhwMCYsh/aQTgSGLIN3Foz5wMbH9ahb0Zva//UzwZYbMiZd7oT3AU9jHT9DLswYDswsRwPU9jVF3yA48Q==}
     peerDependencies:
@@ -2513,6 +2524,12 @@ packages:
 
   quill@1.3.7:
     resolution: {integrity: sha512-hG/DVzh/TiknWtE6QmWAF/pxoZKYxfe3J/d/+ShUWkDvvkZQVTPeVmUJVu1uE6DDooC4fWTiCLh84ul89oNz5g==}
+
+  react-colorful@5.6.1:
+    resolution: {integrity: sha512-1exovf0uGTGyq5mXQT0zgQ80uvj2PCwvF8zY1RN9/vbJVSjSo3fsB/4L3ObbF7u70NduSiK4xu4Y6q1MHoUGEw==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
 
   react-day-picker@8.10.1:
     resolution: {integrity: sha512-TMx7fNbhLk15eqcMt+7Z7S2KF7mfTId/XJDjKE8f+IUcFn0l08/kI4FiYTL/0yuOLmEcbR4Fwe3GJf/NiiMnPA==}
@@ -4259,6 +4276,10 @@ snapshots:
       '@typescript-eslint/types': 8.30.1
       eslint-visitor-keys: 4.2.0
 
+  '@uiw/color-convert@2.7.3(@babel/runtime@7.27.0)':
+    dependencies:
+      '@babel/runtime': 7.27.0
+
   '@vitejs/plugin-react-swc@3.9.0(vite@6.3.4(@types/node@22.14.1)(jiti@1.21.7)(yaml@2.7.1))':
     dependencies:
       '@swc/core': 1.11.21
@@ -5183,6 +5204,11 @@ snapshots:
       extend: 3.0.2
       parchment: 1.1.4
       quill-delta: 3.6.3
+
+  react-colorful@5.6.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
 
   react-day-picker@8.10.1(date-fns@3.6.0)(react@18.3.1):
     dependencies:

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Goal } from '@/data/goals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Trash2, ChevronDown } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import IconPicker from './IconPicker';
-import { Slider } from '@/components/ui/slider';
+import { CustomColorPicker } from './CustomColorPicker';
 
 interface GoalDetailProps {
   goal: Goal;
@@ -16,81 +16,8 @@ interface GoalDetailProps {
   isCreateMode?: boolean;
 }
 
-// --- Color Conversion Helpers ---
-
-const cmykToRgb = (c: number, m: number, y: number, k: number) => {
-  const c_ = c / 100;
-  const m_ = m / 100;
-  const y_ = y / 100;
-  const k_ = k / 100;
-
-  const r = 255 * (1 - c_) * (1 - k_);
-  const g = 255 * (1 - m_) * (1 - k_);
-  const b = 255 * (1 - y_) * (1 - k_);
-
-  return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
-};
-
-const rgbToCmyk = (r: number, g: number, b: number) => {
-  const r_ = r / 255;
-  const g_ = g / 255;
-  const b_ = b / 255;
-
-  const k = 1 - Math.max(r_, g_, b_);
-  if (k === 1) {
-    return { c: 0, m: 0, y: 0, k: 100 };
-  }
-
-  const c = (1 - r_ - k) / (1 - k);
-  const m = (1 - g_ - k) / (1 - k);
-  const y = (1 - b_ - k) / (1 - k);
-
-  return {
-    c: Math.round(c * 100),
-    m: Math.round(m * 100),
-    y: Math.round(y * 100),
-    k: Math.round(k * 100),
-  };
-};
-
-// --- Component ---
-
 const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetailProps) => {
   const [editedGoal, setEditedGoal] = useState<Goal>(goal);
-  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
-  const [cmykColor, setCmykColor] = useState({ c: 0, m: 0, y: 0, k: 100 });
-
-  useEffect(() => {
-    if (isColorPickerOpen) {
-      const colorStr = editedGoal.color;
-      let parsedRgb = { r: 239, g: 68, b: 68 }; // Default to a red color
-
-      if (colorStr.startsWith('rgb')) {
-        const match = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-        if (match) {
-          parsedRgb = { r: parseInt(match[1], 10), g: parseInt(match[2], 10), b: parseInt(match[3], 10) };
-        }
-      } else if (colorStr.startsWith('#')) {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(colorStr);
-        if (result) {
-          parsedRgb = {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16),
-          };
-        }
-      }
-      setCmykColor(rgbToCmyk(parsedRgb.r, parsedRgb.g, parsedRgb.b));
-    }
-  }, [isColorPickerOpen, editedGoal.color]);
-
-  const handleCmykChange = (component: 'c' | 'm' | 'y' | 'k', value: number) => {
-    const newCmyk = { ...cmykColor, [component]: value };
-    setCmykColor(newCmyk);
-    
-    const newRgb = cmykToRgb(newCmyk.c, newCmyk.m, newCmyk.y, newCmyk.k);
-    setEditedGoal({ ...editedGoal, color: `rgb(${newRgb.r}, ${newRgb.g}, ${newRgb.b})` });
-  };
 
   const handleSave = () => {
     onUpdate(editedGoal);
@@ -102,13 +29,17 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
 
   const getIconBackgroundColor = () => {
     const color = editedGoal.color;
-    if (color.startsWith('rgb')) {
-      return color.replace(')', ', 0.2)').replace('rgb', 'rgba');
+    if (color.startsWith('#')) {
+      let fullHex = color;
+      if (color.length === 4) { // expand shorthand hex #RGB -> #RRGGBB
+        fullHex = `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
+      }
+      if (fullHex.length === 7) {
+        return `${fullHex}33`; // Append alpha for ~20% opacity
+      }
     }
-    if (color.startsWith('#') && color.length === 7) {
-      return `${color}33`; // Approximation for 20% opacity
-    }
-    return color;
+    // Fallback for invalid hex or other formats during input
+    return 'rgba(128, 128, 128, 0.2)';
   }
 
   return (
@@ -140,71 +71,17 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
         </div>
         <div>
           <Label>Color</Label>
-          <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
+          <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full mt-1 justify-start px-2 h-10">
                 <div className="w-5 h-5 rounded-full mr-2 border" style={{ backgroundColor: editedGoal.color }} />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 p-4">
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label htmlFor="c-slider" className="text-cyan-500">Cyan</Label>
-                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{cmykColor.c}</span>
-                  </div>
-                  <Slider
-                    id="c-slider"
-                    value={[cmykColor.c]}
-                    onValueChange={([c]) => handleCmykChange('c', c)}
-                    max={100}
-                    step={1}
-                    className="[&>span:first-child]:bg-cyan-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label htmlFor="m-slider" className="text-fuchsia-500">Magenta</Label>
-                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{cmykColor.m}</span>
-                  </div>
-                  <Slider
-                    id="m-slider"
-                    value={[cmykColor.m]}
-                    onValueChange={([m]) => handleCmykChange('m', m)}
-                    max={100}
-                    step={1}
-                    className="[&>span:first-child]:bg-fuchsia-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label htmlFor="y-slider" className="text-yellow-500">Yellow</Label>
-                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{cmykColor.y}</span>
-                  </div>
-                  <Slider
-                    id="y-slider"
-                    value={[cmykColor.y]}
-                    onValueChange={([y]) => handleCmykChange('y', y)}
-                    max={100}
-                    step={1}
-                    className="[&>span:first-child]:bg-yellow-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label htmlFor="k-slider" className="text-gray-800">Black</Label>
-                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{cmykColor.k}</span>
-                  </div>
-                  <Slider
-                    id="k-slider"
-                    value={[cmykColor.k]}
-                    onValueChange={([k]) => handleCmykChange('k', k)}
-                    max={100}
-                    step={1}
-                    className="[&>span:first-child]:bg-gray-800"
-                  />
-                </div>
-              </div>
+            <PopoverContent className="w-64 p-2">
+              <CustomColorPicker
+                color={editedGoal.color}
+                onChange={(newColor) => setEditedGoal({ ...editedGoal, color: newColor })}
+              />
             </PopoverContent>
           </Popover>
         </div>
