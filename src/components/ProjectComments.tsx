@@ -46,7 +46,7 @@ const renderWithMentions = (text: string) => {
         return <strong key={index} className="text-primary font-medium">{part}</strong>;
       }
       if (part.startsWith('#/')) {
-        return <strong key={index} className="text-blue-600 bg-blue-100 dark:bg-blue-900/50 px-1 py-0.5 rounded-sm font-medium">{part}</strong>;
+        return <strong key={index} className="text-blue-600 font-semibold">{part.substring(2)}</strong>;
       }
     }
     return part;
