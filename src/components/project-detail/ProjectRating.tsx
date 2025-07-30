@@ -28,12 +28,12 @@ const ProjectRating = ({ submittedRating, submittedComment, onSubmit }: ProjectR
     return (
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label>Your Rating</Label>
+          <Label>Rating</Label>
           <StarRatingDisplay rating={submittedRating} />
         </div>
         {submittedComment && (
           <div className="space-y-1.5">
-            <Label>Your Comment</Label>
+            <Label>Comment</Label>
             <p className="text-sm text-muted-foreground bg-gray-50 dark:bg-gray-900/50 p-3 rounded-md whitespace-pre-wrap border">
               {submittedComment}
             </p>
@@ -48,7 +48,7 @@ const ProjectRating = ({ submittedRating, submittedComment, onSubmit }: ProjectR
     <div className="space-y-3 rounded-lg border bg-card text-card-foreground p-4 shadow-sm">
         <h4 className="font-semibold">Project Review</h4>
         <div className="space-y-1.5">
-            <Label>Your Rating</Label>
+            <Label>Rating</Label>
             <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                 <Star
@@ -67,7 +67,7 @@ const ProjectRating = ({ submittedRating, submittedComment, onSubmit }: ProjectR
             </div>
         </div>
         <div className="space-y-1.5">
-            <Label htmlFor="comment">Your Comment</Label>
+            <Label htmlFor="comment">Comment</Label>
             <Textarea
                 id="comment"
                 placeholder="Tell us about your experience with this project..."

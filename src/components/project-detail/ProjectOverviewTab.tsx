@@ -114,7 +114,7 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
       </Section>
 
       {projectIsDone && (
-        <Section title={review ? "Your Review" : "Project Review"}>
+        <Section title={review ? "Review" : "Project Review"}>
           <ProjectRating
             onSubmit={handleReviewSubmit}
             submittedRating={review?.rating}
