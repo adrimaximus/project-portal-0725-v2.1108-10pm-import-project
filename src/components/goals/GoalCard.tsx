@@ -20,11 +20,21 @@ const GoalCard = ({ goal }: GoalCardProps) => {
   });
 
   const formatFrequency = (freq: string) => {
+    // Handle simple legacy formats
+    if (freq.toLowerCase() === 'daily') {
+      return 'Setiap hari';
+    }
+    if (freq.toLowerCase() === 'weekly') {
+      return 'Seminggu sekali';
+    }
+
+    // Handle "Every X day(s) for Y week(s)" format
     const daysMatch = freq.match(/Every (\d+)/);
     const weeksMatch = freq.match(/for (\d+)/);
 
+    // Fallback for any other unexpected format
     if (!daysMatch) {
-      return freq; // Fallback for old formats
+      return freq;
     }
 
     const days = parseInt(daysMatch[1], 10);
@@ -34,13 +44,15 @@ const GoalCard = ({ goal }: GoalCardProps) => {
     if (days === 1) {
       dayPart = 'Setiap hari';
     } else if (days === 7) {
-      dayPart = 'Seminggu sekali';
+      // If it's every 7 days, it's just weekly, regardless of the duration.
+      return 'Seminggu sekali';
     } else {
       dayPart = `Setiap ${days} hari`;
     }
 
     let weekPart = '';
-    if (weeks > 1) {
+    // Only add the duration part if it was specified and is more than 1 week.
+    if (weeksMatch && weeks > 1) {
       weekPart = ` selama ${weeks} minggu`;
     }
 
