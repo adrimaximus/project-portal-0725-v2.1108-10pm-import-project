@@ -2,13 +2,30 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { moods, MoodHistoryEntry } from '@/data/mood';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface MoodOverviewProps {
   history: MoodHistoryEntry[];
 }
 
 type Period = 'month' | 'year';
+
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="rounded-lg border bg-background p-2 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{data.emoji}</span>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-bold" style={{ color: data.color }}>{data.label}</span>: {data.value} hari
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 const MoodOverview = ({ history }: MoodOverviewProps) => {
   const [period, setPeriod] = useState<Period>('month');
@@ -61,6 +78,7 @@ const MoodOverview = ({ history }: MoodOverviewProps) => {
         <div className="w-full h-40 relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
               <Pie
                 data={moodCounts}
                 cx="50%"
