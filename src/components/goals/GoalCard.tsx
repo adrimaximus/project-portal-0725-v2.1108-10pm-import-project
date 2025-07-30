@@ -10,7 +10,6 @@ interface GoalCardProps {
 const GoalCard = ({ goal }: GoalCardProps) => {
   const { title, icon: Icon, frequency, color, completions } = goal;
 
-  // Filter completions to only include the last 3 months
   const today = startOfToday();
   const threeMonthsAgo = subMonths(today, 3);
 
@@ -20,7 +19,13 @@ const GoalCard = ({ goal }: GoalCardProps) => {
   });
 
   const formatFrequency = (freq: string) => {
-    // Handle "Every X day(s)..." format to match the editor's options
+    if (freq.startsWith('weekly:')) {
+      const days = freq.split(':')[1].split(',').filter(d => d);
+      if (days.length === 7) return 'Every day';
+      if (days.length === 0) return 'Weekly';
+      return days.map(day => day.charAt(0).toUpperCase() + day.slice(1, 3)).join(', ');
+    }
+
     const daysMatch = freq.match(/Every (\d+)/);
     if (daysMatch) {
       const days = parseInt(daysMatch[1], 10);
@@ -29,15 +34,9 @@ const GoalCard = ({ goal }: GoalCardProps) => {
       return `Every ${days} days`;
     }
 
-    // Handle simple legacy formats for backward compatibility
-    if (freq.toLowerCase() === 'daily') {
-      return 'Every day';
-    }
-    if (freq.toLowerCase() === 'weekly') {
-      return 'Once a week';
-    }
+    if (freq.toLowerCase() === 'daily') return 'Every day';
+    if (freq.toLowerCase() === 'weekly') return 'Once a week';
 
-    // Fallback for any other unexpected format
     return freq;
   };
 
