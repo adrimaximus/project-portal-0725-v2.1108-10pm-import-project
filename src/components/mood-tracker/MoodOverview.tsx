@@ -1,46 +1,95 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { moods, Mood, MoodEntry } from '@/data/mood';
+import { Button } from '@/components/ui/button';
+import { moods, MoodHistoryEntry } from '@/data/mood';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 interface MoodOverviewProps {
-  history: MoodEntry[];
+  history: MoodHistoryEntry[];
 }
 
+type Period = 'month' | 'year';
+
 const MoodOverview = ({ history }: MoodOverviewProps) => {
-  if (history.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>No mood entries yet.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const [period, setPeriod] = useState<Period>('month');
 
-  const averageMoodValue =
-    history.reduce((acc, entry) => {
-      const mood = moods.find((m) => m.id === entry.moodId);
-      return acc + (mood?.value || 0);
-    }, 0) / history.length;
+  const now = new Date();
+  const filteredHistory = history.filter(entry => {
+    const entryDate = new Date(entry.date);
+    if (period === 'month') {
+      return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
+    }
+    if (period === 'year') {
+      return entryDate.getFullYear() === now.getFullYear();
+    }
+    return true;
+  });
 
-  const averageMood =
-    moods
-      .slice()
-      .sort((a, b) => Math.abs(a.value - averageMoodValue) - Math.abs(b.value - averageMoodValue))[0] || moods[2];
+  const moodCounts = moods.map(mood => ({
+    ...mood,
+    value: filteredHistory.filter(entry => entry.moodId === mood.id).length,
+  })).filter(mood => mood.value > 0);
+
+  const mostFrequentMood = moodCounts.length > 0 
+    ? moodCounts.reduce((prev, current) => (prev.value > current.value) ? prev : current)
+    : null;
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>This week's overview</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle>Overview</CardTitle>
+        <div className="flex items-center gap-1 rounded-md bg-secondary p-1">
+          <Button
+            variant={period === 'month' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setPeriod('month')}
+            className="h-7"
+          >
+            This Month
+          </Button>
+          <Button
+            variant={period === 'year' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setPeriod('year')}
+            className="h-7"
+          >
+            This Year
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-center text-center">
-          <div>
-            <span className="text-6xl">{averageMood.emoji}</span>
-            <p className="text-xl font-semibold mt-2">You've been feeling {averageMood.label.toLowerCase()}</p>
-            <p className="text-muted-foreground">on average this week</p>
+        <div className="w-full h-40 relative">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={moodCounts}
+                cx="50%"
+                cy="50%"
+                innerRadius="60%"
+                outerRadius="100%"
+                dataKey="value"
+                nameKey="label"
+                paddingAngle={moodCounts.length > 1 ? 5 : 0}
+                startAngle={90}
+                endAngle={450}
+              >
+                {moodCounts.map((entry) => (
+                  <Cell key={`cell-${entry.id}`} fill={entry.color} stroke="hsl(var(--background))" strokeWidth={2} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+            {mostFrequentMood ? (
+              <>
+                <span className="text-2xl">{mostFrequentMood.emoji}</span>
+                <p className="text-xs text-muted-foreground mt-1 max-w-[100px]">
+                  You have been mostly feeling <span className="font-bold text-primary">{mostFrequentMood.label.toLowerCase()}</span>
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">No data for this period.</p>
+            )}
           </div>
         </div>
       </CardContent>
