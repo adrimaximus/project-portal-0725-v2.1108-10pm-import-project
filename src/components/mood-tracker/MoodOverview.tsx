@@ -11,11 +11,14 @@ interface MoodOverviewProps {
 
 type Period = 'month' | 'year';
 
-const CustomTooltip = ({ active, payload, isHoverOnRight }: any) => {
+const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
+    // Selalu pindahkan tooltip ke kiri untuk mood 'Happy' dan 'Good'
+    const shouldMoveLeft = data.label === 'Happy' || data.label === 'Good';
+
     return (
-      <div className={cn(isHoverOnRight && '-translate-x-full')}>
+      <div className={cn(shouldMoveLeft && '-translate-x-full')}>
         <div className="rounded-lg border bg-background p-2 shadow-sm">
           <div className="flex items-center gap-2">
             <span className="text-lg">{data.emoji}</span>
@@ -32,20 +35,6 @@ const CustomTooltip = ({ active, payload, isHoverOnRight }: any) => {
 
 const MoodOverview = ({ history }: MoodOverviewProps) => {
   const [period, setPeriod] = useState<Period>('month');
-  const [isHoverOnRight, setIsHoverOnRight] = useState(false);
-
-  const handleMouseMove = (state: any) => {
-    if (state.isTooltipActive && state.activePayload && state.activePayload.length) {
-      const sliceData = state.activePayload[0];
-      const midAngle = sliceData.startAngle + (sliceData.endAngle - sliceData.startAngle) / 2;
-      
-      // Angles in recharts: 0 is at 3 o'clock. Right half is from 270 to 90 degrees.
-      // Cosine is positive for angles in the 1st and 4th quadrants (-90 to 90 deg).
-      const cosAngle = Math.cos(midAngle * (Math.PI / 180));
-      
-      setIsHoverOnRight(cosAngle > 0);
-    }
-  };
 
   const now = new Date();
   const filteredHistory = history.filter(entry => {
@@ -94,9 +83,9 @@ const MoodOverview = ({ history }: MoodOverviewProps) => {
       <CardContent>
         <div className="w-full h-40 relative">
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart onMouseMove={handleMouseMove}>
+            <PieChart>
               <Tooltip 
-                content={<CustomTooltip isHoverOnRight={isHoverOnRight} />} 
+                content={<CustomTooltip />} 
                 cursor={{ fill: 'transparent' }}
                 wrapperStyle={{ zIndex: 50 }}
               />
