@@ -16,10 +16,49 @@ interface GoalDetailProps {
   isCreateMode?: boolean;
 }
 
+// --- Color Conversion Helpers ---
+
+const cmykToRgb = (c: number, m: number, y: number, k: number) => {
+  const c_ = c / 100;
+  const m_ = m / 100;
+  const y_ = y / 100;
+  const k_ = k / 100;
+
+  const r = 255 * (1 - c_) * (1 - k_);
+  const g = 255 * (1 - m_) * (1 - k_);
+  const b = 255 * (1 - y_) * (1 - k_);
+
+  return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+};
+
+const rgbToCmyk = (r: number, g: number, b: number) => {
+  const r_ = r / 255;
+  const g_ = g / 255;
+  const b_ = b / 255;
+
+  const k = 1 - Math.max(r_, g_, b_);
+  if (k === 1) {
+    return { c: 0, m: 0, y: 0, k: 100 };
+  }
+
+  const c = (1 - r_ - k) / (1 - k);
+  const m = (1 - g_ - k) / (1 - k);
+  const y = (1 - b_ - k) / (1 - k);
+
+  return {
+    c: Math.round(c * 100),
+    m: Math.round(m * 100),
+    y: Math.round(y * 100),
+    k: Math.round(k * 100),
+  };
+};
+
+// --- Component ---
+
 const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetailProps) => {
   const [editedGoal, setEditedGoal] = useState<Goal>(goal);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
-  const [rgbColor, setRgbColor] = useState({ r: 0, g: 0, b: 0 });
+  const [cmykColor, setCmykColor] = useState({ c: 0, m: 0, y: 0, k: 100 });
 
   useEffect(() => {
     if (isColorPickerOpen) {
@@ -41,13 +80,15 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
           };
         }
       }
-      setRgbColor(parsedRgb);
+      setCmykColor(rgbToCmyk(parsedRgb.r, parsedRgb.g, parsedRgb.b));
     }
   }, [isColorPickerOpen, editedGoal.color]);
 
-  const handleRgbChange = (component: 'r' | 'g' | 'b', value: number) => {
-    const newRgb = { ...rgbColor, [component]: value };
-    setRgbColor(newRgb);
+  const handleCmykChange = (component: 'c' | 'm' | 'y' | 'k', value: number) => {
+    const newCmyk = { ...cmykColor, [component]: value };
+    setCmykColor(newCmyk);
+    
+    const newRgb = cmykToRgb(newCmyk.c, newCmyk.m, newCmyk.y, newCmyk.k);
     setEditedGoal({ ...editedGoal, color: `rgb(${newRgb.r}, ${newRgb.g}, ${newRgb.b})` });
   };
 
@@ -64,7 +105,6 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
     if (color.startsWith('rgb')) {
       return color.replace(')', ', 0.2)').replace('rgb', 'rgba');
     }
-    // Handle hex with alpha
     if (color.startsWith('#') && color.length === 7) {
       return `${color}33`; // Approximation for 20% opacity
     }
@@ -110,44 +150,58 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
               <div className="grid gap-4">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label htmlFor="r-slider" className="text-red-500">Red</Label>
-                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{rgbColor.r}</span>
+                    <Label htmlFor="c-slider" className="text-cyan-500">Cyan</Label>
+                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{cmykColor.c}</span>
                   </div>
                   <Slider
-                    id="r-slider"
-                    value={[rgbColor.r]}
-                    onValueChange={([r]) => handleRgbChange('r', r)}
-                    max={255}
+                    id="c-slider"
+                    value={[cmykColor.c]}
+                    onValueChange={([c]) => handleCmykChange('c', c)}
+                    max={100}
                     step={1}
-                    className="[&>span:first-child]:bg-red-500"
+                    className="[&>span:first-child]:bg-cyan-500"
                   />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label htmlFor="g-slider" className="text-green-500">Green</Label>
-                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{rgbColor.g}</span>
+                    <Label htmlFor="m-slider" className="text-fuchsia-500">Magenta</Label>
+                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{cmykColor.m}</span>
                   </div>
                   <Slider
-                    id="g-slider"
-                    value={[rgbColor.g]}
-                    onValueChange={([g]) => handleRgbChange('g', g)}
-                    max={255}
+                    id="m-slider"
+                    value={[cmykColor.m]}
+                    onValueChange={([m]) => handleCmykChange('m', m)}
+                    max={100}
                     step={1}
-                    className="[&>span:first-child]:bg-green-500"
+                    className="[&>span:first-child]:bg-fuchsia-500"
                   />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label htmlFor="b-slider" className="text-blue-500">Blue</Label>
-                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{rgbColor.b}</span>
+                    <Label htmlFor="y-slider" className="text-yellow-500">Yellow</Label>
+                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{cmykColor.y}</span>
                   </div>
                   <Slider
-                    id="b-slider"
-                    value={[rgbColor.b]}
-                    onValueChange={([b]) => handleRgbChange('b', b)}
-                    max={255}
+                    id="y-slider"
+                    value={[cmykColor.y]}
+                    onValueChange={([y]) => handleCmykChange('y', y)}
+                    max={100}
                     step={1}
-                    className="[&>span:first-child]:bg-blue-500"
+                    className="[&>span:first-child]:bg-yellow-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="k-slider" className="text-gray-800">Black</Label>
+                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{cmykColor.k}</span>
+                  </div>
+                  <Slider
+                    id="k-slider"
+                    value={[cmykColor.k]}
+                    onValueChange={([k]) => handleCmykChange('k', k)}
+                    max={100}
+                    step={1}
+                    className="[&>span:first-child]:bg-gray-800"
                   />
                 </div>
               </div>
