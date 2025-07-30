@@ -11,15 +11,13 @@ interface MoodHistoryProps {
 
 const MoodHistory = ({ history }: MoodHistoryProps) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [hoveredMonth, setHoveredMonth] = useState<string | null>(null);
 
-  // Filter riwayat untuk hanya menyertakan entri dari tahun yang dipilih
   const yearHistory = history.filter(entry => {
-    // Menambahkan 'T00:00:00Z' untuk memperlakukan string tanggal sebagai UTC
     const entryDate = new Date(entry.date + 'T00:00:00Z');
     return entryDate.getUTCFullYear() === selectedYear;
   });
 
-  // Kelompokkan riwayat tahun berdasarkan indeks bulan (0-11)
   const groupedByMonth = yearHistory.reduce((acc, entry) => {
     const entryDate = new Date(entry.date + 'T00:00:00Z');
     const monthIndex = entryDate.getUTCMonth();
@@ -31,13 +29,10 @@ const MoodHistory = ({ history }: MoodHistoryProps) => {
     return acc;
   }, {} as Record<number, MoodHistoryEntry[]>);
 
-  // Buat daftar 12 bulan untuk tahun yang dipilih
   const monthsOfYear = Array.from({ length: 12 }, (_, i) => {
     const monthDate = new Date(selectedYear, i, 1);
-    // Menggunakan lokal 'id-ID' untuk nama bulan
     const monthName = monthDate.toLocaleString('id-ID', { month: 'long' });
     return {
-      // MonthHistorySection mengharapkan string seperti "Januari 2024"
       name: `${monthName} ${selectedYear}`,
       entries: groupedByMonth[i] || []
     };
@@ -46,7 +41,7 @@ const MoodHistory = ({ history }: MoodHistoryProps) => {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Riwayat Mood</CardTitle>
+        <CardTitle>{hoveredMonth ? `${hoveredMonth.split(' ')[0]} Mood` : 'Riwayat Mood'}</CardTitle>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={() => setSelectedYear(y => y - 1)}>
             <ChevronLeft className="h-4 w-4" />
@@ -62,7 +57,13 @@ const MoodHistory = ({ history }: MoodHistoryProps) => {
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
           {monthsOfYear.map(monthData => (
-            <MonthHistorySection key={monthData.name} month={monthData.name} entries={monthData.entries} />
+            <MonthHistorySection 
+              key={monthData.name} 
+              month={monthData.name} 
+              entries={monthData.entries}
+              onMouseEnter={() => setHoveredMonth(monthData.name)}
+              onMouseLeave={() => setHoveredMonth(null)}
+            />
           ))}
         </div>
       </CardContent>
