@@ -8,7 +8,12 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import NotFound from './NotFound';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Pencil } from 'lucide-react';
+import { Pencil, Calendar as CalendarIcon } from 'lucide-react';
+import { DateRange } from 'react-day-picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format, isWithinInterval, parseISO, endOfDay } from 'date-fns';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -16,16 +21,24 @@ const GoalDetailPage = () => {
 
   const [goal, setGoal] = useState<Goal | undefined>(initialGoal);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const handleUpdateGoal = (updatedGoal: Goal) => {
     setGoal(updatedGoal);
     setIsEditModalOpen(false);
-    // In a real app, you would also send the update to your backend here.
   };
 
   if (!goal) {
     return <PortalLayout><NotFound /></PortalLayout>;
   }
+
+  const filteredCompletions = dateRange?.from
+    ? goal.completions.filter(c => {
+        const completionDate = parseISO(c.date);
+        const intervalEnd = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from!);
+        return isWithinInterval(completionDate, { start: dateRange.from!, end: intervalEnd });
+      })
+    : goal.completions;
 
   const Icon = goal.icon;
 
@@ -56,27 +69,65 @@ const GoalDetailPage = () => {
               <p className="text-muted-foreground">{goal.frequency}</p>
             </div>
           </div>
-          <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit Goal
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Edit Goal</DialogTitle>
-              </DialogHeader>
-              <GoalDetail 
-                goal={goal} 
-                onUpdate={handleUpdateGoal}
-                onClose={() => setIsEditModalOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-[260px] justify-start text-left font-normal",
+                    !dateRange && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "LLL dd, y")} -{" "}
+                        {format(dateRange.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(dateRange.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit Goal
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Edit Goal</DialogTitle>
+                </DialogHeader>
+                <GoalDetail 
+                  goal={goal} 
+                  onUpdate={handleUpdateGoal}
+                  onClose={() => setIsEditModalOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
         
-        <GoalYearlyProgress completions={goal.completions} color={goal.color} />
+        <GoalYearlyProgress completions={filteredCompletions} color={goal.color} />
       </div>
     </PortalLayout>
   );
