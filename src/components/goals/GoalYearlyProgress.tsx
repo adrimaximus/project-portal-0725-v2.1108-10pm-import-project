@@ -60,11 +60,7 @@ const GoalYearlyProgress = ({ completions, color }: GoalYearlyProgressProps) => 
           You've completed this goal <strong>{totalCompleted}</strong> out of <strong>{totalPossible}</strong> times in the last year.
         </CardDescription>
         <div className="flex items-center gap-4 pt-2">
-          <Progress value={overallPercentage} className="w-full" indicatorColor={cn(
-              overallPercentage > 75 && "bg-green-500",
-              overallPercentage <= 75 && overallPercentage > 50 && "bg-yellow-500",
-              overallPercentage <= 50 && "bg-red-500"
-            )} />
+          <Progress value={overallPercentage} className="w-full" indicatorStyle={{ backgroundColor: color }} />
           <span className="font-bold text-lg">{overallPercentage}%</span>
         </div>
       </CardHeader>
