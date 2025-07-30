@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, ChevronDown } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import IconPicker from './IconPicker';
 import { CustomColorPicker } from './CustomColorPicker';
 
@@ -112,20 +111,19 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
 
       <div className="grid gap-2">
         <Label htmlFor="frequency">Frequency</Label>
-        <Select value={frequencyValue} onValueChange={setFrequencyValue}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select frequency" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1">Every day</SelectItem>
-            <SelectItem value="2">Every 2 days</SelectItem>
-            <SelectItem value="3">Every 3 days</SelectItem>
-            <SelectItem value="4">Every 4 days</SelectItem>
-            <SelectItem value="5">Every 5 days</SelectItem>
-            <SelectItem value="6">Every 6 days</SelectItem>
-            <SelectItem value="7">Once a week</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Every</span>
+          <Input
+            id="frequency-days"
+            type="number"
+            min="1"
+            value={frequencyValue}
+            onChange={(e) => setFrequencyValue(e.target.value)}
+            className="w-20"
+            placeholder="e.g. 3"
+          />
+          <span className="text-sm text-muted-foreground">day(s)</span>
+        </div>
       </div>
 
       <div className="flex justify-between items-center pt-4 mt-4 border-t">

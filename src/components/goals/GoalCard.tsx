@@ -28,9 +28,8 @@ const GoalCard = ({ goal }: GoalCardProps) => {
       return 'Weekly';
     }
 
-    // Handle "Every X day(s) for Y week(s)" format
+    // Handle "Every X day(s)..." format
     const daysMatch = freq.match(/Every (\d+)/);
-    const weeksMatch = freq.match(/for (\d+)/);
 
     // Fallback for any other unexpected format
     if (!daysMatch) {
@@ -38,23 +37,14 @@ const GoalCard = ({ goal }: GoalCardProps) => {
     }
 
     const days = parseInt(daysMatch[1], 10);
-    const weeks = weeksMatch ? parseInt(weeksMatch[1], 10) : 1;
 
-    let dayPart = '';
     if (days === 1) {
-      dayPart = 'Daily';
-    } else if (days === 7) {
+      return 'Daily';
+    }
+    if (days === 7) {
       return 'Weekly';
-    } else {
-      dayPart = `Every ${days} days`;
     }
-
-    let weekPart = '';
-    if (weeksMatch && weeks > 1) {
-      weekPart = ` for ${weeks} weeks`;
-    }
-
-    return `${dayPart}${weekPart}`;
+    return `Every ${days} days`;
   };
 
   return (
