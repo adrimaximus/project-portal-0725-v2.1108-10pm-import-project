@@ -5,6 +5,7 @@ import MoodOverview from '@/components/mood-tracker/MoodOverview';
 import MoodHistory from '@/components/mood-tracker/MoodHistory';
 import { moods, dummyHistory, Mood } from '@/data/mood';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const MoodTracker = () => {
   const [selectedMoodId, setSelectedMoodId] = useState<Mood['id']>(moods[0].id);
@@ -12,33 +13,48 @@ const MoodTracker = () => {
   const handleSubmit = () => {
     const selectedMood = moods.find(mood => mood.id === selectedMoodId);
     console.log('Mood submitted:', selectedMood);
-    // Anda bisa menambahkan logika untuk menyimpan mood di sini
     alert(`You submitted: ${selectedMood?.label}`);
   };
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Mood tracker</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Mood Tracker</h1>
+          <p className="text-muted-foreground">Keep a diary of your daily feelings.</p>
         </div>
 
-        <div className="flex flex-col xl:flex-row items-start gap-8">
-          <div className="w-full xl:w-auto">
-            <section className="max-w-md">
-              <h2 className="text-lg font-semibold mb-2">How are you feeling today?</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle>How are you feeling today?</CardTitle>
+            </CardHeader>
+            <CardContent>
               <MoodSelector selectedMoodId={selectedMoodId} onSelectMood={setSelectedMoodId} />
               <Button onClick={handleSubmit} className="w-full mt-4">
-                Submit
+                Submit Mood
               </Button>
-            </section>
-          </div>
-          <div className="w-full xl:w-5/12">
-            <MoodOverview history={dummyHistory} />
-          </div>
-        </div>
+            </CardContent>
+          </Card>
 
-        <MoodHistory history={dummyHistory} />
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>This Week's Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MoodOverview history={dummyHistory} />
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <CardTitle>Your Mood History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MoodHistory history={dummyHistory} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </PortalLayout>
   );
