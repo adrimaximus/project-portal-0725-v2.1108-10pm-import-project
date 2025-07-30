@@ -14,18 +14,11 @@ type Period = 'month' | 'year';
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    
-    let tooltipClass = '';
-    if (data.label === 'Happy') {
-      // Pindahkan ke kiri
-      tooltipClass = '-translate-x-full';
-    } else if (data.label === 'Good') {
-      // Pindahkan ke kiri bawah
-      tooltipClass = '-translate-x-full translate-y-4';
-    }
+    // Selalu pindahkan tooltip ke kiri untuk mood 'Happy' dan 'Good'
+    const shouldMoveLeft = data.label === 'Happy' || data.label === 'Good';
 
     return (
-      <div className={cn(tooltipClass)}>
+      <div className={cn(shouldMoveLeft && '-translate-x-full')}>
         <div className="rounded-lg border bg-background p-2 shadow-sm">
           <div className="flex items-center gap-2">
             <span className="text-lg">{data.emoji}</span>
