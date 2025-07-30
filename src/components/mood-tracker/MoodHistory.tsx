@@ -12,14 +12,14 @@ interface MoodHistoryProps {
 const MoodHistory = ({ history }: MoodHistoryProps) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // Filter riwayat untuk hanya menyertakan entri dari tahun yang dipilih
+  // Filter history to only include entries from the selected year
   const yearHistory = history.filter(entry => {
-    // Menambahkan 'T00:00:00Z' untuk memperlakukan string tanggal sebagai UTC
+    // Appending 'T00:00:00Z' to treat the date string as UTC
     const entryDate = new Date(entry.date + 'T00:00:00Z');
     return entryDate.getUTCFullYear() === selectedYear;
   });
 
-  // Kelompokkan riwayat tahun berdasarkan indeks bulan (0-11)
+  // Group year's history by month index (0-11)
   const groupedByMonth = yearHistory.reduce((acc, entry) => {
     const entryDate = new Date(entry.date + 'T00:00:00Z');
     const monthIndex = entryDate.getUTCMonth();
@@ -31,13 +31,13 @@ const MoodHistory = ({ history }: MoodHistoryProps) => {
     return acc;
   }, {} as Record<number, MoodHistoryEntry[]>);
 
-  // Buat daftar 12 bulan untuk tahun yang dipilih
+  // Create a list of 12 months for the selected year
   const monthsOfYear = Array.from({ length: 12 }, (_, i) => {
     const monthDate = new Date(selectedYear, i, 1);
-    // Menggunakan lokal 'id-ID' untuk nama bulan
-    const monthName = monthDate.toLocaleString('id-ID', { month: 'long' });
+    // Using 'en-US' locale for month names
+    const monthName = monthDate.toLocaleString('en-US', { month: 'long' });
     return {
-      // MonthHistorySection mengharapkan string seperti "Januari 2024"
+      // MonthHistorySection expects a string like "January 2024"
       name: `${monthName} ${selectedYear}`,
       entries: groupedByMonth[i] || []
     };
@@ -46,16 +46,16 @@ const MoodHistory = ({ history }: MoodHistoryProps) => {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Riwayat Mood</CardTitle>
+        <CardTitle>Your Mood History</CardTitle>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={() => setSelectedYear(y => y - 1)}>
             <ChevronLeft className="h-4 w-4" />
-            <span className="sr-only">Tahun Sebelumnya</span>
+            <span className="sr-only">Previous Year</span>
           </Button>
           <span className="font-semibold text-lg tabular-nums">{selectedYear}</span>
           <Button variant="outline" size="icon" onClick={() => setSelectedYear(y => y + 1)}>
             <ChevronRight className="h-4 w-4" />
-            <span className="sr-only">Tahun Berikutnya</span>
+            <span className="sr-only">Next Year</span>
           </Button>
         </div>
       </CardHeader>
