@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Goal } from '@/data/goals';
 import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -62,7 +62,7 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
 
     return {
       date: monthDate,
-      name: format(monthDate, 'MMMM', { locale: id }),
+      name: format(monthDate, 'MMMM', { locale: enUS }),
       percentage,
       days: daysInMonth.map(day => {
         const dayStr = format(day, 'yyyy-MM-dd');
@@ -96,7 +96,7 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center mb-2">
-            <CardTitle>Progres Tahunan</CardTitle>
+            <CardTitle>Yearly Progress</CardTitle>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={handlePrevYear}>
                 <ChevronLeft className="h-4 w-4" />
@@ -108,7 +108,7 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
             </div>
           </div>
           <CardDescription>
-            Anda telah menyelesaikan target ini <strong>{totalCompleted}</strong> dari <strong>{totalPossible}</strong> kali pada tahun {displayYear}.
+            You have completed this target <strong>{totalCompleted}</strong> of <strong>{totalPossible}</strong> times in {displayYear}.
           </CardDescription>
           <div className="flex items-center gap-4 pt-2">
             <Progress value={overallPercentage} className="w-full" indicatorStyle={{ backgroundColor: color }} />
@@ -149,10 +149,10 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
                           />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{format(day.date, 'PPP', { locale: id })}</p>
-                          {isFutureDay ? <p>Tanggal mendatang</p> : 
-                           !isValidDay ? <p>Bukan hari yang dijadwalkan</p> :
-                           day.isCompleted !== undefined ? <p>{day.isCompleted ? 'Selesai' : 'Tidak selesai'}</p> : <p>Lacak sekarang</p>}
+                          <p>{format(day.date, 'PPP', { locale: enUS })}</p>
+                          {isFutureDay ? <p>Future date</p> : 
+                           !isValidDay ? <p>Not a scheduled day</p> :
+                           day.isCompleted !== undefined ? <p>{day.isCompleted ? 'Completed' : 'Not completed'}</p> : <p>Track now</p>}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -166,9 +166,9 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
       <AlertDialog open={!!dayToConfirm} onOpenChange={() => setDayToConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Apakah kamu yakin, ingin mengganti?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure you want to change this?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tindakan ini akan mengubah status penyelesaian untuk tanggal yang telah lewat.
+              This action will change the completion status for a past date.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

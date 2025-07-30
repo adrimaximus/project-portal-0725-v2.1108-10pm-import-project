@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -105,11 +106,11 @@ const GoalDetailPage = () => {
                   {dateRange?.from ? (
                     dateRange.to ? (
                       <>
-                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                        {format(dateRange.to, "LLL dd, y")}
+                        {format(dateRange.from, "LLL dd, y", { locale: enUS })} -{" "}
+                        {format(dateRange.to, "LLL dd, y", { locale: enUS })}
                       </>
                     ) : (
-                      format(dateRange.from, "LLL dd, y")
+                      format(dateRange.from, "LLL dd, y", { locale: enUS })
                     )
                   ) : (
                     <span>Pick a date range</span>

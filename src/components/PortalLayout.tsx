@@ -17,7 +17,7 @@ const PortalLayout = ({ children, noPadding: noPaddingProp = false, summary, dis
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
 
-  // Menonaktifkan scroll dan padding untuk halaman detail
+  // Disable scroll and padding for detail pages
   const isDetailPage = location.pathname.startsWith('/projects/') || location.pathname.startsWith('/requests/');
 
   const toggleSidebar = () => {
