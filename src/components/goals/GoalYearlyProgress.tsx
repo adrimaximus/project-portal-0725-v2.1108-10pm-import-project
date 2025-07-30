@@ -83,7 +83,7 @@ const GoalYearlyProgress = ({ completions, color }: GoalYearlyProgressProps) => 
                 <TooltipProvider key={day.date.toString()} delayDuration={100}>
                   <Tooltip>
                     <TooltipTrigger>
-                      <div className="w-full h-3 rounded-sm" style={{ backgroundColor: day.isCompleted === undefined ? '#E5E7EB' : (day.isCompleted ? color : '#FCA5A5') }} />
+                      <div className="w-full h-3 rounded-sm" style={{ backgroundColor: day.isCompleted === undefined ? '#E5E7EB' : (day.isCompleted ? color : '#6B7280') }} />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{format(day.date, 'PPP')}</p>
