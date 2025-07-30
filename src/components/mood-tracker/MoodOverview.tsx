@@ -58,14 +58,14 @@ const MoodOverview = ({ history }: MoodOverviewProps) => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="w-full h-56 relative">
+        <div className="w-full h-40 relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={moodCounts}
                 cx="50%"
                 cy="50%"
-                innerRadius="60%"
+                innerRadius="50%"
                 outerRadius="100%"
                 dataKey="value"
                 nameKey="label"
@@ -82,8 +82,8 @@ const MoodOverview = ({ history }: MoodOverviewProps) => {
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
             {mostFrequentMood ? (
               <>
-                <span className="text-3xl">{mostFrequentMood.emoji}</span>
-                <p className="text-sm text-muted-foreground mt-2 max-w-[120px]">
+                <span className="text-2xl">{mostFrequentMood.emoji}</span>
+                <p className="text-xs text-muted-foreground mt-1 max-w-[100px]">
                   You have been mostly feeling <span className="font-bold text-primary">{mostFrequentMood.label.toLowerCase()}</span>
                 </p>
               </>

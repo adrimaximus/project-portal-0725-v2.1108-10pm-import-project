@@ -25,30 +25,34 @@ const MoodTracker = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 grid gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>How are you feeling today?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <MoodSelector selectedMoodId={selectedMoodId} onSelectMood={setSelectedMoodId} />
-                <Button onClick={handleSubmit} className="w-full mt-4">
-                  Submit Mood
-                </Button>
-              </CardContent>
-            </Card>
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Your Mood History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <MoodHistory history={dummyHistory} />
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle>How are you feeling today?</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MoodSelector selectedMoodId={selectedMoodId} onSelectMood={setSelectedMoodId} />
+              <Button onClick={handleSubmit} className="w-full mt-4">
+                Submit Mood
+              </Button>
+            </CardContent>
+          </Card>
 
-          <Card className="lg:col-span-1 row-start-1 lg:row-start-auto">
-            <MoodOverview history={dummyHistory} />
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>This Week's Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MoodOverview history={dummyHistory} />
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <CardTitle>Your Mood History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MoodHistory history={dummyHistory} />
+            </CardContent>
           </Card>
         </div>
       </div>
