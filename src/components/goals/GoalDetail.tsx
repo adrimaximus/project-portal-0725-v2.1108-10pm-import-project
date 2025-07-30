@@ -8,8 +8,6 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import IconPicker from './IconPicker';
 import { CustomColorPicker } from './CustomColorPicker';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MultiSelect, Option } from '@/components/ui/MultiSelect';
 
 interface GoalDetailProps {
   goal: Goal;
@@ -18,52 +16,33 @@ interface GoalDetailProps {
   isCreateMode?: boolean;
 }
 
-const dayOptions: Option[] = [
-  { value: 'mon', label: 'Monday' },
-  { value: 'tue', label: 'Tuesday' },
-  { value: 'wed', label: 'Wednesday' },
-  { value: 'thu', label: 'Thursday' },
-  { value: 'fri', label: 'Friday' },
-  { value: 'sat', label: 'Saturday' },
-  { value: 'sun', label: 'Sunday' },
-];
-
 const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetailProps) => {
   const [editedGoal, setEditedGoal] = useState<Goal>(goal);
 
-  const parseFrequency = (freq: string): { type: 'interval' | 'weekly', intervalDays: string, weeklyDays: string[] } => {
-    if (freq.startsWith('weekly:')) {
-      const days = freq.split(':')[1].split(',').filter(d => d);
-      return { type: 'weekly', intervalDays: '7', weeklyDays: days };
+  // Helper function to parse frequency string.
+  const parseFrequency = (freq: string): { days: string } => {
+    const daysMatch = freq.match(/Every (\d+)/);
+
+    let days = "1";
+    if (daysMatch) {
+      days = daysMatch[1];
+    } else if (freq.toLowerCase().includes('week')) {
+      days = "7";
+    } else if (freq.toLowerCase().includes('daily')) {
+      days = "1";
     }
 
-    const daysMatch = freq.match(/Every (\d+)/);
-    let daysValue = "1";
-    if (daysMatch) {
-      daysValue = daysMatch[1];
-    } else if (freq.toLowerCase().includes('week')) {
-      daysValue = "7";
-    } else if (freq.toLowerCase().includes('daily')) {
-      daysValue = "1";
-    }
-    return { type: 'interval', intervalDays: daysValue, weeklyDays: [] };
+    return { days };
   };
 
   const initialFrequency = parseFrequency(goal.frequency);
-
-  const [frequencyType, setFrequencyType] = useState<'interval' | 'weekly'>(initialFrequency.type);
-  const [intervalDays, setIntervalDays] = useState<string>(initialFrequency.intervalDays);
-  const [weeklyDays, setWeeklyDays] = useState<string[]>(initialFrequency.weeklyDays);
+  const [frequencyValue, setFrequencyValue] = useState<string>(initialFrequency.days);
 
   const handleSave = () => {
-    let newFrequencyString = '';
+    const finalDays = parseInt(frequencyValue, 10) || 1;
 
-    if (frequencyType === 'interval') {
-      const finalDays = parseInt(intervalDays, 10) || 1;
-      newFrequencyString = `Every ${finalDays} day${finalDays > 1 ? 's' : ''} for 1 week`;
-    } else {
-      newFrequencyString = `weekly:${weeklyDays.join(',')}`;
-    }
+    // Duration is now fixed to 1 week and not shown in the UI.
+    const newFrequencyString = `Every ${finalDays} day${finalDays > 1 ? 's' : ''} for 1 week`;
     
     onUpdate({ ...editedGoal, frequency: newFrequencyString });
   };
@@ -76,17 +55,15 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
     const color = editedGoal.color;
     if (color.startsWith('#')) {
       let fullHex = color;
-      if (color.length === 4) {
+      if (color.length === 4) { // expand shorthand hex #RGB -> #RRGGBB
         fullHex = `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
       }
       if (fullHex.length === 7) {
-        return `${fullHex}33`;
+        return `${fullHex}33`; // Append alpha for ~20% opacity
       }
     }
     return 'rgba(128, 128, 128, 0.2)';
   }
-
-  const isSaveDisabled = frequencyType === 'weekly' && weeklyDays.length === 0;
 
   return (
     <div className="grid gap-4 py-4">
@@ -135,36 +112,20 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
 
       <div className="grid gap-2">
         <Label htmlFor="frequency">Frequency</Label>
-        <Tabs value={frequencyType} onValueChange={(value) => setFrequencyType(value as 'interval' | 'weekly')} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="interval">Interval</TabsTrigger>
-            <TabsTrigger value="weekly">Weekly</TabsTrigger>
-          </TabsList>
-          <TabsContent value="interval" className="pt-2">
-            <Select value={intervalDays} onValueChange={setIntervalDays}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select frequency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">Every day</SelectItem>
-                <SelectItem value="2">Every 2 days</SelectItem>
-                <SelectItem value="3">Every 3 days</SelectItem>
-                <SelectItem value="4">Every 4 days</SelectItem>
-                <SelectItem value="5">Every 5 days</SelectItem>
-                <SelectItem value="6">Every 6 days</SelectItem>
-                <SelectItem value="7">Once a week</SelectItem>
-              </SelectContent>
-            </Select>
-          </TabsContent>
-          <TabsContent value="weekly" className="pt-2">
-            <MultiSelect
-              options={dayOptions}
-              selected={weeklyDays}
-              onChange={setWeeklyDays}
-              placeholder="Select days..."
-            />
-          </TabsContent>
-        </Tabs>
+        <Select value={frequencyValue} onValueChange={setFrequencyValue}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select frequency" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">Every day</SelectItem>
+            <SelectItem value="2">Every 2 days</SelectItem>
+            <SelectItem value="3">Every 3 days</SelectItem>
+            <SelectItem value="4">Every 4 days</SelectItem>
+            <SelectItem value="5">Every 5 days</SelectItem>
+            <SelectItem value="6">Every 6 days</SelectItem>
+            <SelectItem value="7">Once a week</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex justify-between items-center pt-4 mt-4 border-t">
@@ -178,7 +139,7 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
         </div>
         <div className="flex gap-2">
           {onClose && <Button variant="ghost" onClick={onClose}>Cancel</Button>}
-          <Button onClick={handleSave} disabled={isSaveDisabled}>
+          <Button onClick={handleSave}>
             {isCreateMode ? 'Create Goal' : 'Save Changes'}
           </Button>
         </div>
