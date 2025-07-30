@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Goal } from '@/data/goals';
-import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay } from 'date-fns';
+import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -13,15 +13,17 @@ interface GoalYearlyProgressProps {
   completions: Goal['completions'];
   color: string;
   onToggleCompletion: (date: Date) => void;
+  specificDays?: string[];
 }
 
-const GoalYearlyProgress = ({ completions, color, onToggleCompletion }: GoalYearlyProgressProps) => {
+const GoalYearlyProgress = ({ completions, color, onToggleCompletion, specificDays }: GoalYearlyProgressProps) => {
   const today = new Date();
   const currentYear = getYear(today);
   const [displayYear, setDisplayYear] = useState(currentYear);
   const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
 
   const todayStart = startOfDay(today);
+  const dayIndexToKey = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
   const handlePrevYear = () => setDisplayYear(prev => prev - 1);
   const handleNextYear = () => setDisplayYear(prev => prev + 1);
@@ -35,34 +37,48 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion }: GoalYear
   });
   
   const totalCompleted = relevantCompletions.filter(c => c.completed).length;
-  const totalPossible = relevantCompletions.length;
-  const overallPercentage = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
-
+  
   const months = Array.from({ length: 12 }).map((_, i) => startOfMonth(new Date(displayYear, i, 1)));
 
   const monthlyData = months.map(monthDate => {
     const monthCompletions = relevantCompletions.filter(c => isSameMonth(parseISO(c.date), monthDate));
     const completedCount = monthCompletions.filter(c => c.completed).length;
-    const possibleCount = monthCompletions.length;
-    const percentage = possibleCount > 0 ? Math.round((completedCount / possibleCount) * 100) : 0;
     
     const daysInMonth = eachDayOfInterval({ start: startOfMonth(monthDate), end: endOfMonth(monthDate) });
     const completionMap = new Map(monthCompletions.map(c => [format(parseISO(c.date), 'yyyy-MM-dd'), c.completed]));
+
+    const daysWithGoalStatus = daysInMonth.map(day => {
+      const dayKey = dayIndexToKey[getDay(day)];
+      const isGoalDay = !specificDays || specificDays.length === 0 || specificDays.includes(dayKey);
+      return { date: day, isGoalDay };
+    });
+
+    const possibleDaysInMonth = daysWithGoalStatus.filter(d => d.isGoalDay && (isBefore(d.date, todayStart) || isToday(d.date))).length;
+    const percentage = possibleDaysInMonth > 0 ? Math.round((completedCount / possibleDaysInMonth) * 100) : 0;
 
     return {
       date: monthDate,
       name: format(monthDate, 'MMMM', { locale: id }),
       percentage,
-      days: daysInMonth.map(day => {
-        const dayStr = format(day, 'yyyy-MM-dd');
+      days: daysWithGoalStatus.map(dayInfo => {
+        const { date, isGoalDay } = dayInfo;
+        const dayStr = format(date, 'yyyy-MM-dd');
         let isCompleted: boolean | undefined = completionMap.get(dayStr);
-        if (isCompleted === undefined && isBefore(day, todayStart)) {
+        
+        if (isCompleted === undefined && isBefore(date, todayStart) && isGoalDay) {
           isCompleted = false;
         }
-        return { date: day, isCompleted };
+        return { date, isCompleted, isGoalDay };
       })
     };
   });
+
+  const yearGoalDays = eachDayOfInterval({ start: yearStartDate, end: yearEndDate }).filter(day => {
+      const dayKey = dayIndexToKey[getDay(day)];
+      return (!specificDays || specificDays.length === 0 || specificDays.includes(dayKey)) && (isBefore(day, todayStart) || isToday(day));
+  }).length;
+
+  const overallPercentage = yearGoalDays > 0 ? Math.round((totalCompleted / yearGoalDays) * 100) : 0;
 
   const handleDayClick = (day: Date) => {
     if (isAfter(day, todayStart)) return;
@@ -97,7 +113,7 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion }: GoalYear
             </div>
           </div>
           <CardDescription>
-            Anda telah menyelesaikan target ini <strong>{totalCompleted}</strong> dari <strong>{totalPossible}</strong> kali pada tahun {displayYear}.
+            Progres keseluruhan Anda untuk target ini pada tahun {displayYear}.
           </CardDescription>
           <div className="flex items-center gap-4 pt-2">
             <Progress value={overallPercentage} className="w-full" indicatorStyle={{ backgroundColor: color }} />
@@ -115,20 +131,29 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion }: GoalYear
                 {Array.from({ length: (month.days[0].date.getDay() + 6) % 7 }).map((_, i) => <div key={`empty-${i}`} />)}
                 {month.days.map(day => {
                   const isFutureDay = isAfter(day.date, todayStart);
+                  const isDisabled = isFutureDay || !day.isGoalDay;
+                  
                   return (
                     <TooltipProvider key={day.date.toString()} delayDuration={100}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => handleDayClick(day.date)}
-                            disabled={isFutureDay}
-                            className="w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            style={{ backgroundColor: day.isCompleted === undefined ? '#E5E7EB' : (day.isCompleted ? color : '#6B7280') }}
+                            disabled={isDisabled}
+                            className="w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed"
+                            style={{ 
+                              backgroundColor: !day.isGoalDay 
+                                ? '#F3F4F6' 
+                                : day.isCompleted === undefined 
+                                  ? '#E5E7EB' 
+                                  : (day.isCompleted ? color : '#6B7280'),
+                              opacity: !day.isGoalDay ? 0.5 : 1
+                            }}
                           />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>{format(day.date, 'PPP', { locale: id })}</p>
-                          {isFutureDay ? <p>Tanggal mendatang</p> : day.isCompleted !== undefined ? <p>{day.isCompleted ? 'Selesai' : 'Tidak selesai'}</p> : <p>Lacak sekarang</p>}
+                          {isFutureDay ? <p>Tanggal mendatang</p> : !day.isGoalDay ? <p>Bukan hari target</p> : day.isCompleted !== undefined ? <p>{day.isCompleted ? 'Selesai' : 'Tidak selesai'}</p> : <p>Lacak sekarang</p>}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
