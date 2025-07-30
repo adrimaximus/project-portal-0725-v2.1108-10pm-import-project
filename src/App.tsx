@@ -1,18 +1,29 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Index from './pages/Index';
-import GoalPage from './pages/GoalPage';
-import { Toaster } from "@/components/ui/toaster";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+import Request from "./pages/Request";
+import ChatPage from "./pages/ChatPage";
+import Profile from "./pages/Profile";
+import ProjectDetail from "./pages/ProjectDetail";
+import NotFound from "./pages/NotFound";
+import MoodTracker from "./pages/MoodTracker";
+import GoalsPage from "./pages/GoalsPage";
+import GoalDetailPage from "./pages/GoalDetailPage";
 
 function App() {
   return (
     <Router>
-      <main className="min-h-screen bg-background text-foreground">
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/goal/:id" element={<GoalPage />} />
-        </Routes>
-      </main>
-      <Toaster />
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/request" element={<Request />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/chat/:conversationId" element={<ChatPage />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/projects/:projectId" element={<ProjectDetail />} />
+        <Route path="/mood-tracker" element={<MoodTracker />} />
+        <Route path="/goals" element={<GoalsPage />} />
+        <Route path="/goals/:goalId" element={<GoalDetailPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </Router>
   );
 }
