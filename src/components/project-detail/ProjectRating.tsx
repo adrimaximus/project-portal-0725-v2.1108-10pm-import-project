@@ -13,23 +13,23 @@ const ProjectRating = () => {
   const [comment, setComment] = useState("");
 
   const handleSubmit = () => {
-    // Di aplikasi sungguhan, Anda akan mengirim data ini ke server
+    // In a real application, you would send this data to the server
     console.log({ rating, comment });
-    // Anda bisa menampilkan notifikasi toast di sini
-    alert("Terima kasih atas masukan Anda!");
+    // You could show a toast notification here
+    alert("Thank you for your feedback!");
   };
 
   return (
-    <div className="space-y-4 rounded-lg border bg-card text-card-foreground p-4 shadow">
-        <h4 className="font-semibold text-lg">Ulasan Proyek</h4>
-        <div className="space-y-2">
-            <Label>Rating Anda</Label>
+    <div className="space-y-3 rounded-lg border bg-card text-card-foreground p-4 shadow-sm">
+        <h4 className="font-semibold">Project Review</h4>
+        <div className="space-y-1.5">
+            <Label>Your Rating</Label>
             <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                 <Star
                     key={star}
                     className={cn(
-                    "h-7 w-7 cursor-pointer transition-colors",
+                    "h-6 w-6 cursor-pointer transition-colors",
                     (hoverRating || rating) >= star
                         ? "text-yellow-400 fill-yellow-400"
                         : "text-gray-300 hover:text-yellow-300"
@@ -41,18 +41,18 @@ const ProjectRating = () => {
                 ))}
             </div>
         </div>
-        <div className="space-y-2">
-            <Label htmlFor="comment">Komentar Anda</Label>
+        <div className="space-y-1.5">
+            <Label htmlFor="comment">Your Comment</Label>
             <Textarea
                 id="comment"
-                placeholder="Ceritakan pengalaman Anda dengan proyek ini..."
+                placeholder="Tell us about your experience with this project..."
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                className="min-h-[100px]"
+                className="min-h-[80px]"
             />
         </div>
-        <Button onClick={handleSubmit} disabled={rating === 0 || !comment.trim()}>
-            Kirim Ulasan
+        <Button onClick={handleSubmit} disabled={rating === 0 || !comment.trim()} size="sm">
+            Submit Review
         </Button>
     </div>
   );

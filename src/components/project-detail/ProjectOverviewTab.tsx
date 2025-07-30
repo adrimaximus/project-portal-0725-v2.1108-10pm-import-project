@@ -16,7 +16,7 @@ interface ProjectOverviewTabProps {
 }
 
 const Section = ({ title, children }: { title: string, children: React.ReactNode }) => (
-  <div className="space-y-3">
+  <div className="space-y-2">
     <h4 className="font-semibold">{title}</h4>
     <div className="text-sm text-muted-foreground">{children}</div>
   </div>
@@ -67,7 +67,7 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex justify-between items-start">
         <Section title="Project Owner">
           <div className="flex items-center gap-3">
