@@ -58,15 +58,15 @@ const MoodOverview = ({ history }: MoodOverviewProps) => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="w-full h-32 relative">
+        <div className="w-full h-40 relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={moodCounts}
                 cx="50%"
                 cy="50%"
-                innerRadius="60%"
-                outerRadius="80%"
+                innerRadius="75%"
+                outerRadius="100%"
                 dataKey="value"
                 nameKey="label"
                 paddingAngle={moodCounts.length > 1 ? 5 : 0}
