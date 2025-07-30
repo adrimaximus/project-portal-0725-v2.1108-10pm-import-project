@@ -19,7 +19,7 @@ const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
           )}
           aria-label={`Select mood: ${mood.label}`}
         >
-          <mood.Icon className={cn('h-10 w-10 sm:h-12 sm:w-12', mood.color)} />
+          <span className="text-4xl sm:text-5xl">{mood.emoji}</span>
         </button>
       ))}
     </div>

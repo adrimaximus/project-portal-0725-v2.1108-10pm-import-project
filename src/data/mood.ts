@@ -1,47 +1,30 @@
-import { Laugh, Smile, Meh, Frown, Angry } from 'lucide-react';
-import { subDays, format } from 'date-fns';
-
 export type Mood = {
-  id: 'ecstatic' | 'happy' | 'neutral' | 'sad' | 'angry';
+  id: number;
   label: string;
-  Icon: React.ElementType;
-  color: string;
-  bgColor: string;
+  emoji: string;
   ringColor: string;
-  value: number;
+};
+
+export type MoodHistoryEntry = {
+  id: number;
+  moodId: number;
+  date: string;
 };
 
 export const moods: Mood[] = [
-  { id: 'ecstatic', label: 'Ecstatic', Icon: Laugh, color: 'text-green-500', bgColor: 'bg-green-500', ringColor: 'ring-green-500', value: 5 },
-  { id: 'happy', label: 'Happy', Icon: Smile, color: 'text-lime-500', bgColor: 'bg-lime-500', ringColor: 'ring-lime-500', value: 4 },
-  { id: 'neutral', label: 'Neutral', Icon: Meh, color: 'text-orange-500', bgColor: 'bg-orange-500', ringColor: 'ring-orange-500', value: 3 },
-  { id: 'sad', label: 'Sad', Icon: Frown, color: 'text-pink-500', bgColor: 'bg-pink-500', ringColor: 'ring-pink-500', value: 2 },
-  { id: 'angry', label: 'Angry', Icon: Angry, color: 'text-red-500', bgColor: 'bg-red-500', ringColor: 'ring-red-500', value: 1 },
+  { id: 1, label: 'Happy', emoji: '😄', ringColor: 'ring-green-500' },
+  { id: 2, label: 'Good', emoji: '😊', ringColor: 'ring-yellow-500' },
+  { id: 3, label: 'Okay', emoji: '😐', ringColor: 'ring-blue-500' },
+  { id: 4, label: 'Bad', emoji: '😟', ringColor: 'ring-orange-500' },
+  { id: 5, label: 'Awful', emoji: '😠', ringColor: 'ring-red-500' },
 ];
 
-export type MoodEntry = {
-  date: string; // YYYY-MM-DD
-  moodId: Mood['id'];
-  note?: string;
-  tags?: string[];
-  imageUrl?: string;
-};
-
-// Generate dummy data for the last 6 months
-const generateDummyData = (): MoodEntry[] => {
-  const entries: MoodEntry[] = [];
-  const today = new Date();
-  for (let i = 0; i < 180; i++) {
-    const date = subDays(today, i);
-    if (Math.random() > 0.3) { // Don't create an entry for every day
-      const moodIndex = Math.floor(Math.pow(Math.random(), 0.5) * moods.length);
-      entries.push({
-        date: format(date, 'yyyy-MM-dd'),
-        moodId: moods[moodIndex].id,
-      });
-    }
-  }
-  return entries;
-};
-
-export const dummyHistory: MoodEntry[] = generateDummyData();
+export const dummyHistory: MoodHistoryEntry[] = [
+  { id: 1, moodId: 2, date: '2023-10-26' },
+  { id: 2, moodId: 1, date: '2023-10-25' },
+  { id: 3, moodId: 3, date: '2023-10-24' },
+  { id: 4, moodId: 4, date: '2023-10-23' },
+  { id: 5, moodId: 2, date: '2023-10-22' },
+  { id: 6, moodId: 5, date: '2023-10-21' },
+  { id: 7, moodId: 1, date: '2023-10-20' },
+];
