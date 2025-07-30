@@ -3,7 +3,7 @@ import { Goal } from '@/data/goals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, ChevronDown } from 'lucide-react';
+import { Trash2, ChevronDown, LucideIcon } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import IconPicker from './IconPicker';
 import { CustomColorPicker } from './CustomColorPicker';
@@ -18,7 +18,6 @@ interface GoalDetailProps {
 const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetailProps) => {
   const [editedGoal, setEditedGoal] = useState<Goal>(goal);
 
-  // Helper function to parse frequency string.
   const parseFrequency = (freq: string): { days: number, weeks: number } => {
     const daysMatch = freq.match(/Every (\d+)/);
     const weeksMatch = freq.match(/for (\d+)/);
@@ -51,7 +50,7 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
     onUpdate({ ...editedGoal, frequency: newFrequencyString });
   };
 
-  const handleIconSelect = (icon: React.ElementType) => {
+  const handleIconSelect = (icon: LucideIcon) => {
     setEditedGoal({ ...editedGoal, icon });
   };
 
@@ -59,14 +58,13 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
     const color = editedGoal.color;
     if (color.startsWith('#')) {
       let fullHex = color;
-      if (color.length === 4) { // expand shorthand hex #RGB -> #RRGGBB
+      if (color.length === 4) {
         fullHex = `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
       }
       if (fullHex.length === 7) {
-        return `${fullHex}33`; // Append alpha for ~20% opacity
+        return `${fullHex}33`;
       }
     }
-    // Fallback for invalid hex or other formats during input
     return 'rgba(128, 128, 128, 0.2)';
   }
 

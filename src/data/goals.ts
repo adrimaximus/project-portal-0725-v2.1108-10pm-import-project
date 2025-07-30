@@ -1,74 +1,70 @@
-import { Target, Dumbbell, BookOpen, Bed, BrainCircuit, Trophy } from 'lucide-react';
-import { addDays, format } from 'date-fns';
+import { Book, Dumbbell, Droplets, LucideIcon, CalendarCheck } from 'lucide-react';
+import { subDays, formatISO, startOfDay } from 'date-fns';
 
-export type Goal = {
+export interface Goal {
   id: string;
   title: string;
-  icon: React.ElementType;
+  icon: LucideIcon;
   color: string;
   frequency: string;
-  completions: { date: string; completed: boolean }[];
-};
+  startDate?: string;
+  completions: {
+    date: string; // ISO date string
+    completed: boolean;
+  }[];
+}
 
-// Helper to generate completions for a goal
-const generateCompletions = (days: number, frequencyPattern: (dayOfWeek: number) => boolean) => {
+const generateCompletions = (startDate: Date, freq: number, count: number) => {
   const completions = [];
-  const today = new Date();
-  for (let i = 0; i < days; i++) {
-    const date = new Date();
-    date.setDate(today.getDate() - i);
-    const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
-    
-    if (frequencyPattern(dayOfWeek)) {
-      // For demo, some days are not completed
-      completions.push({
-        date: format(date, 'yyyy-MM-dd'),
-        completed: Math.random() > 0.2, // 80% chance of completion
-      });
+  for (let i = 0; i < count; i++) {
+    const date = subDays(startDate, i * freq);
+    // Add some variety to completion data
+    if (i % 3 !== 0) { 
+      completions.push({ date: formatISO(startOfDay(date)), completed: true });
+    } else {
+      completions.push({ date: formatISO(startOfDay(date)), completed: false });
     }
   }
-  return completions.reverse();
+  return completions;
 };
 
-export const dummyGoals: Goal[] = [
+const today = new Date();
+
+export const goals: Goal[] = [
   {
     id: '1',
-    title: 'Set Small Goals',
-    icon: Target,
-    color: '#EF4444', // red-500
-    frequency: 'Everyday',
-    completions: generateCompletions(90, () => true),
+    title: 'Read 10 pages of a book',
+    icon: Book,
+    color: '#4A90E2',
+    frequency: 'Every 1 day for 1 week',
+    startDate: formatISO(startOfDay(subDays(today, 30))),
+    completions: generateCompletions(today, 1, 30),
   },
   {
     id: '2',
-    title: 'Meditation',
-    icon: BrainCircuit,
-    color: '#22C55E', // green-500
-    frequency: '5 days per week',
-    completions: generateCompletions(90, (day) => day >= 1 && day <= 5), // Mon-Fri
+    title: 'Workout for 30 minutes',
+    icon: Dumbbell,
+    color: '#D0021B',
+    frequency: 'Every 2 days for 2 weeks',
+    startDate: formatISO(startOfDay(subDays(today, 60))),
+    completions: generateCompletions(today, 2, 30),
   },
   {
     id: '3',
-    title: 'Work',
-    icon: Trophy,
-    color: '#8B5CF6', // violet-500
-    frequency: 'Everyday',
-    completions: generateCompletions(90, () => true),
+    title: 'Drink 8 glasses of water',
+    icon: Droplets,
+    color: '#50E3C2',
+    frequency: 'Every 1 day for 4 weeks',
+    startDate: formatISO(startOfDay(subDays(today, 45))),
+    completions: generateCompletions(today, 1, 45),
   },
   {
     id: '4',
-    title: 'Sleep Over 8h',
-    icon: Bed,
-    color: '#3B82F6', // blue-500
-    frequency: 'Everyday',
-    completions: generateCompletions(90, () => true),
-  },
-  {
-    id: '5',
-    title: 'Exercise or Workout',
-    icon: Dumbbell,
-    color: '#14B8A6', // teal-500
-    frequency: 'Everyday',
-    completions: generateCompletions(90, () => true),
+    title: 'Plan the next day',
+    icon: CalendarCheck,
+    color: '#F5A623',
+    frequency: 'Once a week',
+    startDate: formatISO(startOfDay(subDays(today, 90))),
+    completions: generateCompletions(today, 7, 12),
   },
 ];
