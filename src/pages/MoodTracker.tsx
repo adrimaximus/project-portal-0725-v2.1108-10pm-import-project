@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 const MoodTracker = () => {
   const [selectedMoodId, setSelectedMoodId] = useState<Mood['id']>(moods[0].id);
   const [history, setHistory] = useState<MoodHistoryEntry[]>(dummyHistory);
+  const user = { name: 'Alex' }; // Data pengguna tiruan
 
   const handleSubmit = () => {
     const selectedMood = moods.find(mood => mood.id === selectedMoodId);
@@ -50,14 +51,14 @@ const MoodTracker = () => {
     <PortalLayout>
       <div className="space-y-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Mood Tracker</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user.name}!</h1>
           <p className="text-muted-foreground">Keep a diary of your daily feelings.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <Card className="lg:col-span-1">
             <CardHeader>
-              <CardTitle>How are you feeling today?</CardTitle>
+              <CardTitle>How are you feeling, {user.name}?</CardTitle>
             </CardHeader>
             <CardContent>
               <MoodSelector selectedMoodId={selectedMoodId} onSelectMood={setSelectedMoodId} />
