@@ -7,6 +7,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
 import MoodTracker from "./pages/MoodTracker";
 import GoalsPage from "./pages/GoalsPage";
+import GoalDetailPage from "./pages/GoalDetailPage";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="/projects/:projectId" element={<ProjectDetail />} />
         <Route path="/mood-tracker" element={<MoodTracker />} />
         <Route path="/goals" element={<GoalsPage />} />
+        <Route path="/goals/:goalId" element={<GoalDetailPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>

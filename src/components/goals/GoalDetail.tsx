@@ -4,13 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 
 interface GoalDetailProps {
   goal: Goal;
   onUpdate: (goal: Goal) => void;
-  onClose: () => void;
 }
 
 const colors = [
@@ -18,7 +17,7 @@ const colors = [
   '#14B8A6', '#06B6D4', '#3B82F6', '#6366F1', '#8B5CF6', '#A855F7',
 ];
 
-const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
+const GoalDetail = ({ goal, onUpdate }: GoalDetailProps) => {
   const [editedGoal, setEditedGoal] = useState<Goal>(goal);
 
   const handleSave = () => {
@@ -26,14 +25,11 @@ const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
   };
 
   return (
-    <div className="flex flex-col h-full border-l bg-background">
-      <header className="p-4 border-b flex items-center justify-between sticky top-0 bg-background z-10">
+    <div className="flex flex-col h-full bg-background rounded-lg">
+      <header className="p-4 border-b flex items-center justify-between">
         <h2 className="text-lg font-semibold">Goal Details</h2>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
       </header>
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 p-6 space-y-6">
         <div>
           <Label htmlFor="goal-title">Goal Title</Label>
           <Input
@@ -96,7 +92,7 @@ const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
           </Select>
         </div>
       </div>
-      <footer className="p-4 border-t flex items-center justify-between sticky bottom-0 bg-background z-10">
+      <footer className="p-4 border-t flex items-center justify-between">
         <Button variant="outline" className="text-destructive hover:text-destructive">
           <Trash2 className="mr-2 h-4 w-4" />
           Delete
