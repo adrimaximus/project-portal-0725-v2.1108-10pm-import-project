@@ -23,7 +23,7 @@ const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
           key={mood.id}
           variant="ghost"
           onClick={() => onSelectMood(mood.id)}
-          className="w-full justify-start h-auto p-2"
+          className="w-full justify-start h-auto p-2 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
         >
           <div
             className={cn(
