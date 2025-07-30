@@ -78,8 +78,8 @@ const MoodOverview = ({ history, period }: MoodOverviewProps) => {
             data={moodCounts}
             cx="50%"
             cy="50%"
-            innerRadius="80%"
-            outerRadius="100%"
+            innerRadius="70%"
+            outerRadius="90%"
             dataKey="value"
             nameKey="label"
             paddingAngle={moodCounts.length > 1 ? 5 : 0}

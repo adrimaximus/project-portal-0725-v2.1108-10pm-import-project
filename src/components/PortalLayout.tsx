@@ -10,13 +10,14 @@ type PortalLayoutProps = {
   children: ReactNode;
   noPadding?: boolean;
   summary?: ReactNode;
+  disableMainScroll?: boolean;
 };
 
-const PortalLayout = ({ children, noPadding: noPaddingProp = false, summary }: PortalLayoutProps) => {
+const PortalLayout = ({ children, noPadding: noPaddingProp = false, summary, disableMainScroll: disableMainScrollProp = false }: PortalLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
 
-  // Menonaktifkan padding untuk halaman detail
+  // Menonaktifkan scroll dan padding untuk halaman detail
   const isDetailPage = location.pathname.startsWith('/projects/') || location.pathname.startsWith('/requests/');
 
   const toggleSidebar = () => {
@@ -26,6 +27,7 @@ const PortalLayout = ({ children, noPadding: noPaddingProp = false, summary }: P
   const sidebarContainerWidth = isCollapsed ? "md:w-[72px]" : "md:w-[220px] lg:w-[280px]";
   const mainContentMargin = isCollapsed ? "md:ml-[72px]" : "md:ml-[220px] lg:ml-[280px]";
 
+  const disableMainScroll = disableMainScrollProp || isDetailPage;
   const noPadding = noPaddingProp || isDetailPage;
 
   return (
@@ -43,7 +45,7 @@ const PortalLayout = ({ children, noPadding: noPaddingProp = false, summary }: P
       </div>
       
       <div className={cn(
-        "flex flex-col min-h-screen transition-[margin-left] duration-300 ease-in-out",
+        "flex flex-col h-screen transition-[margin-left] duration-300 ease-in-out",
         mainContentMargin
       )}>
         <header className="sticky top-0 z-10 bg-background">
@@ -51,6 +53,7 @@ const PortalLayout = ({ children, noPadding: noPaddingProp = false, summary }: P
         </header>
         <main className={cn(
           "flex flex-1 flex-col",
+          !disableMainScroll && "overflow-auto",
           !noPadding && "gap-2 px-4 py-2 lg:gap-4 lg:px-6 lg:py-4"
         )}>
           {children}
