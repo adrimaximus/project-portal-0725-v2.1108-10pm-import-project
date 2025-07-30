@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { differenceInDays, parseISO, isBefore, isAfter, isToday, isTomorrow } from 'date-fns';
 import ProjectRating from "./ProjectRating";
+import { useState } from "react";
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -23,6 +24,14 @@ const Section = ({ title, children }: { title: string, children: React.ReactNode
 );
 
 const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesChange }: ProjectOverviewTabProps) => {
+  const [review, setReview] = useState<{ rating: number; comment: string } | null>(null);
+
+  const handleReviewSubmit = (rating: number, comment: string) => {
+    setReview({ rating, comment });
+    // In a real app, you would also update the project data globally
+    // so the dashboard could see the new rating.
+  };
+
   const projectIsDone = (() => {
     try {
       const now = new Date();
@@ -40,17 +49,14 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
       const startDate = parseISO(project.startDate);
       const deadline = parseISO(project.deadline);
 
-      // Case 1: After deadline
       if (isAfter(now, deadline)) {
         return <Badge className="bg-black text-white hover:bg-black/80">Done</Badge>;
       }
 
-      // Case 2: On or after start date (but not after deadline)
       if (isToday(startDate) || isAfter(now, startDate)) {
         return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">On Going</Badge>;
       }
 
-      // Case 3: Before start date
       if (isBefore(now, startDate)) {
         if (isTomorrow(startDate)) {
           return <Badge variant="secondary">Tomorrow</Badge>;
@@ -59,7 +65,7 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
         return <Badge variant="secondary">{daysUntilStart} day{daysUntilStart !== 1 ? 's' : ''} to go</Badge>;
       }
 
-      return null; // Should not be reached if dates are valid
+      return null;
 
     } catch (error) {
       return null;
@@ -108,8 +114,12 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
       </Section>
 
       {projectIsDone && (
-        <Section title="Rating">
-          <ProjectRating />
+        <Section title={review ? "Your Review" : "Project Review"}>
+          <ProjectRating
+            onSubmit={handleReviewSubmit}
+            submittedRating={review?.rating}
+            submittedComment={review?.comment}
+          />
         </Section>
       )}
     </div>

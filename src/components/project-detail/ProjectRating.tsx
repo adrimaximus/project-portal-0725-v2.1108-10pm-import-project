@@ -6,19 +6,44 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import StarRatingDisplay from "./StarRatingDisplay";
 
-const ProjectRating = () => {
+interface ProjectRatingProps {
+  submittedRating?: number;
+  submittedComment?: string;
+  onSubmit: (rating: number, comment: string) => void;
+}
+
+const ProjectRating = ({ submittedRating, submittedComment, onSubmit }: ProjectRatingProps) => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
 
   const handleSubmit = () => {
-    // In a real application, you would send this data to the server
-    console.log({ rating, comment });
-    // You could show a toast notification here
-    alert("Thank you for your feedback!");
+    onSubmit(rating, comment);
   };
 
+  // Display view: if a rating has been submitted
+  if (submittedRating) {
+    return (
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label>Your Rating</Label>
+          <StarRatingDisplay rating={submittedRating} />
+        </div>
+        {submittedComment && (
+          <div className="space-y-1.5">
+            <Label>Your Comment</Label>
+            <p className="text-sm text-muted-foreground bg-gray-50 dark:bg-gray-900/50 p-3 rounded-md whitespace-pre-wrap border">
+              {submittedComment}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Form view: if no rating has been submitted yet
   return (
     <div className="space-y-3 rounded-lg border bg-card text-card-foreground p-4 shadow-sm">
         <h4 className="font-semibold">Project Review</h4>
