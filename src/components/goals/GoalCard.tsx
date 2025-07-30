@@ -1,6 +1,7 @@
 import { Goal } from '@/data/goals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import GoalProgressGrid from '@/components/goals/GoalProgressGrid';
+import { subMonths, parseISO, isAfter, startOfToday } from 'date-fns';
 
 interface GoalCardProps {
   goal: Goal;
@@ -8,6 +9,15 @@ interface GoalCardProps {
 
 const GoalCard = ({ goal }: GoalCardProps) => {
   const { title, icon: Icon, frequency, color, completions } = goal;
+
+  // Filter completions to only include the last 3 months
+  const today = startOfToday();
+  const threeMonthsAgo = subMonths(today, 3);
+
+  const recentCompletions = completions.filter(completion => {
+    const completionDate = parseISO(completion.date);
+    return isAfter(completionDate, threeMonthsAgo);
+  });
 
   return (
     <Card className="h-full transition-all hover:shadow-md hover:-translate-y-1">
@@ -21,7 +31,7 @@ const GoalCard = ({ goal }: GoalCardProps) => {
         <p className="text-sm text-muted-foreground">{frequency}</p>
       </CardHeader>
       <CardContent>
-        <GoalProgressGrid completions={completions} color={color} />
+        <GoalProgressGrid completions={recentCompletions} color={color} />
       </CardContent>
     </Card>
   );
