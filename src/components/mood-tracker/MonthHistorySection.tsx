@@ -11,7 +11,7 @@ const getMoodById = (moodId: number) => {
 };
 
 const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
-  // --- Perhitungan untuk kartu ringkasan ---
+  // --- Calculation for the summary card ---
   const moodCounts: { [key: number]: number } = {};
   let totalScore = 0;
 
@@ -30,18 +30,18 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
   const mostFrequentMood = mostFrequentMoodId ? getMoodById(mostFrequentMoodId) : null;
   const averagePercentage = entries.length > 0 ? Math.round((totalScore / entries.length)) : 0;
 
-  // --- Perhitungan untuk grid kalender ---
+  // --- Calculation for the calendar grid ---
   const monthDate = new Date(month);
   const year = monthDate.getFullYear();
   const monthIndex = monthDate.getMonth();
 
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  // getDay() adalah 0 untuk Minggu, 1 untuk Senin... Asumsikan minggu dimulai pada hari Minggu.
+  // getDay() is 0 for Sunday, 1 for Monday... Assuming the week starts on Sunday.
   const firstDayOfWeek = new Date(year, monthIndex, 1).getDay();
 
   const entriesMap = new Map<number, MoodHistoryEntry>();
   entries.forEach(entry => {
-    // Menggunakan tanggal UTC untuk menghindari pergeseran zona waktu. String tanggal adalah 'YYYY-MM-DD'.
+    // Using UTC date to avoid timezone shifts. The date string is 'YYYY-MM-DD'.
     const entryDate = new Date(entry.date + 'T00:00:00Z');
     const dayOfMonth = entryDate.getUTCDate();
     entriesMap.set(dayOfMonth, entry);
@@ -49,12 +49,12 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
 
   const calendarDays = [];
 
-  // Tambahkan placeholder kosong untuk hari-hari sebelum tanggal 1 bulan itu
+  // Add empty placeholders for days before the 1st of the month
   for (let i = 0; i < firstDayOfWeek; i++) {
     calendarDays.push(<div key={`empty-${i}`} className="w-5 h-5 sm:w-6 sm:h-6" />);
   }
 
-  // Tambahkan hari-hari sebenarnya dalam bulan itu
+  // Add the actual days of the month
   for (let day = 1; day <= daysInMonth; day++) {
     const entry = entriesMap.get(day);
     if (entry) {
@@ -64,7 +64,7 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
           key={entry.id}
           className="w-5 h-5 sm:w-6 sm:h-6 rounded-full"
           style={{ backgroundColor: mood?.color }}
-          title={`${mood?.label} pada ${new Date(year, monthIndex, day).toLocaleDateString()}`}
+          title={`${mood?.label} on ${new Date(year, monthIndex, day).toLocaleDateString()}`}
         />
       );
     } else {
@@ -72,7 +72,7 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
         <div
           key={`day-${day}`}
           className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-muted/50"
-          title={`Tidak ada entri untuk ${new Date(year, monthIndex, day).toLocaleDateString()}`}
+          title={`No entry for ${new Date(year, monthIndex, day).toLocaleDateString()}`}
         />
       );
     }

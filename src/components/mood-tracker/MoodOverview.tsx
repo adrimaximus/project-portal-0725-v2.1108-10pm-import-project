@@ -20,7 +20,7 @@ const CustomTooltip = ({ active, payload }: any) => {
           <div className="flex items-center gap-2">
             <span className="text-lg">{data.emoji}</span>
             <p className="text-sm text-muted-foreground">
-              <span className="font-bold" style={{ color: data.color }}>{data.label}</span>: {data.value} hari
+              <span className="font-bold" style={{ color: data.color }}>{data.label}</span>: {data.value} day{data.value !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
