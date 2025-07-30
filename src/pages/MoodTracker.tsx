@@ -65,8 +65,8 @@ const MoodTracker = () => {
           <p className="text-muted-foreground">Keep a diary of your daily feelings.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <Card className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-15 gap-6 items-start">
+          <Card className="lg:col-span-7">
             <CardHeader>
               <CardTitle>How are you feeling today, {user.name}?</CardTitle>
             </CardHeader>
@@ -78,7 +78,7 @@ const MoodTracker = () => {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-8">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle>{getOverviewTitle()}</CardTitle>
               <div className="flex items-center gap-1 rounded-md bg-secondary p-1">
@@ -113,7 +113,7 @@ const MoodTracker = () => {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-3">
+          <Card className="lg:col-span-15">
             <CardHeader>
               <CardTitle>Your Mood History</CardTitle>
             </CardHeader>
