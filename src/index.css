@@ -76,7 +76,7 @@
 }
 
 @layer components {
-  .progress-bar-color {
-    background-color: var(--progress-color, hsl(var(--primary)));
+  .mood-progress > div {
+    background-color: var(--progress-color);
   }
 }
