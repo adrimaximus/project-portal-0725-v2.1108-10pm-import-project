@@ -1,101 +1,70 @@
-import { moods, MoodHistoryEntry } from '@/data/mood';
-import { Card } from '@/components/ui/card';
+import { MoodHistoryEntry, moods } from '@/data/mood';
+import { getDaysInMonth, getDay as getDayOfWeek, format, getDate } from 'date-fns';
 
 interface MonthHistorySectionProps {
-  month: string;
-  entries: MoodHistoryEntry[];
+  history: MoodHistoryEntry[];
+  month: number; // 0-11
+  year: number;
 }
 
-const getMoodById = (moodId: number) => {
-  return moods.find(mood => mood.id === moodId);
-};
+const MonthHistorySection = ({ history, month, year }: MonthHistorySectionProps) => {
+  const daysInMonth = getDaysInMonth(new Date(year, month));
+  const firstDayOfWeek = getDayOfWeek(new Date(year, month, 1));
 
-const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
-  // --- Perhitungan untuk kartu ringkasan ---
-  const moodCounts: { [key: number]: number } = {};
-  let totalScore = 0;
+  const entriesForMonth = history.filter(
+    (entry) => new Date(entry.date).getMonth() === month && new Date(entry.date).getFullYear() === year
+  );
 
-  entries.forEach(entry => {
-    moodCounts[entry.moodId] = (moodCounts[entry.moodId] || 0) + 1;
-    const mood = getMoodById(entry.moodId);
-    if (mood) {
-      totalScore += mood.score;
-    }
-  });
+  const totalScore = entriesForMonth.reduce((acc, entry) => {
+    const mood = moods.find((m) => m.id === entry.moodId);
+    return acc + (mood?.score ?? 0);
+  }, 0);
 
-  const mostFrequentMoodId = Object.keys(moodCounts).length > 0
-    ? parseInt(Object.keys(moodCounts).reduce((a, b) => moodCounts[parseInt(a)] > moodCounts[parseInt(b)] ? a : b))
-    : null;
+  const averageScore = entriesForMonth.length > 0 ? totalScore / entriesForMonth.length : null;
 
-  const mostFrequentMood = mostFrequentMoodId ? getMoodById(mostFrequentMoodId) : null;
-  const averagePercentage = entries.length > 0 ? Math.round((totalScore / entries.length)) : 0;
-
-  // --- Perhitungan untuk grid kalender ---
-  const monthDate = new Date(month);
-  const year = monthDate.getFullYear();
-  const monthIndex = monthDate.getMonth();
-
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  // getDay() adalah 0 untuk Minggu, 1 untuk Senin... Asumsikan minggu dimulai pada hari Minggu.
-  const firstDayOfWeek = new Date(year, monthIndex, 1).getDay();
-
-  const entriesMap = new Map<number, MoodHistoryEntry>();
-  entries.forEach(entry => {
-    // Menggunakan tanggal UTC untuk menghindari pergeseran zona waktu. String tanggal adalah 'YYYY-MM-DD'.
-    const entryDate = new Date(entry.date + 'T00:00:00Z');
-    const dayOfMonth = entryDate.getUTCDate();
-    entriesMap.set(dayOfMonth, entry);
-  });
-
-  const calendarDays = [];
-
-  // Tambahkan placeholder kosong untuk hari-hari sebelum tanggal 1 bulan itu
-  for (let i = 0; i < firstDayOfWeek; i++) {
-    calendarDays.push(<div key={`empty-${i}`} className="w-5 h-5 sm:w-6 sm:h-6" />);
-  }
-
-  // Tambahkan hari-hari sebenarnya dalam bulan itu
-  for (let day = 1; day <= daysInMonth; day++) {
-    const entry = entriesMap.get(day);
-    if (entry) {
-      const mood = getMoodById(entry.moodId);
-      calendarDays.push(
-        <div
-          key={entry.id}
-          className="w-5 h-5 sm:w-6 sm:h-6 rounded-full"
-          style={{ backgroundColor: mood?.color }}
-          title={`${mood?.label} pada ${new Date(year, monthIndex, day).toLocaleDateString()}`}
-        />
-      );
-    } else {
-      calendarDays.push(
-        <div
-          key={`day-${day}`}
-          className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-muted/50"
-          title={`Tidak ada entri untuk ${new Date(year, monthIndex, day).toLocaleDateString()}`}
-        />
-      );
-    }
+  let averageMoodLabel = null;
+  if (averageScore !== null) {
+    if (averageScore > 1.5) averageMoodLabel = { label: 'Mostly Good', color: moods.find(m => m.id === 'good')?.color };
+    else if (averageScore > 0.5) averageMoodLabel = { label: 'Mostly Neutral', color: moods.find(m => m.id === 'neutral')?.color };
+    else averageMoodLabel = { label: 'Mostly Bad', color: moods.find(m => m.id === 'bad')?.color };
   }
 
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-4 text-center">{month}</h3>
-      <div className="flex items-center justify-between gap-4 sm:gap-8">
-        <div className="grid grid-cols-7 gap-2 flex-1">
-          {calendarDays}
-        </div>
-        {mostFrequentMood && (
-          <Card className="flex flex-col items-center justify-center p-3 rounded-2xl w-24 h-24 sm:w-28 sm:h-28 shrink-0">
-            <div 
-              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-3xl sm:text-4xl mb-1"
-              style={{ backgroundColor: mostFrequentMood.color }}
-            >
-              {mostFrequentMood.emoji}
-            </div>
-            <span className="font-bold text-base sm:text-lg text-card-foreground">{averagePercentage}%</span>
-          </Card>
+    <div className="mt-6">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-semibold">
+          {format(new Date(year, month), 'MMMM yyyy')}
+        </h3>
+        {averageMoodLabel && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: averageMoodLabel.color }}></span>
+            <span>{averageMoodLabel.label}</span>
+          </div>
         )}
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <div key={day}>{day}</div>)}
+      </div>
+      <div className="grid grid-cols-7 gap-1 mt-1">
+        {Array.from({ length: firstDayOfWeek }).map((_, i) => <div key={`empty-${i}`} />)}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1;
+          const entryForDay = entriesForMonth.find(
+            (e) => getDate(new Date(e.date)) === day
+          );
+          const mood = entryForDay ? moods.find((m) => m.id === entryForDay.moodId) : undefined;
+          return (
+            <div key={day} className="aspect-square flex items-center justify-center">
+              {mood ? (
+                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: mood.color }}>
+                  <span className="text-lg">{mood.emoji}</span>
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground">{day}</span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

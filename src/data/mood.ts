@@ -1,64 +1,55 @@
-export type Mood = {
-  id: number;
-  label: string;
-  emoji: string;
-  ringColor: string;
+export interface Mood {
+  id: 'good' | 'neutral' | 'bad';
+  label: 'Good' | 'Neutral' | 'Bad';
+  emoji: '😊' | '😐' | '😔';
   color: string;
-  score: number;
   pastelColor: string;
-};
-
-export type MoodHistoryEntry = {
-  id: number;
-  moodId: number;
-  date: string; // YYYY-MM-DD
-};
+  score: number;
+}
 
 export const moods: Mood[] = [
-  { id: 1, label: 'Happy', emoji: '😄', ringColor: 'ring-green-500', color: '#10B981', score: 100, pastelColor: 'bg-green-100' },
-  { id: 2, label: 'Good', emoji: '😊', ringColor: 'ring-yellow-500', color: '#34D399', score: 75, pastelColor: 'bg-sky-100' },
-  { id: 3, label: 'Okay', emoji: '😐', ringColor: 'ring-blue-500', color: '#FBBF24', score: 50, pastelColor: 'bg-yellow-100' },
-  { id: 4, label: 'Bad', emoji: '😟', ringColor: 'ring-orange-500', color: '#FCA5A5', score: 25, pastelColor: 'bg-orange-100' },
-  { id: 5, label: 'Awful', emoji: '😠', ringColor: 'ring-red-500', color: '#EF4444', score: 0, pastelColor: 'bg-red-100' },
+  {
+    id: 'good',
+    label: 'Good',
+    emoji: '😊',
+    color: '#34d399',
+    pastelColor: 'bg-green-100',
+    score: 2,
+  },
+  {
+    id: 'neutral',
+    label: 'Neutral',
+    emoji: '😐',
+    color: '#f59e0b',
+    pastelColor: 'bg-amber-100',
+    score: 1,
+  },
+  {
+    id: 'bad',
+    label: 'Bad',
+    emoji: '😔',
+    color: '#ef4444',
+    pastelColor: 'bg-red-100',
+    score: 0,
+  },
 ];
 
-const today = new Date();
-const y = today.getFullYear();
-const m = today.getMonth();
-const d = today.getDate();
-
-const formatDate = (date: Date) => {
-    return date.toISOString().split('T')[0];
+export interface MoodHistoryEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  moodId: Mood['id'];
+  notes?: string;
 }
 
-// Filter out entries that might be in the future if the current day is early in the month
-const safeDate = (year: number, month: number, day: number) => {
-    const date = new Date(year, month, day);
-    return date > today ? today : date;
-}
-
+// Dummy data for demonstration
 export const dummyHistory: MoodHistoryEntry[] = [
-  // This month's data
-  { id: 1, moodId: 2, date: formatDate(safeDate(y, m, d - 2)) },
-  { id: 2, moodId: 1, date: formatDate(safeDate(y, m, d - 5)) },
-  { id: 3, moodId: 3, date: formatDate(safeDate(y, m, d - 6)) },
-  { id: 4, moodId: 2, date: formatDate(safeDate(y, m, d - 8)) },
-  { id: 5, moodId: 1, date: formatDate(safeDate(y, m, d - 10)) },
-  { id: 6, moodId: 2, date: formatDate(safeDate(y, m, d - 15)) },
-  { id: 7, moodId: 4, date: formatDate(safeDate(y, m, d - 18)) },
-  { id: 8, moodId: 5, date: formatDate(safeDate(y, m, d - 20)) },
-  { id: 9, moodId: 1, date: formatDate(safeDate(y, m, d - 25)) },
-  
-  // This year's data (but previous months)
-  { id: 11, moodId: 3, date: formatDate(new Date(y, m > 1 ? m - 1 : 0, 18)) },
-  { id: 12, moodId: 1, date: formatDate(new Date(y, m > 2 ? m - 2 : 0, 28)) },
-  { id: 13, moodId: 2, date: formatDate(new Date(y, m > 2 ? m - 2 : 0, 15)) },
-  { id: 14, moodId: 4, date: formatDate(new Date(y, m > 3 ? m - 3 : 0, 22)) },
-  { id: 15, moodId: 1, date: formatDate(new Date(y, m > 4 ? m - 4 : 0, 10)) },
-  { id: 16, moodId: 5, date: formatDate(new Date(y, m > 5 ? m - 5 : 0, 5)) },
-  { id: 17, moodId: 2, date: formatDate(new Date(y, m > 6 ? m - 6 : 0, 20)) },
-
-  // Last year's data
-  { id: 18, moodId: 1, date: formatDate(new Date(y - 1, 11, 25)) },
-  { id: 19, moodId: 3, date: formatDate(new Date(y - 1, 10, 1)) },
-].filter(entry => new Date(entry.date) <= today);
+  { id: '1', date: '2024-07-01', moodId: 'good', notes: 'Great day at work!' },
+  { id: '2', date: '2024-07-02', moodId: 'neutral', notes: 'Just a regular day.' },
+  { id: '3', date: '2024-07-03', moodId: 'bad', notes: 'Feeling a bit down.' },
+  { id: '4', date: '2024-07-05', moodId: 'good' },
+  { id: '5', date: '2024-07-08', moodId: 'good' },
+  { id: '6', date: '2024-07-10', moodId: 'bad', notes: 'Headache all day.' },
+  { id: '7', date: '2024-07-12', moodId: 'neutral' },
+  { id: '8', date: '2024-07-15', moodId: 'good' },
+  { id: '9', date: '2024-06-28', moodId: 'good' },
+];
