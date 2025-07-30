@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { MoodHistoryEntry } from '@/data/mood';
 import MonthHistorySection from './MonthHistorySection';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface MoodHistoryProps {
   history: MoodHistoryEntry[];
+  className?: string;
 }
 
-const MoodHistory = ({ history }: MoodHistoryProps) => {
+const MoodHistory = ({ history, className }: MoodHistoryProps) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   // Filter history to only include entries from the selected year
@@ -44,7 +46,7 @@ const MoodHistory = ({ history }: MoodHistoryProps) => {
   });
 
   return (
-    <Card>
+    <Card className={cn(className)}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Your Mood History</CardTitle>
         <div className="flex items-center gap-2">

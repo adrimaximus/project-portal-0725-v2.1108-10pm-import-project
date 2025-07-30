@@ -113,14 +113,7 @@ const MoodTracker = () => {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-3">
-            <CardHeader>
-              <CardTitle>Your Mood History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MoodHistory history={history} />
-            </CardContent>
-          </Card>
+          <MoodHistory history={history} className="lg:col-span-3" />
         </div>
       </div>
     </PortalLayout>
