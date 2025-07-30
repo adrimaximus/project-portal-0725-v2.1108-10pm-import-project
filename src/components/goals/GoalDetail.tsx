@@ -20,9 +20,8 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
   const [editedGoal, setEditedGoal] = useState<Goal>(goal);
 
   // Helper function to parse frequency string.
-  const parseFrequency = (freq: string): { days: string, weeks: number } => {
+  const parseFrequency = (freq: string): { days: string } => {
     const daysMatch = freq.match(/Every (\d+)/);
-    const weeksMatch = freq.match(/for (\d+)/);
 
     let days = "1";
     if (daysMatch) {
@@ -33,22 +32,17 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
       days = "1";
     }
 
-    const weeks = weeksMatch ? parseInt(weeksMatch[1], 10) : 1;
-
-    return { days, weeks };
+    return { days };
   };
 
   const initialFrequency = parseFrequency(goal.frequency);
   const [frequencyValue, setFrequencyValue] = useState<string>(initialFrequency.days);
-  const [durationValue, setDurationValue] = useState<number | string>(initialFrequency.weeks);
 
   const handleSave = () => {
     const finalDays = parseInt(frequencyValue, 10) || 1;
 
-    const numWeeks = typeof durationValue === 'number' ? durationValue : parseInt(durationValue as string, 10);
-    const finalWeeks = !isNaN(numWeeks) && numWeeks > 0 ? numWeeks : 1;
-
-    const newFrequencyString = `Every ${finalDays} day${finalDays > 1 ? 's' : ''} for ${finalWeeks} week${finalWeeks > 1 ? 's' : ''}`;
+    // Duration is now fixed to 1 week and not shown in the UI.
+    const newFrequencyString = `Every ${finalDays} day${finalDays > 1 ? 's' : ''} for 1 week`;
     
     onUpdate({ ...editedGoal, frequency: newFrequencyString });
   };
@@ -71,49 +65,35 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
     return 'rgba(128, 128, 128, 0.2)';
   }
 
-  const durNum = parseInt(durationValue.toString(), 10) || 1;
-
-  const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (val === '') {
-      setDurationValue('');
-    } else {
-      let num = parseInt(val, 10);
-      if (num > 4) num = 4;
-      if (num < 1 && val !== '') num = 1;
-      setDurationValue(num);
-    }
-  };
-
   return (
     <div className="grid gap-4 py-4">
       <div className="grid gap-2">
-        <Label htmlFor="goal-title">Judul Target</Label>
+        <Label htmlFor="goal-title">Goal Title</Label>
         <Input
           id="goal-title"
           value={editedGoal.title}
           onChange={(e) => setEditedGoal({ ...editedGoal, title: e.target.value })}
-          placeholder="Contoh: Baca 10 halaman"
+          placeholder="e.g., Read 10 pages"
         />
       </div>
       
       <div className="flex items-end gap-4">
         <div className="flex-1">
-          <Label>Ikon</Label>
+          <Label>Icon</Label>
           <IconPicker onSelectIcon={handleIconSelect} currentColor={editedGoal.color}>
             <Button variant="outline" className="w-full mt-1 flex items-center justify-between h-10 px-3">
               <div className="flex items-center gap-3">
                 <div className="p-1 rounded-lg" style={{ backgroundColor: getIconBackgroundColor() }}>
                   <editedGoal.icon className="h-5 w-5" style={{ color: editedGoal.color }} />
                 </div>
-                <span className="text-sm">Pilih Ikon</span>
+                <span className="text-sm">Select Icon</span>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
           </IconPicker>
         </div>
         <div>
-          <Label>Warna</Label>
+          <Label>Color</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full mt-1 justify-start px-2 h-10">
@@ -131,37 +111,21 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="frequency">Frekuensi</Label>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Select value={frequencyValue} onValueChange={setFrequencyValue}>
-            <SelectTrigger className="flex-1 min-w-[150px]">
-              <SelectValue placeholder="Pilih frekuensi" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">Setiap hari</SelectItem>
-              <SelectItem value="2">Setiap 2 hari</SelectItem>
-              <SelectItem value="3">Setiap 3 hari</SelectItem>
-              <SelectItem value="4">Setiap 4 hari</SelectItem>
-              <SelectItem value="5">Setiap 5 hari</SelectItem>
-              <SelectItem value="6">Setiap 6 hari</SelectItem>
-              <SelectItem value="7">Seminggu sekali</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground">selama</span>
-          <Input
-            id="duration"
-            type="number"
-            min="1"
-            max="4"
-            value={durationValue}
-            onChange={handleDurationChange}
-            className="w-20"
-            placeholder="e.g. 1"
-          />
-          <span className="text-sm text-muted-foreground">
-            {durNum === 1 ? 'minggu' : 'minggu'}
-          </span>
-        </div>
+        <Label htmlFor="frequency">Frequency</Label>
+        <Select value={frequencyValue} onValueChange={setFrequencyValue}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select frequency" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">Every day</SelectItem>
+            <SelectItem value="2">Every 2 days</SelectItem>
+            <SelectItem value="3">Every 3 days</SelectItem>
+            <SelectItem value="4">Every 4 days</SelectItem>
+            <SelectItem value="5">Every 5 days</SelectItem>
+            <SelectItem value="6">Every 6 days</SelectItem>
+            <SelectItem value="7">Once a week</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex justify-between items-center pt-4 mt-4 border-t">
@@ -169,14 +133,14 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
           {!isCreateMode && (
             <Button variant="ghost" className="text-destructive hover:text-destructive">
               <Trash2 className="mr-2 h-4 w-4" />
-              Hapus
+              Delete
             </Button>
           )}
         </div>
         <div className="flex gap-2">
-          {onClose && <Button variant="ghost" onClick={onClose}>Batal</Button>}
+          {onClose && <Button variant="ghost" onClick={onClose}>Cancel</Button>}
           <Button onClick={handleSave}>
-            {isCreateMode ? 'Buat Target' : 'Simpan Perubahan'}
+            {isCreateMode ? 'Create Goal' : 'Save Changes'}
           </Button>
         </div>
       </div>
