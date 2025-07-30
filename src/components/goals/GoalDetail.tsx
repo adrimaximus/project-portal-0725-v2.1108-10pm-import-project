@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ChevronDown } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import IconPicker from './IconPicker';
 
 interface GoalDetailProps {
   goal: Goal;
@@ -26,6 +27,10 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
     onUpdate(editedGoal);
   };
 
+  const handleIconSelect = (icon: React.ElementType) => {
+    setEditedGoal({ ...editedGoal, icon });
+  };
+
   return (
     <div className="grid gap-4 py-4">
       <div className="grid gap-2">
@@ -41,12 +46,17 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
       <div className="flex items-end gap-4">
         <div className="flex-1">
           <Label>Icon</Label>
-          <div className="p-3 mt-1 rounded-lg border flex items-center gap-3 h-10">
-            <div className="p-1 rounded-lg" style={{ backgroundColor: `${editedGoal.color}20` }}>
-              <editedGoal.icon className="h-5 w-5" style={{ color: editedGoal.color }} />
-            </div>
-            <p className="text-sm text-muted-foreground">Icon selection coming soon</p>
-          </div>
+          <IconPicker onSelectIcon={handleIconSelect} currentColor={editedGoal.color}>
+            <Button variant="outline" className="w-full mt-1 flex items-center justify-between h-10 px-3">
+              <div className="flex items-center gap-3">
+                <div className="p-1 rounded-lg" style={{ backgroundColor: `${editedGoal.color}20` }}>
+                  <editedGoal.icon className="h-5 w-5" style={{ color: editedGoal.color }} />
+                </div>
+                <span className="text-sm">Select Icon</span>
+              </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </IconPicker>
         </div>
         <div>
           <Label>Color</Label>
