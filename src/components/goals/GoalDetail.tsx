@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Goal } from '@/data/goals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Trash2, ChevronDown } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import IconPicker from './IconPicker';
+import { Slider } from '@/components/ui/slider';
 
 interface GoalDetailProps {
   goal: Goal;
@@ -15,19 +16,40 @@ interface GoalDetailProps {
   isCreateMode?: boolean;
 }
 
-const colors = [
-  // Row 1: Brights
-  '#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#22C55E',
-  // Row 2: Greens & Blues
-  '#10B981', '#14B8A6', '#06B6D4', '#0EA5E9', '#3B82F6', '#6366F1',
-  // Row 3: Purples & Pinks
-  '#8B5CF6', '#A855F7', '#D946EF', '#EC4899', '#F43F5E', '#78716C',
-  // Row 4: Deeper & Neutrals
-  '#DC2626', '#D97706', '#16A34A', '#0284C7', '#4F46E5', '#6B7280',
-];
-
 const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetailProps) => {
   const [editedGoal, setEditedGoal] = useState<Goal>(goal);
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [rgbColor, setRgbColor] = useState({ r: 0, g: 0, b: 0 });
+
+  useEffect(() => {
+    if (isColorPickerOpen) {
+      const colorStr = editedGoal.color;
+      let parsedRgb = { r: 239, g: 68, b: 68 }; // Default to a red color
+
+      if (colorStr.startsWith('rgb')) {
+        const match = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        if (match) {
+          parsedRgb = { r: parseInt(match[1], 10), g: parseInt(match[2], 10), b: parseInt(match[3], 10) };
+        }
+      } else if (colorStr.startsWith('#')) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(colorStr);
+        if (result) {
+          parsedRgb = {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16),
+          };
+        }
+      }
+      setRgbColor(parsedRgb);
+    }
+  }, [isColorPickerOpen, editedGoal.color]);
+
+  const handleRgbChange = (component: 'r' | 'g' | 'b', value: number) => {
+    const newRgb = { ...rgbColor, [component]: value };
+    setRgbColor(newRgb);
+    setEditedGoal({ ...editedGoal, color: `rgb(${newRgb.r}, ${newRgb.g}, ${newRgb.b})` });
+  };
 
   const handleSave = () => {
     onUpdate(editedGoal);
@@ -36,6 +58,18 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
   const handleIconSelect = (icon: React.ElementType) => {
     setEditedGoal({ ...editedGoal, icon });
   };
+
+  const getIconBackgroundColor = () => {
+    const color = editedGoal.color;
+    if (color.startsWith('rgb')) {
+      return color.replace(')', ', 0.2)').replace('rgb', 'rgba');
+    }
+    // Handle hex with alpha
+    if (color.startsWith('#') && color.length === 7) {
+      return `${color}33`; // Approximation for 20% opacity
+    }
+    return color;
+  }
 
   return (
     <div className="grid gap-4 py-4">
@@ -55,7 +89,7 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
           <IconPicker onSelectIcon={handleIconSelect} currentColor={editedGoal.color}>
             <Button variant="outline" className="w-full mt-1 flex items-center justify-between h-10 px-3">
               <div className="flex items-center gap-3">
-                <div className="p-1 rounded-lg" style={{ backgroundColor: `${editedGoal.color}20` }}>
+                <div className="p-1 rounded-lg" style={{ backgroundColor: getIconBackgroundColor() }}>
                   <editedGoal.icon className="h-5 w-5" style={{ color: editedGoal.color }} />
                 </div>
                 <span className="text-sm">Select Icon</span>
@@ -66,22 +100,56 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
         </div>
         <div>
           <Label>Color</Label>
-          <Popover>
+          <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full mt-1 justify-start px-2 h-10">
                 <div className="w-5 h-5 rounded-full mr-2 border" style={{ backgroundColor: editedGoal.color }} />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-2">
-              <div className="grid grid-cols-6 gap-1">
-                {colors.map(c => (
-                  <button
-                    key={c}
-                    className="w-6 h-6 rounded-full border"
-                    style={{ backgroundColor: c }}
-                    onClick={() => setEditedGoal({ ...editedGoal, color: c })}
+            <PopoverContent className="w-64 p-4">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="r-slider" className="text-red-500">Red</Label>
+                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{rgbColor.r}</span>
+                  </div>
+                  <Slider
+                    id="r-slider"
+                    value={[rgbColor.r]}
+                    onValueChange={([r]) => handleRgbChange('r', r)}
+                    max={255}
+                    step={1}
+                    className="[&>span:first-child]:bg-red-500"
                   />
-                ))}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="g-slider" className="text-green-500">Green</Label>
+                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{rgbColor.g}</span>
+                  </div>
+                  <Slider
+                    id="g-slider"
+                    value={[rgbColor.g]}
+                    onValueChange={([g]) => handleRgbChange('g', g)}
+                    max={255}
+                    step={1}
+                    className="[&>span:first-child]:bg-green-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="b-slider" className="text-blue-500">Blue</Label>
+                    <span className="text-sm font-medium w-12 text-center border rounded-md px-2 py-0.5">{rgbColor.b}</span>
+                  </div>
+                  <Slider
+                    id="b-slider"
+                    value={[rgbColor.b]}
+                    onValueChange={([b]) => handleRgbChange('b', b)}
+                    max={255}
+                    step={1}
+                    className="[&>span:first-child]:bg-blue-500"
+                  />
+                </div>
               </div>
             </PopoverContent>
           </Popover>
