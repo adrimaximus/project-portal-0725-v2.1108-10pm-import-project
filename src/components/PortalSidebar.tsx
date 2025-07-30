@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown, LifeBuoy, LogOut, MessageSquare } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -52,6 +52,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       icon: MessageSquare, 
       ...(totalUnreadChatCount > 0 && { badge: totalUnreadChatCount }) 
     },
+    { href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
     { href: "#", label: "Notifications", icon: Bell, badge: 3 },
     { href: "#", label: "Settings", icon: Settings },
   ];

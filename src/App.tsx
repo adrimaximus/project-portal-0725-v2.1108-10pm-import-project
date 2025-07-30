@@ -5,6 +5,7 @@ import ChatPage from "./pages/ChatPage";
 import Profile from "./pages/Profile";
 import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
+import MoodTracker from "./pages/MoodTracker";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/chat/:conversationId" element={<ChatPage />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/projects/:projectId" element={<ProjectDetail />} />
+        <Route path="/mood-tracker" element={<MoodTracker />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
