@@ -16,9 +16,9 @@ const MoodTracker = () => {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 space-y-4">
+          <div className="xl:col-span-2 space-y-2">
             <section>
-              <h2 className="text-lg font-semibold mb-3">Bagaimana perasaanmu hari ini?</h2>
+              <h2 className="text-lg font-semibold mb-2">Bagaimana perasaanmu hari ini?</h2>
               <MoodSelector selectedMoodId={selectedMoodId} onSelectMood={setSelectedMoodId} />
             </section>
           </div>
