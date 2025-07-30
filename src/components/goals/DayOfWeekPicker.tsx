@@ -2,13 +2,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const days = [
-  { key: 'Su', label: 'S' },
-  { key: 'Mo', label: 'M' },
-  { key: 'Tu', label: 'T' },
-  { key: 'We', label: 'W' },
-  { key: 'Th', label: 'T' },
-  { key: 'Fr', label: 'F' },
-  { key: 'Sa', label: 'S' },
+  { key: 'Su', label: 'Su' },
+  { key: 'Mo', label: 'Mo' },
+  { key: 'Tu', label: 'Tu' },
+  { key: 'We', label: 'We' },
+  { key: 'Th', label: 'Th' },
+  { key: 'Fr', 'label': 'Fr' },
+  { key: 'Sa', label: 'Sa' },
 ];
 
 interface DayOfWeekPickerProps {
