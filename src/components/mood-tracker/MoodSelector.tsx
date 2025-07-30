@@ -9,14 +9,14 @@ interface MoodSelectorProps {
 
 const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
   return (
-    <div className="grid grid-cols-1 gap-2">
+    <div className="grid grid-cols-1 gap-1">
       {moods.map((mood) => (
         <Button
           key={mood.id}
           variant={selectedMoodId === mood.id ? 'secondary' : 'ghost'}
           onClick={() => onSelectMood(mood.id)}
           className={cn(
-            'w-full justify-start h-auto p-3 border',
+            'w-full justify-start h-auto p-2 border',
             selectedMoodId === mood.id ? 'border-primary' : 'border-transparent'
           )}
         >
