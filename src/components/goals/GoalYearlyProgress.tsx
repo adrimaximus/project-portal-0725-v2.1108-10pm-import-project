@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Goal } from '@/data/goals';
-import { format, getMonth, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, subYears, isSameMonth, parseISO } from 'date-fns';
+import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface GoalYearlyProgressProps {
   completions: Goal['completions'];
@@ -12,18 +14,27 @@ interface GoalYearlyProgressProps {
 
 const GoalYearlyProgress = ({ completions, color }: GoalYearlyProgressProps) => {
   const today = new Date();
-  const oneYearAgo = subYears(today, 1);
+  const currentYear = getYear(today);
+  const [displayYear, setDisplayYear] = useState(currentYear);
 
-  const relevantCompletions = completions.filter(c => parseISO(c.date) >= oneYearAgo);
+  const handlePrevYear = () => setDisplayYear(prev => prev - 1);
+  const handleNextYear = () => setDisplayYear(prev => prev + 1);
+
+  const yearStartDate = startOfYear(new Date(displayYear, 0, 1));
+  const yearEndDate = endOfYear(new Date(displayYear, 0, 1));
+
+  const relevantCompletions = completions.filter(c => {
+    const completionDate = parseISO(c.date);
+    return isWithinInterval(completionDate, { start: yearStartDate, end: yearEndDate });
+  });
   
   const totalCompleted = relevantCompletions.filter(c => c.completed).length;
   const totalPossible = relevantCompletions.length;
   const overallPercentage = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
 
   const months = Array.from({ length: 12 }).map((_, i) => {
-    const monthDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
-    return startOfMonth(monthDate);
-  }).reverse();
+    return startOfMonth(new Date(displayYear, i, 1));
+  });
 
   const monthlyData = months.map(monthDate => {
     const monthCompletions = relevantCompletions.filter(c => isSameMonth(parseISO(c.date), monthDate));
@@ -40,14 +51,11 @@ const GoalYearlyProgress = ({ completions, color }: GoalYearlyProgressProps) => 
 
     return {
       date: monthDate,
-      name: format(monthDate, 'MMMM yyyy'),
+      name: format(monthDate, 'MMMM'),
       percentage,
-      completedCount,
-      possibleCount,
       days: daysInMonth.map(day => ({
         date: day,
         isCompleted: completionMap.get(format(day, 'yyyy-MM-dd')),
-        isInMonth: isSameMonth(day, monthDate)
       }))
     };
   });
@@ -55,16 +63,27 @@ const GoalYearlyProgress = ({ completions, color }: GoalYearlyProgressProps) => 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Yearly Progress</CardTitle>
+        <div className="flex justify-between items-center mb-2">
+          <CardTitle>Yearly Progress</CardTitle>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={handlePrevYear}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="font-semibold text-lg w-24 text-center">{displayYear}</span>
+            <Button variant="outline" size="icon" onClick={handleNextYear} disabled={displayYear === currentYear}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
         <CardDescription>
-          You've completed this goal <strong>{totalCompleted}</strong> out of <strong>{totalPossible}</strong> times in the last year.
+          You've completed this goal <strong>{totalCompleted}</strong> out of <strong>{totalPossible}</strong> times in {displayYear}.
         </CardDescription>
         <div className="flex items-center gap-4 pt-2">
           <Progress value={overallPercentage} className="w-full" indicatorStyle={{ backgroundColor: color }} />
           <span className="font-bold text-lg">{overallPercentage}%</span>
         </div>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {monthlyData.map(month => (
           <div key={month.name} className="p-3 border rounded-lg">
             <div className="flex justify-between items-center mb-2">
