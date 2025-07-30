@@ -77,7 +77,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       assignedTo: assignedTeam,
       services: selectedServices.map(s => s.title),
       briefFiles: briefFiles,
-      tags: [], // Added missing property
     };
 
     dummyProjects.unshift(newProject);
