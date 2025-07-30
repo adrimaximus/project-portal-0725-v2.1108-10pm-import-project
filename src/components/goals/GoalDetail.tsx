@@ -12,11 +12,12 @@ import { CustomColorPicker } from './CustomColorPicker';
 interface GoalDetailProps {
   goal: Goal;
   onUpdate: (goal: Goal) => void;
+  onDelete?: (goalId: string) => void;
   onClose?: () => void;
   isCreateMode?: boolean;
 }
 
-const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetailProps) => {
+const GoalDetail = ({ goal, onUpdate, onDelete, onClose, isCreateMode = false }: GoalDetailProps) => {
   const [editedGoal, setEditedGoal] = useState<Goal>(goal);
 
   // Helper function to parse frequency string.
@@ -130,8 +131,12 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
 
       <div className="flex justify-between items-center pt-4 mt-4 border-t">
         <div>
-          {!isCreateMode && (
-            <Button variant="ghost" className="text-destructive hover:text-destructive">
+          {!isCreateMode && onDelete && (
+            <Button
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => onDelete(goal.id)}
+            >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </Button>

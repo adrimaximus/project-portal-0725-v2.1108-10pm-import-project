@@ -1,160 +1,67 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import PortalLayout from '@/components/PortalLayout';
-import { dummyGoals, Goal } from '@/data/goals';
-import GoalDetail from '@/components/goals/GoalDetail';
+import { useParams } from 'react-router-dom';
+import { initialGoals, Goal } from '@/data/goals';
 import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import NotFound from './NotFound';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Pencil, Calendar as CalendarIcon } from 'lucide-react';
-import { DateRange } from 'react-day-picker';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-fns';
+import { useState } from 'react';
+import { format, isSameDay, parseISO } from 'date-fns';
 
 const GoalDetailPage = () => {
-  const { goalId } = useParams<{ goalId: string }>();
-  const initialGoal = dummyGoals.find(g => g.id === goalId);
+  const { id } = useParams<{ id: string }>();
+  const [goals, setGoals] = useState(initialGoals);
+  const goal = goals.find(g => g.id === id);
 
-  const [goal, setGoal] = useState<Goal | undefined>(initialGoal);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-
-  const handleUpdateGoal = (updatedGoal: Goal) => {
-    setGoal(updatedGoal);
-    setIsEditModalOpen(false);
-  };
-
-  const handleToggleCompletion = (date: Date) => {
+  const handleToggleCompletion = () => {
     if (!goal) return;
 
-    const dateString = format(startOfDay(date), 'yyyy-MM-dd');
-    const existingCompletion = goal.completions.find(c => format(parseISO(c.date), 'yyyy-MM-dd') === dateString);
-
-    let newCompletions;
-    if (existingCompletion) {
-      newCompletions = goal.completions.map(c => 
-        format(parseISO(c.date), 'yyyy-MM-dd') === dateString 
-          ? { ...c, completed: !c.completed } 
-          : c
-      );
-    } else {
-      newCompletions = [...goal.completions, { date: date.toISOString(), completed: true }];
-    }
-
-    const updatedGoal = { ...goal, completions: newCompletions };
-    setGoal(updatedGoal);
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const updatedGoals = goals.map(g => {
+      if (g.id === goal.id) {
+        const isCompleted = g.completions.some(c => isSameDay(parseISO(c.date), new Date()));
+        if (isCompleted) {
+          return {
+            ...g,
+            completions: g.completions.filter(c => !isSameDay(parseISO(c.date), new Date())),
+          };
+        } else {
+          return {
+            ...g,
+            completions: [...g.completions, { date: todayStr }],
+          };
+        }
+      }
+      return g;
+    });
+    setGoals(updatedGoals);
   };
 
   if (!goal) {
-    return <PortalLayout><NotFound /></PortalLayout>;
+    return <div>Goal not found</div>;
   }
 
-  const filteredCompletions = dateRange?.from
-    ? goal.completions.filter(c => {
-        const completionDate = parseISO(c.date);
-        const intervalEnd = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from!);
-        return isWithinInterval(completionDate, { start: dateRange.from!, end: intervalEnd });
-      })
-    : goal.completions;
-
-  const Icon = goal.icon;
+  const isCompletedToday = goal.completions.some(c => isSameDay(parseISO(c.date), new Date()));
 
   return (
-    <PortalLayout>
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/goals">Goals</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{goal.title}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      <div className="mt-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-lg" style={{ backgroundColor: `${goal.color}20` }}>
-              <Icon className="h-8 w-8" style={{ color: goal.color }} />
+    <div className="container mx-auto p-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${goal.color}20` }}>
+                <goal.icon className="h-6 w-6" style={{ color: goal.color }} />
+              </div>
+              <CardTitle className="text-2xl font-bold">{goal.title}</CardTitle>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold">{goal.title}</h1>
-              <p className="text-muted-foreground">{goal.frequency}</p>
-            </div>
+            <Button onClick={handleToggleCompletion}>
+              {isCompletedToday ? 'Mark as Incomplete' : 'Mark as Complete'}
+            </Button>
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-[260px] justify-start text-left font-normal",
-                    !dateRange && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                        {format(dateRange.to, "LLL dd, y")}
-                      </>
-                    ) : (
-                      format(dateRange.from, "LLL dd, y")
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit Goal
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Edit Goal</DialogTitle>
-                </DialogHeader>
-                <GoalDetail 
-                  goal={goal} 
-                  onUpdate={handleUpdateGoal}
-                  onClose={() => setIsEditModalOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-        
-        <GoalYearlyProgress 
-          completions={filteredCompletions} 
-          color={goal.color}
-          onToggleCompletion={handleToggleCompletion}
-        />
-      </div>
-    </PortalLayout>
+        </CardHeader>
+        <CardContent>
+          <GoalYearlyProgress goal={goal} />
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
