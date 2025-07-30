@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import PortalLayout from '@/components/PortalLayout';
-import MoodSelector from '@/components/MoodSelector';
-import MoodEntryCard from '@/components/MoodEntryCard';
-import MoodOverview from '@/components/MoodOverview';
-import MoodHistory from '@/components/MoodHistory';
-import { moods, dummyHistory } from '@/data/mood';
+import MoodSelector from '@/components/mood-tracker/MoodSelector';
+import MoodEntryCard from '@/components/mood-tracker/MoodEntryCard';
+import MoodOverview from '@/components/mood-tracker/MoodOverview';
+import MoodHistory from '@/components/mood-tracker/MoodHistory';
+import { moods, dummyHistory, Mood } from '@/data/mood';
 
 const MoodTracker = () => {
-  const [selectedMoodId, setSelectedMoodId] = useState(moods[0].id);
+  const [selectedMoodId, setSelectedMoodId] = useState<Mood['id']>(moods[0].id);
   const [note, setNote] = useState("Very excited to have met our new puppy!");
   const [tags, setTags] = useState(["Excited", "Family", "Love"]);
   const [image, setImage] = useState<File | null>(null);

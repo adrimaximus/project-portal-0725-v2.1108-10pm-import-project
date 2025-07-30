@@ -1,9 +1,9 @@
-import { moods } from '@/data/mood';
+import { moods, Mood } from '@/data/mood';
 import { cn } from '@/lib/utils';
 
 interface MoodSelectorProps {
-  selectedMoodId: string;
-  onSelectMood: (moodId: string) => void;
+  selectedMoodId: Mood['id'];
+  onSelectMood: (moodId: Mood['id']) => void;
 }
 
 const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
