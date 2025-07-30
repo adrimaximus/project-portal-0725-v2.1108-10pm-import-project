@@ -4,6 +4,7 @@ export type Mood = {
   emoji: string;
   ringColor: string;
   color: string;
+  score: number;
 };
 
 export type MoodHistoryEntry = {
@@ -13,11 +14,11 @@ export type MoodHistoryEntry = {
 };
 
 export const moods: Mood[] = [
-  { id: 1, label: 'Happy', emoji: '😄', ringColor: 'ring-green-500', color: '#10B981' },
-  { id: 2, label: 'Good', emoji: '😊', ringColor: 'ring-yellow-500', color: '#34D399' },
-  { id: 3, label: 'Okay', emoji: '😐', ringColor: 'ring-blue-500', color: '#FBBF24' },
-  { id: 4, label: 'Bad', emoji: '😟', ringColor: 'ring-orange-500', color: '#FCA5A5' },
-  { id: 5, label: 'Awful', emoji: '😠', ringColor: 'ring-red-500', color: '#EF4444' },
+  { id: 1, label: 'Happy', emoji: '😄', ringColor: 'ring-green-500', color: '#10B981', score: 100 },
+  { id: 2, label: 'Good', emoji: '😊', ringColor: 'ring-yellow-500', color: '#34D399', score: 75 },
+  { id: 3, label: 'Okay', emoji: '😐', ringColor: 'ring-blue-500', color: '#FBBF24', score: 50 },
+  { id: 4, label: 'Bad', emoji: '😟', ringColor: 'ring-orange-500', color: '#FCA5A5', score: 25 },
+  { id: 5, label: 'Awful', emoji: '😠', ringColor: 'ring-red-500', color: '#EF4444', score: 0 },
 ];
 
 const today = new Date();

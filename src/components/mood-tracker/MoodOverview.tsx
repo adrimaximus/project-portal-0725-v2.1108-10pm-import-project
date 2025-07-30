@@ -40,7 +40,7 @@ const MoodOverview = ({ history }: MoodOverviewProps) => {
         <CardTitle>Overview</CardTitle>
         <div className="flex items-center gap-1 rounded-md bg-secondary p-1">
           <Button
-            variant={period === 'month' ? 'primary' : 'ghost'}
+            variant={period === 'month' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setPeriod('month')}
             className="h-7"
@@ -48,7 +48,7 @@ const MoodOverview = ({ history }: MoodOverviewProps) => {
             This Month
           </Button>
           <Button
-            variant={period === 'year' ? 'primary' : 'ghost'}
+            variant={period === 'year' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setPeriod('year')}
             className="h-7"
