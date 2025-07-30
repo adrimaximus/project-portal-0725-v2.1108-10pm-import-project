@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
 import { dummyGoals, Goal } from '@/data/goals';
 import GoalDetail from '@/components/goals/GoalDetail';
+import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Card, CardContent } from '@/components/ui/card';
 import NotFound from './NotFound';
@@ -20,7 +21,6 @@ const GoalDetailPage = () => {
   };
 
   if (!goal) {
-    // You can render a proper 404 page here
     return <PortalLayout><NotFound /></PortalLayout>;
   }
 
@@ -40,16 +40,21 @@ const GoalDetailPage = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="mt-6 max-w-4xl mx-auto">
-        <Card>
-          <CardContent className="p-0">
-             <GoalDetail 
-                key={goal.id}
-                goal={goal} 
-                onUpdate={handleUpdateGoal}
-              />
-          </CardContent>
-        </Card>
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-1">
+          <Card>
+            <CardContent className="p-0">
+              <GoalDetail 
+                  key={goal.id}
+                  goal={goal} 
+                  onUpdate={handleUpdateGoal}
+                />
+            </CardContent>
+          </Card>
+        </div>
+        <div className="lg:col-span-2">
+          <GoalYearlyProgress completions={goal.completions} color={goal.color} />
+        </div>
       </div>
     </PortalLayout>
   );
