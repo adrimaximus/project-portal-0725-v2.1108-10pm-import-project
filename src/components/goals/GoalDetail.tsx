@@ -13,7 +13,7 @@ import { Trash2 } from 'lucide-react';
 interface GoalDetailProps {
   goal: Goal;
   onUpdate: (updatedGoal: Goal) => void;
-  onDelete: (goalId: number) => void;
+  onDelete: (goalId: string) => void;
 }
 
 const weekDays = [

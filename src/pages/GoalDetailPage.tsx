@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import PortalLayout from '@/components/PortalLayout';
-import { dummyGoals, Goal } from '@/data/goals';
-import { dummyUsers } from '@/data/users';
+import { dummyGoals, Goal, GoalCompletion } from '@/data/goals';
+import { allUsers } from '@/data/users';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, ChevronLeft } from 'lucide-react';
@@ -24,9 +24,9 @@ const GoalDetailPage = () => {
   const handleCreateGoal = (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => {
     const newGoal: Goal = {
       ...newGoalData,
-      id: Date.now(),
-      completions: {},
-      collaborators: [dummyUsers[0]],
+      id: `goal-${Date.now()}`,
+      completions: [],
+      collaborators: [allUsers[0]],
     };
     setGoals([...goals, newGoal]);
     setSelectedGoal(newGoal);
@@ -39,7 +39,7 @@ const GoalDetailPage = () => {
     toast.success('Goal updated!');
   };
 
-  const handleDeleteGoal = (goalId: number) => {
+  const handleDeleteGoal = (goalId: string) => {
     setGoals(goals.filter((g) => g.id !== goalId));
     setSelectedGoal(null);
     toast.error('Goal deleted');
@@ -48,11 +48,15 @@ const GoalDetailPage = () => {
   const handleToggleCompletion = (date: string) => {
     if (!selectedGoal) return;
 
-    const newCompletions = { ...selectedGoal.completions };
-    if (newCompletions[date]) {
-      delete newCompletions[date];
+    const existingCompletionIndex = selectedGoal.completions.findIndex(c => c.date === date);
+    let newCompletions: GoalCompletion[];
+
+    if (existingCompletionIndex > -1) {
+      newCompletions = selectedGoal.completions.map((c, index) => 
+        index === existingCompletionIndex ? { ...c, completed: !c.completed } : c
+      );
     } else {
-      newCompletions[date] = true;
+      newCompletions = [...selectedGoal.completions, { date, completed: true }];
     }
 
     const updatedGoal = { ...selectedGoal, completions: newCompletions };
@@ -109,7 +113,7 @@ const GoalDetailPage = () => {
                   <CollaboratorManager
                     collaborators={selectedGoal.collaborators}
                     onUpdateCollaborators={handleUpdateCollaborators}
-                    allUsers={dummyUsers}
+                    allUsers={allUsers}
                   />
                 </div>
                 <div className="space-y-6">
