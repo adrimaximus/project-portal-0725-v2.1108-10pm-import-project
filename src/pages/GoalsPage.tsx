@@ -2,33 +2,42 @@ import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dummyGoals, Goal } from "@/data/goals";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Target, TrendingUp, Users } from "lucide-react";
 import { Link } from "react-router-dom";
-
-// This mock goal previously had `frequency: "Everyday"` which caused a TS error.
-// It has been corrected to `frequency: "Daily"`.
-const newGoalTemplate: Goal = {
-  id: 'new-goal-placeholder',
-  title: 'A Brand New Goal',
-  frequency: 'Daily', // FIX: Was "Everyday"
-  icon: PlusCircle,
-  color: '#888888',
-  completions: [],
-  collaborators: [],
-};
+import { useState } from "react";
+import NewGoalDialog from "@/components/goals/NewGoalDialog";
 
 const GoalsPage = () => {
+  const [goals, setGoals] = useState<Goal[]>(dummyGoals);
+  const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
+
+  const handleGoalCreate = (newGoalData: Omit<Goal, 'id' | 'icon' | 'color' | 'completions' | 'collaborators'>) => {
+    const icons = [Target, TrendingUp, Users, PlusCircle];
+    const colors = ['#4A90E2', '#50E3C2', '#F5A623', '#E02020'];
+
+    const newGoal: Goal = {
+      ...newGoalData,
+      id: `goal-${Date.now()}`,
+      completions: [],
+      collaborators: [],
+      icon: icons[Math.floor(Math.random() * icons.length)],
+      color: colors[Math.floor(Math.random() * colors.length)],
+    };
+
+    setGoals(prevGoals => [...prevGoals, newGoal]);
+  };
+
   return (
     <PortalLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Your Goals</h1>
-        <Button>
+        <Button onClick={() => setIsNewGoalDialogOpen(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />
           New Goal
         </Button>
       </div>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {dummyGoals.map((goal) => (
+        {goals.map((goal) => (
           <Link to={`/goals/${goal.id}`} key={goal.id}>
             <Card className="hover:border-primary transition-colors">
               <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
@@ -44,6 +53,11 @@ const GoalsPage = () => {
           </Link>
         ))}
       </div>
+      <NewGoalDialog
+        open={isNewGoalDialogOpen}
+        onOpenChange={setIsNewGoalDialogOpen}
+        onGoalCreate={handleGoalCreate}
+      />
     </PortalLayout>
   );
 };
