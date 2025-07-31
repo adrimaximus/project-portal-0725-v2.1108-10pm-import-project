@@ -3,11 +3,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Project, AssignedUser, Task } from "@/data/projects";
 import { Comment } from "@/components/ProjectComments";
 import ProjectOverviewTab from "./ProjectOverviewTab";
-import ProjectTasksCard from "./ProjectTasksCard";
 import ProjectComments from "../ProjectComments";
 import { dummyProjects } from "@/data/projects";
 import { Badge } from "../ui/badge";
-import { CheckSquare, MessageSquare, GanttChartSquare, FileText } from "lucide-react";
+import { MessageSquare, GanttChartSquare } from "lucide-react";
 
 interface ProjectMainContentProps {
   project: Project;
@@ -49,14 +48,10 @@ const ProjectMainContent = ({
     <Card>
       <CardContent className="p-0">
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 border-b rounded-none">
+          <TabsList className="grid w-full grid-cols-2 border-b rounded-none">
             <TabsTrigger value="overview">
               <GanttChartSquare className="h-4 w-4 mr-2" />
               Overview
-            </TabsTrigger>
-            <TabsTrigger value="tasks">
-              <CheckSquare className="h-4 w-4 mr-2" />
-              Tasks
             </TabsTrigger>
             <TabsTrigger value="comments">
               <MessageSquare className="h-4 w-4 mr-2" />
@@ -64,10 +59,6 @@ const ProjectMainContent = ({
               {ticketCount > 0 && (
                 <Badge variant="destructive" className="ml-2">{ticketCount}</Badge>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="files">
-              <FileText className="h-4 w-4 mr-2" />
-              Files
             </TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="p-6">
@@ -80,9 +71,6 @@ const ProjectMainContent = ({
               onServicesChange={onServicesChange}
             />
           </TabsContent>
-          <TabsContent value="tasks" className="p-6">
-            <ProjectTasksCard project={project} onTasksUpdate={() => {}} />
-          </TabsContent>
           <TabsContent value="comments" className="p-6">
             <ProjectComments
               comments={comments}
@@ -92,9 +80,6 @@ const ProjectMainContent = ({
               allProjects={allProjects}
               onTaskCreate={handleTaskCreate}
             />
-          </TabsContent>
-          <TabsContent value="files" className="p-6">
-            <p>File management coming soon.</p>
           </TabsContent>
         </Tabs>
       </CardContent>
