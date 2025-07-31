@@ -4,7 +4,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TeamSelector from "./TeamSelector";
 import FileUploader from "./FileUploader";
 import { Project, AssignedUser, ProjectFile } from "@/data/projects";
@@ -26,7 +25,6 @@ interface ProjectDetailsFormProps {
 
 const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
   const [projectName, setProjectName] = useState("");
-  const [category, setCategory] = useState("");
   const [date, setDate] = useState<DateRange | undefined>();
   const [budget, setBudget] = useState("");
   const [description, setDescription] = useState("");
@@ -59,7 +57,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     const newProject: Project = {
       id: `proj-${Date.now()}`,
       name: projectName,
-      category: category,
+      category: selectedServices.length > 0 ? selectedServices[0].title : "General",
       description: description,
       assignedTo: team,
       briefFiles: newProjectFiles,
@@ -103,21 +101,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
               onChange={(e) => setProjectName(e.target.value)}
               required
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-            <Select onValueChange={setCategory} value={category}>
-              <SelectTrigger id="category">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Web Development">Web Development</SelectItem>
-                <SelectItem value="Mobile Development">Mobile Development</SelectItem>
-                <SelectItem value="UI/UX Design">UI/UX Design</SelectItem>
-                <SelectItem value="Branding">Branding</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           <div className="space-y-2">
             <Label>Selected Services</Label>

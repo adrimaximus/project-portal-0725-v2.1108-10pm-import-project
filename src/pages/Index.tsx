@@ -253,9 +253,6 @@ const Index = () => {
                     >
                       <TableCell>
                         <div className="font-medium">{project.name}</div>
-                        <div className="text-sm text-muted-foreground hidden md:block">
-                          {project.category}
-                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={cn("border-transparent", getStatusClass(project.status))}>
