@@ -27,9 +27,9 @@ export function ServiceSelector({ services, selectedServices, onSelectionChange 
   const [open, setOpen] = useState(false);
 
   const handleSelect = (service: Service) => {
-    const isSelected = selectedServices.some((s) => s.id === service.id);
+    const isSelected = selectedServices.some((s) => s.title === service.title);
     if (isSelected) {
-      onSelectionChange(selectedServices.filter((s) => s.id !== service.id));
+      onSelectionChange(selectedServices.filter((s) => s.title !== service.title));
     } else {
       onSelectionChange([...selectedServices, service]);
     }
@@ -59,19 +59,19 @@ export function ServiceSelector({ services, selectedServices, onSelectionChange 
             <CommandGroup>
               {services.map((service) => (
                 <CommandItem
-                  key={service.id}
-                  value={service.name}
+                  key={service.title}
+                  value={service.title}
                   onSelect={() => handleSelect(service)}
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      selectedServices.some((s) => s.id === service.id)
+                      selectedServices.some((s) => s.title === service.title)
                         ? "opacity-100"
                         : "opacity-0"
                     )}
                   />
-                  {service.name}
+                  {service.title}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -80,8 +80,8 @@ export function ServiceSelector({ services, selectedServices, onSelectionChange 
       </Popover>
       <div className="flex flex-wrap gap-1">
         {selectedServices.map((service) => (
-          <Badge key={service.id} variant="secondary">
-            {service.name}
+          <Badge key={service.title} variant="secondary">
+            {service.title}
           </Badge>
         ))}
       </div>

@@ -30,17 +30,15 @@ const getStatusBadgeVariant = (status: Project["status"]): BadgeProps["variant"]
 };
 
 const getPaymentStatusBadgeVariant = (status: Project["paymentStatus"]): BadgeProps["variant"] => {
-  switch (status) {
-    case "Paid":
+  switch (status.toLowerCase()) {
     case "paid":
     case "approved":
     case "po_created":
     case "on_process":
       return "success";
-    case "Pending":
     case "pending":
       return "secondary"; // Mapped from warning
-    case "Overdue":
+    case "overdue":
     case "cancelled":
       return "destructive";
     case "proposed":
@@ -61,14 +59,14 @@ const getPaymentDueDateInfo = (project: Project) => {
   const now = new Date();
   const daysDifference = differenceInDays(dueDate, now);
 
-  if (isPast(dueDate) && project.paymentStatus !== "Paid" && project.paymentStatus !== "paid") {
+  if (isPast(dueDate) && project.paymentStatus.toLowerCase() !== "paid") {
     return {
       text: `Overdue by ${Math.abs(daysDifference)} days`,
       className: "text-red-500 font-semibold",
     };
   }
 
-  if (daysDifference <= 7 && project.paymentStatus !== "Paid" && project.paymentStatus !== "paid") {
+  if (daysDifference <= 7 && project.paymentStatus.toLowerCase() !== "paid") {
     return {
       text: `Due in ${daysDifference} days`,
       className: "text-orange-500 font-semibold",

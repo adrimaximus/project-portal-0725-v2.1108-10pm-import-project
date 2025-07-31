@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
 import { Goal } from '@/data/goals';
-import { User } from '@/data/users';
+import { User } from '@/data/projects';
 import GoalDetail from '@/components/goals/GoalDetail';
 import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Goal } from '@/data/goals';
-import { User, allUsers } from '@/data/users';
+import { User } from '@/data/projects';
+import { allUsers } from '@/data/users';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Check, Plus } from 'lucide-react';

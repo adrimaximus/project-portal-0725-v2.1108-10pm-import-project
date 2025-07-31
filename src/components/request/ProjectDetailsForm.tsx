@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Project, User, File as ProjectFile } from "@/data/projects";
-import { Service, dummyServices } from "@/data/services";
+import { Service, services } from "@/data/services";
 import { ServiceSelector } from "./ServiceSelector";
 import { TeamSelector } from "./TeamSelector";
 import { FileUploader } from "./FileUploader";
@@ -43,7 +43,7 @@ export function ProjectDetailsForm({ onFormSubmit }: ProjectDetailsFormProps) {
     }));
 
     const projectServices: Project['services'] = selectedServices.map(s => ({
-        name: s.name,
+        name: s.title,
         price: s.price,
     }));
 
@@ -106,7 +106,7 @@ export function ProjectDetailsForm({ onFormSubmit }: ProjectDetailsFormProps) {
       <div className="space-y-2">
         <Label>Services</Label>
         <ServiceSelector
-          services={dummyServices}
+          services={services}
           selectedServices={selectedServices}
           onSelectionChange={setSelectedServices}
         />

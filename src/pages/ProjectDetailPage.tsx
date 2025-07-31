@@ -81,14 +81,9 @@ const ProjectDetailPage = () => {
     toast({ title: "Project Status Updated" });
   };
 
-  const handleAddFile = (file: File) => {
+  const handleAddFile = (file: ProjectFile) => {
     if (!project) return;
-    const newFile: ProjectFile = {
-        name: file.name,
-        size: `${(file.size / 1024).toFixed(2)} KB`,
-        url: '#' // Placeholder
-    }
-    setProject({ ...project, briefFiles: [...project.briefFiles, newFile] });
+    setProject({ ...project, briefFiles: [...project.briefFiles, file] });
   };
 
   const handleAddService = (service: Service) => {
