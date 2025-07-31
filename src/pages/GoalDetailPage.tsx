@@ -8,13 +8,16 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import NotFound from './NotFound';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Pencil, Calendar as CalendarIcon } from 'lucide-react';
+import { Pencil, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { User } from '@/data/users';
+import InviteUsersForm from '@/components/goals/InviteUsersForm';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -22,11 +25,21 @@ const GoalDetailPage = () => {
 
   const [goal, setGoal] = useState<Goal | undefined>(initialGoal);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const handleUpdateGoal = (updatedGoal: Goal) => {
     setGoal(updatedGoal);
     setIsEditModalOpen(false);
+  };
+
+  const handleInviteUser = (user: User) => {
+    if (!goal) return;
+    const updatedGoal = {
+        ...goal,
+        invitedUsers: [...(goal.invitedUsers || []), user],
+    };
+    setGoal(updatedGoal);
   };
 
   const handleToggleCompletion = (date: Date) => {
@@ -92,6 +105,32 @@ const GoalDetailPage = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            <div className="flex items-center -space-x-2 mr-2">
+              {goal.invitedUsers?.map(user => (
+                  <Avatar key={user.id} className="h-9 w-9 border-2 border-background">
+                      <AvatarImage src={user.avatar} />
+                      <AvatarFallback>{user.name[0]}</AvatarFallback>
+                  </Avatar>
+              ))}
+            </div>
+            <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+              <DialogTrigger asChild>
+                  <Button variant="outline">
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Invite
+                  </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                      <DialogTitle>Invite to "{goal.title}"</DialogTitle>
+                  </DialogHeader>
+                  <InviteUsersForm 
+                      goal={goal} 
+                      onInvite={handleInviteUser}
+                      onClose={() => setIsInviteModalOpen(false)}
+                  />
+              </DialogContent>
+            </Dialog>
             <Popover>
               <PopoverTrigger asChild>
                 <Button

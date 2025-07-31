@@ -1,69 +1,49 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { PlusCircle } from 'lucide-react';
 import { dummyGoals, Goal } from '@/data/goals';
 import GoalCard from '@/components/goals/GoalCard';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import GoalDetail from '@/components/goals/GoalDetail';
-import { Button } from '@/components/ui/button';
-import { Plus, Target } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 
 const GoalsPage = () => {
   const [goals, setGoals] = useState<Goal[]>(dummyGoals);
-  const [isNewGoalModalOpen, setIsNewGoalModalOpen] = useState(false);
-
-  const defaultNewGoal: Goal = {
-    id: '',
-    title: '',
-    icon: Target,
-    color: '#3B82F6',
-    frequency: 'Everyday',
-    completions: [],
-  };
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const handleCreateGoal = (newGoal: Goal) => {
-    const goalToAdd = { ...newGoal, id: (goals.length + 1).toString() };
-    setGoals([goalToAdd, ...goals]);
-    setIsNewGoalModalOpen(false);
+    setGoals(prev => [newGoal, ...prev]);
+    setIsCreateModalOpen(false);
   };
 
   return (
     <PortalLayout>
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">My Goals</h1>
-          <p className="text-muted-foreground">Track your habits and stay consistent.</p>
-        </div>
-        <Dialog open={isNewGoalModalOpen} onOpenChange={setIsNewGoalModalOpen}>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">My Goals</h1>
+        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="mr-2 h-4 w-4" />
+              <PlusCircle className="mr-2 h-4 w-4" />
               New Goal
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Create a New Goal</DialogTitle>
-              <DialogDescription>
-                Set up a new goal to track your progress. What do you want to achieve?
-              </DialogDescription>
             </DialogHeader>
             <GoalDetail 
-              goal={defaultNewGoal}
               onUpdate={handleCreateGoal}
-              onClose={() => setIsNewGoalModalOpen(false)}
-              isCreateMode
+              onClose={() => setIsCreateModalOpen(false)}
             />
           </DialogContent>
         </Dialog>
-      </header>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {goals.map(goal => (
-          <Link to={`/goals/${goal.id}`} key={goal.id} className="no-underline h-full">
-            <GoalCard 
-              goal={goal} 
-            />
-          </Link>
+          <GoalCard key={goal.id} goal={goal} />
         ))}
       </div>
     </PortalLayout>
