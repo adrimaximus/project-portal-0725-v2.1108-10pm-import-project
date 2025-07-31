@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import IconPicker from './IconPicker';
 import { DialogFooter } from '@/components/ui/dialog';
+import { ColorPicker } from 'antd';
+import type { Color } from 'antd/es/color-picker';
 
 interface GoalDetailProps {
   goal: Goal;
@@ -23,8 +25,6 @@ const weekDays = [
   { label: 'F', value: '5' },
   { label: 'S', value: '6' },
 ];
-
-const colors = ['#4A90E2', '#50E3C2', '#F5A623', '#E02020', '#9013FE', '#BD10E0'];
 
 const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
   const [title, setTitle] = useState(goal.title);
@@ -103,19 +103,7 @@ const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
         <div className="grid grid-cols-4 items-center gap-4">
           <Label className="text-right">Color</Label>
           <div className="col-span-3">
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={color}
-              onValueChange={(value) => { if (value) setColor(value) }}
-              className="flex flex-wrap gap-2"
-            >
-              {colors.map((c) => (
-                <ToggleGroupItem key={c} value={c} aria-label={c} className="p-0 h-8 w-8 rounded-full border-2 border-transparent data-[state=on]:border-ring">
-                  <div className="h-full w-full rounded-full" style={{ backgroundColor: c }}></div>
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+            <ColorPicker value={color} onChange={(_, hex) => setColor(hex)} showText />
           </div>
         </div>
       </div>
