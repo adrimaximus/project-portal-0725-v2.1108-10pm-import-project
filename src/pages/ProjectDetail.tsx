@@ -140,18 +140,30 @@ const ProjectDetail = () => {
   
       if (newComment.isTicket) {
         const mentionedUsersToAssign: AssignedUser[] = [];
+        let textForTask = newComment.text;
   
-        updatedProject.assignedTo.forEach(user => {
+        // Sort assignable users by name length, descending, to handle cases like "@Jo" and "@John"
+        const sortedAssignableUsers = [...updatedProject.assignedTo].sort((a, b) => b.name.length - a.name.length);
+
+        sortedAssignableUsers.forEach(user => {
+          // Regex to find the user mention, ensuring it's not part of a larger word.
           const userMentionRegex = new RegExp(`@${user.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}(?!\\w)`, 'g');
-          if (newComment.text.match(userMentionRegex)) {
+          
+          if (textForTask.match(userMentionRegex)) {
+            // Add to assignees if not already there
             if (!mentionedUsersToAssign.find(u => u.id === user.id)) {
               mentionedUsersToAssign.push(user);
             }
+            // Remove the mention from the text
+            textForTask = textForTask.replace(userMentionRegex, '');
           }
         });
   
-        const allMentionsRegex = /(@[a-zA-Z0-9\s._-]+|#\/[a-zA-Z0-9\s._-]+)/g;
-        let newTaskText = newComment.text.replace(allMentionsRegex, '').replace(/\s\s+/g, ' ').trim();
+        // Also strip project mentions
+        const projectMentionRegex = /#\/[a-zA-Z0-9\s._-]+/g;
+        textForTask = textForTask.replace(projectMentionRegex, '');
+  
+        let newTaskText = textForTask.replace(/\s\s+/g, ' ').trim();
   
         if (!newTaskText && newComment.attachment) {
           newTaskText = `Review attachment: ${newComment.attachment.name}`;
