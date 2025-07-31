@@ -139,23 +139,31 @@ const ProjectDetail = () => {
       updatedProject.comments = [...(currentEditedProject.comments || []), newComment];
 
       if (newComment.isTicket) {
-        const userMentionRegex = /@([^@#]+)/g;
-        const allMentionsRegex = /(?:@|#\/)[^@#]+/g;
+        const mentionedUsersToAssign: AssignedUser[] = [];
 
-        const mentionedNames = [...newComment.text.matchAll(userMentionRegex)].map(match => match[1].trim());
-        
-        const usersToAssign = updatedProject.assignedTo.filter(user => 
-          mentionedNames.includes(user.name)
-        );
+        // Iterate over assignable users to find who was mentioned.
+        updatedProject.assignedTo.forEach(user => {
+          // Create a regex to find "@Username" ensuring it's not part of a larger word.
+          // Example: Matches "@John Doe" in "task for @John Doe." but not in "task for @John Doer"
+          const userMentionRegex = new RegExp(`@${user.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}(?!\\w)`, 'g');
+          if (newComment.text.match(userMentionRegex)) {
+            if (!mentionedUsersToAssign.find(u => u.id === user.id)) {
+              mentionedUsersToAssign.push(user);
+            }
+          }
+        });
 
+        // Regex to find all mentions (users and projects) to clean them from the task text.
+        const allMentionsRegex = /(@[a-zA-Z0-9\s._-]+|#\/[a-zA-Z0-9\s._-]+)/g;
         const newTaskText = newComment.text.replace(allMentionsRegex, '').replace(/\s\s+/g, ' ').trim();
 
+        // Only create a task if there's text left after cleaning mentions.
         if (newTaskText) {
           const newTask: Task = {
             id: `task-${Date.now()}`,
             text: newTaskText,
             completed: false,
-            assignedTo: usersToAssign.map(user => user.id),
+            assignedTo: mentionedUsersToAssign.map(user => user.id),
           };
           updatedProject.tasks = [...(currentEditedProject.tasks || []), newTask];
         }
