@@ -39,11 +39,21 @@ const Index = () => {
   const allServices = [...new Set(dummyProjects.flatMap(p => p.services || []))].sort();
 
   const filteredProjects = dummyProjects.filter(project => {
-    // Date filter
-    if (date?.from && project.paymentDueDate) {
-      const dueDate = new Date(project.paymentDueDate);
-      const toDate = date.to || date.from;
-      if (dueDate < date.from || dueDate > toDate) {
+    // Date filter for project timeline intersection
+    if (date?.from) {
+      const pickerFrom = date.from;
+      const pickerTo = date.to || date.from;
+
+      if (!project.startDate || !project.deadline) {
+        return false;
+      }
+
+      const projectStart = new Date(project.startDate);
+      const projectEnd = new Date(project.deadline);
+
+      // Check for intersection: (ProjectStart <= PickerEnd) and (ProjectEnd >= PickerFrom)
+      // If there is no overlap, filter it out.
+      if (projectStart > pickerTo || projectEnd < pickerFrom) {
         return false;
       }
     }

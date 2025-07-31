@@ -47,7 +47,7 @@ export function DateRangePicker({
                 format(date.from, "LLL dd, y")
               )
             ) : (
-              <span>Pick a date range</span>
+              <span>Filter by project timeline</span>
             )}
           </Button>
         </PopoverTrigger>
