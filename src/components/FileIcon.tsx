@@ -1,50 +1,26 @@
-import React from 'react';
-import { 
-  File, 
-  FileText, 
-  FileArchive, 
-  FileAudio, 
-  FileVideo, 
-  FileSpreadsheet, 
-  FileImage,
-  FileCode,
-  FileJson
-} from 'lucide-react';
+import { File, FileText, Image, Video, Music, Archive, Code } from "lucide-react";
 
-const getIconForFileType = (type: string): React.ElementType => {
-  if (type.startsWith('image/')) return FileImage;
-  if (type.startsWith('audio/')) return FileAudio;
-  if (type.startsWith('video/')) return FileVideo;
+export const FileIcon = ({ fileName, className = "h-6 w-6 text-gray-500" }: { fileName: string, className?: string }) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
 
-  // Specific MIME types
-  const fileTypeIcons: { [key: string]: React.ElementType } = {
-    'application/pdf': FileText,
-    'application/msword': FileText,
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': FileText,
-    'text/plain': FileText,
-    'application/vnd.ms-excel': FileSpreadsheet,
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': FileSpreadsheet,
-    'text/csv': FileSpreadsheet,
-    'application/zip': FileArchive,
-    'application/x-rar-compressed': FileArchive,
-    'application/x-7z-compressed': FileArchive,
-    'text/html': FileCode,
-    'text/css': FileCode,
-    'application/javascript': FileCode,
-    'application/json': FileJson,
-  };
-
-  return fileTypeIcons[type] || File;
+    if (['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(extension || '')) {
+        return <Image className={className} />;
+    }
+    if (['mp4', 'mov', 'avi', 'webm'].includes(extension || '')) {
+        return <Video className={className} />;
+    }
+    if (['mp3', 'wav', 'ogg'].includes(extension || '')) {
+        return <Music className={className} />;
+    }
+    if (['zip', 'rar', '7z', 'tar.gz'].includes(extension || '')) {
+        return <Archive className={className} />;
+    }
+    if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'json', 'py', 'java'].includes(extension || '')) {
+        return <Code className={className} />;
+    }
+    if (['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'xls', 'xlsx'].includes(extension || '')) {
+        return <FileText className={className} />;
+    }
+    
+    return <File className={className} />;
 };
-
-interface FileIconProps {
-  fileType: string;
-  className?: string;
-}
-
-const FileIcon: React.FC<FileIconProps> = ({ fileType, className }) => {
-  const IconComponent = getIconForFileType(fileType);
-  return <IconComponent className={className} />;
-};
-
-export default FileIcon;
