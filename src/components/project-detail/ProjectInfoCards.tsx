@@ -7,7 +7,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { format, isPast, differenceInDays } from "date-fns";
+import { format, isPast, differenceInDays, addDays } from "date-fns";
 import { Activity, CreditCard, Wallet, CalendarDays, CalendarClock } from "lucide-react";
 
 interface ProjectInfoCardsProps {
@@ -85,14 +85,14 @@ const ProjectInfoCards = ({
     year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  const paymentDueDateFormatted = project.paymentDueDate
-    ? new Date(project.paymentDueDate).toLocaleDateString("en-US", {
-        year: 'numeric', month: 'long', day: 'numeric'
-      })
-    : "Not Set";
+  // Calculate Payment Due Date as 30 days after the project deadline
+  const paymentDueDate = addDays(new Date(project.deadline), 30);
+  const paymentDueDateFormatted = paymentDueDate.toLocaleDateString("en-US", {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
 
-  const isPaymentOverdue = project.paymentDueDate && isPast(new Date(project.paymentDueDate)) && !['paid', 'cancelled'].includes(project.paymentStatus);
-  const paymentOverdueDays = project.paymentDueDate && isPaymentOverdue ? differenceInDays(new Date(), new Date(project.paymentDueDate)) : 0;
+  const isPaymentOverdue = isPast(paymentDueDate) && !['paid', 'cancelled'].includes(project.paymentStatus);
+  const paymentOverdueDays = isPaymentOverdue ? differenceInDays(new Date(), paymentDueDate) : 0;
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -218,28 +218,14 @@ const ProjectInfoCards = ({
           <CalendarClock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {isEditing && editedProject ? (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !editedProject.paymentDueDate && "text-muted-foreground")}>
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  {editedProject.paymentDueDate ? format(new Date(editedProject.paymentDueDate), "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={editedProject.paymentDueDate ? new Date(editedProject.paymentDueDate) : undefined} onSelect={(date) => onDateChange('paymentDueDate', date)} initialFocus />
-              </PopoverContent>
-            </Popover>
-          ) : (
-            <div>
-              <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
-              {isPaymentOverdue && (
-                <p className="text-xs text-red-500 mt-1">
-                  Overdue by {paymentOverdueDays} day{paymentOverdueDays !== 1 ? 's' : ''}
-                </p>
-              )}
-            </div>
-          )}
+          <div>
+            <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
+            {isPaymentOverdue && (
+              <p className="text-xs text-red-500 mt-1">
+                Overdue by {paymentOverdueDays} day{paymentOverdueDays !== 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
