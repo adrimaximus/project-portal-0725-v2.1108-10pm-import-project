@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isProductivityMenuOpen, setIsProductivityMenuOpen] = useState(
+    location.pathname.startsWith('/mood-tracker') || location.pathname.startsWith('/goals')
+  );
 
   const totalUnreadChatCount = dummyConversations.reduce(
     (sum, convo) => sum + convo.unreadCount,
@@ -52,15 +55,18 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       icon: MessageSquare, 
       ...(totalUnreadChatCount > 0 && { badge: totalUnreadChatCount }) 
     },
-    { href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
-    { href: "/goals", label: "Goals", icon: Target },
     { href: "#", label: "Notifications", icon: Bell, badge: 3 },
-    { href: "#", label: "Settings", icon: Settings },
+    { href: "/settings", label: "Settings", icon: Settings },
+  ];
+
+  const productivityNavItems = [
+      { href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
+      { href: "/goals", label: "Goals", icon: Target },
   ];
 
   return (
     <div
-      className="hidden h-screen border-r bg-muted/40 md:block transition-all duration-300 ease-in-out"
+      className="hidden h-screen border-r bg-background md:block transition-all duration-300 ease-in-out"
       onDoubleClick={onToggle}
     >
       <div className="flex h-full max-h-screen flex-col">
@@ -129,6 +135,59 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                     )}
                   </Link>
                 )
+              )}
+              
+              {/* Productivity Section */}
+              {isCollapsed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      to="/mood-tracker"
+                      className={cn(
+                        "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative",
+                        (location.pathname.startsWith('/mood-tracker') || location.pathname.startsWith('/goals')) && "bg-muted text-primary"
+                      )}
+                    >
+                      <Activity className="h-5 w-5" />
+                      <span className="sr-only">Productivity</span>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Productivity</TooltipContent>
+                </Tooltip>
+              ) : (
+                <div className="mt-1">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    onClick={() => setIsProductivityMenuOpen(!isProductivityMenuOpen)}
+                  >
+                    <Activity className="h-4 w-4" />
+                    Productivity
+                    <ChevronDown
+                      className={cn(
+                        "ml-auto h-4 w-4 transition-transform",
+                        isProductivityMenuOpen && "rotate-180"
+                      )}
+                    />
+                  </Button>
+                  {isProductivityMenuOpen && (
+                    <div className="grid items-start gap-1 text-sm font-medium mt-1 pl-7">
+                      {productivityNavItems.map(item => (
+                        <Link
+                          key={item.label}
+                          to={item.href}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                            location.pathname === item.href && "bg-muted text-primary"
+                          )}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </nav>
           </TooltipProvider>

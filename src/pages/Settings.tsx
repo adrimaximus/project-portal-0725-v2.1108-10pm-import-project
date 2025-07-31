@@ -1,19 +1,2 @@
-import PortalLayout from "@/components/PortalLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const Settings = () => {
-  return (
-    <PortalLayout>
-      <Card>
-        <CardHeader>
-          <CardTitle>Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>Halaman pengaturan sedang dalam pengembangan.</p>
-        </CardContent>
-      </Card>
-    </PortalLayout>
-  );
-};
-
+const Settings = () => <div className="py-6">Settings Page</div>;
 export default Settings;

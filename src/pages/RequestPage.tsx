@@ -1,4 +1,4 @@
-const Request = () => {
+const RequestPage = () => {
   return (
     <div className="py-6">
       <h1 className="text-2xl font-bold">Request</h1>
@@ -7,4 +7,4 @@ const Request = () => {
   );
 };
 
-export default Request;
+export default RequestPage;
