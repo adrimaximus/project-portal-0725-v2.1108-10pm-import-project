@@ -1,171 +1,160 @@
-export type AssignedUser = {
+export interface User {
   id: string;
   name: string;
-  avatar?: string;
+  avatar?: string; // Dibuat opsional untuk kompatibilitas
   initials: string;
-  email?: string;
-  role?: string;
-};
+}
 
-export type User = AssignedUser;
+// Mengekspor sebagai AssignedUser untuk kompatibilitas dengan impor yang ada
+export type AssignedUser = User;
 
-export type Task = {
+export interface Task {
+  id: string;
+  text: string; // Diubah dari 'title' menjadi 'text' untuk konsistensi
+  completed: boolean;
+  assignedTo?: User[];
+}
+
+export interface Comment {
   id: string;
   text: string;
-  completed: boolean;
-  assignedTo?: string[];
-};
+  author: User;
+  createdAt: string;
+  isTicket?: boolean;
+}
 
-export type Activity = {
-  id: string;
-  user: {
+export interface ProjectFile {
+    id: string;
     name: string;
-    avatar?: string;
-  };
-  action: string;
-  target: string;
-  timestamp: string;
-};
+    url: string;
+    size: string;
+}
 
-export type ProjectFile = {
-  name: string;
-  size: number; // Changed to number for consistency
-  url: string;
-  type: string; // Added type for consistency
-};
+export interface Activity {
+    id: string;
+    type: 'comment' | 'file' | 'task' | 'status';
+    user: User;
+    timestamp: string;
+    details: string;
+}
 
-export type Project = {
+export interface Project {
   id:string;
   name: string;
   category: string;
-  status: 'Completed' | 'In Progress' | 'On Hold' | 'Cancelled' | 'Requested' | 'On Track' | 'At Risk' | 'Done' | 'Billed' | 'Off Track';
-  paymentStatus: 'Paid' | 'Pending' | 'Overdue' | 'proposed' | 'approved' | 'po_created' | 'on_process' | 'cancelled' | 'paid' | 'pending';
-  progress: number;
+  description: string; // Ditambahkan
+  status: 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Requested' | 'Done' | 'Billed' | 'In Progress' | 'Cancelled'; // Diperluas
+  paymentStatus: 'Paid' | 'Pending' | 'Overdue' | 'Draft' | 'Proposed' | 'Approved' | 'PO Created' | 'On Process' | 'Cancelled' | 'paid' | 'approved' | 'po_created' | 'on_process' | 'pending' | 'cancelled' | 'proposed'; // Diperluas
   budget: number;
-  deadline: string;
-  startDate?: string;
+  progress: number;
+  startDate: string;
+  endDate: string;
+  deadline?: string; // Ditambahkan
   paymentDueDate?: string;
-  assignedTo: AssignedUser[];
-  createdBy: AssignedUser;
-  description: string;
+  assignedTo: User[];
+  createdBy?: User; // Ditambahkan
   tasks?: Task[];
-  files?: ProjectFile[];
-  briefFiles?: ProjectFile[];
-  comments?: { id: string; userId: string; text: string; timestamp: string }[];
+  comments?: Comment[];
+  tickets?: Comment[]; // Ditambahkan
   services?: string[];
-  tickets?: number; // Changed to number
-  activity?: Activity[];
-};
+  briefFiles?: ProjectFile[]; // Ditambahkan
+  files?: ProjectFile[]; // Ditambahkan
+}
 
-const users: AssignedUser[] = [
-  { id: 'user-1', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', initials: 'AJ', email: 'alice@example.com', role: 'Project Manager' },
-  { id: 'user-2', name: 'Bob Williams', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', initials: 'BW', email: 'bob@example.com', role: 'Lead Developer' },
-  { id: 'user-3', name: 'Charlie Brown', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', initials: 'CB', email: 'charlie@example.com', role: 'UI/UX Designer' },
-  { id: 'user-4', name: 'Diana Prince', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026707d', initials: 'DP', email: 'diana@example.com', role: 'QA Tester' },
+const users: User[] = [
+    { id: 'user-1', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=alice', initials: 'AJ' },
+    { id: 'user-2', name: 'Bob Williams', avatar: 'https://i.pravatar.cc/150?u=bob', initials: 'BW' },
+    { id: 'user-3', name: 'Charlie Brown', avatar: 'https://i.pravatar.cc/150?u=charlie', initials: 'CB' },
+    { id: 'user-4', name: 'Diana Miller', avatar: 'https://i.pravatar.cc/150?u=diana', initials: 'DM' },
 ];
 
 export const dummyProjects: Project[] = [
   {
-    id: 'proj-001',
-    name: 'E-commerce Platform Development',
-    category: 'Web Development',
-    status: 'In Progress',
-    paymentStatus: 'Paid',
-    progress: 65,
-    budget: 50000,
-    startDate: '2024-03-01T00:00:00.000Z',
-    deadline: '2024-08-15T23:59:59.999Z',
-    paymentDueDate: '2024-04-01T23:59:59.999Z',
-    assignedTo: [users[0], users[1], users[2]],
+    id: "proj-1",
+    name: "E-commerce Platform",
+    category: "Web Development",
+    description: "Building a full-featured e-commerce platform with a modern tech stack.",
+    status: "On Track",
+    paymentStatus: "Paid",
+    budget: 50000000,
+    progress: 75,
+    startDate: "2023-08-01",
+    endDate: "2024-02-28",
+    deadline: "2024-02-28",
+    paymentDueDate: "2024-01-15",
+    assignedTo: [users[0], users[1]],
     createdBy: users[0],
-    description: 'Full-stack development of a new e-commerce platform with modern features, including a custom CMS, payment gateway integration, and a responsive user interface. The goal is to increase sales by 30% in the first quarter after launch.',
-    tasks: [
-      { id: 't1', text: 'Setup project structure', completed: true, assignedTo: ['user-1'] },
-      { id: 't2', text: 'Design database schema', completed: true, assignedTo: ['user-2'] },
-      { id: 't3', text: 'Develop API endpoints for products', completed: false, assignedTo: ['user-2'] },
-      { id: 't4', text: 'Create frontend components for homepage', completed: false, assignedTo: ['user-1', 'user-3'] },
-    ],
-    services: ['Web Development', 'UI/UX Design', 'API Integration'],
-    briefFiles: [
-        { name: 'project-brief.pdf', size: 2621440, url: '#', type: 'application/pdf' },
-        { name: 'design-mockups.zip', size: 15938355, url: '#', type: 'application/zip' },
-    ],
-    activity: [
-        { id: 'act-1', user: { name: 'Alice Johnson', avatar: users[0].avatar }, action: 'added a new task', target: 'Create frontend components', timestamp: '2024-05-20T10:00:00Z' },
-        { id: 'act-2', user: { name: 'Bob Williams', avatar: users[1].avatar }, action: 'completed a task', target: 'Design database schema', timestamp: '2024-05-19T15:30:00Z' },
-    ]
+    services: ["Web Development", "UI/UX Design"],
+    tasks: [{id: 't1', text: 'Implement payment gateway', completed: true, assignedTo: [users[1]]}],
+    comments: [{id: 'c1', text: 'Initial project kickoff meeting notes.', author: users[0], createdAt: '2023-08-02'}],
+    tickets: [{id: 'ticket-1', text: 'Login button not working on Firefox', author: users[1], createdAt: '2023-10-01', isTicket: true}],
+    briefFiles: [{id: 'file-1', name: 'Project Brief.pdf', url: '#', size: '2.5 MB'}],
   },
   {
-    id: 'proj-002',
-    name: 'Mobile App for Task Management',
-    category: 'Mobile Development',
-    status: 'Completed',
-    paymentStatus: 'Paid',
-    progress: 100,
-    budget: 35000,
-    startDate: '2024-01-10T00:00:00.000Z',
-    deadline: '2024-06-30T23:59:59.999Z',
-    assignedTo: [users[1], users[3]],
-    createdBy: users[3],
-    description: 'A cross-platform mobile application for personal and team task management. Features include push notifications, offline access, and third-party integrations.',
-    tasks: [
-      { id: 't1', text: 'UI/UX Design', completed: true },
-      { id: 't2', text: 'Frontend Development', completed: true },
-      { id: 't3', text: 'Backend & Database', completed: true },
-      { id: 't4', text: 'Testing & QA', completed: true },
-    ],
-    services: ['Mobile App Development', 'Firebase Integration'],
-  },
-  {
-    id: 'proj-003',
-    name: 'Cloud Migration for Legacy System',
-    category: 'Infrastructure',
-    status: 'On Hold',
-    paymentStatus: 'Pending',
-    progress: 20,
-    budget: 75000,
-    startDate: '2024-04-01T00:00:00.000Z',
-    deadline: '2024-10-01T23:59:59.999Z',
-    assignedTo: [users[0], users[3]],
-    createdBy: users[0],
-    description: 'Migrating a monolithic legacy application to a modern, cloud-native architecture on AWS. The project is currently on hold pending budget approval for Q3.',
-    services: ['Cloud Architecture', 'DevOps', 'Database Migration'],
-  },
-  {
-    id: 'proj-004',
-    name: 'Marketing Website Redesign',
-    category: 'Web Design',
-    status: 'In Progress',
-    paymentStatus: 'Overdue',
-    progress: 85,
-    budget: 15000,
-    startDate: '2024-05-15T00:00:00.000Z',
-    deadline: '2024-07-20T23:59:59.999Z',
-    paymentDueDate: '2024-06-15T23:59:59.999Z',
-    assignedTo: [users[2], users[3]],
+    id: "proj-2",
+    name: "Mobile Banking App",
+    category: "Mobile Development",
+    description: "Developing a secure and user-friendly mobile banking application for iOS and Android.",
+    status: "At Risk",
+    paymentStatus: "Pending",
+    budget: 75000000,
+    progress: 40,
+    startDate: "2023-09-15",
+    endDate: "2024-05-30",
+    deadline: "2024-05-30",
+    paymentDueDate: "2024-02-20",
+    assignedTo: [users[2], users[3], users[0]],
     createdBy: users[2],
-    description: 'Redesigning the company\'s public-facing marketing website for better user engagement and lead generation. The new design will be fully responsive and SEO-optimized.',
-    tasks: [
-      { id: 't1', text: 'Wireframing', completed: true },
-      { id: 't2', text: 'Visual Design Mockups', completed: true },
-      { id: 't3', text: 'Frontend Implementation', completed: true },
-      { id: 't4', text: 'CMS Integration', completed: false },
-    ],
-    services: ['Web Design', 'SEO Optimization'],
+    services: ["Mobile Development", "API Integration", "Security Audit"],
   },
   {
-    id: 'proj-005',
-    name: 'Data Analytics Dashboard',
-    category: 'Data Science',
-    status: 'Cancelled',
-    paymentStatus: 'Pending',
-    progress: 10,
-    budget: 40000,
-    startDate: '2024-02-20T00:00:00.000Z',
-    deadline: '2024-09-01T23:59:59.999Z',
+    id: "proj-3",
+    name: "Data Analytics Dashboard",
+    category: "Data Science",
+    description: "A comprehensive dashboard for visualizing sales and marketing data.",
+    status: "Completed",
+    paymentStatus: "Paid",
+    budget: 30000000,
+    progress: 100,
+    startDate: "2023-06-01",
+    endDate: "2023-11-30",
+    deadline: "2023-11-30",
+    paymentDueDate: "2023-12-05",
     assignedTo: [users[1]],
     createdBy: users[1],
-    description: 'A dashboard for visualizing key business metrics and KPIs. Project cancelled due to a shift in company priorities.',
-    services: ['Data Visualization', 'Business Intelligence'],
+    services: ["Data Visualization", "ETL Pipeline"],
   },
+  {
+    id: "proj-4",
+    name: "Branding for Startup X",
+    category: "Marketing",
+    description: "Complete branding package including logo, style guide, and marketing materials.",
+    status: "On Hold",
+    paymentStatus: "Draft",
+    budget: 15000000,
+    progress: 10,
+    startDate: "2024-01-10",
+    endDate: "2024-04-30",
+    deadline: "2024-04-30",
+    assignedTo: [users[0], users[3]],
+    createdBy: users[3],
+    services: ["Branding", "Logo Design"],
+  },
+  {
+    id: "proj-5",
+    name: "Cloud Migration",
+    category: "Infrastructure",
+    description: "Migrating on-premise servers to a cloud-based infrastructure.",
+    status: "Off Track",
+    paymentStatus: "Overdue",
+    budget: 60000000,
+    progress: 25,
+    startDate: "2023-10-01",
+    endDate: "2024-03-31",
+    deadline: "2024-03-31",
+    paymentDueDate: "2023-12-15",
+    assignedTo: [users[1], users[2]],
+    createdBy: users[2],
+    services: ["Cloud Architecture", "DevOps"],
+  }
 ];
