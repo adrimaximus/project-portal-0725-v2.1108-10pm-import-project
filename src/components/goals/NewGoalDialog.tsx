@@ -24,14 +24,14 @@ const weekDays = [
   { label: 'S', value: '6' },
 ];
 
-const colors = ['#4A90E2', '#50E3C2', '#F5A623', '#E02020', '#9013FE', '#BD10E0'];
+const colors = ['#BFDBFE', '#A7F3D0', '#FED7AA', '#FECACA', '#DDD6FE', '#FBCFE8'];
 
 const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps) => {
   const [title, setTitle] = useState('');
   const [frequency, setFrequency] = useState<Goal['frequency']>('Daily');
   const [specificDays, setSpecificDays] = useState<string[]>([]);
   const [icon, setIcon] = useState('Target');
-  const [color, setColor] = useState('#4A90E2');
+  const [color, setColor] = useState('#BFDBFE');
 
   const handleSave = () => {
     if (!title) return;
@@ -46,7 +46,7 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
     setFrequency('Daily');
     setSpecificDays([]);
     setIcon('Target');
-    setColor('#4A90E2');
+    setColor('#BFDBFE');
     onOpenChange(false);
   };
 
