@@ -68,27 +68,6 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
   const totalTasks = tasks.length;
   const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Automatically create tasks from comments marked as tickets
-  useEffect(() => {
-    if (!onTasksUpdate || !project.comments) return;
-
-    const ticketComments = project.comments.filter((c: any) => c.isTicket);
-    const existingTaskTexts = new Set(tasks.map(t => t.text));
-
-    const newTasksToCreate: Task[] = ticketComments
-      .filter((ticket: any) => !existingTaskTexts.has(ticket.text))
-      .map((ticket: any) => ({
-        id: `task-from-comment-${ticket.id}`,
-        text: ticket.text,
-        completed: false,
-        assignedTo: ticket.mentions || [],
-      }));
-
-    if (newTasksToCreate.length > 0) {
-      onTasksUpdate([...tasks, ...newTasksToCreate]);
-    }
-  }, [project.comments, tasks, onTasksUpdate]);
-
   const handleToggleTask = (taskId: string) => {
     if (!onTasksUpdate) return;
     const updatedTasks = tasks.map(task =>
