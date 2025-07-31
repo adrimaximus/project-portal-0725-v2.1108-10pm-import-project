@@ -10,20 +10,39 @@ import FileUploader from "./FileUploader";
 import { Project, AssignedUser, ProjectFile } from "@/data/projects";
 import { dummyProjects } from "@/data/projects";
 import { useNavigate } from "react-router-dom";
-import { Service } from "@/data/services";
+import { Service, services as allServicesData } from "@/data/services";
+import { DateRange } from "react-day-picker";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
   onBack: () => void;
 }
 
-const ProjectDetailsForm = ({ onBack }: ProjectDetailsFormProps) => {
+const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
   const [projectName, setProjectName] = useState("");
   const [category, setCategory] = useState("");
+  const [date, setDate] = useState<DateRange | undefined>();
+  const [budget, setBudget] = useState("");
   const [description, setDescription] = useState("");
   const [team, setTeam] = useState<AssignedUser[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const navigate = useNavigate();
+
+  const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/[^0-9]/g, '');
+    if (rawValue) {
+      const formattedValue = new Intl.NumberFormat('id-ID').format(parseInt(rawValue));
+      setBudget(`Rp ${formattedValue}`);
+    } else {
+      setBudget('');
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +54,8 @@ const ProjectDetailsForm = ({ onBack }: ProjectDetailsFormProps) => {
       url: URL.createObjectURL(file),
     }));
 
+    const numericBudget = parseInt(budget.replace(/[^0-9]/g, ''), 10) || 0;
+
     const newProject: Project = {
       id: `proj-${Date.now()}`,
       name: projectName,
@@ -44,8 +65,9 @@ const ProjectDetailsForm = ({ onBack }: ProjectDetailsFormProps) => {
       briefFiles: newProjectFiles,
       status: "Requested",
       progress: 0,
-      budget: 0,
-      deadline: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(),
+      budget: numericBudget,
+      startDate: date?.from?.toISOString(),
+      deadline: date?.to?.toISOString() ?? new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(),
       paymentStatus: "proposed",
       createdBy: {
         id: "user-current",
@@ -53,11 +75,16 @@ const ProjectDetailsForm = ({ onBack }: ProjectDetailsFormProps) => {
         initials: "CU",
       },
       tickets: 0,
+      services: selectedServices.map(s => s.title),
     };
 
     dummyProjects.push(newProject);
     navigate(`/projects/${newProject.id}`);
   };
+
+  const serviceDetails = selectedServices
+    .map((service) => allServicesData.find((s) => s.title === service.title))
+    .filter((s): s is Service => s !== undefined);
 
   return (
     <form onSubmit={handleSubmit}>
@@ -91,6 +118,67 @@ const ProjectDetailsForm = ({ onBack }: ProjectDetailsFormProps) => {
                 <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Selected Services</Label>
+            <div className="flex flex-wrap gap-2 rounded-md border p-3 bg-muted/50 min-h-[40px]">
+              {serviceDetails.length > 0 ? serviceDetails.map((service) => (
+                <Badge key={service.title} variant="secondary" className="flex items-center gap-2">
+                  <service.icon className={cn("h-4 w-4", service.iconColor)} />
+                  <span>{service.title}</span>
+                </Badge>
+              )) : <p className="text-sm text-muted-foreground">No services selected. Go back to select services.</p>}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="date-range">Project Timeline</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="date-range"
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date?.from ? (
+                      date.to ? (
+                        <>
+                          {format(date.from, "LLL dd, y")} -{" "}
+                          {format(date.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(date.from, "LLL dd, y")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={date?.from}
+                    selected={date}
+                    onSelect={setDate}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="budget">Project Budget</Label>
+              <Input
+                id="budget"
+                placeholder="e.g., Rp 10.000.000"
+                value={budget}
+                onChange={handleBudgetChange}
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="description">Project Description</Label>
