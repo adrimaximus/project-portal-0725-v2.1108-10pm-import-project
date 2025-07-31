@@ -36,7 +36,7 @@ const Index = () => {
                 <TableHead>Payment Status</TableHead>
                 <TableHead>Project Progress</TableHead>
                 <TableHead>Project Value</TableHead>
-                <TableHead>Deadline</TableHead>
+                <TableHead>Payment Due</TableHead>
                 <TableHead className="text-right">Team</TableHead>
               </TableRow>
             </TableHeader>
