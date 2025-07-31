@@ -1,60 +1,47 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { goalIcons } from '@/data/icons';
+import {
+  Book, Target, Repeat, CheckCircle, TrendingUp, Award, Dumbbell, Droplet,
+  Leaf, Heart, DollarSign, Briefcase, Coffee, Bed, Music, Film, Code,
+  PenTool, Brush, Bike, Plane, Star, Smile, Brain, Zap, Sunrise, Sunset,
+  Apple, Activity, AlarmClock, Anchor, Archive, Wallet, Trophy
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+
+const iconList: LucideIcon[] = [
+  Book, Target, Repeat, CheckCircle, TrendingUp, Award, Dumbbell, Droplet,
+  Leaf, Heart, DollarSign, Briefcase, Coffee, Bed, Music, Film, Code,
+  PenTool, Brush, Bike, Plane, Star, Smile, Brain, Zap, Sunrise, Sunset,
+  Apple, Activity, AlarmClock, Anchor, Archive, Wallet, Trophy
+];
 
 interface IconPickerProps {
   children: React.ReactNode;
-  onSelectIcon: (icon: React.ElementType) => void;
+  onSelectIcon: (icon: LucideIcon) => void;
   currentColor: string;
 }
 
 const IconPicker = ({ children, onSelectIcon, currentColor }: IconPickerProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredIcons = goalIcons.filter(icon =>
-    icon.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleSelect = (iconComponent: React.ElementType) => {
-    onSelectIcon(iconComponent);
-    setIsOpen(false);
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>Select an Icon</DialogTitle>
-        </DialogHeader>
-        <div className="py-2">
-          <Input
-            placeholder="Search for an icon..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <ScrollArea className="h-[300px] mt-2 pr-3">
-          <div className="grid grid-cols-6 gap-2">
-            {filteredIcons.map(icon => (
+    <Popover>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent className="w-80 p-2">
+        <div className="grid grid-cols-8 gap-1">
+          {iconList.map((Icon, index) => (
+            <PopoverTrigger asChild key={index}>
               <Button
-                key={icon.name}
-                variant="outline"
-                className="h-16 w-16 flex flex-col items-center justify-center gap-1"
-                onClick={() => handleSelect(icon.component)}
+                variant="ghost"
+                size="icon"
+                onClick={() => onSelectIcon(Icon)}
+                className="rounded-md flex items-center justify-center"
               >
-                <icon.component className="h-6 w-6" style={{ color: currentColor }} />
-                <span className="text-xs text-muted-foreground truncate">{icon.name}</span>
+                <Icon className="h-5 w-5" style={{ color: currentColor }} />
               </Button>
-            ))}
-          </div>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+            </PopoverTrigger>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
