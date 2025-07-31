@@ -33,7 +33,7 @@ const Index = () => {
               <TableRow>
                 <TableHead className="w-[30%]">Project Name</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Progress</TableHead>
+                <TableHead>Project Progress</TableHead>
                 <TableHead>Budget</TableHead>
                 <TableHead>Deadline</TableHead>
                 <TableHead className="text-right">Team</TableHead>
