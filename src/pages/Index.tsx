@@ -84,7 +84,6 @@ export default function Index() {
 
   const billingColumnIds = ['name', 'assignedTo', 'paymentStatus', 'paymentDueDate', 'budget'];
   const billingColumns = columns.filter(column => {
-    // The 'id' is manually set in ProjectsTable.tsx for each column
     const columnId = (column as any).id;
     return billingColumnIds.includes(columnId);
   });

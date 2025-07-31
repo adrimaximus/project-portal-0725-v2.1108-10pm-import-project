@@ -91,7 +91,7 @@ const Dashboard = () => {
               <Button onClick={() => navigate('/request')}>+ Add Project</Button>
             </div>
           </div>
-          <ProjectsTable columns={columns} data={dummyProjects} onFilteredDataChange={setFilteredProjects} />
+          <ProjectsTable columns={columns} data={dummyProjects} />
         </TabsContent>
       </Tabs>
     </div>

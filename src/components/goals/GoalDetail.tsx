@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { TwitterPicker } from 'react-color';
+import { TwitterPicker, ColorResult } from 'react-color';
 import IconPicker from './IconPicker';
 import type { LucideIcon } from 'lucide-react';
 import { Target } from 'lucide-react';
@@ -79,7 +79,7 @@ const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
         </div>
         <TwitterPicker
           color={editedGoal.color}
-          onChangeComplete={(color) => setEditedGoal(prev => ({ ...prev, color: color.hex }))}
+          onChangeComplete={(color: ColorResult) => setEditedGoal(prev => ({ ...prev, color: color.hex }))}
           triangle="hide"
           styles={{ default: { card: { boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: '0.375rem' } } }}
         />

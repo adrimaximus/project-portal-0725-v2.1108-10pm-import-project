@@ -12,7 +12,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
-// A small component for the assignment popover content
 const TaskAssigneeSelector = ({
   assignableUsers,
   selectedUserIds,
@@ -124,16 +123,16 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
         <CardDescription>
           {onTasksUpdate
             ? `${completedTasks} of ${totalTasks} tasks completed.`
-            : `This project is ${project.progress}% complete.`
+            : `This project is ${project.progress || 0}% complete.`
           }
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm text-muted-foreground">Overall Progress</span>
-          <span className="text-sm font-bold">{onTasksUpdate ? progressPercentage : project.progress}%</span>
+          <span className="text-sm font-bold">{onTasksUpdate ? progressPercentage : project.progress || 0}%</span>
         </div>
-        <Progress value={onTasksUpdate ? progressPercentage : project.progress} className={onTasksUpdate ? "mb-6" : ""} />
+        <Progress value={onTasksUpdate ? progressPercentage : project.progress || 0} className={onTasksUpdate ? "mb-6" : ""} />
         
         {onTasksUpdate && (
           <>

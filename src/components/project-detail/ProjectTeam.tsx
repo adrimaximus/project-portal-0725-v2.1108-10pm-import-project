@@ -1,42 +1,47 @@
-import { User } from '@/data/users';
-import { dummyUsers } from '@/data/users';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AssignedUser } from '@/data/projects';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, X } from 'lucide-react';
 
 interface ProjectTeamProps {
-  team: User[];
+  assignedTo: AssignedUser[];
+  onTeamChange: (team: AssignedUser[]) => void;
 }
 
-const ProjectTeam = ({ team }: ProjectTeamProps) => {
+const ProjectTeam = ({ assignedTo, onTeamChange }: ProjectTeamProps) => {
+  // Dummy function, in a real app this would open a user selection modal
+  const handleAddMember = () => {
+    console.log("Add member clicked");
+  };
+
+  const handleRemoveMember = (userId: string) => {
+    onTeamChange(assignedTo.filter(user => user.id !== userId));
+  };
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Project Team</CardTitle>
-        <Button variant="outline" size="sm">
-          <UserPlus className="h-4 w-4 mr-2" />
-          Add Member
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {team.map(member => (
-            <div key={member.id} className="flex items-center gap-4">
-              <Avatar>
-                <AvatarImage src={member.avatar} alt={member.name} />
-                <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-grow">
-                <p className="font-medium">{member.name}</p>
-                <p className="text-sm text-muted-foreground">developer</p>
-              </div>
-              <Button variant="ghost" size="sm">Remove</Button>
+    <div className="space-y-3">
+      {assignedTo.map(member => (
+        <div key={member.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={member.avatar} alt={member.name} />
+              <AvatarFallback>{member.name.slice(0, 2)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-sm font-medium">{member.name}</p>
+              <p className="text-xs text-muted-foreground">{member.role}</p>
             </div>
-          ))}
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveMember(member.id)}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+      ))}
+      <Button variant="outline" className="w-full" onClick={handleAddMember}>
+        <UserPlus className="mr-2 h-4 w-4" />
+        Add Team Member
+      </Button>
+    </div>
   );
 };
 
