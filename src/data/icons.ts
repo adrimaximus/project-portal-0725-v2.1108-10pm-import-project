@@ -6,13 +6,12 @@ import {
   Star, Sun, Sunset, Target, ThumbsUp, ToyBrick, Trophy, Tv, Video,
   Wallet, Watch, Wind, Zap, Anchor, Bike, Brush, Camera, Car, Clapperboard,
   Cloud, Diamond, Droplet, Film, Gamepad, GraduationCap, Hammer, Headphones,
-
+  type LucideIcon
 } from 'lucide-react';
-import { FC } from 'react';
 
 export interface GoalIcon {
   name: string;
-  component: FC<any>;
+  component: LucideIcon;
 }
 
 export const goalIcons: GoalIcon[] = [
