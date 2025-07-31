@@ -42,6 +42,7 @@ const Index = () => {
                   <TableHead>Project Status</TableHead>
                   <TableHead>Payment Status</TableHead>
                   <TableHead>Project Progress</TableHead>
+                  <TableHead>Tickets</TableHead>
                   <TableHead>Project Value</TableHead>
                   <TableHead>Payment Due</TableHead>
                   <TableHead>Owner</TableHead>
@@ -53,6 +54,7 @@ const Index = () => {
                   const totalTasks = project.tasks?.length || 0;
                   const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
                   const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : project.progress;
+                  const ticketCount = project.comments?.filter(comment => (comment as any).isTicket).length || 0;
 
                   return (
                     <TableRow
@@ -83,6 +85,9 @@ const Index = () => {
                             {progressPercentage}%
                           </span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium text-center">{ticketCount}</div>
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">
