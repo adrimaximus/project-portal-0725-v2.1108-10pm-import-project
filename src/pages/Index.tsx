@@ -15,6 +15,12 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { getStatusClass, getPaymentStatusClass } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -27,90 +33,106 @@ const Index = () => {
           <p className="text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
         </div>
 
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[30%]">Project Name</TableHead>
-                <TableHead>Project Status</TableHead>
-                <TableHead>Payment Status</TableHead>
-                <TableHead>Project Progress</TableHead>
-                <TableHead>Project Value</TableHead>
-                <TableHead>Payment Due</TableHead>
-                <TableHead>Owner</TableHead>
-                <TableHead className="text-right">Team</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {dummyProjects.map((project) => {
-                const totalTasks = project.tasks?.length || 0;
-                const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
-                const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : project.progress;
+        <TooltipProvider>
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[30%]">Project Name</TableHead>
+                  <TableHead>Project Status</TableHead>
+                  <TableHead>Payment Status</TableHead>
+                  <TableHead>Project Progress</TableHead>
+                  <TableHead>Project Value</TableHead>
+                  <TableHead>Payment Due</TableHead>
+                  <TableHead>Owner</TableHead>
+                  <TableHead className="text-right">Team</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dummyProjects.map((project) => {
+                  const totalTasks = project.tasks?.length || 0;
+                  const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
+                  const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : project.progress;
 
-                return (
-                  <TableRow
-                    key={project.id}
-                    onClick={() => navigate(`/projects/${project.id}`)}
-                    className="cursor-pointer"
-                  >
-                    <TableCell>
-                      <div className="font-medium">{project.name}</div>
-                      <div className="text-sm text-muted-foreground hidden md:block">
-                        {project.category}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn("border-transparent", getStatusClass(project.status))}>
-                        {project.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn("border-transparent", getPaymentStatusClass(project.paymentStatus))}>
-                        {project.paymentStatus}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Progress value={progressPercentage} className="w-24" />
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {progressPercentage}%
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">
-                        {'Rp ' + project.budget.toLocaleString('id-ID')}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">
-                        {project.paymentDueDate ? format(new Date(project.paymentDueDate), "MMM dd, yyyy") : 'N/A'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {project.assignedTo && project.assignedTo.length > 0 && (
-                        <Avatar className="h-8 w-8 border-2 border-background">
-                          <AvatarImage src={project.assignedTo[0].avatar} alt={project.assignedTo[0].name} />
-                          <AvatarFallback>{project.assignedTo[0].initials}</AvatarFallback>
-                        </Avatar>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-end -space-x-2">
-                        {project.assignedTo.map((user) => (
-                          <Avatar key={user.id} className="h-8 w-8 border-2 border-background">
-                            <AvatarImage src={user.avatar} alt={user.name} />
-                            <AvatarFallback>{user.initials}</AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                  return (
+                    <TableRow
+                      key={project.id}
+                      onClick={() => navigate(`/projects/${project.id}`)}
+                      className="cursor-pointer"
+                    >
+                      <TableCell>
+                        <div className="font-medium">{project.name}</div>
+                        <div className="text-sm text-muted-foreground hidden md:block">
+                          {project.category}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn("border-transparent", getStatusClass(project.status))}>
+                          {project.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn("border-transparent", getPaymentStatusClass(project.paymentStatus))}>
+                          {project.paymentStatus}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Progress value={progressPercentage} className="w-24" />
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {progressPercentage}%
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">
+                          {'Rp ' + project.budget.toLocaleString('id-ID')}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">
+                          {project.paymentDueDate ? format(new Date(project.paymentDueDate), "MMM dd, yyyy") : 'N/A'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {project.assignedTo && project.assignedTo.length > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Avatar className="h-8 w-8 border-2 border-background">
+                                <AvatarImage src={project.assignedTo[0].avatar} alt={project.assignedTo[0].name} />
+                                <AvatarFallback>{project.assignedTo[0].initials}</AvatarFallback>
+                              </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{project.assignedTo[0].name}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end -space-x-2">
+                          {project.assignedTo.map((user) => (
+                            <Tooltip key={user.id}>
+                              <TooltipTrigger asChild>
+                                <Avatar className="h-8 w-8 border-2 border-background">
+                                  <AvatarImage src={user.avatar} alt={user.name} />
+                                  <AvatarFallback>{user.initials}</AvatarFallback>
+                                </Avatar>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{user.name}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ))}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </TooltipProvider>
       </div>
     </PortalLayout>
   );
