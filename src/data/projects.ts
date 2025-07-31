@@ -72,7 +72,7 @@ export const dummyProjects: Project[] = [
   {
     id: "PROJ-002",
     name: "Mobile Banking App",
-    assignedTo: [allUsers[1], allUsers[3]],
+    assignedTo: [allUsers[1], allUsers[4]],
     status: "Completed",
     progress: 100,
     startDate: "2023-03-01",
@@ -91,7 +91,7 @@ export const dummyProjects: Project[] = [
   {
     id: "PROJ-003",
     name: "CRM System",
-    assignedTo: [allUsers[0], allUsers[3], allUsers[1]],
+    assignedTo: [allUsers[0], allUsers[3], allUsers[4]],
     status: "On Hold",
     progress: 30,
     startDate: "2023-05-20",
@@ -126,7 +126,7 @@ export const dummyProjects: Project[] = [
   {
     id: "PROJ-005",
     name: "Data Analytics Dashboard",
-    assignedTo: [allUsers[1], allUsers[3]],
+    assignedTo: [allUsers[1], allUsers[4]],
     status: "In Progress",
     progress: 50,
     startDate: "2023-09-01",
