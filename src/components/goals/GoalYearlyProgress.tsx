@@ -128,10 +128,25 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
                   const isFutureDay = isAfter(day.date, todayStart);
                   const isValidDay = isDayValidForGoal(day.date);
                   const isDisabled = isFutureDay || !isValidDay;
+                  const isMissed = isValidDay && day.isCompleted === false;
 
-                  let bgColor = '#E5E7EB'; // Default for non-valid past days
-                  if (isValidDay) {
-                    bgColor = day.isCompleted === undefined ? '#E5E7EB' : (day.isCompleted ? color : '#6B7280');
+                  const buttonStyle: React.CSSProperties = {};
+                  let buttonClasses = "w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed";
+
+                  if (isMissed) {
+                    buttonStyle.backgroundColor = 'transparent';
+                    buttonStyle.border = `1px solid ${color}`;
+                    buttonClasses += ' box-border';
+                  } else {
+                    let bgColor = '#E5E7EB'; // Default for non-valid, or untracked valid days
+                    if (isValidDay && day.isCompleted === true) {
+                      bgColor = color;
+                    }
+                    buttonStyle.backgroundColor = bgColor;
+                  }
+
+                  if (isFutureDay) {
+                    buttonStyle.opacity = 0.2;
                   }
 
                   return (
@@ -141,11 +156,8 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
                           <button
                             onClick={() => handleDayClick(day.date)}
                             disabled={isDisabled}
-                            className="w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed"
-                            style={{ 
-                              backgroundColor: bgColor,
-                              opacity: isFutureDay ? 0.2 : 1,
-                            }}
+                            className={buttonClasses}
+                            style={buttonStyle}
                           />
                         </TooltipTrigger>
                         <TooltipContent>
