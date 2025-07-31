@@ -139,16 +139,26 @@ const ProjectDetail = () => {
       updatedProject.comments = [...(currentEditedProject.comments || []), newComment];
 
       if (newComment.isTicket) {
-        const mentionRegex = /@([a-zA-Z0-9\s._-]+)/g;
-        const mentionedNames = [...newComment.text.matchAll(mentionRegex)].map(match => match[1].trim());
-        const usersToAssign = updatedProject.assignedTo.filter(user => mentionedNames.includes(user.name));
-        const newTask: Task = {
-          id: `task-${Date.now()}`,
-          text: newComment.text.replace(mentionRegex, '').replace(/\s\s+/g, ' ').trim(),
-          completed: false,
-          assignedTo: usersToAssign.map(user => user.id),
-        };
-        updatedProject.tasks = [...(currentEditedProject.tasks || []), newTask];
+        const userMentionRegex = /@([^@#]+)/g;
+        const allMentionsRegex = /(?:@|#\/)[^@#]+/g;
+
+        const mentionedNames = [...newComment.text.matchAll(userMentionRegex)].map(match => match[1].trim());
+        
+        const usersToAssign = updatedProject.assignedTo.filter(user => 
+          mentionedNames.includes(user.name)
+        );
+
+        const newTaskText = newComment.text.replace(allMentionsRegex, '').replace(/\s\s+/g, ' ').trim();
+
+        if (newTaskText) {
+          const newTask: Task = {
+            id: `task-${Date.now()}`,
+            text: newTaskText,
+            completed: false,
+            assignedTo: usersToAssign.map(user => user.id),
+          };
+          updatedProject.tasks = [...(currentEditedProject.tasks || []), newTask];
+        }
       }
 
       if (!isEditing) {
