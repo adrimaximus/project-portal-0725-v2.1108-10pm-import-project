@@ -25,7 +25,7 @@ const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (name: string, value: string | undefined) => {
+  const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -68,13 +68,13 @@ const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
         <Select
           name="assignedTo"
           value={formData.assignedTo || ''}
-          onValueChange={(value) => handleSelectChange('assignedTo', value === 'none' ? undefined : value)}
+          onValueChange={(value) => handleSelectChange('assignedTo', value === '' ? undefined : value)}
         >
           <SelectTrigger id="assignedTo">
             <SelectValue placeholder="Select a user" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">Unassigned</SelectItem>
+            <SelectItem value="">Unassigned</SelectItem>
             {allUsers.map((user) => (
               <SelectItem key={user.id} value={user.id}>
                 {user.name}
