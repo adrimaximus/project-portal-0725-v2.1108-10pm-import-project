@@ -231,8 +231,8 @@ const ProjectDetails = () => {
         <Separator />
 
         <ProjectComments initialComments={comments} />
-      </CardContent>
-    </Card>
+      </div>
+    </PortalLayout>
   );
 };
 
