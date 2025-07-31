@@ -37,6 +37,7 @@ const Index = () => {
                 <TableHead>Project Progress</TableHead>
                 <TableHead>Project Value</TableHead>
                 <TableHead>Payment Due</TableHead>
+                <TableHead>Owner</TableHead>
                 <TableHead className="text-right">Team</TableHead>
               </TableRow>
             </TableHeader>
@@ -85,6 +86,14 @@ const Index = () => {
                       <div className="font-medium">
                         {project.paymentDueDate ? format(new Date(project.paymentDueDate), "MMM dd, yyyy") : 'N/A'}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {project.assignedTo && project.assignedTo.length > 0 && (
+                        <Avatar className="h-8 w-8 border-2 border-background">
+                          <AvatarImage src={project.assignedTo[0].avatar} alt={project.assignedTo[0].name} />
+                          <AvatarFallback>{project.assignedTo[0].initials}</AvatarFallback>
+                        </Avatar>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end -space-x-2">
