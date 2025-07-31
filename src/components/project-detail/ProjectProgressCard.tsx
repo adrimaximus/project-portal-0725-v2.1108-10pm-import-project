@@ -42,7 +42,7 @@ const TaskAssigneeSelector = ({
               />
               <Avatar className="mr-2 h-6 w-6">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback>{user.name.slice(0, 2)}</AvatarFallback>
+                <AvatarFallback>{user.initials || user.name?.slice(0, 2) || '??'}</AvatarFallback>
               </Avatar>
               <span>{user.name}</span>
             </CommandItem>
@@ -172,7 +172,7 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
                                 <TooltipTrigger>
                                   <Avatar className="h-6 w-6 border-2 border-background">
                                     <AvatarImage src={user.avatar} />
-                                    <AvatarFallback>{user.name.slice(0,1)}</AvatarFallback>
+                                    <AvatarFallback>{user.initials || user.name?.slice(0, 1) || '??'}</AvatarFallback>
                                   </Avatar>
                                 </TooltipTrigger>
                                 <TooltipContent>
