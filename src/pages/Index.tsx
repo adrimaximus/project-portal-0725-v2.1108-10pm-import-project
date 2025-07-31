@@ -82,17 +82,27 @@ const Index = () => {
 
   const topOwner = Object.values(ownerCounts).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
 
-  const collaboratorCounts = filteredProjects.reduce((acc, p) => {
+  const collaboratorStats = filteredProjects.reduce((acc, p) => {
       p.assignedTo.forEach(user => {
           if (!acc[user.id]) {
-              acc[user.id] = { ...user, projectCount: 0 };
+              acc[user.id] = { ...user, projectCount: 0, taskCount: 0 };
           }
           acc[user.id].projectCount++;
       });
       return acc;
   }, {} as Record<string, any>);
 
-  const collaborators = Object.values(collaboratorCounts).sort((a, b) => b.projectCount - a.projectCount);
+  filteredProjects.forEach(p => {
+      p.tasks?.forEach(task => {
+          task.assignedTo.forEach(userId => {
+              if (collaboratorStats[userId]) {
+                  collaboratorStats[userId].taskCount++;
+              }
+          });
+      });
+  });
+
+  const collaborators = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount);
   const topCollaborator = collaborators[0] || null;
 
   const userValueCounts = filteredProjects.reduce((acc, p) => {
@@ -135,7 +145,7 @@ const Index = () => {
                 <h2 className="text-2xl font-bold">Insights</h2>
                 <DateRangePicker date={date} onDateChange={setDate} />
             </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Project Value</CardTitle>
@@ -292,6 +302,7 @@ const Index = () => {
                             <TableRow>
                                 <TableHead>Collaborator</TableHead>
                                 <TableHead className="text-right">Projects</TableHead>
+                                <TableHead className="text-right">Tasks</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -307,6 +318,7 @@ const Index = () => {
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
+                                    <TableCell className="text-right font-medium">{c.taskCount}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
