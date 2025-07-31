@@ -83,7 +83,7 @@ const Index = () => {
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">
-                        {project.deadline ? format(new Date(project.deadline), "MMM dd, yyyy") : 'N/A'}
+                        {project.paymentDueDate ? format(new Date(project.paymentDueDate), "MMM dd, yyyy") : 'N/A'}
                       </div>
                     </TableCell>
                     <TableCell>
