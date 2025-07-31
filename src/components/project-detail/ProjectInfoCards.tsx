@@ -75,8 +75,8 @@ const ProjectInfoCards = ({
     style: "currency", currency: "IDR", minimumFractionDigits: 0,
   }).format(project.budget);
 
-  const startDateFormatted = project.startDate
-    ? new Date(project.startDate).toLocaleDateString("en-US", {
+  const startDateFormatted = (project as any).startDate
+    ? new Date((project as any).startDate).toLocaleDateString("en-US", {
         year: 'numeric', month: 'long', day: 'numeric'
       })
     : "Not Set";
@@ -173,13 +173,13 @@ const ProjectInfoCards = ({
           {isEditing && editedProject ? (
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !editedProject.startDate && "text-muted-foreground")}>
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !(editedProject as any).startDate && "text-muted-foreground")}>
                   <CalendarDays className="mr-2 h-4 w-4" />
-                  {editedProject.startDate ? format(new Date(editedProject.startDate), "PPP") : <span>Pick a date</span>}
+                  {(editedProject as any).startDate ? format(new Date((editedProject as any).startDate), "PPP") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={editedProject.startDate ? new Date(editedProject.startDate) : undefined} onSelect={(date) => onDateChange('startDate', date)} initialFocus />
+                <Calendar mode="single" selected={(editedProject as any).startDate ? new Date((editedProject as any).startDate) : undefined} onSelect={(date) => onDateChange('startDate', date)} initialFocus />
               </PopoverContent>
             </Popover>
           ) : (

@@ -5,11 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { TwitterPicker } from 'react-color';
 import IconPicker from './IconPicker';
 import type { LucideIcon } from 'lucide-react';
 import { Target } from 'lucide-react';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { CustomColorPicker } from './CustomColorPicker';
 
 interface GoalDetailProps {
   goal?: Goal;
@@ -64,31 +63,26 @@ const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
         />
       </div>
 
-      <div>
-        <Label>Icon & Color</Label>
-        <div className="flex items-center gap-2 mt-1">
+      <div className="flex items-end gap-2">
+        <div className="flex-grow">
+          <Label>Icon & Color</Label>
           <IconPicker onSelectIcon={handleIconSelect} currentColor={editedGoal.color}>
-            <Button variant="outline" className="flex-grow flex items-center justify-start h-10 px-3 gap-3">
-              <div className="p-1 rounded-lg" style={{ backgroundColor: getIconBackgroundColor() }}>
-                <editedGoal.icon className="h-5 w-5" style={{ color: editedGoal.color }} />
+            <Button variant="outline" className="w-full mt-1 flex items-center justify-between h-10 px-3">
+              <div className="flex items-center gap-3">
+                <div className="p-1 rounded-lg" style={{ backgroundColor: getIconBackgroundColor() }}>
+                  <editedGoal.icon className="h-5 w-5" style={{ color: editedGoal.color }} />
+                </div>
+                <span>Select Icon</span>
               </div>
-              <span>Select Icon</span>
             </Button>
           </IconPicker>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-10 h-10 p-0 flex-shrink-0">
-                <div className="w-6 h-6 rounded-md border" style={{ backgroundColor: editedGoal.color }} />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 border-0">
-              <CustomColorPicker
-                color={editedGoal.color}
-                onChange={(newColor) => setEditedGoal(prev => ({ ...prev, color: newColor }))}
-              />
-            </PopoverContent>
-          </Popover>
         </div>
+        <TwitterPicker
+          color={editedGoal.color}
+          onChangeComplete={(color) => setEditedGoal(prev => ({ ...prev, color: color.hex }))}
+          triangle="hide"
+          styles={{ default: { card: { boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: '0.375rem' } } }}
+        />
       </div>
 
       <div>

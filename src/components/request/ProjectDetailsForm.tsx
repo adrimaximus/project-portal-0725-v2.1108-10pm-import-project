@@ -11,14 +11,9 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import TeamSelector from './TeamSelector';
 import { User } from '@/data/users';
-import { Service } from '@/data/services';
+import { dummyUsers } from '@/data/users';
 
-interface ProjectDetailsFormProps {
-  selectedServices: Service[];
-  onBack: () => void;
-}
-
-const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
+const ProjectDetailsForm = () => {
   const [deadline, setDeadline] = useState<Date>();
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
 
@@ -70,10 +65,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         <div className="space-y-2">
           <Label>Team</Label>
           <TeamSelector selectedUsers={selectedUsers} onSelectionChange={setSelectedUsers} />
-        </div>
-        <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={onBack}>Back</Button>
-            <Button>Submit Request</Button>
         </div>
       </CardContent>
     </Card>

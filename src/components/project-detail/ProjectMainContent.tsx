@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Project, AssignedUser } from "@/data/projects";
+import { Project } from "@/data/projects";
 import { Comment } from "../ProjectComments";
 import ProjectComments from "../ProjectComments";
 import ProjectOverviewTab from "./ProjectOverviewTab";
@@ -9,7 +9,7 @@ interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
-  onTeamChange: (selectedUsers: AssignedUser[]) => void;
+  onTeamChange: (selectedUsers: Project['assignedTo']) => void;
   onFilesChange: (files: File[]) => void;
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
