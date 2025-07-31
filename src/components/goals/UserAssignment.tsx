@@ -99,7 +99,7 @@ export function UserAssignment({ selectedUserIds, onSelectionChange }: UserAssig
                         <AvatarFallback className="text-xs">{user.initials}</AvatarFallback>
                       </Avatar>
                       <span>{user.name}</span>
-                      <span className={`ml-auto h-2 w-2 rounded-full ${user.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      <span className={`ml-auto h-2 w-2 rounded-full ${user.status === 'Online' ? 'bg-green-500' : 'bg-gray-400'}`} />
                     </div>
                   </CommandItem>
                 ))}
