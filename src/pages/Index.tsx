@@ -25,8 +25,7 @@ import {
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ListChecks, CreditCard, User, Users, LayoutGrid } from "lucide-react";
-import ServiceSelection from "@/components/ServiceSelection";
+import { DollarSign, ListChecks, CreditCard, User, Users } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -34,9 +33,6 @@ const Index = () => {
     from: subYears(new Date(), 1),
     to: new Date(),
   });
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
-
-  const allServices = [...new Set(dummyProjects.flatMap(p => p.services || []))].sort();
 
   const filteredProjects = dummyProjects.filter(project => {
     // Date filter for project timeline intersection
@@ -54,13 +50,6 @@ const Index = () => {
       // Check for intersection: (ProjectStart <= PickerEnd) and (ProjectEnd >= PickerFrom)
       // If there is no overlap, filter it out.
       if (projectStart > pickerTo || projectEnd < pickerFrom) {
-        return false;
-      }
-    }
-
-    // Service filter
-    if (selectedServices.length > 0) {
-      if (!project.services || !project.services.some(s => selectedServices.includes(s))) {
         return false;
       }
     }
@@ -127,19 +116,6 @@ const Index = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{'Rp ' + totalValue.toLocaleString('id-ID')}</div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Service Selection</CardTitle>
-                        <LayoutGrid className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <ServiceSelection
-                            services={allServices}
-                            selectedServices={selectedServices}
-                            onSelectionChange={setSelectedServices}
-                        />
                     </CardContent>
                 </Card>
                 <Card>
