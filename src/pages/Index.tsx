@@ -55,13 +55,16 @@ const Index = () => {
 
   const ownerCounts = filteredProjects.reduce((acc, p) => {
       if (p.assignedTo.length > 0) {
-          const ownerName = p.assignedTo[0].name;
-          acc[ownerName] = (acc[ownerName] || 0) + 1;
+          const owner = p.assignedTo[0];
+          if (!acc[owner.id]) {
+              acc[owner.id] = { ...owner, projectCount: 0 };
+          }
+          acc[owner.id].projectCount++;
       }
       return acc;
-  }, {} as Record<string, number>);
+  }, {} as Record<string, any>);
 
-  const topOwner = Object.entries(ownerCounts).sort((a, b) => b[1] - a[1])[0] || ["N/A", 0];
+  const topOwner = Object.values(ownerCounts).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
 
   const collaboratorCounts = filteredProjects.reduce((acc, p) => {
       p.assignedTo.forEach(user => {
@@ -136,8 +139,23 @@ const Index = () => {
                         <User className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{topOwner[0]}</div>
-                        <p className="text-xs text-muted-foreground">{topOwner[1]} projects</p>
+                        {topOwner ? (
+                            <div className="flex items-center gap-4">
+                                <Avatar>
+                                    <AvatarImage src={topOwner.avatar} alt={topOwner.name} />
+                                    <AvatarFallback>{topOwner.initials}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="text-lg font-bold">{topOwner.name}</div>
+                                    <p className="text-xs text-muted-foreground">{topOwner.projectCount} projects</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="text-2xl font-bold">N/A</div>
+                                <p className="text-xs text-muted-foreground">0 projects</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
