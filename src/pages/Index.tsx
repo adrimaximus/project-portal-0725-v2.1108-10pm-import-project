@@ -35,7 +35,7 @@ const Index = () => {
                 <TableHead>Project Status</TableHead>
                 <TableHead>Payment Status</TableHead>
                 <TableHead>Project Progress</TableHead>
-                <TableHead>Budget</TableHead>
+                <TableHead>Project Value</TableHead>
                 <TableHead>Deadline</TableHead>
                 <TableHead className="text-right">Team</TableHead>
               </TableRow>
@@ -78,12 +78,12 @@ const Index = () => {
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">
-                        ${project.budget.toLocaleString()}
+                        {'Rp ' + project.budget.toLocaleString('id-ID')}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">
-                        {format(new Date(project.deadline), "MMM dd, yyyy")}
+                        {project.deadline ? format(new Date(project.deadline), "MMM dd, yyyy") : 'N/A'}
                       </div>
                     </TableCell>
                     <TableCell>
