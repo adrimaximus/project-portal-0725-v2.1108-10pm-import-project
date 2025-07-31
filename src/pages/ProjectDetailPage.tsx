@@ -103,6 +103,12 @@ const ProjectDetail = () => {
     }
   };
 
+  const handleServicesChange = (services: string[]) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, services });
+    }
+  };
+
   const handleTasksUpdate = (updatedTasks: Task[]) => {
     if (editedProject) {
       const completedTasks = updatedTasks.filter(task => task.completed).length;
@@ -148,6 +154,7 @@ const ProjectDetail = () => {
               onDescriptionChange={handleDescriptionChange}
               onTeamChange={handleTeamChange}
               onFilesChange={handleFilesChange}
+              onServicesChange={handleServicesChange}
               comments={projectComments}
               setComments={setComments}
               projectId={project.id}

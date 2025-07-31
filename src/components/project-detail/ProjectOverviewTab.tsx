@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { differenceInDays, parseISO, isBefore, isAfter, isToday, isTomorrow } from 'date-fns';
 import ProjectRating from "./ProjectRating";
 import { useState } from "react";
+import ProjectServices from "./ProjectServices";
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -14,6 +15,7 @@ interface ProjectOverviewTabProps {
   onDescriptionChange: (value: string) => void;
   onTeamChange: (selectedUsers: AssignedUser[]) => void;
   onFilesChange: (files: File[]) => void;
+  onServicesChange: (services: string[]) => void;
 }
 
 const Section = ({ title, children }: { title: string, children: React.ReactNode }) => (
@@ -23,7 +25,7 @@ const Section = ({ title, children }: { title: string, children: React.ReactNode
   </div>
 );
 
-const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesChange }: ProjectOverviewTabProps) => {
+const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesChange, onServicesChange }: ProjectOverviewTabProps) => {
   const [review, setReview] = useState<{ rating: number; comment: string } | null>(null);
 
   const handleReviewSubmit = (rating: number, comment: string) => {
@@ -67,7 +69,8 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
 
       return null;
 
-    } catch (error) {
+    } catch (error)
+      {
       return null;
     }
   };
@@ -102,6 +105,14 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
         <ProjectTeam
           assignedTo={project.assignedTo}
           onTeamChange={onTeamChange}
+        />
+      </Section>
+
+      <Section title="Services">
+        <ProjectServices
+          selectedServices={project.services}
+          isEditing={isEditing}
+          onServicesChange={onServicesChange}
         />
       </Section>
 
