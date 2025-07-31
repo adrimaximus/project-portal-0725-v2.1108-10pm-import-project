@@ -76,6 +76,9 @@ const GoalDetailPage = () => {
 
   const Icon = goal.icon;
 
+  const dayKeys = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const specificDayKeys = goal.specificDays?.map(dayIndex => dayKeys[dayIndex]);
+
   return (
     <PortalLayout>
       <Breadcrumb>
@@ -194,7 +197,7 @@ const GoalDetailPage = () => {
           color={goal.color}
           onToggleCompletion={handleToggleCompletion}
           frequency={goal.frequency}
-          specificDays={goal.specificDays?.map(String)}
+          specificDays={specificDayKeys}
         />
       </div>
     </PortalLayout>
