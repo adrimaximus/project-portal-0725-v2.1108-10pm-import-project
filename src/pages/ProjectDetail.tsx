@@ -132,31 +132,25 @@ const ProjectDetail = () => {
   };
 
   const handleAddCommentOrTicket = (newComment: Comment) => {
-    if (editedProject) {
-      const updatedProject = { ...editedProject };
-      
-      updatedProject.comments = [...(updatedProject.comments || []), newComment];
+    setEditedProject(currentEditedProject => {
+      if (!currentEditedProject) return null;
+
+      const updatedProject = { ...currentEditedProject };
+      updatedProject.comments = [...(currentEditedProject.comments || []), newComment];
 
       if (newComment.isTicket) {
         const mentionRegex = /@([a-zA-Z0-9\s._-]+)/g;
-        
         const mentionedNames = [...newComment.text.matchAll(mentionRegex)].map(match => match[1].trim());
-        
-        const usersToAssign = updatedProject.assignedTo.filter(user => 
-          mentionedNames.includes(user.name)
-        );
-
+        const usersToAssign = updatedProject.assignedTo.filter(user => mentionedNames.includes(user.name));
         const newTask: Task = {
           id: `task-${Date.now()}`,
           text: newComment.text.replace(mentionRegex, '').replace(/\s\s+/g, ' ').trim(),
           completed: false,
           assignedTo: usersToAssign.map(user => user.id),
         };
-        
-        updatedProject.tasks = [...(updatedProject.tasks || []), newTask];
+        updatedProject.tasks = [...(currentEditedProject.tasks || []), newTask];
       }
 
-      setEditedProject(updatedProject);
       if (!isEditing) {
         setProject(updatedProject);
         const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
@@ -164,7 +158,9 @@ const ProjectDetail = () => {
           dummyProjects[projectIndex] = updatedProject;
         }
       }
-    }
+      
+      return updatedProject;
+    });
   };
 
   const ticketCount = editedProject.comments?.filter(c => c.isTicket).length || 0;
