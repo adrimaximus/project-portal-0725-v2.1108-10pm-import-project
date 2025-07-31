@@ -1,5 +1,5 @@
 import React from "react";
-import { Project, AssignedUser } from "@/data/projects";
+import { Project, AssignedUser, User } from "@/data/projects";
 import { allUsers } from "@/data/users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -25,13 +25,13 @@ interface AssignedTeamProps {
 const AssignedTeam = ({ users, isEditing, onTeamChange }: AssignedTeamProps) => {
   const [open, setOpen] = React.useState(false);
 
-  const handleSelect = (currentUser: AssignedUser) => {
+  const handleSelect = (currentUser: User) => {
     const isSelected = users.some(u => u.id === currentUser.id);
     let newSelectedUsers: AssignedUser[];
     if (isSelected) {
       newSelectedUsers = users.filter(u => u.id !== currentUser.id);
     } else {
-      const newUserToAdd: AssignedUser = { ...currentUser, status: 'Offline' };
+      const newUserToAdd: AssignedUser = { ...currentUser, role: 'Team Member' };
       newSelectedUsers = [...users, newUserToAdd];
     }
     onTeamChange(newSelectedUsers);

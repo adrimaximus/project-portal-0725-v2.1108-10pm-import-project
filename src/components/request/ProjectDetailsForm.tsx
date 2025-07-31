@@ -69,14 +69,21 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       status: "Requested",
       progress: 0,
       startDate: format(date.from, "yyyy-MM-dd"),
+      endDate: format(date.to, "yyyy-MM-dd"),
       deadline: format(date.to, "yyyy-MM-dd"),
       paymentDueDate: paymentDueDate ? format(paymentDueDate, "yyyy-MM-dd") : undefined,
       budget: budget as number,
       paymentStatus: "proposed",
-      createdBy: allUsers[0], // Assume the first user is the creator for new projects
+      createdBy: allUsers[0],
       assignedTo: assignedTeam,
       services: selectedServices.map(s => s.title),
       briefFiles: briefFiles,
+      imageUrl: '/placeholder.svg',
+      category: selectedServices.length > 0 ? selectedServices[0].title : 'General',
+      rating: 0,
+      tickets: 0,
+      tasks: [],
+      activityFeed: [],
     };
 
     dummyProjects.unshift(newProject);

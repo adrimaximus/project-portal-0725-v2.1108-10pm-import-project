@@ -37,7 +37,7 @@ const Index = () => {
                   <div className="flex items-center justify-between w-full">
                     <span className="text-sm text-muted-foreground">Team</span>
                     <div className="flex -space-x-2">
-                      {project.assigned.map((user) => (
+                      {project.assignedTo.map((user) => (
                         <Avatar key={user.id} className="h-8 w-8 border-2 border-card">
                           <AvatarImage src={user.avatar} alt={user.name} />
                           <AvatarFallback>{user.initials}</AvatarFallback>

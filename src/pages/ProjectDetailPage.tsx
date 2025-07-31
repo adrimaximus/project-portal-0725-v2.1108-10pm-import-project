@@ -1,104 +1,170 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { dummyProjects, Project, Task } from "@/data/projects";
+import { format } from "date-fns";
+import { dummyProjects, Project, AssignedUser, Task } from "@/data/projects";
+import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
-import ProjectInfoCard from "@/components/project-detail/ProjectInfoCard";
+import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
+import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
+import { Comment } from "@/components/ProjectComments";
+import { initialComments } from "@/data/comments";
 import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
-import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
-import ProjectActivityFeed from "@/components/project-detail/ProjectActivityFeed";
-import ProjectDetailsTabs from "@/components/project-detail/ProjectDetailsTabs";
 
-const ProjectDetailPage = () => {
-  const { projectId } = useParams();
+const ProjectDetail = () => {
+  const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  
   const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editableProject, setEditableProject] = useState<Project | null>(null);
+  const [editedProject, setEditedProject] = useState<Project | null>(null);
+  const [comments, setComments] = useState<Comment[]>(initialComments);
 
   useEffect(() => {
-    const foundProject = dummyProjects.find((p) => p.id === projectId);
+    const foundProject = dummyProjects.find(p => p.id === projectId);
     if (foundProject) {
-      setProject(foundProject);
-      setEditableProject(JSON.parse(JSON.stringify(foundProject))); // Deep copy for editing
+      const projectWithTasks = {
+        ...foundProject,
+        tasks: foundProject.tasks || [],
+      };
+      setProject(projectWithTasks);
+      setEditedProject(structuredClone(projectWithTasks));
     } else {
-      navigate("/404");
+      navigate('/');
     }
   }, [projectId, navigate]);
 
-  const handleEditToggle = () => {
-    setIsEditing(!isEditing);
-    if (project) {
-      // Reset changes if canceling
-      setEditableProject(JSON.parse(JSON.stringify(project)));
-    }
-  };
+  if (!project || !editedProject) {
+    return (
+      <PortalLayout>
+        <div className="flex items-center justify-center h-full">
+          <p>Loading project...</p>
+        </div>
+      </PortalLayout>
+    );
+  }
 
   const handleSaveChanges = () => {
-    if (editableProject) {
-      // Find the index of the project in the main array
-      const projectIndex = dummyProjects.findIndex(p => p.id === editableProject.id);
-      if (projectIndex !== -1) {
-        // Update the main array
-        dummyProjects[projectIndex] = editableProject;
-      }
-      // Update the state
-      setProject(editableProject);
-      setIsEditing(false);
+    const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
+    if (projectIndex !== -1 && editedProject) {
+      dummyProjects[projectIndex] = editedProject;
+      setProject(editedProject);
     }
+    setIsEditing(false);
+  };
+
+  const handleCancelChanges = () => {
+    if (project) {
+      setEditedProject(structuredClone(project));
+    }
+    setIsEditing(false);
   };
 
   const handleProjectNameChange = (name: string) => {
-    if (editableProject) {
-      setEditableProject({ ...editableProject, name });
+    if (editedProject) {
+      setEditedProject({ ...editedProject, name });
+    }
+  };
+
+  const handleSelectChange = (name: 'status' | 'paymentStatus', value: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, [name]: value as any });
+    }
+  };
+
+  const handleDateChange = (name: 'deadline' | 'paymentDueDate' | 'startDate', date: Date | undefined) => {
+    if (editedProject) {
+      const originalDate = (project as any)[name];
+      const dateString = date ? format(date, 'yyyy-MM-dd') : originalDate;
+      setEditedProject({ ...editedProject, [name]: dateString });
+    }
+  };
+
+  const handleBudgetChange = (value: number | undefined) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, budget: value || 0 });
+    }
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, description: value });
+    }
+  };
+
+  const handleTeamChange = (selectedUsers: AssignedUser[]) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, assignedTo: selectedUsers });
+    }
+  };
+  
+  const handleFilesChange = (files: File[]) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, briefFiles: files });
     }
   };
 
   const handleTasksUpdate = (updatedTasks: Task[]) => {
-    if (editableProject) {
+    if (editedProject) {
       const completedTasks = updatedTasks.filter(task => task.completed).length;
       const totalTasks = updatedTasks.length;
       const newProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-      setEditableProject({ 
-        ...editableProject, 
+      setEditedProject({
+        ...editedProject,
         tasks: updatedTasks,
         progress: newProgress,
       });
     }
   };
 
-  if (!project || !editableProject) {
-    return <div>Loading project...</div>;
-  }
-
-  const projectData = isEditing ? editableProject : project;
+  const projectComments = comments.filter(c => c.projectId === projectId);
+  const ticketCount = projectComments.filter(c => c.isTicket).length;
 
   return (
-    <div className="flex h-full flex-col">
-      <main className="flex-1 space-y-6 overflow-y-auto p-4 lg:p-6">
-        <ProjectHeader
-          project={projectData}
+    <PortalLayout>
+      <div className="h-full overflow-y-auto space-y-6 p-4 lg:p-6">
+        <ProjectHeader 
+          project={project} 
           isEditing={isEditing}
-          projectName={editableProject.name}
+          projectName={editedProject.name}
           onProjectNameChange={handleProjectNameChange}
-          onEditToggle={handleEditToggle}
+          onEditToggle={() => setIsEditing(!isEditing)}
           onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleEditToggle} // Cancel is the same as toggling off
+          onCancelChanges={handleCancelChanges}
         />
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="space-y-6 md:col-span-2">
-            <ProjectInfoCard project={projectData} />
-            <ProjectDetailsTabs project={projectData} isEditing={isEditing} onTasksUpdate={handleTasksUpdate} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <ProjectInfoCards 
+              project={project}
+              isEditing={isEditing}
+              editedProject={editedProject}
+              onSelectChange={handleSelectChange}
+              onDateChange={handleDateChange}
+              onBudgetChange={handleBudgetChange}
+            />
+            <ProjectMainContent
+              project={editedProject}
+              isEditing={isEditing}
+              onDescriptionChange={handleDescriptionChange}
+              onTeamChange={handleTeamChange}
+              onFilesChange={handleFilesChange}
+              comments={projectComments}
+              setComments={setComments}
+              projectId={project.id}
+              ticketCount={ticketCount}
+              allProjects={dummyProjects}
+            />
           </div>
-          <div className="space-y-6 md:col-span-1">
-            <ProjectProgressCard project={projectData} onTasksUpdate={isEditing ? handleTasksUpdate : undefined} />
-            <ProjectTeamCard project={projectData} />
-            <ProjectActivityFeed activities={projectData.activityFeed || []} />
+          <div className="lg:col-span-1 space-y-6">
+            <ProjectProgressCard 
+              project={editedProject}
+              onTasksUpdate={handleTasksUpdate}
+            />
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </PortalLayout>
   );
 };
 
-export default ProjectDetailPage;
+export default ProjectDetail;

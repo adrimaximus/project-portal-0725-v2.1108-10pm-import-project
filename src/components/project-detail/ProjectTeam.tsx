@@ -1,4 +1,4 @@
-import { AssignedUser } from "@/data/projects";
+import { AssignedUser, User } from "@/data/projects";
 import { allUsers } from "@/data/users";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -16,9 +16,9 @@ interface ProjectTeamProps {
 const ProjectTeam = ({ assignedTo, onTeamChange }: ProjectTeamProps) => {
   const [open, setOpen] = useState(false);
 
-  const handleSelect = (user: AssignedUser) => {
+  const handleSelect = (user: User) => {
     if (!assignedTo.find(u => u.id === user.id)) {
-      onTeamChange([...assignedTo, user]);
+      onTeamChange([...assignedTo, { ...user, role: 'Team Member' }]);
     }
     setOpen(false);
   };
@@ -83,7 +83,6 @@ const ProjectTeam = ({ assignedTo, onTeamChange }: ProjectTeamProps) => {
                       </Avatar>
                       <div>
                         <p>{user.name}</p>
-                        <p className="text-xs text-muted-foreground">{user.role}</p>
                       </div>
                     </CommandItem>
                   ))}

@@ -46,7 +46,7 @@ const ProjectDetails = () => {
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "Completed":
-        return "success";
+        return "default";
       case "In Progress":
         return "default";
       case "On Hold":
@@ -231,8 +231,8 @@ const ProjectDetails = () => {
         <Separator />
 
         <ProjectComments initialComments={comments} />
-      </div>
-    </PortalLayout>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Project } from "@/data/projects";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -74,7 +75,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
                 </TableCell>
                 <TableCell>
                   <div className="flex -space-x-2">
-                    {project.assigned.map((user) => (
+                    {project.assignedTo.map((user) => (
                       <Avatar key={user.id} className="border-2 border-background">
                         <AvatarImage src={user.avatar} alt={user.name} />
                         <AvatarFallback>{user.initials}</AvatarFallback>

@@ -1,5 +1,5 @@
 import PortalLayout from "@/components/PortalLayout";
-import ProjectsTable, { columns } from "@/components/ProjectsTable";
+import ProjectsTable from "@/components/ProjectsTable";
 import { dummyProjects } from "@/data/projects";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
@@ -17,7 +17,7 @@ const Projects = () => {
           New Project
         </Button>
       </div>
-      <ProjectsTable columns={columns} data={dummyProjects} />
+      <ProjectsTable projects={dummyProjects} />
     </PortalLayout>
   );
 };

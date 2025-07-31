@@ -83,7 +83,7 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
             </Avatar>
             <div>
               <p className="font-medium text-primary">{project.createdBy.name}</p>
-              <p className="text-xs">{project.createdBy.role}</p>
+              <p className="text-xs">{project.createdBy.email}</p>
             </div>
           </div>
         </Section>

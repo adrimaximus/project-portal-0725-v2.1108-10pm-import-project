@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { allUsers } from '@/data/users';
-import { AssignedUser } from '@/data/projects';
+import { AssignedUser, User } from '@/data/projects';
 import { Check, ChevronsUpDown, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,12 +16,12 @@ interface TeamSelectorProps {
 const TeamSelector = ({ selectedUsers, onTeamChange }: TeamSelectorProps) => {
   const [open, setOpen] = useState(false);
 
-  const handleSelect = (user: AssignedUser) => {
+  const handleSelect = (user: User) => {
     const isSelected = selectedUsers.some(u => u.id === user.id);
     if (isSelected) {
       onTeamChange(selectedUsers.filter(u => u.id !== user.id));
     } else {
-      onTeamChange([...selectedUsers, user]);
+      onTeamChange([...selectedUsers, { ...user, role: 'Team Member' }]);
     }
   };
 
