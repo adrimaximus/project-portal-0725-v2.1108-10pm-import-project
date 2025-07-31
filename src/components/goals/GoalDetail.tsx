@@ -56,7 +56,6 @@ const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
           <SelectContent>
             <SelectItem value="Daily">Daily</SelectItem>
             <SelectItem value="Weekly">Weekly</SelectItem>
-            <SelectItem value="Monthly">Monthly</SelectItem>
           </SelectContent>
         </Select>
       </div>
