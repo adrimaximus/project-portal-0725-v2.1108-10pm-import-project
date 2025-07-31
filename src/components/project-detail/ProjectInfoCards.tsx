@@ -1,210 +1,249 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project } from "@/data/projects";
-import { format, differenceInDays, isPast } from "date-fns";
-import { id as idLocale } from "date-fns/locale";
-import { Badge, BadgeProps } from "../ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { format, isPast, differenceInDays } from "date-fns";
+import { Activity, CreditCard, Wallet, CalendarDays, CalendarClock } from "lucide-react";
 
 interface ProjectInfoCardsProps {
   project: Project;
+  isEditing: boolean;
+  editedProject: Project | null;
+  onSelectChange: (name: 'status' | 'paymentStatus', value: string) => void;
+  onDateChange: (name: 'deadline' | 'paymentDueDate' | 'startDate', date: Date | undefined) => void;
+  onBudgetChange: (value: number | undefined) => void;
 }
 
-const getStatusBadgeVariant = (status: Project["status"]): BadgeProps["variant"] => {
-  switch (status) {
-    case "Completed":
-    case "Done":
-    case "Billed":
-      return "default";
-    case "On Track":
-    case "In Progress":
-      return "success";
-    case "At Risk":
-    case "On Hold":
-      return "secondary"; // Mapped from warning
-    case "Off Track":
-    case "Cancelled":
-      return "destructive";
-    default:
-      return "secondary";
-  }
-};
-
-const getPaymentStatusBadgeVariant = (status: Project["paymentStatus"]): BadgeProps["variant"] => {
-  switch (status) {
-    case "Paid":
-    case "paid":
-    case "approved":
-    case "po_created":
-    case "on_process":
-      return "success";
-    case "Pending":
-    case "pending":
-      return "secondary"; // Mapped from warning
-    case "Overdue":
-    case "cancelled":
-      return "destructive";
-    case "proposed":
-    default:
-      return "secondary";
-  }
-};
-
-const getPaymentDueDateInfo = (project: Project) => {
-  if (project.paymentStatus === "po_created" || project.paymentStatus === "on_process") {
-    return { text: "On Process", className: "text-gray-500" };
-  }
-  if (!project.paymentDue) {
-    return { text: "Not Set", className: "text-gray-500" };
-  }
-
-  const dueDate = new Date(project.paymentDue);
-  const now = new Date();
-  const daysDifference = differenceInDays(dueDate, now);
-
-  if (isPast(dueDate) && project.paymentStatus !== "Paid" && project.paymentStatus !== "paid") {
-    return {
-      text: `Overdue by ${Math.abs(daysDifference)} days`,
-      className: "text-red-500 font-semibold",
-    };
-  }
-
-  if (daysDifference <= 7 && project.paymentStatus !== "Paid" && project.paymentStatus !== "paid") {
-    return {
-      text: `Due in ${daysDifference} days`,
-      className: "text-orange-500 font-semibold",
-    };
-  }
-
-  return {
-    text: `Due on ${format(dueDate, "d MMM yyyy")}`,
-    className: "text-gray-500",
+const ProjectInfoCards = ({
+  project,
+  isEditing,
+  editedProject,
+  onSelectChange,
+  onDateChange,
+  onBudgetChange,
+}: ProjectInfoCardsProps) => {
+  const getStatusBadgeVariant = (status: Project["status"]) => {
+    switch (status) {
+      case "Completed":
+      case "Done":
+      case "Billed":
+        return "default";
+      case "In Progress":
+        return "secondary";
+      case "On Hold":
+      case "Cancelled":
+        return "destructive";
+      default:
+        return "outline";
+    }
   };
-};
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(value);
-};
+  const getPaymentStatusBadgeVariant = (status: Project["paymentStatus"]) => {
+    switch (status) {
+      case "paid": return "default";
+      case "approved":
+      case "po_created":
+      case "on_process":
+      case "pending": 
+        return "secondary";
+      case "cancelled": 
+        return "destructive";
+      case "proposed": 
+        return "outline";
+      default: 
+        return "outline";
+    }
+  };
 
-export function ProjectInfoCards({ project }: ProjectInfoCardsProps) {
-  const deadlineDate = new Date(project.dueDate);
-  const paymentDueDateInfo = getPaymentDueDateInfo(project);
+  const formatPaymentStatus = (status: Project["paymentStatus"]) => {
+    switch (status) {
+      case "po_created":
+        return "PO Created";
+      case "on_process":
+        return "On Process";
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
+  const budgetFormatted = new Intl.NumberFormat("id-ID", {
+    style: "currency", currency: "IDR", minimumFractionDigits: 0,
+  }).format(project.budget);
+
+  const startDateFormatted = (project as any).startDate
+    ? new Date((project as any).startDate).toLocaleDateString("en-US", {
+        year: 'numeric', month: 'long', day: 'numeric'
+      })
+    : "Not Set";
+
+  const deadlineFormatted = new Date(project.deadline).toLocaleDateString("en-US", {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  const paymentDueDateFormatted = project.paymentDueDate
+    ? new Date(project.paymentDueDate).toLocaleDateString("en-US", {
+        year: 'numeric', month: 'long', day: 'numeric'
+      })
+    : "Not Set";
+
+  const isPaymentOverdue = project.paymentDueDate && isPast(new Date(project.paymentDueDate)) && !['paid', 'cancelled'].includes(project.paymentStatus);
+  const paymentOverdueDays = project.paymentDueDate && isPaymentOverdue ? differenceInDays(new Date(), new Date(project.paymentDueDate)) : 0;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Project Value</CardTitle>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="h-4 w-4 text-muted-foreground"
-          >
-            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-          </svg>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(project.value)}</div>
-          <p className="text-xs text-muted-foreground">
-            Total budget for the project
-          </p>
-        </CardContent>
-      </Card>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Project Status</CardTitle>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="h-4 w-4 text-muted-foreground"
-          >
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
+          <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <Badge variant={getStatusBadgeVariant(project.status)}>
-            {project.status}
-          </Badge>
-          <p className="text-xs text-muted-foreground mt-2">
-            Current state of the project
-          </p>
+          {isEditing && editedProject ? (
+            <Select value={editedProject.status} onValueChange={(value) => onSelectChange('status', value)}>
+              <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Requested">Requested</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="Billed">Billed</SelectItem>
+                <SelectItem value="On Hold">On Hold</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                <SelectItem value="Done">Done</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge variant={getStatusBadgeVariant(project.status)}>
+              {project.status}
+            </Badge>
+          )}
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Project Deadline</CardTitle>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="h-4 w-4 text-muted-foreground"
-          >
-            <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-            <line x1="16" x2="16" y1="2" y2="6" />
-            <line x1="8" x2="8" y1="2" y2="6" />
-            <line x1="3" x2="21" y1="10" y2="10" />
-          </svg>
+          <CardTitle className="text-sm font-medium">Payment Status</CardTitle>
+          <CreditCard className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
-            {format(deadlineDate, "d MMM yyyy", { locale: idLocale })}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {differenceInDays(deadlineDate, new Date()) >= 0
-              ? `${differenceInDays(deadlineDate, new Date())} days remaining`
-              : `Overdue by ${Math.abs(
-                  differenceInDays(deadlineDate, new Date())
-                )} days`}
-          </p>
+          {isEditing && editedProject ? (
+            <Select value={editedProject.paymentStatus} onValueChange={(value) => onSelectChange('paymentStatus', value as Project["paymentStatus"])}>
+              <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="proposed">Proposed</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="po_created">PO Created</SelectItem>
+                <SelectItem value="on_process">On Process</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
+              {formatPaymentStatus(project.paymentStatus)}
+            </Badge>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Project Value</CardTitle>
+          <Wallet className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {isEditing && editedProject ? (
+            <div className="relative">
+              <span className="absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">IDR</span>
+              <CurrencyInput value={editedProject.budget} onChange={onBudgetChange} className="pl-12" />
+            </div>
+          ) : (
+            <div className="text-xl font-bold">{budgetFormatted}</div>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Project Start Date</CardTitle>
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {isEditing && editedProject ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !(editedProject as any).startDate && "text-muted-foreground")}>
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {(editedProject as any).startDate ? format(new Date((editedProject as any).startDate), "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={(editedProject as any).startDate ? new Date((editedProject as any).startDate) : undefined} onSelect={(date) => onDateChange('startDate', date)} initialFocus />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <div className="text-xl font-bold">{startDateFormatted}</div>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Project Due Date</CardTitle>
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {isEditing && editedProject ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !editedProject.deadline && "text-muted-foreground")}>
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {editedProject.deadline ? format(new Date(editedProject.deadline), "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={new Date(editedProject.deadline)} onSelect={(date) => onDateChange('deadline', date)} initialFocus />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <div>
+              <div className="text-xl font-bold">{deadlineFormatted}</div>
+            </div>
+          )}
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Payment Due</CardTitle>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="h-4 w-4 text-muted-foreground"
-          >
-            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
+          <CalendarClock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className={cn("text-lg font-bold", paymentDueDateInfo.className)}>
-            {paymentDueDateInfo.text}
-          </div>
-          <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
-            <span>Status</span>
-            <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
-              {project.paymentStatus}
-            </Badge>
-          </div>
+          {isEditing && editedProject ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !editedProject.paymentDueDate && "text-muted-foreground")}>
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {editedProject.paymentDueDate ? format(new Date(editedProject.paymentDueDate), "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={editedProject.paymentDueDate ? new Date(editedProject.paymentDueDate) : undefined} onSelect={(date) => onDateChange('paymentDueDate', date)} initialFocus />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <div>
+              <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
+              {isPaymentOverdue && (
+                <p className="text-xs text-red-500 mt-1">
+                  Overdue by {paymentOverdueDays} day{paymentOverdueDays !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
-}
+};
+
+export default ProjectInfoCards;

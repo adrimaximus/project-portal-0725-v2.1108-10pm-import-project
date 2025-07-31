@@ -1,5 +1,5 @@
 import PortalLayout from "@/components/PortalLayout";
-import { dummyProjects, Project } from "@/data/projects";
+import { dummyProjects } from "@/data/projects";
 import { useNavigate } from "react-router-dom";
 import {
   Table,
@@ -12,58 +12,9 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Star } from "lucide-react";
-
-const StatusBadge = ({ status }: { status: Project['status'] }) => {
-  const variants = {
-    'On Track': 'default',
-    'At Risk': 'secondary',
-    'Off Track': 'destructive',
-    'Completed': 'outline',
-  } as const;
-  return <Badge variant={variants[status]}>{status}</Badge>;
-};
-
-const PaymentStatusBadge = ({ status }: { status: Project['paymentStatus'] }) => {
-    const variants = {
-    'Paid': 'outline',
-    'Pending': 'secondary',
-    'Overdue': 'destructive',
-  } as const;
-  return <Badge variant={variants[status]}>{status}</Badge>;
-};
-
-const Rating = ({ rating }: { rating: number }) => {
-  return (
-    <div className="flex items-center">
-      {Array.from({ length: 5 }, (_, i) => (
-        <Star
-          key={i}
-          className={`h-4 w-4 ${i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
-        />
-      ))}
-    </div>
-  );
-};
 
 const Index = () => {
   const navigate = useNavigate();
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
 
   return (
     <PortalLayout>
@@ -73,21 +24,14 @@ const Index = () => {
           <p className="text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
         </div>
 
-        <div className="border rounded-lg overflow-x-auto">
+        <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Project Name</TableHead>
-                <TableHead>Project Owner</TableHead>
-                <TableHead>Project Status</TableHead>
-                <TableHead>Payment Status</TableHead>
-                <TableHead>Project Progress</TableHead>
-                <TableHead>Project Value</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Payment Due</TableHead>
-                <TableHead>Active Tickets</TableHead>
-                <TableHead>Rating</TableHead>
+                <TableHead className="w-[40%]">Project</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Progress</TableHead>
+                <TableHead className="text-right">Team</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -99,35 +43,30 @@ const Index = () => {
                 >
                   <TableCell>
                     <div className="font-medium">{project.name}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={project.owner.avatar} alt={project.owner.name} />
-                        <AvatarFallback>{project.owner.initials}</AvatarFallback>
-                      </Avatar>
-                      <span>{project.owner.name}</span>
+                    <div className="text-sm text-muted-foreground hidden md:block">
+                      {project.description}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={project.status} />
+                    <Badge variant="secondary">{project.category}</Badge>
                   </TableCell>
                   <TableCell>
-                    <PaymentStatusBadge status={project.paymentStatus} />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Progress value={project.progress} className="w-20" />
-                      <span>{project.progress}%</span>
+                    <div className="flex items-center gap-3">
+                      <Progress value={project.progress} className="w-24" />
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {project.progress}%
+                      </span>
                     </div>
                   </TableCell>
-                  <TableCell>{formatCurrency(project.value)}</TableCell>
-                  <TableCell>{formatDate(project.startDate)}</TableCell>
-                  <TableCell>{formatDate(project.dueDate)}</TableCell>
-                  <TableCell>{formatDate(project.paymentDue)}</TableCell>
-                  <TableCell className="text-center">{project.activeTickets}</TableCell>
                   <TableCell>
-                    <Rating rating={project.rating} />
+                    <div className="flex items-center justify-end -space-x-2">
+                      {project.assignedTo.map((user) => (
+                        <Avatar key={user.id} className="h-8 w-8 border-2 border-background">
+                          <AvatarImage src={user.avatar} alt={user.name} />
+                          <AvatarFallback>{user.initials}</AvatarFallback>
+                        </Avatar>
+                      ))}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

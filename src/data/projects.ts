@@ -1,186 +1,141 @@
-export interface User {
-  id: string;
-  name: string;
-  initials: string;
-  avatar?: string;
-}
+import { allUsers, User } from './users';
+export type { User };
 
-export type AssignedUser = User;
+export interface AssignedUser extends User {
+  role: string;
+}
 
 export interface Task {
   id: string;
-  title: string;
+  text: string;
   completed: boolean;
-  assignedTo?: AssignedUser[];
-  dueDate?: string;
-}
-
-export interface File {
-  name: string;
-  size: string;
-  url: string;
+  assignedTo?: string[];
 }
 
 export interface Activity {
   id: string;
   user: User;
   action: string;
-  target: string;
-  date: string;
-}
-
-export interface Service {
-  name: string;
-  price: number;
-}
-
-export interface Ticket {
-    id: string;
-    title: string;
-    status: 'Open' | 'In Progress' | 'Closed';
-    priority: 'Low' | 'Medium' | 'High';
-    lastUpdate: string;
+  timestamp: string;
+  target?: string;
 }
 
 export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'Completed' | 'Done' | 'Billed' | 'In Progress' | 'On Hold' | 'Cancelled' | 'Requested';
-export type PaymentStatus = 'Paid' | 'Pending' | 'Overdue' | 'paid' | 'approved' | 'po_created' | 'on_process' | 'cancelled' | 'proposed';
-
-
-const user1: User = { id: 'user-1', name: 'Ahmad Subagja', initials: 'AS', avatar: 'https://i.pravatar.cc/150?u=ahmad' };
-const user2: User = { id: 'user-2', name: 'Budi Santoso', initials: 'BS', avatar: 'https://i.pravatar.cc/150?u=budi' };
-const user3: User = { id: 'user-3', name: 'Citra Lestari', initials: 'CL', avatar: 'https://i.pravatar.cc/150?u=citra' };
-const user4: User = { id: 'user-4', name: 'Dewi Anggraini', initials: 'DA', avatar: 'https://i.pravatar.cc/150?u=dewi' };
+export type PaymentStatus = 'paid' | 'pending' | 'overdue' | 'draft' | 'proposed' | 'approved' | 'po_created' | 'on_process' | 'cancelled' | 'Billed';
 
 export interface Project {
   id: string;
   name: string;
+  imageUrl: string;
+  category: string;
+  progress: number;
   description: string;
-  owner: User;
-  createdBy: User;
+  startDate: string;
+  endDate: string;
+  assignedTo: AssignedUser[];
   status: ProjectStatus;
   paymentStatus: PaymentStatus;
-  progress: number;
-  value: number;
   budget: number;
-  startDate: string;
-  dueDate: string;
   deadline: string;
-  paymentDue: string;
-  paymentDueDate: string;
-  activeTickets: number;
+  paymentDueDate?: string;
   rating: number;
-  assignedTo: User[];
-  category: string;
-  tasks: Task[];
-  tickets: Ticket[];
-  services: Service[];
+  tickets: number;
+  invoiceAttachmentUrl?: string;
+  createdBy: User;
   briefFiles: File[];
-  activity: Activity[];
+  services: string[];
+  tasks: Task[];
+  activityFeed: Activity[];
 }
 
 export const dummyProjects: Project[] = [
-  {
-    id: 'proj-1',
-    name: 'Platform E-commerce',
-    description: 'Membangun toko online baru dari awal.',
-    owner: user1,
-    createdBy: user1,
-    status: 'On Track',
-    paymentStatus: 'Paid',
-    progress: 75,
-    value: 750000000,
-    budget: 750000000,
-    startDate: '2023-01-15',
-    dueDate: '2023-08-30',
-    deadline: '2023-08-30',
-    paymentDue: '2023-09-15',
-    paymentDueDate: '2023-09-15',
-    activeTickets: 3,
-    rating: 4,
-    assignedTo: [user1, user2, user3],
-    category: 'Web Development',
-    tasks: [{ id: 'task-1', title: 'Design UI/UX', completed: true }, { id: 'task-2', title: 'Develop Frontend', completed: true }, { id: 'task-3', title: 'Develop Backend', completed: false }],
-    tickets: [{ id: 't-1', title: 'Bug in cart', status: 'Open', priority: 'High', lastUpdate: '2023-08-20' }],
-    services: [{ name: 'Web Development', price: 500000000 }, { name: 'UI/UX Design', price: 250000000 }],
-    briefFiles: [{ name: 'brief.pdf', size: '1.2MB', url: '#' }],
-    activity: [{ id: 'act-1', user: user1, action: 'created project', target: 'Platform E-commerce', date: '2023-01-15' }],
-  },
-  {
-    id: 'proj-2',
-    name: 'Aplikasi Seluler untuk Kebugaran',
-    description: 'Aplikasi lintas platform untuk melacak latihan.',
-    owner: user2,
-    createdBy: user2,
-    status: 'At Risk',
-    paymentStatus: 'Pending',
-    progress: 40,
-    value: 1125000000,
-    budget: 1125000000,
-    startDate: '2023-03-01',
-    dueDate: '2023-10-15',
-    deadline: '2023-10-15',
-    paymentDue: '2023-11-01',
-    paymentDueDate: '2023-11-01',
-    activeTickets: 8,
-    rating: 3,
-    assignedTo: [user2, user4],
-    category: 'Mobile App',
-    tasks: [{ id: 'task-4', title: 'Setup React Native', completed: true }, { id: 'task-5', title: 'Integrate with Strava', completed: false }],
-    tickets: [],
-    services: [{ name: 'Mobile App Development', price: 1125000000 }],
-    briefFiles: [],
-    activity: [],
-  },
-  {
-    id: 'proj-3',
-    name: 'Dasbor Analitik Data',
-    description: 'Dasbor internal untuk memvisualisasikan data penjualan.',
-    owner: user3,
-    createdBy: user3,
-    status: 'Completed',
-    paymentStatus: 'Paid',
-    progress: 100,
-    value: 450000000,
-    budget: 450000000,
-    startDate: '2023-02-01',
-    dueDate: '2023-06-30',
-    deadline: '2023-06-30',
-    paymentDue: '2023-07-15',
-    paymentDueDate: '2023-07-15',
-    activeTickets: 0,
-    rating: 5,
-    assignedTo: [user3, user4],
-    category: 'Data Science',
-    tasks: [],
-    tickets: [],
-    services: [],
-    briefFiles: [],
-    activity: [],
-  },
-  {
-    id: 'proj-4',
-    name: 'Migrasi Cloud',
-    description: 'Memigrasikan server on-premise ke AWS.',
-    owner: user1,
-    createdBy: user1,
-    status: 'Off Track',
-    paymentStatus: 'Overdue',
-    progress: 20,
-    value: 1800000000,
-    budget: 1800000000,
-    startDate: '2023-05-10',
-    dueDate: '2023-12-20',
-    deadline: '2023-12-20',
-    paymentDue: '2024-01-05',
-    paymentDueDate: '2024-01-05',
-    activeTickets: 12,
-    rating: 2,
-    assignedTo: [user1, user2, user3, user4],
-    category: 'Infrastructure',
-    tasks: [],
-    tickets: [],
-    services: [],
-    briefFiles: [],
-    activity: [],
-  },
+    {
+        id: 'proj-1',
+        name: 'E-commerce Platform',
+        imageUrl: '/placeholder.svg',
+        category: 'Web Development',
+        progress: 75,
+        description: 'Developing a new e-commerce platform from scratch.',
+        startDate: '2024-01-15',
+        endDate: '2024-09-30',
+        deadline: '2024-09-30',
+        assignedTo: [
+            { ...allUsers[0], role: 'Project Manager' },
+            { ...allUsers[1], role: 'Lead Developer' },
+            { ...allUsers[2], role: 'UI/UX Designer' },
+        ],
+        status: 'On Track',
+        paymentStatus: 'pending',
+        budget: 50000,
+        rating: 4,
+        tickets: 5,
+        createdBy: allUsers[0],
+        briefFiles: [],
+        services: ['UI/UX Design', 'Frontend Development', 'Backend Development'],
+        tasks: [
+            { id: 't1', text: 'Design landing page', completed: true, assignedTo: [allUsers[2].id] },
+            { id: 't2', text: 'Setup database schema', completed: false, assignedTo: [allUsers[1].id] },
+            { id: 't3', text: 'Develop authentication flow', completed: false, assignedTo: [allUsers[1].id] },
+        ],
+        activityFeed: [
+            { id: 'a1', user: allUsers[1], action: 'completed task', target: 'Design landing page', timestamp: '2024-07-27T10:00:00Z' },
+            { id: 'a2', user: allUsers[0], action: 'added a file', target: 'wireframes.fig', timestamp: '2024-07-26T15:30:00Z' },
+        ]
+    },
+    {
+        id: 'proj-2',
+        name: 'Mobile App for iOS',
+        imageUrl: '/placeholder.svg',
+        category: 'Mobile Development',
+        progress: 40,
+        description: 'Creating a native iOS application for our new service.',
+        startDate: '2024-03-01',
+        endDate: '2024-11-20',
+        deadline: '2024-11-20',
+        assignedTo: [
+            { ...allUsers[3], role: 'iOS Developer' },
+            { ...allUsers[4], role: 'Backend Developer' },
+        ],
+        status: 'At Risk',
+        paymentStatus: 'paid',
+        budget: 75000,
+        rating: 3,
+        tickets: 12,
+        paymentDueDate: '2024-06-01',
+        invoiceAttachmentUrl: '#',
+        createdBy: allUsers[3],
+        briefFiles: [],
+        services: ['iOS Development', 'API Integration'],
+        tasks: [
+            { id: 't4', text: 'Implement push notifications', completed: false, assignedTo: [allUsers[3].id] },
+        ],
+        activityFeed: [
+            { id: 'a3', user: allUsers[4], action: 'pushed new commits', timestamp: '2024-07-28T09:15:00Z' },
+        ]
+    },
+    {
+        id: 'proj-3',
+        name: 'Data Analytics Dashboard',
+        imageUrl: '/placeholder.svg',
+        category: 'Data Science',
+        progress: 90,
+        description: 'Building a dashboard for visualizing key business metrics.',
+        startDate: '2024-02-01',
+        endDate: '2024-07-31',
+        deadline: '2024-07-31',
+        assignedTo: [
+            { ...allUsers[1], role: 'Data Scientist' },
+            { ...allUsers[4], role: 'Frontend Developer' },
+        ],
+        status: 'Completed',
+        paymentStatus: 'Billed',
+        budget: 30000,
+        rating: 5,
+        tickets: 2,
+        createdBy: allUsers[1],
+        briefFiles: [],
+        services: ['Data Visualization', 'Dashboard Development'],
+        tasks: [],
+        activityFeed: []
+    },
 ];
