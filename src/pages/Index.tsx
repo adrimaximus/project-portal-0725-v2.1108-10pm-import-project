@@ -28,7 +28,7 @@ const Index = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[40%]">Project</TableHead>
+                <TableHead className="w-[40%]">Project Name</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Progress</TableHead>
                 <TableHead className="text-right">Team</TableHead>
