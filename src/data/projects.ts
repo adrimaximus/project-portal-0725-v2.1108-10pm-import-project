@@ -1,17 +1,16 @@
 export interface User {
   id: string;
   name: string;
-  avatar?: string;
+  avatar?: string; // Dibuat opsional untuk kompatibilitas
   initials: string;
-  email?: string;
-  role?: string;
 }
 
+// Mengekspor sebagai AssignedUser untuk kompatibilitas dengan impor yang ada
 export type AssignedUser = User;
 
 export interface Task {
   id: string;
-  text: string;
+  text: string; // Diubah dari 'title' menjadi 'text' untuk konsistensi
   completed: boolean;
   assignedTo?: User[];
 }
@@ -28,8 +27,7 @@ export interface ProjectFile {
     id: string;
     name: string;
     url: string;
-    size: number; // Changed to number
-    type?: string;
+    size: string;
 }
 
 export interface Activity {
@@ -44,30 +42,30 @@ export interface Project {
   id:string;
   name: string;
   category: string;
-  description: string;
-  status: 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Requested' | 'Done' | 'Billed' | 'In Progress' | 'Cancelled';
-  paymentStatus: 'Paid' | 'Pending' | 'Overdue' | 'Draft' | 'Proposed' | 'Approved' | 'PO Created' | 'On Process' | 'Cancelled' | 'paid' | 'approved' | 'po_created' | 'on_process' | 'pending' | 'cancelled' | 'proposed';
+  description: string; // Ditambahkan
+  status: 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Requested' | 'Done' | 'Billed' | 'In Progress' | 'Cancelled'; // Diperluas
+  paymentStatus: 'Paid' | 'Pending' | 'Overdue' | 'Draft' | 'Proposed' | 'Approved' | 'PO Created' | 'On Process' | 'Cancelled' | 'paid' | 'approved' | 'po_created' | 'on_process' | 'pending' | 'cancelled' | 'proposed'; // Diperluas
   budget: number;
   progress: number;
   startDate: string;
   endDate: string;
-  deadline?: string;
+  deadline?: string; // Ditambahkan
   paymentDueDate?: string;
   assignedTo: User[];
-  createdBy?: User;
+  createdBy?: User; // Ditambahkan
   tasks?: Task[];
   comments?: Comment[];
-  tickets?: Comment[];
+  tickets?: Comment[]; // Ditambahkan
   services?: string[];
-  briefFiles?: ProjectFile[];
-  files?: ProjectFile[];
+  briefFiles?: ProjectFile[]; // Ditambahkan
+  files?: ProjectFile[]; // Ditambahkan
 }
 
 const users: User[] = [
-    { id: 'user-1', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=alice', initials: 'AJ', email: 'alice@example.com', role: 'Project Manager' },
-    { id: 'user-2', name: 'Bob Williams', avatar: 'https://i.pravatar.cc/150?u=bob', initials: 'BW', email: 'bob@example.com', role: 'Lead Developer' },
-    { id: 'user-3', name: 'Charlie Brown', avatar: 'https://i.pravatar.cc/150?u=charlie', initials: 'CB', email: 'charlie@example.com', role: 'UX Designer' },
-    { id: 'user-4', name: 'Diana Miller', avatar: 'https://i.pravatar.cc/150?u=diana', initials: 'DM', email: 'diana@example.com', role: 'QA Tester' },
+    { id: 'user-1', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=alice', initials: 'AJ' },
+    { id: 'user-2', name: 'Bob Williams', avatar: 'https://i.pravatar.cc/150?u=bob', initials: 'BW' },
+    { id: 'user-3', name: 'Charlie Brown', avatar: 'https://i.pravatar.cc/150?u=charlie', initials: 'CB' },
+    { id: 'user-4', name: 'Diana Miller', avatar: 'https://i.pravatar.cc/150?u=diana', initials: 'DM' },
 ];
 
 export const dummyProjects: Project[] = [
@@ -90,7 +88,7 @@ export const dummyProjects: Project[] = [
     tasks: [{id: 't1', text: 'Implement payment gateway', completed: true, assignedTo: [users[1]]}],
     comments: [{id: 'c1', text: 'Initial project kickoff meeting notes.', author: users[0], createdAt: '2023-08-02'}],
     tickets: [{id: 'ticket-1', text: 'Login button not working on Firefox', author: users[1], createdAt: '2023-10-01', isTicket: true}],
-    briefFiles: [{id: 'file-1', name: 'Project Brief.pdf', url: '#', size: 2621440, type: 'application/pdf'}],
+    briefFiles: [{id: 'file-1', name: 'Project Brief.pdf', url: '#', size: '2.5 MB'}],
   },
   {
     id: "proj-2",
