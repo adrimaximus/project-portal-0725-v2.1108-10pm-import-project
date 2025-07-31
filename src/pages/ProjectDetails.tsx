@@ -1,6 +1,5 @@
 import { useParams, Link } from "react-router-dom";
 import { dummyProjects } from "@/data/projects";
-import { initialComments } from "@/data/comments";
 import PortalLayout from "@/components/PortalLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +22,20 @@ import ProjectComments from "@/components/project-detail/ProjectComments";
 const ProjectDetails = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const project = dummyProjects.find((p) => p.id === projectId);
-  const comments = initialComments.filter((c) => c.projectId === projectId);
+
+  // Adapt the project's comment data to the format expected by the ProjectComments component.
+  const comments = project
+    ? [...(project.comments || []), ...(project.tickets || [])]
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .map((comment, index) => ({
+          id: index, // The component expects a number, data has string. Using index as a key.
+          user: { name: comment.author.name, avatar: comment.author.avatar || '' },
+          timestamp: comment.createdAt,
+          text: comment.text,
+          isTicket: comment.isTicket,
+          projectId: project.id,
+        }))
+    : [];
 
   if (!project) {
     return (
@@ -83,7 +95,7 @@ const ProjectDetails = () => {
                 {project.assignedTo.map((user) => (
                   <Avatar key={user.id} className="border-2 border-background">
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>{user.initials}</AvatarFallback>
                   </Avatar>
                 ))}
               </div>
@@ -110,7 +122,7 @@ const ProjectDetails = () => {
             </CardHeader>
             <CardContent>
               <div className="text-lg font-bold">
-                {format(parseISO(project.deadline), "dd MMM yyyy")}
+                {project.deadline ? format(parseISO(project.deadline), "dd MMM yyyy") : 'N/A'}
               </div>
             </CardContent>
           </Card>
@@ -189,7 +201,7 @@ const ProjectDetails = () => {
                         className="relative group border rounded-lg overflow-hidden aspect-square"
                         title={file.name}
                       >
-                        {file.type.startsWith("image/") ? (
+                        {file.type && file.type.startsWith("image/") ? (
                           <img
                             src={file.url}
                             alt={file.name}
