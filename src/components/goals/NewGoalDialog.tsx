@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Target, TrendingUp, Users, CheckCircle, Award, BarChart } from "lucide-react";
+import { 
+  Target, TrendingUp, Users, CheckCircle, Award, BarChart, Activity, Bike, BookOpen, 
+  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap 
+} from "lucide-react";
 
 interface NewGoalDialogProps {
   open: boolean;
@@ -31,6 +34,22 @@ const icons = [
   { name: 'CheckCircle', component: CheckCircle },
   { name: 'Award', component: Award },
   { name: 'BarChart', component: BarChart },
+  { name: 'Activity', component: Activity },
+  { name: 'Bike', component: Bike },
+  { name: 'BookOpen', component: BookOpen },
+  { name: 'Brain', component: Brain },
+  { name: 'Calendar', component: Calendar },
+  { name: 'Dumbbell', component: Dumbbell },
+  { name: 'Flame', component: Flame },
+  { name: 'Heart', component: Heart },
+  { name: 'Leaf', component: Leaf },
+  { name: 'Moon', component: Moon },
+  { name: 'PenTool', component: PenTool },
+  { name: 'Footprints', component: Footprints },
+  { name: 'Smile', component: Smile },
+  { name: 'Sunrise', component: Sunrise },
+  { name: 'Wallet', component: Wallet },
+  { name: 'Zap', component: Zap },
 ];
 
 const colors = ['#4A90E2', '#50E3C2', '#F5A623', '#E02020', '#9013FE', '#BD10E0'];
@@ -116,7 +135,7 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
               >
                 {icons.map(({ name, component: IconComponent }) => (
                   <ToggleGroupItem key={name} value={name} aria-label={name} className="p-2 h-10 w-10">
-                    <IconComponent className="h-5 w-5" />
+                    <IconComponent className="h-5 w-5" style={{ color }} />
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>

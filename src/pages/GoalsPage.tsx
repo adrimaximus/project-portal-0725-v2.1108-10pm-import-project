@@ -2,19 +2,18 @@ import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dummyGoals, Goal } from "@/data/goals";
-import { PlusCircle, Target, TrendingUp, Users, CheckCircle, Award, BarChart } from "lucide-react";
+import { 
+  PlusCircle, Target, TrendingUp, Users, CheckCircle, Award, BarChart, Activity, Bike, BookOpen, 
+  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap 
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import NewGoalDialog from "@/components/goals/NewGoalDialog";
 import { LucideIcon } from "lucide-react";
 
 const iconComponents: { [key: string]: LucideIcon } = {
-  Target,
-  TrendingUp,
-  Users,
-  CheckCircle,
-  Award,
-  BarChart,
+  Target, TrendingUp, Users, CheckCircle, Award, BarChart, Activity, Bike, BookOpen, 
+  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap
 };
 
 const GoalsPage = () => {
