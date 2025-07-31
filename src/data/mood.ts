@@ -17,7 +17,7 @@ export const moods: Mood[] = [
   { id: 2, label: 'Calm', emoji: '😌', color: '#A7F3D0', score: 4 },    // emerald-200
   { id: 3, label: 'Neutral', emoji: '😐', color: '#FEF08A', score: 3 },  // yellow-200
   { id: 4, label: 'Sad', emoji: '😢', color: '#FED7AA', score: 2 },      // orange-200
-  { id: 5, label: 'Angry', emoji: '😠', color: '#FECACA', score: 1 },    // red-200
+  { id: 5, label: 'Depressed', emoji: '😔', color: '#FECACA', score: 1 },// red-200
 ];
 
 const generateDummyHistory = (): MoodHistoryEntry[] => {
