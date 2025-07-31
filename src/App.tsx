@@ -1,4 +1,3 @@
-import 'antd/dist/reset.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Index from './pages/Index';
 import RequestPage from './pages/Request';
