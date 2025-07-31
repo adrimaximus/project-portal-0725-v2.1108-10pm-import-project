@@ -1,202 +1,142 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
-import { Goal } from '@/data/goals';
-import { User } from '@/data/users';
-import GoalDetail from '@/components/goals/GoalDetail';
-import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import NotFound from './NotFound';
+import { dummyGoals, Goal } from '@/data/goals';
+import { dummyUsers } from '@/data/users';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { Pencil, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
-import { DateRange } from 'react-day-picker';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-fns';
-import { enUS } from 'date-fns/locale';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import GoalCollaborationManager from '@/components/goals/GoalCollaborationManager';
-import { getIconComponent } from '@/data/icons';
-import { useGoals } from '@/context/GoalsContext';
+import { PlusCircle, ChevronLeft } from 'lucide-react';
+import { toast } from 'sonner';
+import GoalGrid from '@/components/goals/GoalGrid';
+import GoalDetail from '@/components/goals/GoalDetail';
+import NewGoalDialog from '@/components/goals/NewGoalDialog';
+import CompletionCalendar from '@/components/goals/CompletionCalendar';
+import CollaboratorManager from '@/components/goals/CollaboratorManager';
 
 const GoalDetailPage = () => {
-  const { goalId } = useParams<{ goalId: string }>();
-  const { getGoalById, updateGoal } = useGoals();
-  
-  // Mengambil tujuan langsung dari konteks, bukan state lokal
-  const goal = goalId ? getGoalById(goalId) : undefined;
+  const [goals, setGoals] = useState<Goal[]>(dummyGoals);
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(goals[0] || null);
+  const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const handleSelectGoal = (goal: Goal) => {
+    setSelectedGoal(goal);
+  };
+
+  const handleCreateGoal = (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => {
+    const newGoal: Goal = {
+      ...newGoalData,
+      id: Date.now(),
+      completions: {},
+      collaborators: [dummyUsers[0]],
+    };
+    setGoals([...goals, newGoal]);
+    setSelectedGoal(newGoal);
+    toast.success(`Goal "${newGoal.title}" created!`);
+  };
 
   const handleUpdateGoal = (updatedGoal: Goal) => {
-    updateGoal(updatedGoal);
-    setIsEditModalOpen(false);
-    setIsInviteModalOpen(false);
+    setGoals(goals.map((g) => (g.id === updatedGoal.id ? updatedGoal : g)));
+    setSelectedGoal(updatedGoal);
+    toast.success('Goal updated!');
   };
 
-  const handleToggleCompletion = (date: Date) => {
-    if (!goal) return;
+  const handleDeleteGoal = (goalId: number) => {
+    setGoals(goals.filter((g) => g.id !== goalId));
+    setSelectedGoal(null);
+    toast.error('Goal deleted');
+  };
 
-    const dateString = format(startOfDay(date), 'yyyy-MM-dd');
-    const existingCompletion = goal.completions.find(c => format(parseISO(c.date), 'yyyy-MM-dd') === dateString);
+  const handleToggleCompletion = (date: string) => {
+    if (!selectedGoal) return;
 
-    let newCompletions;
-    if (existingCompletion) {
-      newCompletions = goal.completions.map(c => 
-        format(parseISO(c.date), 'yyyy-MM-dd') === dateString 
-          ? { ...c, completed: !c.completed } 
-          : c
-      );
+    const newCompletions = { ...selectedGoal.completions };
+    if (newCompletions[date]) {
+      delete newCompletions[date];
     } else {
-      newCompletions = [...goal.completions, { date: date.toISOString(), completed: true }];
+      newCompletions[date] = true;
     }
 
-    const updatedGoal = { ...goal, completions: newCompletions };
-    updateGoal(updatedGoal);
+    const updatedGoal = { ...selectedGoal, completions: newCompletions };
+    handleUpdateGoal(updatedGoal);
   };
 
-  if (!goal) {
-    return <PortalLayout><NotFound /></PortalLayout>;
-  }
-
-  const filteredCompletions = dateRange?.from
-    ? goal.completions.filter(c => {
-        const completionDate = parseISO(c.date);
-        const intervalEnd = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from!);
-        return isWithinInterval(completionDate, { start: dateRange.from!, end: intervalEnd });
-      })
-    : goal.completions;
-
-  const Icon = getIconComponent(goal.icon);
-
-  const dayKeys = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-  const specificDayKeys = goal.specificDays?.map(dayIndex => dayKeys[dayIndex]);
+  const handleUpdateCollaborators = (updatedCollaborators: Goal['collaborators']) => {
+    if (!selectedGoal) return;
+    const updatedGoal = { ...selectedGoal, collaborators: updatedCollaborators };
+    handleUpdateGoal(updatedGoal);
+  };
 
   return (
     <PortalLayout>
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/goals">Goals</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{goal.title}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      <div className="mt-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <div className="flex items-center gap-4 flex-grow min-w-0">
-            <div className="p-3 rounded-lg flex-shrink-0" style={{ backgroundColor: `${goal.color}20` }}>
-              <Icon className="h-8 w-8" style={{ color: goal.color }} />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-3xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">{goal.title}</h1>
-              <p className="text-muted-foreground">{goal.frequency}</p>
-            </div>
-            <div className="flex -space-x-2 overflow-hidden ml-2">
-              {goal.collaborators?.map((user: User) => (
-                <Avatar key={user.id} className="inline-block h-8 w-8 rounded-full border-2 border-background">
-                  <AvatarFallback>{user.initials}</AvatarFallback>
-                </Avatar>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-[260px] justify-start text-left font-normal",
-                    !dateRange && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "LLL dd, y", { locale: enUS })} -{" "}
-                        {format(dateRange.to, "LLL dd, y", { locale: enUS })}
-                      </>
-                    ) : (
-                      format(dateRange.from, "LLL dd, y", { locale: enUS })
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit Goal
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Edit Goal</DialogTitle>
-                </DialogHeader>
-                <GoalDetail 
-                  goal={goal} 
-                  onUpdate={handleUpdateGoal}
-                  onClose={() => setIsEditModalOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-            <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Invite
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Manage Collaborators</DialogTitle>
-                  <DialogDescription>
-                    Invite users to collaborate on "{goal.title}".
-                  </DialogDescription>
-                </DialogHeader>
-                <GoalCollaborationManager
-                  goal={goal}
-                  onUpdate={handleUpdateGoal}
-                  onClose={() => setIsInviteModalOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
+      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
+        {/* Left Sidebar: Goal List */}
+        <div className="md:col-span-1 lg:col-span-1 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Goals</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GoalGrid goals={goals} selectedGoal={selectedGoal} onSelectGoal={handleSelectGoal} />
+              <Button className="w-full mt-4" onClick={() => setIsNewGoalDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New Goal
+              </Button>
+            </CardContent>
+          </Card>
         </div>
-        
-        <GoalYearlyProgress 
-          completions={filteredCompletions} 
-          color={goal.color}
-          onToggleCompletion={handleToggleCompletion}
-          frequency={goal.frequency}
-          specificDays={specificDayKeys}
-        />
+
+        {/* Right Content: Goal Details */}
+        <div className="md:col-span-2 lg:col-span-3">
+          {selectedGoal ? (
+            <div className="space-y-6">
+              <Button variant="ghost" onClick={() => setSelectedGoal(null)} className="md:hidden">
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Back to Goals
+              </Button>
+              
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Progress</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CompletionCalendar
+                        goal={selectedGoal}
+                        onToggleCompletion={handleToggleCompletion}
+                      />
+                    </CardContent>
+                  </Card>
+                  <CollaboratorManager
+                    collaborators={selectedGoal.collaborators}
+                    onUpdateCollaborators={handleUpdateCollaborators}
+                    allUsers={dummyUsers}
+                  />
+                </div>
+                <div className="space-y-6">
+                  <GoalDetail
+                    goal={selectedGoal}
+                    onUpdate={handleUpdateGoal}
+                    onDelete={handleDeleteGoal}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20 p-8 text-center">
+              <h2 className="text-xl font-semibold">Select a goal</h2>
+              <p className="text-muted-foreground mt-2">
+                Choose a goal from the list to see its details, or create a new one.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
+
+      <NewGoalDialog
+        open={isNewGoalDialogOpen}
+        onOpenChange={setIsNewGoalDialogOpen}
+        onGoalCreate={handleCreateGoal}
+      />
     </PortalLayout>
   );
 };

@@ -1,12 +1,22 @@
 import PortalLayout from "@/components/PortalLayout";
 import { dummyProjects } from "@/data/projects";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const Index = () => {
+  const navigate = useNavigate();
+
   return (
     <PortalLayout>
       <div className="space-y-8">
@@ -15,41 +25,53 @@ const Index = () => {
           <p className="text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {dummyProjects.map((project) => (
-            <Link to={`/projects/${project.id}`} key={project.id} className="block">
-              <Card className="h-full flex flex-col hover:border-primary transition-colors">
-                <CardHeader>
-                  <CardTitle>{project.name}</CardTitle>
-                  <Badge variant="secondary" className="w-fit">{project.category}</Badge>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <p className="text-muted-foreground text-sm mb-4">{project.description}</p>
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center text-sm text-muted-foreground">
-                      <span>Progress</span>
-                      <span>{project.progress}%</span>
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[45%]">Project</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Progress</TableHead>
+                <TableHead className="text-right">Team</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {dummyProjects.map((project) => (
+                <TableRow
+                  key={project.id}
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                  className="cursor-pointer"
+                >
+                  <TableCell>
+                    <div className="font-medium">{project.name}</div>
+                    <div className="text-sm text-muted-foreground hidden md:inline">
+                      {project.description}
                     </div>
-                    <Progress value={project.progress} />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-sm text-muted-foreground">Team</span>
-                    <div className="flex -space-x-2">
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{project.category}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-x-3">
+                      <Progress value={project.progress} className="h-2 w-20" />
+                      <span className="text-sm text-muted-foreground">{project.progress}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex -space-x-2 justify-end">
                       {project.assignedTo.map((user) => (
-                        <Avatar key={user.id} className="h-8 w-8 border-2 border-card">
+                        <Avatar key={user.id} className="h-8 w-8 border-2 border-background">
                           <AvatarImage src={user.avatar} alt={user.name} />
                           <AvatarFallback>{user.initials}</AvatarFallback>
                         </Avatar>
                       ))}
                     </div>
-                  </div>
-                </CardFooter>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       </div>
     </PortalLayout>
   );
