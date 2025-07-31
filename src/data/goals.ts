@@ -1,54 +1,58 @@
-import { Book, Dumbbell, Droplets } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-
-export interface GoalCompletion {
-  date: string; // ISO 8601 format: "YYYY-MM-DD"
-  completed: boolean;
-}
+import { BookOpen, Dumbbell, TrendingUp, Heart, LucideIcon } from 'lucide-react';
 
 export interface Goal {
   id: string;
   title: string;
-  icon: LucideIcon;
+  frequency: 'Daily' | 'Weekly' | 'Monthly';
+  specificDays?: number[];
   color: string;
-  frequency: string; // e.g., "daily", "specific_days"
-  specificDays?: string[]; // e.g., ["Mo", "We", "Fr"]
-  completions: GoalCompletion[];
+  icon: LucideIcon;
+  completions: { date: string; completed: boolean }[];
+  assignedTo?: string;
 }
 
 export const dummyGoals: Goal[] = [
   {
     id: '1',
-    title: 'Read 10 pages',
-    icon: Book,
+    title: 'Read 10 pages of a book',
+    frequency: 'Daily',
     color: '#4A90E2',
-    frequency: 'Every 1 day for 1 week',
+    icon: BookOpen,
+    assignedTo: 'user-1',
     completions: [
-      { date: '2024-07-20', completed: true },
-      { date: '2024-07-21', completed: true },
+      { date: '2024-07-20T00:00:00.000Z', completed: true },
+      { date: '2024-07-21T00:00:00.000Z', completed: false },
+      { date: '2024-07-22T00:00:00.000Z', completed: true },
     ],
   },
   {
     id: '2',
-    title: 'Workout for 30 mins',
-    icon: Dumbbell,
+    title: 'Go to the gym',
+    frequency: 'Weekly',
+    specificDays: [1, 3, 5],
     color: '#D0021B',
-    frequency: 'On 3 specific day(s) for 1 week',
-    specificDays: ['Mo', 'We', 'Fr'],
+    icon: Dumbbell,
+    assignedTo: 'user-2',
     completions: [
-      { date: '2024-07-22', completed: true },
+       { date: '2024-07-22T00:00:00.000Z', completed: true },
     ],
   },
   {
     id: '3',
-    title: 'Drink 8 glasses of water',
-    icon: Droplets,
-    color: '#50E3C2',
-    frequency: 'Every 1 day for 1 week',
+    title: 'Track monthly expenses',
+    frequency: 'Monthly',
+    color: '#F5A623',
+    icon: TrendingUp,
     completions: [
-      { date: '2024-07-20', completed: true },
-      { date: '2024-07-21', completed: false },
-      { date: '2024-07-22', completed: true },
+       { date: '2024-07-15T00:00:00.000Z', completed: true },
     ],
+  },
+  {
+    id: '4',
+    title: 'Meditate for 5 minutes',
+    frequency: 'Daily',
+    color: '#50E3C2',
+    icon: Heart,
+    completions: [],
   },
 ];
