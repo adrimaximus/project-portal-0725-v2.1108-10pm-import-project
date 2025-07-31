@@ -13,7 +13,7 @@ interface MoodOverviewProps {
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    const shouldMoveLeft = data.label === 'Happy' || data.label === 'Good';
+    const shouldMoveLeft = data.label === 'Happy';
 
     return (
       <div className={cn(shouldMoveLeft && '-translate-x-full')}>
