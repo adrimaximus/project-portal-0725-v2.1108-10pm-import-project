@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import React from 'react';
 import { Goal } from '@/data/goals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, ChevronDown } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import IconPicker from './IconPicker';
@@ -68,7 +68,7 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
   };
 
   const handleIconSelect = (icon: React.ElementType) => {
-    setEditedGoal({ ...editedGoal, icon: icon });
+    setEditedGoal({ ...editedGoal, icon: icon as LucideIcon });
   };
 
   const handleDayToggle = (dayKey: string) => {
@@ -109,8 +109,8 @@ const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetai
           <IconPicker onSelectIcon={handleIconSelect} currentColor={editedGoal.color}>
             <Button variant="outline" className="w-full mt-1 flex items-center justify-between h-10 px-3">
               <div className="flex items-center gap-3">
-                <div className="p-1 rounded-lg flex items-center justify-center w-7 h-7" style={{ backgroundColor: getIconBackgroundColor() }}>
-                  <editedGoal.icon style={{ fontSize: '20px' }} twoToneColor={editedGoal.color} />
+                <div className="p-1 rounded-lg" style={{ backgroundColor: getIconBackgroundColor() }}>
+                  <editedGoal.icon className="h-5 w-5" style={{ color: editedGoal.color }} />
                 </div>
                 <span className="text-sm">Select Icon</span>
               </div>

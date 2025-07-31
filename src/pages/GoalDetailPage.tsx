@@ -83,8 +83,8 @@ const GoalDetailPage = () => {
       <div className="mt-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div className="flex items-center gap-4 flex-grow min-w-0">
-            <div className="p-3 rounded-lg flex-shrink-0 flex items-center justify-center w-14 h-14" style={{ backgroundColor: `${goal.color}20` }}>
-              <Icon style={{ fontSize: '32px' }} twoToneColor={goal.color} />
+            <div className="p-3 rounded-lg flex-shrink-0" style={{ backgroundColor: `${goal.color}20` }}>
+              <Icon className="h-8 w-8" style={{ color: goal.color }} />
             </div>
             <div className="min-w-0">
               <h1 className="text-3xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">{goal.title}</h1>

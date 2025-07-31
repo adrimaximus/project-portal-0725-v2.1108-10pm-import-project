@@ -1,21 +1,21 @@
 import { useState } from 'react';
-import React from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { goalIcons } from '@/data/icons';
 
-const iconList = goalIcons.map(icon => icon.component);
+const iconList: LucideIcon[] = goalIcons.map(icon => icon.component);
 
 interface IconPickerProps {
   children: React.ReactNode;
-  onSelectIcon: (icon: React.ElementType) => void;
+  onSelectIcon: (icon: LucideIcon) => void;
   currentColor: string;
 }
 
 const IconPicker = ({ children, onSelectIcon, currentColor }: IconPickerProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleSelect = (Icon: React.ElementType) => {
+  const handleSelect = (Icon: LucideIcon) => {
     onSelectIcon(Icon);
     setIsOpen(false);
   };
@@ -31,9 +31,9 @@ const IconPicker = ({ children, onSelectIcon, currentColor }: IconPickerProps) =
               variant="ghost"
               size="icon"
               onClick={() => handleSelect(Icon)}
-              className="rounded-md flex items-center justify-center h-9 w-9"
+              className="rounded-md flex items-center justify-center"
             >
-              <Icon style={{ fontSize: '20px' }} twoToneColor={currentColor} />
+              <Icon className="h-5 w-5" style={{ color: currentColor }} />
             </Button>
           ))}
         </div>
