@@ -62,7 +62,7 @@ const MoodHistory = ({ history, className }: MoodHistoryProps) => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
           {monthsOfYear.map(monthData => (
             <MonthHistorySection key={monthData.name} month={monthData.name} entries={monthData.entries} />
           ))}
