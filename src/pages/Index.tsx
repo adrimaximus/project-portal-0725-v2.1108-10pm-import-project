@@ -53,9 +53,11 @@ const Index = () => {
       return acc;
   }, {} as Record<string, number>);
 
-  const serviceCounts = filteredProjects.reduce((acc, p) => {
-      acc[p.category] = (acc[p.category] || 0) + 1;
-      return acc;
+  const serviceCounts = filteredProjects.reduce((acc, project) => {
+    (project.services || []).forEach(service => {
+        acc[service] = (acc[service] || 0) + 1;
+    });
+    return acc;
   }, {} as Record<string, number>);
 
   const ownerCounts = filteredProjects.reduce((acc, p) => {
@@ -115,7 +117,7 @@ const Index = () => {
                         <div className="space-y-1 text-sm">
                             {Object.entries(serviceCounts).sort((a,b) => b[1] - a[1]).map(([service, count]) => (
                                 <div key={service} className="flex justify-between">
-                                    <span>{service}</span>
+                                    <span className="truncate pr-2">{service}</span>
                                     <span className="font-semibold">{count}</span>
                                 </div>
                             ))}
