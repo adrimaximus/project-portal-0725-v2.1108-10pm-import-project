@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Check, Plus } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { DialogFooter } from '@/components/ui/dialog';
 
 interface GoalCollaborationManagerProps {
   goal: Goal;
@@ -58,10 +59,10 @@ const GoalCollaborationManager = ({ goal, onUpdate, onClose }: GoalCollaboration
           </CommandGroup>
         </CommandList>
       </Command>
-      <div className="flex justify-end gap-2 pt-4">
+      <DialogFooter className="pt-4">
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button onClick={handleSaveChanges}>Save Changes</Button>
-      </div>
+      </DialogFooter>
     </div>
   );
 };
