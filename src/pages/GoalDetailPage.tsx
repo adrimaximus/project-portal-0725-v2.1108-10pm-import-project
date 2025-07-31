@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
 import { Goal } from '@/data/goals';
 import { User } from '@/data/users';
@@ -23,9 +23,9 @@ import { useGoals } from '@/context/GoalsContext';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
-  const { getGoalById, updateGoal } = useGoals();
+  const { getGoalById, updateGoal, deleteGoal } = useGoals();
+  const navigate = useNavigate();
   
-  // Mengambil tujuan langsung dari konteks, bukan state lokal
   const goal = goalId ? getGoalById(goalId) : undefined;
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -36,6 +36,11 @@ const GoalDetailPage = () => {
     updateGoal(updatedGoal);
     setIsEditModalOpen(false);
     setIsInviteModalOpen(false);
+  };
+
+  const handleDeleteGoal = (id: string) => {
+    deleteGoal(id);
+    navigate('/goals');
   };
 
   const handleToggleCompletion = (date: Date) => {
@@ -161,6 +166,7 @@ const GoalDetailPage = () => {
                 <GoalDetail 
                   goal={goal} 
                   onUpdate={handleUpdateGoal}
+                  onDelete={handleDeleteGoal}
                   onClose={() => setIsEditModalOpen(false)}
                 />
               </DialogContent>
