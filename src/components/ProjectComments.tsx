@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, Ticket, File, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { dummyProjects, Project, AssignedUser, Task } from '@/data/projects';
+import { Project, AssignedUser } from '@/data/projects';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 
 export type Comment = {
@@ -29,12 +29,10 @@ export type Comment = {
 };
 
 interface ProjectCommentsProps {
-  comments: Comment[];
-  setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
-  projectId: string;
+  project: Project;
+  onAddCommentOrTicket: (comment: Comment) => void;
   assignableUsers: AssignedUser[];
   allProjects: Project[];
-  onTaskCreate?: (task: Task) => void;
 }
 
 const renderWithMentions = (text: string, allProjects: Project[]) => {
@@ -68,7 +66,7 @@ const renderWithMentions = (text: string, allProjects: Project[]) => {
   });
 };
 
-const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments, projectId, assignableUsers, allProjects, onTaskCreate }) => {
+const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddCommentOrTicket, assignableUsers, allProjects }) => {
   const [newComment, setNewComment] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +77,8 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
   const [suggestionQuery, setSuggestionQuery] = useState('');
   const [suggestionOpen, setSuggestionOpen] = useState(false);
   const [triggerIndex, setTriggerIndex] = useState(0);
+
+  const comments = project.comments || [];
 
   const handleTextChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = event.target.value;
@@ -146,7 +146,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
 
     const comment: Comment = {
       id: Date.now(),
-      projectId: projectId,
+      projectId: project.id,
       user: { name: "You", avatar: "https://i.pravatar.cc/150?u=currentuser" },
       text: newComment,
       timestamp: "Just now",
@@ -161,30 +161,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
       };
     }
 
-    setComments(prev => [...prev, comment]);
-
-    if (isTicket && onTaskCreate) {
-      const mentionRegex = /@([a-zA-Z0-9\s._-]+)/g;
-      const mentions = [...newComment.matchAll(mentionRegex)].map(match => match[1].trim());
-      
-      const assignedToTaskUsers = assignableUsers.filter(user => 
-          mentions.includes(user.name)
-      );
-
-      const newTask: Task = {
-          id: `task-${Date.now()}`,
-          text: newComment.replace(mentionRegex, '').trim(),
-          completed: false,
-          assignedTo: assignedToTaskUsers.map(user => user.id),
-      };
-      
-      onTaskCreate(newTask);
-
-      const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
-      if (projectIndex !== -1) {
-        dummyProjects[projectIndex].tickets = (dummyProjects[projectIndex].tickets || 0) + 1;
-      }
-    }
+    onAddCommentOrTicket(comment);
 
     setNewComment("");
     setAttachmentFile(null);
@@ -195,7 +172,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ comments, setComments
   const handleSendTicket = () => handleSendComment(true);
 
   const filteredUsers = assignableUsers.filter(u => u.name.toLowerCase().includes(suggestionQuery.toLowerCase()));
-  const filteredProjects = allProjects.filter(p => p.id !== projectId && p.name.toLowerCase().includes(suggestionQuery.toLowerCase()));
+  const filteredProjects = allProjects.filter(p => p.id !== project.id && p.name.toLowerCase().includes(suggestionQuery.toLowerCase()));
 
   return (
     <Card>

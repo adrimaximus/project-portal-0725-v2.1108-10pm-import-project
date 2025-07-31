@@ -1,3 +1,5 @@
+import { Comment } from "@/components/ProjectComments";
+
 export type AssignedUser = {
   id: string;
   name: string;
@@ -51,7 +53,7 @@ export type Project = {
   tasks?: Task[];
   files?: ProjectFile[];
   briefFiles?: ProjectFile[];
-  comments?: { id: string; userId: string; text: string; timestamp: string }[];
+  comments?: Comment[];
   services?: string[];
   tickets?: number; // Changed to number
   activity?: Activity[];

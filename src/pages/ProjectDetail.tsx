@@ -17,17 +17,18 @@ const ProjectDetail = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
-  const [comments, setComments] = useState<Comment[]>(initialComments);
 
   useEffect(() => {
     const foundProject = dummyProjects.find(p => p.id === projectId);
     if (foundProject) {
-      const projectWithTasks = {
+      const projectComments = initialComments.filter(c => c.projectId === projectId);
+      const projectWithData = {
         ...foundProject,
         tasks: foundProject.tasks || [],
+        comments: projectComments,
       };
-      setProject(projectWithTasks);
-      setEditedProject(structuredClone(projectWithTasks));
+      setProject(projectWithData);
+      setEditedProject(structuredClone(projectWithData));
     } else {
       navigate('/');
     }
@@ -130,8 +131,38 @@ const ProjectDetail = () => {
     }
   };
 
-  const projectComments = comments.filter(c => c.projectId === projectId);
-  const ticketCount = projectComments.filter(c => c.isTicket).length;
+  const handleAddCommentOrTicket = (newComment: Comment) => {
+    if (editedProject) {
+      const updatedProject = { ...editedProject };
+      
+      updatedProject.comments = [...(updatedProject.comments || []), newComment];
+
+      if (newComment.isTicket) {
+        const mentionRegex = /@([a-zA-Z0-9\s._-]+)/g;
+        const mentions = [...newComment.text.matchAll(mentionRegex)].map(match => match[1].trim());
+        const assignedToTaskUsers = updatedProject.assignedTo.filter(user => mentions.includes(user.name));
+
+        const newTask: Task = {
+          id: `task-${Date.now()}`,
+          text: newComment.text.replace(mentionRegex, '').trim(),
+          completed: false,
+          assignedTo: assignedToTaskUsers.map(user => user.id),
+        };
+        updatedProject.tasks = [...(updatedProject.tasks || []), newTask];
+      }
+
+      setEditedProject(updatedProject);
+      if (!isEditing) {
+        setProject(updatedProject);
+        const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
+        if (projectIndex !== -1) {
+          dummyProjects[projectIndex] = updatedProject;
+        }
+      }
+    }
+  };
+
+  const ticketCount = editedProject.comments?.filter(c => c.isTicket).length || 0;
 
   return (
     <PortalLayout>
@@ -162,8 +193,7 @@ const ProjectDetail = () => {
               onTeamChange={handleTeamChange}
               onFilesChange={handleFilesChange}
               onServicesChange={handleServicesChange}
-              comments={projectComments}
-              setComments={setComments}
+              onAddCommentOrTicket={handleAddCommentOrTicket}
               projectId={project.id}
               ticketCount={ticketCount}
               allProjects={dummyProjects}

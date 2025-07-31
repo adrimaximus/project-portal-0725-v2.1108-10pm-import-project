@@ -15,8 +15,7 @@ interface ProjectMainContentProps {
   onTeamChange: (selectedUsers: AssignedUser[]) => void;
   onFilesChange: (files: File[]) => void;
   onServicesChange: (services: string[]) => void;
-  comments: Comment[];
-  setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
+  onAddCommentOrTicket: (comment: Comment) => void;
   projectId: string;
   ticketCount: number;
   allProjects: Project[];
@@ -29,21 +28,11 @@ const ProjectMainContent = ({
   onTeamChange,
   onFilesChange,
   onServicesChange,
-  comments,
-  setComments,
+  onAddCommentOrTicket,
   projectId,
   ticketCount,
   allProjects,
 }: ProjectMainContentProps) => {
-  const handleTaskCreate = (newTask: Task) => {
-    const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
-    if (projectIndex !== -1) {
-      const updatedProject = { ...dummyProjects[projectIndex] };
-      updatedProject.tasks = [...updatedProject.tasks, newTask];
-      dummyProjects[projectIndex] = updatedProject;
-    }
-  };
-
   return (
     <Card>
       <CardContent className="p-0">
@@ -73,12 +62,10 @@ const ProjectMainContent = ({
           </TabsContent>
           <TabsContent value="comments" className="p-6">
             <ProjectComments
-              comments={comments}
-              setComments={setComments}
-              projectId={projectId}
+              project={project}
+              onAddCommentOrTicket={onAddCommentOrTicket}
               assignableUsers={project.assignedTo}
               allProjects={allProjects}
-              onTaskCreate={handleTaskCreate}
             />
           </TabsContent>
         </Tabs>
