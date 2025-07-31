@@ -1,25 +1,14 @@
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { dummyGoals, Goal } from "@/data/goals";
 import { PlusCircle } from "lucide-react";
 import { useState } from "react";
 import NewGoalDialog from "@/components/goals/NewGoalDialog";
 import GoalCard from "@/components/goals/GoalCard";
+import { useGoals } from "@/context/GoalsContext";
 
 const GoalsPage = () => {
-  const [goals, setGoals] = useState<Goal[]>(dummyGoals);
+  const { goals, addGoal } = useGoals();
   const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
-
-  const handleGoalCreate = (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => {
-    const newGoal: Goal = {
-      ...newGoalData,
-      id: `goal-${Date.now()}`,
-      completions: [],
-      collaborators: [],
-    };
-
-    setGoals(prevGoals => [...prevGoals, newGoal]);
-  };
 
   return (
     <PortalLayout>
@@ -38,7 +27,7 @@ const GoalsPage = () => {
       <NewGoalDialog
         open={isNewGoalDialogOpen}
         onOpenChange={setIsNewGoalDialogOpen}
-        onGoalCreate={handleGoalCreate}
+        onGoalCreate={addGoal}
       />
     </PortalLayout>
   );

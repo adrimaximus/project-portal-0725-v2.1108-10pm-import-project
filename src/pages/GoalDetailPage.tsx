@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
-import { dummyGoals, Goal } from '@/data/goals';
+import { Goal } from '@/data/goals';
 import { User } from '@/data/users';
 import GoalDetail from '@/components/goals/GoalDetail';
 import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
@@ -19,26 +19,20 @@ import { enUS } from 'date-fns/locale';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import GoalCollaborationManager from '@/components/goals/GoalCollaborationManager';
 import { getIconComponent } from '@/data/icons';
+import { useGoals } from '@/context/GoalsContext';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
+  const { getGoalById, updateGoal } = useGoals();
   
-  const getInitialGoalState = () => {
-    const foundGoal = dummyGoals.find(g => g.id === goalId);
-    if (!foundGoal) return undefined;
-    return {
-      ...foundGoal,
-      collaborators: foundGoal.collaborators || [],
-    };
-  };
+  const goal = goalId ? getGoalById(goalId) : undefined;
 
-  const [goal, setGoal] = useState<Goal | undefined>(getInitialGoalState());
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const handleUpdateGoal = (updatedGoal: Goal) => {
-    setGoal(updatedGoal);
+    updateGoal(updatedGoal);
     setIsEditModalOpen(false);
     setIsInviteModalOpen(false);
   };
@@ -61,7 +55,7 @@ const GoalDetailPage = () => {
     }
 
     const updatedGoal = { ...goal, completions: newCompletions };
-    setGoal(updatedGoal);
+    updateGoal(updatedGoal);
   };
 
   if (!goal) {
