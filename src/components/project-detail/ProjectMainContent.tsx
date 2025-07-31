@@ -1,16 +1,18 @@
-import { Project, User, ProjectFile } from "@/data/projects";
-import ProjectDescription from "./ProjectDescription";
-import ProjectTeam from "./ProjectTeam";
-import ProjectFiles from "./ProjectFiles";
-import ProjectServices from "./ProjectServices";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Project, AssignedUser, Task } from "@/data/projects";
+import { Comment } from "@/components/ProjectComments";
+import ProjectOverviewTab from "./ProjectOverviewTab";
 import ProjectComments from "../ProjectComments";
-import { Comment } from "@/data/comments";
+import { dummyProjects } from "@/data/projects";
+import { Badge } from "../ui/badge";
+import { MessageSquare, GanttChartSquare } from "lucide-react";
 
 interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
-  onTeamChange: (selectedUsers: User[]) => void;
+  onTeamChange: (selectedUsers: AssignedUser[]) => void;
   onFilesChange: (files: File[]) => void;
   onServicesChange: (services: string[]) => void;
   onAddCommentOrTicket: (comment: Comment) => void;
@@ -19,36 +21,56 @@ interface ProjectMainContentProps {
   allProjects: Project[];
 }
 
-const ProjectMainContent = (props: ProjectMainContentProps) => {
+const ProjectMainContent = ({
+  project,
+  isEditing,
+  onDescriptionChange,
+  onTeamChange,
+  onFilesChange,
+  onServicesChange,
+  onAddCommentOrTicket,
+  projectId,
+  ticketCount,
+  allProjects,
+}: ProjectMainContentProps) => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 space-y-6">
-        <ProjectDescription
-          description={props.project.description}
-          isEditing={props.isEditing}
-          onDescriptionChange={props.onDescriptionChange}
-        />
-        <ProjectComments
-          project={props.project}
-          onAddComment={props.onAddCommentOrTicket}
-          allProjects={props.allProjects}
-        />
-      </div>
-      <div className="space-y-6">
-        <ProjectTeam
-          assignedTo={props.project.assignedTo}
-          createdBy={props.project.createdBy}
-          isEditing={props.isEditing}
-          onTeamChange={props.onTeamChange}
-        />
-        <ProjectFiles project={props.project} />
-        <ProjectServices
-          services={props.project.services}
-          isEditing={props.isEditing}
-          onServicesChange={props.onServicesChange}
-        />
-      </div>
-    </div>
+    <Card>
+      <CardContent className="p-0">
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 border-b rounded-none">
+            <TabsTrigger value="overview">
+              <GanttChartSquare className="h-4 w-4 mr-2" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="comments">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Comments
+              {ticketCount > 0 && (
+                <Badge variant="destructive" className="ml-2">{ticketCount}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="overview" className="p-6">
+            <ProjectOverviewTab
+              project={project}
+              isEditing={isEditing}
+              onDescriptionChange={onDescriptionChange}
+              onTeamChange={onTeamChange}
+              onFilesChange={onFilesChange}
+              onServicesChange={onServicesChange}
+            />
+          </TabsContent>
+          <TabsContent value="comments" className="p-6">
+            <ProjectComments
+              project={project}
+              onAddCommentOrTicket={onAddCommentOrTicket}
+              assignableUsers={project.assignedTo}
+              allProjects={allProjects}
+            />
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
 

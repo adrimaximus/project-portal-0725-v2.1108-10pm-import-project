@@ -1,135 +1,231 @@
+import { Project } from "@/data/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
-import { Calendar, DollarSign, CheckCircle, AlertTriangle, XCircle, PauseCircle, Clock, BadgePercent } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/datepicker";
-import { Input } from "@/components/ui/input";
-
-const getStatusIcon = (status: ProjectStatus) => {
-  const icons: Record<ProjectStatus, JSX.Element> = {
-    'On Track': <CheckCircle className="h-5 w-5 text-green-500" />,
-    'At Risk': <AlertTriangle className="h-5 w-5 text-yellow-500" />,
-    'Off Track': <XCircle className="h-5 w-5 text-red-500" />,
-    'On Hold': <PauseCircle className="h-5 w-5 text-gray-500" />,
-    'Completed': <CheckCircle className="h-5 w-5 text-blue-500" />,
-    'Requested': <Clock className="h-5 w-5 text-gray-500" />,
-    'In Progress': <Clock className="h-5 w-5 text-blue-500" />,
-    'Cancelled': <XCircle className="h-5 w-5 text-red-500" />,
-    'Billed': <DollarSign className="h-5 w-5 text-green-500" />,
-    'Done': <CheckCircle className="h-5 w-5 text-green-500" />,
-  };
-  return icons[status] || <Clock className="h-5 w-5 text-gray-500" />;
-};
-
-const getPaymentStatusInfo = (status: PaymentStatus) => {
-  const info: Record<PaymentStatus, { icon: JSX.Element; color: string }> = {
-    'Paid': { icon: <CheckCircle className="h-5 w-5" />, color: "text-green-500" },
-    'Approved': { icon: <CheckCircle className="h-5 w-5" />, color: "text-green-500" },
-    'PO Created': { icon: <CheckCircle className="h-5 w-5" />, color: "text-blue-500" },
-    'On Process': { icon: <Clock className="h-5 w-5" />, color: "text-blue-500" },
-    'Unpaid': { icon: <AlertTriangle className="h-5 w-5" />, color: "text-yellow-500" },
-    'Pending': { icon: <PauseCircle className="h-5 w-5" />, color: "text-gray-500" },
-    'Overdue': { icon: <XCircle className="h-5 w-5" />, color: "text-red-500" },
-    'Cancelled': { icon: <XCircle className="h-5 w-5" />, color: "text-red-500" },
-    'Proposed': { icon: <AlertTriangle className="h-5 w-5" />, color: "text-yellow-500" },
-  };
-  return info[status] || { icon: <Clock className="h-5 w-5" />, color: "text-gray-500" };
-};
+import { cn } from "@/lib/utils";
+import { format, isPast, differenceInDays, addDays } from "date-fns";
+import { Activity, CreditCard, Wallet, CalendarDays, CalendarClock } from "lucide-react";
 
 interface ProjectInfoCardsProps {
   project: Project;
   isEditing: boolean;
-  editedProject: Project;
+  editedProject: Project | null;
   onSelectChange: (name: 'status' | 'paymentStatus', value: string) => void;
-  onDateChange: (name: 'deadline' | 'paymentDueDate', date: Date | undefined) => void;
+  onDateChange: (name: 'deadline' | 'paymentDueDate' | 'startDate', date: Date | undefined) => void;
   onBudgetChange: (value: number | undefined) => void;
 }
 
-const ProjectInfoCards = ({ project, isEditing, editedProject, onSelectChange, onDateChange, onBudgetChange }: ProjectInfoCardsProps) => {
-  const paymentStatusInfo = getPaymentStatusInfo(editedProject.paymentStatus);
+const ProjectInfoCards = ({
+  project,
+  isEditing,
+  editedProject,
+  onSelectChange,
+  onDateChange,
+  onBudgetChange,
+}: ProjectInfoCardsProps) => {
+  const getStatusBadgeVariant = (status: Project["status"]) => {
+    switch (status) {
+      case "Completed":
+      case "Done":
+      case "Billed":
+        return "default";
+      case "In Progress":
+        return "secondary";
+      case "On Hold":
+      case "Cancelled":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
+  const getPaymentStatusBadgeVariant = (status: Project["paymentStatus"]) => {
+    switch (status) {
+      case "paid": return "default";
+      case "approved":
+      case "po_created":
+      case "on_process":
+      case "pending": 
+        return "secondary";
+      case "cancelled": 
+        return "destructive";
+      case "proposed": 
+        return "outline";
+      default: 
+        return "outline";
+    }
+  };
+
+  const formatPaymentStatus = (status: Project["paymentStatus"]) => {
+    switch (status) {
+      case "po_created":
+        return "PO Created";
+      case "on_process":
+        return "On Process";
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
+  const budgetFormatted = new Intl.NumberFormat("id-ID", {
+    style: "currency", currency: "IDR", minimumFractionDigits: 0,
+  }).format(project.budget);
+
+  const startDateFormatted = (project as any).startDate
+    ? new Date((project as any).startDate).toLocaleDateString("en-US", {
+        year: 'numeric', month: 'long', day: 'numeric'
+      })
+    : "Not Set";
+
+  const deadlineFormatted = new Date(project.deadline).toLocaleDateString("en-US", {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  // Calculate Payment Due Date as 30 days after the project deadline
+  const paymentDueDate = addDays(new Date(project.deadline), 30);
+  const paymentDueDateFormatted = paymentDueDate.toLocaleDateString("en-US", {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  const isPaymentOverdue = isPast(paymentDueDate) && !['paid', 'cancelled'].includes(project.paymentStatus);
+  const paymentOverdueDays = isPaymentOverdue ? differenceInDays(new Date(), paymentDueDate) : 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {/* Status Card */}
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Status</CardTitle>
-          {getStatusIcon(editedProject.status)}
+          <CardTitle className="text-sm font-medium">Project Status</CardTitle>
+          <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {isEditing ? (
+          {isEditing && editedProject ? (
             <Select value={editedProject.status} onValueChange={(value) => onSelectChange('status', value)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="On Track">On Track</SelectItem>
-                <SelectItem value="At Risk">At Risk</SelectItem>
-                <SelectItem value="Off Track">Off Track</SelectItem>
-                <SelectItem value="On Hold">On Hold</SelectItem>
+                <SelectItem value="Requested">Requested</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
                 <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="Billed">Billed</SelectItem>
+                <SelectItem value="On Hold">On Hold</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                <SelectItem value="Done">Done</SelectItem>
               </SelectContent>
             </Select>
           ) : (
-            <div className="text-2xl font-bold">{project.status}</div>
+            <Badge variant={getStatusBadgeVariant(project.status)}>
+              {project.status}
+            </Badge>
           )}
         </CardContent>
       </Card>
-
-      {/* Deadline Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Deadline</CardTitle>
-          <Calendar className="h-5 w-5 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Payment Status</CardTitle>
+          <CreditCard className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {isEditing ? (
-            <DatePicker date={parseISO(editedProject.deadline)} setDate={(date) => onDateChange('deadline', date)} />
-          ) : (
-            <div className="text-2xl font-bold">{format(parseISO(project.deadline), "MMM d, yyyy")}</div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Budget Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Budget</CardTitle>
-          <DollarSign className="h-5 w-5 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          {isEditing ? (
-            <Input
-              type="number"
-              value={editedProject.budget}
-              onChange={(e) => onBudgetChange(e.target.valueAsNumber)}
-              placeholder="Enter budget"
-            />
-          ) : (
-            <div className="text-2xl font-bold">${project.budget.toLocaleString()}</div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Payment Status Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Payment</CardTitle>
-          <span className={paymentStatusInfo.color}>{paymentStatusInfo.icon}</span>
-        </CardHeader>
-        <CardContent>
-          {isEditing ? (
-            <Select value={editedProject.paymentStatus} onValueChange={(value) => onSelectChange('paymentStatus', value)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+          {isEditing && editedProject ? (
+            <Select value={editedProject.paymentStatus} onValueChange={(value) => onSelectChange('paymentStatus', value as Project["paymentStatus"])}>
+              <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Paid">Paid</SelectItem>
-                <SelectItem value="Unpaid">Unpaid</SelectItem>
-                <SelectItem value="Overdue">Overdue</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="proposed">Proposed</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="po_created">PO Created</SelectItem>
+                <SelectItem value="on_process">On Process</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           ) : (
-            <div className="text-2xl font-bold">{project.paymentStatus}</div>
+            <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
+              {formatPaymentStatus(project.paymentStatus)}
+            </Badge>
           )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Project Value</CardTitle>
+          <Wallet className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {isEditing && editedProject ? (
+            <div className="relative">
+              <span className="absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">IDR</span>
+              <CurrencyInput value={editedProject.budget} onChange={onBudgetChange} className="pl-12" />
+            </div>
+          ) : (
+            <div className="text-xl font-bold">{budgetFormatted}</div>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Project Start Date</CardTitle>
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {isEditing && editedProject ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !(editedProject as any).startDate && "text-muted-foreground")}>
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {(editedProject as any).startDate ? format(new Date((editedProject as any).startDate), "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={(editedProject as any).startDate ? new Date((editedProject as any).startDate) : undefined} onSelect={(date) => onDateChange('startDate', date)} initialFocus />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <div className="text-xl font-bold">{startDateFormatted}</div>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Project Due Date</CardTitle>
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {isEditing && editedProject ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !editedProject.deadline && "text-muted-foreground")}>
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {editedProject.deadline ? format(new Date(editedProject.deadline), "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={new Date(editedProject.deadline)} onSelect={(date) => onDateChange('deadline', date)} initialFocus />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <div>
+              <div className="text-xl font-bold">{deadlineFormatted}</div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Payment Due</CardTitle>
+          <CalendarClock className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div>
+            <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
+            {isPaymentOverdue && (
+              <p className="text-xs text-red-500 mt-1">
+                Overdue by {paymentOverdueDays} day{paymentOverdueDays !== 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

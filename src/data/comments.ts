@@ -1,44 +1,62 @@
-export interface Comment {
-  id: string;
-  projectId: string;
-  user: {
-    name: string;
-    avatar: string;
-  };
-  text: string;
-  timestamp: string;
-  isTicket?: boolean;
-  attachment?: {
-    name: string;
-    size: number;
-    type: string;
-    url: string;
-  };
-}
+import { Comment } from "@/components/ProjectComments";
 
 export const initialComments: Comment[] = [
-    {
-      id: 'comment-1',
-      projectId: 'proj-1',
-      user: { name: 'Alice', avatar: 'https://i.pravatar.cc/150?u=alice' },
-      text: 'Just reviewed the wireframes, they look great! One small suggestion: can we make the CTA button on the homepage a bit larger?',
-      timestamp: '2024-08-15T10:30:00Z',
+  {
+    id: 1,
+    projectId: "proj-1",
+    user: {
+      name: "Olivia Martin",
+      avatar: "https://i.pravatar.cc/150?u=olivia",
     },
-    {
-      id: 'comment-2',
-      projectId: 'proj-1',
-      user: { name: 'Charlie', avatar: 'https://i.pravatar.cc/150?u=charlie' },
-      text: '@Alice Good point! I\'ll update the design. I\'ve also attached the latest brand guidelines for reference. #/Website Redesign',
-      timestamp: '2024-08-15T11:00:00Z',
-      isTicket: true,
-      attachment: { name: 'Brand-Guidelines-v2.pdf', size: 1300000, type: 'application/pdf', url: '#' },
+    text: "Just a heads up, the latest designs for the user dashboard are ready for review. I've attached the Figma link.",
+    timestamp: "2 days ago",
+  },
+  {
+    id: 2,
+    projectId: "proj-1",
+    user: {
+      name: "Ethan Carter",
+      avatar: "https://i.pravatar.cc/150?u=ethan",
     },
-    {
-      id: 'comment-3',
-      projectId: 'proj-2',
-      user: { name: 'David', avatar: 'https://i.pravatar.cc/150?u=david' },
-      text: 'We\'re hitting a snag with the real-time sync feature. The database connection is unstable. @Bob can you take a look?',
-      timestamp: '2024-08-16T14:00:00Z',
-      isTicket: true,
+    text: "I'm encountering a bug on the staging server where the login button is unresponsive. I've raised a ticket for this.",
+    timestamp: "1 day ago",
+    isTicket: true,
+  },
+  {
+    id: 3,
+    projectId: "proj-1",
+    user: {
+      name: "You",
+      avatar: "https://i.pravatar.cc/150?u=currentuser",
     },
+    text: "Thanks for the update, Olivia. I'll take a look at the designs today.",
+    timestamp: "1 day ago",
+  },
+  {
+    id: 4,
+    projectId: "proj-2",
+    user: {
+      name: "Sophia Davis",
+      avatar: "https://i.pravatar.cc/150?u=sophia",
+    },
+    text: "The client has requested a new feature: the ability to export reports as CSV files. I've created a ticket to track this request.",
+    timestamp: "3 hours ago",
+    isTicket: true,
+    attachment: {
+      name: "feature-request.pdf",
+      url: "#",
+      type: 'file',
+    }
+  },
+  {
+    id: 5,
+    projectId: "proj-3",
+    user: {
+      name: "Liam Brown",
+      avatar: "https://i.pravatar.cc/150?u=liam",
+    },
+    text: "The campaign is underperforming. We need to rethink the ad copy. Ticket raised.",
+    timestamp: "5 hours ago",
+    isTicket: true,
+  },
 ];

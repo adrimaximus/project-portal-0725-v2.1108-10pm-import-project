@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { dummyProjects, Project, User, Task, ProjectFile } from "@/data/projects";
+import { dummyProjects, Project, AssignedUser, Task, ProjectFile } from "@/data/projects";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
-import { Comment } from "@/data/comments";
+import { Comment } from "@/components/ProjectComments";
 import { initialComments } from "@/data/comments";
 import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
 
@@ -92,7 +92,7 @@ const ProjectDetail = () => {
     }
   };
 
-  const handleTeamChange = (selectedUsers: User[]) => {
+  const handleTeamChange = (selectedUsers: AssignedUser[]) => {
     if (editedProject) {
       setEditedProject({ ...editedProject, assignedTo: selectedUsers });
     }
@@ -106,8 +106,8 @@ const ProjectDetail = () => {
         type: file.type,
         url: URL.createObjectURL(file),
       }));
-      const existingFiles = editedProject.files || [];
-      setEditedProject({ ...editedProject, files: [...existingFiles, ...newProjectFiles] });
+      const existingFiles = editedProject.briefFiles || [];
+      setEditedProject({ ...editedProject, briefFiles: [...existingFiles, ...newProjectFiles] });
     }
   };
 
@@ -139,22 +139,27 @@ const ProjectDetail = () => {
       updatedProject.comments = [...(currentEditedProject.comments || []), newComment];
   
       if (newComment.isTicket) {
-        const mentionedUsersToAssign: User[] = [];
+        const mentionedUsersToAssign: AssignedUser[] = [];
         let textForTask = newComment.text;
   
+        // Sort assignable users by name length, descending, to handle cases like "@Jo" and "@John"
         const sortedAssignableUsers = [...updatedProject.assignedTo].sort((a, b) => b.name.length - a.name.length);
 
         sortedAssignableUsers.forEach(user => {
+          // Regex to find the user mention, ensuring it's not part of a larger word.
           const userMentionRegex = new RegExp(`@${user.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}(?!\\w)`, 'g');
           
           if (textForTask.match(userMentionRegex)) {
+            // Add to assignees if not already there
             if (!mentionedUsersToAssign.find(u => u.id === user.id)) {
               mentionedUsersToAssign.push(user);
             }
+            // Remove the mention from the text
             textForTask = textForTask.replace(userMentionRegex, '');
           }
         });
   
+        // Also strip project mentions
         const projectMentionRegex = /#\/[a-zA-Z0-9\s._-]+/g;
         textForTask = textForTask.replace(projectMentionRegex, '');
   
@@ -174,7 +179,6 @@ const ProjectDetail = () => {
             text: newTaskText,
             completed: false,
             assignedTo: mentionedUsersToAssign.map(user => user.id),
-            isFromTicket: true,
           };
           updatedProject.tasks = [...(currentEditedProject.tasks || []), newTask];
         }
