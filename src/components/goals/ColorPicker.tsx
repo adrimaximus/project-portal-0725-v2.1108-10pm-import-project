@@ -25,7 +25,9 @@ const ColorPicker = ({ color, onChange, className }: ColorPickerProps) => {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <HexColorPicker color={color} onChange={onChange} />
+        <div className="p-2">
+          <HexColorPicker color={color} onChange={onChange} />
+        </div>
         <div className="p-2 border-t border-input">
             <div className="flex items-center gap-2">
                 <div
