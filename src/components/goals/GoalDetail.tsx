@@ -3,133 +3,174 @@ import { Goal } from '@/data/goals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { TwitterPicker } from 'react-color';
-import IconPicker from './IconPicker';
+import { Trash2, ChevronDown } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { Target } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import IconPicker from './IconPicker';
+import { CustomColorPicker } from './CustomColorPicker';
+import DayOfWeekPicker from './DayOfWeekPicker';
 
 interface GoalDetailProps {
-  goal?: Goal;
+  goal: Goal;
   onUpdate: (goal: Goal) => void;
-  onClose: () => void;
+  onClose?: () => void;
+  isCreateMode?: boolean;
 }
 
-const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const GoalDetail = ({ goal, onUpdate, onClose, isCreateMode = false }: GoalDetailProps) => {
+  const [editedGoal, setEditedGoal] = useState<Goal>(goal);
 
-const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
-  const isNew = !goal;
-  const [editedGoal, setEditedGoal] = useState<Omit<Goal, 'id' | 'completions'>>(
-    isNew
-      ? { title: '', frequency: 'Daily', icon: Target, color: '#3b82f6', specificDays: [], invitedUsers: [] }
-      : { ...goal }
-  );
-  const [selectedFrequency, setSelectedFrequency] = useState<Goal['frequency']>(editedGoal.frequency);
-  const [selectedDays, setSelectedDays] = useState<string[]>(editedGoal.specificDays || []);
+  const getInitialFrequencyType = (g: Goal) => {
+    if (g.specificDays && g.specificDays.length > 0) {
+      return 'specific_days';
+    }
+    if (g.frequency.startsWith('Every 1 day')) {
+      return 'daily';
+    }
+    if (g.frequency) {
+        return 'specific_days';
+    }
+    return 'daily';
+  };
+
+  const [frequencyType, setFrequencyType] = useState<'daily' | 'specific_days'>(getInitialFrequencyType(goal));
+  const [selectedDays, setSelectedDays] = useState<string[]>(goal.specificDays || []);
 
   useEffect(() => {
-    if (selectedFrequency !== 'Weekly') {
+    if (selectedDays.length === 7) {
+      setFrequencyType('daily');
+    }
+  }, [selectedDays]);
+
+  const handleFrequencyChange = (value: string) => {
+    const newFrequencyType = value as 'daily' | 'specific_days';
+    setFrequencyType(newFrequencyType);
+
+    if (newFrequencyType === 'specific_days' && selectedDays.length === 7) {
       setSelectedDays([]);
     }
-  }, [selectedFrequency]);
+  };
 
   const handleSave = () => {
-    const finalGoal: Goal = {
-      ...editedGoal,
-      id: goal?.id || new Date().toISOString(),
-      completions: goal?.completions || [],
-      frequency: selectedFrequency,
-      specificDays: selectedDays,
-    };
-    onUpdate(finalGoal);
+    let finalFrequency = '';
+    let finalSpecificDays: string[] | undefined = undefined;
+
+    if (frequencyType === 'daily') {
+      finalFrequency = 'Every 1 day for 1 week';
+      finalSpecificDays = undefined;
+    } else {
+      finalFrequency = `On ${selectedDays.length} specific day(s) for 1 week`;
+      finalSpecificDays = selectedDays;
+    }
+    
+    onUpdate({ ...editedGoal, frequency: finalFrequency, specificDays: finalSpecificDays });
   };
 
-  const handleIconSelect = (icon: LucideIcon) => {
-    setEditedGoal(prev => ({ ...prev, icon }));
+  const handleIconSelect = (icon: React.ElementType) => {
+    setEditedGoal({ ...editedGoal, icon: icon as LucideIcon });
   };
 
-  const getIconBackgroundColor = () => `${editedGoal.color}20`;
+  const handleDayToggle = (dayKey: string) => {
+    setSelectedDays(prev => 
+      prev.includes(dayKey) ? prev.filter(d => d !== dayKey) : [...prev, dayKey]
+    );
+  };
+
+  const getIconBackgroundColor = () => {
+    const color = editedGoal.color;
+    if (color.startsWith('#')) {
+      let fullHex = color;
+      if (color.length === 4) {
+        fullHex = `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
+      }
+      if (fullHex.length === 7) {
+        return `${fullHex}33`;
+      }
+    }
+    return 'rgba(128, 128, 128, 0.2)';
+  }
 
   return (
-    <div className="space-y-4 mt-4">
-      <div>
-        <Label htmlFor="title">Goal Title</Label>
+    <div className="grid gap-4 py-4">
+      <div className="grid gap-2">
+        <Label htmlFor="goal-title">Goal Title</Label>
         <Input
-          id="title"
+          id="goal-title"
           value={editedGoal.title}
-          onChange={(e) => setEditedGoal(prev => ({ ...prev, title: e.target.value }))}
-          placeholder="e.g., Read 10 books"
+          onChange={(e) => setEditedGoal({ ...editedGoal, title: e.target.value })}
+          placeholder="e.g., Read 10 pages"
         />
       </div>
-
-      <div className="flex items-end gap-2">
-        <div className="flex-grow">
-          <Label>Icon & Color</Label>
+      
+      <div className="flex items-end gap-4">
+        <div className="flex-1">
+          <Label>Icon</Label>
           <IconPicker onSelectIcon={handleIconSelect} currentColor={editedGoal.color}>
             <Button variant="outline" className="w-full mt-1 flex items-center justify-between h-10 px-3">
               <div className="flex items-center gap-3">
                 <div className="p-1 rounded-lg" style={{ backgroundColor: getIconBackgroundColor() }}>
                   <editedGoal.icon className="h-5 w-5" style={{ color: editedGoal.color }} />
                 </div>
-                <span>Select Icon</span>
+                <span className="text-sm">Select Icon</span>
               </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
           </IconPicker>
         </div>
-        <TwitterPicker
-          color={editedGoal.color}
-          onChangeComplete={(color) => setEditedGoal(prev => ({ ...prev, color: color.hex }))}
-          triangle="hide"
-          styles={{ default: { card: { boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: '0.375rem' } } }}
-        />
+        <div>
+          <Label>Color</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full mt-1 justify-start px-2 h-10">
+                <div className="w-5 h-5 rounded-full mr-2 border" style={{ backgroundColor: editedGoal.color }} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2">
+              <CustomColorPicker
+                color={editedGoal.color}
+                onChange={(newColor) => setEditedGoal({ ...editedGoal, color: newColor })}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
-      <div>
+      <div className="grid gap-2">
         <Label htmlFor="frequency">Frequency</Label>
-        <Select value={selectedFrequency} onValueChange={(value) => setSelectedFrequency(value as Goal['frequency'])}>
-          <SelectTrigger>
+        <Select value={frequencyType} onValueChange={handleFrequencyChange}>
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select frequency" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Daily">Daily</SelectItem>
-            <SelectItem value="Weekly">Weekly</SelectItem>
-            <SelectItem value="Monthly">Monthly</SelectItem>
-            <SelectItem value="Yearly">Yearly</SelectItem>
+            <SelectItem value="daily">Every day</SelectItem>
+            <SelectItem value="specific_days">Specific days of the week</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {selectedFrequency === 'Weekly' && (
-        <div>
-          <Label>Specific days of the week</Label>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-            {weekDays.map((day, index) => (
-              <div key={day} className="flex items-center space-x-2">
-                <Checkbox
-                  id={day}
-                  checked={selectedDays.includes(String(index))}
-                  onCheckedChange={(checked) => {
-                    const dayIndex = String(index);
-                    if (checked) {
-                      setSelectedDays(prev => [...prev, dayIndex]);
-                    } else {
-                      setSelectedDays(prev => prev.filter(d => d !== dayIndex));
-                    }
-                  }}
-                />
-                <Label htmlFor={day} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  {day}
-                </Label>
-              </div>
-            ))}
-          </div>
+      {frequencyType === 'specific_days' && (
+        <div className="grid gap-2 pt-2">
+            <Label className="text-center mb-2">On which days?</Label>
+            <DayOfWeekPicker selectedDays={selectedDays} onDayToggle={handleDayToggle} />
         </div>
       )}
 
-      <div className="flex justify-end gap-2 pt-4 border-t">
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave}>Save Changes</Button>
+      <div className="flex justify-between items-center pt-4 mt-4 border-t">
+        <div>
+          {!isCreateMode && (
+            <Button variant="ghost" className="text-destructive hover:text-destructive">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {onClose && <Button variant="ghost" onClick={onClose}>Cancel</Button>}
+          <Button onClick={handleSave} disabled={frequencyType === 'specific_days' && selectedDays.length === 0}>
+            {isCreateMode ? 'Create Goal' : 'Save Changes'}
+          </Button>
+        </div>
       </div>
     </div>
   );
