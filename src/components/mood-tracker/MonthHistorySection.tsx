@@ -86,14 +86,14 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
           {calendarDays}
         </div>
         {mostFrequentMood && (
-          <Card className="flex flex-col items-center justify-center p-3 rounded-2xl w-24 h-24 sm:w-28 sm:h-28 shrink-0">
+          <Card className="flex flex-col items-center justify-center p-2 rounded-xl w-16 h-16 sm:w-20 sm:h-20 shrink-0">
             <div 
-              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-3xl sm:text-4xl mb-1"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xl sm:text-2xl"
               style={{ backgroundColor: mostFrequentMood.color }}
             >
               {mostFrequentMood.emoji}
             </div>
-            <span className="font-bold text-base sm:text-lg text-card-foreground">{averagePercentage}%</span>
+            <span className="font-bold text-xs sm:text-sm text-card-foreground">{averagePercentage}%</span>
           </Card>
         )}
       </div>
