@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dummyGoals, Goal } from "@/data/goals";
 import { 
   PlusCircle, Target, TrendingUp, Users, CheckCircle, Award, BarChart, Activity, Bike, BookOpen, 
-  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap 
+  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap,
+  Coffee, Code, DollarSign, GraduationCap, Headphones, MapPin, Paintbrush, Plane, ShoppingCart, Utensils
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
@@ -13,7 +14,8 @@ import { LucideIcon } from "lucide-react";
 
 const iconComponents: { [key: string]: LucideIcon } = {
   Target, TrendingUp, Users, CheckCircle, Award, BarChart, Activity, Bike, BookOpen, 
-  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap
+  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap,
+  Coffee, Code, DollarSign, GraduationCap, Headphones, MapPin, Paintbrush, Plane, ShoppingCart, Utensils
 };
 
 const GoalsPage = () => {

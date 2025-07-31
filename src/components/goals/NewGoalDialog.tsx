@@ -8,7 +8,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { 
   Target, TrendingUp, Users, CheckCircle, Award, BarChart, Activity, Bike, BookOpen, 
-  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap 
+  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap,
+  Coffee, Code, DollarSign, GraduationCap, Headphones, MapPin, Paintbrush, Plane, ShoppingCart, Utensils
 } from "lucide-react";
 
 interface NewGoalDialogProps {
@@ -50,6 +51,16 @@ const icons = [
   { name: 'Sunrise', component: Sunrise },
   { name: 'Wallet', component: Wallet },
   { name: 'Zap', component: Zap },
+  { name: 'Coffee', component: Coffee },
+  { name: 'Code', component: Code },
+  { name: 'DollarSign', component: DollarSign },
+  { name: 'GraduationCap', component: GraduationCap },
+  { name: 'Headphones', component: Headphones },
+  { name: 'MapPin', component: MapPin },
+  { name: 'Paintbrush', component: Paintbrush },
+  { name: 'Plane', component: Plane },
+  { name: 'ShoppingCart', component: ShoppingCart },
+  { name: 'Utensils', component: Utensils },
 ];
 
 const colors = ['#4A90E2', '#50E3C2', '#F5A623', '#E02020', '#9013FE', '#BD10E0'];
@@ -125,7 +136,7 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
           )}
           <div className="grid grid-cols-4 items-start gap-4">
             <Label className="text-right pt-2">Icon</Label>
-            <div className="col-span-3">
+            <div className="col-span-3 max-h-[150px] overflow-y-auto p-2 border rounded-md">
               <ToggleGroup
                 type="single"
                 variant="outline"
