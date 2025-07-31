@@ -25,7 +25,7 @@ import {
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ListChecks, CreditCard, User, LayoutGrid } from "lucide-react";
+import { DollarSign, ListChecks, CreditCard, User, Users, LayoutGrid } from "lucide-react";
 import ServiceSelection from "@/components/ServiceSelection";
 
 const Index = () => {
@@ -104,6 +104,7 @@ const Index = () => {
   }, {} as Record<string, any>);
 
   const collaborators = Object.values(collaboratorCounts).sort((a, b) => b.projectCount - a.projectCount);
+  const topCollaborator = collaborators[0] || null;
 
   return (
     <PortalLayout>
@@ -118,7 +119,7 @@ const Index = () => {
                 <h2 className="text-2xl font-bold">Insights</h2>
                 <DateRangePicker date={date} onDateChange={setDate} />
             </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Project Value</CardTitle>
@@ -198,6 +199,31 @@ const Index = () => {
                         )}
                     </CardContent>
                 </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Most Collabs</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {topCollaborator ? (
+                            <div className="flex items-center gap-4">
+                                <Avatar>
+                                    <AvatarImage src={topCollaborator.avatar} alt={topCollaborator.name} />
+                                    <AvatarFallback>{topCollaborator.initials}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="text-lg font-bold">{topCollaborator.name}</div>
+                                    <p className="text-xs text-muted-foreground">{topCollaborator.projectCount} projects</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="text-2xl font-bold">N/A</div>
+                                <p className="text-xs text-muted-foreground">0 projects</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
             <Card>
                 <CardHeader>
@@ -243,7 +269,7 @@ const Index = () => {
                   <TableHead>Project Progress</TableHead>
                   <TableHead>Tickets</TableHead>
                   <TableHead>Project Value</TableHead>
-                  <TableHead>Payment Due</TableHead>
+                  <TableHead>Project Due Date</TableHead>
                   <TableHead>Owner</TableHead>
                   <TableHead className="text-right">Team</TableHead>
                 </TableRow>
@@ -292,7 +318,7 @@ const Index = () => {
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">
-                          {project.paymentDueDate ? format(new Date(project.paymentDueDate), "MMM dd, yyyy") : 'N/A'}
+                          {project.deadline ? format(new Date(project.deadline), "MMM dd, yyyy") : 'N/A'}
                         </div>
                       </TableCell>
                       <TableCell>
