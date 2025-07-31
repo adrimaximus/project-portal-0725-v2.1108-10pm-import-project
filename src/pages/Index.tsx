@@ -1,19 +1,10 @@
 import PortalLayout from "@/components/PortalLayout";
 import { dummyProjects } from "@/data/projects";
 import { Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 
 const Index = () => {
   return (
@@ -24,54 +15,41 @@ const Index = () => {
           <p className="text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
         </div>
 
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px] pl-6">Project</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Team</TableHead>
-                  <TableHead className="text-right pr-6"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dummyProjects.map((project) => (
-                  <TableRow key={project.id}>
-                    <TableCell className="font-medium pl-6">
-                      <Link to={`/projects/${project.id}`} className="hover:underline">{project.name}</Link>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{project.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Progress value={project.progress} className="w-28" />
-                        <span className="text-sm text-muted-foreground">{project.progress}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex -space-x-2">
-                        {project.assignedTo.map((user) => (
-                          <Avatar key={user.id} className="h-8 w-8 border-2 border-background">
-                            <AvatarImage src={user.avatar} alt={user.name} />
-                            <AvatarFallback>{user.initials}</AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                       <Link to={`/projects/${project.id}`}>
-                         <Button variant="outline" size="sm">View Project</Button>
-                       </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {dummyProjects.map((project) => (
+            <Link to={`/projects/${project.id}`} key={project.id} className="block">
+              <Card className="h-full flex flex-col hover:border-primary transition-colors">
+                <CardHeader>
+                  <CardTitle>{project.name}</CardTitle>
+                  <Badge variant="secondary" className="w-fit">{project.category}</Badge>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p className="text-muted-foreground text-sm mb-4">{project.description}</p>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-sm text-muted-foreground">
+                      <span>Progress</span>
+                      <span>{project.progress}%</span>
+                    </div>
+                    <Progress value={project.progress} />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-sm text-muted-foreground">Team</span>
+                    <div className="flex -space-x-2">
+                      {project.assignedTo.map((user) => (
+                        <Avatar key={user.id} className="h-8 w-8 border-2 border-card">
+                          <AvatarImage src={user.avatar} alt={user.name} />
+                          <AvatarFallback>{user.initials}</AvatarFallback>
+                        </Avatar>
+                      ))}
+                    </div>
+                  </div>
+                </CardFooter>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
     </PortalLayout>
   );
