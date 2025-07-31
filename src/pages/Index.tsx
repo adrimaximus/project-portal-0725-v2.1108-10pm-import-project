@@ -26,6 +26,7 @@ import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ListChecks, CreditCard, User, LayoutGrid } from "lucide-react";
+import ServiceSelection from "@/components/ServiceSelection";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -33,12 +34,28 @@ const Index = () => {
     from: subYears(new Date(), 1),
     to: new Date(),
   });
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+
+  const allServices = [...new Set(dummyProjects.flatMap(p => p.services || []))].sort();
 
   const filteredProjects = dummyProjects.filter(project => {
-    if (!date?.from || !project.paymentDueDate) return true;
-    const dueDate = new Date(project.paymentDueDate);
-    const toDate = date.to || date.from;
-    return dueDate >= date.from && dueDate <= toDate;
+    // Date filter
+    if (date?.from && project.paymentDueDate) {
+      const dueDate = new Date(project.paymentDueDate);
+      const toDate = date.to || date.from;
+      if (dueDate < date.from || dueDate > toDate) {
+        return false;
+      }
+    }
+
+    // Service filter
+    if (selectedServices.length > 0) {
+      if (!project.services || !project.services.some(s => selectedServices.includes(s))) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
   const totalValue = filteredProjects.reduce((sum, p) => sum + p.budget, 0);
@@ -51,13 +68,6 @@ const Index = () => {
   const paymentStatusCounts = filteredProjects.reduce((acc, p) => {
       acc[p.paymentStatus] = (acc[p.paymentStatus] || 0) + 1;
       return acc;
-  }, {} as Record<string, number>);
-
-  const serviceCounts = filteredProjects.reduce((acc, project) => {
-    (project.services || []).forEach(service => {
-        acc[service] = (acc[service] || 0) + 1;
-    });
-    return acc;
   }, {} as Record<string, number>);
 
   const ownerCounts = filteredProjects.reduce((acc, p) => {
@@ -110,18 +120,15 @@ const Index = () => {
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Services</CardTitle>
+                        <CardTitle className="text-sm font-medium">Service Selection</CardTitle>
                         <LayoutGrid className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-1 text-sm">
-                            {Object.entries(serviceCounts).sort((a,b) => b[1] - a[1]).map(([service, count]) => (
-                                <div key={service} className="flex justify-between">
-                                    <span className="truncate pr-2">{service}</span>
-                                    <span className="font-semibold">{count}</span>
-                                </div>
-                            ))}
-                        </div>
+                        <ServiceSelection
+                            services={allServices}
+                            selectedServices={selectedServices}
+                            onSelectionChange={setSelectedServices}
+                        />
                     </CardContent>
                 </Card>
                 <Card>
