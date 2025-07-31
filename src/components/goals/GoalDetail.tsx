@@ -26,6 +26,22 @@ const weekDays = [
   { label: 'S', value: '6' },
 ];
 
+const presetColors = [
+  {
+    label: 'Recommended',
+    colors: [
+      '#F44336', '#E91E63', '#9C27B0', '#673AB7',
+      '#3F51B5', '#2196F3', '#03A9F4', '#00BCD4',
+      '#009688', '#4CAF50', '#8BC34A', '#CDDC39',
+      '#FFC107', '#FF9800', '#FF5722', '#795548',
+    ],
+  },
+  {
+    label: 'Greyscale',
+    colors: ['#000000', '#434343', '#666666', '#999999', '#BDBDBD', '#D9D9D9', '#F0F0F0', '#F5F5F5', '#FAFAFA', '#FFFFFF'],
+  }
+];
+
 const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
   const [title, setTitle] = useState(goal.title);
   const [frequency, setFrequency] = useState<Goal['frequency']>(goal.frequency);
@@ -103,7 +119,13 @@ const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
         <div className="grid grid-cols-4 items-center gap-4">
           <Label className="text-right">Color</Label>
           <div className="col-span-3">
-            <ColorPicker value={color} onChange={(_, hex) => setColor(hex)} showText />
+            <ColorPicker 
+              value={color} 
+              onChange={(_, hex) => setColor(hex)} 
+              showText 
+              allowClear
+              presets={presetColors}
+            />
           </div>
         </div>
       </div>
