@@ -13,7 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { getStatusClass } from "@/lib/utils";
+import { getStatusClass, getPaymentStatusClass } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const Index = () => {
@@ -33,6 +33,7 @@ const Index = () => {
               <TableRow>
                 <TableHead className="w-[30%]">Project Name</TableHead>
                 <TableHead>Project Status</TableHead>
+                <TableHead>Payment Status</TableHead>
                 <TableHead>Project Progress</TableHead>
                 <TableHead>Budget</TableHead>
                 <TableHead>Deadline</TableHead>
@@ -60,6 +61,11 @@ const Index = () => {
                     <TableCell>
                       <Badge variant="outline" className={cn("border-transparent", getStatusClass(project.status))}>
                         {project.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn("border-transparent", getPaymentStatusClass(project.paymentStatus))}>
+                        {project.paymentStatus}
                       </Badge>
                     </TableCell>
                     <TableCell>
