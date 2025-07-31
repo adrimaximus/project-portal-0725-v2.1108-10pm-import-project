@@ -34,14 +34,11 @@ const CompletionCalendar = ({ goal, onToggleCompletion }: CompletionCalendarProp
       modifiers={{
         completed: completedDays,
       }}
-      styles={{
+      modifiersStyles={{
         completed: {
-            backgroundColor: goal.color,
-            color: 'white',
+          backgroundColor: goal.color,
+          color: 'white',
         },
-        button: {
-            backgroundColor: 'transparent',
-        }
       }}
       className="rounded-md border p-0"
     />

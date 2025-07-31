@@ -97,32 +97,28 @@ const GoalDetailPage = () => {
                 Back to Goals
               </Button>
               
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Progress</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CompletionCalendar
-                        goal={selectedGoal}
-                        onToggleCompletion={handleToggleCompletion}
-                      />
-                    </CardContent>
-                  </Card>
-                  <CollaboratorManager
-                    collaborators={selectedGoal.collaborators}
-                    onUpdateCollaborators={handleUpdateCollaborators}
-                    allUsers={allUsers}
-                  />
-                </div>
-                <div className="space-y-6">
-                  <GoalDetail
-                    goal={selectedGoal}
-                    onUpdate={handleUpdateGoal}
-                    onDelete={handleDeleteGoal}
-                  />
-                </div>
+              <div className="space-y-6">
+                <GoalDetail
+                  goal={selectedGoal}
+                  onUpdate={handleUpdateGoal}
+                  onDelete={handleDeleteGoal}
+                />
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Progress</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CompletionCalendar
+                      goal={selectedGoal}
+                      onToggleCompletion={handleToggleCompletion}
+                    />
+                  </CardContent>
+                </Card>
+                <CollaboratorManager
+                  collaborators={selectedGoal.collaborators}
+                  onUpdateCollaborators={handleUpdateCollaborators}
+                  allUsers={allUsers}
+                />
               </div>
             </div>
           ) : (
