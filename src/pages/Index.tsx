@@ -12,6 +12,9 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { getStatusClass } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -28,9 +31,11 @@ const Index = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[40%]">Project</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead className="w-[30%]">Project Name</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Progress</TableHead>
+                <TableHead>Budget</TableHead>
+                <TableHead>Deadline</TableHead>
                 <TableHead className="text-right">Team</TableHead>
               </TableRow>
             </TableHeader>
@@ -44,11 +49,13 @@ const Index = () => {
                   <TableCell>
                     <div className="font-medium">{project.name}</div>
                     <div className="text-sm text-muted-foreground hidden md:block">
-                      {project.description}
+                      {project.category}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{project.category}</Badge>
+                    <Badge variant="outline" className={cn("border-transparent", getStatusClass(project.status))}>
+                      {project.status}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -56,6 +63,16 @@ const Index = () => {
                       <span className="text-sm font-medium text-muted-foreground">
                         {project.progress}%
                       </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">
+                      ${project.budget.toLocaleString()}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">
+                      {format(new Date(project.deadline), "MMM dd, yyyy")}
                     </div>
                   </TableCell>
                   <TableCell>
