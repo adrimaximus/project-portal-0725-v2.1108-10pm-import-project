@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
 import { dummyGoals, Goal } from '@/data/goals';
-import { allUsers } from '@/data/users';
 import GoalDetail from '@/components/goals/GoalDetail';
 import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -16,7 +15,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -56,8 +54,6 @@ const GoalDetailPage = () => {
     return <PortalLayout><NotFound /></PortalLayout>;
   }
 
-  const assignedUser = goal.assignedTo ? allUsers.find(u => u.id === goal.assignedTo) : undefined;
-
   const filteredCompletions = dateRange?.from
     ? goal.completions.filter(c => {
         const completionDate = parseISO(c.date);
@@ -92,21 +88,7 @@ const GoalDetailPage = () => {
             </div>
             <div className="min-w-0">
               <h1 className="text-3xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">{goal.title}</h1>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <p>{goal.frequency}</p>
-                {assignedUser && (
-                  <>
-                    <span className="mx-1">&middot;</span>
-                    <div className="flex items-center gap-1.5">
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={assignedUser.avatar} alt={assignedUser.name} />
-                        <AvatarFallback>{assignedUser.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">{assignedUser.name}</span>
-                    </div>
-                  </>
-                )}
-              </div>
+              <p className="text-muted-foreground">{goal.frequency}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -172,7 +154,7 @@ const GoalDetailPage = () => {
           color={goal.color}
           onToggleCompletion={handleToggleCompletion}
           frequency={goal.frequency}
-          specificDays={goal.specificDays?.map(String)}
+          specificDays={goal.specificDays}
         />
       </div>
     </PortalLayout>

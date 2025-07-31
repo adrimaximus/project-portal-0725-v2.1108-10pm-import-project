@@ -1,58 +1,54 @@
-import { BookOpen, Dumbbell, TrendingUp, Heart, LucideIcon } from 'lucide-react';
+import { Book, Dumbbell, Droplets } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+export interface GoalCompletion {
+  date: string; // ISO 8601 format: "YYYY-MM-DD"
+  completed: boolean;
+}
 
 export interface Goal {
   id: string;
   title: string;
-  frequency: 'Daily' | 'Weekly' | 'Monthly';
-  specificDays?: number[];
-  color: string;
   icon: LucideIcon;
-  completions: { date: string; completed: boolean }[];
-  assignedTo?: string;
+  color: string;
+  frequency: string; // e.g., "daily", "specific_days"
+  specificDays?: string[]; // e.g., ["Mo", "We", "Fr"]
+  completions: GoalCompletion[];
 }
 
 export const dummyGoals: Goal[] = [
   {
     id: '1',
-    title: 'Read 10 pages of a book',
-    frequency: 'Daily',
+    title: 'Read 10 pages',
+    icon: Book,
     color: '#4A90E2',
-    icon: BookOpen,
-    assignedTo: 'user-1',
+    frequency: 'Every 1 day for 1 week',
     completions: [
-      { date: '2024-07-20T00:00:00.000Z', completed: true },
-      { date: '2024-07-21T00:00:00.000Z', completed: false },
-      { date: '2024-07-22T00:00:00.000Z', completed: true },
+      { date: '2024-07-20', completed: true },
+      { date: '2024-07-21', completed: true },
     ],
   },
   {
     id: '2',
-    title: 'Go to the gym',
-    frequency: 'Weekly',
-    specificDays: [1, 3, 5],
-    color: '#D0021B',
+    title: 'Workout for 30 mins',
     icon: Dumbbell,
-    assignedTo: 'user-2',
+    color: '#D0021B',
+    frequency: 'On 3 specific day(s) for 1 week',
+    specificDays: ['Mo', 'We', 'Fr'],
     completions: [
-       { date: '2024-07-22T00:00:00.000Z', completed: true },
+      { date: '2024-07-22', completed: true },
     ],
   },
   {
     id: '3',
-    title: 'Track monthly expenses',
-    frequency: 'Monthly',
-    color: '#F5A623',
-    icon: TrendingUp,
-    completions: [
-       { date: '2024-07-15T00:00:00.000Z', completed: true },
-    ],
-  },
-  {
-    id: '4',
-    title: 'Meditate for 5 minutes',
-    frequency: 'Daily',
+    title: 'Drink 8 glasses of water',
+    icon: Droplets,
     color: '#50E3C2',
-    icon: Heart,
-    completions: [],
+    frequency: 'Every 1 day for 1 week',
+    completions: [
+      { date: '2024-07-20', completed: true },
+      { date: '2024-07-21', completed: false },
+      { date: '2024-07-22', completed: true },
+    ],
   },
 ];
