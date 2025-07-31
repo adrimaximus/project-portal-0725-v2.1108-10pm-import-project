@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -27,8 +28,8 @@ const Index = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[40%]">Project Name</TableHead>
-                <TableHead>Project Owner</TableHead>
+                <TableHead className="w-[40%]">Project</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Progress</TableHead>
                 <TableHead className="text-right">Team</TableHead>
               </TableRow>
@@ -47,13 +48,7 @@ const Index = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={project.owner.avatar} alt={project.owner.name} />
-                        <AvatarFallback>{project.owner.initials}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{project.owner.name}</span>
-                    </div>
+                    <Badge variant="secondary">{project.category}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
