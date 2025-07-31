@@ -13,7 +13,7 @@ interface ProjectServicesProps {
   onServicesChange: (services: string[]) => void;
 }
 
-const ProjectServices = ({ selectedServices, isEditing, onServicesChange }: ProjectServicesProps) => {
+const ProjectServices = ({ selectedServices = [], isEditing, onServicesChange }: ProjectServicesProps) => {
   const [open, setOpen] = useState(false);
 
   const serviceDetails = selectedServices
