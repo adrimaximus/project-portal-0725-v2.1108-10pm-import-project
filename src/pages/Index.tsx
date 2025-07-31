@@ -39,14 +39,11 @@ const Index = () => {
   const allServices = [...new Set(dummyProjects.flatMap(p => p.services || []))].sort();
 
   const filteredProjects = dummyProjects.filter(project => {
-    // Date filter: A project's start and end date must be within the selected range.
-    if (date?.from && date?.to) {
-      if (!project.startDate || !project.endDate) {
-        return false; // Exclude projects without a date range if filter is active
-      }
-      const projectStartDate = new Date(project.startDate);
-      const projectEndDate = new Date(project.endDate);
-      if (projectStartDate < date.from || projectEndDate > date.to) {
+    // Date filter
+    if (date?.from && project.paymentDueDate) {
+      const dueDate = new Date(project.paymentDueDate);
+      const toDate = date.to || date.from;
+      if (dueDate < date.from || dueDate > toDate) {
         return false;
       }
     }
