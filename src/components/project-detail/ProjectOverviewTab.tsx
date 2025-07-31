@@ -1,4 +1,4 @@
-import { Project, AssignedUser } from "@/data/projects";
+import { Project, User } from "@/data/projects";
 import ProjectDescription from "./ProjectDescription";
 import ProjectTeam from "./ProjectTeam";
 import ProjectBrief from "./ProjectBrief";
@@ -13,7 +13,7 @@ interface ProjectOverviewTabProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
-  onTeamChange: (selectedUsers: AssignedUser[]) => void;
+  onTeamChange: (selectedUsers: User[]) => void;
   onFilesChange: (files: File[]) => void;
   onServicesChange: (services: string[]) => void;
 }
@@ -105,6 +105,8 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
         <ProjectTeam
           assignedTo={project.assignedTo}
           onTeamChange={onTeamChange}
+          createdBy={project.createdBy}
+          isEditing={isEditing}
         />
       </Section>
 
@@ -118,7 +120,7 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
 
       <Section title="Attachments">
         <ProjectBrief
-          files={project.briefFiles || []}
+          files={project.files || []}
           isEditing={isEditing}
           onFilesChange={onFilesChange}
         />

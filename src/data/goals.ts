@@ -1,4 +1,4 @@
-import { User, user1, user2 } from './users';
+import { User, allUsers } from './projects';
 
 export interface GoalCompletion {
   date: string; // ISO 8601 format
@@ -15,6 +15,9 @@ export interface Goal {
   completions: GoalCompletion[];
   collaborators?: User[];
 }
+
+const user1 = allUsers.find(u => u.id === 'user-1')!;
+const user2 = allUsers.find(u => u.id === 'user-2')!;
 
 export const dummyGoals: Goal[] = [
   {

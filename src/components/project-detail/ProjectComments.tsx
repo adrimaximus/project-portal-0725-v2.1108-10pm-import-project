@@ -4,15 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
-
-interface User {
-    name: string;
-    avatar: string;
-}
+import { User } from '@/data/projects';
 
 interface Comment {
-    id: number;
-    user: User;
+    id: string;
+    user: { name: string; avatar: string; };
     timestamp: string;
     text: string;
     isTicket?: boolean;
@@ -30,7 +26,7 @@ const ProjectComments = ({ initialComments }: ProjectCommentsProps) => {
     const handleAddComment = () => {
         if (newComment.trim()) {
             const comment: Comment = {
-                id: Date.now(),
+                id: `comment-${Date.now()}`,
                 user: { name: 'Current User', avatar: 'https://github.com/shadcn.png' },
                 timestamp: new Date().toISOString(),
                 text: newComment,

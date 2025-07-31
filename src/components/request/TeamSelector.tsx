@@ -3,14 +3,13 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { allUsers } from '@/data/users';
-import { AssignedUser, User } from '@/data/projects';
+import { allUsers, User } from '@/data/projects';
 import { Check, ChevronsUpDown, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TeamSelectorProps {
-  selectedUsers: AssignedUser[];
-  onTeamChange: (users: AssignedUser[]) => void;
+  selectedUsers: User[];
+  onTeamChange: (users: User[]) => void;
 }
 
 const TeamSelector = ({ selectedUsers, onTeamChange }: TeamSelectorProps) => {

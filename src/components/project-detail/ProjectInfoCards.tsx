@@ -3,7 +3,7 @@ import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
 import { Calendar, DollarSign, CheckCircle, AlertTriangle, XCircle, PauseCircle, Clock, BadgePercent } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/datepicker";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { Input } from "@/components/ui/input";
 
 const getStatusIcon = (status: ProjectStatus) => {
