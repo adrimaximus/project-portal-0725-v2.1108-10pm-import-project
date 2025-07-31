@@ -1,179 +1,96 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { format } from "date-fns";
-import { dummyProjects, Project, AssignedUser, Task, ProjectFile } from "@/data/projects";
-import PortalLayout from "@/components/PortalLayout";
-import ProjectHeader from "@/components/project-detail/ProjectHeader";
-import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
-import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
-import { Comment } from "@/components/ProjectComments";
-import { initialComments } from "@/data/comments";
-import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { dummyProjects, Project, ProjectFile } from '@/data/projects';
+import PortalLayout from '@/components/PortalLayout';
+import { ProjectHeader } from '@/components/project-detail/ProjectHeader';
+import { ProjectTabs } from '@/components/project-detail/ProjectTabs';
+import { ProjectOverview } from '@/components/project-detail/ProjectOverview';
+import ProjectTasks from '@/components/project-detail/ProjectTasks';
+import ProjectFiles from '@/components/project-detail/ProjectFiles';
+import ProjectComments from '@/components/ProjectComments';
+import { ProjectTeam } from '@/components/project-detail/ProjectTeam';
+import { ProjectBrief } from '@/components/project-detail/ProjectBrief';
+import { ProjectActivityFeed } from '@/components/project-detail/ProjectActivityFeed';
+import { ProjectProgressCard } from '@/components/project-detail/ProjectProgressCard';
 
 const ProjectDetail = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
   const [project, setProject] = useState<Project | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedProject, setEditedProject] = useState<Project | null>(null);
-  const [comments, setComments] = useState<Comment[]>(initialComments);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    const foundProject = dummyProjects.find(p => p.id === projectId);
+    const foundProject = dummyProjects.find((p) => p.id === id);
     if (foundProject) {
-      const projectWithTasks = {
-        ...foundProject,
-        tasks: foundProject.tasks || [],
-      };
-      setProject(projectWithTasks);
-      setEditedProject(structuredClone(projectWithTasks));
+      setProject(foundProject);
     } else {
-      navigate('/');
+      navigate('/404');
     }
-  }, [projectId, navigate]);
+  }, [id, navigate]);
 
-  if (!project || !editedProject) {
-    return (
-      <PortalLayout>
-        <div className="flex items-center justify-center h-full">
-          <p>Loading project...</p>
-        </div>
-      </PortalLayout>
-    );
+  const handleUpdateProject = (updatedProject: Project) => {
+    setProject(updatedProject);
+    const projectIndex = dummyProjects.findIndex(p => p.id === updatedProject.id);
+    if (projectIndex !== -1) {
+      dummyProjects[projectIndex] = updatedProject;
+    }
+  };
+
+  const handleFilesDrop = (acceptedFiles: File[]) => {
+    if (!project) return;
+
+    const newProjectFiles: ProjectFile[] = acceptedFiles.map(file => ({
+      id: `file-${file.name}-${Date.now()}`,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      url: URL.createObjectURL(file),
+    }));
+
+    const updatedProject = {
+      ...project,
+      files: [...(project.files || []), ...newProjectFiles],
+    };
+    handleUpdateProject(updatedProject);
+  };
+
+  if (!project) {
+    return <div>Loading...</div>;
   }
 
-  const handleSaveChanges = () => {
-    const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
-    if (projectIndex !== -1 && editedProject) {
-      dummyProjects[projectIndex] = editedProject;
-      setProject(editedProject);
-    }
-    setIsEditing(false);
-  };
-
-  const handleCancelChanges = () => {
-    if (project) {
-      setEditedProject(structuredClone(project));
-    }
-    setIsEditing(false);
-  };
-
-  const handleProjectNameChange = (name: string) => {
-    if (editedProject) {
-      setEditedProject({ ...editedProject, name });
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return <ProjectOverview project={project} onUpdate={handleUpdateProject} />;
+      case 'tasks':
+        return <ProjectTasks project={project} onUpdate={handleUpdateProject} />;
+      case 'files':
+        return <ProjectFiles project={project} onFilesDrop={handleFilesDrop} />;
+      case 'discussion':
+        return <ProjectComments project={project} onUpdate={handleUpdateProject} />;
+      default:
+        return <ProjectOverview project={project} onUpdate={handleUpdateProject} />;
     }
   };
-
-  const handleSelectChange = (name: 'status' | 'paymentStatus', value: string) => {
-    if (editedProject) {
-      setEditedProject({ ...editedProject, [name]: value as any });
-    }
-  };
-
-  const handleDateChange = (name: 'deadline' | 'paymentDueDate' | 'startDate', date: Date | undefined) => {
-    if (editedProject) {
-      const originalDate = (project as any)[name];
-      const dateString = date ? format(date, 'yyyy-MM-dd') : originalDate;
-      setEditedProject({ ...editedProject, [name]: dateString });
-    }
-  };
-
-  const handleBudgetChange = (value: number | undefined) => {
-    if (editedProject) {
-      setEditedProject({ ...editedProject, budget: value || 0 });
-    }
-  };
-
-  const handleDescriptionChange = (value: string) => {
-    if (editedProject) {
-      setEditedProject({ ...editedProject, description: value });
-    }
-  };
-
-  const handleTeamChange = (selectedUsers: AssignedUser[]) => {
-    if (editedProject) {
-      setEditedProject({ ...editedProject, assignedTo: selectedUsers });
-    }
-  };
-  
-  const handleFilesChange = (newFiles: File[]) => {
-    if (editedProject) {
-      const newProjectFiles: ProjectFile[] = newFiles.map(file => ({
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: URL.createObjectURL(file),
-      }));
-      const existingFiles = editedProject.briefFiles || [];
-      setEditedProject({ ...editedProject, briefFiles: [...existingFiles, ...newProjectFiles] });
-    }
-  };
-
-  const handleServicesChange = (services: string[]) => {
-    if (editedProject) {
-      setEditedProject({ ...editedProject, services });
-    }
-  };
-
-  const handleTasksUpdate = (updatedTasks: Task[]) => {
-    if (editedProject) {
-      const completedTasks = updatedTasks.filter(task => task.completed).length;
-      const totalTasks = updatedTasks.length;
-      const newProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-      setEditedProject({
-        ...editedProject,
-        tasks: updatedTasks,
-        progress: newProgress,
-      });
-    }
-  };
-
-  const projectComments = comments.filter(c => c.projectId === projectId);
-  const ticketCount = projectComments.filter(c => c.isTicket).length;
 
   return (
     <PortalLayout>
-      <div className="h-full overflow-y-auto space-y-6 p-4 lg:p-6">
-        <ProjectHeader 
-          project={project} 
-          isEditing={isEditing}
-          projectName={editedProject.name}
-          onProjectNameChange={handleProjectNameChange}
-          onEditToggle={() => setIsEditing(!isEditing)}
-          onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleCancelChanges}
-        />
+      <div className="space-y-6">
+        <ProjectHeader project={project} />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <ProjectInfoCards 
-              project={project}
-              isEditing={isEditing}
-              editedProject={editedProject}
-              onSelectChange={handleSelectChange}
-              onDateChange={handleDateChange}
-              onBudgetChange={handleBudgetChange}
-            />
-            <ProjectMainContent
-              project={editedProject}
-              isEditing={isEditing}
-              onDescriptionChange={handleDescriptionChange}
-              onTeamChange={handleTeamChange}
-              onFilesChange={handleFilesChange}
-              onServicesChange={handleServicesChange}
-              comments={projectComments}
-              setComments={setComments}
-              projectId={project.id}
-              ticketCount={ticketCount}
-              allProjects={dummyProjects}
-            />
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <ProjectTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+              <div className="pt-6">
+                {renderTabContent()}
+              </div>
+            </div>
           </div>
           <div className="lg:col-span-1 space-y-6">
-            <ProjectProgressCard 
-              project={editedProject}
-              onTasksUpdate={handleTasksUpdate}
-            />
+            <ProjectProgressCard project={project} onUpdate={handleUpdateProject} />
+            <ProjectBrief project={project} />
+            <ProjectTeam project={project} />
+            <ProjectActivityFeed project={project} />
           </div>
         </div>
       </div>

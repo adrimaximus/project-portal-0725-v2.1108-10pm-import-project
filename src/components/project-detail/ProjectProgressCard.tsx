@@ -1,245 +1,146 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Project, Task, AssignedUser } from "@/data/projects";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, UserPlus } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-
-// A small component for the assignment popover content
-const TaskAssigneeSelector = ({
-  assignableUsers,
-  selectedUserIds,
-  onSelectionChange,
-}: {
-  assignableUsers: AssignedUser[];
-  selectedUserIds: string[];
-  onSelectionChange: (userId: string) => void;
-}) => {
-  return (
-    <Command>
-      <CommandInput placeholder="Assign to..." />
-      <CommandList>
-        <CommandEmpty>No team members found.</CommandEmpty>
-        <CommandGroup>
-          {assignableUsers.map((user) => (
-            <CommandItem
-              key={user.id}
-              value={user.name}
-              onSelect={() => onSelectionChange(user.id)}
-              className="cursor-pointer"
-            >
-              <Checkbox
-                className="mr-2"
-                checked={selectedUserIds.includes(user.id)}
-                onCheckedChange={() => onSelectionChange(user.id)}
-              />
-              <Avatar className="mr-2 h-6 w-6">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback>{user.initials || user.name?.slice(0, 2) || '??'}</AvatarFallback>
-              </Avatar>
-              <span>{user.name}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </CommandList>
-    </Command>
-  );
-};
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Project, Task, User } from "@/data/projects";
+import { CheckCircle2, PlusCircle, UserPlus } from "lucide-react";
 
 interface ProjectProgressCardProps {
   project: Project;
-  onTasksUpdate?: (tasks: Task[]) => void;
+  onUpdate: (project: Project) => void;
 }
 
-const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProps) => {
-  const [newTaskText, setNewTaskText] = useState("");
-  const [newTaskAssignees, setNewTaskAssignees] = useState<string[]>([]);
-  const tasks = project.tasks || [];
-  const assignableUsers = project.assignedTo || [];
+export const ProjectProgressCard = ({ project, onUpdate }: ProjectProgressCardProps) => {
+  const [taskText, setTaskText] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
-  const completedTasks = tasks.filter(task => task.completed).length;
-  const totalTasks = tasks.length;
-  const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-  const handleToggleTask = (taskId: string) => {
-    if (!onTasksUpdate) return;
-    const updatedTasks = tasks.map(task =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    );
-    onTasksUpdate(updatedTasks);
-  };
-
-  const handleTaskAssignmentChange = (taskId: string, userId: string) => {
-    if (!onTasksUpdate) return;
-    const updatedTasks = tasks.map(task => {
-      if (task.id === taskId) {
-        const currentAssignees = task.assignedTo || [];
-        const isAssigned = currentAssignees.includes(userId);
-        const newAssignees = isAssigned
-          ? currentAssignees.filter(id => id !== userId)
-          : [...currentAssignees, userId];
-        return { ...task, assignedTo: newAssignees };
-      }
-      return task;
-    });
-    onTasksUpdate(updatedTasks);
-  };
-
-  const handleNewTaskAssigneeChange = (userId: string) => {
-    setNewTaskAssignees(prev => {
-      const isAssigned = prev.includes(userId);
-      return isAssigned ? prev.filter(id => id !== userId) : [...prev, userId];
-    });
-  };
+  const totalTasks = project.tasks?.length || 0;
+  const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
+  const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : project.progress;
 
   const handleAddTask = () => {
-    if (!onTasksUpdate || newTaskText.trim() === "") return;
+    if (!taskText.trim()) return;
+    const assignedToUsers = selectedUsers
+      .map(userId => project.assignedTo.find(u => u.id === userId))
+      .filter((u): u is User => !!u);
+
     const newTask: Task = {
       id: `task-${Date.now()}`,
-      text: newTaskText.trim(),
+      text: taskText,
       completed: false,
-      assignedTo: newTaskAssignees,
+      assignedTo: assignedToUsers,
     };
-    const updatedTasks = [...tasks, newTask];
-    onTasksUpdate(updatedTasks);
-    setNewTaskText("");
-    setNewTaskAssignees([]);
+    onUpdate({ ...project, tasks: [...(project.tasks || []), newTask] });
+    setTaskText('');
+    setSelectedUsers([]);
   };
 
-  const getAssigneeDetails = (userId: string) => {
-    return assignableUsers.find(u => u.id === userId) || project.createdBy;
+  const handleToggleTask = (taskId: string) => {
+    const updatedTasks = (project.tasks || []).map(t =>
+      t.id === taskId ? { ...t, completed: !t.completed } : t
+    );
+    onUpdate({ ...project, tasks: updatedTasks });
+  };
+
+  const handleAssign = (task: Task, userId: string) => {
+    const userToAssign = project.assignedTo.find(u => u.id === userId);
+    if (!userToAssign) return;
+
+    const updatedTasks = (project.tasks || []).map(t =>
+      t.id === task.id
+        ? { ...t, assignedTo: [...(t.assignedTo || []), userToAssign] }
+        : t
+    );
+    onUpdate({ ...project, tasks: updatedTasks });
   };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Project Progress</CardTitle>
-        <CardDescription>
-          {onTasksUpdate
-            ? `${completedTasks} of ${totalTasks} tasks completed.`
-            : `This project is ${project.progress}% complete.`
-          }
-        </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-muted-foreground">Overall Progress</span>
-          <span className="text-sm font-bold">{onTasksUpdate ? progressPercentage : project.progress}%</span>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm text-muted-foreground">{completedTasks} of {totalTasks} tasks completed</span>
+          <span className="font-semibold">{progress}%</span>
         </div>
-        <Progress value={onTasksUpdate ? progressPercentage : project.progress} className={onTasksUpdate ? "mb-6" : ""} />
-        
-        {onTasksUpdate && (
-          <>
-            <Separator className="my-4" />
-
-            <h4 className="text-sm font-medium mb-3">Tasks</h4>
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-              {tasks.length > 0 ? (
-                tasks.map(task => (
-                  <div key={task.id} className="flex items-center justify-between group -ml-1.5">
-                    <div className="flex items-center space-x-1.5 flex-1 min-w-0">
-                      <Checkbox
-                        id={task.id}
-                        checked={task.completed}
-                        onCheckedChange={() => handleToggleTask(task.id)}
-                        className="ml-1.5"
-                      />
-                      <label
-                        htmlFor={task.id}
-                        className={`text-sm font-medium leading-none truncate cursor-pointer ${
-                          task.completed ? "line-through text-muted-foreground" : ""
-                        }`}
-                        title={task.text}
-                      >
-                        {task.text}
-                      </label>
-                    </div>
-                    <div className="flex items-center ml-2">
-                      <div className="flex -space-x-2 mr-1">
-                        {task.assignedTo?.map(userId => {
-                          const user = getAssigneeDetails(userId);
-                          if (!user) return null;
-                          return (
-                            <TooltipProvider key={user.id} delayDuration={100}>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Avatar className="h-6 w-6 border-2 border-background">
-                                    <AvatarImage src={user.avatar} />
-                                    <AvatarFallback>{user.initials || user.name?.slice(0, 1) || '??'}</AvatarFallback>
-                                  </Avatar>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{user.name}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          );
-                        })}
-                      </div>
+        <Progress value={progress} className="mb-4" />
+        <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+          {project.tasks?.map(task => {
+            const assignedUserIds = task.assignedTo?.map(u => u.id) || [];
+            const unassignedUsers = project.assignedTo.filter(u => !assignedUserIds.includes(u.id));
+            return (
+              <div key={task.id} className="flex items-start gap-3">
+                <Checkbox id={`task-${task.id}`} checked={task.completed} onCheckedChange={() => handleToggleTask(task.id)} className="mt-1" />
+                <div className="flex-1">
+                  <label htmlFor={`task-${task.id}`} className={`text-sm ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.text}</label>
+                  <div className="flex items-center gap-2 mt-1">
+                    {task.assignedTo?.map(user => (
+                      <Avatar key={user.id} className="h-5 w-5">
+                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarFallback>{user.initials}</AvatarFallback>
+                      </Avatar>
+                    ))}
+                    {unassignedUsers.length > 0 && (
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100">
-                            <UserPlus className="h-4 w-4" />
+                          <Button variant="ghost" size="icon" className="h-5 w-5">
+                            <UserPlus className="h-3 w-3" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="p-0 w-64">
-                          <TaskAssigneeSelector
-                            assignableUsers={assignableUsers}
-                            selectedUserIds={task.assignedTo || []}
-                            onSelectionChange={(userId) => handleTaskAssignmentChange(task.id, userId)}
-                          />
+                        <PopoverContent className="p-0 w-48">
+                          <Command>
+                            <CommandInput placeholder="Assign to..." />
+                            <CommandEmpty>No user found.</CommandEmpty>
+                            <CommandGroup>
+                              {unassignedUsers.map(u => (
+                                <CommandItem key={u.id} onSelect={() => handleAssign(task, u.id)}>{u.name}</CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
                         </PopoverContent>
                       </Popover>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No tasks yet.</p>
-              )}
-            </div>
-
-            <div className="mt-4 flex space-x-2">
-              <Input
-                placeholder="Add a new task..."
-                value={newTaskText}
-                onChange={(e) => setNewTaskText(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
-              />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="icon" className="relative">
-                    <UserPlus className="h-4 w-4" />
-                    {newTaskAssignees.length > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
-                        {newTaskAssignees.length}
-                      </span>
                     )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0 w-64">
-                  <TaskAssigneeSelector
-                    assignableUsers={assignableUsers}
-                    selectedUserIds={newTaskAssignees}
-                    onSelectionChange={handleNewTaskAssigneeChange}
-                  />
-                </PopoverContent>
-              </Popover>
-              <Button onClick={handleAddTask} size="icon">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </>
-        )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-4 flex gap-2">
+          <Input placeholder="Add a new task..." value={taskText} onChange={e => setTaskText(e.target.value)} />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon"><UserPlus className="h-4 w-4" /></Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-56">
+              <Command>
+                <CommandInput placeholder="Assign users..." />
+                <CommandEmpty>No users found.</CommandEmpty>
+                <CommandGroup>
+                  {project.assignedTo.map(user => (
+                    <CommandItem key={user.id} onSelect={() => {
+                      const newSelection = selectedUsers.includes(user.id)
+                        ? selectedUsers.filter(id => id !== user.id)
+                        : [...selectedUsers, user.id];
+                      setSelectedUsers(newSelection);
+                    }}>
+                      <Checkbox className="mr-2" checked={selectedUsers.includes(user.id)} />
+                      {user.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          <Button onClick={handleAddTask} size="icon"><PlusCircle className="h-4 w-4" /></Button>
+        </div>
       </CardContent>
     </Card>
   );
 };
-
-export default ProjectProgressCard;
