@@ -43,7 +43,7 @@ const MoodOverview = ({ data }: MoodOverviewProps) => {
           <Tooltip 
             content={<CustomTooltip />} 
             cursor={{ fill: 'transparent' }}
-            wrapperStyle={{ zIndex: 50 }}
+            wrapperStyle={{ zIndex: 100 }}
           />
           <Pie
             data={data}
