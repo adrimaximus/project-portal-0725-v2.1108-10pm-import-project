@@ -15,9 +15,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
-import { allUsers, User } from '@/data/users';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -66,10 +63,6 @@ const GoalDetailPage = () => {
     : goal.completions;
 
   const Icon = goal.icon;
-  
-  const assignedUsers = goal.assignedUserIds
-    ?.map(id => allUsers.find(u => u.id === id))
-    .filter((u): u is User => !!u) || [];
 
   return (
     <PortalLayout>
@@ -98,81 +91,61 @@ const GoalDetailPage = () => {
               <p className="text-muted-foreground">{goal.frequency}</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            {assignedUsers.length > 0 && (
-              <div className="flex -space-x-2">
-                {assignedUsers.map(user => (
-                  <TooltipProvider key={user.id} delayDuration={100}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Avatar className="h-9 w-9 border-2 border-background">
-                          <AvatarFallback>{user.initials}</AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{user.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ))}
-              </div>
-            )}
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="date"
-                    variant={"outline"}
-                    className={cn(
-                      "w-[260px] justify-start text-left font-normal",
-                      !dateRange && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.from ? (
-                      dateRange.to ? (
-                        <>
-                          {format(dateRange.from, "LLL dd, y", { locale: enUS })} -{" "}
-                          {format(dateRange.to, "LLL dd, y", { locale: enUS })}
-                        </>
-                      ) : (
-                        format(dateRange.from, "LLL dd, y", { locale: enUS })
-                      )
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-[260px] justify-start text-left font-normal",
+                    !dateRange && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "LLL dd, y", { locale: enUS })} -{" "}
+                        {format(dateRange.to, "LLL dd, y", { locale: enUS })}
+                      </>
                     ) : (
-                      <span>Pick a date range</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateRange?.from}
-                    selected={dateRange}
-                    onSelect={setDateRange}
-                    numberOfMonths={2}
-                  />
-                </PopoverContent>
-              </Popover>
-              <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit Goal
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Edit Goal</DialogTitle>
-                  </DialogHeader>
-                  <GoalDetail 
-                    goal={goal} 
-                    onUpdate={handleUpdateGoal}
-                    onClose={() => setIsEditModalOpen(false)}
-                  />
-                </DialogContent>
-              </Dialog>
-            </div>
+                      format(dateRange.from, "LLL dd, y", { locale: enUS })
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit Goal
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Edit Goal</DialogTitle>
+                </DialogHeader>
+                <GoalDetail 
+                  goal={goal} 
+                  onUpdate={handleUpdateGoal}
+                  onClose={() => setIsEditModalOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
         

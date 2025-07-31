@@ -13,7 +13,7 @@ interface MoodOverviewProps {
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    const shouldMoveLeft = data.label === 'Happy';
+    const shouldMoveLeft = data.label === 'Happy' || data.label === 'Good';
 
     return (
       <div className={cn(shouldMoveLeft && '-translate-x-full')}>
@@ -43,7 +43,7 @@ const MoodOverview = ({ data }: MoodOverviewProps) => {
           <Tooltip 
             content={<CustomTooltip />} 
             cursor={{ fill: 'transparent' }}
-            wrapperStyle={{ zIndex: 100 }}
+            wrapperStyle={{ zIndex: 50 }}
           />
           <Pie
             data={data}

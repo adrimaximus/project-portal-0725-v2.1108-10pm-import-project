@@ -1,3 +1,4 @@
+import { Progress } from '@/components/ui/progress';
 import { Mood } from '@/data/mood';
 
 interface MoodStatData extends Mood {
@@ -29,12 +30,7 @@ const MoodStats = ({ data }: MoodStatsProps) => {
               <span className="text-muted-foreground">{mood.value} day{mood.value !== 1 ? 's' : ''}</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-white border">
-                <div
-                  className="h-full transition-all"
-                  style={{ width: `${percentage}%`, backgroundColor: mood.color }}
-                />
-              </div>
+              <Progress value={percentage} className="h-2 w-full" style={{ backgroundColor: mood.color }} />
               <span className="text-xs font-semibold w-10 text-right">{percentage}%</span>
             </div>
           </div>

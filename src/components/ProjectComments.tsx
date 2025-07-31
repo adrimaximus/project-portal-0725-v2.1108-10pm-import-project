@@ -44,7 +44,7 @@ const renderWithMentions = (text: string, allProjects: Project[]) => {
   return parts.map((part, index) => {
     if (part.match(mentionRegex)) {
       if (part.startsWith('@')) {
-        return <strong key={index} className="text-blue-600 font-medium">{part}</strong>;
+        return <strong key={index} className="text-primary font-medium">{part}</strong>;
       }
       if (part.startsWith('#/')) {
         const projectName = part.substring(2).trim();

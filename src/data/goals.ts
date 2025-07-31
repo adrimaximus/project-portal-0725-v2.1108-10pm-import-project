@@ -1,83 +1,54 @@
-import { Book, Dumbbell, Target, Zap, Leaf, LucideIcon } from 'lucide-react';
-import { subDays } from 'date-fns';
+import { Book, Dumbbell, Droplets } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+export interface GoalCompletion {
+  date: string; // ISO 8601 format: "YYYY-MM-DD"
+  completed: boolean;
+}
 
 export interface Goal {
   id: string;
   title: string;
-  frequency: string;
   icon: LucideIcon;
   color: string;
-  completions: { date: string; completed: boolean }[];
-  specificDays?: string[];
-  assignedUserIds?: string[];
+  frequency: string; // e.g., "daily", "specific_days"
+  specificDays?: string[]; // e.g., ["Mo", "We", "Fr"]
+  completions: GoalCompletion[];
 }
-
-const generateCompletions = (days: number, specificDays?: string[]) => {
-  const completions = [];
-  const dayMapping: { [key: string]: number } = { 'Su': 0, 'Mo': 1, 'Tu': 2, 'We': 3, 'Th': 4, 'Fr': 5, 'Sa': 6 };
-
-  for (let i = 1; i <= days; i++) {
-    const date = subDays(new Date(), i);
-    const dayOfWeek = date.getDay();
-    
-    const shouldTrack = !specificDays || specificDays.includes(Object.keys(dayMapping).find(key => dayMapping[key] === dayOfWeek)!);
-
-    if (shouldTrack) {
-      completions.push({
-        date: date.toISOString(),
-        completed: Math.random() > 0.3,
-      });
-    }
-  }
-  return completions;
-};
 
 export const dummyGoals: Goal[] = [
   {
     id: '1',
-    title: 'Read 10 pages of a book',
-    frequency: 'Daily',
+    title: 'Read 10 pages',
     icon: Book,
-    color: '#3b82f6',
-    completions: generateCompletions(90),
-    assignedUserIds: ['user-1'],
+    color: '#4A90E2',
+    frequency: 'Every 1 day for 1 week',
+    completions: [
+      { date: '2024-07-20', completed: true },
+      { date: '2024-07-21', completed: true },
+    ],
   },
   {
     id: '2',
-    title: 'Workout for 30 minutes',
-    frequency: 'Mon, Wed, Fri',
+    title: 'Workout for 30 mins',
     icon: Dumbbell,
-    color: '#ef4444',
+    color: '#D0021B',
+    frequency: 'On 3 specific day(s) for 1 week',
     specificDays: ['Mo', 'We', 'Fr'],
-    completions: generateCompletions(90, ['Mo', 'We', 'Fr']),
-    assignedUserIds: ['user-1', 'user-3'],
+    completions: [
+      { date: '2024-07-22', completed: true },
+    ],
   },
   {
     id: '3',
-    title: 'Achieve sales target',
-    frequency: 'Weekly',
-    icon: Target,
-    color: '#10b981',
-    completions: generateCompletions(90, ['Fr']),
-    assignedUserIds: ['user-2', 'user-4'],
-  },
-  {
-    id: '4',
-    title: 'Learn a new skill',
-    frequency: 'Weekend',
-    icon: Zap,
-    color: '#f97316',
-    specificDays: ['Sa', 'Su'],
-    completions: generateCompletions(90, ['Sa', 'Su']),
-    assignedUserIds: [],
-  },
-  {
-    id: '5',
-    title: 'Meditate for 10 minutes',
-    frequency: 'Daily',
-    icon: Leaf,
-    color: '#8b5cf6',
-    completions: generateCompletions(90),
-    assignedUserIds: ['user-5'],
+    title: 'Drink 8 glasses of water',
+    icon: Droplets,
+    color: '#50E3C2',
+    frequency: 'Every 1 day for 1 week',
+    completions: [
+      { date: '2024-07-20', completed: true },
+      { date: '2024-07-21', completed: false },
+      { date: '2024-07-22', completed: true },
+    ],
   },
 ];
