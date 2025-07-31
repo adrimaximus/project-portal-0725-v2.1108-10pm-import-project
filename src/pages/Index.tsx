@@ -1,3 +1,4 @@
+import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { dummyProjects } from "@/data/projects";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +13,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, subYears } from "date-fns";
 import { getStatusClass, getPaymentStatusClass } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import {
@@ -21,9 +22,58 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { DateRangePicker } from "@/components/DateRangePicker";
+import { DateRange } from "react-day-picker";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DollarSign, ListChecks, CreditCard, User } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: subYears(new Date(), 1),
+    to: new Date(),
+  });
+
+  const filteredProjects = dummyProjects.filter(project => {
+    if (!date?.from || !project.paymentDueDate) return true;
+    const dueDate = new Date(project.paymentDueDate);
+    const toDate = date.to || date.from;
+    return dueDate >= date.from && dueDate <= toDate;
+  });
+
+  const totalValue = filteredProjects.reduce((sum, p) => sum + p.budget, 0);
+
+  const projectStatusCounts = filteredProjects.reduce((acc, p) => {
+      acc[p.status] = (acc[p.status] || 0) + 1;
+      return acc;
+  }, {} as Record<string, number>);
+
+  const paymentStatusCounts = filteredProjects.reduce((acc, p) => {
+      acc[p.paymentStatus] = (acc[p.paymentStatus] || 0) + 1;
+      return acc;
+  }, {} as Record<string, number>);
+
+  const ownerCounts = filteredProjects.reduce((acc, p) => {
+      if (p.assignedTo.length > 0) {
+          const ownerName = p.assignedTo[0].name;
+          acc[ownerName] = (acc[ownerName] || 0) + 1;
+      }
+      return acc;
+  }, {} as Record<string, number>);
+
+  const topOwner = Object.entries(ownerCounts).sort((a, b) => b[1] - a[1])[0] || ["N/A", 0];
+
+  const collaboratorCounts = filteredProjects.reduce((acc, p) => {
+      p.assignedTo.forEach(user => {
+          if (!acc[user.id]) {
+              acc[user.id] = { ...user, projectCount: 0 };
+          }
+          acc[user.id].projectCount++;
+      });
+      return acc;
+  }, {} as Record<string, any>);
+
+  const collaborators = Object.values(collaboratorCounts).sort((a, b) => b.projectCount - a.projectCount);
 
   return (
     <PortalLayout>
@@ -31,6 +81,97 @@ const Index = () => {
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight">Welcome to your Portal</h1>
           <p className="text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
+        </div>
+
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <h2 className="text-2xl font-bold">Insights</h2>
+                <DateRangePicker date={date} onDateChange={setDate} />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Project Value</CardTitle>
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{'Rp ' + totalValue.toLocaleString('id-ID')}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Project Status</CardTitle>
+                        <ListChecks className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-1 text-sm">
+                            {Object.entries(projectStatusCounts).map(([status, count]) => (
+                                <div key={status} className="flex justify-between">
+                                    <span>{status}</span>
+                                    <span className="font-semibold">{count}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Payment Status</CardTitle>
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-1 text-sm">
+                            {Object.entries(paymentStatusCounts).map(([status, count]) => (
+                                <div key={status} className="flex justify-between">
+                                    <span>{status}</span>
+                                    <span className="font-semibold">{count}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Top Project Owner</CardTitle>
+                        <User className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{topOwner[0]}</div>
+                        <p className="text-xs text-muted-foreground">{topOwner[1]} projects</p>
+                    </CardContent>
+                </Card>
+            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Collaborators</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Collaborator</TableHead>
+                                <TableHead className="text-right">Projects</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {collaborators.map(c => (
+                                <TableRow key={c.id}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={c.avatar} alt={c.name} />
+                                                <AvatarFallback>{c.initials}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="font-medium">{c.name}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
         </div>
 
         <TooltipProvider>
@@ -50,7 +191,7 @@ const Index = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dummyProjects.map((project) => {
+                {filteredProjects.map((project) => {
                   const totalTasks = project.tasks?.length || 0;
                   const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
                   const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : project.progress;
