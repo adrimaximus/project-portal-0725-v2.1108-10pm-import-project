@@ -1,13 +1,14 @@
-import { AssignedUser } from './projects';
+export interface User {
+  id: string;
+  name: string;
+  initials: string;
+  avatar: string;
+}
 
-export const allUsers: AssignedUser[] = [
-  { id: "user-1", name: "Alice Johnson", avatar: "https://i.pravatar.cc/150?u=alice", role: "Project Manager", email: "alice@example.com", status: 'Online' },
-  { id: "user-2", name: "Bob Williams", avatar: "https://i.pravatar.cc/150?u=bob", role: "Lead Developer", email: "bob@example.com", status: 'Offline' },
-  { id: "user-3", name: "Charlie Brown", avatar: "https://i.pravatar.cc/150?u=charlie", role: "UI/UX Designer", email: "charlie@example.com", status: 'Online' },
-  { id: "user-4", name: "Diana Miller", avatar: "https://i.pravatar.cc/150?u=diana", role: "QA Tester", email: "diana@example.com", status: 'Offline' },
-  { id: "user-5", name: "Ethan Davis", avatar: "https://i.pravatar.cc/150?u=ethan", role: "Backend Developer", email: "ethan@example.com", status: 'Online' },
-  { id: "user-6", name: "Fiona Green", avatar: "https://i.pravatar.cc/150?u=fiona", role: "Frontend Developer", email: "fiona@example.com", status: 'Online' },
-  { id: "user-7", name: "George White", avatar: "https://i.pravatar.cc/150?u=george", role: "DevOps Engineer", email: "george@example.com", status: 'Offline' },
-  { id: "user-8", name: "Hannah Black", avatar: "https://i.pravatar.cc/150?u=hannah", role: "Product Owner", email: "hannah@example.com", status: 'Online' },
-  { id: "user-9", name: "Ian Grey", avatar: "https://i.pravatar.cc/150?u=ian", role: "Scrum Master", email: "ian@example.com", status: 'Offline' },
+export const allUsers: User[] = [
+  { id: 'u1', name: 'Olivia Martin', initials: 'OM', avatar: '/avatars/01.png' },
+  { id: 'u2', name: 'Jackson Lee', initials: 'JL', avatar: '/avatars/02.png' },
+  { id: 'u3', name: 'Isabella Nguyen', initials: 'IN', avatar: '/avatars/03.png' },
+  { id: 'u4', name: 'William Kim', initials: 'WK', avatar: '/avatars/04.png' },
+  { id: 'u5', name: 'Sophia Davis', initials: 'SD', avatar: '/avatars/05.png' },
 ];

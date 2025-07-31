@@ -1,32 +1,44 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
-import { dummyGoals, Goal } from '@/data/goals';
+import { dummyGoals, Goal, User } from '@/data/goals';
 import GoalDetail from '@/components/goals/GoalDetail';
 import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import NotFound from './NotFound';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Pencil, Calendar as CalendarIcon } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Pencil, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import GoalCollaborationManager from '@/components/goals/GoalCollaborationManager';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
-  const initialGoal = dummyGoals.find(g => g.id === goalId);
+  
+  const getInitialGoalState = () => {
+    const foundGoal = dummyGoals.find(g => g.id === goalId);
+    if (!foundGoal) return undefined;
+    return {
+      ...foundGoal,
+      collaborators: foundGoal.collaborators || [],
+    };
+  };
 
-  const [goal, setGoal] = useState<Goal | undefined>(initialGoal);
+  const [goal, setGoal] = useState<Goal | undefined>(getInitialGoalState());
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const handleUpdateGoal = (updatedGoal: Goal) => {
     setGoal(updatedGoal);
     setIsEditModalOpen(false);
+    setIsInviteModalOpen(false);
   };
 
   const handleToggleCompletion = (date: Date) => {
@@ -90,6 +102,13 @@ const GoalDetailPage = () => {
               <h1 className="text-3xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">{goal.title}</h1>
               <p className="text-muted-foreground">{goal.frequency}</p>
             </div>
+            <div className="flex -space-x-2 overflow-hidden ml-2">
+              {goal.collaborators?.map((user: User) => (
+                <Avatar key={user.id} className="inline-block h-8 w-8 rounded-full border-2 border-background">
+                  <AvatarFallback>{user.initials}</AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <Popover>
@@ -146,6 +165,27 @@ const GoalDetailPage = () => {
                 />
               </DialogContent>
             </Dialog>
+            <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Invite
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Manage Collaborators</DialogTitle>
+                  <DialogDescription>
+                    Invite users to collaborate on "{goal.title}".
+                  </DialogDescription>
+                </DialogHeader>
+                <GoalCollaborationManager
+                  goal={goal}
+                  onUpdate={handleUpdateGoal}
+                  onClose={() => setIsInviteModalOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
         
@@ -154,7 +194,7 @@ const GoalDetailPage = () => {
           color={goal.color}
           onToggleCompletion={handleToggleCompletion}
           frequency={goal.frequency}
-          specificDays={goal.specificDays}
+          specificDays={goal.specificDays?.map(String)}
         />
       </div>
     </PortalLayout>

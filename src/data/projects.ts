@@ -1,144 +1,150 @@
-import { allUsers } from './users';
+import { allUsers, User } from './users';
 
-export interface AssignedUser {
-  id: string;
-  name: string;
-  avatar: string;
-  role?: string;
-  email?: string;
-  status?: 'Online' | 'Offline';
+export interface AssignedUser extends User {
+  role: string;
 }
 
 export interface Task {
   id: string;
-  text: string;
-  completed: boolean;
-  assignedTo?: string[];
+  title: string;
+  status: 'To Do' | 'In Progress' | 'Done';
+  assignee?: User;
+}
+
+export interface BriefFile {
+  id: string;
+  name: string;
+  url: string;
+  size: string;
 }
 
 export interface Activity {
   id: string;
-  user: AssignedUser;
+  user: User;
   action: string;
-  target: string;
   timestamp: string;
+  target?: string;
 }
+
+export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'Completed' | 'Done' | 'Billed' | 'In Progress' | 'On Hold' | 'Cancelled' | 'Requested';
+export type PaymentStatus = 'Paid' | 'Pending' | 'Overdue' | 'Draft';
 
 export interface Project {
   id: string;
   name: string;
-  assignedTo: AssignedUser[];
-  status: "Completed" | "In Progress" | "On Hold" | "Cancelled" | "Done" | "Billed" | "Requested";
+  imageUrl: string;
+  category: string;
   progress: number;
-  startDate: string;
-  deadline: string;
-  paymentStatus: "paid" | "approved" | "po_created" | "on_process" | "pending" | "cancelled" | "proposed";
-  paymentDueDate?: string;
-  tickets?: number;
-  budget: number;
-  invoiceAttachmentUrl?: string;
-  createdBy: AssignedUser;
   description: string;
-  briefFiles?: any[];
-  rating?: number;
-  tasks?: Task[];
-  activityFeed?: Activity[];
-  services?: string[];
+  startDate: string;
+  endDate: string;
+  assigned: AssignedUser[];
+  status: ProjectStatus;
+  paymentStatus: PaymentStatus;
+  budget: number;
+  deadline: string;
+  paymentDueDate?: string;
+  rating: number;
+  tickets: number;
+  invoiceAttachmentUrl?: string;
+  createdBy: User;
+  briefFiles: BriefFile[];
+  services: string[];
+  tasks: Task[];
+  activityFeed: Activity[];
 }
 
 export const dummyProjects: Project[] = [
-  {
-    id: "PROJ-001",
-    name: "E-commerce Platform",
-    assignedTo: [allUsers[0], allUsers[1], allUsers[2]],
-    status: "In Progress",
-    progress: 75,
-    startDate: "2023-01-15",
-    deadline: "2024-08-30",
-    paymentStatus: "pending",
-    budget: 50000000,
-    createdBy: allUsers[0],
-    description: "A full-featured e-commerce platform with a modern UI.",
-    rating: 0,
-    tasks: [
-      { id: 'task-1', text: 'Setup database schema', completed: true, assignedTo: [allUsers[1].id] },
-      { id: 'task-2', text: 'Design product page UI', completed: false, assignedTo: [allUsers[2].id] },
-    ],
-    activityFeed: [
-      { id: 'act-1', user: allUsers[0], action: 'created', target: 'the project', timestamp: '2023-01-15T09:00:00Z' }
-    ],
-    services: ['Web Development', 'UI/UX Design']
-  },
-  {
-    id: "PROJ-002",
-    name: "Mobile Banking App",
-    assignedTo: [allUsers[1], allUsers[4]],
-    status: "Completed",
-    progress: 100,
-    startDate: "2023-03-01",
-    deadline: "2023-09-01",
-    paymentStatus: "paid",
-    paymentDueDate: "2023-09-15",
-    budget: 75000000,
-    createdBy: allUsers[0],
-    description: "A secure and user-friendly mobile banking application.",
-    invoiceAttachmentUrl: "https://example.com/invoice.pdf",
-    rating: 5,
-    tasks: [],
-    activityFeed: [],
-    services: ['Mobile App Development']
-  },
-  {
-    id: "PROJ-003",
-    name: "CRM System",
-    assignedTo: [allUsers[0], allUsers[3], allUsers[4]],
-    status: "On Hold",
-    progress: 30,
-    startDate: "2023-05-20",
-    deadline: "2024-12-31",
-    paymentStatus: "proposed",
-    budget: 120000000,
-    createdBy: allUsers[0],
-    description: "Customer Relationship Management system for sales team.",
-    rating: 0,
-    tasks: [],
-    activityFeed: [],
-    services: ['Backend Development', 'QA']
-  },
-  {
-    id: "PROJ-004",
-    name: "Website Redesign",
-    assignedTo: [allUsers[2]],
-    status: "Completed",
-    progress: 100,
-    startDate: "2023-08-10",
-    deadline: "2023-10-25",
-    paymentStatus: "paid",
-    paymentDueDate: "2023-11-01",
-    budget: 25000000,
-    createdBy: allUsers[0],
-    description: "A complete redesign of the company's public-facing website.",
-    rating: 4,
-    tasks: [],
-    activityFeed: [],
-    services: ['UI/UX Design']
-  },
-  {
-    id: "PROJ-005",
-    name: "Data Analytics Dashboard",
-    assignedTo: [allUsers[1], allUsers[4]],
-    status: "In Progress",
-    progress: 50,
-    startDate: "2023-09-01",
-    deadline: "2024-07-15",
-    paymentStatus: "on_process",
-    budget: 60000000,
-    createdBy: allUsers[0],
-    description: "A dashboard for visualizing key business metrics.",
-    tickets: 3,
-    rating: 0,
-    tasks: [],
-    activityFeed: [],
-    services: ['Data Science', 'Backend Development']
-  },
+    {
+        id: 'proj-1',
+        name: 'E-commerce Platform',
+        imageUrl: '/placeholder.svg',
+        category: 'Web Development',
+        progress: 75,
+        description: 'Developing a new e-commerce platform from scratch.',
+        startDate: '2024-01-15',
+        endDate: '2024-09-30',
+        deadline: '2024-09-30',
+        assigned: [
+            { ...allUsers[0], role: 'Project Manager' },
+            { ...allUsers[1], role: 'Lead Developer' },
+            { ...allUsers[2], role: 'UI/UX Designer' },
+        ],
+        status: 'On Track',
+        paymentStatus: 'Pending',
+        budget: 50000,
+        rating: 4,
+        tickets: 5,
+        createdBy: allUsers[0],
+        briefFiles: [
+            { id: 'f1', name: 'project-brief.pdf', url: '#', size: '2.5 MB' },
+            { id: 'f2', name: 'wireframes.fig', url: '#', size: '10.1 MB' },
+        ],
+        services: ['UI/UX Design', 'Frontend Development', 'Backend Development'],
+        tasks: [
+            { id: 't1', title: 'Design landing page', status: 'Done', assignee: allUsers[2] },
+            { id: 't2', title: 'Setup database schema', status: 'In Progress', assignee: allUsers[1] },
+            { id: 't3', title: 'Develop authentication flow', status: 'To Do', assignee: allUsers[1] },
+        ],
+        activityFeed: [
+            { id: 'a1', user: allUsers[1], action: 'completed task', target: 'Design landing page', timestamp: '2024-07-27T10:00:00Z' },
+            { id: 'a2', user: allUsers[0], action: 'added a file', target: 'wireframes.fig', timestamp: '2024-07-26T15:30:00Z' },
+        ]
+    },
+    {
+        id: 'proj-2',
+        name: 'Mobile App for iOS',
+        imageUrl: '/placeholder.svg',
+        category: 'Mobile Development',
+        progress: 40,
+        description: 'Creating a native iOS application for our new service.',
+        startDate: '2024-03-01',
+        endDate: '2024-11-20',
+        deadline: '2024-11-20',
+        assigned: [
+            { ...allUsers[3], role: 'iOS Developer' },
+            { ...allUsers[4], role: 'Backend Developer' },
+        ],
+        status: 'At Risk',
+        paymentStatus: 'Paid',
+        budget: 75000,
+        rating: 3,
+        tickets: 12,
+        paymentDueDate: '2024-06-01',
+        invoiceAttachmentUrl: '#',
+        createdBy: allUsers[3],
+        briefFiles: [],
+        services: ['iOS Development', 'API Integration'],
+        tasks: [
+            { id: 't4', title: 'Implement push notifications', status: 'To Do', assignee: allUsers[3] },
+        ],
+        activityFeed: [
+            { id: 'a3', user: allUsers[4], action: 'pushed new commits', timestamp: '2024-07-28T09:15:00Z' },
+        ]
+    },
+    {
+        id: 'proj-3',
+        name: 'Data Analytics Dashboard',
+        imageUrl: '/placeholder.svg',
+        category: 'Data Science',
+        progress: 90,
+        description: 'Building a dashboard for visualizing key business metrics.',
+        startDate: '2024-02-01',
+        endDate: '2024-07-31',
+        deadline: '2024-07-31',
+        assigned: [
+            { ...allUsers[1], role: 'Data Scientist' },
+            { ...allUsers[4], role: 'Frontend Developer' },
+        ],
+        status: 'Completed',
+        paymentStatus: 'Billed',
+        budget: 30000,
+        rating: 5,
+        tickets: 2,
+        createdBy: allUsers[1],
+        briefFiles: [],
+        services: ['Data Visualization', 'Dashboard Development'],
+        tasks: [],
+        activityFeed: []
+    },
 ];

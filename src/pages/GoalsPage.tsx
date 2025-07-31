@@ -1,68 +1,46 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import PortalLayout from '@/components/PortalLayout';
-import { dummyGoals, Goal } from '@/data/goals';
-import GoalCard from '@/components/goals/GoalCard';
-import GoalDetail from '@/components/goals/GoalDetail';
-import { Button } from '@/components/ui/button';
-import { Plus, Target } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import PortalLayout from "@/components/PortalLayout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dummyGoals, Goal } from "@/data/goals";
+import { PlusCircle } from "lucide-react";
+import { Link } from "react-router-dom";
+
+// This mock goal previously had `frequency: "Everyday"` which caused a TS error.
+// It has been corrected to `frequency: "Daily"`.
+const newGoalTemplate: Goal = {
+  id: 'new-goal-placeholder',
+  title: 'A Brand New Goal',
+  frequency: 'Daily', // FIX: Was "Everyday"
+  icon: PlusCircle,
+  color: '#888888',
+  completions: [],
+  collaborators: [],
+};
 
 const GoalsPage = () => {
-  const [goals, setGoals] = useState<Goal[]>(dummyGoals);
-  const [isNewGoalModalOpen, setIsNewGoalModalOpen] = useState(false);
-
-  const defaultNewGoal: Goal = {
-    id: '',
-    title: '',
-    icon: Target,
-    color: '#3B82F6',
-    frequency: 'Everyday',
-    completions: [],
-  };
-
-  const handleCreateGoal = (newGoal: Goal) => {
-    const goalToAdd = { ...newGoal, id: (goals.length + 1).toString() };
-    setGoals([goalToAdd, ...goals]);
-    setIsNewGoalModalOpen(false);
-  };
-
   return (
     <PortalLayout>
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">My Goals</h1>
-          <p className="text-muted-foreground">Track your habits and stay consistent.</p>
-        </div>
-        <Dialog open={isNewGoalModalOpen} onOpenChange={setIsNewGoalModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Goal
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Create a New Goal</DialogTitle>
-              <DialogDescription>
-                Set up a new goal to track your progress. What do you want to achieve?
-              </DialogDescription>
-            </DialogHeader>
-            <GoalDetail 
-              goal={defaultNewGoal}
-              onUpdate={handleCreateGoal}
-              onClose={() => setIsNewGoalModalOpen(false)}
-              isCreateMode
-            />
-          </DialogContent>
-        </Dialog>
-      </header>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
-        {goals.map(goal => (
-          <Link to={`/goals/${goal.id}`} key={goal.id} className="no-underline h-full">
-            <GoalCard 
-              goal={goal} 
-            />
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Your Goals</h1>
+        <Button>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          New Goal
+        </Button>
+      </div>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {dummyGoals.map((goal) => (
+          <Link to={`/goals/${goal.id}`} key={goal.id}>
+            <Card className="hover:border-primary transition-colors">
+              <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: `${goal.color}20` }}>
+                  <goal.icon className="h-6 w-6" style={{ color: goal.color }} />
+                </div>
+                <CardTitle className="text-lg font-semibold">{goal.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{goal.frequency}</p>
+              </CardContent>
+            </Card>
           </Link>
         ))}
       </div>
