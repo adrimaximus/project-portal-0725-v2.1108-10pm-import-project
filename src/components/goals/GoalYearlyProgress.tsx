@@ -135,7 +135,7 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
 
                   if (isMissed) {
                     buttonStyle.backgroundColor = 'transparent';
-                    buttonStyle.border = `1px solid ${color}`;
+                    buttonStyle.border = `1px solid ${color}80`;
                     buttonClasses += ' box-border';
                   } else {
                     let bgColor = '#E5E7EB'; // Default for non-valid, or untracked valid days
