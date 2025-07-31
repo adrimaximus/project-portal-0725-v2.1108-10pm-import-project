@@ -14,19 +14,19 @@ import { ProjectActivityFeed } from '@/components/project-detail/ProjectActivity
 import { ProjectProgressCard } from '@/components/project-detail/ProjectProgressCard';
 
 const ProjectDetail = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    const foundProject = dummyProjects.find((p) => p.id === projectId);
+    const foundProject = dummyProjects.find((p) => p.id === id);
     if (foundProject) {
       setProject(foundProject);
     } else {
       navigate('/404');
     }
-  }, [projectId, navigate]);
+  }, [id, navigate]);
 
   const handleUpdateProject = (updatedProject: Project) => {
     setProject(updatedProject);

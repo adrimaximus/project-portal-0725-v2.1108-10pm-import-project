@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { dummyProjects } from "@/data/projects";
+import { initialComments } from "@/data/comments";
 import PortalLayout from "@/components/PortalLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +18,12 @@ import {
   FileText,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import ProjectComments from "@/components/project-detail/ProjectComments";
 
 const ProjectDetails = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const project = dummyProjects.find((p) => p.id === projectId);
+  const comments = initialComments.filter((c) => c.projectId === projectId);
 
   if (!project) {
     return (
@@ -107,7 +110,7 @@ const ProjectDetails = () => {
             </CardHeader>
             <CardContent>
               <div className="text-lg font-bold">
-                {project.deadline ? format(parseISO(project.deadline), "dd MMM yyyy") : 'N/A'}
+                {format(parseISO(project.deadline), "dd MMM yyyy")}
               </div>
             </CardContent>
           </Card>
@@ -186,7 +189,7 @@ const ProjectDetails = () => {
                         className="relative group border rounded-lg overflow-hidden aspect-square"
                         title={file.name}
                       >
-                        {file.type && file.type.startsWith("image/") ? (
+                        {file.type.startsWith("image/") ? (
                           <img
                             src={file.url}
                             alt={file.name}
@@ -227,6 +230,7 @@ const ProjectDetails = () => {
 
         <Separator />
 
+        <ProjectComments initialComments={comments} />
       </div>
     </PortalLayout>
   );
