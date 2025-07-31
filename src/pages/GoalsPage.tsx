@@ -2,26 +2,32 @@ import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dummyGoals, Goal } from "@/data/goals";
-import { PlusCircle, Target, TrendingUp, Users } from "lucide-react";
+import { PlusCircle, Target, TrendingUp, Users, CheckCircle, Award, BarChart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import NewGoalDialog from "@/components/goals/NewGoalDialog";
+import { LucideIcon } from "lucide-react";
+
+const iconComponents: { [key: string]: LucideIcon } = {
+  Target,
+  TrendingUp,
+  Users,
+  CheckCircle,
+  Award,
+  BarChart,
+};
 
 const GoalsPage = () => {
   const [goals, setGoals] = useState<Goal[]>(dummyGoals);
   const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
 
-  const handleGoalCreate = (newGoalData: Omit<Goal, 'id' | 'icon' | 'color' | 'completions' | 'collaborators'>) => {
-    const icons = [Target, TrendingUp, Users, PlusCircle];
-    const colors = ['#4A90E2', '#50E3C2', '#F5A623', '#E02020'];
-
+  const handleGoalCreate = (newGoalData: Omit<Goal, 'id' | 'icon' | 'completions' | 'collaborators'> & { icon: string }) => {
     const newGoal: Goal = {
       ...newGoalData,
       id: `goal-${Date.now()}`,
       completions: [],
       collaborators: [],
-      icon: icons[Math.floor(Math.random() * icons.length)],
-      color: colors[Math.floor(Math.random() * colors.length)],
+      icon: iconComponents[newGoalData.icon] || Target,
     };
 
     setGoals(prevGoals => [...prevGoals, newGoal]);

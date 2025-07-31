@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Target, TrendingUp, Users, CheckCircle, Award, BarChart } from "lucide-react";
 
 interface NewGoalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGoalCreate: (newGoal: Omit<Goal, 'id' | 'icon' | 'color' | 'completions' | 'collaborators'>) => void;
+  onGoalCreate: (newGoal: Omit<Goal, 'id' | 'icon' | 'completions' | 'collaborators'> & { icon: string }) => void;
 }
 
 const weekDays = [
@@ -23,10 +24,23 @@ const weekDays = [
   { label: 'S', value: '6' },
 ];
 
+const icons = [
+  { name: 'Target', component: Target },
+  { name: 'TrendingUp', component: TrendingUp },
+  { name: 'Users', component: Users },
+  { name: 'CheckCircle', component: CheckCircle },
+  { name: 'Award', component: Award },
+  { name: 'BarChart', component: BarChart },
+];
+
+const colors = ['#4A90E2', '#50E3C2', '#F5A623', '#E02020', '#9013FE', '#BD10E0'];
+
 const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps) => {
   const [title, setTitle] = useState('');
   const [frequency, setFrequency] = useState<Goal['frequency']>('Daily');
   const [specificDays, setSpecificDays] = useState<string[]>([]);
+  const [icon, setIcon] = useState('Target');
+  const [color, setColor] = useState('#4A90E2');
 
   const handleSave = () => {
     if (!title) return;
@@ -34,10 +48,14 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
       title,
       frequency,
       specificDays: frequency === 'Weekly' ? specificDays.map(Number) : undefined,
+      icon,
+      color,
     });
     setTitle('');
     setFrequency('Daily');
     setSpecificDays([]);
+    setIcon('Target');
+    setColor('#4A90E2');
     onOpenChange(false);
   };
 
@@ -86,6 +104,42 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
               </ToggleGroup>
             </div>
           )}
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label className="text-right pt-2">Icon</Label>
+            <div className="col-span-3">
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                value={icon}
+                onValueChange={(value) => { if (value) setIcon(value) }}
+                className="flex flex-wrap gap-2"
+              >
+                {icons.map(({ name, component: IconComponent }) => (
+                  <ToggleGroupItem key={name} value={name} aria-label={name} className="p-2 h-10 w-10">
+                    <IconComponent className="h-5 w-5" />
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Color</Label>
+            <div className="col-span-3">
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                value={color}
+                onValueChange={(value) => { if (value) setColor(value) }}
+                className="flex flex-wrap gap-2"
+              >
+                {colors.map((c) => (
+                  <ToggleGroupItem key={c} value={c} aria-label={c} className="p-0 h-8 w-8 rounded-full border-2 border-transparent data-[state=on]:border-ring">
+                    <div className="h-full w-full rounded-full" style={{ backgroundColor: c }}></div>
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
