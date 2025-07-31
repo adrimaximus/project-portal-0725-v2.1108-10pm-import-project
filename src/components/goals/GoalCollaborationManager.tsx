@@ -31,7 +31,7 @@ const GoalCollaborationManager = ({ goal, onUpdate, onClose }: GoalCollaboration
   const availableUsers = allUsers.filter(u => u.id !== 'user-1'); // Assuming user-1 is the current user
 
   return (
-    <div>
+    <>
       <Command className="rounded-lg border shadow-md">
         <CommandInput placeholder="Search users..." />
         <CommandList>
@@ -41,11 +41,11 @@ const GoalCollaborationManager = ({ goal, onUpdate, onClose }: GoalCollaboration
               <CommandItem
                 key={user.id}
                 onSelect={() => toggleCollaborator(user)}
-                className="flex items-center justify-between"
+                className="flex items-center justify-between cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback>{user.initials}</AvatarFallback>
+                    <AvatarFallback>{user.initials || user.name?.slice(0, 2) || '??'}</AvatarFallback>
                   </Avatar>
                   <span>{user.name}</span>
                 </div>
@@ -63,7 +63,7 @@ const GoalCollaborationManager = ({ goal, onUpdate, onClose }: GoalCollaboration
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button onClick={handleSaveChanges}>Save Changes</Button>
       </DialogFooter>
-    </div>
+    </>
   );
 };
 
