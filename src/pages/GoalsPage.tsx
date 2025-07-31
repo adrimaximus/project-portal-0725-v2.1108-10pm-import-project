@@ -1,38 +1,19 @@
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { dummyGoals, Goal } from "@/data/goals";
-import { 
-  PlusCircle, Target, TrendingUp, Users, CheckCircle, Award, BarChart, Activity, Bike, BookOpen, 
-  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap,
-  Coffee, Code, DollarSign, GraduationCap, Headphones, MapPin, Paintbrush, Plane, ShoppingCart, Utensils
-} from "lucide-react";
+import { Goal } from "@/data/goals";
+import { PlusCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import NewGoalDialog from "@/components/goals/NewGoalDialog";
-import { LucideIcon } from "lucide-react";
 
-const iconComponents: { [key: string]: LucideIcon } = {
-  Target, TrendingUp, Users, CheckCircle, Award, BarChart, Activity, Bike, BookOpen, 
-  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap,
-  Coffee, Code, DollarSign, GraduationCap, Headphones, MapPin, Paintbrush, Plane, ShoppingCart, Utensils
-};
+interface GoalsPageProps {
+  goals: Goal[];
+  onGoalCreate: (newGoalData: Omit<Goal, 'id' | 'icon' | 'completions' | 'collaborators'> & { icon: string }) => void;
+}
 
-const GoalsPage = () => {
-  const [goals, setGoals] = useState<Goal[]>(dummyGoals);
+const GoalsPage = ({ goals, onGoalCreate }: GoalsPageProps) => {
   const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
-
-  const handleGoalCreate = (newGoalData: Omit<Goal, 'id' | 'icon' | 'completions' | 'collaborators'> & { icon: string }) => {
-    const newGoal: Goal = {
-      ...newGoalData,
-      id: `goal-${Date.now()}`,
-      completions: [],
-      collaborators: [],
-      icon: iconComponents[newGoalData.icon] || Target,
-    };
-
-    setGoals(prevGoals => [...prevGoals, newGoal]);
-  };
 
   return (
     <PortalLayout>
@@ -63,7 +44,7 @@ const GoalsPage = () => {
       <NewGoalDialog
         open={isNewGoalDialogOpen}
         onOpenChange={setIsNewGoalDialogOpen}
-        onGoalCreate={handleGoalCreate}
+        onGoalCreate={onGoalCreate}
       />
     </PortalLayout>
   );
