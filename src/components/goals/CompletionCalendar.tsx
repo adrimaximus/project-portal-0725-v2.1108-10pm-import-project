@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Goal } from '@/data/goals';
+import { GoalCompletion } from '@/data/goals';
 import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,15 +9,15 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-interface GoalYearlyProgressProps {
-  completions: Goal['completions'];
+interface CompletionCalendarProps {
+  completions: GoalCompletion[];
   color: string;
   onToggleCompletion: (date: Date) => void;
   frequency: string;
-  specificDays?: string[];
+  specificDays?: number[];
 }
 
-const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency, specificDays }: GoalYearlyProgressProps) => {
+const CompletionCalendar = ({ completions, color, onToggleCompletion, frequency, specificDays }: CompletionCalendarProps) => {
   const today = new Date();
   const currentYear = getYear(today);
   const [displayYear, setDisplayYear] = useState(currentYear);
@@ -37,27 +37,33 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
   });
   
   const totalCompleted = relevantCompletions.filter(c => c.completed).length;
-  const totalPossible = relevantCompletions.length;
+  
+  const allDaysInYear = eachDayOfInterval({ start: yearStartDate, end: yearEndDate });
+  const isDaily = !specificDays || specificDays.length === 0 || specificDays.length === 7;
+  
+  const isDayValidForGoal = (date: Date): boolean => {
+    if (isDaily) return true;
+    const dayIndex = getDay(date);
+    return specificDays!.includes(dayIndex);
+  };
+
+  const possibleDaysSoFar = allDaysInYear.filter(d => (isBefore(d, today) || isToday(d)) && isDayValidForGoal(d));
+  const totalPossible = possibleDaysSoFar.length;
+
   const overallPercentage = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
 
   const months = Array.from({ length: 12 }).map((_, i) => startOfMonth(new Date(displayYear, i, 1)));
 
-  const dayKeys = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-  const isDaily = !specificDays || specificDays.length === 0 || specificDays.length === 7;
-
-  const isDayValidForGoal = (date: Date): boolean => {
-    if (isDaily) return true;
-    const dayKey = dayKeys[getDay(date)];
-    return specificDays!.includes(dayKey);
-  };
-
   const monthlyData = months.map(monthDate => {
     const monthCompletions = relevantCompletions.filter(c => isSameMonth(parseISO(c.date), monthDate));
     const completedCount = monthCompletions.filter(c => c.completed).length;
-    const possibleCount = monthCompletions.length;
-    const percentage = possibleCount > 0 ? Math.round((completedCount / possibleCount) * 100) : 0;
     
     const daysInMonth = eachDayOfInterval({ start: startOfMonth(monthDate), end: endOfMonth(monthDate) });
+    const possibleDaysInMonth = daysInMonth.filter(d => (isBefore(d, today) || isToday(d)) && isDayValidForGoal(d));
+    const possibleCount = possibleDaysInMonth.length;
+
+    const percentage = possibleCount > 0 ? Math.round((completedCount / possibleCount) * 100) : 0;
+    
     const completionMap = new Map(monthCompletions.map(c => [format(parseISO(c.date), 'yyyy-MM-dd'), c.completed]));
 
     return {
@@ -76,7 +82,7 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
   });
 
   const handleDayClick = (day: Date) => {
-    if (isAfter(day, todayStart)) return;
+    if (isAfter(day, todayStart) || !isDayValidForGoal(day)) return;
     if (isToday(day)) {
       onToggleCompletion(day);
     } else {
@@ -123,7 +129,7 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
                 <p className="text-sm font-bold">{month.percentage}%</p>
               </div>
               <div className="grid grid-cols-7 gap-1">
-                {Array.from({ length: (month.days[0].date.getDay() + 6) % 7 }).map((_, i) => <div key={`empty-${i}`} />)}
+                {Array.from({ length: getDay(month.days[0].date) }).map((_, i) => <div key={`empty-${i}`} />)}
                 {month.days.map(day => {
                   const isFutureDay = isAfter(day.date, todayStart);
                   const isValidDay = isDayValidForGoal(day.date);
@@ -138,15 +144,15 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
                     buttonStyle.border = `1px solid ${color}80`;
                     buttonClasses += ' box-border';
                   } else {
-                    let bgColor = '#E5E7EB'; // Default for non-valid, or untracked valid days
-                    if (isValidDay && day.isCompleted === true) {
-                      bgColor = color;
-                    }
+                    let bgColor = '#E5E7EB';
+                    if (isValidDay && day.isCompleted === true) bgColor = color;
                     buttonStyle.backgroundColor = bgColor;
                   }
 
-                  if (isFutureDay) {
-                    buttonStyle.opacity = 0.2;
+                  if (isFutureDay) buttonStyle.opacity = 0.2;
+                  if (!isValidDay) {
+                    buttonStyle.backgroundColor = 'transparent';
+                    buttonStyle.border = 'none';
                   }
 
                   return (
@@ -201,4 +207,4 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
   );
 };
 
-export default GoalYearlyProgress;
+export default CompletionCalendar;

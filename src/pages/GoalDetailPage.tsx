@@ -1,20 +1,28 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PortalLayout from '@/components/PortalLayout';
-import { dummyGoals, Goal } from '@/data/goals';
+import { Goal, GoalCompletion } from '@/data/goals';
 import GoalDetail from '@/components/goals/GoalDetail';
 import CompletionCalendar from '@/components/goals/CompletionCalendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useGoals } from '@/context/GoalsContext';
+import { format } from 'date-fns';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
   const navigate = useNavigate();
-  
-  const [goals, setGoals] = useState(dummyGoals);
-  const goal = goals.find((g) => g.id === parseInt(goalId || '', 10));
+  const { getGoalById, updateGoal, deleteGoal, goals } = useGoals();
+
+  const [goal, setGoal] = useState<Goal | undefined>(undefined);
+
+  useEffect(() => {
+    if (goalId) {
+      setGoal(getGoalById(goalId));
+    }
+  }, [goalId, getGoalById, goals]);
 
   if (!goal) {
     return (
@@ -30,21 +38,33 @@ const GoalDetailPage = () => {
   }
 
   const handleUpdateGoal = (updatedGoal: Goal) => {
-    setGoals(goals.map(g => g.id === updatedGoal.id ? updatedGoal : g));
+    updateGoal(updatedGoal);
   };
 
-  const handleDeleteGoal = (goalIdToDelete: number) => {
-    setGoals(goals.filter(g => g.id !== goalIdToDelete));
+  const handleDeleteGoal = (id: string) => {
+    deleteGoal(id);
     navigate('/goals');
   };
 
-  const handleToggleCompletion = (date: string, completed: boolean) => {
+  const handleToggleCompletion = (dateToToggle: Date) => {
+    if (!goal) return;
+    const dateString = format(dateToToggle, 'yyyy-MM-dd');
+    
+    const existingCompletionIndex = goal.completions.findIndex(c => c.date === dateString);
+    
+    let newCompletions: GoalCompletion[];
+
+    if (existingCompletionIndex > -1) {
+        newCompletions = goal.completions.map((c, index) => 
+            index === existingCompletionIndex ? { ...c, completed: !c.completed } : c
+        );
+    } else {
+        newCompletions = [...goal.completions, { date: dateString, completed: true }];
+    }
+
     const updatedGoal = {
       ...goal,
-      completions: {
-        ...goal.completions,
-        [date]: completed,
-      },
+      completions: newCompletions,
     };
     handleUpdateGoal(updatedGoal);
   };
@@ -76,8 +96,11 @@ const GoalDetailPage = () => {
               </CardHeader>
               <CardContent>
                 <CompletionCalendar 
-                  goal={goal}
+                  completions={goal.completions}
+                  color={goal.color}
                   onToggleCompletion={handleToggleCompletion}
+                  frequency={goal.frequency}
+                  specificDays={goal.specificDays}
                 />
               </CardContent>
             </Card>

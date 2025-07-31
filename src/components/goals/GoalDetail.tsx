@@ -8,12 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import IconPicker from './IconPicker';
 import ColorPicker from './ColorPicker';
-import { icons } from 'lucide-react';
+import { getIconComponent } from '@/data/icons';
 
 interface GoalDetailProps {
   goal: Goal;
   onUpdateGoal: (updatedGoal: Goal) => void;
-  onDeleteGoal: (goalId: number) => void;
+  onDeleteGoal: (goalId: string) => void;
 }
 
 const weekDays = [
@@ -35,7 +35,7 @@ const GoalDetail = ({ goal, onUpdateGoal, onDeleteGoal }: GoalDetailProps) => {
   const [icon, setIcon] = useState(goal.icon);
   const [color, setColor] = useState(goal.color);
 
-  const IconComponent = icons[icon as keyof typeof icons] || icons.Target;
+  const IconComponent = getIconComponent(icon);
 
   const handleSave = () => {
     const updatedGoal: Goal = {
