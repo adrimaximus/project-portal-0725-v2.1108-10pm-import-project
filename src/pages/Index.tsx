@@ -27,6 +27,7 @@ import { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ListChecks, CreditCard, User, Users, LayoutGrid } from "lucide-react";
 import ServiceSelection from "@/components/ServiceSelection";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -117,7 +118,10 @@ const Index = () => {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <h2 className="text-2xl font-bold">Insights</h2>
-                <DateRangePicker date={date} onDateChange={setDate} />
+                <div className="flex items-center gap-2">
+                    <Button onClick={() => navigate('/requests')}>New Request</Button>
+                    <DateRangePicker date={date} onDateChange={setDate} />
+                </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Card>
