@@ -25,7 +25,7 @@ import {
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ListChecks, CreditCard, User, Users, TrendingUp } from "lucide-react";
+import { DollarSign, ListChecks, CreditCard, User, Users, TrendingUp, Hourglass } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -106,6 +106,21 @@ const Index = () => {
   }, {} as Record<string, any>);
 
   const topUserByValue = Object.values(userValueCounts).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
+
+  const pendingPaymentCounts = filteredProjects
+    .filter(p => p.paymentStatus === 'Pending')
+    .reduce((acc, p) => {
+        p.assignedTo.forEach(user => {
+            if (!acc[user.id]) {
+                acc[user.id] = { ...user, pendingValue: 0 };
+            }
+            acc[user.id].pendingValue += p.budget;
+        });
+        return acc;
+    }, {} as Record<string, any>);
+
+  const topUserByPendingValue = Object.values(pendingPaymentCounts).sort((a, b) => b.pendingValue - a.pendingValue)[0] || null;
+
 
   return (
     <PortalLayout>
@@ -235,6 +250,33 @@ const Index = () => {
                             <div>
                                 <div className="text-2xl font-bold">N/A</div>
                                 <p className="text-xs text-muted-foreground">No value</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Most Pending Payment</CardTitle>
+                        <Hourglass className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {topUserByPendingValue ? (
+                            <div className="flex items-center gap-4">
+                                <Avatar>
+                                    <AvatarImage src={topUserByPendingValue.avatar} alt={topUserByPendingValue.name} />
+                                    <AvatarFallback>{topUserByPendingValue.initials}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="text-lg font-bold">{topUserByPendingValue.name}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {'Rp ' + topUserByPendingValue.pendingValue.toLocaleString('id-ID')}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="text-2xl font-bold">N/A</div>
+                                <p className="text-xs text-muted-foreground">No pending payments</p>
                             </div>
                         )}
                     </CardContent>
