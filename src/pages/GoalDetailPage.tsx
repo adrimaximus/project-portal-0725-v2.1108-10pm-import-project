@@ -25,6 +25,7 @@ const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
   const { getGoalById, updateGoal } = useGoals();
   
+  // Mengambil tujuan langsung dari konteks, bukan state lokal
   const goal = goalId ? getGoalById(goalId) : undefined;
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
