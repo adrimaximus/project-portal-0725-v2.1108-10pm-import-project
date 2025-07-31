@@ -23,7 +23,7 @@ const ProjectDetailsTabs = ({ project, isEditing }: ProjectDetailsTabsProps) => 
       </TabsList>
       <TabsContent value="brief">
         <ProjectBrief
-          files={project.files || []}
+          files={project.briefFiles || []}
           isEditing={isEditing}
           onFilesChange={handleFilesChange}
         />

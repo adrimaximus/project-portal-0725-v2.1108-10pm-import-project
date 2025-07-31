@@ -43,7 +43,7 @@ const ProjectMainContent = (props: ProjectMainContentProps) => {
         />
         <ProjectFiles project={props.project} />
         <ProjectServices
-          selectedServices={props.project.services}
+          services={props.project.services}
           isEditing={props.isEditing}
           onServicesChange={props.onServicesChange}
         />

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import TeamSelector from "./TeamSelector";
 import FileUploader from "./FileUploader";
-import { Project, User, ProjectFile } from "@/data/projects";
+import { Project, AssignedUser, ProjectFile } from "@/data/projects";
 import { dummyProjects } from "@/data/projects";
 import { useNavigate } from "react-router-dom";
 import { Service, services as allServicesData } from "@/data/services";
@@ -28,7 +28,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const [date, setDate] = useState<DateRange | undefined>();
   const [budget, setBudget] = useState("");
   const [description, setDescription] = useState("");
-  const [team, setTeam] = useState<User[]>([]);
+  const [team, setTeam] = useState<AssignedUser[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const navigate = useNavigate();
 
@@ -60,19 +60,17 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       category: selectedServices.length > 0 ? selectedServices[0].title : "General",
       description: description,
       assignedTo: team,
-      files: newProjectFiles,
+      briefFiles: newProjectFiles,
       status: "Requested",
       progress: 0,
       budget: numericBudget,
-      startDate: date?.from?.toISOString() ?? new Date().toISOString(),
+      startDate: date?.from?.toISOString(),
       deadline: date?.to?.toISOString() ?? new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(),
-      paymentStatus: "Proposed",
-      paymentDueDate: date?.to?.toISOString() ?? new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(),
+      paymentStatus: "proposed",
       createdBy: {
         id: "user-current",
         name: "Current User",
         initials: "CU",
-        avatar: "https://i.pravatar.cc/150?u=currentUser",
       },
       tickets: 0,
       services: selectedServices.map(s => s.title),

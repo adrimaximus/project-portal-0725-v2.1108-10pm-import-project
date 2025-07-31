@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { dummyProjects } from "@/data/projects";
-import { initialComments, Comment } from "@/data/comments";
+import { initialComments } from "@/data/comments";
 import PortalLayout from "@/components/PortalLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -134,7 +134,7 @@ const ProjectDetails = () => {
               <CardTitle className="text-sm font-medium">
                 Payment Status
               </CardTitle>
-              {project.paymentStatus === "Paid" ? (
+              {project.paymentStatus === "paid" ? (
                 <CheckCircle className="h-4 w-4 text-green-500" />
               ) : (
                 <Clock className="h-4 w-4 text-muted-foreground" />
@@ -173,14 +173,14 @@ const ProjectDetails = () => {
                 />
               </CardContent>
             </Card>
-            {project.files && project.files.length > 0 && (
+            {project.briefFiles && project.briefFiles.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Brief Files</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-                    {project.files.map((file, index) => (
+                    {project.briefFiles.map((file, index) => (
                       <a
                         key={index}
                         href={file.url}

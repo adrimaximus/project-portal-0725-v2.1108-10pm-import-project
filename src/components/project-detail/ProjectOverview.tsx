@@ -1,6 +1,6 @@
 import React from "react";
-import { Project, User } from "@/data/projects";
-import { allUsers } from "@/data/projects";
+import { Project, AssignedUser, User } from "@/data/projects";
+import { allUsers } from "@/data/users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,9 +17,9 @@ import ProjectBrief from "./ProjectBrief";
 import { differenceInDays, isFuture, isPast, parseISO } from "date-fns";
 
 interface AssignedTeamProps {
-  users: User[];
+  users: AssignedUser[];
   isEditing: boolean;
-  onTeamChange: (selectedUsers: User[]) => void;
+  onTeamChange: (selectedUsers: AssignedUser[]) => void;
 }
 
 const AssignedTeam = ({ users, isEditing, onTeamChange }: AssignedTeamProps) => {
@@ -27,11 +27,11 @@ const AssignedTeam = ({ users, isEditing, onTeamChange }: AssignedTeamProps) => 
 
   const handleSelect = (currentUser: User) => {
     const isSelected = users.some(u => u.id === currentUser.id);
-    let newSelectedUsers: User[];
+    let newSelectedUsers: AssignedUser[];
     if (isSelected) {
       newSelectedUsers = users.filter(u => u.id !== currentUser.id);
     } else {
-      const newUserToAdd: User = { ...currentUser, role: 'Team Member' };
+      const newUserToAdd: AssignedUser = { ...currentUser, role: 'Team Member' };
       newSelectedUsers = [...users, newUserToAdd];
     }
     onTeamChange(newSelectedUsers);
@@ -167,7 +167,7 @@ interface ProjectOverviewProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
-  onTeamChange: (selectedUsers: User[]) => void;
+  onTeamChange: (selectedUsers: AssignedUser[]) => void;
   onFilesChange: (files: File[]) => void;
 }
 
@@ -250,20 +250,20 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
               />
             )}
             
-            {(isEditing || (project.files && project.files.length > 0)) && (
+            {(isEditing || (project.briefFiles && project.briefFiles.length > 0)) && (
               <>
                 <Separator className="my-6" />
                 <div>
                   <h4 className="text-sm font-medium mb-3 text-foreground">Brief Files</h4>
                   {isEditing ? (
                     <ProjectBrief
-                      files={project.files || []}
+                      files={project.briefFiles || []}
                       isEditing={isEditing}
                       onFilesChange={onFilesChange}
                     />
                   ) : (
                       <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                        {project.files.map((file, index) => (
+                        {project.briefFiles.map((file, index) => (
                           <div
                             key={index}
                             className="relative group border rounded-lg overflow-hidden aspect-square"
