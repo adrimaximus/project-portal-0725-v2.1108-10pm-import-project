@@ -25,7 +25,7 @@ import {
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ListChecks, CreditCard, User, Users } from "lucide-react";
+import { DollarSign, ListChecks, CreditCard, User, Users, TrendingUp } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -94,6 +94,18 @@ const Index = () => {
 
   const collaborators = Object.values(collaboratorCounts).sort((a, b) => b.projectCount - a.projectCount);
   const topCollaborator = collaborators[0] || null;
+
+  const userValueCounts = filteredProjects.reduce((acc, p) => {
+      p.assignedTo.forEach(user => {
+          if (!acc[user.id]) {
+              acc[user.id] = { ...user, totalValue: 0 };
+          }
+          acc[user.id].totalValue += p.budget;
+      });
+      return acc;
+  }, {} as Record<string, any>);
+
+  const topUserByValue = Object.values(userValueCounts).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
 
   return (
     <PortalLayout>
@@ -196,6 +208,33 @@ const Index = () => {
                             <div>
                                 <div className="text-2xl font-bold">N/A</div>
                                 <p className="text-xs text-muted-foreground">0 projects</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Top Contributor</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {topUserByValue ? (
+                            <div className="flex items-center gap-4">
+                                <Avatar>
+                                    <AvatarImage src={topUserByValue.avatar} alt={topUserByValue.name} />
+                                    <AvatarFallback>{topUserByValue.initials}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="text-lg font-bold">{topUserByValue.name}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {'Rp ' + topUserByValue.totalValue.toLocaleString('id-ID')}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="text-2xl font-bold">N/A</div>
+                                <p className="text-xs text-muted-foreground">No value</p>
                             </div>
                         )}
                     </CardContent>
