@@ -1,17 +1,9 @@
-export interface User {
-  id: string;
-  name: string;
-  initials: string;
-  email: string;
-  avatar?: string;
-}
+import { User } from './projects';
 
-export const user1: User = { id: 'user-1', name: 'Alice', initials: 'A', email: 'alice@example.com' };
-export const user2: User = { id: 'user-2', name: 'Bob', initials: 'B', email: 'bob@example.com' };
-
-export const allUsers: User[] = [
-  user1,
-  user2,
-  { id: 'user-3', name: 'Charlie', initials: 'C', email: 'charlie@example.com' },
-  { id: 'user-4', name: 'Diana', initials: 'D', email: 'diana@example.com' },
+export const dummyUsers: User[] = [
+    { id: 'user-1', name: 'Ahmad Subagja', initials: 'AS', avatar: 'https://i.pravatar.cc/150?u=ahmad' },
+    { id: 'user-2', name: 'Budi Santoso', initials: 'BS', avatar: 'https://i.pravatar.cc/150?u=budi' },
+    { id: 'user-3', name: 'Citra Lestari', initials: 'CL', avatar: 'https://i.pravatar.cc/150?u=citra' },
+    { id: 'user-4', name: 'Dewi Anggraini', initials: 'DA', avatar: 'https://i.pravatar.cc/150?u=dewi' },
+    { id: 'user-5', name: 'Eko Prasetyo', initials: 'EP', avatar: 'https://i.pravatar.cc/150?u=eko' },
 ];

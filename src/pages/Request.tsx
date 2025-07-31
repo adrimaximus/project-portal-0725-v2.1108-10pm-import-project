@@ -1,71 +1,32 @@
-import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
-import { Service } from "@/data/services";
-import SelectedServicesSummary from "@/components/SelectedServicesSummary";
-import ServiceSelection from "@/components/request/ServiceSelection";
-import ProjectDetailsForm from "@/components/request/ProjectDetailsForm";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Project } from "@/data/projects";
+import { useNavigate } from "react-router-dom";
+import { ProjectDetailsForm } from "@/components/request/ProjectDetailsForm";
 
-const RequestPage = () => {
-  const [step, setStep] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+const Request = () => {
+  const navigate = useNavigate();
 
-  const handleServiceSelect = (service: Service) => {
-    const isFeatured = service.title === "End to End Services";
-    const isAlreadySelected = selectedServices.some(
-      (s) => s.title === service.title
-    );
-
-    if (isFeatured) {
-      setSelectedServices(isAlreadySelected ? [] : [service]);
-    } else {
-      let newSelectedServices = selectedServices.filter(
-        (s) => s.title !== "End to End Services"
-      );
-      if (isAlreadySelected) {
-        newSelectedServices = newSelectedServices.filter(
-          (s) => s.title !== service.title
-        );
-      } else {
-        newSelectedServices.push(service);
-      }
-      setSelectedServices(newSelectedServices);
-    }
+  const handleFormSubmit = (project: Project) => {
+    // In a real app, you'd add the project to your state management
+    console.log("New project requested:", project);
+    navigate(`/projects/${project.id}`);
   };
-
-  const renderContent = () => {
-    if (step === 1) {
-      return (
-        <ServiceSelection
-          searchTerm={searchTerm}
-          onSearchTermChange={setSearchTerm}
-          selectedServices={selectedServices}
-          onServiceSelect={handleServiceSelect}
-        />
-      );
-    } else {
-      return (
-        <ProjectDetailsForm
-          selectedServices={selectedServices}
-          onBack={() => setStep(1)}
-        />
-      );
-    }
-  };
-
-  const summaryComponent =
-    step === 1 ? (
-      <SelectedServicesSummary
-        selectedServices={selectedServices}
-        onContinue={() => setStep(2)}
-      />
-    ) : null;
 
   return (
-    <PortalLayout summary={summaryComponent} disableMainScroll={step === 2}>
-      {renderContent()}
+    <PortalLayout>
+      <div className="max-w-2xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle>Request a New Project</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProjectDetailsForm onFormSubmit={handleFormSubmit} />
+          </CardContent>
+        </Card>
+      </div>
     </PortalLayout>
   );
 };
 
-export default RequestPage;
+export default Request;
