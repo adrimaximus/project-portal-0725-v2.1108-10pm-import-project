@@ -1,5 +1,4 @@
-import { User } from './projects';
-import { user1, user2 } from './users';
+import { User, user1, user2 } from './users';
 
 export interface GoalCompletion {
   date: string; // ISO 8601 format
