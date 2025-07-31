@@ -6,16 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { 
-  Target, TrendingUp, Users, CheckCircle, Award, BarChart, Activity, Bike, BookOpen, 
-  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap,
-  Coffee, Code, DollarSign, GraduationCap, Headphones, MapPin, Paintbrush, Plane, ShoppingCart, Utensils
-} from "lucide-react";
+import IconPicker from './IconPicker';
 
 interface NewGoalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGoalCreate: (newGoal: Omit<Goal, 'id' | 'icon' | 'completions' | 'collaborators'> & { icon: string }) => void;
+  onGoalCreate: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => void;
 }
 
 const weekDays = [
@@ -26,41 +22,6 @@ const weekDays = [
   { label: 'T', value: '4' },
   { label: 'F', value: '5' },
   { label: 'S', value: '6' },
-];
-
-const icons = [
-  { name: 'Target', component: Target },
-  { name: 'TrendingUp', component: TrendingUp },
-  { name: 'Users', component: Users },
-  { name: 'CheckCircle', component: CheckCircle },
-  { name: 'Award', component: Award },
-  { name: 'BarChart', component: BarChart },
-  { name: 'Activity', component: Activity },
-  { name: 'Bike', component: Bike },
-  { name: 'BookOpen', component: BookOpen },
-  { name: 'Brain', component: Brain },
-  { name: 'Calendar', component: Calendar },
-  { name: 'Dumbbell', component: Dumbbell },
-  { name: 'Flame', component: Flame },
-  { name: 'Heart', component: Heart },
-  { name: 'Leaf', component: Leaf },
-  { name: 'Moon', component: Moon },
-  { name: 'PenTool', component: PenTool },
-  { name: 'Footprints', component: Footprints },
-  { name: 'Smile', component: Smile },
-  { name: 'Sunrise', component: Sunrise },
-  { name: 'Wallet', component: Wallet },
-  { name: 'Zap', component: Zap },
-  { name: 'Coffee', component: Coffee },
-  { name: 'Code', component: Code },
-  { name: 'DollarSign', component: DollarSign },
-  { name: 'GraduationCap', component: GraduationCap },
-  { name: 'Headphones', component: Headphones },
-  { name: 'MapPin', component: MapPin },
-  { name: 'Paintbrush', component: Paintbrush },
-  { name: 'Plane', component: Plane },
-  { name: 'ShoppingCart', component: ShoppingCart },
-  { name: 'Utensils', component: Utensils },
 ];
 
 const colors = ['#4A90E2', '#50E3C2', '#F5A623', '#E02020', '#9013FE', '#BD10E0'];
@@ -136,20 +97,8 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
           )}
           <div className="grid grid-cols-4 items-start gap-4">
             <Label className="text-right pt-2">Icon</Label>
-            <div className="col-span-3 max-h-[150px] overflow-y-auto p-2 border rounded-md">
-              <ToggleGroup
-                type="single"
-                variant="outline"
-                value={icon}
-                onValueChange={(value) => { if (value) setIcon(value) }}
-                className="flex flex-wrap gap-2"
-              >
-                {icons.map(({ name, component: IconComponent }) => (
-                  <ToggleGroupItem key={name} value={name} aria-label={name} className="p-2 h-10 w-10">
-                    <IconComponent className="h-5 w-5" style={{ color }} />
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+            <div className="col-span-3">
+              <IconPicker value={icon} onChange={setIcon} color={color} />
             </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">

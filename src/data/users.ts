@@ -2,14 +2,16 @@ export interface User {
   id: string;
   name: string;
   initials: string;
-  avatar: string;
   email: string;
+  avatar?: string;
 }
 
+export const user1: User = { id: 'user-1', name: 'Alice', initials: 'A', email: 'alice@example.com' };
+export const user2: User = { id: 'user-2', name: 'Bob', initials: 'B', email: 'bob@example.com' };
+
 export const allUsers: User[] = [
-  { id: 'u1', name: 'Olivia Martin', initials: 'OM', avatar: '/avatars/01.png', email: 'olivia.martin@example.com' },
-  { id: 'u2', name: 'Jackson Lee', initials: 'JL', avatar: '/avatars/02.png', email: 'jackson.lee@example.com' },
-  { id: 'u3', name: 'Isabella Nguyen', initials: 'IN', avatar: '/avatars/03.png', email: 'isabella.nguyen@example.com' },
-  { id: 'u4', name: 'William Kim', initials: 'WK', avatar: '/avatars/04.png', email: 'william.kim@example.com' },
-  { id: 'u5', name: 'Sophia Davis', initials: 'SD', avatar: '/avatars/05.png', email: 'sophia.davis@example.com' },
+  user1,
+  user2,
+  { id: 'user-3', name: 'Charlie', initials: 'C', email: 'charlie@example.com' },
+  { id: 'user-4', name: 'Diana', initials: 'D', email: 'diana@example.com' },
 ];

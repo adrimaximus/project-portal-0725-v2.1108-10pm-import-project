@@ -1,81 +1,50 @@
-import {
-  Activity, Award, BarChart, BookOpen, BrainCircuit, Briefcase, Calendar, CheckCircle,
-  Code, Coffee, Cpu, DollarSign, Dumbbell, Feather, Flag, GitBranch, Globe,
-  Heart, Home, Image, Leaf, Map, Medal, Mic, Moon, MousePointer, Music,
-  PenSquare, Plane, Puzzle, Rocket, Settings, ShoppingCart, Smile, Sparkles,
-  Star, Sun, Sunset, Target, ThumbsUp, ToyBrick, Trophy, Tv, Video,
-  Wallet, Watch, Wind, Zap, Anchor, Bike, Brush, Camera, Car, Clapperboard,
-  Cloud, Diamond, Droplet, Film, Gamepad, GraduationCap, Hammer, Headphones,
+import { 
+  LucideIcon,
+  Target, TrendingUp, Users, CheckCircle, Award, BarChart, Activity, Bike, BookOpen, 
+  Brain, Calendar, Dumbbell, Flame, Heart, Leaf, Moon, PenTool, Footprints, Smile, Sunrise, Wallet, Zap,
+  Coffee, Code, DollarSign, GraduationCap, Headphones, MapPin, Paintbrush, Plane, ShoppingCart, Utensils
+} from "lucide-react";
 
-} from 'lucide-react';
-import { FC } from 'react';
-
-export interface GoalIcon {
-  name: string;
-  component: FC<any>;
-}
-
-export const goalIcons: GoalIcon[] = [
-  { name: 'Activity', component: Activity },
-  { name: 'Anchor', component: Anchor },
-  { name: 'Award', component: Award },
-  { name: 'Bar Chart', component: BarChart },
-  { name: 'Bike', component: Bike },
-  { name: 'Book Open', component: BookOpen },
-  { name: 'Brain Circuit', component: BrainCircuit },
-  { name: 'Briefcase', component: Briefcase },
-  { name: 'Brush', component: Brush },
-  { name: 'Calendar', component: Calendar },
-  { name: 'Camera', component: Camera },
-  { name: 'Car', component: Car },
-  { name: 'Check Circle', component: CheckCircle },
-  { name: 'Clapperboard', component: Clapperboard },
-  { name: 'Cloud', component: Cloud },
-  { name: 'Code', component: Code },
-  { name: 'Coffee', component: Coffee },
-  { name: 'Cpu', component: Cpu },
-  { name: 'Diamond', component: Diamond },
-  { name: 'Dollar Sign', component: DollarSign },
-  { name: 'Droplet', component: Droplet },
-  { name: 'Dumbbell', component: Dumbbell },
-  { name: 'Feather', component: Feather },
-  { name: 'Film', component: Film },
-  { name: 'Flag', component: Flag },
-  { name: 'Gamepad', component: Gamepad },
-  { name: 'Git Branch', component: GitBranch },
-  { name: 'Globe', component: Globe },
-  { name: 'Graduation Cap', component: GraduationCap },
-  { name: 'Hammer', component: Hammer },
-  { name: 'Headphones', component: Headphones },
-  { name: 'Heart', component: Heart },
-  { name: 'Home', component: Home },
-  { name: 'Image', component: Image },
-  { name: 'Leaf', component: Leaf },
-  { name: 'Map', component: Map },
-  { name: 'Medal', component: Medal },
-  { name: 'Mic', component: Mic },
-  { name: 'Moon', component: Moon },
-  { name: 'Mouse Pointer', component: MousePointer },
-  { name: 'Music', component: Music },
-  { name: 'Pen Square', component: PenSquare },
-  { name: 'Plane', component: Plane },
-  { name: 'Puzzle', component: Puzzle },
-  { name: 'Rocket', component: Rocket },
-  { name: 'Settings', component: Settings },
-  { name: 'Shopping Cart', component: ShoppingCart },
-  { name: 'Smile', component: Smile },
-  { name: 'Sparkles', component: Sparkles },
-  { name: 'Star', component: Star },
-  { name: 'Sun', component: Sun },
-  { name: 'Sunset', component: Sunset },
+export const iconList = [
   { name: 'Target', component: Target },
-  { name: 'Thumbs Up', component: ThumbsUp },
-  { name: 'Toy Brick', component: ToyBrick },
-  { name: 'Trophy', component: Trophy },
-  { name: 'Tv', component: Tv },
-  { name: 'Video', component: Video },
+  { name: 'TrendingUp', component: TrendingUp },
+  { name: 'Users', component: Users },
+  { name: 'CheckCircle', component: CheckCircle },
+  { name: 'Award', component: Award },
+  { name: 'BarChart', component: BarChart },
+  { name: 'Activity', component: Activity },
+  { name: 'Bike', component: Bike },
+  { name: 'BookOpen', component: BookOpen },
+  { name: 'Brain', component: Brain },
+  { name: 'Calendar', component: Calendar },
+  { name: 'Dumbbell', component: Dumbbell },
+  { name: 'Flame', component: Flame },
+  { name: 'Heart', component: Heart },
+  { name: 'Leaf', component: Leaf },
+  { name: 'Moon', component: Moon },
+  { name: 'PenTool', component: PenTool },
+  { name: 'Footprints', component: Footprints },
+  { name: 'Smile', component: Smile },
+  { name: 'Sunrise', component: Sunrise },
   { name: 'Wallet', component: Wallet },
-  { name: 'Watch', component: Watch },
-  { name: 'Wind', component: Wind },
   { name: 'Zap', component: Zap },
+  { name: 'Coffee', component: Coffee },
+  { name: 'Code', component: Code },
+  { name: 'DollarSign', component: DollarSign },
+  { name: 'GraduationCap', component: GraduationCap },
+  { name: 'Headphones', component: Headphones },
+  { name: 'MapPin', component: MapPin },
+  { name: 'Paintbrush', component: Paintbrush },
+  { name: 'Plane', component: Plane },
+  { name: 'ShoppingCart', component: ShoppingCart },
+  { name: 'Utensils', component: Utensils },
 ];
+
+export const iconComponents: { [key: string]: LucideIcon } = iconList.reduce((acc, curr) => {
+  acc[curr.name] = curr.component;
+  return acc;
+}, {} as { [key: string]: LucideIcon });
+
+export const getIconComponent = (name: string): LucideIcon => {
+  return iconComponents[name] || Target;
+};

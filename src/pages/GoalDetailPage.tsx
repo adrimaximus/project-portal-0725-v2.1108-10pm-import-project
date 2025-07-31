@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
-import { dummyGoals, Goal, User } from '@/data/goals';
+import { dummyGoals, Goal } from '@/data/goals';
+import { User } from '@/data/users';
 import GoalDetail from '@/components/goals/GoalDetail';
 import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -17,6 +18,7 @@ import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-f
 import { enUS } from 'date-fns/locale';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import GoalCollaborationManager from '@/components/goals/GoalCollaborationManager';
+import { getIconComponent } from '@/data/icons';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -74,7 +76,7 @@ const GoalDetailPage = () => {
       })
     : goal.completions;
 
-  const Icon = goal.icon;
+  const Icon = getIconComponent(goal.icon);
 
   const dayKeys = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
   const specificDayKeys = goal.specificDays?.map(dayIndex => dayKeys[dayIndex]);

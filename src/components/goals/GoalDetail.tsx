@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Goal } from '@/data/goals';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { DialogFooter } from '../ui/dialog';
+import IconPicker from './IconPicker';
 
 interface GoalDetailProps {
   goal: Goal;
@@ -23,18 +23,33 @@ const weekDays = [
   { label: 'S', value: '6' },
 ];
 
+const colors = ['#4A90E2', '#50E3C2', '#F5A623', '#E02020', '#9013FE', '#BD10E0'];
+
 const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
   const [title, setTitle] = useState(goal.title);
   const [frequency, setFrequency] = useState<Goal['frequency']>(goal.frequency);
   const [specificDays, setSpecificDays] = useState<string[]>(goal.specificDays?.map(String) || []);
+  const [icon, setIcon] = useState(goal.icon);
+  const [color, setColor] = useState(goal.color);
+
+  useEffect(() => {
+    setTitle(goal.title);
+    setFrequency(goal.frequency);
+    setSpecificDays(goal.specificDays?.map(String) || []);
+    setIcon(goal.icon);
+    setColor(goal.color);
+  }, [goal]);
 
   const handleSave = () => {
-    onUpdate({
+    const updatedGoal: Goal = {
       ...goal,
       title,
       frequency,
       specificDays: frequency === 'Weekly' ? specificDays.map(Number) : undefined,
-    });
+      icon,
+      color,
+    };
+    onUpdate(updatedGoal);
   };
 
   return (
@@ -77,10 +92,34 @@ const GoalDetail = ({ goal, onUpdate, onClose }: GoalDetailProps) => {
           </ToggleGroup>
         </div>
       )}
-      <DialogFooter>
+      <div className="grid grid-cols-4 items-start gap-4">
+        <Label className="text-right pt-2">Icon</Label>
+        <div className="col-span-3">
+          <IconPicker value={icon} onChange={setIcon} color={color} />
+        </div>
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label className="text-right">Color</Label>
+        <div className="col-span-3">
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            value={color}
+            onValueChange={(value) => { if (value) setColor(value) }}
+            className="flex flex-wrap gap-2"
+          >
+            {colors.map((c) => (
+              <ToggleGroupItem key={c} value={c} aria-label={c} className="p-0 h-8 w-8 rounded-full border-2 border-transparent data-[state=on]:border-ring">
+                <div className="h-full w-full rounded-full" style={{ backgroundColor: c }}></div>
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 pt-4">
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button onClick={handleSave}>Save Changes</Button>
-      </DialogFooter>
+      </div>
     </div>
   );
 };
