@@ -19,7 +19,7 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
             <div className="flex items-center gap-2">
                 <Avatar className="h-9 w-9">
                     <AvatarImage src={project.createdBy.avatar} />
-                    <AvatarFallback>{project.createdBy.name.slice(0, 2)}</AvatarFallback>
+                    <AvatarFallback>{project.createdBy.initials || project.createdBy.name?.slice(0, 2) || '??'}</AvatarFallback>
                 </Avatar>
                 <div>
                     <p className="text-sm font-medium">{project.createdBy.name}</p>
@@ -32,7 +32,7 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
             <div className="flex items-center gap-2">
                 <Avatar className="h-9 w-9">
                     <AvatarImage src={member.avatar} />
-                    <AvatarFallback>{member.name.slice(0, 2)}</AvatarFallback>
+                    <AvatarFallback>{member.initials || member.name?.slice(0, 2) || '??'}</AvatarFallback>
                 </Avatar>
                 <div>
                     <p className="text-sm font-medium">{member.name}</p>

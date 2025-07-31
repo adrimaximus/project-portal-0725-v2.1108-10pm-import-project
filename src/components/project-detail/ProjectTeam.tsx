@@ -40,7 +40,7 @@ const ProjectTeam = ({ assignedTo, onTeamChange }: ProjectTeamProps) => {
               <TooltipTrigger>
                 <Avatar>
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.name.slice(0, 2)}</AvatarFallback>
+                  <AvatarFallback>{user.initials || user.name?.slice(0, 2) || '??'}</AvatarFallback>
                 </Avatar>
               </TooltipTrigger>
               <TooltipContent>
@@ -79,7 +79,7 @@ const ProjectTeam = ({ assignedTo, onTeamChange }: ProjectTeamProps) => {
                     >
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.name.slice(0, 2)}</AvatarFallback>
+                        <AvatarFallback>{user.initials || user.name?.slice(0, 2) || '??'}</AvatarFallback>
                       </Avatar>
                       <div>
                         <p>{user.name}</p>
