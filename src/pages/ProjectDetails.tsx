@@ -99,7 +99,7 @@ const ProjectDetails = () => {
             </CardHeader>
             <CardContent>
               <div className="text-lg font-bold">
-                {format(parseISO(project.startDate), "dd MMM yyyy")}
+                {project.startDate ? format(parseISO(project.startDate), "dd MMM yyyy") : 'N/A'}
               </div>
             </CardContent>
           </Card>
@@ -183,7 +183,7 @@ const ProjectDetails = () => {
                     {project.briefFiles.map((file, index) => (
                       <a
                         key={index}
-                        href={URL.createObjectURL(file)}
+                        href={file.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="relative group border rounded-lg overflow-hidden aspect-square"
@@ -191,7 +191,7 @@ const ProjectDetails = () => {
                       >
                         {file.type.startsWith("image/") ? (
                           <img
-                            src={URL.createObjectURL(file)}
+                            src={file.url}
                             alt={file.name}
                             className="h-full w-full object-cover"
                           />
@@ -218,7 +218,7 @@ const ProjectDetails = () => {
                 <CardTitle>Services</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
-                {project.services.map((service) => (
+                {project.services?.map((service) => (
                   <Badge key={service} variant="secondary" className="py-1">
                     {service}
                   </Badge>

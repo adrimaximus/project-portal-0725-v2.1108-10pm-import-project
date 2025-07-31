@@ -10,8 +10,14 @@ import FileUploader from "./FileUploader";
 import { Project, AssignedUser, ProjectFile } from "@/data/projects";
 import { dummyProjects } from "@/data/projects";
 import { useNavigate } from "react-router-dom";
+import { Service } from "@/data/services";
 
-const ProjectDetailsForm = () => {
+interface ProjectDetailsFormProps {
+  selectedServices: Service[];
+  onBack: () => void;
+}
+
+const ProjectDetailsForm = ({ onBack }: ProjectDetailsFormProps) => {
   const [projectName, setProjectName] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
@@ -49,10 +55,7 @@ const ProjectDetailsForm = () => {
       tickets: 0,
     };
 
-    // In a real app, you'd send this to a server.
-    // For this demo, we'll add it to our dummy data.
     dummyProjects.push(newProject);
-    console.log("New Project Submitted:", newProject);
     navigate(`/projects/${newProject.id}`);
   };
 
@@ -101,13 +104,16 @@ const ProjectDetailsForm = () => {
           </div>
           <div className="space-y-2">
             <Label>Assign Team</Label>
-            <TeamSelector selectedUsers={team} onSelectedUsersChange={setTeam} />
+            <TeamSelector selectedUsers={team} onTeamChange={setTeam} />
           </div>
           <div className="space-y-2">
             <Label>Attach Files</Label>
             <FileUploader onFilesChange={setFiles} />
           </div>
-          <Button type="submit" className="w-full">Submit Project Request</Button>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onBack}>Back</Button>
+            <Button type="submit">Submit Project Request</Button>
+          </div>
         </CardContent>
       </Card>
     </form>

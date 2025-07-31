@@ -2,9 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Download } from "lucide-react";
 import React, { useRef } from "react";
 import FileIcon from "../FileIcon";
+import { ProjectFile } from "@/data/projects";
 
 interface ProjectBriefProps {
-  files: File[];
+  files: ProjectFile[];
   isEditing: boolean;
   onFilesChange: (files: File[]) => void;
 }
@@ -15,12 +16,9 @@ const ProjectBrief = ({ files, isEditing, onFilesChange }: ProjectBriefProps) =>
   const handleFileAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const newFiles = Array.from(event.target.files);
-      onFilesChange([...files, ...newFiles]);
+      // This component only adds new files, it doesn't manage the full list
+      onFilesChange(newFiles);
     }
-  };
-
-  const handleFileRemove = (fileToRemove: File) => {
-    onFilesChange(files.filter(file => file !== fileToRemove));
   };
 
   const handleAddClick = () => {
@@ -39,7 +37,7 @@ const ProjectBrief = ({ files, isEditing, onFilesChange }: ProjectBriefProps) =>
               </div>
               <div className="flex items-center flex-shrink-0">
                 <a
-                  href={URL.createObjectURL(file)}
+                  href={file.url}
                   download={file.name}
                   title={`Download ${file.name}`}
                 >
@@ -49,7 +47,7 @@ const ProjectBrief = ({ files, isEditing, onFilesChange }: ProjectBriefProps) =>
                   </Button>
                 </a>
                 {isEditing && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleFileRemove(file)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
                     <Trash2 className="h-4 w-4" />
                     <span className="sr-only">Remove file</span>
                   </Button>

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project, ProjectFile } from "@/data/projects";
-import { FileText, Download, Paperclip, FileImage, FileZip } from "lucide-react";
+import { FileText, Download, Paperclip, FileImage, FileArchive } from "lucide-react";
 import { Button } from "../ui/button";
 import FileUploader from "../request/FileUploader";
 
@@ -14,7 +14,7 @@ const FileIcon = ({ type }: { type: string }) => {
     return <FileImage className="h-6 w-6 text-gray-500" />;
   }
   if (type === "application/zip" || type === "application/x-zip-compressed") {
-    return <FileZip className="h-6 w-6 text-gray-500" />;
+    return <FileArchive className="h-6 w-6 text-gray-500" />;
   }
   if (type === "application/pdf") {
     return <FileText className="h-6 w-6 text-red-500" />;

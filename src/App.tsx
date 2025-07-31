@@ -5,7 +5,7 @@ import ChatPage from './pages/ChatPage';
 import MoodTracker from './pages/MoodTracker';
 import GoalsPage from './pages/GoalsPage';
 import GoalDetailPage from './pages/GoalDetailPage';
-import ProjectDetail from './pages/ProjectDetailPage';
+import ProjectDetail from './pages/ProjectDetail';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Billing from './pages/Billing';

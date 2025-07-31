@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { dummyProjects, Project, AssignedUser, Task } from "@/data/projects";
+import { dummyProjects, Project, AssignedUser, Task, ProjectFile } from "@/data/projects";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
@@ -97,9 +97,16 @@ const ProjectDetail = () => {
     }
   };
   
-  const handleFilesChange = (files: File[]) => {
+  const handleFilesChange = (newFiles: File[]) => {
     if (editedProject) {
-      setEditedProject({ ...editedProject, briefFiles: files });
+      const newProjectFiles: ProjectFile[] = newFiles.map(file => ({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: URL.createObjectURL(file),
+      }));
+      const existingFiles = editedProject.briefFiles || [];
+      setEditedProject({ ...editedProject, briefFiles: [...existingFiles, ...newProjectFiles] });
     }
   };
 

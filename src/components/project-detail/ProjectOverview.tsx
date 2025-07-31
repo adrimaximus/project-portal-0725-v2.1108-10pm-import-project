@@ -13,7 +13,7 @@ import { Check, ChevronsUpDown, FileText, Download, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { services as allServices, type Service } from "@/data/services";
 import { Separator } from "../ui/separator";
-import FileUpload from "./FileUpload";
+import ProjectBrief from "./ProjectBrief";
 import { differenceInDays, isFuture, isPast, parseISO } from "date-fns";
 
 interface AssignedTeamProps {
@@ -254,17 +254,14 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
               <>
                 <Separator className="my-6" />
                 <div>
+                  <h4 className="text-sm font-medium mb-3 text-foreground">Brief Files</h4>
                   {isEditing ? (
-                    <>
-                      <h4 className="text-sm font-medium mb-3 text-foreground">Attach Brief Files</h4>
-                      <FileUpload 
-                        files={project.briefFiles || []}
-                        onFilesChange={onFilesChange}
-                      />
-                    </>
+                    <ProjectBrief
+                      files={project.briefFiles || []}
+                      isEditing={isEditing}
+                      onFilesChange={onFilesChange}
+                    />
                   ) : (
-                    <>
-                      <h4 className="text-sm font-medium mb-3 text-foreground">Brief Files</h4>
                       <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
                         {project.briefFiles.map((file, index) => (
                           <div
@@ -274,7 +271,7 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
                           >
                             {file.type.startsWith("image/") ? (
                               <img
-                                src={URL.createObjectURL(file)}
+                                src={file.url}
                                 alt={file.name}
                                 className="h-full w-full object-cover"
                               />
@@ -285,7 +282,7 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
                             )}
                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                               <a
-                                href={URL.createObjectURL(file)}
+                                href={file.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
@@ -294,7 +291,7 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
                                 <Eye className="h-5 w-5" />
                               </a>
                               <a
-                                href={URL.createObjectURL(file)}
+                                href={file.url}
                                 download={file.name}
                                 className="text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
                                 title="Download file"
@@ -310,7 +307,6 @@ const ProjectOverview = ({ project, isEditing, onDescriptionChange, onTeamChange
                           </div>
                         ))}
                       </div>
-                    </>
                   )}
                 </div>
               </>
