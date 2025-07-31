@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import IconPicker from './IconPicker';
+import ColorPicker from './ColorPicker';
 
 interface NewGoalDialogProps {
   open: boolean;
@@ -23,8 +24,6 @@ const weekDays = [
   { label: 'F', value: '5' },
   { label: 'S', value: '6' },
 ];
-
-const colors = ['#BFDBFE', '#A7F3D0', '#FED7AA', '#FECACA', '#DDD6FE', '#FBCFE8'];
 
 const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps) => {
   const [title, setTitle] = useState('');
@@ -104,19 +103,7 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right">Color</Label>
             <div className="col-span-3">
-              <ToggleGroup
-                type="single"
-                variant="outline"
-                value={color}
-                onValueChange={(value) => { if (value) setColor(value) }}
-                className="flex flex-wrap gap-2"
-              >
-                {colors.map((c) => (
-                  <ToggleGroupItem key={c} value={c} aria-label={c} className="p-0 h-8 w-8 rounded-full border-2 border-transparent data-[state=on]:border-ring">
-                    <div className="h-full w-full rounded-full" style={{ backgroundColor: c }}></div>
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+              <ColorPicker color={color} setColor={setColor} />
             </div>
           </div>
         </div>
