@@ -5,7 +5,6 @@ interface GoalsContextType {
   goals: Goal[];
   addGoal: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => void;
   updateGoal: (updatedGoal: Goal) => void;
-  deleteGoal: (goalId: string) => void;
   getGoalById: (id: string) => Goal | undefined;
 }
 
@@ -28,16 +27,12 @@ export const GoalsProvider = ({ children }: { children: ReactNode }) => {
     setGoals(prevGoals => prevGoals.map(g => g.id === updatedGoal.id ? updatedGoal : g));
   };
 
-  const deleteGoal = (goalId: string) => {
-    setGoals(prevGoals => prevGoals.filter(g => g.id !== goalId));
-  };
-
   const getGoalById = (id: string) => {
     return goals.find(g => g.id === id);
   };
 
   return (
-    <GoalsContext.Provider value={{ goals, addGoal, updateGoal, deleteGoal, getGoalById }}>
+    <GoalsContext.Provider value={{ goals, addGoal, updateGoal, getGoalById }}>
       {children}
     </GoalsContext.Provider>
   );
