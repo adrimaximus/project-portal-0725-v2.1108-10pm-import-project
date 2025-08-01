@@ -22,6 +22,7 @@ import OnlineCollaborators from "./OnlineCollaborators";
 import { dummyConversations } from "@/data/chat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/contexts/UserContext";
+import { dummyNotifications } from "@/data/notifications";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -46,6 +47,8 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     0
   );
 
+  const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
+
   const navItems: NavItem[] = [
     { href: "/", label: "Dashboard", icon: Home },
     { href: "/request", label: "Request", icon: LayoutGrid },
@@ -57,7 +60,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     },
     { href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
     { href: "/goals", label: "Goals", icon: Target },
-    { href: "/notifications", label: "Notifications", icon: Bell, badge: 3 },
+    { href: "/notifications", label: "Notifications", icon: Bell, ...(unreadNotificationCount > 0 && { badge: unreadNotificationCount }) },
   ];
 
   return (
