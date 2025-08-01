@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ import {
 import { Button } from "./ui/button";
 import OnlineCollaborators from "./OnlineCollaborators";
 import { dummyConversations } from "@/data/chat";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -145,8 +146,11 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="w-full">
-                          <CircleUser className="h-5 w-5" />
+                        <Button variant="ghost" size="icon" className="w-full h-auto p-1">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src="https://github.com/shadcn.png" alt="User" />
+                            <AvatarFallback>A</AvatarFallback>
+                          </Avatar>
                           <span className="sr-only">My Account</span>
                         </Button>
                       </TooltipTrigger>
@@ -180,7 +184,10 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                   onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
                 >
                   <span className="flex items-center gap-3">
-                    <CircleUser className="h-5 w-5" />
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src="https://github.com/shadcn.png" alt="User" />
+                      <AvatarFallback>A</AvatarFallback>
+                    </Avatar>
                     My Account
                   </span>
                   <ChevronDown
