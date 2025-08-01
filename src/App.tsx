@@ -1,36 +1,29 @@
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Index from './pages/Index';
-import RequestPage from './pages/Request';
-import ChatPage from './pages/ChatPage';
-import MoodTracker from './pages/MoodTracker';
-import GoalsPage from './pages/GoalsPage';
-import GoalDetailPage from './pages/GoalDetailPage';
-import ProjectDetail from './pages/ProjectDetail';
-import Profile from './pages/Profile';
-import Settings from './pages/Settings';
-import Billing from './pages/Billing';
-import NotFound from './pages/NotFound';
-import { GoalsProvider } from './context/GoalsContext';
+import { Route, Routes, Outlet } from "react-router-dom";
+import PortalLayout from "./components/PortalLayout";
+import Dashboard from "./pages/Dashboard";
+import RequestPage from "./pages/RequestPage";
+import ChatPage from "./pages/ChatPage";
+import MoodTrackerPage from "./pages/MoodTrackerPage";
+import GoalsPage from "./pages/GoalsPage";
+import ProfilePage from "./pages/ProfilePage";
+import NotificationsPage from "./pages/NotificationsPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
 
 function App() {
   return (
-    <GoalsProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/request" element={<RequestPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/mood-tracker" element={<MoodTracker />} />
-          <Route path="/goals" element={<GoalsPage />} />
-          <Route path="/goals/:goalId" element={<GoalDetailPage />} />
-          <Route path="/projects/:projectId" element={<ProjectDetail />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/billing" element={<Billing />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
-    </GoalsProvider>
+    <Routes>
+      <Route path="/" element={<PortalLayout><Outlet /></PortalLayout>}>
+        <Route index element={<Dashboard />} />
+        <Route path="request" element={<RequestPage />} />
+        <Route path="chat" element={<ChatPage />} />
+        <Route path="chat/:conversationId" element={<ChatPage />} />
+        <Route path="mood-tracker" element={<MoodTrackerPage />} />
+        <Route path="goals" element={<GoalsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+      </Route>
+    </Routes>
   );
 }
 
