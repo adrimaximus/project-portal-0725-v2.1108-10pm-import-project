@@ -1,55 +1,88 @@
-import { Project, AssignedUser, Comment } from "@/data/projects";
+import { Project, User, Comment } from "@/data/projects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectComments from "@/components/ProjectComments";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import ProjectOwner from "./ProjectOwner";
+import ProjectDescription from "./ProjectDescription";
+import ProjectTeam from "./ProjectTeam";
+import ProjectServices from "./ProjectServices";
+import ProjectAttachments from "./ProjectAttachments";
+import ProjectReview from "./ProjectReview";
 
 interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
-  onTeamChange: (users: AssignedUser[]) => void;
+  onTeamChange: (users: User[]) => void;
   onFilesChange: (files: File[]) => void;
   onServicesChange: (services: string[]) => void;
   onAddCommentOrTicket: (comment: Comment) => void;
-  projectId: string;
-  ticketCount: number;
   allProjects: Project[];
+  availableTeamMembers: User[];
+  newFiles: File[];
 }
 
 const ProjectMainContent = ({
   project,
+  isEditing,
+  onDescriptionChange,
+  onTeamChange,
+  onFilesChange,
+  onServicesChange,
   onAddCommentOrTicket,
-  ticketCount,
   allProjects,
+  availableTeamMembers,
+  newFiles,
 }: ProjectMainContentProps) => {
   return (
-    <Card>
-      <CardContent className="p-4 md:p-6">
-        <Tabs defaultValue="comments" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="description">Description</TabsTrigger>
-            <TabsTrigger value="comments">
-              Comments & Tickets
-              {ticketCount > 0 && <Badge className="ml-2 bg-orange-500">{ticketCount}</Badge>}
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="description">
-            <div className="prose prose-sm max-w-none text-muted-foreground">
-              <p>{project.description || "No description provided."}</p>
-            </div>
-          </TabsContent>
-          <TabsContent value="comments">
+    <Tabs defaultValue="overview" className="w-full">
+      <TabsList className="grid w-full grid-cols-2 mb-4">
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="comments">Comments</TabsTrigger>
+      </TabsList>
+      <TabsContent value="overview">
+        <Card>
+          <CardContent className="p-6 space-y-6">
+            <ProjectOwner owner={project.createdBy} />
+            <ProjectDescription
+              description={project.description}
+              isEditing={isEditing}
+              onDescriptionChange={onDescriptionChange}
+            />
+            <ProjectTeam
+              team={project.assignedTo}
+              availableTeamMembers={availableTeamMembers}
+              isEditing={isEditing}
+              onTeamChange={onTeamChange}
+            />
+            <ProjectServices
+              services={project.services}
+              isEditing={isEditing}
+              onServicesChange={onServicesChange}
+            />
+            <ProjectAttachments
+              attachments={project.attachments || []}
+              newFiles={newFiles}
+              isEditing={isEditing}
+              onFilesChange={onFilesChange}
+            />
+            <ProjectReview />
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="comments">
+        <Card>
+          <CardContent className="p-4 md:p-6">
             <ProjectComments
               project={project}
               assignableUsers={project.assignedTo}
               allProjects={allProjects}
               onAddCommentOrTicket={onAddCommentOrTicket}
             />
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
   );
 };
 
