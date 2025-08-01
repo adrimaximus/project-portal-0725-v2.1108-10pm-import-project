@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import TeamSelector from "./TeamSelector";
+import ModernTeamSelector from "./ModernTeamSelector";
 import FileUploader from "./FileUploader";
 import { Project, AssignedUser, ProjectFile, dummyProjects } from "@/data/projects";
 import { allUsers } from "@/data/users";
@@ -184,7 +184,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </div>
           <div className="space-y-2">
             <Label>Assign Team</Label>
-            <TeamSelector users={allUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
+            <ModernTeamSelector users={allUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
           </div>
           <div className="space-y-2">
             <Label>Attach Files</Label>
