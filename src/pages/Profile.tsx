@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/components/ui/use-toast";
 import PortalLayout from "@/components/PortalLayout";
+import { ChevronRight } from "lucide-react";
 
 const Profile = () => {
   const { user, updateUser } = useUser();
@@ -77,6 +79,24 @@ const Profile = () => {
               </div>
             </div>
             <Button onClick={handleSaveChanges}>Save Changes</Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Roles & Permissions</CardTitle>
+            <CardDescription>Manage user roles and access levels.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {user.role === 'Admin' && (
+              <Link to="/team-settings" className="flex items-center justify-between p-3 rounded-lg hover:bg-muted">
+                <div>
+                  <p className="font-medium">Manage Team Roles</p>
+                  <p className="text-sm text-muted-foreground">Set global roles for all users.</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </Link>
+            )}
           </CardContent>
         </Card>
       </div>

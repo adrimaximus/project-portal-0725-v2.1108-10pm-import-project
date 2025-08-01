@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit, Save, X } from "lucide-react";
 import { Input } from "../ui/input";
 import { getStatusClass } from "@/lib/utils";
+import { ReactNode } from "react";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -15,6 +16,7 @@ interface ProjectHeaderProps {
   onSaveChanges: () => void;
   onCancelChanges: () => void;
   canEdit: boolean;
+  children?: ReactNode;
 }
 
 const ProjectHeader = ({
@@ -26,6 +28,7 @@ const ProjectHeader = ({
   onSaveChanges,
   onCancelChanges,
   canEdit,
+  children,
 }: ProjectHeaderProps) => {
   return (
     <header className="flex flex-col gap-4">
@@ -51,6 +54,7 @@ const ProjectHeader = ({
           <Badge className={getStatusClass(project.status)}>{project.status}</Badge>
         </div>
         <div className="flex items-center gap-2">
+          {children}
           {canEdit && (
             isEditing ? (
               <>

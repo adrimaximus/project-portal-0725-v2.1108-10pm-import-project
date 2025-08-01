@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode, useState } from 'react';
-import { Role } from '@/types';
+import { GlobalRole } from '@/types';
 
 interface User {
   id: string;
@@ -7,7 +7,7 @@ interface User {
   email: string;
   avatar: string;
   initials: string;
-  role: Role;
+  role: GlobalRole;
 }
 
 interface UserContextType {

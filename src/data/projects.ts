@@ -1,3 +1,6 @@
+import { ProjectRole } from "@/types";
+import { User, allUsers } from "./users";
+
 export interface AssignedUser {
   id: string;
   name: string;
@@ -5,6 +8,11 @@ export interface AssignedUser {
   initials?: string;
   email?: string;
   role?: string;
+}
+
+export interface ProjectCollaborator {
+  userId: string;
+  role: ProjectRole;
 }
 
 export interface Task {
@@ -60,17 +68,14 @@ export interface Project {
   services: string[];
   createdBy: AssignedUser;
   assignedTo: AssignedUser[];
+  collaborators: ProjectCollaborator[];
   briefFiles?: ProjectFile[];
   tasks?: Task[];
   comments?: Comment[];
   category?: string;
 }
 
-const users: AssignedUser[] = [
-    { id: 'user-1', name: 'Alice', avatar: 'https://i.pravatar.cc/150?u=alice', initials: 'A', email: 'alice@example.com', role: 'Project Manager' },
-    { id: 'user-2', name: 'Bob', avatar: 'https://i.pravatar.cc/150?u=bob', initials: 'B', email: 'bob@example.com', role: 'Developer' },
-    { id: 'user-3', name: 'Charlie', avatar: 'https://i.pravatar.cc/150?u=charlie', initials: 'C', email: 'charlie@example.com', role: 'Designer' },
-];
+const users: AssignedUser[] = allUsers.map(u => ({...u}));
 
 export const dummyProjects: Project[] = [
   {
@@ -87,6 +92,11 @@ export const dummyProjects: Project[] = [
     services: ['Web Development', 'UI/UX Design'],
     createdBy: users[0],
     assignedTo: users,
+    collaborators: [
+      { userId: 'user-1', role: 'Project Owner' },
+      { userId: 'user-2', role: 'Assignee' },
+      { userId: 'user-3', role: 'Client' },
+    ],
     category: 'Web Development',
     tasks: [
         { id: 'task-1', text: 'Design homepage mockups', completed: true, assignedTo: ['user-3'], originTicketId: 'comment-3' },
