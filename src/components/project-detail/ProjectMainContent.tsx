@@ -1,16 +1,14 @@
-import { Project, User, Comment } from "@/data/projects";
+import { Project, AssignedUser, Comment } from "@/data/projects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectComments from "@/components/ProjectComments";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import ProjectOwnerInfo from "./ProjectOwnerInfo";
-import ProjectStatusBadge from "./ProjectStatusBadge";
 
 interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
-  onTeamChange: (users: User[]) => void;
+  onTeamChange: (users: AssignedUser[]) => void;
   onFilesChange: (files: File[]) => void;
   onServicesChange: (services: string[]) => void;
   onAddCommentOrTicket: (comment: Comment) => void;
@@ -37,17 +35,8 @@ const ProjectMainContent = ({
             </TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
-            <div className="space-y-8">
-              <div className="flex justify-between items-start">
-                <ProjectOwnerInfo owner={project.createdBy} />
-                <ProjectStatusBadge startDate={project.startDate} endDate={project.endDate} />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Description</h3>
-                <div className="prose prose-sm max-w-none text-muted-foreground">
-                  <p>{project.description || "No description provided."}</p>
-                </div>
-              </div>
+            <div className="prose prose-sm max-w-none text-muted-foreground">
+              <p>{project.description || "No description provided."}</p>
             </div>
           </TabsContent>
           <TabsContent value="comments">

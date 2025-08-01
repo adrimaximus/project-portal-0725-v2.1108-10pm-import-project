@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { dummyProjects, Project, AssignedUser, Task, ProjectFile, Comment } from "@/data/projects";
+import { dummyProjects, Project, AssignedUser, Task, Comment } from "@/data/projects";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
@@ -9,7 +9,7 @@ import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import { initialComments } from "@/data/comments";
 import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
 
-const ProjectDetail = () => {
+const ProjectDetails = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   
@@ -99,7 +99,7 @@ const ProjectDetail = () => {
   
   const handleFilesChange = (newFiles: File[]) => {
     if (editedProject) {
-      const newProjectFiles: ProjectFile[] = newFiles.map(file => ({
+      const newProjectFiles = newFiles.map(file => ({
         name: file.name,
         size: file.size,
         type: file.type,
@@ -164,7 +164,7 @@ const ProjectDetail = () => {
         }
   
         if (!newTaskText && mentionedUsersToAssign.length > 0) {
-          newTaskText = "New task assigned";
+          newTaskText = "Tugas baru ditugaskan";
         }
   
         if (newTaskText) {
@@ -176,11 +176,6 @@ const ProjectDetail = () => {
             originTicketId: newComment.id,
           };
           updatedProject.tasks = [...(currentEditedProject.tasks || []), newTask];
-          
-          const currentTasks = updatedProject.tasks || [];
-          const completedTasks = currentTasks.filter(task => task.completed).length;
-          const totalTasks = currentTasks.length;
-          updatedProject.progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
         }
       }
   
@@ -196,13 +191,7 @@ const ProjectDetail = () => {
     });
   };
 
-  const openTicketCount = editedProject.comments?.filter(comment => {
-    if (!comment.isTicket) {
-      return false;
-    }
-    const task = editedProject.tasks?.find(t => t.originTicketId === comment.id);
-    return !task || !task.completed;
-  }).length || 0;
+  const ticketCount = editedProject.comments?.filter(c => c.isTicket).length || 0;
 
   return (
     <PortalLayout>
@@ -235,7 +224,7 @@ const ProjectDetail = () => {
               onServicesChange={handleServicesChange}
               onAddCommentOrTicket={handleAddCommentOrTicket}
               projectId={project.id}
-              ticketCount={openTicketCount}
+              ticketCount={ticketCount}
               allProjects={dummyProjects}
             />
           </div>
@@ -251,4 +240,4 @@ const ProjectDetail = () => {
   );
 };
 
-export default ProjectDetail;
+export default ProjectDetails;
