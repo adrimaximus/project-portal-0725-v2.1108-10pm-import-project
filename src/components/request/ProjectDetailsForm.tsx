@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Project, dummyProjects } from '@/data/projects';
-import { Service } from '@/data/services';
+import { Project, dummyProjects, Service } from '@/data/projects';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,7 +19,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       id: `proj-${Date.now()}`,
       name: projectName,
       description: projectDescription,
-      services: selectedServices.map(s => s.title),
+      services: selectedServices.map(s => s.name),
       status: 'Requested',
       paymentStatus: 'proposed',
       progress: 0,
@@ -65,7 +64,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         </div>
         <div>
             <p className="text-sm font-medium">Selected Services</p>
-            <p className="text-sm text-muted-foreground">{selectedServices.map(s => s.title).join(', ')}</p>
+            <p className="text-sm text-muted-foreground">{selectedServices.map(s => s.name).join(', ')}</p>
         </div>
       </div>
       <div className="flex justify-between">
