@@ -1,65 +1,83 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Service } from "@/data/services";
-import { cn } from "@/lib/utils";
+import * as React from "react"
+import { Check, ChevronsUpDown } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { services as allServices } from "@/data/services"
 
 interface ServiceSelectorProps {
-  services: Service[];
-  onNext: (selectedServices: Service[]) => void;
+  selectedServices: string[];
+  onSelectServices: (services: string[]) => void;
 }
 
-const ServiceSelector = ({ services, onNext }: ServiceSelectorProps) => {
-  const [selected, setSelected] = useState<string[]>([]);
+export default function ServiceSelector({ selectedServices, onSelectServices }: ServiceSelectorProps) {
+  const [open, setOpen] = React.useState(false)
 
-  const toggleSelection = (title: string) => {
-    setSelected((current) =>
-      current.includes(title)
-        ? current.filter((item) => item !== title)
-        : [...current, title]
-    );
-  };
-
-  const handleNext = () => {
-    const selectedServices = services.filter((service) =>
-      selected.includes(service.title)
-    );
-    onNext(selectedServices);
+  const handleSelect = (serviceTitle: string) => {
+    const isSelected = selectedServices.includes(serviceTitle);
+    if (isSelected) {
+      onSelectServices(selectedServices.filter(s => s !== serviceTitle));
+    } else {
+      onSelectServices([...selectedServices, serviceTitle]);
+    }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Select Services</CardTitle>
-        <CardDescription>Choose the services you need for your project. You can select multiple.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {services.map((service) => (
-            <div
-              key={service.title}
-              onClick={() => toggleSelection(service.title)}
-              className={cn(
-                "p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md",
-                selected.includes(service.title) ? "ring-2 ring-primary bg-muted/50" : "bg-background"
-              )}
-            >
-              <div className="flex items-center gap-4 mb-2">
-                <service.icon className={cn("h-6 w-6", service.iconColor)} />
-                <h3 className="font-semibold">{service.title}</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">{service.description}</p>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-end">
-        <Button onClick={handleNext} disabled={selected.length === 0}>
-          Next
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
+          <span className="truncate">
+            {selectedServices.length > 0
+              ? `${selectedServices.length} service(s) selected`
+              : "Select services..."}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
-      </CardFooter>
-    </Card>
-  );
-};
-
-export default ServiceSelector;
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <Command>
+          <CommandInput placeholder="Search services..." />
+          <CommandList>
+            <CommandEmpty>No service found.</CommandEmpty>
+            <CommandGroup>
+              {allServices.map((service) => (
+                <CommandItem
+                  key={service.title}
+                  value={service.title}
+                  onSelect={() => handleSelect(service.title)}
+                  className="cursor-pointer"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedServices.includes(service.title) ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {service.title}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
