@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Menu, Search } from "lucide-react";
+import { Menu, Package2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PortalSidebar from "./PortalSidebar";
+import { useState } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
@@ -52,7 +53,7 @@ const PortalHeader = () => {
           <Button variant="secondary" size="icon" className="rounded-full">
             <Avatar className="h-8 w-8">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback>{user.initials}</AvatarFallback>
+              <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
             <span className="sr-only">Toggle user menu</span>
           </Button>
@@ -60,9 +61,7 @@ const PortalHeader = () => {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link to="/settings">Settings</Link>
-          </DropdownMenuItem>
+          <DropdownMenuItem>Settings</DropdownMenuItem>
           <DropdownMenuItem>Support</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem>Logout</DropdownMenuItem>
