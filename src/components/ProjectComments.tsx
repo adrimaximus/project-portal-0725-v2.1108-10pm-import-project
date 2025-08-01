@@ -8,25 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, Ticket, File, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Project, AssignedUser } from '@/data/projects';
+import { Project, AssignedUser, Comment } from '@/data/projects';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
-
-export type Comment = {
-  id: number;
-  projectId: string;
-  user: {
-    name: string;
-    avatar: string;
-  };
-  text: string;
-  timestamp: string;
-  isTicket?: boolean;
-  attachment?: {
-    name: string;
-    url: string;
-    type: 'image' | 'file';
-  };
-};
+import { cn } from '@/lib/utils';
 
 interface ProjectCommentsProps {
   project: Project;
@@ -79,6 +63,15 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
   const [triggerIndex, setTriggerIndex] = useState(0);
 
   const comments = project.comments || [];
+  const tasks = project.tasks || [];
+
+  const getTicketStatus = (commentId: string) => {
+    const task = tasks.find(t => t.originTicketId === commentId);
+    if (task && task.completed) {
+      return 'Done';
+    }
+    return 'Ticket';
+  };
 
   const handleTextChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = event.target.value;
@@ -145,11 +138,11 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
     if (newComment.trim() === "" && !attachmentFile) return;
 
     const comment: Comment = {
-      id: Date.now(),
+      id: `comment-${Date.now()}`,
       projectId: project.id,
-      user: { name: "You", avatar: "https://i.pravatar.cc/150?u=currentuser" },
+      user: { id: 'user-current', name: "You", avatar: "https://i.pravatar.cc/150?u=currentuser" },
       text: newComment,
-      timestamp: "Just now",
+      timestamp: new Date().toISOString(),
       isTicket: isTicket,
     };
 
@@ -157,7 +150,6 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
       comment.attachment = {
         name: attachmentFile.name,
         url: URL.createObjectURL(attachmentFile),
-        type: attachmentFile.type.startsWith('image/') ? 'image' : 'file',
       };
     }
 
@@ -179,26 +171,41 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
       <CardHeader><CardTitle>Comments & Tickets</CardTitle></CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {comments.map((comment) => (
-            <div key={comment.id} className="flex items-start gap-4">
-              <Avatar className="h-10 w-10 border"><AvatarImage src={comment.user.avatar} /><AvatarFallback>{comment.user.name.slice(0, 2)}</AvatarFallback></Avatar>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2"><p className="font-semibold">{comment.user.name}</p>{comment.isTicket && <Badge variant="destructive">Ticket</Badge>}</div>
-                  <p className="text-xs text-muted-foreground">{comment.timestamp}</p>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{renderWithMentions(comment.text, allProjects)}</p>
-                {comment.attachment && (
-                  <div className="mt-2">
-                    <a href={comment.attachment.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md border p-2 text-sm text-muted-foreground transition-colors hover:bg-accent">
-                      {comment.attachment.type === 'image' ? <img src={comment.attachment.url} alt={comment.attachment.name} className="h-10 w-10 rounded-md object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted"><File className="h-5 w-5" /></div>}
-                      <span>{comment.attachment.name}</span>
-                    </a>
+          {comments.map((comment) => {
+            const ticketStatus = getTicketStatus(comment.id);
+            return (
+              <div key={comment.id} className="flex items-start gap-4">
+                <Avatar className="h-10 w-10 border"><AvatarImage src={comment.user.avatar} /><AvatarFallback>{comment.user.name.slice(0, 2)}</AvatarFallback></Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{comment.user.name}</p>
+                      {comment.isTicket && (
+                        <Badge
+                          variant={ticketStatus === 'Done' ? 'default' : 'destructive'}
+                          className={cn(
+                            ticketStatus === 'Done' && 'bg-green-500 hover:bg-green-600 text-white border-green-500'
+                          )}
+                        >
+                          {ticketStatus}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{new Date(comment.timestamp).toLocaleString()}</p>
                   </div>
-                )}
+                  <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{renderWithMentions(comment.text, allProjects)}</p>
+                  {comment.attachment && (
+                    <div className="mt-2">
+                      <a href={comment.attachment.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md border p-2 text-sm text-muted-foreground transition-colors hover:bg-accent">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted"><File className="h-5 w-5" /></div>
+                        <span>{comment.attachment.name}</span>
+                      </a>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="mt-6 pt-6 border-t">
           <div className="relative">
