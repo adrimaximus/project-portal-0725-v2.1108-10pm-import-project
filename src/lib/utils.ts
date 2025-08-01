@@ -1,40 +1,33 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { ProjectStatus, PaymentStatus } from "@/data/projects";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const getStatusClass = (status: ProjectStatus) => {
-  switch (status) {
-    case 'On Track':
-    case 'Completed':
-    case 'Done':
+export const getStatusClass = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'completed':
       return 'bg-green-100 text-green-800';
-    case 'At Risk':
+    case 'in progress':
+      return 'bg-blue-100 text-blue-800';
+    case 'on hold':
       return 'bg-yellow-100 text-yellow-800';
-    case 'Off Track':
+    case 'cancelled':
       return 'bg-red-100 text-red-800';
-    case 'On Hold':
-    case 'In Progress':
     default:
       return 'bg-gray-100 text-gray-800';
   }
 };
 
-export const getPaymentStatusClass = (status: PaymentStatus) => {
-  switch (status) {
-    case 'Paid':
+export const getPaymentStatusClass = (status: string) => {
+  switch (status.toLowerCase()) {
     case 'paid':
       return 'bg-green-100 text-green-800';
-    case 'Partially Paid':
-    case 'approved':
+    case 'pending':
       return 'bg-yellow-100 text-yellow-800';
-    case 'Unpaid':
+    case 'overdue':
       return 'bg-red-100 text-red-800';
-    case 'Overdue':
-      return 'bg-purple-100 text-purple-800';
     default:
       return 'bg-gray-100 text-gray-800';
   }

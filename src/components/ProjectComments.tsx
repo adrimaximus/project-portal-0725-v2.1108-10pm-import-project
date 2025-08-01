@@ -1,122 +1,242 @@
-import { useState } from 'react';
-import { Comment, Task, AssignedUser, Project } from '@/data/projects';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Paperclip, Send, Ticket } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+"use client";
+
+import React, { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Paperclip, Send, Ticket, File, X } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Badge } from './ui/badge';
+import { Project, AssignedUser } from '@/data/projects';
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+
+export type Comment = {
+  id: number;
+  projectId: string;
+  user: {
+    name: string;
+    avatar: string;
+  };
+  text: string;
+  timestamp: string;
+  isTicket?: boolean;
+  attachment?: {
+    name: string;
+    url: string;
+    type: 'image' | 'file';
+  };
+};
 
 interface ProjectCommentsProps {
-  projectId: string;
-  comments: Comment[];
-  tasks: Task[];
-  currentUser: AssignedUser;
-  teamMembers: AssignedUser[];
-  allProjects: Project[];
+  project: Project;
   onAddCommentOrTicket: (comment: Comment) => void;
+  assignableUsers: AssignedUser[];
+  allProjects: Project[];
 }
 
-const ProjectComments = ({
-  projectId,
-  comments,
-  tasks,
-  currentUser,
-  onAddCommentOrTicket,
-}: ProjectCommentsProps) => {
-  const [newCommentText, setNewCommentText] = useState('');
-  const [isTicket, setIsTicket] = useState(false);
+const renderWithMentions = (text: string, allProjects: Project[]) => {
+  const mentionRegex = /(@[a-zA-Z0-9\s._-]+|#\/[a-zA-Z0-9\s._-]+)/g;
+  const parts = text.split(mentionRegex);
 
-  const handleAddComment = () => {
-    if (newCommentText.trim() === '') return;
+  return parts.map((part, index) => {
+    if (part.match(mentionRegex)) {
+      if (part.startsWith('@')) {
+        return <strong key={index} className="text-primary font-medium">{part}</strong>;
+      }
+      if (part.startsWith('#/')) {
+        const projectName = part.substring(2).trim();
+        const project = allProjects.find(p => p.name === projectName);
+        if (project) {
+          return (
+            <Link
+              to={`/projects/${project.id}`}
+              key={index}
+              className="text-blue-600 font-semibold hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {projectName}
+            </Link>
+          );
+        }
+        return <strong key={index} className="text-blue-600 font-semibold">{projectName}</strong>;
+      }
+    }
+    return part;
+  });
+};
 
-    const newComment: Comment = {
-      id: `comment-${Date.now()}`,
-      projectId,
-      user: currentUser,
-      text: newCommentText,
-      timestamp: new Date().toISOString(),
-      isTicket,
+const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddCommentOrTicket, assignableUsers, allProjects }) => {
+  const [newComment, setNewComment] = useState("");
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  type SuggestionType = 'user' | 'project' | null;
+  const [suggestionType, setSuggestionType] = useState<SuggestionType>(null);
+  const [suggestionQuery, setSuggestionQuery] = useState('');
+  const [suggestionOpen, setSuggestionOpen] = useState(false);
+  const [triggerIndex, setTriggerIndex] = useState(0);
+
+  const comments = project.comments || [];
+
+  const handleTextChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = event.target.value;
+    const cursorPosition = event.target.selectionStart;
+    setNewComment(text);
+
+    const textBeforeCursor = text.substring(0, cursorPosition);
+    const triggerCharIndex = Math.max(textBeforeCursor.lastIndexOf('@'), textBeforeCursor.lastIndexOf('/'));
+
+    if (triggerCharIndex === -1) {
+      setSuggestionOpen(false);
+      return;
+    }
+    
+    const charBeforeTrigger = text.charAt(triggerCharIndex - 1);
+    if (charBeforeTrigger && !/\s/.test(charBeforeTrigger)) {
+        setSuggestionOpen(false);
+        return;
+    }
+
+    const query = text.substring(triggerCharIndex + 1, cursorPosition);
+    if (/\s/.test(query)) {
+      setSuggestionOpen(false);
+      return;
+    }
+
+    const triggerChar = text.charAt(triggerCharIndex);
+    if (triggerChar === '@') {
+      setSuggestionType('user');
+      setSuggestionQuery(query);
+      setTriggerIndex(triggerCharIndex);
+      setSuggestionOpen(true);
+    } else if (triggerChar === '/') {
+      setSuggestionType('project');
+      setSuggestionQuery(query);
+      setTriggerIndex(triggerCharIndex);
+      setSuggestionOpen(true);
+    } else {
+      setSuggestionOpen(false);
+    }
+  };
+
+  const handleSuggestionSelect = (name: string) => {
+    const prefix = newComment.substring(0, triggerIndex);
+    const suffix = newComment.substring(triggerIndex + 1 + suggestionQuery.length);
+    const mention = `${suggestionType === 'user' ? '@' : '#/'}${name} `;
+    
+    setNewComment(prefix + mention + suffix);
+    setSuggestionOpen(false);
+    
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      const newCursorPos = (prefix + mention).length;
+      textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const handleAttachmentClick = () => fileInputRef.current?.click();
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) setAttachmentFile(event.target.files[0]);
+  };
+
+  const handleSendComment = (isTicket = false) => {
+    if (newComment.trim() === "" && !attachmentFile) return;
+
+    const comment: Comment = {
+      id: Date.now(),
+      projectId: project.id,
+      user: { name: "You", avatar: "https://i.pravatar.cc/150?u=currentuser" },
+      text: newComment,
+      timestamp: "Just now",
+      isTicket: isTicket,
     };
 
-    onAddCommentOrTicket(newComment);
-    setNewCommentText('');
-    setIsTicket(false);
+    if (attachmentFile) {
+      comment.attachment = {
+        name: attachmentFile.name,
+        url: URL.createObjectURL(attachmentFile),
+        type: attachmentFile.type.startsWith('image/') ? 'image' : 'file',
+      };
+    }
+
+    onAddCommentOrTicket(comment);
+
+    setNewComment("");
+    setAttachmentFile(null);
+    setSuggestionOpen(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const getTicketStatus = (commentId: string) => {
-    const task = tasks.find(t => t.originTicketId === commentId);
-    if (task) {
-      return task.completed ? 'Done' : 'Ticket';
-    }
-    return 'Ticket';
-  };
+  const handleSendTicket = () => handleSendComment(true);
+
+  const filteredUsers = assignableUsers.filter(u => u.name.toLowerCase().includes(suggestionQuery.toLowerCase()));
+  const filteredProjects = allProjects.filter(p => p.id !== project.id && p.name.toLowerCase().includes(suggestionQuery.toLowerCase()));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col space-y-2">
-        <Textarea
-          placeholder="Add a comment or create a ticket by mentioning a team member..."
-          value={newCommentText}
-          onChange={(e) => setNewCommentText(e.target.value)}
-          className="min-h-[80px]"
-        />
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" className="text-muted-foreground">
-              <Paperclip className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={isTicket ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setIsTicket(!isTicket)}
-              className={isTicket ? "text-primary" : "text-muted-foreground"}
-            >
-              <Ticket className="h-4 w-4 mr-2" />
-              {isTicket ? 'Creating Ticket' : 'Create Ticket'}
-            </Button>
-          </div>
-          <Button onClick={handleAddComment}>
-            <Send className="h-4 w-4 mr-2" />
-            Post
-          </Button>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {comments.slice().reverse().map(comment => (
-          <div key={comment.id} className="flex items-start space-x-3">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={comment.user.avatar} />
-              <AvatarFallback>{comment.user.initials || comment.user.name.slice(0,2)}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 bg-muted/50 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold text-sm">{comment.user.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
-                  </span>
+    <Card>
+      <CardHeader><CardTitle>Comments & Tickets</CardTitle></CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {comments.map((comment) => (
+            <div key={comment.id} className="flex items-start gap-4">
+              <Avatar className="h-10 w-10 border"><AvatarImage src={comment.user.avatar} /><AvatarFallback>{comment.user.name.slice(0, 2)}</AvatarFallback></Avatar>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2"><p className="font-semibold">{comment.user.name}</p>{comment.isTicket && <Badge variant="destructive">Ticket</Badge>}</div>
+                  <p className="text-xs text-muted-foreground">{comment.timestamp}</p>
                 </div>
-                {comment.isTicket && (
-                  <Badge
-                    variant="default"
-                    className={
-                      getTicketStatus(comment.id) === 'Done'
-                        ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                        : 'bg-orange-500 hover:bg-orange-600 text-white'
-                    }
-                  >
-                    {getTicketStatus(comment.id)}
-                  </Badge>
+                <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{renderWithMentions(comment.text, allProjects)}</p>
+                {comment.attachment && (
+                  <div className="mt-2">
+                    <a href={comment.attachment.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md border p-2 text-sm text-muted-foreground transition-colors hover:bg-accent">
+                      {comment.attachment.type === 'image' ? <img src={comment.attachment.url} alt={comment.attachment.name} className="h-10 w-10 rounded-md object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted"><File className="h-5 w-5" /></div>}
+                      <span>{comment.attachment.name}</span>
+                    </a>
+                  </div>
                 )}
               </div>
-              <p className="text-sm text-foreground/80 whitespace-pre-wrap mt-1">{comment.text}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 pt-6 border-t">
+          <div className="relative">
+            <Textarea ref={textareaRef} placeholder="Add a comment or create a ticket... Type '@' to mention a user, '/' to link a project." value={newComment} onChange={handleTextChange} className="pr-36" />
+            {suggestionOpen && (
+              <Card className="absolute bottom-full mb-2 w-full max-h-60 overflow-y-auto shadow-lg border z-10">
+                <Command>
+                  <CommandList>
+                    {suggestionType === 'user' && (
+                      <CommandGroup heading="Mention Team Member">
+                        {filteredUsers.length > 0 ? filteredUsers.map(user => <CommandItem key={user.id} value={user.name} onSelect={() => handleSuggestionSelect(user.name)} className="cursor-pointer flex items-center gap-2"><Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /><AvatarFallback>{user.name.slice(0,1)}</AvatarFallback></Avatar>{user.name}</CommandItem>) : <CommandEmpty>No users found.</CommandEmpty>}
+                      </CommandGroup>
+                    )}
+                    {suggestionType === 'project' && (
+                      <CommandGroup heading="Link to Project">
+                        {filteredProjects.length > 0 ? filteredProjects.map(project => <CommandItem key={project.id} value={project.name} onSelect={() => handleSuggestionSelect(project.name)} className="cursor-pointer">{project.name}</CommandItem>) : <CommandEmpty>No projects found.</CommandEmpty>}
+                      </CommandGroup>
+                    )}
+                  </CommandList>
+                </Command>
+              </Card>
+            )}
+            <div className="absolute top-2 right-2 flex items-center gap-1">
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+              <Button type="button" variant="ghost" size="icon" onClick={handleAttachmentClick}><Paperclip className="h-4 w-4" /><span className="sr-only">Attach file</span></Button>
+              <Button type="button" variant="ghost" size="icon" onClick={handleSendTicket}><Ticket className="h-4 w-4" /><span className="sr-only">Create ticket</span></Button>
+              <Button type="button" size="sm" onClick={() => handleSendComment(false)}>Send</Button>
             </div>
           </div>
-        ))}
-      </div>
-    </div>
+          {attachmentFile && (
+            <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2 bg-muted p-2 rounded-md">
+              <File className="h-4 w-4" /><span className="flex-1 truncate">{attachmentFile.name}</span>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setAttachmentFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}><X className="h-4 w-4" /><span className="sr-only">Remove attachment</span></Button>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

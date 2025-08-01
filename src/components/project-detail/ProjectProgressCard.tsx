@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Project, Task, AssignedUser } from "@/data/projects";
@@ -11,7 +11,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
 
 // A small component for the assignment popover content
 const TaskAssigneeSelector = ({
@@ -150,10 +149,7 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
                         id={task.id}
                         checked={task.completed}
                         onCheckedChange={() => handleToggleTask(task.id)}
-                        className={cn(
-                          "ml-1.5",
-                          task.originTicketId && "border-orange-500 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
-                        )}
+                        className="ml-1.5"
                       />
                       <label
                         htmlFor={task.id}

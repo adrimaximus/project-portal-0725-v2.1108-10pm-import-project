@@ -1,7 +1,10 @@
-import { Project } from '@/data/projects';
-import { Badge } from '@/components/ui/badge';
-import { getStatusClass } from '@/lib/utils';
-import { Button } from '../ui/button';
+import { Link } from "react-router-dom";
+import { Project } from "@/data/projects";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Edit, Save, X } from "lucide-react";
+import { Input } from "../ui/input";
+import { getStatusClass } from "@/lib/utils";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -13,15 +16,59 @@ interface ProjectHeaderProps {
   onCancelChanges: () => void;
 }
 
-const ProjectHeader = ({ project, projectName }: ProjectHeaderProps) => {
+const ProjectHeader = ({
+  project,
+  isEditing,
+  projectName,
+  onProjectNameChange,
+  onEditToggle,
+  onSaveChanges,
+  onCancelChanges,
+}: ProjectHeaderProps) => {
   return (
-    <div className="flex justify-between items-center">
-      <h1 className="text-2xl font-bold">{projectName}</h1>
-      <div className="flex items-center gap-4">
-        <Badge className={getStatusClass(project.status)}>{project.status}</Badge>
-        <Button>Edit</Button>
+    <header className="flex flex-col gap-4">
+      <div>
+        <Button variant="ghost" asChild className="-ml-4">
+          <Link to="/">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        </Button>
       </div>
-    </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          {isEditing ? (
+            <Input
+              value={projectName}
+              onChange={(e) => onProjectNameChange(e.target.value)}
+              className="text-2xl font-bold h-auto p-0 border-0 focus-visible:ring-0"
+            />
+          ) : (
+            <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+          )}
+          <Badge className={getStatusClass(project.status)}>{project.status}</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <>
+              <Button onClick={onSaveChanges}>
+                <Save className="mr-2 h-4 w-4" />
+                Save
+              </Button>
+              <Button variant="outline" onClick={onCancelChanges}>
+                <X className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" onClick={onEditToggle}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Project
+            </Button>
+          )}
+        </div>
+      </div>
+    </header>
   );
 };
 
