@@ -1,30 +1,34 @@
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import Index from "./pages/Index";
-import Request from "./pages/Request";
-import Chat from "./pages/Chat";
-import MoodTracker from "./pages/MoodTracker";
-import Goals from "./pages/Goals";
-import Notifications from "./pages/Notifications";
-import ProjectDetail from "./pages/ProjectDetail";
-import { UserProvider } from "./contexts/UserContext";
-import Settings from "./pages/Settings";
+import { Route, Routes } from 'react-router-dom';
+import Index from './pages/Index';
+import RequestPage from './pages/Request';
+import ChatPage from './pages/ChatPage';
+import MoodTracker from './pages/MoodTracker';
+import GoalsPage from './pages/GoalsPage';
+import GoalDetailPage from './pages/GoalDetailPage';
+import ProjectDetail from './pages/ProjectDetail';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
+import Billing from './pages/Billing';
+import NotFound from './pages/NotFound';
+import { GoalsProvider } from './context/GoalsContext';
 
 function App() {
   return (
-    <UserProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/request" element={<Request />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/mood-tracker" element={<MoodTracker />} />
-          <Route path="/goals" element={<Goals />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/project/:projectId" element={<ProjectDetail />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </Router>
-    </UserProvider>
+    <GoalsProvider>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/request" element={<RequestPage />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/mood-tracker" element={<MoodTracker />} />
+        <Route path="/goals" element={<GoalsPage />} />
+        <Route path="/goals/:goalId" element={<GoalDetailPage />} />
+        <Route path="/projects/:projectId" element={<ProjectDetail />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/billing" element={<Billing />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </GoalsProvider>
   );
 }
 
