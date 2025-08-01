@@ -62,8 +62,8 @@ export interface Project {
   services?: string[];
   files?: File[];
   budget?: number;
-  deadline: string;
-  paymentStatus: 'proposed' | 'approved' | 'po_created' | 'on_process' | 'pending' | 'paid' | 'cancelled';
+  deadline?: string;
+  paymentStatus?: 'Paid' | 'Pending' | 'Overdue';
   category?: string;
   briefFiles?: ProjectFile[];
 }
@@ -102,7 +102,7 @@ const projects: Project[] = [
     files: [],
     budget: 50000,
     deadline: "2024-09-30",
-    paymentStatus: 'pending',
+    paymentStatus: 'Pending',
     category: 'Web Development',
     briefFiles: [],
   },
@@ -129,7 +129,7 @@ const projects: Project[] = [
     files: [],
     budget: 75000,
     deadline: "2024-12-31",
-    paymentStatus: 'paid',
+    paymentStatus: 'Paid',
     category: 'Mobile App',
     briefFiles: [],
   },
@@ -149,7 +149,7 @@ const projects: Project[] = [
     files: [],
     budget: 40000,
     deadline: "2024-05-30",
-    paymentStatus: 'paid',
+    paymentStatus: 'Paid',
     category: 'Data Science',
     briefFiles: [],
   },
@@ -169,7 +169,7 @@ const projects: Project[] = [
     files: [],
     budget: 120000,
     deadline: "2025-03-31",
-    paymentStatus: 'pending',
+    paymentStatus: 'Pending',
     category: 'Infrastructure',
     briefFiles: [],
   },

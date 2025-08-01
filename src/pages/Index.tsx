@@ -1,4 +1,4 @@
-import { getProjects, getAssignableUsers, Project, AssignedUser } from "@/data/projects";
+import { getProjects, Project, AssignedUser } from "@/data/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,7 @@ const Index = () => {
   const stats: StatCardData = {
     projectCount: projects.length,
     totalValue: projects.reduce((sum, p) => sum + (p.budget || 0), 0),
-    pendingValue: projects.filter(p => p.paymentStatus === 'pending').reduce((sum, p) => sum + (p.budget || 0), 0),
+    pendingValue: projects.filter(p => p.paymentStatus === 'Pending').reduce((sum, p) => sum + (p.budget || 0), 0),
   };
 
   const teamPerformance: TeamMemberStats[] = users.map(user => ({

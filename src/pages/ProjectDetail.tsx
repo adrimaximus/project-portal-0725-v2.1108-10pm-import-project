@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getProjectById, getProjects, Project, Comment, Task } from "@/data/projects";
+import { getProjectById, getProjects, Project, Comment, Task, AssignedUser, ProjectFile } from "@/data/projects";
 import { useToast } from "@/components/ui/use-toast";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
@@ -17,7 +17,6 @@ const ProjectDetail = () => {
 
   const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProject, setEditedProject] = useState<Project | null>(null);
 
   useEffect(() => {
     if (projectId) {
@@ -30,36 +29,19 @@ const ProjectDetail = () => {
     }
   }, [projectId, navigate]);
 
-  const handleEditToggle = () => {
-    if (!isEditing && project) {
-      setEditedProject({ ...project });
-    }
-    setIsEditing(!isEditing);
-  };
-
-  const handleCancelChanges = () => {
-    setIsEditing(false);
-    setEditedProject(null);
+  const handleUpdateProject = (updatedProject: Partial<Project>) => {
+    if (!project) return;
+    setProject(prev => prev ? { ...prev, ...updatedProject } : null);
   };
 
   const handleSaveChanges = () => {
-    if (editedProject) {
-      setProject(editedProject);
-      // Here you would typically save to a backend
-      console.log("Saving changes:", editedProject);
-      toast({
-        title: "Project Updated",
-        description: "Your changes have been saved.",
-      });
-    }
+    // Here you would typically save to a backend
+    console.log("Saving changes:", project);
+    toast({
+      title: "Project Updated",
+      description: "Your changes have been saved.",
+    });
     setIsEditing(false);
-    setEditedProject(null);
-  };
-
-  const handleUpdateEditedProject = (update: Partial<Project>) => {
-    if (editedProject) {
-      setEditedProject({ ...editedProject, ...update });
-    }
   };
 
   const handleAddCommentOrTicket = (comment: Comment) => {
@@ -90,7 +72,7 @@ const ProjectDetail = () => {
       updatedTasks = [...updatedTasks, newTicketTask];
     }
 
-    setProject({ ...project, comments: updatedComments, tasks: updatedTasks });
+    handleUpdateProject({ comments: updatedComments, tasks: updatedTasks });
   };
 
   if (!project) {
@@ -105,29 +87,19 @@ const ProjectDetail = () => {
         <ProjectHeader
           project={project}
           isEditing={isEditing}
-          projectName={editedProject?.name ?? project.name}
-          onProjectNameChange={(name) => handleUpdateEditedProject({ name })}
-          onEditToggle={handleEditToggle}
+          onEditToggle={() => setIsEditing(!isEditing)}
           onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleCancelChanges}
         />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <ProjectInfoCards
-              project={project}
-              isEditing={isEditing}
-              editedProject={editedProject}
-              onSelectChange={(name, value) => handleUpdateEditedProject({ [name]: value })}
-              onDateChange={(name, date) => handleUpdateEditedProject({ [name]: date?.toISOString() })}
-              onBudgetChange={(value) => handleUpdateEditedProject({ budget: value })}
-            />
+            <ProjectInfoCards project={project} />
             <ProjectMainContent
               project={project}
               isEditing={isEditing}
-              onDescriptionChange={(value) => handleUpdateEditedProject({ description: value })}
-              onTeamChange={(users) => handleUpdateEditedProject({ assignedTo: users })}
-              onFilesChange={(files) => handleUpdateEditedProject({ files: files })}
-              onServicesChange={(services) => handleUpdateEditedProject({ services: services })}
+              onDescriptionChange={(value) => handleUpdateProject({ description: value })}
+              onTeamChange={(users) => handleUpdateProject({ assignedTo: users })}
+              onFilesChange={(files) => handleUpdateProject({ files: files })}
+              onServicesChange={(services) => handleUpdateProject({ services: services })}
               onAddCommentOrTicket={handleAddCommentOrTicket}
               projectId={project.id}
               ticketCount={ticketCount}
@@ -137,7 +109,7 @@ const ProjectDetail = () => {
           <div className="lg:col-span-1 space-y-6">
             <ProjectProgressCard
               project={project}
-              onTasksUpdate={(tasks) => setProject({ ...project, tasks })}
+              onTasksUpdate={(tasks) => handleUpdateProject({ tasks })}
             />
           </div>
         </div>

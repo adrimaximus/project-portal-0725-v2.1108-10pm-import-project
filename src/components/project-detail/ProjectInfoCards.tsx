@@ -15,7 +15,7 @@ interface ProjectInfoCardsProps {
   isEditing: boolean;
   editedProject: Project | null;
   onSelectChange: (name: 'status' | 'paymentStatus', value: string) => void;
-  onDateChange: (name: 'deadline' | 'startDate', date: Date | undefined) => void;
+  onDateChange: (name: 'deadline' | 'paymentDueDate' | 'startDate', date: Date | undefined) => void;
   onBudgetChange: (value: number | undefined) => void;
 }
 
@@ -73,7 +73,7 @@ const ProjectInfoCards = ({
 
   const budgetFormatted = new Intl.NumberFormat("id-ID", {
     style: "currency", currency: "IDR", minimumFractionDigits: 0,
-  }).format(project.budget || 0);
+  }).format(project.budget);
 
   const startDateFormatted = (project as any).startDate
     ? new Date((project as any).startDate).toLocaleDateString("en-US", {
