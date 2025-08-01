@@ -5,8 +5,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/context/UserContext";
 
 const Profile = () => {
+  const { user, updateUser } = useUser();
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -17,8 +19,16 @@ const Profile = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setAvatarPreview(URL.createObjectURL(file));
+      const newAvatarUrl = URL.createObjectURL(file);
+      setAvatarPreview(newAvatarUrl);
+      // In a real app, you would upload the file to a server and get a permanent URL.
+      // For this example, we'll update the context with the temporary blob URL.
+      updateUser({ avatar: newAvatarUrl });
     }
+  };
+
+  const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    updateUser({ name: event.target.value });
   };
 
   return (
@@ -38,8 +48,8 @@ const Profile = () => {
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarPreview || "https://github.com/shadcn.png"} alt="Alex" />
-                <AvatarFallback>A</AvatarFallback>
+                <AvatarImage src={avatarPreview || user.avatar} alt={user.name} />
+                <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
               </Avatar>
               <input
                 type="file"
@@ -53,11 +63,11 @@ const Profile = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" defaultValue="Alex" />
+                <Input id="name" value={user.name} onChange={handleNameChange} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue="alex@example.com" disabled />
+                <Input id="email" type="email" value={user.email} disabled />
               </div>
             </div>
             <Button>Save Changes</Button>

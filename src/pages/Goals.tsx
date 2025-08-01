@@ -1,16 +1,16 @@
 import PortalLayout from "@/components/PortalLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-const Request = () => {
+const Goals = () => {
   return (
     <PortalLayout>
       <div className="p-4">
         <Card>
           <CardHeader>
-            <CardTitle>Request</CardTitle>
+            <CardTitle>Goals</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>This is the request page.</p>
+            <p>This is the goals page.</p>
           </CardContent>
         </Card>
       </div>
@@ -18,4 +18,4 @@ const Request = () => {
   );
 };
 
-export default Request;
+export default Goals;
