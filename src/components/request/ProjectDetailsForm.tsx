@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import ModernTeamSelector from "./ModernTeamSelector";
 import FileUploader from "./FileUploader";
 import { Project, User, Attachment, projects } from "@/data/projects";
-import { users as allUsers } from "@/data/users";
+import { allUsers } from "@/data/users";
 import { useNavigate } from "react-router-dom";
 import { Service, services as allServicesData } from "@/data/services";
 import { DateRange } from "react-day-picker";
