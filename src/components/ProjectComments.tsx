@@ -11,6 +11,7 @@ import { Badge } from './ui/badge';
 import { Project, AssignedUser, Comment } from '@/data/projects';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
+import { useUser } from '@/contexts/UserContext';
 
 interface ProjectCommentsProps {
   project: Project;
@@ -51,6 +52,7 @@ const renderWithMentions = (text: string, allProjects: Project[]) => {
 };
 
 const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddCommentOrTicket, assignableUsers, allProjects }) => {
+  const { user: currentUser } = useUser();
   const [newComment, setNewComment] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,7 +142,12 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
     const comment: Comment = {
       id: `comment-${Date.now()}`,
       projectId: project.id,
-      user: { id: 'user-current', name: "You", avatar: "https://i.pravatar.cc/150?u=currentuser" },
+      user: { 
+        id: currentUser.id, 
+        name: currentUser.name, 
+        avatar: currentUser.avatar,
+        initials: currentUser.name.slice(0, 2).toUpperCase(),
+      },
       text: newComment,
       timestamp: new Date().toISOString(),
       isTicket: isTicket,
@@ -179,7 +186,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold">{comment.user.name}</p>
+                      <p className="font-semibold">{comment.user.id === currentUser.id ? "You" : comment.user.name}</p>
                       {comment.isTicket && (
                         <Badge
                           variant={ticketStatus === 'Done' ? 'default' : 'destructive'}

@@ -1,6 +1,7 @@
-import { createContext, useState, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useState } from 'react';
 
 interface User {
+  id: string;
   name: string;
   email: string;
   avatar: string;
@@ -8,22 +9,24 @@ interface User {
 
 interface UserContextType {
   user: User;
-  updateUser: (newUserData: Partial<User>) => void;
+  updateUser: (data: Partial<User>) => void;
 }
+
+// In a real application, this user data would come from an authentication service.
+const defaultUser: User = {
+  id: 'user-1',
+  name: 'Alex',
+  email: 'alex@example.com',
+  avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
+};
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-const initialUser: User = {
-  name: 'Alex',
-  email: 'alex@example.com',
-  avatar: 'https://github.com/shadcn.png',
-};
-
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User>(initialUser);
+  const [user, setUser] = useState<User>(defaultUser);
 
-  const updateUser = (newUserData: Partial<User>) => {
-    setUser((prevUser) => ({ ...prevUser, ...newUserData }));
+  const updateUser = (data: Partial<User>) => {
+    setUser(prevUser => ({ ...prevUser, ...data }));
   };
 
   return (
