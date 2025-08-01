@@ -151,15 +151,23 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
                         onCheckedChange={() => handleToggleTask(task.id)}
                         className="ml-1.5"
                       />
-                      <label
-                        htmlFor={task.id}
-                        className={`text-sm font-medium leading-none truncate cursor-pointer ${
-                          task.completed ? "line-through text-muted-foreground" : ""
-                        }`}
-                        title={task.text}
-                      >
-                        {task.text}
-                      </label>
+                      <TooltipProvider delayDuration={100}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <label
+                              htmlFor={task.id}
+                              className={`text-sm font-medium leading-none truncate cursor-pointer ${
+                                task.completed ? "line-through text-muted-foreground" : ""
+                              }`}
+                            >
+                              {task.text}
+                            </label>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{task.text}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                     <div className="flex items-center ml-2">
                       <div className="flex -space-x-2 mr-1">
