@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { dummyProjects, Project, AssignedUser, Task, ProjectFile, Comment } from "@/data/projects";
 import PortalLayout from "@/components/PortalLayout";
@@ -8,8 +8,6 @@ import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
 import { useUser } from "@/contexts/UserContext";
-import { Button } from "@/components/ui/button";
-import { Users } from "lucide-react";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -21,7 +19,6 @@ const ProjectDetail = () => {
   const [editedProject, setEditedProject] = useState<Project | null>(null);
 
   const canEdit = currentUser.role === 'Admin';
-  const isOwner = project?.collaborators.find(c => c.userId === currentUser.id)?.role === 'Project Owner';
 
   useEffect(() => {
     const foundProject = dummyProjects.find(p => p.id === projectId);
@@ -222,16 +219,7 @@ const ProjectDetail = () => {
           onSaveChanges={handleSaveChanges}
           onCancelChanges={handleCancelChanges}
           canEdit={canEdit}
-        >
-          {isOwner && !isEditing && (
-            <Button variant="outline" asChild>
-              <Link to={`/projects/${project.id}/roles`}>
-                <Users className="mr-2 h-4 w-4" />
-                Manage Roles
-              </Link>
-            </Button>
-          )}
-        </ProjectHeader>
+        />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <ProjectInfoCards 

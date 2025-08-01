@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import ModernTeamSelector from "./ModernTeamSelector";
 import FileUploader from "./FileUploader";
-import { Project, AssignedUser, ProjectFile, dummyProjects, ProjectCollaborator } from "@/data/projects";
+import { Project, AssignedUser, ProjectFile, dummyProjects } from "@/data/projects";
 import { allUsers } from "@/data/users";
 import { useNavigate } from "react-router-dom";
 import { Service, services as allServicesData } from "@/data/services";
@@ -17,8 +17,6 @@ import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useUser } from "@/contexts/UserContext";
-import { ProjectRole } from "@/types";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -26,7 +24,6 @@ interface ProjectDetailsFormProps {
 }
 
 const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
-  const { user: currentUser } = useUser();
   const [projectName, setProjectName] = useState("");
   const [date, setDate] = useState<DateRange | undefined>();
   const [budget, setBudget] = useState("");
@@ -66,11 +63,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     const numericBudget = parseInt(budget.replace(/[^0-9]/g, ''), 10) || 0;
     const deadline = date?.to ?? addDays(new Date(), 30);
 
-    const newProjectCollaborators: ProjectCollaborator[] = [
-      { userId: currentUser.id, role: 'Project Owner' },
-      ...team.map(user => ({ userId: user.id, role: 'Assignee' as ProjectRole }))
-    ];
-
     const newProject: Project = {
       id: `proj-${Date.now()}`,
       name: projectName,
@@ -86,12 +78,11 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       paymentDueDate: addDays(deadline, 30).toISOString(),
       paymentStatus: "proposed",
       createdBy: {
-        id: currentUser.id,
-        name: currentUser.name,
-        initials: currentUser.initials,
+        id: "user-current",
+        name: "Current User",
+        initials: "CU",
       },
       services: selectedServices.map(s => s.title),
-      collaborators: newProjectCollaborators,
     };
 
     dummyProjects.push(newProject);

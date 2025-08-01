@@ -11,8 +11,6 @@ import Settings from './pages/Settings';
 import Billing from './pages/Billing';
 import NotFound from './pages/NotFound';
 import { GoalsProvider } from './context/GoalsContext';
-import TeamSettingsPage from './pages/TeamSettingsPage';
-import ProjectRolesPage from './pages/ProjectRolesPage';
 
 function App() {
   return (
@@ -25,9 +23,7 @@ function App() {
         <Route path="/goals" element={<GoalsPage />} />
         <Route path="/goals/:goalId" element={<GoalDetailPage />} />
         <Route path="/projects/:projectId" element={<ProjectDetail />} />
-        <Route path="/projects/:projectId/roles" element={<ProjectRolesPage />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/team-settings" element={<TeamSettingsPage />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/billing" element={<Billing />} />
         <Route path="*" element={<NotFound />} />
