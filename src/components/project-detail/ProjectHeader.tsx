@@ -14,6 +14,7 @@ interface ProjectHeaderProps {
   onEditToggle: () => void;
   onSaveChanges: () => void;
   onCancelChanges: () => void;
+  canEdit: boolean;
 }
 
 const ProjectHeader = ({
@@ -24,6 +25,7 @@ const ProjectHeader = ({
   onEditToggle,
   onSaveChanges,
   onCancelChanges,
+  canEdit,
 }: ProjectHeaderProps) => {
   return (
     <header className="flex flex-col gap-4">
@@ -49,22 +51,24 @@ const ProjectHeader = ({
           <Badge className={getStatusClass(project.status)}>{project.status}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <Button onClick={onSaveChanges}>
-                <Save className="mr-2 h-4 w-4" />
-                Save
+          {canEdit && (
+            isEditing ? (
+              <>
+                <Button onClick={onSaveChanges}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save
+                </Button>
+                <Button variant="outline" onClick={onCancelChanges}>
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" onClick={onEditToggle}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Project
               </Button>
-              <Button variant="outline" onClick={onCancelChanges}>
-                <X className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" onClick={onEditToggle}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Project
-            </Button>
+            )
           )}
         </div>
       </div>

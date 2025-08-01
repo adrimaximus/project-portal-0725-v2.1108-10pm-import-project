@@ -1,10 +1,13 @@
 import { createContext, useContext, ReactNode, useState } from 'react';
+import { Role } from '@/types';
 
 interface User {
   id: string;
   name: string;
   email: string;
   avatar: string;
+  initials: string;
+  role: Role;
 }
 
 interface UserContextType {
@@ -18,6 +21,8 @@ const defaultUser: User = {
   name: 'Alex',
   email: 'alex@example.com',
   avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
+  initials: 'A',
+  role: 'Admin',
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);

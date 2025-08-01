@@ -6,21 +6,24 @@ import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
-import { initialComments } from "@/data/comments";
 import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
+import { useUser } from "@/contexts/UserContext";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const { user: currentUser } = useUser();
   
   const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
 
+  const canEdit = currentUser.role === 'Admin';
+
   useEffect(() => {
     const foundProject = dummyProjects.find(p => p.id === projectId);
     if (foundProject) {
-      const projectComments = initialComments.filter(c => c.projectId === projectId);
+      const projectComments = foundProject.comments || [];
       const projectWithData = {
         ...foundProject,
         tasks: foundProject.tasks || [],
@@ -215,6 +218,7 @@ const ProjectDetail = () => {
           onEditToggle={() => setIsEditing(!isEditing)}
           onSaveChanges={handleSaveChanges}
           onCancelChanges={handleCancelChanges}
+          canEdit={canEdit}
         />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
