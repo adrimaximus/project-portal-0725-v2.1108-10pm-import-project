@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { dummyProjects, Project, AssignedUser, Task, Comment } from "@/data/projects";
-import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
@@ -35,11 +34,9 @@ const ProjectDetails = () => {
 
   if (!project || !editedProject) {
     return (
-      <PortalLayout>
-        <div className="flex items-center justify-center h-full">
-          <p>Loading project...</p>
-        </div>
-      </PortalLayout>
+      <div className="flex items-center justify-center h-full">
+        <p>Loading project...</p>
+      </div>
     );
   }
 
@@ -194,49 +191,47 @@ const ProjectDetails = () => {
   const ticketCount = editedProject.comments?.filter(c => c.isTicket).length || 0;
 
   return (
-    <PortalLayout>
-      <div className="h-full overflow-y-auto space-y-6 p-4 lg:p-6">
-        <ProjectHeader 
-          project={project} 
-          isEditing={isEditing}
-          projectName={editedProject.name}
-          onProjectNameChange={handleProjectNameChange}
-          onEditToggle={() => setIsEditing(!isEditing)}
-          onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleCancelChanges}
-        />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <ProjectInfoCards 
-              project={project}
-              isEditing={isEditing}
-              editedProject={editedProject}
-              onSelectChange={handleSelectChange}
-              onDateChange={handleDateChange}
-              onBudgetChange={handleBudgetChange}
-            />
-            <ProjectMainContent
-              project={editedProject}
-              isEditing={isEditing}
-              onDescriptionChange={handleDescriptionChange}
-              onTeamChange={handleTeamChange}
-              onFilesChange={handleFilesChange}
-              onServicesChange={handleServicesChange}
-              onAddCommentOrTicket={handleAddCommentOrTicket}
-              projectId={project.id}
-              ticketCount={ticketCount}
-              allProjects={dummyProjects}
-            />
-          </div>
-          <div className="lg:col-span-1 space-y-6">
-            <ProjectProgressCard 
-              project={editedProject}
-              onTasksUpdate={handleTasksUpdate}
-            />
-          </div>
+    <div className="h-full overflow-y-auto space-y-6 p-4 lg:p-6">
+      <ProjectHeader 
+        project={project} 
+        isEditing={isEditing}
+        projectName={editedProject.name}
+        onProjectNameChange={handleProjectNameChange}
+        onEditToggle={() => setIsEditing(!isEditing)}
+        onSaveChanges={handleSaveChanges}
+        onCancelChanges={handleCancelChanges}
+      />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <ProjectInfoCards 
+            project={project}
+            isEditing={isEditing}
+            editedProject={editedProject}
+            onSelectChange={handleSelectChange}
+            onDateChange={handleDateChange}
+            onBudgetChange={handleBudgetChange}
+          />
+          <ProjectMainContent
+            project={editedProject}
+            isEditing={isEditing}
+            onDescriptionChange={handleDescriptionChange}
+            onTeamChange={handleTeamChange}
+            onFilesChange={handleFilesChange}
+            onServicesChange={handleServicesChange}
+            onAddCommentOrTicket={handleAddCommentOrTicket}
+            projectId={project.id}
+            ticketCount={ticketCount}
+            allProjects={dummyProjects}
+          />
+        </div>
+        <div className="lg:col-span-1 space-y-6">
+          <ProjectProgressCard 
+            project={editedProject}
+            onTasksUpdate={handleTasksUpdate}
+          />
         </div>
       </div>
-    </PortalLayout>
+    </div>
   );
 };
 

@@ -1,4 +1,3 @@
-import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { useState } from "react";
@@ -11,7 +10,7 @@ const GoalsPage = () => {
   const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
 
   return (
-    <PortalLayout>
+    <>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Your Goals</h1>
         <Button onClick={() => setIsNewGoalDialogOpen(true)}>
@@ -29,7 +28,7 @@ const GoalsPage = () => {
         onOpenChange={setIsNewGoalDialogOpen}
         onGoalCreate={addGoal}
       />
-    </PortalLayout>
+    </>
   );
 };
 

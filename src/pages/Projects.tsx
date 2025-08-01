@@ -1,4 +1,3 @@
-import PortalLayout from "@/components/PortalLayout";
 import ProjectsTable from "@/components/ProjectsTable";
 import { dummyProjects } from "@/data/projects";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ const Projects = () => {
   const navigate = useNavigate();
 
   return (
-    <PortalLayout>
+    <>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold tracking-tight">All Projects</h1>
         <Button onClick={() => navigate('/request')}>
@@ -18,7 +17,7 @@ const Projects = () => {
         </Button>
       </div>
       <ProjectsTable projects={dummyProjects} />
-    </PortalLayout>
+    </>
   );
 };
 

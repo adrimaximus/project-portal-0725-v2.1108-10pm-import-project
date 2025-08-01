@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import PortalLayout from '@/components/PortalLayout';
 import { Goal } from '@/data/goals';
 import { User } from '@/data/users';
 import GoalDetail from '@/components/goals/GoalDetail';
@@ -65,7 +64,7 @@ const GoalDetailPage = () => {
   };
 
   if (!goal) {
-    return <PortalLayout><NotFound /></PortalLayout>;
+    return <NotFound />;
   }
 
   const filteredCompletions = dateRange?.from
@@ -82,7 +81,7 @@ const GoalDetailPage = () => {
   const specificDayKeys = goal.specificDays?.map(dayIndex => dayKeys[dayIndex]);
 
   return (
-    <PortalLayout>
+    <>
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -203,7 +202,7 @@ const GoalDetailPage = () => {
           specificDays={specificDayKeys}
         />
       </div>
-    </PortalLayout>
+    </>
   );
 };
 
