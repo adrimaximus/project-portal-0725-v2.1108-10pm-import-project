@@ -1,25 +1,31 @@
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { CircleUser, Menu, Package, Home, Bell, Settings, LayoutGrid, MessageSquare, Smile, Target } from "lucide-react";
-import { Badge } from "./ui/badge";
-import { Link, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Menu,
+  Package2,
+  Search,
+  Settings,
+  LifeBuoy,
+  LogOut,
+  Home,
+} from "lucide-react";
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/request", label: "Request", icon: LayoutGrid },
-  { href: "/chat", label: "Chat", icon: MessageSquare },
-  { href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
-  { href: "/goals", label: "Goals", icon: Target },
-  { href: "#", label: "Notifications", icon: Bell, badge: 3 },
-  { href: "#", label: "Settings", icon: Settings },
-];
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 const PortalHeader = () => {
-  const location = useLocation();
-
+  const navigate = useNavigate();
   return (
-    <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+    <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="outline" size="icon" className="shrink-0 md:hidden">
@@ -30,46 +36,63 @@ const PortalHeader = () => {
         <SheetContent side="left" className="flex flex-col">
           <nav className="grid gap-2 text-lg font-medium">
             <Link
-              to="/"
+              to="#"
               className="flex items-center gap-2 text-lg font-semibold mb-4"
             >
-              <Package className="h-6 w-6" />
+              <Package2 className="h-6 w-6" />
               <span>Client Portal</span>
             </Link>
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                to={item.href}
-                className={cn(
-                  "mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground",
-                  location.pathname === item.href && "bg-muted text-foreground"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.label}
-                {item.badge && (
-                  <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-                    {item.badge}
-                  </Badge>
-                )}
-              </Link>
-            ))}
+            <Link
+              to="/"
+              className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
+            >
+              <Home className="h-5 w-5" />
+              Dashboard
+            </Link>
+            {/* You can add other mobile navigation links here */}
           </nav>
-          <div className="mt-auto border-t pt-4">
-             <div className="flex items-center gap-4 px-4 py-2 text-lg font-semibold">
-                <CircleUser className="h-5 w-5" />
-                My Account
-             </div>
-             <Link to="#" className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground">Settings</Link>
-             <Link to="#" className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground">Support</Link>
-             <Link to="#" className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground">Logout</Link>
-          </div>
         </SheetContent>
       </Sheet>
-
-      <div className="w-full flex-1">{/* Search bar can go here */}</div>
-
-      {/* User menu has been moved to the sidebar for desktop and the sheet for mobile */}
+      <div className="w-full flex-1">
+        <form>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3"
+            />
+          </div>
+        </form>
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="secondary" size="icon" className="rounded-full">
+            <Avatar>
+              <AvatarImage src="https://github.com/shadcn.png" alt="User" />
+              <AvatarFallback>A</AvatarFallback>
+            </Avatar>
+            <span className="sr-only">Toggle user menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => navigate('/profile')}>
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Profile</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <LifeBuoy className="mr-2 h-4 w-4" />
+            <span>Support</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Logout</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
   );
 };
