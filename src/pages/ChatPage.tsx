@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ChatList from "@/components/ChatList";
 import ChatWindow from "@/components/ChatWindow";
-import ContentLayout from "@/components/ContentLayout";
+import PortalLayout from "@/components/PortalLayout";
 import { dummyConversations, Conversation, Message } from "@/data/chat";
 import { Collaborator } from "@/types";
 import { dummyProjects } from "@/data/projects";
@@ -140,7 +140,7 @@ const ChatPage = () => {
 
   if (isMobile) {
     return (
-      <ContentLayout noPadding>
+      <PortalLayout noPadding>
         <div className="h-full">
           {!selectedConversation ? (
             <ChatList
@@ -159,12 +159,12 @@ const ChatPage = () => {
             />
           )}
         </div>
-      </ContentLayout>
+      </PortalLayout>
     );
   }
 
   return (
-    <ContentLayout noPadding>
+    <PortalLayout noPadding>
       <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full">
         <ChatList
           conversations={conversations}
@@ -179,7 +179,7 @@ const ChatPage = () => {
           projects={dummyProjects}
         />
       </div>
-    </ContentLayout>
+    </PortalLayout>
   );
 };
 

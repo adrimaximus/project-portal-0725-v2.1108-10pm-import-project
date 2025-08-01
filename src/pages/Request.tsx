@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ContentLayout from "@/components/ContentLayout";
+import PortalLayout from "@/components/PortalLayout";
 import { Service } from "@/data/services";
 import SelectedServicesSummary from "@/components/SelectedServicesSummary";
 import ServiceSelection from "@/components/request/ServiceSelection";
@@ -62,9 +62,9 @@ const RequestPage = () => {
     ) : null;
 
   return (
-    <ContentLayout summary={summaryComponent} disableMainScroll={step === 2}>
+    <PortalLayout summary={summaryComponent} disableMainScroll={step === 2}>
       {renderContent()}
-    </ContentLayout>
+    </PortalLayout>
   );
 };
 
