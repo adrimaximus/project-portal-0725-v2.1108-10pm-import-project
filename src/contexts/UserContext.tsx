@@ -5,7 +5,6 @@ interface User {
   name: string;
   email: string;
   avatar: string;
-  initials: string;
 }
 
 interface UserContextType {
@@ -19,7 +18,6 @@ const defaultUser: User = {
   name: 'Alex',
   email: 'alex@example.com',
   avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
-  initials: 'A',
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);

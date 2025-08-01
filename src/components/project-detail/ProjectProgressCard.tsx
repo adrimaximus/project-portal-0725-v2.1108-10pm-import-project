@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Project, Task, User } from "@/data/projects";
+import { Project, Task, AssignedUser } from "@/data/projects";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ const TaskAssigneeSelector = ({
   selectedUserIds,
   onSelectionChange,
 }: {
-  assignableUsers: User[];
+  assignableUsers: AssignedUser[];
   selectedUserIds: string[];
   onSelectionChange: (userId: string) => void;
 }) => {

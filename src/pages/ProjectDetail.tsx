@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { projects as allProjectsData, Project, User, Comment, Task } from "@/data/projects";
+import { projects as allProjectsData, users as allUsersData, Project, User, Comment, Task } from "@/data/projects";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
@@ -14,7 +14,6 @@ const ProjectDetail = () => {
 
   const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [tempProjectName, setTempProjectName] = useState("");
   const [tempDescription, setTempDescription] = useState("");
   const [tempTeam, setTempTeam] = useState<User[]>([]);
   const [tempServices, setTempServices] = useState<string[]>([]);
@@ -24,7 +23,6 @@ const ProjectDetail = () => {
     const foundProject = allProjectsData.find((p) => p.id === projectId);
     if (foundProject) {
       setProject(JSON.parse(JSON.stringify(foundProject))); // Deep copy to prevent mutation of original data
-      setTempProjectName(foundProject.name);
       setTempDescription(foundProject.description);
       setTempTeam(foundProject.assignedTo);
       setTempServices(foundProject.services);
@@ -38,7 +36,6 @@ const ProjectDetail = () => {
     
     const updatedProject = {
       ...project,
-      name: tempProjectName,
       description: tempDescription,
       assignedTo: tempTeam,
       services: tempServices,
@@ -60,7 +57,6 @@ const ProjectDetail = () => {
 
   const handleCancel = () => {
     if (!project) return;
-    setTempProjectName(project.name);
     setTempDescription(project.description);
     setTempTeam(project.assignedTo);
     setTempServices(project.services);
@@ -99,11 +95,9 @@ const ProjectDetail = () => {
         <ProjectHeader
           project={project}
           isEditing={isEditing}
-          projectName={tempProjectName}
-          onProjectNameChange={setTempProjectName}
-          onEditToggle={() => setIsEditing(true)}
-          onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleCancel}
+          onEdit={() => setIsEditing(true)}
+          onSave={handleSaveChanges}
+          onCancel={handleCancel}
         />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
