@@ -12,13 +12,13 @@ const Profile = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
           <p className="text-muted-foreground">
-            Kelola pengaturan akun dan informasi profil Anda.
+            Manage your account settings and profile information.
           </p>
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Informasi Pribadi</CardTitle>
-            <CardDescription>Perbarui detail pribadi Anda di sini.</CardDescription>
+            <CardTitle>Personal Information</CardTitle>
+            <CardDescription>Update your personal details here.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
@@ -26,11 +26,11 @@ const Profile = () => {
                 <AvatarImage src="https://github.com/shadcn.png" alt="Alex" />
                 <AvatarFallback>A</AvatarFallback>
               </Avatar>
-              <Button variant="outline">Ubah Foto</Button>
+              <Button variant="outline">Change Photo</Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nama</Label>
+                <Label htmlFor="name">Name</Label>
                 <Input id="name" defaultValue="Alex" />
               </div>
               <div className="space-y-2">
@@ -38,7 +38,7 @@ const Profile = () => {
                 <Input id="email" type="email" defaultValue="alex@example.com" disabled />
               </div>
             </div>
-            <Button>Simpan Perubahan</Button>
+            <Button>Save Changes</Button>
           </CardContent>
         </Card>
       </div>
