@@ -1,97 +1,60 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import { Project } from "@/data/projects";
-import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 
 interface ProjectsTableProps {
   projects: Project[];
 }
 
-const getStatusBadgeClass = (status: Project['status']) => {
-  switch (status) {
-    case 'On Track':
-    case 'Completed':
-    case 'Done':
-    case 'Billed':
-      return 'bg-green-100 text-green-800';
-    case 'At Risk':
-    case 'On Hold':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'Off Track':
-    case 'Cancelled':
-      return 'bg-red-100 text-red-800';
-    case 'In Progress':
-    case 'Requested':
-      return 'bg-blue-100 text-blue-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
+const statusStyles: { [key: string]: string } = {
+  "On Track": "bg-green-100 text-green-800",
+  "In Progress": "bg-green-100 text-green-800",
+  "At Risk": "bg-yellow-100 text-yellow-800",
+  "Off Track": "bg-red-100 text-red-800",
+  "On Hold": "bg-gray-100 text-gray-800",
+  Completed: "bg-blue-100 text-blue-800",
+  Done: "bg-blue-100 text-blue-800",
+  Billed: "bg-purple-100 text-purple-800",
+  Cancelled: "bg-red-100 text-red-800",
+  Requested: "bg-yellow-100 text-yellow-800",
 };
 
 const ProjectsTable = ({ projects }: ProjectsTableProps) => {
+  const navigate = useNavigate();
+
+  const handleRowClick = (projectId: string) => {
+    navigate(`/projects/${projectId}`);
+  };
+
   return (
-    <Card>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Project</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Progress</TableHead>
-              <TableHead>Assigned</TableHead>
-              <TableHead className="text-right">Budget</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {projects.map((project) => (
-              <TableRow key={project.id}>
-                <TableCell>
-                  <Link to={`/projects/${project.id}`} className="font-medium text-primary hover:underline">
-                    {project.name}
-                  </Link>
-                  <div className="text-sm text-muted-foreground">{project.category}</div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={cn("border-transparent", getStatusBadgeClass(project.status))}>
-                    {project.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Progress value={project.progress} className="h-2" />
-                    <span className="text-sm text-muted-foreground">{project.progress}%</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex -space-x-2">
-                    {project.assignedTo.map((user) => (
-                      <Avatar key={user.id} className="border-2 border-background">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.initials}</AvatarFallback>
-                      </Avatar>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right font-medium">
-                  ${project.budget.toLocaleString()}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Project Name</TableHead>
+          <TableHead>Category</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Budget</TableHead>
+          <TableHead>End Date</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {projects.map((project) => (
+          <TableRow key={project.id} onClick={() => handleRowClick(project.id)} className="cursor-pointer">
+            <TableCell className="font-medium">{project.name}</TableCell>
+            <TableCell>{project.category || 'N/A'}</TableCell>
+            <TableCell>
+              <Badge className={cn("capitalize", statusStyles[project.status] || "bg-gray-100 text-gray-800")}>
+                {project.status}
+              </Badge>
+            </TableCell>
+            <TableCell>${project.budget?.toLocaleString() || 'N/A'}</TableCell>
+            <TableCell>{project.endDate}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 };
 

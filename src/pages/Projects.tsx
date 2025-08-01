@@ -1,23 +1,32 @@
 import PortalLayout from "@/components/PortalLayout";
 import ProjectsTable from "@/components/ProjectsTable";
-import { dummyProjects } from "@/data/projects";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { getProjects } from "@/data/projects";
+import { Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Projects = () => {
-  const navigate = useNavigate();
+  const projects = getProjects();
 
   return (
     <PortalLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">All Projects</h1>
-        <Button onClick={() => navigate('/request')}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          New Project
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
+          <p className="text-muted-foreground">
+            Here's a list of all your projects.
+          </p>
+        </div>
+        <Button asChild>
+          <Link to="/request-project">
+            <Plus className="mr-2 h-4 w-4" />
+            New Project
+          </Link>
         </Button>
       </div>
-      <ProjectsTable projects={dummyProjects} />
+      <div className="border rounded-lg">
+        <ProjectsTable projects={projects} />
+      </div>
     </PortalLayout>
   );
 };
