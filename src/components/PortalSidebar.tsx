@@ -162,9 +162,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                 <DropdownMenuContent side="right" align="end" className="w-56">
                   <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => navigate('/profile')}>
+                  <DropdownMenuItem onSelect={() => navigate('/settings')}>
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                    <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <LifeBuoy className="mr-2 h-4 w-4" />
@@ -201,11 +201,11 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                 {isAccountMenuOpen && (
                   <nav className="grid items-start gap-1 text-sm font-medium mt-2 pl-8">
                     <Link
-                      to="/profile"
+                      to="/settings"
                       className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
                       <Settings className="h-4 w-4" />
-                      Profile
+                      Settings
                     </Link>
                     <Link
                       to="#"
