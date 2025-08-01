@@ -1,5 +1,4 @@
 import { useState } from "react";
-import PortalLayout from "@/components/PortalLayout";
 import { dummyProjects } from "@/data/projects";
 import { useNavigate } from "react-router-dom";
 import {
@@ -26,8 +25,10 @@ import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ListChecks, CreditCard, User, Users, TrendingUp, Hourglass } from "lucide-react";
+import { useUser } from "@/contexts/UserContext";
 
 const Index = () => {
+  const { user } = useUser();
   const navigate = useNavigate();
   const [date, setDate] = useState<DateRange | undefined>({
     from: subYears(new Date(), 1),
@@ -35,7 +36,6 @@ const Index = () => {
   });
 
   const filteredProjects = dummyProjects.filter(project => {
-    // Date filter for project timeline intersection
     if (date?.from) {
       const pickerFrom = date.from;
       const pickerTo = date.to || date.from;
@@ -47,8 +47,6 @@ const Index = () => {
       const projectStart = new Date(project.startDate);
       const projectEnd = new Date(project.deadline);
 
-      // Check for intersection: (ProjectStart <= PickerEnd) and (ProjectEnd >= PickerFrom)
-      // If there is no overlap, filter it out.
       if (projectStart > pickerTo || projectEnd < pickerFrom) {
         return false;
       }
@@ -133,10 +131,9 @@ const Index = () => {
 
 
   return (
-    <PortalLayout>
       <div className="space-y-8">
         <div className="text-left">
-          <h1 className="text-4xl font-bold tracking-tight">Hey Alex, have a good day! 👋</h1>
+          <h1 className="text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
           <p className="text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
         </div>
 
@@ -430,7 +427,6 @@ const Index = () => {
           </div>
         </TooltipProvider>
       </div>
-    </PortalLayout>
   );
 };
 

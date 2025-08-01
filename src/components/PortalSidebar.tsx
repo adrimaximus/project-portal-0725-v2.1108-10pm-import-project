@@ -21,6 +21,7 @@ import { Button } from "./ui/button";
 import OnlineCollaborators from "./OnlineCollaborators";
 import { dummyConversations } from "@/data/chat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useUser } from "@/contexts/UserContext";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -35,6 +36,7 @@ type NavItem = {
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
+  const { user } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -55,7 +57,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     },
     { href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
     { href: "/goals", label: "Goals", icon: Target },
-    { href: "#", label: "Notifications", icon: Bell, badge: 3 },
+    { href: "/notifications", label: "Notifications", icon: Bell, badge: 3 },
   ];
 
   return (
@@ -147,18 +149,18 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                       <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" className="w-full h-auto p-1">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src="https://github.com/shadcn.png" alt="User" />
-                            <AvatarFallback>A</AvatarFallback>
+                            <AvatarImage src={user.avatar} alt={user.name} />
+                            <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
                           </Avatar>
-                          <span className="sr-only">My Account</span>
+                          <span className="sr-only">{user.name}</span>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="right">My Account</TooltipContent>
+                      <TooltipContent side="right">{user.name}</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="right" align="end" className="w-56">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => navigate('/profile')}>
                     <Settings className="mr-2 h-4 w-4" />
@@ -184,10 +186,10 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                 >
                   <span className="flex items-center gap-3">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src="https://github.com/shadcn.png" alt="User" />
-                      <AvatarFallback>A</AvatarFallback>
+                      <AvatarImage src={user.avatar} alt={user.name} />
+                      <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
-                    My Account
+                    {user.name}
                   </span>
                   <ChevronDown
                     className={cn(
