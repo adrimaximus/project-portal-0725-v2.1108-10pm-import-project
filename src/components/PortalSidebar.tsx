@@ -55,7 +55,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     },
     { href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
     { href: "/goals", label: "Goals", icon: Target },
-    { href: "/notifications", label: "Notifications", icon: Bell, badge: 3 },
+    { href: "#", label: "Notifications", icon: Bell, badge: 3 },
   ];
 
   return (
