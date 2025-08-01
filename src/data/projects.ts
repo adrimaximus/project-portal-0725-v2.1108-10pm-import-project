@@ -43,12 +43,6 @@ export interface Activity {
   timestamp: string;
 }
 
-export interface Service {
-  id: string;
-  name: string;
-  description: string;
-}
-
 export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Requested' | 'Done' | 'Billed' | 'In Progress' | 'Cancelled';
 export type PaymentStatus = 'Paid' | 'Partially Paid' | 'Unpaid' | 'Overdue' | 'proposed' | 'approved' | 'po_created' | 'on_process' | 'pending' | 'cancelled' | 'paid';
 
