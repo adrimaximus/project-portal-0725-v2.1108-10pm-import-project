@@ -26,6 +26,7 @@ import { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ListChecks, CreditCard, User, Users, TrendingUp, Hourglass } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
+import PortalLayout from "@/components/PortalLayout";
 
 const Index = () => {
   const { user } = useUser();
@@ -131,6 +132,7 @@ const Index = () => {
 
 
   return (
+    <PortalLayout>
       <div className="space-y-8">
         <div className="text-left">
           <h1 className="text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
@@ -427,6 +429,7 @@ const Index = () => {
           </div>
         </TooltipProvider>
       </div>
+    </PortalLayout>
   );
 };
 
