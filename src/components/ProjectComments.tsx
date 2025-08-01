@@ -149,6 +149,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
         initials: currentUser.name.slice(0, 2).toUpperCase(),
       },
       text: newComment,
+      date: new Date().toISOString(),
       timestamp: new Date().toISOString(),
       isTicket: isTicket,
     };
@@ -198,7 +199,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{new Date(comment.timestamp).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(comment.timestamp!).toLocaleString()}</p>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{renderWithMentions(comment.text, allProjects)}</p>
                   {comment.attachment && (
