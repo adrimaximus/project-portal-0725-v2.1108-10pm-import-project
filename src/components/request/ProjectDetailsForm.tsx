@@ -6,15 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import TeamSelector from "./TeamSelector";
 import FileUploader from "./FileUploader";
-import { Project, AssignedUser, ProjectFile } from "@/data/projects";
-import { dummyProjects } from "@/data/projects";
+import { Project, AssignedUser, ProjectFile, dummyProjects } from "@/data/projects";
+import { allUsers } from "@/data/users";
 import { useNavigate } from "react-router-dom";
 import { Service, services as allServicesData } from "@/data/services";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -42,6 +42,14 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     }
   };
 
+  const handleTeamChange = (userToToggle: AssignedUser) => {
+    setTeam((currentTeam) =>
+      currentTeam.some((user) => user.id === userToToggle.id)
+        ? currentTeam.filter((user) => user.id !== userToToggle.id)
+        : [...currentTeam, userToToggle]
+    );
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -53,6 +61,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     }));
 
     const numericBudget = parseInt(budget.replace(/[^0-9]/g, ''), 10) || 0;
+    const deadline = date?.to ?? addDays(new Date(), 30);
 
     const newProject: Project = {
       id: `proj-${Date.now()}`,
@@ -64,15 +73,15 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       status: "Requested",
       progress: 0,
       budget: numericBudget,
-      startDate: date?.from?.toISOString(),
-      deadline: date?.to?.toISOString() ?? new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(),
+      startDate: date?.from?.toISOString() ?? new Date().toISOString(),
+      deadline: deadline.toISOString(),
+      paymentDueDate: addDays(deadline, 30).toISOString(),
       paymentStatus: "proposed",
       createdBy: {
         id: "user-current",
         name: "Current User",
         initials: "CU",
       },
-      tickets: 0,
       services: selectedServices.map(s => s.title),
     };
 
@@ -175,7 +184,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </div>
           <div className="space-y-2">
             <Label>Assign Team</Label>
-            <TeamSelector selectedUsers={team} onTeamChange={setTeam} />
+            <TeamSelector users={allUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
           </div>
           <div className="space-y-2">
             <Label>Attach Files</Label>

@@ -118,7 +118,7 @@ const Index = () => {
   const topUserByValue = Object.values(userValueCounts).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
 
   const pendingPaymentCounts = filteredProjects
-    .filter(p => p.paymentStatus === 'Pending')
+    .filter(p => p.paymentStatus === 'pending')
     .reduce((acc, p) => {
         p.assignedTo.forEach(user => {
             if (!acc[user.id]) {
