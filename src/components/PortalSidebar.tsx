@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, CircleUser, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -20,8 +20,6 @@ import {
 import { Button } from "./ui/button";
 import OnlineCollaborators from "./OnlineCollaborators";
 import { dummyConversations } from "@/data/chat";
-import { useUser } from "@/context/UserContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -39,7 +37,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const { user } = useUser();
 
   const totalUnreadChatCount = dummyConversations.reduce(
     (sum, convo) => sum + convo.unreadCount,
@@ -149,10 +146,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" className="w-full">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={user.avatar} alt={user.name} />
-                            <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
-                          </Avatar>
+                          <CircleUser className="h-5 w-5" />
                           <span className="sr-only">My Account</span>
                         </Button>
                       </TooltipTrigger>
@@ -161,7 +155,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                   </TooltipProvider>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="right" align="end" className="w-56">
-                  <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => navigate('/profile')}>
                     <Settings className="mr-2 h-4 w-4" />
@@ -186,11 +180,8 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                   onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
                 >
                   <span className="flex items-center gap-3">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    {user.name}
+                    <CircleUser className="h-5 w-5" />
+                    My Account
                   </span>
                   <ChevronDown
                     className={cn(
