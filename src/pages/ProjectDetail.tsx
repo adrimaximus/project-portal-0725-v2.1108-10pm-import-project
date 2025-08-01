@@ -164,7 +164,7 @@ const ProjectDetail = () => {
         }
   
         if (!newTaskText && mentionedUsersToAssign.length > 0) {
-          newTaskText = "Tugas baru ditugaskan";
+          newTaskText = "New task assigned";
         }
   
         if (newTaskText) {
