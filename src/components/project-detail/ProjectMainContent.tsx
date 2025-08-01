@@ -26,15 +26,15 @@ const ProjectMainContent = ({
   return (
     <Card>
       <CardContent className="p-4 md:p-6">
-        <Tabs defaultValue="comments" className="w-full">
+        <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="description">Description</TabsTrigger>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="comments">
               Comments & Tickets
               {ticketCount > 0 && <Badge className="ml-2 bg-orange-500">{ticketCount}</Badge>}
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="description">
+          <TabsContent value="overview">
             <div className="prose prose-sm max-w-none text-muted-foreground">
               <p>{project.description || "No description provided."}</p>
             </div>
