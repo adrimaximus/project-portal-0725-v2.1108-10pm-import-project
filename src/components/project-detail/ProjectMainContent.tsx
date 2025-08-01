@@ -1,18 +1,14 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Project, AssignedUser, Comment } from "@/data/projects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Project, AssignedUser, Task } from "@/data/projects";
-import { Comment } from "@/components/ProjectComments";
-import ProjectOverviewTab from "./ProjectOverviewTab";
-import ProjectComments from "../ProjectComments";
-import { dummyProjects } from "@/data/projects";
-import { Badge } from "../ui/badge";
-import { MessageSquare, GanttChartSquare } from "lucide-react";
+import ProjectComments from "@/components/ProjectComments";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
-  onTeamChange: (selectedUsers: AssignedUser[]) => void;
+  onTeamChange: (users: AssignedUser[]) => void;
   onFilesChange: (files: File[]) => void;
   onServicesChange: (services: string[]) => void;
   onAddCommentOrTicket: (comment: Comment) => void;
@@ -23,11 +19,6 @@ interface ProjectMainContentProps {
 
 const ProjectMainContent = ({
   project,
-  isEditing,
-  onDescriptionChange,
-  onTeamChange,
-  onFilesChange,
-  onServicesChange,
   onAddCommentOrTicket,
   projectId,
   ticketCount,
@@ -35,37 +26,29 @@ const ProjectMainContent = ({
 }: ProjectMainContentProps) => {
   return (
     <Card>
-      <CardContent className="p-0">
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 border-b rounded-none">
-            <TabsTrigger value="overview">
-              <GanttChartSquare className="h-4 w-4 mr-2" />
-              Overview
-            </TabsTrigger>
+      <CardContent className="p-4 md:p-6">
+        <Tabs defaultValue="comments" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="description">Description</TabsTrigger>
             <TabsTrigger value="comments">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Comments
-              {ticketCount > 0 && (
-                <Badge variant="destructive" className="ml-2">{ticketCount}</Badge>
-              )}
+              Comments & Tickets
+              {ticketCount > 0 && <Badge className="ml-2 bg-orange-500">{ticketCount}</Badge>}
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="overview" className="p-6">
-            <ProjectOverviewTab
-              project={project}
-              isEditing={isEditing}
-              onDescriptionChange={onDescriptionChange}
-              onTeamChange={onTeamChange}
-              onFilesChange={onFilesChange}
-              onServicesChange={onServicesChange}
-            />
+          <TabsContent value="description">
+            <div className="prose prose-sm max-w-none text-muted-foreground">
+              <p>{project.description || "No description provided."}</p>
+            </div>
           </TabsContent>
-          <TabsContent value="comments" className="p-6">
+          <TabsContent value="comments">
             <ProjectComments
-              project={project}
-              onAddCommentOrTicket={onAddCommentOrTicket}
-              assignableUsers={project.assignedTo}
+              projectId={projectId}
+              comments={project.comments || []}
+              tasks={project.tasks || []}
+              currentUser={project.createdBy}
+              teamMembers={project.assignedTo}
               allProjects={allProjects}
+              onAddCommentOrTicket={onAddCommentOrTicket}
             />
           </TabsContent>
         </Tabs>
