@@ -18,18 +18,18 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User } from "@/data/projects";
+import { AssignedUser } from "@/data/projects";
 
 interface ModernTeamSelectorProps {
-  users: User[];
-  selectedUsers: User[];
-  onSelectionChange: (user: User) => void;
+  users: AssignedUser[];
+  selectedUsers: AssignedUser[];
+  onSelectionChange: (user: AssignedUser) => void;
 }
 
 const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernTeamSelectorProps) => {
   const [open, setOpen] = React.useState(false);
 
-  const handleUnselect = (e: React.MouseEvent, user: User) => {
+  const handleUnselect = (e: React.MouseEvent, user: AssignedUser) => {
     e.preventDefault();
     e.stopPropagation();
     onSelectionChange(user);
@@ -92,7 +92,7 @@ const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernT
                   />
                   <div className="flex items-center gap-2">
                      <Avatar className="h-6 w-6">
-                       <AvatarImage src={user.avatar} alt={user.name} />
+                       <AvatarImage src={(user as any).avatar} alt={user.name} />
                        <AvatarFallback>{user.initials}</AvatarFallback>
                      </Avatar>
                      <span>{user.name}</span>

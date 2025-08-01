@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import ModernTeamSelector from "./ModernTeamSelector";
 import FileUploader from "./FileUploader";
-import { Project, User, Attachment, projects } from "@/data/projects";
+import { Project, AssignedUser, ProjectFile, dummyProjects } from "@/data/projects";
 import { allUsers } from "@/data/users";
 import { useNavigate } from "react-router-dom";
 import { Service, services as allServicesData } from "@/data/services";
@@ -17,7 +17,6 @@ import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useUser } from "@/contexts/UserContext";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -25,12 +24,11 @@ interface ProjectDetailsFormProps {
 }
 
 const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
-  const { user: currentUser } = useUser();
   const [projectName, setProjectName] = useState("");
   const [date, setDate] = useState<DateRange | undefined>();
   const [budget, setBudget] = useState("");
   const [description, setDescription] = useState("");
-  const [team, setTeam] = useState<User[]>([]);
+  const [team, setTeam] = useState<AssignedUser[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const navigate = useNavigate();
 
@@ -44,7 +42,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     }
   };
 
-  const handleTeamChange = (userToToggle: User) => {
+  const handleTeamChange = (userToToggle: AssignedUser) => {
     setTeam((currentTeam) =>
       currentTeam.some((user) => user.id === userToToggle.id)
         ? currentTeam.filter((user) => user.id !== userToToggle.id)
@@ -55,8 +53,10 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newProjectAttachments: Attachment[] = files.map(file => ({
+    const newProjectFiles: ProjectFile[] = files.map(file => ({
       name: file.name,
+      size: file.size,
+      type: file.type,
       url: URL.createObjectURL(file),
     }));
 
@@ -69,19 +69,23 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       category: selectedServices.length > 0 ? selectedServices[0].title : "General",
       description: description,
       assignedTo: team,
-      attachments: newProjectAttachments,
+      briefFiles: newProjectFiles,
       status: "Requested",
       progress: 0,
       budget: numericBudget,
       startDate: date?.from?.toISOString() ?? new Date().toISOString(),
       deadline: deadline.toISOString(),
-      endDate: deadline.toISOString(),
-      paymentStatus: "Pending",
-      createdBy: currentUser,
+      paymentDueDate: addDays(deadline, 30).toISOString(),
+      paymentStatus: "proposed",
+      createdBy: {
+        id: "user-current",
+        name: "Current User",
+        initials: "CU",
+      },
       services: selectedServices.map(s => s.title),
     };
 
-    projects.push(newProject);
+    dummyProjects.push(newProject);
     navigate(`/projects/${newProject.id}`);
   };
 
