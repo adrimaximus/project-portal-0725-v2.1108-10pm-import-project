@@ -71,13 +71,12 @@ const GoalCard = ({ goal }: { goal: GoalWithTags }) => {
         <CardContent className="flex-grow flex flex-col justify-end">
           {goal.tags && goal.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-4">
-              {goal.tags.slice(0, 3).map(tag => {
+              {goal.tags.map(tag => {
                 const { bg, text, border } = getColorForTag(tag);
                 return (
                   <Badge key={tag} className={cn("font-normal", bg, text, border)}>{tag}</Badge>
                 );
               })}
-              {goal.tags.length > 3 && <Badge variant="outline">+{goal.tags.length - 3}</Badge>}
             </div>
           )}
           <div>
