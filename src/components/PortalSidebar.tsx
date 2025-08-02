@@ -254,7 +254,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
   return (
     <div
-      className="hidden h-screen border-r bg-muted/40 md:block transition-all duration-300 ease-in-out"
+      className="h-screen border-r bg-muted/40 transition-all duration-300 ease-in-out"
       onDoubleClick={onToggle}
     >
       <div className="flex h-full max-h-screen flex-col">
