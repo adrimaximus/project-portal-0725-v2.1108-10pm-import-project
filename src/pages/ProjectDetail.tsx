@@ -238,7 +238,7 @@ const ProjectDetail = () => {
               onFilesChange={handleFilesChange}
               onServicesChange={handleServicesChange}
               onAddCommentOrTicket={handleAddCommentOrTicket}
-              projectId={project.id}
+              onTasksUpdate={handleTasksUpdate}
               ticketCount={openTicketCount}
               allProjects={dummyProjects}
             />
@@ -246,7 +246,6 @@ const ProjectDetail = () => {
           <div className="lg:col-span-1 space-y-6">
             <ProjectProgressCard 
               project={editedProject}
-              onTasksUpdate={handleTasksUpdate}
             />
           </div>
         </div>
