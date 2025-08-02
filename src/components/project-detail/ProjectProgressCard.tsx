@@ -5,7 +5,7 @@ import { Project, Task, AssignedUser } from "@/data/projects";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, UserPlus } from "lucide-react";
+import { Plus, UserPlus, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -73,6 +73,12 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
     const updatedTasks = tasks.map(task =>
       task.id === taskId ? { ...task, completed: !task.completed } : task
     );
+    onTasksUpdate(updatedTasks);
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    if (!onTasksUpdate) return;
+    const updatedTasks = tasks.filter(task => task.id !== taskId);
     onTasksUpdate(updatedTasks);
   };
 
@@ -205,6 +211,9 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
                           />
                         </PopoverContent>
                       </Popover>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100" onClick={() => handleDeleteTask(task.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))
