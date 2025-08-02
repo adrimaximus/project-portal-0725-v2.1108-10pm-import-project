@@ -58,6 +58,14 @@ const PortalHeader = () => {
     setIsSearchOpen(false);
   };
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
+    }
+  };
+
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
       <Sheet>
@@ -76,63 +84,65 @@ const PortalHeader = () => {
         </SheetContent>
       </Sheet>
       <div className="w-full flex-1">
-        <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-          <PopoverTrigger asChild>
-            <div className="relative md:w-2/3 lg:w-1/3">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search projects or users..."
-                className="w-full appearance-none bg-muted pl-8 shadow-none"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onClick={() => setIsSearchOpen(true)}
-                onFocus={() => setIsSearchOpen(true)}
-              />
-            </div>
-          </PopoverTrigger>
-          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-            <Command>
-              <CommandList>
-                <CommandEmpty>No results found.</CommandEmpty>
-                
-                {displayedContent.projects.length > 0 && (
-                  <CommandGroup heading={searchQuery ? "Projects" : "Suggested Projects"}>
-                    {displayedContent.projects.map((project) => (
-                      <CommandItem
-                        key={`proj-${project.id}`}
-                        onSelect={() => handleProjectSelect(project.id)}
-                        className="cursor-pointer"
-                      >
-                        <Building className="mr-2 h-4 w-4" />
-                        <HighlightMatch text={project.name} query={searchQuery} />
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                )}
-                
-                {displayedContent.users.length > 0 && (
-                  <CommandGroup heading={searchQuery ? "Users" : "Suggested Users"}>
-                    {displayedContent.users.map((userResult) => (
-                      <CommandItem
-                        key={`user-${userResult.id}`}
-                        onSelect={() => handleUserSelect(userResult.name)}
-                        className="cursor-pointer flex items-center"
-                      >
-                        <Avatar className="mr-2 h-6 w-6">
-                          <AvatarImage src={userResult.avatar} />
-                          <AvatarFallback>{userResult.initials}</AvatarFallback>
-                        </Avatar>
-                        <HighlightMatch text={userResult.name} query={searchQuery} />
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                )}
+        <form onSubmit={handleSearchSubmit}>
+          <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+            <PopoverTrigger asChild>
+              <div className="relative md:w-2/3 lg:w-1/3">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search projects or users..."
+                  className="w-full appearance-none bg-muted pl-8 shadow-none"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onClick={() => setIsSearchOpen(true)}
+                  onFocus={() => setIsSearchOpen(true)}
+                />
+              </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+              <Command>
+                <CommandList>
+                  <CommandEmpty>No results found.</CommandEmpty>
+                  
+                  {displayedContent.projects.length > 0 && (
+                    <CommandGroup heading={searchQuery ? "Projects" : "Suggested Projects"}>
+                      {displayedContent.projects.map((project) => (
+                        <CommandItem
+                          key={`proj-${project.id}`}
+                          onSelect={() => handleProjectSelect(project.id)}
+                          className="cursor-pointer"
+                        >
+                          <Building className="mr-2 h-4 w-4" />
+                          <HighlightMatch text={project.name} query={searchQuery} />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                  
+                  {displayedContent.users.length > 0 && (
+                    <CommandGroup heading={searchQuery ? "Users" : "Suggested Users"}>
+                      {displayedContent.users.map((userResult) => (
+                        <CommandItem
+                          key={`user-${userResult.id}`}
+                          onSelect={() => handleUserSelect(userResult.name)}
+                          className="cursor-pointer flex items-center"
+                        >
+                          <Avatar className="mr-2 h-6 w-6">
+                            <AvatarImage src={userResult.avatar} />
+                            <AvatarFallback>{userResult.initials}</AvatarFallback>
+                          </Avatar>
+                          <HighlightMatch text={userResult.name} query={searchQuery} />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
 
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </form>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

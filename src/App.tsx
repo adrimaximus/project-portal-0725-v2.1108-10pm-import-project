@@ -11,6 +11,7 @@ import Billing from './pages/Billing';
 import NotFound from './pages/NotFound';
 import { GoalsProvider } from './context/GoalsContext';
 import Notifications from './pages/Notifications';
+import SearchPage from './pages/SearchPage';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/billing" element={<Billing />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </GoalsProvider>
