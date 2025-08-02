@@ -8,7 +8,8 @@ import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/components/ui/use-toast";
 import PortalLayout from "@/components/PortalLayout";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Role } from "@/types";
 
 const Profile = () => {
   const { user, updateUser } = useUser();
@@ -88,6 +89,33 @@ const Profile = () => {
             <Button onClick={handleSaveChanges}>Save Changes</Button>
           </CardContent>
         </Card>
+
+        {user.role === 'Admin' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Role Management</CardTitle>
+              <CardDescription>Switch your role for demonstration purposes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="max-w-sm">
+                <Label htmlFor="role-switcher">Current Role</Label>
+                <Select
+                  value={user.role}
+                  onValueChange={(value) => updateUser({ role: value as Role })}
+                >
+                  <SelectTrigger id="role-switcher" className="mt-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Admin">Admin</SelectItem>
+                    <SelectItem value="Member">Member</SelectItem>
+                    <SelectItem value="Client">Client</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

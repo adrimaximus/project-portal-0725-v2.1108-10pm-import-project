@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,7 @@ import { dummyConversations } from "@/data/chat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/contexts/UserContext";
 import { dummyNotifications } from "@/data/notifications";
+import { Role } from "@/types";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -34,6 +35,7 @@ type NavItem = {
   label: string;
   icon: typeof Home;
   badge?: number;
+  roles: Role[];
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
@@ -50,18 +52,17 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 
   const navItems: NavItem[] = [
-    { href: "/", label: "Dashboard", icon: Home },
-    { href: "/request", label: "Request", icon: LayoutGrid },
-    { 
-      href: "/chat", 
-      label: "Chat", 
-      icon: MessageSquare, 
-      ...(totalUnreadChatCount > 0 && { badge: totalUnreadChatCount }) 
-    },
-    { href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
-    { href: "/goals", label: "Goals", icon: Target },
-    { href: "/notifications", label: "Notifications", icon: Bell, ...(unreadNotificationCount > 0 && { badge: unreadNotificationCount }) },
+    { href: "/", label: "Dashboard", icon: Home, roles: ['Admin', 'Member', 'Client'] },
+    { href: "/projects", label: "Projects", icon: Package, roles: ['Admin', 'Member'] },
+    { href: "/request", label: "Request", icon: LayoutGrid, roles: ['Admin', 'Member', 'Client'] },
+    { href: "/chat", label: "Chat", icon: MessageSquare, roles: ['Admin', 'Member', 'Client'], badge: totalUnreadChatCount > 0 ? totalUnreadChatCount : undefined },
+    { href: "/mood-tracker", label: "Mood Tracker", icon: Smile, roles: ['Admin', 'Member'] },
+    { href: "/goals", label: "Goals", icon: Target, roles: ['Admin', 'Member'] },
+    { href: "/billing", label: "Billing", icon: CreditCard, roles: ['Admin'] },
+    { href: "/notifications", label: "Notifications", icon: Bell, roles: ['Admin', 'Member', 'Client'], badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined },
   ];
+
+  const accessibleNavItems = navItems.filter(item => item.roles.includes(user.role));
 
   return (
     <div
@@ -94,7 +95,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                 isCollapsed ? "px-2" : "px-2 lg:px-4"
               )}
             >
-              {navItems.map((item) =>
+              {accessibleNavItems.map((item) =>
                 isCollapsed ? (
                   <Tooltip key={item.label}>
                     <TooltipTrigger asChild>
