@@ -29,6 +29,7 @@ const PortalHeader = () => {
   const displayedContent = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
 
+    // If there's a search query, filter projects and users.
     if (query) {
       const projects = dummyProjects.filter(p =>
         p.name.toLowerCase().includes(query)
@@ -39,6 +40,7 @@ const PortalHeader = () => {
       return { projects, users };
     }
 
+    // If the search query is empty, show initial suggestions.
     return {
       projects: dummyProjects.slice(0, 2),
       users: allUsers.slice(0, 2),
