@@ -88,6 +88,7 @@ const PortalHeader = () => {
                 className="w-full appearance-none bg-muted pl-8 shadow-none"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onClick={() => setIsSearchOpen(true)}
                 onFocus={() => setIsSearchOpen(true)}
               />
             </div>
