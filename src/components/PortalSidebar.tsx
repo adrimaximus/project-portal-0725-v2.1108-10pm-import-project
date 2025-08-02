@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, PlusCircle, Trash2, LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import NewLinkDialog from "./NewLinkDialog";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -50,8 +51,9 @@ type NavItem = {
   id: string;
   href: string;
   label: string;
-  icon: typeof Home;
+  icon: LucideIcon;
   badge?: number;
+  isCustom?: boolean;
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
@@ -59,6 +61,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isNewLinkOpen, setIsNewLinkOpen] = useState(false);
 
   const totalUnreadChatCount = dummyConversations.reduce(
     (sum, convo) => sum + convo.unreadCount,
@@ -67,7 +70,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
   const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 
-  const [navItems, setNavItems] = useState<NavItem[]>(() => [
+  const [defaultNavItems, setDefaultNavItems] = useState<NavItem[]>(() => [
     { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
     { id: "request", href: "/request", label: "Request", icon: LayoutGrid },
     { 
@@ -82,6 +85,42 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
     { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, ...(unreadNotificationCount > 0 && { badge: unreadNotificationCount }) },
   ]);
+  
+  const [customNavItems, setCustomNavItems] = useState<NavItem[]>([]);
+
+  useEffect(() => {
+    try {
+      const storedItems = localStorage.getItem('customNavItems');
+      if (storedItems) {
+        setCustomNavItems(JSON.parse(storedItems));
+      }
+    } catch (error) {
+      console.error("Failed to parse custom nav items from localStorage", error);
+      setCustomNavItems([]);
+    }
+  }, []);
+
+  const handleAddLink = (label: string, url: string) => {
+    const newId = `custom-${Date.now()}`;
+    const newItem: NavItem = {
+      id: newId,
+      href: `/custom?url=${encodeURIComponent(url)}&title=${encodeURIComponent(label)}`,
+      label,
+      icon: LinkIcon,
+      isCustom: true,
+    };
+    const updatedItems = [...customNavItems, newItem];
+    setCustomNavItems(updatedItems);
+    localStorage.setItem('customNavItems', JSON.stringify(updatedItems));
+  };
+
+  const handleDeleteLink = (id: string) => {
+    const updatedItems = customNavItems.filter(item => item.id !== id);
+    setCustomNavItems(updatedItems);
+    localStorage.setItem('customNavItems', JSON.stringify(updatedItems));
+  };
+
+  const allNavItems = [...defaultNavItems, ...customNavItems];
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -96,13 +135,37 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    if (over && over.id === 'dashboard') {
-      return;
-    }
-    if (over && active.id !== over.id) {
-      setNavItems((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
+    if (!over || active.id === over.id) return;
+
+    const activeItem = allNavItems.find(item => item.id === active.id);
+    const overItem = allNavItems.find(item => item.id === over.id);
+
+    if (!activeItem || !overItem || overItem.id === 'dashboard') return;
+
+    if (activeItem.isCustom && !overItem.isCustom) {
+      // Dragging custom item into default items list
+      const oldIndex = customNavItems.findIndex(item => item.id === active.id);
+      const newIndex = defaultNavItems.findIndex(item => item.id === over.id);
+      const [movedItem] = customNavItems.splice(oldIndex, 1);
+      defaultNavItems.splice(newIndex, 0, movedItem);
+    } else if (!activeItem.isCustom && overItem.isCustom) {
+      // Dragging default item into custom items list
+      const oldIndex = defaultNavItems.findIndex(item => item.id === active.id);
+      const newIndex = customNavItems.findIndex(item => item.id === over.id);
+      const [movedItem] = defaultNavItems.splice(oldIndex, 1);
+      customNavItems.splice(newIndex, 0, movedItem);
+    } else if (activeItem.isCustom && overItem.isCustom) {
+      // Both custom
+      setCustomNavItems(items => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    } else {
+      // Both default
+      setDefaultNavItems(items => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
         return arrayMove(items, oldIndex, newIndex);
       });
     }
@@ -167,8 +230,22 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     );
 
     return (
-      <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="group">
         {navLink}
+        {!isCollapsed && item.isCustom && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover:opacity-100"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleDeleteLink(item.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        )}
       </div>
     );
   };
@@ -199,20 +276,28 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         <div className="flex-1 overflow-y-auto py-2 flex flex-col">
           <TooltipProvider delayDuration={0}>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={navItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={allNavItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
                 <nav
                   className={cn(
                     "grid items-start gap-1 text-sm font-medium",
                     isCollapsed ? "px-2" : "px-2 lg:px-4"
                   )}
                 >
-                  {navItems.map((item) => (
+                  {allNavItems.map((item) => (
                     <SortableNavItem key={item.id} item={item} />
                   ))}
                 </nav>
               </SortableContext>
             </DndContext>
           </TooltipProvider>
+          {!isCollapsed && (
+            <div className="px-2 lg:px-4 mt-2">
+              <Button variant="outline" className="w-full" onClick={() => setIsNewLinkOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Link
+              </Button>
+            </div>
+          )}
           <div className="flex-grow" />
           <div className="border-t">
             <OnlineCollaborators isCollapsed={isCollapsed} />
@@ -307,6 +392,11 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           </div>
         </div>
       </div>
+      <NewLinkDialog
+        open={isNewLinkOpen}
+        onOpenChange={setIsNewLinkOpen}
+        onAddLink={handleAddLink}
+      />
     </div>
   );
 };
