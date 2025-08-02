@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PortalSidebar from "./PortalSidebar";
 import { useUser } from "@/contexts/UserContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { dummyProjects } from "@/data/projects";
 import { allUsers } from "@/data/users";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -26,6 +26,19 @@ const PortalHeader = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
 
   const displayedContent = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
@@ -90,14 +103,18 @@ const PortalHeader = () => {
               <div className="relative md:w-2/3 lg:w-1/3">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
+                  ref={searchInputRef}
                   type="search"
-                  placeholder="Search projects or users..."
-                  className="w-full appearance-none bg-muted pl-8 shadow-none"
+                  placeholder="Search..."
+                  className="w-full appearance-none bg-muted pl-8 pr-16 shadow-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onClick={() => setIsSearchOpen(true)}
                   onFocus={() => setIsSearchOpen(true)}
                 />
+                <kbd className="absolute top-1/2 right-2.5 -translate-y-1/2 pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
               </div>
             </PopoverTrigger>
             <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
