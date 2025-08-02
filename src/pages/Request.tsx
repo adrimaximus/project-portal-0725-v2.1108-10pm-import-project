@@ -1,32 +1,71 @@
+import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle } from "lucide-react";
+import { Service } from "@/data/services";
+import SelectedServicesSummary from "@/components/SelectedServicesSummary";
+import ServiceSelection from "@/components/request/ServiceSelection";
+import ProjectDetailsForm from "@/components/request/ProjectDetailsForm";
 
-const Request = () => {
+const RequestPage = () => {
+  const [step, setStep] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+
+  const handleServiceSelect = (service: Service) => {
+    const isFeatured = service.title === "End to End Services";
+    const isAlreadySelected = selectedServices.some(
+      (s) => s.title === service.title
+    );
+
+    if (isFeatured) {
+      setSelectedServices(isAlreadySelected ? [] : [service]);
+    } else {
+      let newSelectedServices = selectedServices.filter(
+        (s) => s.title !== "End to End Services"
+      );
+      if (isAlreadySelected) {
+        newSelectedServices = newSelectedServices.filter(
+          (s) => s.title !== service.title
+        );
+      } else {
+        newSelectedServices.push(service);
+      }
+      setSelectedServices(newSelectedServices);
+    }
+  };
+
+  const renderContent = () => {
+    if (step === 1) {
+      return (
+        <ServiceSelection
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          selectedServices={selectedServices}
+          onServiceSelect={handleServiceSelect}
+        />
+      );
+    } else {
+      return (
+        <ProjectDetailsForm
+          selectedServices={selectedServices}
+          onBack={() => setStep(1)}
+        />
+      );
+    }
+  };
+
+  const summaryComponent =
+    step === 1 ? (
+      <SelectedServicesSummary
+        selectedServices={selectedServices}
+        onContinue={() => setStep(2)}
+      />
+    ) : null;
+
   return (
-    <PortalLayout>
-      <div className="flex h-full flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-background px-4 md:px-6">
-          <h1 className="text-lg font-semibold md:text-xl">Requests</h1>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" /> New Request
-          </Button>
-        </header>
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Placeholder Request</CardTitle>
-              <CardDescription>This is a placeholder card to demonstrate the layout.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>The content area is now scrollable independently of the sidebar.</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+    <PortalLayout summary={summaryComponent} disableMainScroll={step === 2}>
+      {renderContent()}
     </PortalLayout>
   );
 };
 
-export default Request;
+export default RequestPage;
