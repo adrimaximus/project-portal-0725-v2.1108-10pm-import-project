@@ -14,7 +14,6 @@ export interface Goal {
   specificDays?: number[]; // 0 for Sunday, 1 for Monday, etc.
   completions: GoalCompletion[];
   collaborators?: User[];
-  tags?: string[];
 }
 
 export const dummyGoals: Goal[] = [
@@ -30,7 +29,6 @@ export const dummyGoals: Goal[] = [
       { date: new Date().toISOString(), completed: true },
     ],
     collaborators: [user1, user2],
-    tags: ['Personal Growth', 'Reading'],
   },
   {
     id: 'goal-2',
@@ -44,7 +42,6 @@ export const dummyGoals: Goal[] = [
       { date: new Date().toISOString(), completed: true },
     ],
     collaborators: [user1],
-    tags: ['Health', 'Fitness'],
   },
   {
     id: 'goal-3',
@@ -54,6 +51,5 @@ export const dummyGoals: Goal[] = [
     frequency: 'Daily',
     completions: [],
     collaborators: [],
-    tags: ['Health', 'Mindfulness'],
   },
 ];
