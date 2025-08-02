@@ -20,19 +20,22 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import GoalCollaborationManager from '@/components/goals/GoalCollaborationManager';
 import { getIconComponent } from '@/data/icons';
 import { useGoals } from '@/context/GoalsContext';
+import { Badge } from '@/components/ui/badge';
+
+type GoalWithTags = Goal & { tags?: string[] };
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
   const { getGoalById, updateGoal, deleteGoal } = useGoals();
   const navigate = useNavigate();
   
-  const goal = goalId ? getGoalById(goalId) : undefined;
+  const goal = goalId ? getGoalById(goalId) as GoalWithTags : undefined;
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
-  const handleUpdateGoal = (updatedGoal: Goal) => {
+  const handleUpdateGoal = (updatedGoal: GoalWithTags) => {
     updateGoal(updatedGoal);
     setIsEditModalOpen(false);
     setIsInviteModalOpen(false);
@@ -106,6 +109,13 @@ const GoalDetailPage = () => {
             <div className="min-w-0">
               <h1 className="text-3xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">{goal.title}</h1>
               <p className="text-muted-foreground">{goal.frequency}</p>
+              {goal.tags && goal.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {goal.tags.map(tag => (
+                    <Badge key={tag} variant="secondary">{tag}</Badge>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex -space-x-2 overflow-hidden ml-2">
               {goal.collaborators?.map((user: User) => (

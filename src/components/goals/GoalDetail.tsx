@@ -1,142 +1,140 @@
 import { useState, useEffect } from 'react';
 import { Goal } from '@/data/goals';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import IconPicker from './IconPicker';
-import ColorPicker from './ColorPicker';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Trash2 } from 'lucide-react';
+import { TagInput } from '@/components/ui/TagInput';
+import { iconList, getIconComponent } from '@/data/icons';
+import { colorOptions } from '@/data/colors';
+
+type EditableGoal = Goal & { tags?: string[] };
 
 interface GoalDetailProps {
-  goal: Goal;
-  onUpdate: (updatedGoal: Goal) => void;
-  onDelete: (goalId: string) => void;
-  onClose?: () => void;
+  goal: EditableGoal;
+  onUpdate: (goal: EditableGoal) => void;
+  onDelete: (id: string) => void;
+  onClose: () => void;
 }
 
-const weekDays = [
-  { label: 'S', value: '0' },
-  { label: 'M', value: '1' },
-  { label: 'T', value: '2' },
-  { label: 'W', value: '3' },
-  { label: 'T', 'value': '4' },
-  { label: 'F', value: '5' },
-  { label: 'S', value: '6' },
-];
-
 const GoalDetail = ({ goal, onUpdate, onDelete, onClose }: GoalDetailProps) => {
-  const [title, setTitle] = useState(goal.title);
-  const [frequency, setFrequency] = useState<Goal['frequency']>(goal.frequency);
-  const [specificDays, setSpecificDays] = useState<string[]>(goal.specificDays?.map(String) || []);
-  const [icon, setIcon] = useState(goal.icon);
-  const [color, setColor] = useState(goal.color);
+  const [editedGoal, setEditedGoal] = useState<EditableGoal>(goal);
 
   useEffect(() => {
-    setTitle(goal.title);
-    setFrequency(goal.frequency);
-    setSpecificDays(goal.specificDays?.map(String) || []);
-    setIcon(goal.icon);
-    setColor(goal.color);
+    setEditedGoal(goal);
   }, [goal]);
 
-  const handleUpdate = () => {
-    onUpdate({
-      ...goal,
-      title,
-      frequency,
-      specificDays: frequency === 'Weekly' ? specificDays.map(Number) : undefined,
-      icon,
-      color,
-    });
+  const handleChange = (field: keyof EditableGoal, value: any) => {
+    setEditedGoal(prev => ({ ...prev, [field]: value }));
   };
 
-  const hasChanges = (() => {
-    if (title !== goal.title) return true;
-    if (frequency !== goal.frequency) return true;
-    if (icon !== goal.icon) return true;
-    if (color !== goal.color) return true;
+  const handleSave = () => {
+    onUpdate(editedGoal);
+  };
 
-    if (frequency === 'Weekly') {
-      const currentDays = specificDays.map(Number).sort((a, b) => a - b);
-      const originalDays = (goal.specificDays || []).sort((a, b) => a - b);
-      if (currentDays.length !== originalDays.length) return true;
-      if (currentDays.some((day, i) => day !== originalDays[i])) return true;
-    }
-    
-    return false;
-  })();
+  const Icon = getIconComponent(editedGoal.icon);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Edit Goal</CardTitle>
-        <Button variant="ghost" size="icon" onClick={() => onDelete(goal.id)}>
-          <Trash2 className="h-4 w-4" />
-          <span className="sr-only">Delete Goal</span>
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="title" className="text-right">
-              Title
-            </Label>
-            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} className="col-span-3" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="frequency" className="text-right">
-              Frequency
-            </Label>
-            <Select value={frequency} onValueChange={(value) => setFrequency(value as Goal['frequency'])}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select frequency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Daily">Daily</SelectItem>
-                <SelectItem value="Weekly">Weekly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {frequency === 'Weekly' && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Days</Label>
-              <ToggleGroup
-                type="multiple"
-                variant="outline"
-                value={specificDays}
-                onValueChange={setSpecificDays}
-                className="col-span-3 justify-start"
-              >
-                {weekDays.map(day => (
-                  <ToggleGroupItem key={day.value} value={day.value} aria-label={day.label}>
-                    {day.label}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </div>
-          )}
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">Icon</Label>
-            <div className="col-span-3">
-              <IconPicker value={icon} onChange={setIcon} color={color} />
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Color</Label>
-            <div className="col-span-3">
-              <ColorPicker color={color} setColor={setColor} />
-            </div>
-          </div>
+    <div className="grid gap-4 py-4">
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="title" className="text-right">
+          Title
+        </Label>
+        <Input
+          id="title"
+          value={editedGoal.title}
+          onChange={(e) => handleChange('title', e.target.value)}
+          className="col-span-3"
+        />
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="frequency" className="text-right">
+          Frequency
+        </Label>
+        <Select
+          value={editedGoal.frequency}
+          onValueChange={(value) => handleChange('frequency', value)}
+        >
+          <SelectTrigger className="col-span-3">
+            <SelectValue placeholder="Select frequency" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Daily">Daily</SelectItem>
+            <SelectItem value="Weekly">Weekly</SelectItem>
+            <SelectItem value="Monthly">Monthly</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label className="text-right">Icon & Color</Label>
+        <div className="col-span-3 flex gap-2">
+          <Select value={editedGoal.icon} onValueChange={(value) => handleChange('icon', value)}>
+            <SelectTrigger className="w-full">
+              <SelectValue>
+                <div className="flex items-center gap-2">
+                  <Icon className="h-5 w-5" />
+                  <span>{iconList.find(i => i.value === editedGoal.icon)?.label}</span>
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {iconList.map(icon => {
+                const OptIcon = getIconComponent(icon.value);
+                return (
+                  <SelectItem key={icon.value} value={icon.value}>
+                    <div className="flex items-center gap-2">
+                      <OptIcon className="h-5 w-5" /> {icon.label}
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+          <Select value={editedGoal.color} onValueChange={(value) => handleChange('color', value)}>
+            <SelectTrigger className="w-full">
+              <SelectValue>
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 rounded-full" style={{ backgroundColor: editedGoal.color }} />
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {colorOptions.map(color => (
+                <SelectItem key={color} value={color}>
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 rounded-full" style={{ backgroundColor: color }} />
+                    {color}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </CardContent>
-      <CardFooter className="justify-end space-x-2">
-        {onClose && <Button variant="ghost" onClick={onClose}>Cancel</Button>}
-        <Button onClick={handleUpdate} disabled={!hasChanges}>Save Changes</Button>
-      </CardFooter>
-    </Card>
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="tags" className="text-right">
+          Tags
+        </Label>
+        <div className="col-span-3">
+          <TagInput
+            value={editedGoal.tags || []}
+            onChange={(tags) => handleChange('tags', tags)}
+            placeholder="Add tags and press Enter"
+          />
+        </div>
+      </div>
+      <div className="flex justify-between items-center pt-4 mt-4 border-t">
+        <Button variant="destructive" onClick={() => onDelete(editedGoal.id)}>
+          Delete Goal
+        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>Save Changes</Button>
+        </div>
+      </div>
+    </div>
   );
 };
 
