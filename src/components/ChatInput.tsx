@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, X, Folder } from "lucide-react";
 import { currentUser } from "@/data/collaborators";
 import { Collaborator } from "@/types";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from "@/components/ui/command";
 import { Project } from "@/data/projects";
 
@@ -124,41 +124,40 @@ const ChatInput = ({ onSendMessage, members = [], projects = [] }: ChatInputProp
         open={showPopover && ((mentionType === 'user' && filteredMembers.length > 0) || (mentionType === 'project' && filteredProjects.length > 0))} 
         onOpenChange={setShowPopover}
       >
-        <PopoverTrigger asChild>
-          <div />
-        </PopoverTrigger>
         <form onSubmit={handleSubmit} className="flex w-full items-start space-x-4">
           <Avatar className="h-9 w-9 border">
             <AvatarImage src={currentUser.src} alt="You" />
             <AvatarFallback>ME</AvatarFallback>
           </Avatar>
           <div className="w-full">
-            <div className="relative">
-              <Textarea
-                ref={textareaRef}
-                placeholder="Type your comment here... (@mention, /project)"
-                className="min-h-[60px] pr-24"
-                value={message}
-                onChange={handleMessageChange}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !showPopover) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-              />
-              <div className="absolute top-3 right-2 flex items-center">
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                <Button type="button" variant="ghost" size="icon" onClick={handleAttachClick}>
-                  <Paperclip className="h-4 w-4" />
-                  <span className="sr-only">Attach file</span>
-                </Button>
-                <Button type="submit" size="icon">
-                  <Send className="h-4 w-4" />
-                  <span className="sr-only">Send</span>
-                </Button>
+            <PopoverAnchor asChild>
+              <div className="relative">
+                <Textarea
+                  ref={textareaRef}
+                  placeholder="Type your comment here... (@mention, /project)"
+                  className="min-h-[60px] pr-24"
+                  value={message}
+                  onChange={handleMessageChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !showPopover) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                />
+                <div className="absolute top-3 right-2 flex items-center">
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                  <Button type="button" variant="ghost" size="icon" onClick={handleAttachClick}>
+                    <Paperclip className="h-4 w-4" />
+                    <span className="sr-only">Attach file</span>
+                  </Button>
+                  <Button type="submit" size="icon">
+                    <Send className="h-4 w-4" />
+                    <span className="sr-only">Send</span>
+                  </Button>
+                </div>
               </div>
-            </div>
+            </PopoverAnchor>
             {file && (
               <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground bg-muted p-2 rounded-md">
                 <span className="truncate pr-2">{file.name}</span>
