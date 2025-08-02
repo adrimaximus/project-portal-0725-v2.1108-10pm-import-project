@@ -1,5 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
-import { Menu, Package2, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Menu, Search, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,10 +14,47 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PortalSidebar from "./PortalSidebar";
 import { useUser } from "@/contexts/UserContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { useState, useEffect } from "react";
+import { dummyProjects } from "@/data/projects";
+import { allUsers } from "@/data/users";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 
 const PortalHeader = () => {
   const { user } = useUser();
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<{ projects: any[], users: any[] }>({ projects: [], users: [] });
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchQuery.length > 1) {
+      const projects = dummyProjects.filter(p =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      const users = allUsers.filter(u =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setSearchResults({ projects, users });
+      setIsSearchOpen(true);
+    } else {
+      setSearchResults({ projects: [], users: [] });
+      setIsSearchOpen(false);
+    }
+  }, [searchQuery]);
+
+  const handleProjectSelect = (projectId: string) => {
+    navigate(`/projects/${projectId}`);
+    setSearchQuery("");
+    setIsSearchOpen(false);
+  };
+
+  const handleUserSelect = (userName: string) => {
+    // Since user profile pages don't exist yet, we'll just log the selection.
+    console.log("Selected user:", userName);
+    setSearchQuery("");
+    setIsSearchOpen(false);
+  };
 
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
@@ -37,16 +74,59 @@ const PortalHeader = () => {
         </SheetContent>
       </Sheet>
       <div className="w-full flex-1">
-        <form>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="w-full appearance-none bg-muted pl-8 shadow-none md:w-2/3 lg:w-1/3"
-            />
-          </div>
-        </form>
+        <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+          <PopoverTrigger asChild>
+            <div className="relative md:w-2/3 lg:w-1/3">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search projects or users..."
+                className="w-full appearance-none bg-muted pl-8 shadow-none"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchQuery.length > 1 && setIsSearchOpen(true)}
+              />
+            </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+            <Command>
+              <CommandList>
+                <CommandEmpty>No results found.</CommandEmpty>
+                {searchResults.projects.length > 0 && (
+                  <CommandGroup heading="Projects">
+                    {searchResults.projects.map((project) => (
+                      <CommandItem
+                        key={project.id}
+                        onSelect={() => handleProjectSelect(project.id)}
+                        className="cursor-pointer"
+                      >
+                        <Building className="mr-2 h-4 w-4" />
+                        <span>{project.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+                {searchResults.users.length > 0 && (
+                  <CommandGroup heading="Users">
+                    {searchResults.users.map((userResult) => (
+                      <CommandItem
+                        key={userResult.id}
+                        onSelect={() => handleUserSelect(userResult.name)}
+                        className="cursor-pointer flex items-center"
+                      >
+                        <Avatar className="mr-2 h-6 w-6">
+                          <AvatarImage src={userResult.avatar} />
+                          <AvatarFallback>{userResult.initials}</AvatarFallback>
+                        </Avatar>
+                        <span>{userResult.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
