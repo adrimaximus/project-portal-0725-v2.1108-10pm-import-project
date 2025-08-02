@@ -88,11 +88,21 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   
   const [customNavItems, setCustomNavItems] = useState<NavItem[]>([]);
 
+  const updateCustomItemsInStorage = (items: NavItem[]) => {
+    const itemsToStore = items.map(({ icon, ...rest }) => rest);
+    localStorage.setItem('customNavItems', JSON.stringify(itemsToStore));
+  };
+
   useEffect(() => {
     try {
       const storedItems = localStorage.getItem('customNavItems');
       if (storedItems) {
-        setCustomNavItems(JSON.parse(storedItems));
+        const parsedItems: Omit<NavItem, 'icon'>[] = JSON.parse(storedItems);
+        const hydratedItems = parsedItems.map(item => ({
+          ...item,
+          icon: LinkIcon,
+        }));
+        setCustomNavItems(hydratedItems);
       }
     } catch (error) {
       console.error("Failed to parse custom nav items from localStorage", error);
@@ -111,13 +121,13 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     };
     const updatedItems = [...customNavItems, newItem];
     setCustomNavItems(updatedItems);
-    localStorage.setItem('customNavItems', JSON.stringify(updatedItems));
+    updateCustomItemsInStorage(updatedItems);
   };
 
   const handleDeleteLink = (id: string) => {
     const updatedItems = customNavItems.filter(item => item.id !== id);
     setCustomNavItems(updatedItems);
-    localStorage.setItem('customNavItems', JSON.stringify(updatedItems));
+    updateCustomItemsInStorage(updatedItems);
   };
 
   const allNavItems = [...defaultNavItems, ...customNavItems];
@@ -142,33 +152,22 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
     if (!activeItem || !overItem || overItem.id === 'dashboard') return;
 
-    if (activeItem.isCustom && !overItem.isCustom) {
-      // Dragging custom item into default items list
-      const oldIndex = customNavItems.findIndex(item => item.id === active.id);
-      const newIndex = defaultNavItems.findIndex(item => item.id === over.id);
-      const [movedItem] = customNavItems.splice(oldIndex, 1);
-      defaultNavItems.splice(newIndex, 0, movedItem);
-    } else if (!activeItem.isCustom && overItem.isCustom) {
-      // Dragging default item into custom items list
-      const oldIndex = defaultNavItems.findIndex(item => item.id === active.id);
-      const newIndex = customNavItems.findIndex(item => item.id === over.id);
-      const [movedItem] = defaultNavItems.splice(oldIndex, 1);
-      customNavItems.splice(newIndex, 0, movedItem);
-    } else if (activeItem.isCustom && overItem.isCustom) {
-      // Both custom
-      setCustomNavItems(items => {
-        const oldIndex = items.findIndex(item => item.id === active.id);
-        const newIndex = items.findIndex(item => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
-    } else {
-      // Both default
-      setDefaultNavItems(items => {
-        const oldIndex = items.findIndex(item => item.id === active.id);
-        const newIndex = items.findIndex(item => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
+    if (activeItem.isCustom && overItem.isCustom) {
+        setCustomNavItems(items => {
+            const oldIndex = items.findIndex(item => item.id === active.id);
+            const newIndex = items.findIndex(item => item.id === over.id);
+            const newItems = arrayMove(items, oldIndex, newIndex);
+            updateCustomItemsInStorage(newItems);
+            return newItems;
+        });
+    } else if (!activeItem.isCustom && !overItem.isCustom) {
+        setDefaultNavItems(items => {
+            const oldIndex = items.findIndex(item => item.id === active.id);
+            const newIndex = items.findIndex(item => item.id === over.id);
+            return arrayMove(items, oldIndex, newIndex);
+        });
     }
+    // Note: Dragging between default and custom lists is not implemented for simplicity.
   }
 
   const SortableNavItem = ({ item }: { item: NavItem }) => {
