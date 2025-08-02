@@ -1,5 +1,5 @@
 import { Route, Routes } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
+import Index from './pages/Index';
 import RequestPage from './pages/Request';
 import ChatPage from './pages/ChatPage';
 import MoodTracker from './pages/MoodTracker';
@@ -11,14 +11,12 @@ import Billing from './pages/Billing';
 import NotFound from './pages/NotFound';
 import { GoalsProvider } from './context/GoalsContext';
 import Notifications from './pages/Notifications';
-import Projects from './pages/Projects';
 
 function App() {
   return (
     <GoalsProvider>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/projects" element={<Projects />} />
+        <Route path="/" element={<Index />} />
         <Route path="/request" element={<RequestPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/mood-tracker" element={<MoodTracker />} />
