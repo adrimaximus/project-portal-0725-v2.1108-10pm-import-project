@@ -19,6 +19,7 @@ import { dummyProjects } from "@/data/projects";
 import { allUsers } from "@/data/users";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import HighlightMatch from "./HighlightMatch";
 
 const PortalHeader = () => {
   const { user } = useUser();
@@ -29,7 +30,6 @@ const PortalHeader = () => {
   const displayedContent = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
 
-    // If there's a search query, filter projects and users.
     if (query) {
       const projects = dummyProjects.filter(p =>
         p.name.toLowerCase().includes(query)
@@ -40,7 +40,6 @@ const PortalHeader = () => {
       return { projects, users };
     }
 
-    // If the search query is empty, show initial suggestions.
     return {
       projects: dummyProjects.slice(0, 2),
       users: allUsers.slice(0, 2),
@@ -54,7 +53,6 @@ const PortalHeader = () => {
   };
 
   const handleUserSelect = (userName: string) => {
-    // Since user profile pages don't exist yet, we'll just log the selection.
     console.log("Selected user:", userName);
     setSearchQuery("");
     setIsSearchOpen(false);
@@ -107,7 +105,7 @@ const PortalHeader = () => {
                         className="cursor-pointer"
                       >
                         <Building className="mr-2 h-4 w-4" />
-                        <span>{project.name}</span>
+                        <HighlightMatch text={project.name} query={searchQuery} />
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -125,7 +123,7 @@ const PortalHeader = () => {
                           <AvatarImage src={userResult.avatar} />
                           <AvatarFallback>{userResult.initials}</AvatarFallback>
                         </Avatar>
-                        <span>{userResult.name}</span>
+                        <HighlightMatch text={userResult.name} query={searchQuery} />
                       </CommandItem>
                     ))}
                   </CommandGroup>
