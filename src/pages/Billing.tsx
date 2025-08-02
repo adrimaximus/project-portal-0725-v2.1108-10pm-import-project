@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { dummyInvoices, Invoice } from "@/data/invoices";
+import { dummyProjects } from "@/data/projects";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { DollarSign, Clock, AlertTriangle, Download } from "lucide-react";
@@ -31,6 +32,8 @@ const Billing = () => {
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0]?.dueDate;
 
   const overdueInvoices = dummyInvoices.filter(inv => inv.status === 'Overdue').length;
+
+  const projectMap = new Map(dummyProjects.map(p => [p.id, p.name]));
 
   return (
     <PortalLayout>
@@ -97,7 +100,7 @@ const Billing = () => {
                 {dummyInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.id}</TableCell>
-                    <TableCell>{invoice.project}</TableCell>
+                    <TableCell>{projectMap.get(invoice.projectId) || 'Unknown Project'}</TableCell>
                     <TableCell>${invoice.amount.toLocaleString()}</TableCell>
                     <TableCell>{format(new Date(invoice.dueDate), 'MMM dd, yyyy')}</TableCell>
                     <TableCell>
