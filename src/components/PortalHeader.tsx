@@ -20,19 +20,30 @@ import { allUsers } from "@/data/users";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import HighlightMatch from "./HighlightMatch";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const PortalHeader = () => {
   const { user } = useUser();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        searchInputRef.current?.focus();
+        // For desktop, focus the input. For mobile, open the dialog.
+        if (window.innerWidth < 768) {
+          setIsMobileSearchOpen(true);
+        } else {
+          searchInputRef.current?.focus();
+        }
       }
     };
 
@@ -63,12 +74,14 @@ const PortalHeader = () => {
     navigate(`/projects/${projectId}`);
     setSearchQuery("");
     setIsSearchOpen(false);
+    setIsMobileSearchOpen(false);
   };
 
   const handleUserSelect = (userName: string) => {
     console.log("Selected user:", userName);
     setSearchQuery("");
     setIsSearchOpen(false);
+    setIsMobileSearchOpen(false);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -76,8 +89,48 @@ const PortalHeader = () => {
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setIsSearchOpen(false);
+      setIsMobileSearchOpen(false);
     }
   };
+
+  const searchResults = (
+    <CommandList>
+      <CommandEmpty>No results found.</CommandEmpty>
+      
+      {displayedContent.projects.length > 0 && (
+        <CommandGroup heading={searchQuery ? "Projects" : "Suggested Projects"}>
+          {displayedContent.projects.map((project) => (
+            <CommandItem
+              key={`proj-${project.id}`}
+              onSelect={() => handleProjectSelect(project.id)}
+              className="cursor-pointer"
+            >
+              <Building className="mr-2 h-4 w-4" />
+              <HighlightMatch text={project.name} query={searchQuery} />
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      )}
+      
+      {displayedContent.users.length > 0 && (
+        <CommandGroup heading={searchQuery ? "Users" : "Suggested Users"}>
+          {displayedContent.users.map((userResult) => (
+            <CommandItem
+              key={`user-${userResult.id}`}
+              onSelect={() => handleUserSelect(userResult.name)}
+              className="cursor-pointer flex items-center"
+            >
+              <Avatar className="mr-2 h-6 w-6">
+                <AvatarImage src={userResult.avatar} />
+                <AvatarFallback>{userResult.initials}</AvatarFallback>
+              </Avatar>
+              <HighlightMatch text={userResult.name} query={searchQuery} />
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      )}
+    </CommandList>
+  );
 
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
@@ -97,68 +150,63 @@ const PortalHeader = () => {
         </SheetContent>
       </Sheet>
       <div className="w-full flex-1">
-        <form onSubmit={handleSearchSubmit}>
-          <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-            <PopoverAnchor asChild>
-              <div className="relative md:w-2/3 lg:w-1/3">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  ref={searchInputRef}
-                  type="search"
-                  placeholder="Search..."
-                  className="w-full appearance-none bg-muted pl-8 pr-16 shadow-none"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => setIsSearchOpen(true)}
-                />
-                <kbd className="absolute top-1/2 right-2.5 -translate-y-1/2 pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
-              </div>
-            </PopoverAnchor>
-            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-              <Command>
-                <CommandList>
-                  <CommandEmpty>No results found.</CommandEmpty>
-                  
-                  {displayedContent.projects.length > 0 && (
-                    <CommandGroup heading={searchQuery ? "Projects" : "Suggested Projects"}>
-                      {displayedContent.projects.map((project) => (
-                        <CommandItem
-                          key={`proj-${project.id}`}
-                          onSelect={() => handleProjectSelect(project.id)}
-                          className="cursor-pointer"
-                        >
-                          <Building className="mr-2 h-4 w-4" />
-                          <HighlightMatch text={project.name} query={searchQuery} />
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  )}
-                  
-                  {displayedContent.users.length > 0 && (
-                    <CommandGroup heading={searchQuery ? "Users" : "Suggested Users"}>
-                      {displayedContent.users.map((userResult) => (
-                        <CommandItem
-                          key={`user-${userResult.id}`}
-                          onSelect={() => handleUserSelect(userResult.name)}
-                          className="cursor-pointer flex items-center"
-                        >
-                          <Avatar className="mr-2 h-6 w-6">
-                            <AvatarImage src={userResult.avatar} />
-                            <AvatarFallback>{userResult.initials}</AvatarFallback>
-                          </Avatar>
-                          <HighlightMatch text={userResult.name} query={searchQuery} />
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  )}
-
-                </CommandList>
+        {/* Mobile Search */}
+        <div className="md:hidden">
+          <Dialog open={isMobileSearchOpen} onOpenChange={setIsMobileSearchOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full justify-start text-muted-foreground">
+                <Search className="mr-2 h-4 w-4" />
+                Search...
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="p-0 gap-0 top-[25%]">
+              <form onSubmit={handleSearchSubmit} className="p-4">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search..."
+                    className="w-full appearance-none bg-background pl-8 shadow-none"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              </form>
+              <Command className="[&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground">
+                {searchResults}
               </Command>
-            </PopoverContent>
-          </Popover>
-        </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Desktop Search */}
+        <div className="hidden md:block">
+          <form onSubmit={handleSearchSubmit}>
+            <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+              <PopoverAnchor asChild>
+                <div className="relative md:w-2/3 lg:w-1/3">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    ref={searchInputRef}
+                    type="search"
+                    placeholder="Search..."
+                    className="w-full appearance-none bg-muted pl-8 pr-16 shadow-none"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={() => setIsSearchOpen(true)}
+                  />
+                  <kbd className="absolute top-1/2 right-2.5 -translate-y-1/2 pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
+                    <span className="text-xs">⌘</span>K
+                  </kbd>
+                </div>
+              </PopoverAnchor>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command>{searchResults}</Command>
+              </PopoverContent>
+            </Popover>
+          </form>
+        </div>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
