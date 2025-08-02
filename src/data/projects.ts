@@ -12,14 +12,14 @@ export interface Task {
   name: string;
   text?: string;
   completed: boolean;
-  assignedTo?: AssignedUser;
+  assignedTo: string[];
   originTicketId?: string;
 }
 
 export interface ProjectFile {
   name: string;
   size: number;
-  type: 'PDF' | 'DOCX' | 'PNG' | 'JPG' | 'ZIP';
+  type: string;
   url: string;
 }
 
@@ -91,18 +91,18 @@ export const dummyProjects: Project[] = [
     createdBy: teamMembers[0],
     assignedTo: [teamMembers[0], teamMembers[2], teamMembers[4]],
     tasks: [
-      { id: 't1-1', name: 'Setup project structure', completed: true, assignedTo: teamMembers[2] },
-      { id: 't1-2', name: 'Design product pages', completed: true, assignedTo: teamMembers[1] },
-      { id: 't1-3', name: 'Develop API for products', completed: false, assignedTo: teamMembers[2] },
-      { id: 't1-4', name: 'Implement payment gateway', completed: false },
+      { id: 't1-1', name: 'Setup project structure', completed: true, assignedTo: [teamMembers[2].id] },
+      { id: 't1-2', name: 'Design product pages', completed: true, assignedTo: [teamMembers[1].id] },
+      { id: 't1-3', name: 'Develop API for products', completed: false, assignedTo: [teamMembers[2].id] },
+      { id: 't1-4', name: 'Implement payment gateway', completed: false, assignedTo: [] },
     ],
     comments: [
       { id: 'c1-1', user: teamMembers[0], timestamp: '2024-07-28T10:30:00Z', text: 'Great progress on the API. Let\'s sync up about the payment gateway options tomorrow.', isTicket: true },
       { id: 'c1-2', user: teamMembers[2], timestamp: '2024-07-28T11:00:00Z', text: 'Sounds good. I\'ve prepared a comparison of Stripe vs. Braintree.', attachment: { name: 'Payment-Gateways.pdf', url: '#' } },
     ],
     briefFiles: [
-      { name: 'Project-Brief.pdf', size: 1.2 * 1024 * 1024, type: 'PDF', url: '#' },
-      { name: 'Wireframes.zip', size: 15.7 * 1024 * 1024, type: 'ZIP', url: '#' },
+      { name: 'Project-Brief.pdf', size: 1.2 * 1024 * 1024, type: 'application/pdf', url: '#' },
+      { name: 'Wireframes.zip', size: 15.7 * 1024 * 1024, type: 'application/zip', url: '#' },
     ],
     services: ['Web Development', 'UI/UX Design', 'API Integration'],
     activities: [
@@ -124,12 +124,12 @@ export const dummyProjects: Project[] = [
     createdBy: teamMembers[1],
     assignedTo: [teamMembers[1], teamMembers[3]],
     tasks: [
-      { id: 't2-1', name: 'Conduct user interviews', completed: true, assignedTo: teamMembers[3] },
-      { id: 't2-2', name: 'Create low-fidelity wireframes', completed: false, assignedTo: teamMembers[1] },
+      { id: 't2-1', name: 'Conduct user interviews', completed: true, assignedTo: [teamMembers[3].id] },
+      { id: 't2-2', name: 'Create low-fidelity wireframes', completed: false, assignedTo: [teamMembers[1].id] },
     ],
     comments: [],
     briefFiles: [
-      { name: 'User-Research-Summary.docx', size: 450 * 1024, type: 'DOCX', url: '#' },
+      { name: 'User-Research-Summary.docx', size: 450 * 1024, type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', url: '#' },
     ],
     services: ['UI/UX Design', 'User Research'],
     activities: [

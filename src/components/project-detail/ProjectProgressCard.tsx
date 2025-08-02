@@ -103,7 +103,7 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
     if (!onTasksUpdate || newTaskText.trim() === "") return;
     const newTask: Task = {
       id: `task-${Date.now()}`,
-      text: newTaskText.trim(),
+      name: newTaskText.trim(),
       completed: false,
       assignedTo: newTaskAssignees,
     };
@@ -160,11 +160,11 @@ const ProjectProgressCard = ({ project, onTasksUpdate }: ProjectProgressCardProp
                                 task.completed ? "line-through text-muted-foreground" : ""
                               }`}
                             >
-                              {task.text}
+                              {task.name}
                             </label>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{task.text}</p>
+                            <p>{task.name}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>

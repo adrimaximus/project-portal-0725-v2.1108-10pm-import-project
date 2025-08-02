@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useUser } from "@/contexts/UserContext";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -24,6 +25,7 @@ interface ProjectDetailsFormProps {
 }
 
 const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
+  const { user: currentUser } = useUser();
   const [projectName, setProjectName] = useState("");
   const [date, setDate] = useState<DateRange | undefined>();
   const [budget, setBudget] = useState("");
@@ -75,14 +77,12 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       budget: numericBudget,
       startDate: date?.from?.toISOString() ?? new Date().toISOString(),
       deadline: deadline.toISOString(),
-      paymentDueDate: addDays(deadline, 30).toISOString(),
-      paymentStatus: "proposed",
-      createdBy: {
-        id: "user-current",
-        name: "Current User",
-        initials: "CU",
-      },
+      paymentStatus: "Proposed",
+      createdBy: currentUser,
       services: selectedServices.map(s => s.title),
+      tasks: [],
+      comments: [],
+      activities: [],
     };
 
     dummyProjects.push(newProject);

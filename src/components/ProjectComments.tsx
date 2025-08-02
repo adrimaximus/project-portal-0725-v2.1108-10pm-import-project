@@ -141,13 +141,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
 
     const comment: Comment = {
       id: `comment-${Date.now()}`,
-      projectId: project.id,
-      user: { 
-        id: currentUser.id, 
-        name: currentUser.name, 
-        avatar: currentUser.avatar,
-        initials: currentUser.name.slice(0, 2).toUpperCase(),
-      },
+      user: currentUser,
       text: newComment,
       timestamp: new Date().toISOString(),
       isTicket: isTicket,

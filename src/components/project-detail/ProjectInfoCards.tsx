@@ -1,5 +1,5 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project } from "@/data/projects";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -45,15 +45,15 @@ const ProjectInfoCards = ({
 
   const getPaymentStatusBadgeVariant = (status: Project["paymentStatus"]) => {
     switch (status) {
-      case "paid": return "default";
-      case "approved":
-      case "po_created":
-      case "on_process":
-      case "pending": 
+      case "Paid": return "default";
+      case "Approved":
+      case "PO Created":
+      case "On Process":
+      case "Pending": 
         return "secondary";
-      case "cancelled": 
+      case "Cancelled": 
         return "destructive";
-      case "proposed": 
+      case "Proposed": 
         return "outline";
       default: 
         return "outline";
@@ -62,9 +62,9 @@ const ProjectInfoCards = ({
 
   const formatPaymentStatus = (status: Project["paymentStatus"]) => {
     switch (status) {
-      case "po_created":
+      case "PO Created":
         return "PO Created";
-      case "on_process":
+      case "On Process":
         return "On Process";
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
@@ -91,7 +91,7 @@ const ProjectInfoCards = ({
     year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  const isPaymentOverdue = isPast(paymentDueDate) && !['paid', 'cancelled'].includes(project.paymentStatus);
+  const isPaymentOverdue = isPast(paymentDueDate) && !['Paid', 'Cancelled'].includes(project.paymentStatus);
   const paymentOverdueDays = isPaymentOverdue ? differenceInDays(new Date(), paymentDueDate) : 0;
 
   return (
@@ -132,13 +132,13 @@ const ProjectInfoCards = ({
             <Select value={editedProject.paymentStatus} onValueChange={(value) => onSelectChange('paymentStatus', value as Project["paymentStatus"])}>
               <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="proposed">Proposed</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="po_created">PO Created</SelectItem>
-                <SelectItem value="on_process">On Process</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="Proposed">Proposed</SelectItem>
+                <SelectItem value="Approved">Approved</SelectItem>
+                <SelectItem value="PO Created">PO Created</SelectItem>
+                <SelectItem value="On Process">On Process</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="Paid">Paid</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           ) : (

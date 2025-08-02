@@ -74,7 +74,7 @@ const ProjectDetail = () => {
     }
   };
 
-  const handleDateChange = (name: 'deadline' | 'paymentDueDate' | 'startDate', date: Date | undefined) => {
+  const handleDateChange = (name: 'deadline' | 'startDate', date: Date | undefined) => {
     if (editedProject) {
       const originalDate = (project as any)[name];
       const dateString = date ? format(date, 'yyyy-MM-dd') : originalDate;
@@ -173,7 +173,7 @@ const ProjectDetail = () => {
         if (newTaskText) {
           const newTask: Task = {
             id: `task-${Date.now()}`,
-            text: newTaskText,
+            name: newTaskText,
             completed: false,
             assignedTo: mentionedUsersToAssign.map(user => user.id),
             originTicketId: newComment.id,
