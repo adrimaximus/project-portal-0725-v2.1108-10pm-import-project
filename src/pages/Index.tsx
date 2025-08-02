@@ -139,7 +139,7 @@ const Index = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-8 p-4 md:p-8">
+      <div className="h-full overflow-y-auto space-y-8 p-4 md:p-8">
         <div className="text-left">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
           <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
