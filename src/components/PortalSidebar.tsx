@@ -23,6 +23,23 @@ import { dummyConversations } from "@/data/chat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/contexts/UserContext";
 import { dummyNotifications } from "@/data/notifications";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -30,6 +47,7 @@ type PortalSidebarProps = {
 };
 
 type NavItem = {
+  id: string;
   href: string;
   label: string;
   icon: typeof Home;
@@ -49,20 +67,111 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
   const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 
-  const navItems: NavItem[] = [
-    { href: "/", label: "Dashboard", icon: Home },
-    { href: "/request", label: "Request", icon: LayoutGrid },
+  const [navItems, setNavItems] = useState<NavItem[]>(() => [
+    { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
+    { id: "request", href: "/request", label: "Request", icon: LayoutGrid },
     { 
+      id: "chat",
       href: "/chat", 
       label: "Chat", 
       icon: MessageSquare, 
       ...(totalUnreadChatCount > 0 && { badge: totalUnreadChatCount }) 
     },
-    { href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
-    { href: "/goals", label: "Goals", icon: Target },
-    { href: "/billing", label: "Billing", icon: CreditCard },
-    { href: "/notifications", label: "Notifications", icon: Bell, ...(unreadNotificationCount > 0 && { badge: unreadNotificationCount }) },
-  ];
+    { id: "mood-tracker", href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
+    { id: "goals", href: "/goals", label: "Goals", icon: Target },
+    { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
+    { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, ...(unreadNotificationCount > 0 && { badge: unreadNotificationCount }) },
+  ]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && over.id === 'dashboard') {
+      return;
+    }
+    if (over && active.id !== over.id) {
+      setNavItems((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  }
+
+  const SortableNavItem = ({ item }: { item: NavItem }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: item.id, disabled: item.id === 'dashboard' });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+      cursor: item.id === 'dashboard' ? 'default' : 'grab',
+      zIndex: isDragging ? 10 : 0,
+      position: 'relative' as 'relative',
+    };
+
+    const navLink = isCollapsed ? (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            to={item.href}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative",
+              location.pathname === item.href && "bg-muted text-primary"
+            )}
+          >
+            <item.icon className="h-5 w-5" />
+            <span className="sr-only">{item.label}</span>
+            {item.badge && (
+              <Badge className="absolute -top-1 -right-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full p-0 text-xs">
+                {item.badge}
+              </Badge>
+            )}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right">{item.label}</TooltipContent>
+      </Tooltip>
+    ) : (
+      <Link
+        to={item.href}
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+          location.pathname === item.href && "bg-muted text-primary"
+        )}
+      >
+        <item.icon className="h-4 w-4" />
+        {item.label}
+        {item.badge && (
+          <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+            {item.badge}
+          </Badge>
+        )}
+      </Link>
+    );
+
+    return (
+      <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        {navLink}
+      </div>
+    );
+  };
 
   return (
     <div
@@ -89,54 +198,20 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         </div>
         <div className="flex-1 overflow-y-auto py-2 flex flex-col">
           <TooltipProvider delayDuration={0}>
-            <nav
-              className={cn(
-                "grid items-start gap-1 text-sm font-medium",
-                isCollapsed ? "px-2" : "px-2 lg:px-4"
-              )}
-            >
-              {navItems.map((item) =>
-                isCollapsed ? (
-                  <Tooltip key={item.label}>
-                    <TooltipTrigger asChild>
-                      <Link
-                        to={item.href}
-                        className={cn(
-                          "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative",
-                          location.pathname === item.href && "bg-muted text-primary"
-                        )}
-                      >
-                        <item.icon className="h-5 w-5" />
-                        <span className="sr-only">{item.label}</span>
-                        {item.badge && (
-                          <Badge className="absolute -top-1 -right-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full p-0 text-xs">
-                            {item.badge}
-                          </Badge>
-                        )}
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">{item.label}</TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Link
-                    key={item.label}
-                    to={item.href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                      location.pathname === item.href && "bg-muted text-primary"
-                    )}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.label}
-                    {item.badge && (
-                      <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-                        {item.badge}
-                      </Badge>
-                    )}
-                  </Link>
-                )
-              )}
-            </nav>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={navItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
+                <nav
+                  className={cn(
+                    "grid items-start gap-1 text-sm font-medium",
+                    isCollapsed ? "px-2" : "px-2 lg:px-4"
+                  )}
+                >
+                  {navItems.map((item) => (
+                    <SortableNavItem key={item.id} item={item} />
+                  ))}
+                </nav>
+              </SortableContext>
+            </DndContext>
           </TooltipProvider>
           <div className="flex-grow" />
           <div className="border-t">
