@@ -39,7 +39,7 @@ const ProjectMainContent = ({
     <Card>
       <CardContent className="p-4 md:p-6">
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-4">
             <TabsTrigger value="overview">
               <LayoutDashboard className="mr-0 sm:mr-2 h-4 w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Overview</span>
@@ -51,7 +51,8 @@ const ProjectMainContent = ({
             </TabsTrigger>
             <TabsTrigger value="comments">
               <MessageSquare className="mr-0 sm:mr-2 h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline whitespace-nowrap">Comments & Tickets</span>
+              <span className="hidden md:inline">Comments & Tickets</span>
+              <span className="hidden sm:inline md:hidden">Comments</span>
               {ticketCount > 0 && <Badge className="ml-2 bg-orange-500">{ticketCount}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="activity">
