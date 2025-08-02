@@ -12,6 +12,7 @@ import { Project, AssignedUser, Comment } from '@/data/projects';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/UserContext';
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -209,33 +210,35 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
           })}
         </div>
         <div className="mt-6 pt-6 border-t">
-          <div className="relative">
-            <Textarea ref={textareaRef} placeholder="Add a comment or create a ticket... Type '@' to mention a user, '/' to link a project." value={newComment} onChange={handleTextChange} className="pr-36" />
-            {suggestionOpen && (
-              <Card className="absolute bottom-full mb-2 w-full max-h-60 overflow-y-auto shadow-lg border z-10">
-                <Command>
-                  <CommandList>
-                    {suggestionType === 'user' && (
-                      <CommandGroup heading="Mention Team Member">
-                        {filteredUsers.length > 0 ? filteredUsers.map(user => <CommandItem key={user.id} value={user.name} onSelect={() => handleSuggestionSelect(user.name)} className="cursor-pointer flex items-center gap-2"><Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /><AvatarFallback>{user.name.slice(0,1)}</AvatarFallback></Avatar>{user.name}</CommandItem>) : <CommandEmpty>No users found.</CommandEmpty>}
-                      </CommandGroup>
-                    )}
-                    {suggestionType === 'project' && (
-                      <CommandGroup heading="Link to Project">
-                        {filteredProjects.length > 0 ? filteredProjects.map(project => <CommandItem key={project.id} value={project.name} onSelect={() => handleSuggestionSelect(project.name)} className="cursor-pointer">{project.name}</CommandItem>) : <CommandEmpty>No projects found.</CommandEmpty>}
-                      </CommandGroup>
-                    )}
-                  </CommandList>
-                </Command>
-              </Card>
-            )}
-            <div className="absolute top-2 right-2 flex items-center gap-1">
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-              <Button type="button" variant="ghost" size="icon" onClick={handleAttachmentClick}><Paperclip className="h-4 w-4" /><span className="sr-only">Attach file</span></Button>
-              <Button type="button" variant="ghost" size="icon" onClick={handleSendTicket}><Ticket className="h-4 w-4" /><span className="sr-only">Create ticket</span></Button>
-              <Button type="button" size="sm" onClick={() => handleSendComment(false)}>Send</Button>
+          <Popover open={suggestionOpen} onOpenChange={setSuggestionOpen}>
+            <div className="relative">
+              <PopoverAnchor>
+                <Textarea ref={textareaRef} placeholder="Add a comment or create a ticket... Type '@' to mention a user, '/' to link a project." value={newComment} onChange={handleTextChange} className="pr-36" />
+              </PopoverAnchor>
+              <div className="absolute top-2 right-2 flex items-center gap-1">
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                <Button type="button" variant="ghost" size="icon" onClick={handleAttachmentClick}><Paperclip className="h-4 w-4" /><span className="sr-only">Attach file</span></Button>
+                <Button type="button" variant="ghost" size="icon" onClick={handleSendTicket}><Ticket className="h-4 w-4" /><span className="sr-only">Create ticket</span></Button>
+                <Button type="button" size="sm" onClick={() => handleSendComment(false)}>Send</Button>
+              </div>
             </div>
-          </div>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" side="top" align="start">
+              <Command>
+                <CommandList>
+                  {suggestionType === 'user' && (
+                    <CommandGroup heading="Mention Team Member">
+                      {filteredUsers.length > 0 ? filteredUsers.map(user => <CommandItem key={user.id} value={user.name} onSelect={() => handleSuggestionSelect(user.name)} className="cursor-pointer flex items-center gap-2"><Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /><AvatarFallback>{user.name.slice(0,1)}</AvatarFallback></Avatar>{user.name}</CommandItem>) : <CommandEmpty>No users found.</CommandEmpty>}
+                    </CommandGroup>
+                  )}
+                  {suggestionType === 'project' && (
+                    <CommandGroup heading="Link to Project">
+                      {filteredProjects.length > 0 ? filteredProjects.map(project => <CommandItem key={project.id} value={project.name} onSelect={() => handleSuggestionSelect(project.name)} className="cursor-pointer">{project.name}</CommandItem>) : <CommandEmpty>No projects found.</CommandEmpty>}
+                    </CommandGroup>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           {attachmentFile && (
             <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2 bg-muted p-2 rounded-md">
               <File className="h-4 w-4" /><span className="flex-1 truncate">{attachmentFile.name}</span>
