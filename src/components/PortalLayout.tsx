@@ -1,6 +1,7 @@
 import { useState, ReactNode } from "react";
 import PortalSidebar from "./PortalSidebar";
 import { cn } from "@/lib/utils";
+import GlobalSearch from "./GlobalSearch";
 
 type PortalLayoutProps = {
   children: ReactNode;
@@ -23,6 +24,7 @@ const PortalLayout = ({ children, summary, disableMainScroll, noPadding }: Porta
         {summary && (
           <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-background px-4 sm:h-[60px] sm:px-6">
             {summary}
+            <GlobalSearch />
           </header>
         )}
         <main
