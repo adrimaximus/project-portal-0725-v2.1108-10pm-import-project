@@ -140,10 +140,10 @@ const Index = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-8">
+      <div className="space-y-8 p-4 md:p-8">
         <div className="text-left">
-          <h1 className="text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
-          <p className="text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
+          <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
         </div>
 
         <div className="space-y-6">
@@ -308,32 +308,34 @@ const Index = () => {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="px-6 pb-6 pt-0">
-                      <Table>
-                          <TableHeader>
-                              <TableRow>
-                                  <TableHead>Collaborator</TableHead>
-                                  <TableHead className="text-right">Projects</TableHead>
-                                  <TableHead className="text-right">Tasks</TableHead>
-                              </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                              {collaborators.map(c => (
-                                  <TableRow key={c.id}>
-                                      <TableCell>
-                                          <div className="flex items-center gap-3">
-                                              <Avatar className="h-8 w-8">
-                                                  <AvatarImage src={c.avatar} alt={c.name} />
-                                                  <AvatarFallback>{c.initials}</AvatarFallback>
-                                              </Avatar>
-                                              <span className="font-medium">{c.name}</span>
-                                          </div>
-                                      </TableCell>
-                                      <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
-                                      <TableCell className="text-right font-medium">{c.taskCount}</TableCell>
-                                  </TableRow>
-                              ))}
-                          </TableBody>
-                      </Table>
+                      <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Collaborator</TableHead>
+                                    <TableHead className="text-right">Projects</TableHead>
+                                    <TableHead className="text-right">Tasks</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {collaborators.map(c => (
+                                    <TableRow key={c.id}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage src={c.avatar} alt={c.name} />
+                                                    <AvatarFallback>{c.initials}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="font-medium whitespace-nowrap">{c.name}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
+                                        <TableCell className="text-right font-medium">{c.taskCount}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                      </div>
                   </CardContent>
                 </CollapsibleContent>
               </Collapsible>
@@ -349,106 +351,108 @@ const Index = () => {
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <TooltipProvider>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[30%]">Project Name</TableHead>
-                      <TableHead>Project Status</TableHead>
-                      <TableHead>Payment Status</TableHead>
-                      <TableHead>Project Progress</TableHead>
-                      <TableHead>Tickets</TableHead>
-                      <TableHead>Project Value</TableHead>
-                      <TableHead>Project Due Date</TableHead>
-                      <TableHead>Owner</TableHead>
-                      <TableHead className="text-right">Team</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProjects.map((project) => {
-                      const totalTasks = project.tasks?.length || 0;
-                      const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
-                      const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : project.progress;
-                      const ticketCount = project.comments?.filter(comment => (comment as any).isTicket).length || 0;
+              <div className="overflow-x-auto">
+                <TooltipProvider>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[30%]">Project Name</TableHead>
+                        <TableHead>Project Status</TableHead>
+                        <TableHead>Payment Status</TableHead>
+                        <TableHead>Project Progress</TableHead>
+                        <TableHead>Tickets</TableHead>
+                        <TableHead>Project Value</TableHead>
+                        <TableHead>Project Due Date</TableHead>
+                        <TableHead>Owner</TableHead>
+                        <TableHead className="text-right">Team</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredProjects.map((project) => {
+                        const totalTasks = project.tasks?.length || 0;
+                        const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
+                        const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : project.progress;
+                        const ticketCount = project.comments?.filter(comment => (comment as any).isTicket).length || 0;
 
-                      return (
-                        <TableRow
-                          key={project.id}
-                          onClick={() => navigate(`/projects/${project.id}`)}
-                          className="cursor-pointer"
-                        >
-                          <TableCell>
-                            <div className="font-medium">{project.name}</div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={cn("border-transparent", getStatusClass(project.status))}>
-                              {project.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={cn("border-transparent", getPaymentStatusClass(project.paymentStatus))}>
-                              {project.paymentStatus}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Progress value={progressPercentage} className="w-24" />
-                              <span className="text-sm font-medium text-muted-foreground">
-                                {progressPercentage}%
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium text-center">{ticketCount}</div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium">
-                              {'Rp ' + project.budget.toLocaleString('id-ID')}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium">
-                              {project.deadline ? format(new Date(project.deadline), "MMM dd, yyyy") : 'N/A'}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {project.assignedTo && project.assignedTo.length > 0 && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Avatar className="h-8 w-8 border-2 border-background">
-                                    <AvatarImage src={project.assignedTo[0].avatar} alt={project.assignedTo[0].name} />
-                                    <AvatarFallback>{project.assignedTo[0].initials}</AvatarFallback>
-                                  </Avatar>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{project.assignedTo[0].name}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-end -space-x-2">
-                              {project.assignedTo.map((user) => (
-                                <Tooltip key={user.id}>
+                        return (
+                          <TableRow
+                            key={project.id}
+                            onClick={() => navigate(`/projects/${project.id}`)}
+                            className="cursor-pointer"
+                          >
+                            <TableCell>
+                              <div className="font-medium whitespace-nowrap">{project.name}</div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={cn("border-transparent", getStatusClass(project.status))}>
+                                {project.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={cn("border-transparent", getPaymentStatusClass(project.paymentStatus))}>
+                                {project.paymentStatus}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Progress value={progressPercentage} className="w-24" />
+                                <span className="text-sm font-medium text-muted-foreground">
+                                  {progressPercentage}%
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium text-center">{ticketCount}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium whitespace-nowrap">
+                                {'Rp ' + project.budget.toLocaleString('id-ID')}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium whitespace-nowrap">
+                                {project.deadline ? format(new Date(project.deadline), "MMM dd, yyyy") : 'N/A'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {project.assignedTo && project.assignedTo.length > 0 && (
+                                <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Avatar className="h-8 w-8 border-2 border-background">
-                                      <AvatarImage src={user.avatar} alt={user.name} />
-                                      <AvatarFallback>{user.initials}</AvatarFallback>
+                                      <AvatarImage src={project.assignedTo[0].avatar} alt={project.assignedTo[0].name} />
+                                      <AvatarFallback>{project.assignedTo[0].initials}</AvatarFallback>
                                     </Avatar>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{user.name}</p>
+                                    <p>{project.assignedTo[0].name}</p>
                                   </TooltipContent>
                                 </Tooltip>
-                              ))}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TooltipProvider>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end -space-x-2">
+                                {project.assignedTo.map((user) => (
+                                  <Tooltip key={user.id}>
+                                    <TooltipTrigger asChild>
+                                      <Avatar className="h-8 w-8 border-2 border-background">
+                                        <AvatarImage src={user.avatar} alt={user.name} />
+                                        <AvatarFallback>{user.initials}</AvatarFallback>
+                                      </Avatar>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{user.name}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ))}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TooltipProvider>
+              </div>
             </CollapsibleContent>
           </div>
         </Collapsible>
