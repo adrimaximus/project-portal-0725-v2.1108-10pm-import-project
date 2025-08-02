@@ -1,4 +1,4 @@
-import { Activity } from '@/data/projects';
+import { Activity, ActivityType } from '@/data/projects';
 import {
   MessageSquare,
   ArrowRightCircle,
@@ -7,25 +7,45 @@ import {
   UserPlus,
   LucideIcon,
   Circle,
+  Ticket,
+  CheckCircle2,
+  TrendingUp,
+  Wallet,
+  CalendarClock,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { id as indonesianLocale } from 'date-fns/locale';
 
-const activityIcons: Record<string, LucideIcon> = {
+const activityIcons: Record<ActivityType, LucideIcon> = {
   comment: MessageSquare,
+  ticket_created: Ticket,
+  ticket_resolved: CheckCircle2,
   status_change: ArrowRightCircle,
+  payment_status_change: Wallet,
+  progress_update: TrendingUp,
+  budget_change: Wallet,
+  deadline_change: CalendarClock,
+  start_date_change: CalendarClock,
   file_upload: FileUp,
+  member_add: UserPlus,
+  task_assign: UserPlus,
   commit: GitCommit,
-  assignment: UserPlus,
-  default: Circle,
 };
 
-const activityDescriptions: Record<string, string> = {
-    comment: 'memberi komentar',
-    status_change: 'memperbarui status',
+const activityDescriptions: Record<ActivityType, string> = {
+    comment: 'memberi komentar pada',
+    ticket_created: 'membuat tiket baru',
+    ticket_resolved: 'menyelesaikan tiket',
+    status_change: 'memperbarui status proyek',
+    payment_status_change: 'memperbarui status pembayaran',
+    progress_update: 'memperbarui progres proyek',
+    budget_change: 'memperbarui anggaran proyek',
+    deadline_change: 'memperbarui tenggat waktu proyek',
+    start_date_change: 'memperbarui tanggal mulai proyek',
     file_upload: 'mengunggah file',
+    member_add: 'menambahkan anggota baru',
+    task_assign: 'menugaskan tugas',
     commit: 'mendorong sebuah commit',
-    assignment: 'menugaskan sebuah tugas',
 };
 
 const ProjectActivityFeed = ({ activities }: { activities: Activity[] }) => {
@@ -45,7 +65,7 @@ const ProjectActivityFeed = ({ activities }: { activities: Activity[] }) => {
       <div className="absolute left-5 top-2 bottom-2 w-0.5 bg-border" aria-hidden="true" />
 
       {sortedActivities.map((activity) => {
-        const Icon = activityIcons[activity.type] || activityIcons.default;
+        const Icon = activityIcons[activity.type] || Circle;
         const description = activityDescriptions[activity.type] || 'melakukan sebuah aktivitas';
 
         return (
@@ -59,12 +79,13 @@ const ProjectActivityFeed = ({ activities }: { activities: Activity[] }) => {
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
                   <span className="font-semibold text-foreground">{activity.user.name}</span> {description}
+                  {activity.target && <span className="font-medium text-foreground"> {activity.target}</span>}
                 </p>
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true, locale: indonesianLocale })}
                 </span>
               </div>
-              <p className="text-sm mt-1">{activity.details}</p>
+              <p className="text-sm mt-1 text-foreground/80">{activity.details}</p>
             </div>
           </div>
         );

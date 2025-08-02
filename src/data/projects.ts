@@ -35,11 +35,26 @@ export interface Comment {
   isTicket?: boolean;
 }
 
+export type ActivityType = 
+  | 'comment'
+  | 'ticket_created'
+  | 'ticket_resolved'
+  | 'status_change'
+  | 'payment_status_change'
+  | 'progress_update'
+  | 'budget_change'
+  | 'deadline_change'
+  | 'start_date_change'
+  | 'file_upload'
+  | 'member_add'
+  | 'task_assign'
+  | 'commit';
+
 export interface Activity {
   id: string;
+  type: ActivityType;
   user: AssignedUser;
   timestamp: string;
-  action: string;
   details: string;
   target?: string;
 }
@@ -106,8 +121,12 @@ export const dummyProjects: Project[] = [
     ],
     services: ['Web Development', 'UI/UX Design', 'API Integration'],
     activities: [
-        { id: 'a1-1', user: teamMembers[2], timestamp: '2024-07-29T14:00:00Z', action: 'pushed a commit', details: 'to `feature/product-api`', target: 'Git Repository' },
-        { id: 'a1-2', user: teamMembers[1], timestamp: '2024-07-29T11:20:00Z', action: 'uploaded a file', details: '`Homepage_Mockup_v3.png`', target: 'Project Files' },
+        { id: 'a1-1', type: 'commit', user: teamMembers[2], timestamp: '2024-07-29T14:00:00Z', details: 'to `feature/product-api`', target: 'Git Repository' },
+        { id: 'a1-2', type: 'file_upload', user: teamMembers[1], timestamp: '2024-07-29T11:20:00Z', details: '`Homepage_Mockup_v3.png`', target: 'Project Files' },
+        { id: 'a1-3', type: 'status_change', user: teamMembers[0], timestamp: '2024-07-28T16:45:00Z', details: "from 'At Risk' to 'On Track'", target: 'Project Status' },
+        { id: 'a1-4', type: 'ticket_created', user: teamMembers[0], timestamp: '2024-07-28T10:30:00Z', details: 'Great progress on the API. Let\'s sync up about the payment gateway options tomorrow.', target: 'Ticket C1-1' },
+        { id: 'a1-5', type: 'comment', user: teamMembers[2], timestamp: '2024-07-28T11:00:00Z', details: 'Sounds good. I\'ve prepared a comparison of Stripe vs. Braintree.', target: 'Ticket C1-1' },
+        { id: 'a1-6', type: 'member_add', user: teamMembers[0], timestamp: '2024-07-27T09:00:00Z', details: 'Added David Wilson to the project.', target: 'Team' },
     ]
   },
   {
@@ -133,7 +152,8 @@ export const dummyProjects: Project[] = [
     ],
     services: ['UI/UX Design', 'User Research'],
     activities: [
-        { id: 'a2-1', user: teamMembers[3], timestamp: '2024-07-25T09:00:00Z', action: 'added a comment', details: 'on the wireframes task.', target: 'Task T2-2' },
+        { id: 'a2-1', type: 'comment', user: teamMembers[3], timestamp: '2024-07-25T09:00:00Z', details: 'The user interviews are complete, summary attached.', target: 'Task T2-1' },
+        { id: 'a2-2', type: 'deadline_change', user: teamMembers[1], timestamp: '2024-07-24T10:00:00Z', details: 'extended to 2024-11-30', target: 'Project Deadline' },
     ]
   },
   {
@@ -153,7 +173,10 @@ export const dummyProjects: Project[] = [
     comments: [],
     briefFiles: [],
     services: ['Social Media', 'Email Marketing'],
-    activities: []
+    activities: [
+        { id: 'a3-1', type: 'payment_status_change', user: teamMembers[0], timestamp: '2024-07-20T14:00:00Z', details: "from 'Pending' to 'Paid'", target: 'Payment' },
+        { id: 'a3-2', type: 'progress_update', user: teamMembers[0], timestamp: '2024-07-19T18:00:00Z', details: 'to 100%', target: 'Project Progress' },
+    ]
   },
   {
     id: 'proj-004',
