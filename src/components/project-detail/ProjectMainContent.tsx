@@ -4,6 +4,7 @@ import ProjectComments from "@/components/ProjectComments";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import ProjectOverviewTab from "./ProjectOverviewTab";
+import ProjectActivityFeed from "./ProjectActivityFeed";
 
 interface ProjectMainContentProps {
   project: Project;
@@ -33,12 +34,13 @@ const ProjectMainContent = ({
     <Card>
       <CardContent className="p-4 md:p-6">
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="comments">
               Comments & Tickets
               {ticketCount > 0 && <Badge className="ml-2 bg-orange-500">{ticketCount}</Badge>}
             </TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
             <ProjectOverviewTab
@@ -57,6 +59,9 @@ const ProjectMainContent = ({
               allProjects={allProjects}
               onAddCommentOrTicket={onAddCommentOrTicket}
             />
+          </TabsContent>
+          <TabsContent value="activity">
+            <ProjectActivityFeed activities={project.activities || []} />
           </TabsContent>
         </Tabs>
       </CardContent>
