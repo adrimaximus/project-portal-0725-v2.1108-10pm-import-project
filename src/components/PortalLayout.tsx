@@ -21,12 +21,10 @@ const PortalLayout = ({ children, summary, disableMainScroll, noPadding }: Porta
     <div className="flex h-screen w-full bg-muted/40">
       <PortalSidebar isCollapsed={isCollapsed} onToggle={toggleSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        {summary && (
-          <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-background px-4 sm:h-[60px] sm:px-6">
-            {summary}
-            <GlobalSearch />
-          </header>
-        )}
+        <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-background px-4 sm:h-[60px] sm:px-6">
+          {summary}
+          <GlobalSearch />
+        </header>
         <main
           className={cn(
             "flex-1",
