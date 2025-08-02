@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectComments from "@/components/ProjectComments";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import ProjectOverviewTab from "./ProjectOverviewTab";
 
 interface ProjectMainContentProps {
   project: Project;
@@ -19,6 +20,11 @@ interface ProjectMainContentProps {
 
 const ProjectMainContent = ({
   project,
+  isEditing,
+  onDescriptionChange,
+  onTeamChange,
+  onFilesChange,
+  onServicesChange,
   onAddCommentOrTicket,
   ticketCount,
   allProjects,
@@ -35,9 +41,14 @@ const ProjectMainContent = ({
             </TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
-            <div className="prose prose-sm max-w-none text-muted-foreground">
-              <p>{project.description || "No description provided."}</p>
-            </div>
+            <ProjectOverviewTab
+              project={project}
+              isEditing={isEditing}
+              onDescriptionChange={onDescriptionChange}
+              onTeamChange={onTeamChange}
+              onFilesChange={onFilesChange}
+              onServicesChange={onServicesChange}
+            />
           </TabsContent>
           <TabsContent value="comments">
             <ProjectComments
