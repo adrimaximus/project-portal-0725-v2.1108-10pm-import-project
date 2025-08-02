@@ -87,15 +87,16 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   ]);
   
   const [customNavItems, setCustomNavItems] = useState<NavItem[]>([]);
+  const localStorageKey = `customNavItems_${user.id}`;
 
   const updateCustomItemsInStorage = (items: NavItem[]) => {
     const itemsToStore = items.map(({ icon, ...rest }) => rest);
-    localStorage.setItem('customNavItems', JSON.stringify(itemsToStore));
+    localStorage.setItem(localStorageKey, JSON.stringify(itemsToStore));
   };
 
   useEffect(() => {
     try {
-      const storedItems = localStorage.getItem('customNavItems');
+      const storedItems = localStorage.getItem(localStorageKey);
       if (storedItems) {
         const parsedItems: Omit<NavItem, 'icon'>[] = JSON.parse(storedItems);
         const hydratedItems = parsedItems.map(item => ({
@@ -103,12 +104,14 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           icon: LinkIcon,
         }));
         setCustomNavItems(hydratedItems);
+      } else {
+        setCustomNavItems([]);
       }
     } catch (error) {
       console.error("Failed to parse custom nav items from localStorage", error);
       setCustomNavItems([]);
     }
-  }, []);
+  }, [localStorageKey]);
 
   const handleAddLink = (label: string, url: string) => {
     const newId = `custom-${Date.now()}`;
