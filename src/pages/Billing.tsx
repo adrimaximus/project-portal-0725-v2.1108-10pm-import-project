@@ -3,11 +3,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { dummyInvoices, Invoice } from "@/data/invoices";
-import { dummyProjects } from "@/data/projects";
+import { dummyProjects, PaymentStatus } from "@/data/projects";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, addDays, isPast } from "date-fns";
 import { DollarSign, Clock, AlertTriangle, Download } from "lucide-react";
+
+type Invoice = {
+  id: string;
+  projectId: string;
+  projectName: string;
+  amount: number;
+  dueDate: Date;
+  status: 'Paid' | 'Due' | 'Overdue';
+};
+
+const getInvoiceStatus = (status: PaymentStatus): Invoice['status'] | null => {
+  switch (status) {
+    case 'Paid':
+      return 'Paid';
+    case 'Pending':
+      return 'Due';
+    case 'Overdue':
+      return 'Overdue';
+    default:
+      return null;
+  }
+};
 
 const getStatusClass = (status: Invoice['status']) => {
   switch (status) {
@@ -23,17 +44,41 @@ const getStatusClass = (status: Invoice['status']) => {
 };
 
 const Billing = () => {
-  const outstandingBalance = dummyInvoices
+  const invoices: Invoice[] = dummyProjects
+    .map(project => {
+      const status = getInvoiceStatus(project.paymentStatus);
+      if (!status) {
+        return null;
+      }
+      
+      const dueDate = addDays(new Date(project.deadline), 30);
+
+      let finalStatus = status;
+      if (status === 'Due' && isPast(dueDate)) {
+        finalStatus = 'Overdue';
+      }
+
+      return {
+        id: `INV-${project.id}`,
+        projectId: project.id,
+        projectName: project.name,
+        amount: project.budget,
+        dueDate: dueDate,
+        status: finalStatus,
+      };
+    })
+    .filter((invoice): invoice is Invoice => invoice !== null)
+    .sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
+
+  const outstandingBalance = invoices
     .filter(inv => inv.status === 'Due' || inv.status === 'Overdue')
     .reduce((sum, inv) => sum + inv.amount, 0);
 
-  const nextDueDate = dummyInvoices
+  const nextDueDate = invoices
     .filter(inv => inv.status === 'Due')
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0]?.dueDate;
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]?.dueDate;
 
-  const overdueInvoices = dummyInvoices.filter(inv => inv.status === 'Overdue').length;
-
-  const projectMap = new Map(dummyProjects.map(p => [p.id, p.name]));
+  const overdueInvoicesCount = invoices.filter(inv => inv.status === 'Overdue').length;
 
   return (
     <PortalLayout>
@@ -41,7 +86,7 @@ const Billing = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
           <p className="text-muted-foreground">
-            View your invoices and manage your payment details.
+            View your invoices and manage your payment details, derived from your projects.
           </p>
         </div>
 
@@ -52,7 +97,7 @@ const Billing = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${outstandingBalance.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{'Rp ' + outstandingBalance.toLocaleString('id-ID')}</div>
               <p className="text-xs text-muted-foreground">Total amount due</p>
             </CardContent>
           </Card>
@@ -63,7 +108,7 @@ const Billing = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {nextDueDate ? format(new Date(nextDueDate), 'MMM dd, yyyy') : 'N/A'}
+                {nextDueDate ? format(nextDueDate, 'MMM dd, yyyy') : 'N/A'}
               </div>
               <p className="text-xs text-muted-foreground">Date of next invoice payment</p>
             </CardContent>
@@ -74,7 +119,7 @@ const Billing = () => {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{overdueInvoices}</div>
+              <div className="text-2xl font-bold">{overdueInvoicesCount}</div>
               <p className="text-xs text-muted-foreground">Invoices past their due date</p>
             </CardContent>
           </Card>
@@ -97,12 +142,12 @@ const Billing = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dummyInvoices.map((invoice) => (
+                {invoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.id}</TableCell>
-                    <TableCell>{projectMap.get(invoice.projectId) || 'Unknown Project'}</TableCell>
-                    <TableCell>${invoice.amount.toLocaleString()}</TableCell>
-                    <TableCell>{format(new Date(invoice.dueDate), 'MMM dd, yyyy')}</TableCell>
+                    <TableCell>{invoice.projectName}</TableCell>
+                    <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
+                    <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn("border-transparent", getStatusClass(invoice.status))}>
                         {invoice.status}
