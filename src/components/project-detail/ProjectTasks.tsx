@@ -143,7 +143,7 @@ const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksPro
           <Plus className="h-4 w-4" />
         </Button>
       </div>
-      <div className="border rounded-md">
+      <div className="border rounded-md overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
