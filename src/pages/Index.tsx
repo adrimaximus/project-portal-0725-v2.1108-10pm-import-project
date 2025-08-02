@@ -41,7 +41,6 @@ const Index = () => {
     to: new Date(),
   });
   const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(false);
-  const [isProjectsOpen, setIsProjectsOpen] = useState(false);
 
   const filteredProjects = dummyProjects.filter(project => {
     if (date?.from) {
@@ -363,120 +362,115 @@ const Index = () => {
             </Card>
         </div>
 
-        <Collapsible open={isProjectsOpen} onOpenChange={setIsProjectsOpen}>
-          <div className="border rounded-lg">
-            <CollapsibleTrigger className="w-full p-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">Projects</h2>
-                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="overflow-x-auto">
-                <TooltipProvider>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[30%]">Project Name</TableHead>
-                        <TableHead>Project Status</TableHead>
-                        <TableHead>Payment Status</TableHead>
-                        <TableHead>Project Progress</TableHead>
-                        <TableHead>Tickets</TableHead>
-                        <TableHead>Project Value</TableHead>
-                        <TableHead>Project Due Date</TableHead>
-                        <TableHead>Owner</TableHead>
-                        <TableHead className="text-right">Team</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredProjects.map((project) => {
-                        const totalTasks = project.tasks?.length || 0;
-                        const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
-                        const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : project.progress;
-                        const ticketCount = project.comments?.filter(comment => (comment as any).isTicket).length || 0;
+        <Card>
+          <CardHeader>
+            <CardTitle>Projects</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <TooltipProvider>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[30%]">Project Name</TableHead>
+                      <TableHead>Project Status</TableHead>
+                      <TableHead>Payment Status</TableHead>
+                      <TableHead>Project Progress</TableHead>
+                      <TableHead>Tickets</TableHead>
+                      <TableHead>Project Value</TableHead>
+                      <TableHead>Project Due Date</TableHead>
+                      <TableHead>Owner</TableHead>
+                      <TableHead className="text-right">Team</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProjects.map((project) => {
+                      const totalTasks = project.tasks?.length || 0;
+                      const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
+                      const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : project.progress;
+                      const ticketCount = project.comments?.filter(comment => (comment as any).isTicket).length || 0;
 
-                        return (
-                          <TableRow
-                            key={project.id}
-                            onClick={() => navigate(`/projects/${project.id}`)}
-                            className="cursor-pointer"
-                          >
-                            <TableCell>
-                              <div className="font-medium whitespace-nowrap">{project.name}</div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={cn("border-transparent", getStatusClass(project.status))}>
-                                {project.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={cn("border-transparent", getPaymentStatusClass(project.paymentStatus))}>
-                                {project.paymentStatus}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <Progress value={progressPercentage} className="w-24" />
-                                <span className="text-sm font-medium text-muted-foreground">
-                                  {progressPercentage}%
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium text-center">{ticketCount}</div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium whitespace-nowrap">
-                                {'Rp ' + project.budget.toLocaleString('id-ID')}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium whitespace-nowrap">
-                                {project.deadline ? format(new Date(project.deadline), "MMM dd, yyyy") : 'N/A'}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {project.assignedTo && project.assignedTo.length > 0 && (
-                                <Tooltip>
+                      return (
+                        <TableRow
+                          key={project.id}
+                          onClick={() => navigate(`/projects/${project.id}`)}
+                          className="cursor-pointer"
+                        >
+                          <TableCell>
+                            <div className="font-medium whitespace-nowrap">{project.name}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn("border-transparent", getStatusClass(project.status))}>
+                              {project.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn("border-transparent", getPaymentStatusClass(project.paymentStatus))}>
+                              {project.paymentStatus}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Progress value={progressPercentage} className="w-24" />
+                              <span className="text-sm font-medium text-muted-foreground">
+                                {progressPercentage}%
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium text-center">{ticketCount}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium whitespace-nowrap">
+                              {'Rp ' + project.budget.toLocaleString('id-ID')}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium whitespace-nowrap">
+                              {project.deadline ? format(new Date(project.deadline), "MMM dd, yyyy") : 'N/A'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {project.assignedTo && project.assignedTo.length > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Avatar className="h-8 w-8 border-2 border-background">
+                                    <AvatarImage src={project.assignedTo[0].avatar} alt={project.assignedTo[0].name} />
+                                    <AvatarFallback>{project.assignedTo[0].initials}</AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{project.assignedTo[0].name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end -space-x-2">
+                              {project.assignedTo.map((user) => (
+                                <Tooltip key={user.id}>
                                   <TooltipTrigger asChild>
                                     <Avatar className="h-8 w-8 border-2 border-background">
-                                      <AvatarImage src={project.assignedTo[0].avatar} alt={project.assignedTo[0].name} />
-                                      <AvatarFallback>{project.assignedTo[0].initials}</AvatarFallback>
+                                      <AvatarImage src={user.avatar} alt={user.name} />
+                                      <AvatarFallback>{user.initials}</AvatarFallback>
                                     </Avatar>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{project.assignedTo[0].name}</p>
+                                    <p>{user.name}</p>
                                   </TooltipContent>
                                 </Tooltip>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center justify-end -space-x-2">
-                                {project.assignedTo.map((user) => (
-                                  <Tooltip key={user.id}>
-                                    <TooltipTrigger asChild>
-                                      <Avatar className="h-8 w-8 border-2 border-background">
-                                        <AvatarImage src={user.avatar} alt={user.name} />
-                                        <AvatarFallback>{user.initials}</AvatarFallback>
-                                      </Avatar>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>{user.name}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                ))}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </TooltipProvider>
-              </div>
-            </CollapsibleContent>
-          </div>
-        </Collapsible>
+                              ))}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TooltipProvider>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </PortalLayout>
   );
