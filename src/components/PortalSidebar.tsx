@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -60,6 +60,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     },
     { href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
     { href: "/goals", label: "Goals", icon: Target },
+    { href: "/billing", label: "Billing", icon: CreditCard },
     { href: "/notifications", label: "Notifications", icon: Bell, ...(unreadNotificationCount > 0 && { badge: unreadNotificationCount }) },
   ];
 
