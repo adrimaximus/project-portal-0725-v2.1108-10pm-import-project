@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PortalSidebar from "./PortalSidebar";
 import { useUser } from "@/contexts/UserContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { dummyProjects } from "@/data/projects";
 import { allUsers } from "@/data/users";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -24,10 +24,9 @@ const PortalHeader = () => {
   const { user } = useUser();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<{ projects: any[], users: any[] }>({ projects: [], users: [] });
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  useEffect(() => {
+  const searchResults = useMemo(() => {
     if (searchQuery.length > 1) {
       const projects = dummyProjects.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -35,12 +34,19 @@ const PortalHeader = () => {
       const users = allUsers.filter(u =>
         u.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setSearchResults({ projects, users });
-      setIsSearchOpen(true);
-    } else {
-      setSearchResults({ projects: [], users: [] });
-      setIsSearchOpen(false);
+      return { projects, users };
     }
+    return { projects: [], users: [] };
+  }, [searchQuery]);
+
+  const suggestions = useMemo(() => {
+    if (searchQuery.length <= 1) {
+      return {
+        projects: dummyProjects.slice(0, 2),
+        users: allUsers.slice(0, 2),
+      };
+    }
+    return { projects: [], users: [] };
   }, [searchQuery]);
 
   const handleProjectSelect = (projectId: string) => {
@@ -55,6 +61,14 @@ const PortalHeader = () => {
     setSearchQuery("");
     setIsSearchOpen(false);
   };
+
+  const showSearchResults = searchQuery.length > 1;
+  const showSuggestions = !showSearchResults;
+
+  const isPopoverVisible = isSearchOpen && (
+    (showSearchResults && (searchResults.projects.length > 0 || searchResults.users.length > 0)) ||
+    (showSuggestions && (suggestions.projects.length > 0 || suggestions.users.length > 0))
+  );
 
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
@@ -74,7 +88,7 @@ const PortalHeader = () => {
         </SheetContent>
       </Sheet>
       <div className="w-full flex-1">
-        <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+        <Popover open={isPopoverVisible} onOpenChange={setIsSearchOpen}>
           <PopoverTrigger asChild>
             <div className="relative md:w-2/3 lg:w-1/3">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -84,7 +98,7 @@ const PortalHeader = () => {
                 className="w-full appearance-none bg-muted pl-8 shadow-none"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => searchQuery.length > 1 && setIsSearchOpen(true)}
+                onFocus={() => setIsSearchOpen(true)}
               />
             </div>
           </PopoverTrigger>
@@ -92,7 +106,8 @@ const PortalHeader = () => {
             <Command>
               <CommandList>
                 <CommandEmpty>No results found.</CommandEmpty>
-                {searchResults.projects.length > 0 && (
+                
+                {showSearchResults && searchResults.projects.length > 0 && (
                   <CommandGroup heading="Projects">
                     {searchResults.projects.map((project) => (
                       <CommandItem
@@ -106,7 +121,8 @@ const PortalHeader = () => {
                     ))}
                   </CommandGroup>
                 )}
-                {searchResults.users.length > 0 && (
+                
+                {showSearchResults && searchResults.users.length > 0 && (
                   <CommandGroup heading="Users">
                     {searchResults.users.map((userResult) => (
                       <CommandItem
@@ -123,6 +139,35 @@ const PortalHeader = () => {
                     ))}
                   </CommandGroup>
                 )}
+
+                {showSuggestions && (
+                  <CommandGroup heading="Suggestions">
+                    {suggestions.projects.map((project) => (
+                      <CommandItem
+                        key={`sugg-proj-${project.id}`}
+                        onSelect={() => handleProjectSelect(project.id)}
+                        className="cursor-pointer"
+                      >
+                        <Building className="mr-2 h-4 w-4" />
+                        <span>{project.name}</span>
+                      </CommandItem>
+                    ))}
+                    {suggestions.users.map((userResult) => (
+                      <CommandItem
+                        key={`sugg-user-${userResult.id}`}
+                        onSelect={() => handleUserSelect(userResult.name)}
+                        className="cursor-pointer flex items-center"
+                      >
+                        <Avatar className="mr-2 h-6 w-6">
+                          <AvatarImage src={userResult.avatar} />
+                          <AvatarFallback>{userResult.initials}</AvatarFallback>
+                        </Avatar>
+                        <span>{userResult.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+
               </CommandList>
             </Command>
           </PopoverContent>
