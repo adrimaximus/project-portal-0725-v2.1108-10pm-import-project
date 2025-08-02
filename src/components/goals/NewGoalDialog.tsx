@@ -29,7 +29,7 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
   const [title, setTitle] = useState('');
   const [frequency, setFrequency] = useState<Goal['frequency']>('Daily');
   const [specificDays, setSpecificDays] = useState<string[]>([]);
-  const [icon, setIcon] = useState('Target');
+  const [icon, setIcon] = useState('target');
   const [color, setColor] = useState('#BFDBFE');
 
   const handleSave = () => {
@@ -44,7 +44,7 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
     setTitle('');
     setFrequency('Daily');
     setSpecificDays([]);
-    setIcon('Target');
+    setIcon('target');
     setColor('#BFDBFE');
     onOpenChange(false);
   };
