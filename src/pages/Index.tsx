@@ -40,8 +40,8 @@ const Index = () => {
     from: subYears(new Date(), 1),
     to: new Date(),
   });
-  const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(true);
-  const [isProjectsOpen, setIsProjectsOpen] = useState(true);
+  const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(false);
+  const [isProjectsOpen, setIsProjectsOpen] = useState(false);
 
   const filteredProjects = dummyProjects.filter(project => {
     if (date?.from) {
