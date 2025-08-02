@@ -26,27 +26,23 @@ const PortalHeader = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  const searchResults = useMemo(() => {
-    if (searchQuery.length > 1) {
+  const displayedContent = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+
+    if (query) {
       const projects = dummyProjects.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+        p.name.toLowerCase().includes(query)
       );
       const users = allUsers.filter(u =>
-        u.name.toLowerCase().includes(searchQuery.toLowerCase())
+        u.name.toLowerCase().includes(query)
       );
       return { projects, users };
     }
-    return { projects: [], users: [] };
-  }, [searchQuery]);
 
-  const suggestions = useMemo(() => {
-    if (searchQuery.length <= 1) {
-      return {
-        projects: dummyProjects.slice(0, 2),
-        users: allUsers.slice(0, 2),
-      };
-    }
-    return { projects: [], users: [] };
+    return {
+      projects: dummyProjects.slice(0, 2),
+      users: allUsers.slice(0, 2),
+    };
   }, [searchQuery]);
 
   const handleProjectSelect = (projectId: string) => {
@@ -61,14 +57,6 @@ const PortalHeader = () => {
     setSearchQuery("");
     setIsSearchOpen(false);
   };
-
-  const showSearchResults = searchQuery.length > 1;
-  const showSuggestions = !showSearchResults;
-
-  const isPopoverVisible = isSearchOpen && (
-    (showSearchResults && (searchResults.projects.length > 0 || searchResults.users.length > 0)) ||
-    (showSuggestions && (suggestions.projects.length > 0 || suggestions.users.length > 0))
-  );
 
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
@@ -88,7 +76,7 @@ const PortalHeader = () => {
         </SheetContent>
       </Sheet>
       <div className="w-full flex-1">
-        <Popover open={isPopoverVisible} onOpenChange={setIsSearchOpen}>
+        <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
           <PopoverTrigger asChild>
             <div className="relative md:w-2/3 lg:w-1/3">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -107,11 +95,11 @@ const PortalHeader = () => {
               <CommandList>
                 <CommandEmpty>No results found.</CommandEmpty>
                 
-                {showSearchResults && searchResults.projects.length > 0 && (
-                  <CommandGroup heading="Projects">
-                    {searchResults.projects.map((project) => (
+                {displayedContent.projects.length > 0 && (
+                  <CommandGroup heading={searchQuery ? "Projects" : "Suggested Projects"}>
+                    {displayedContent.projects.map((project) => (
                       <CommandItem
-                        key={project.id}
+                        key={`proj-${project.id}`}
                         onSelect={() => handleProjectSelect(project.id)}
                         className="cursor-pointer"
                       >
@@ -122,39 +110,11 @@ const PortalHeader = () => {
                   </CommandGroup>
                 )}
                 
-                {showSearchResults && searchResults.users.length > 0 && (
-                  <CommandGroup heading="Users">
-                    {searchResults.users.map((userResult) => (
+                {displayedContent.users.length > 0 && (
+                  <CommandGroup heading={searchQuery ? "Users" : "Suggested Users"}>
+                    {displayedContent.users.map((userResult) => (
                       <CommandItem
-                        key={userResult.id}
-                        onSelect={() => handleUserSelect(userResult.name)}
-                        className="cursor-pointer flex items-center"
-                      >
-                        <Avatar className="mr-2 h-6 w-6">
-                          <AvatarImage src={userResult.avatar} />
-                          <AvatarFallback>{userResult.initials}</AvatarFallback>
-                        </Avatar>
-                        <span>{userResult.name}</span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                )}
-
-                {showSuggestions && (
-                  <CommandGroup heading="Suggestions">
-                    {suggestions.projects.map((project) => (
-                      <CommandItem
-                        key={`sugg-proj-${project.id}`}
-                        onSelect={() => handleProjectSelect(project.id)}
-                        className="cursor-pointer"
-                      >
-                        <Building className="mr-2 h-4 w-4" />
-                        <span>{project.name}</span>
-                      </CommandItem>
-                    ))}
-                    {suggestions.users.map((userResult) => (
-                      <CommandItem
-                        key={`sugg-user-${userResult.id}`}
+                        key={`user-${userResult.id}`}
                         onSelect={() => handleUserSelect(userResult.name)}
                         className="cursor-pointer flex items-center"
                       >
