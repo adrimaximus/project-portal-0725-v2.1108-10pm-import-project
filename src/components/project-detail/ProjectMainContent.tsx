@@ -39,25 +39,24 @@ const ProjectMainContent = ({
     <Card>
       <CardContent className="p-4 md:p-6">
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="overview">
-              <LayoutDashboard className="mr-0 sm:mr-2 h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Overview</span>
+              <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline ml-2">Overview</span>
             </TabsTrigger>
             <TabsTrigger value="tasks">
-              <ListChecks className="mr-0 sm:mr-2 h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Tasks</span>
+              <ListChecks className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline ml-2">Tasks</span>
               {totalTasks > 0 && <Badge className="ml-2">{totalTasks}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="comments">
-              <MessageSquare className="mr-0 sm:mr-2 h-4 w-4 flex-shrink-0" />
-              <span className="hidden md:inline">Comments & Tickets</span>
-              <span className="hidden sm:inline md:hidden">Comments</span>
+              <MessageSquare className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline ml-2">Tickets</span>
               {ticketCount > 0 && <Badge className="ml-2 bg-orange-500">{ticketCount}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="activity">
-              <History className="mr-0 sm:mr-2 h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Activity</span>
+              <History className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline ml-2">Activity</span>
             </TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
