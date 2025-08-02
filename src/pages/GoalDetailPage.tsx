@@ -21,6 +21,7 @@ import GoalCollaborationManager from '@/components/goals/GoalCollaborationManage
 import { getIconComponent } from '@/data/icons';
 import { useGoals } from '@/context/GoalsContext';
 import { Badge } from '@/components/ui/badge';
+import { getColorForTag } from '@/lib/utils';
 
 type GoalWithTags = Goal & { tags?: string[] };
 
@@ -111,9 +112,12 @@ const GoalDetailPage = () => {
               <p className="text-muted-foreground">{goal.frequency}</p>
               {goal.tags && goal.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {goal.tags.map(tag => (
-                    <Badge key={tag} variant="secondary">{tag}</Badge>
-                  ))}
+                  {goal.tags.map(tag => {
+                    const { bg, text, border } = getColorForTag(tag);
+                    return (
+                      <Badge key={tag} className={cn("font-normal", bg, text, border)}>{tag}</Badge>
+                    );
+                  })}
                 </div>
               )}
             </div>

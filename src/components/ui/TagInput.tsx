@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getColorForTag } from '@/lib/utils';
 
 interface TagInputProps {
   value: string[];
@@ -33,19 +34,22 @@ export const TagInput = ({ value = [], onChange, placeholder, className }: TagIn
 
   return (
     <div className={cn("border rounded-md p-2 flex flex-wrap items-center gap-2", className)}>
-      {value.map((tag, index) => (
-        <Badge key={index} variant="secondary" className="flex items-center gap-1">
-          {tag}
-          <button
-            type="button"
-            className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            onClick={() => removeTag(index)}
-            aria-label={`Remove ${tag}`}
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
-      ))}
+      {value.map((tag, index) => {
+        const { bg, text, border } = getColorForTag(tag);
+        return (
+          <Badge key={index} className={cn("flex items-center gap-1 font-normal", bg, text, border)}>
+            {tag}
+            <button
+              type="button"
+              className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              onClick={() => removeTag(index)}
+              aria-label={`Remove ${tag}`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        );
+      })}
       <Input
         className="flex-1 border-none shadow-none focus-visible:ring-0 h-auto py-0 px-1 min-w-[100px]"
         value={inputValue}
