@@ -7,6 +7,7 @@ import { dummyProjects, PaymentStatus } from "@/data/projects";
 import { cn } from "@/lib/utils";
 import { format, addDays, isPast } from "date-fns";
 import { DollarSign, Clock, AlertTriangle, Download } from "lucide-react";
+import { Link } from "react-router-dom";
 
 type Invoice = {
   id: string;
@@ -145,7 +146,11 @@ const Billing = () => {
                 {invoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.id}</TableCell>
-                    <TableCell>{invoice.projectName}</TableCell>
+                    <TableCell>
+                      <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
+                        {invoice.projectName}
+                      </Link>
+                    </TableCell>
                     <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
                     <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
                     <TableCell>
