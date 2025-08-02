@@ -100,22 +100,25 @@ const PortalHeader = () => {
         <form onSubmit={handleSearchSubmit}>
           <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
             <PopoverTrigger asChild>
-              <div className="relative md:w-2/3 lg:w-1/3">
+              <label
+                htmlFor="header-search"
+                className="relative block cursor-text md:w-2/3 lg:w-1/3"
+              >
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   ref={searchInputRef}
+                  id="header-search"
                   type="search"
                   placeholder="Search..."
                   className="w-full appearance-none bg-muted pl-8 pr-16 shadow-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onClick={() => setIsSearchOpen(true)}
                   onFocus={() => setIsSearchOpen(true)}
                 />
                 <kbd className="absolute top-1/2 right-2.5 -translate-y-1/2 pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
                   <span className="text-xs">⌘</span>K
                 </kbd>
-              </div>
+              </label>
             </PopoverTrigger>
             <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
               <Command>
