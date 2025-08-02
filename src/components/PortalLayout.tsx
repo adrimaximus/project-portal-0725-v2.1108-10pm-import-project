@@ -1,40 +1,24 @@
-import { useState, ReactNode } from "react";
-import PortalSidebar from "./PortalSidebar";
-import PortalHeader from "./PortalHeader";
-import { Toaster } from "@/components/ui/toaster";
-import { cn } from "@/lib/utils";
+import { useState } from "react";
+import PortalSidebar from "@/components/PortalSidebar";
 
-interface PortalLayoutProps {
-  children: ReactNode;
-  summary?: ReactNode;
-  disableMainScroll?: boolean;
-  noPadding?: boolean;
-}
-
-const PortalLayout = ({ children, summary, disableMainScroll, noPadding }: PortalLayoutProps) => {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+const PortalLayout = ({ children }: { children: React.ReactNode }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSidebar = () => {
-    setIsSidebarCollapsed(!isSidebarCollapsed);
+    setIsCollapsed(!isCollapsed);
   };
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex h-screen w-full bg-muted/40">
       <PortalSidebar
-        isCollapsed={isSidebarCollapsed}
+        isCollapsed={isCollapsed}
         onToggle={toggleSidebar}
       />
-      <div className="flex flex-col flex-1 bg-muted/40">
-        <PortalHeader />
-        <main className={cn(
-          "flex-1",
-          !disableMainScroll && "overflow-auto",
-          !noPadding && "p-4 sm:p-6"
-        )}>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* A header could be placed here if needed in the future */}
+        <main className="flex-1 overflow-hidden">
           {children}
         </main>
-        {summary}
-        <Toaster />
       </div>
     </div>
   );

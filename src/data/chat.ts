@@ -1,114 +1,37 @@
-import { Collaborator } from "@/types";
+export const dummyUsers = [
+  { id: 'user-1', name: 'You', avatar: '/avatars/01.png', initials: 'YOU', online: true },
+  { id: 'user-2', name: 'Alice', avatar: '/avatars/02.png', initials: 'A', online: true },
+  { id: 'user-3', name: 'Bob', avatar: '/avatars/03.png', initials: 'B', online: false },
+  { id: 'user-4', name: 'Charlie', avatar: '/avatars/04.png', initials: 'C', online: true },
+];
 
-export interface Attachment {
-  name: string;
-  url: string;
-  type: 'image' | 'file';
-}
-
-export interface Message {
-  id: string;
-  text: string;
-  timestamp: string;
-  sender: "me" | "other";
-  senderName: string;
-  senderAvatar: string;
-  attachment?: Attachment;
-}
-
-export interface Conversation {
-  id: string;
-  userName: string; // For groups, this will be the group name
-  userAvatar?: string; // Optional for groups
-  lastMessage: string;
-  lastMessageTimestamp: string;
-  unreadCount: number;
-  messages: Message[];
-  isGroup?: boolean;
-  members?: Collaborator[];
-}
-
-export const dummyConversations: Conversation[] = [
+export const dummyConversations = [
   {
-    id: "1",
-    userName: "John Doe",
-    userAvatar: "https://i.pravatar.cc/150?u=john",
-    lastMessage: "Hey, how's the project going?",
-    lastMessageTimestamp: "10:30 AM",
+    id: 'convo-1',
+    participants: ['user-1', 'user-2'],
     unreadCount: 2,
-    isGroup: false,
     messages: [
-      {
-        id: 'msg-1',
-        text: "Hey, how's the project going?",
-        timestamp: "10:30 AM",
-        sender: "other",
-        senderName: "John Doe",
-        senderAvatar: "https://i.pravatar.cc/150?u=john",
-      },
-      {
-        id: 'msg-2',
-        text: "Pretty good! I'm almost done with the new feature.",
-        timestamp: "10:31 AM",
-        sender: "me",
-        senderName: "You",
-        senderAvatar: "https://i.pravatar.cc/150?u=me",
-      },
+      { id: 'msg-1', sender: 'user-2', content: 'Hey, how is the project going?', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
+      { id: 'msg-2', sender: 'user-1', content: 'Pretty good! Just wrapping up the dashboard.', timestamp: new Date(Date.now() - 1000 * 60 * 50).toISOString() },
+      { id: 'msg-3', sender: 'user-2', content: 'Great to hear!', timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
+      { id: 'msg-4', sender: 'user-2', content: 'Let me know if you need help with the charts.', timestamp: new Date(Date.now() - 1000 * 60 * 44).toISOString() },
     ],
   },
   {
-    id: "2",
-    userName: "Jane Smith",
-    userAvatar: "https://i.pravatar.cc/150?u=jane",
-    lastMessage: "Can you send me the report?",
-    lastMessageTimestamp: "Yesterday",
+    id: 'convo-2',
+    participants: ['user-1', 'user-3'],
     unreadCount: 0,
-    isGroup: false,
     messages: [
-      {
-        id: 'msg-3',
-        text: "Can you send me the report?",
-        timestamp: "Yesterday",
-        sender: "other",
-        senderName: "Jane Smith",
-        senderAvatar: "https://i.pravatar.cc/150?u=jane",
-      },
+      { id: 'msg-5', sender: 'user-3', content: 'Can you check the latest invoice?', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
+      { id: 'msg-6', sender: 'user-1', content: 'Sure, I will take a look this afternoon.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2 + 1000 * 60 * 5).toISOString() },
     ],
   },
   {
-    id: "3",
-    userName: "Project Team",
-    lastMessage: "I've attached the agenda.",
-    lastMessageTimestamp: "Yesterday",
-    unreadCount: 5,
-    isGroup: true,
-    members: [
-        { id: '1', name: 'Alex', src: 'https://i.pravatar.cc/150?u=alex', fallback: 'A', online: true },
-        { id: '2', name: 'Beth', src: 'https://i.pravatar.cc/150?u=beth', fallback: 'B', online: false },
-        { id: '3', name: 'Charlie', src: 'https://i.pravatar.cc/150?u=charlie', fallback: 'C', online: true },
-    ],
+    id: 'convo-3',
+    participants: ['user-1', 'user-4'],
+    unreadCount: 1,
     messages: [
-      {
-        id: 'msg-4',
-        text: "Don't forget the meeting at 3 PM.",
-        timestamp: "Yesterday",
-        sender: "other",
-        senderName: "Alex",
-        senderAvatar: "https://i.pravatar.cc/150?u=alex",
-      },
-      {
-        id: 'msg-5',
-        text: "I've attached the agenda.",
-        timestamp: "Yesterday",
-        sender: "other",
-        senderName: "Alex",
-        senderAvatar: "https://i.pravatar.cc/150?u=alex",
-        attachment: {
-          name: "meeting-agenda.pdf",
-          url: "#",
-          type: "file"
-        }
-      }
+      { id: 'msg-7', sender: 'user-4', content: 'Meeting at 3 PM today.', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
     ],
   },
 ];
