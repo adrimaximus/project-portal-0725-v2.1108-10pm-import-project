@@ -4,7 +4,7 @@ import { useUser } from "@/contexts/UserContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Paperclip, Send, Ticket, Folder, MessageSquare, X } from "lucide-react";
+import { Paperclip, Send, Ticket, Folder, MessageSquare, X, CheckCircle } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
@@ -193,43 +193,56 @@ const ProjectComments = ({
             </div>
         </div>
         <div className="space-y-4">
-          {filteredItems.map(item => (
-            <div key={item.id} className="flex items-start space-x-3 p-3 rounded-lg">
-              <Avatar>
-                <AvatarImage src={item.author.avatar} />
-                <AvatarFallback>{item.author.name.slice(0, 2)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-card-foreground flex items-center gap-2">
-                    {item.author.name}
-                    {item.isTicket && (
-                      <span className="flex items-center gap-1.5 text-xs font-semibold bg-orange-500/20 text-orange-800 px-2 py-0.5 rounded-full">
-                        <Ticket className="h-3 w-3" />
-                        Ticket
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true, locale: id })}
-                  </p>
-                </div>
-                <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{
-                  __html: item.text
-                    .replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<span class="bg-blue-100 text-blue-600 font-semibold rounded-sm px-1">@$1</span>')
-                    .replace(/\/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="/projects/$2" class="text-blue-600 hover:underline font-medium">$1</a>')
-                }} />
-                {item.attachment && (
-                  <div className="mt-2">
-                    <a href={item.attachment.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md">
-                      <Paperclip className="h-4 w-4" />
-                      {item.attachment.name}
-                    </a>
+          {filteredItems.map(item => {
+            const isTicketCompleted = item.isTicket && project.tasks?.find(t => t.originTicketId === item.id)?.completed;
+
+            return (
+              <div key={item.id} className="flex items-start space-x-3 p-3 rounded-lg">
+                <Avatar>
+                  <AvatarImage src={item.author.avatar} />
+                  <AvatarFallback>{item.author.name.slice(0, 2)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-card-foreground flex items-center gap-2">
+                      {item.author.name}
+                      {item.isTicket && (
+                        <>
+                          {isTicketCompleted ? (
+                            <span className="flex items-center gap-1 text-xs font-semibold bg-green-600 text-white px-2.5 py-1 rounded-full">
+                              <CheckCircle className="h-3 w-3" />
+                              Done
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-xs font-semibold bg-red-500 text-white px-2.5 py-1 rounded-full">
+                              <Ticket className="h-3 w-3" />
+                              Ticket
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true, locale: id })}
+                    </p>
                   </div>
-                )}
+                  <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{
+                    __html: item.text
+                      .replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<span class="bg-blue-100 text-blue-600 font-semibold rounded-sm px-1">@$1</span>')
+                      .replace(/\/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="/projects/$2" class="text-blue-600 hover:underline font-medium">$1</a>')
+                  }} />
+                  {item.attachment && (
+                    <div className="mt-2">
+                      <a href={item.attachment.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md">
+                        <Paperclip className="h-4 w-4" />
+                        {item.attachment.name}
+                      </a>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {filteredItems.length === 0 && (
             <div className="text-center py-10 text-muted-foreground">
                 <MessageSquare className="mx-auto h-12 w-12" />
