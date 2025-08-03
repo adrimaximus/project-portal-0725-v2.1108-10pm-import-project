@@ -221,7 +221,7 @@ const FeatureSettingsPage = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Last Active</TableHead>
-                    <TableHead>Role</TableHead>
+                    <TableHead className="w-[180px]">Role</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -249,7 +249,7 @@ const FeatureSettingsPage = () => {
                           <Badge variant={getStatusBadgeVariant(member.status)}>Suspended</Badge>
                         ) : (
                           <Select defaultValue={member.role.toLowerCase().replace(/\s+/g, '-')}>
-                            <SelectTrigger className="w-[120px] h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent">
+                            <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
