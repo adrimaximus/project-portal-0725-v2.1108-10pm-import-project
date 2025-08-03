@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { formatNumber, formatValue } from '@/lib/formatting';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import AiCoachInsight from './AiCoachInsight';
+import { useMemo } from 'react';
 
 interface GoalProgressChartProps {
   goal: Goal;
@@ -15,17 +16,35 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
   }
 
   const currentYear = getYear(new Date());
-  const monthlyTotals = Array(12).fill(0);
-  let totalProgress = 0;
 
-  goal.completions.forEach(completion => {
-    const completionDate = parseISO(completion.date);
-    if (getYear(completionDate) === currentYear) {
-      const monthIndex = getMonth(completionDate);
-      monthlyTotals[monthIndex] += completion.value;
-      totalProgress += completion.value;
-    }
-  });
+  const { monthlyContributions, totalProgress, allAchievers, colorMap } = useMemo(() => {
+    // Initialize an array of 12 empty objects, one for each month
+    const monthlyContributions: { [achiever: string]: number }[] = Array.from({ length: 12 }, () => ({}));
+    let totalProgress = 0;
+    const achieverSet = new Set<string>();
+
+    goal.completions.forEach(completion => {
+      achieverSet.add(completion.achiever);
+      const completionDate = parseISO(completion.date);
+      if (getYear(completionDate) === currentYear) {
+        const monthIndex = getMonth(completionDate);
+        // Add completion value to the specific achiever's total for that month
+        monthlyContributions[monthIndex][completion.achiever] = (monthlyContributions[monthIndex][completion.achiever] || 0) + completion.value;
+        totalProgress += completion.value;
+      }
+    });
+
+    const allAchievers = Array.from(achieverSet);
+    const colors = ['#3b82f6', '#16a34a', '#ef4444', '#eab308', '#8b5cf6', '#db2777'];
+    const colorMap = allAchievers.reduce((acc, achiever, i) => {
+      acc[achiever] = colors[i % colors.length];
+      return acc;
+    }, {} as { [key: string]: string });
+
+    return { monthlyContributions, totalProgress, allAchievers, colorMap };
+  }, [goal, currentYear]);
+
+  const monthlyTotals = monthlyContributions.map(month => Object.values(month).reduce((sum, val) => sum + val, 0));
 
   const getMonthlyTarget = () => {
     const target = goal.type === 'quantity' ? goal.targetQuantity : goal.targetValue;
@@ -39,11 +58,7 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
   };
 
   const monthlyTarget = getMonthlyTarget();
-  // The chart's vertical scale should be based on the monthly target,
-  // but if any month's progress exceeds the target, the scale should adjust to the highest value.
-  // We also ensure it's at least 1 to avoid division by zero.
   const chartMax = Math.max(monthlyTarget || 0, ...monthlyTotals, 1);
-
   const unit = goal.type === 'value' ? goal.unit : '';
 
   const formatProgress = (value: number) => {
@@ -91,39 +106,54 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
       </CardHeader>
       <CardContent>
         <div className="flex h-48 w-full items-end gap-2 rounded-md bg-muted/50 p-4" aria-label="Monthly progress chart">
-          {monthlyTotals.map((value, index) => {
+          {monthlyContributions.map((contributions, index) => {
             const monthName = format(new Date(currentYear, index, 1), 'MMM');
-            const heightPercentage = (value / chartMax) * 100;
+            const totalMonthValue = monthlyTotals[index];
             const targetHeightPercentage = monthlyTarget ? (monthlyTarget / chartMax) * 100 : 0;
+            let accumulatedHeight = 0;
 
             return (
               <TooltipProvider key={index}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="relative h-full flex-1">
-                      <div
-                        className="absolute bottom-0 w-full rounded-t-md transition-all duration-300 hover:opacity-80"
-                        style={{
-                          height: `${heightPercentage}%`,
-                          backgroundColor: goal.color,
-                        }}
-                        aria-label={`Progress for ${monthName}: ${formatProgress(value)}`}
-                      />
+                    <div className="relative h-full flex-1 cursor-pointer">
+                      {Object.entries(contributions)
+                        .sort(([a], [b]) => a.localeCompare(b)) // Sort for consistent stack order
+                        .map(([achiever, value]) => {
+                          const heightPercentage = (value / chartMax) * 100;
+                          const bottomPosition = accumulatedHeight;
+                          accumulatedHeight += heightPercentage;
+                          return (
+                            <div
+                              key={achiever}
+                              className="absolute w-full transition-all duration-300 hover:opacity-80"
+                              style={{
+                                height: `${heightPercentage}%`,
+                                bottom: `${bottomPosition}%`,
+                                backgroundColor: colorMap[achiever] || '#9ca3af', // gray-400
+                              }}
+                              aria-label={`Progress by ${achiever}: ${formatProgress(value)}`}
+                            />
+                          );
+                      })}
                       {monthlyTarget && targetHeightPercentage > 0 && (
                          <div
                           className="absolute left-0 w-full border-t-2 border-dashed border-foreground/50"
-                          style={{
-                            bottom: `${targetHeightPercentage}%`,
-                          }}
+                          style={{ bottom: `${targetHeightPercentage}%` }}
                           aria-label={`Monthly Target: ${formatProgress(monthlyTarget)}`}
                         />
                       )}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="font-bold">{monthName}</p>
-                    <p>Progress: {formatProgress(value)}</p>
-                    {monthlyTarget && <p>Target: {formatProgress(monthlyTarget)}</p>}
+                    <p className="font-bold">{monthName} - {formatProgress(totalMonthValue)}</p>
+                    {Object.entries(contributions).map(([achiever, value]) => (
+                      <div key={achiever} className="flex items-center gap-2 text-sm">
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: colorMap[achiever] }} />
+                        <span>{achiever}: {formatProgress(value)}</span>
+                      </div>
+                    ))}
+                    {monthlyTarget && <p className="mt-2 pt-2 border-t">Target: {formatProgress(monthlyTarget)}</p>}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -137,6 +167,16 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
             </div>
           ))}
         </div>
+        {allAchievers.length > 1 && (
+          <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm">
+            {allAchievers.map(achiever => (
+              <div key={achiever} className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: colorMap[achiever] }} />
+                <span>{achiever}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <AiCoachInsight goal={goal} progress={overallPercentage !== null ? { percentage: overallPercentage } : null} />
       </CardContent>
     </Card>
