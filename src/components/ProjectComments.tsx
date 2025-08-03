@@ -1,107 +1,20 @@
 import { useState, useMemo } from "react";
-import { Project, Comment, dummyProjects } from "@/data/projects";
-import { useUser } from "@/contexts/UserContext";
+import { Project, Comment } from "@/data/projects";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Paperclip, Send, Ticket, Folder, MessageSquare, X } from "lucide-react";
+import { Paperclip, Ticket, MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import { cn } from "@/lib/utils";
-import './mentions-style.css';
 
 interface ProjectCommentsProps {
   project: Project;
-  onAddCommentOrTicket: (comment: Comment) => void;
 }
 
 const ProjectComments = ({
   project,
-  onAddCommentOrTicket,
 }: ProjectCommentsProps) => {
-  const { user: currentUser } = useUser();
-  const [newCommentText, setNewCommentText] = useState("");
-  const [isTicket, setIsTicket] = useState(false);
-  const [attachment, setAttachment] = useState<File | null>(null);
   const [filter, setFilter] = useState<'all' | 'comments' | 'tickets'>('all');
-
-  const usersForMentions = project.assignedTo.map(user => ({
-    id: user.id,
-    display: user.name,
-    avatar: user.avatar,
-    initials: user.initials,
-  }));
-
-  const projectsForMentions = dummyProjects.map(p => ({
-    id: p.id,
-    display: p.name,
-  }));
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setAttachment(e.target.files[0]);
-    }
-  };
-
-  const handleRemoveAttachment = () => {
-    setAttachment(null);
-    const fileInput = document.getElementById('comment-attachment') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = "";
-    }
-  };
-
-  const handleSubmit = () => {
-    if (newCommentText.trim() === "" && !attachment) return;
-
-    const newComment: Comment = {
-      id: `item-${Date.now()}`,
-      author: currentUser,
-      text: newCommentText,
-      timestamp: new Date().toISOString(),
-      isTicket: isTicket,
-      attachment: attachment ? { name: attachment.name, url: URL.createObjectURL(attachment) } : undefined,
-    };
-
-    onAddCommentOrTicket(newComment);
-    setNewCommentText("");
-    setIsTicket(false);
-    setAttachment(null);
-    const fileInput = document.getElementById('comment-attachment') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = "";
-    }
-  };
-
-  const renderUserSuggestion = (
-    suggestion: SuggestionDataItem & { avatar?: string; initials?: string },
-    search: string,
-    highlightedDisplay: React.ReactNode,
-    index: number,
-    focused: boolean
-  ) => (
-    <div className={`mentions__suggestions__item ${focused ? 'mentions__suggestions__item--focused' : ''}`}>
-      <Avatar className="h-8 w-8">
-        <AvatarImage src={suggestion.avatar} />
-        <AvatarFallback>{suggestion.initials}</AvatarFallback>
-      </Avatar>
-      <span>{highlightedDisplay}</span>
-    </div>
-  );
-
-  const renderProjectSuggestion = (
-    suggestion: SuggestionDataItem,
-    search: string,
-    highlightedDisplay: React.ReactNode,
-    index: number,
-    focused: boolean
-  ) => (
-    <div className={`mentions__suggestions__item ${focused ? 'mentions__suggestions__item--focused' : ''}`}>
-      <Folder className="h-5 w-5 text-muted-foreground" />
-      <span>{highlightedDisplay}</span>
-    </div>
-  );
 
   const sortedItems = useMemo(() => 
     [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
@@ -114,74 +27,8 @@ const ProjectComments = ({
     return sortedItems;
   }, [filter, sortedItems]);
 
-  const placeholderText = isTicket
-    ? "Create a new ticket... Describe the issue or task."
-    : "Add a comment... Type '@' to mention, '/' to link.";
-
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Discussion</h3>
-        
-        <div className={cn(
-          "rounded-lg border bg-background transition-all",
-          isTicket && "border-orange-500/50 ring-2 ring-orange-500/20"
-        )}>
-          <div className="relative">
-            <MentionsInput
-              value={newCommentText}
-              onChange={(e) => setNewCommentText(e.target.value)}
-              placeholder={placeholderText}
-              className="mentions"
-              a11ySuggestionsListLabel="Suggested mentions"
-            >
-              <Mention
-                trigger="@"
-                data={usersForMentions}
-                renderSuggestion={renderUserSuggestion}
-                markup="@[__display__](__id__)"
-                className="mentions__mention"
-              />
-              <Mention
-                trigger="/"
-                data={projectsForMentions}
-                renderSuggestion={renderProjectSuggestion}
-                markup="/[__display__](__id__)"
-                className="mentions__mention"
-              />
-            </MentionsInput>
-            <div className="absolute bottom-2 right-2 flex items-center gap-1">
-              <Button variant="ghost" size="icon" asChild>
-                <Label htmlFor="comment-attachment" className="cursor-pointer h-9 w-9 flex items-center justify-center">
-                  <Paperclip className="h-4 w-4" />
-                  <input id="comment-attachment" type="file" className="sr-only" onChange={handleFileChange} />
-                </Label>
-              </Button>
-              <Button 
-                variant={isTicket ? "secondary" : "ghost"} 
-                size="icon" 
-                onClick={() => setIsTicket(!isTicket)}
-                className={cn("h-9 w-9", isTicket && "text-orange-600")}
-              >
-                <Ticket className="h-4 w-4" />
-              </Button>
-              <Button size="icon" onClick={handleSubmit} disabled={!newCommentText.trim() && !attachment} className="h-9 w-9">
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          {attachment && (
-            <div className="text-sm text-muted-foreground flex items-center gap-2 px-3 py-2 border-t">
-              <Paperclip className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate flex-1">{attachment.name}</span>
-              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveAttachment}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-
       <div className="space-y-4">
         <div className="flex items-center gap-2">
             <h4 className="text-md font-semibold">History</h4>
