@@ -28,8 +28,8 @@ const ProjectHeader = ({
   canEdit,
 }: ProjectHeaderProps) => {
   return (
-    <header className="sticky top-0 z-20 flex flex-col gap-4 border-b bg-background -mx-4 md:-mx-8 px-4 md:px-8 pb-4 -mt-4 md:-mt-8">
-      <div className="pt-4 md:pt-8">
+    <header className="flex flex-col gap-4 border-b bg-background px-4 sm:px-6">
+      <div className="pt-4 md:pt-8 pb-4">
         <Button variant="ghost" asChild className="-ml-4">
           <Link to="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -37,7 +37,7 @@ const ProjectHeader = ({
           </Link>
         </Button>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-4">
         <div className="flex items-center gap-4">
           {isEditing ? (
             <Input

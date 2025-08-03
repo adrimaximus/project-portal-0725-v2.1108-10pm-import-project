@@ -9,11 +9,12 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 type PortalLayoutProps = {
   children: ReactNode;
   summary?: ReactNode;
+  pageHeader?: ReactNode;
   disableMainScroll?: boolean;
   noPadding?: boolean;
 };
 
-const PortalLayout = ({ children, summary, disableMainScroll, noPadding }: PortalLayoutProps) => {
+const PortalLayout = ({ children, summary, pageHeader, disableMainScroll, noPadding }: PortalLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSidebar = () => {
@@ -28,7 +29,7 @@ const PortalLayout = ({ children, summary, disableMainScroll, noPadding }: Porta
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-background px-4 sm:h-[60px] sm:px-6">
+        <header className="relative z-30 flex h-14 shrink-0 items-center gap-4 border-b bg-background px-4 sm:h-[60px] sm:px-6">
           {/* Mobile Sidebar: Uses a Sheet component */}
           <Sheet>
             <SheetTrigger asChild>
@@ -46,6 +47,7 @@ const PortalLayout = ({ children, summary, disableMainScroll, noPadding }: Porta
           {summary}
           <GlobalSearch />
         </header>
+        {pageHeader}
         <main
           className={cn(
             "flex-1",
