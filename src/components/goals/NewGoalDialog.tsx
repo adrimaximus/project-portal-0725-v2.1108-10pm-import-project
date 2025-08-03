@@ -12,7 +12,7 @@ import ColorPicker from './ColorPicker';
 interface NewGoalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGoalCreate: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => void;
+  onGoalCreate: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators' | 'description' | 'tags'>) => void;
 }
 
 const weekDays = [
@@ -36,12 +36,10 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
     if (!title) return;
     onGoalCreate({
       title,
-      description: '',
       frequency,
       specificDays: frequency === 'Weekly' ? specificDays : [],
       icon,
       color,
-      tags: [],
     });
     setTitle('');
     setFrequency('Daily');
