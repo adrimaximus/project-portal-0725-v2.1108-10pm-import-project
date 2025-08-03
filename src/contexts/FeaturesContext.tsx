@@ -1,7 +1,21 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { defaultFeatures, Feature } from '@/data/features';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { initialFeatures, Feature } from '@/data/features';
 
-const FEATURES_STORAGE_KEY = 'app_features';
+const getStoredFeatures = (): Feature[] => {
+  try {
+    const stored = localStorage.getItem('features');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.every(item => 'id' in item && 'status' in item)) {
+        const featureMap = new Map(parsed.map(f => [f.id, f]));
+        return initialFeatures.map(f => featureMap.has(f.id) ? { ...f, status: featureMap.get(f.id).status } : f);
+      }
+    }
+  } catch (error) {
+    console.error("Failed to parse features from localStorage", error);
+  }
+  return initialFeatures;
+};
 
 interface FeaturesContextType {
   features: Feature[];
@@ -12,52 +26,31 @@ interface FeaturesContextType {
 const FeaturesContext = createContext<FeaturesContextType | undefined>(undefined);
 
 export const FeaturesProvider = ({ children }: { children: ReactNode }) => {
-  const [features, setFeatures] = useState<Feature[]>(() => {
-    try {
-      const storedFeaturesJSON = localStorage.getItem(FEATURES_STORAGE_KEY);
-      if (storedFeaturesJSON) {
-        const storedFeatures: Feature[] = JSON.parse(storedFeaturesJSON);
-        const storedFeaturesMap = new Map(storedFeatures.map(f => [f.id, f]));
-        
-        // Merge default features with stored features to add new ones
-        const mergedFeatures = defaultFeatures.map(defaultFeature => {
-          const storedFeature = storedFeaturesMap.get(defaultFeature.id);
-          return storedFeature ? storedFeature : defaultFeature;
-        });
-        
-        return mergedFeatures;
-      }
-    } catch (error) {
-      console.error("Failed to load features from localStorage", error);
-    }
-    return defaultFeatures;
-  });
+  const [features, setFeatures] = useState<Feature[]>(getStoredFeatures);
 
   useEffect(() => {
     try {
-      localStorage.setItem(FEATURES_STORAGE_KEY, JSON.stringify(features));
+      localStorage.setItem('features', JSON.stringify(features));
     } catch (error) {
       console.error("Failed to save features to localStorage", error);
     }
   }, [features]);
 
   const toggleFeatureStatus = (featureId: string) => {
-    // Prevent disabling the settings page itself
     if (featureId === 'settings') return;
-
     setFeatures(prevFeatures =>
       prevFeatures.map(feature =>
         feature.id === featureId
-          ? { ...feature, status: feature.status === 'enabled' ? 'upgrade' : 'enabled' }
+          ? { ...feature, status: feature.status === 'enabled' ? 'disabled' : 'enabled' }
           : feature
       )
     );
   };
 
-  const isFeatureEnabled = (featureId: string) => {
+  const isFeatureEnabled = useCallback((featureId: string): boolean => {
     const feature = features.find(f => f.id === featureId);
     return feature ? feature.status === 'enabled' : false;
-  };
+  }, [features]);
 
   return (
     <FeaturesContext.Provider value={{ features, toggleFeatureStatus, isFeatureEnabled }}>

@@ -1,70 +1,90 @@
-export type Feature = {
+export type FeatureStatus = 'enabled' | 'disabled';
+
+export interface Feature {
   id: string;
   name: string;
   description: string;
-  status: 'enabled' | 'upgrade';
-};
+  status: FeatureStatus;
+  path: string;
+}
 
-// This will be the default state if nothing is in localStorage.
-export const defaultFeatures: Feature[] = [
-  { 
-    id: 'dashboard',
-    name: 'Dashboard', 
-    description: 'Get a complete overview of all your projects and activities.', 
-    status: 'enabled' 
-  },
-  { 
+// Berdasarkan rute di App.tsx dan fitur aplikasi umum.
+export const initialFeatures: Feature[] = [
+  {
     id: 'projects',
-    name: 'Projects', 
-    description: 'Organize your work into distinct projects with tasks and deadlines.', 
-    status: 'enabled' 
+    name: 'Projects',
+    description: 'Manage your projects and track their progress.',
+    status: 'enabled',
+    path: '/projects',
   },
-  { 
+  {
     id: 'request',
-    name: 'Request', 
-    description: 'Submit new work requests through a formal, trackable process.', 
-    status: 'enabled' 
+    name: 'Request Feature',
+    description: 'Request new features or improvements.',
+    status: 'enabled',
+    path: '/request',
   },
-  { 
+  {
     id: 'chat',
-    name: 'Chat', 
-    description: 'Real-time communication with your team and collaborators.', 
-    status: 'enabled' 
+    name: 'Chat',
+    description: 'Communicate with your team in real-time.',
+    status: 'enabled',
+    path: '/chat',
   },
-  { 
+  {
     id: 'mood-tracker',
-    name: 'Mood Tracker', 
-    description: 'Log and monitor team morale and well-being over time.', 
-    status: 'enabled' 
+    name: 'Mood Tracker',
+    description: 'Track your mood and well-being over time.',
+    status: 'enabled',
+    path: '/mood-tracker',
   },
-  { 
+  {
     id: 'goals',
-    name: 'Goals', 
-    description: 'Set, track, and manage project and personal objectives.', 
-    status: 'enabled' 
+    name: 'Goals',
+    description: 'Set and track personal or team goals.',
+    status: 'enabled',
+    path: '/goals',
   },
-  { 
+  {
     id: 'billing',
-    name: 'Billing', 
-    description: 'Manage invoices, payments, and view your subscription details.', 
-    status: 'enabled' 
+    name: 'Billing',
+    description: 'Manage your subscription and payment methods.',
+    status: 'enabled',
+    path: '/billing',
   },
-  { 
+  {
     id: 'notifications',
-    name: 'Notifications', 
-    description: 'Receive timely updates on important activities and mentions.', 
-    status: 'enabled' 
+    name: 'Notifications',
+    description: 'Stay updated with important events and alerts.',
+    status: 'enabled',
+    path: '/notifications',
+  },
+  {
+    id: 'profile',
+    name: 'Profile',
+    description: 'Manage your personal information and settings.',
+    status: 'enabled',
+    path: '/profile',
+  },
+  {
+    id: 'search',
+    name: 'Search',
+    description: 'Quickly find anything across your workspace.',
+    status: 'enabled',
+    path: '/search',
+  },
+  {
+    id: 'user-management',
+    name: 'User Management',
+    description: 'Manage users, roles, and permissions for your team.',
+    status: 'enabled',
+    path: '/users',
   },
   {
     id: 'settings',
     name: 'Settings',
-    description: 'Manage platform features and user profile.',
-    status: 'enabled'
+    description: 'Configure application features and preferences.',
+    status: 'enabled',
+    path: '/settings',
   },
-  {
-    id: 'custom-links',
-    name: 'Custom Links',
-    description: 'Add your own custom links to the sidebar for quick access.',
-    status: 'enabled'
-  }
 ];
