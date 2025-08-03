@@ -194,7 +194,7 @@ const FeatureSettingsPage = () => {
                             }}
                           >
                             <SelectTrigger id={`role-${invite.id}`} className="w-[220px]">
-                              <SelectValue placeholder="Select a role" />
+                              {defaultRoles.find(r => r.value === invite.role)?.label ?? <span className="text-muted-foreground">Select a role</span>}
                             </SelectTrigger>
                             <SelectContent>
                               {defaultRoles.map(role => (
