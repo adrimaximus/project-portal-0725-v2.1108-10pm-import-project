@@ -1,5 +1,9 @@
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, RefreshCw } from 'lucide-react';
 import { User } from '@/data/users';
+import { useEffect, useState } from 'react';
+import { generateAiInsight } from '@/lib/openai';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MonthlyData {
     name: string;
@@ -35,50 +39,46 @@ const AiCoachInsight = ({
     selectedMonth,
     collaborators,
     color,
+    frequency,
 }: AiCoachInsightProps) => {
+    const [insight, setInsight] = useState<string>('');
+    const [isLoading, setIsLoading] = useState<boolean>(true);
 
     const hasCollaborators = collaborators.length > 0;
-    const collaboratorText = hasCollaborators ? `You and ${collaborators[0].name}${collaborators.length > 1 ? ` & your team` : ''}` : userName;
-    const collaboratorPronoun = hasCollaborators ? 'your team is' : 'you are';
-    const collaboratorAction = hasCollaborators ? 'are working together' : 'are working';
+    const collaboratorText = hasCollaborators ? `Anda dan ${collaborators[0].name}${collaborators.length > 1 ? ` & tim Anda` : ''}` : userName;
 
-    const getMonthlyInsight = (month: MonthlyData) => {
-        const { name, percentage, completedCount, possibleCount } = month;
-        if (possibleCount === 0) {
-            return `It looks like there were no scheduled days for "${goalTitle}" in ${name}, so no progress to report. A good time to plan for the future!`;
+    const buildPrompt = (): string => {
+        let prompt = `Tujuan: "${goalTitle}" (Deskripsi: "${goalDescription}"). Tag: #${goalTags.join(', #')}. Frekuensi: ${frequency}. `;
+        prompt += `Pengguna adalah ${userName}. `;
+
+        if (hasCollaborators) {
+            prompt += `Mereka berkolaborasi dengan ${collaborators.map(c => c.name).join(', ')}. `;
         }
-        if (percentage >= 90) {
-            return `Incredible work in ${name}, ${collaboratorText}! A ${percentage}% success rate (${completedCount}/${possibleCount}) is outstanding. Your dedication to this goal, especially in areas like #${goalTags[0]}, is truly paying off. Keep that amazing momentum going!`;
+
+        if (selectedMonth) {
+            const { name, percentage, completedCount, possibleCount } = selectedMonth;
+            prompt += `Analisis performa mereka untuk bulan ${name}, ${displayYear}. `;
+            prompt += `Statistik: ${completedCount}/${possibleCount} penyelesaian (${percentage}% tingkat keberhasilan). `;
+            prompt += `Berikan mereka wawasan motivasi berdasarkan performa bulanan ini. Sapa mereka sebagai ${collaboratorText}.`;
+        } else {
+            prompt += `Analisis performa keseluruhan mereka untuk tahun ${displayYear}. `;
+            prompt += `Statistik: ${totalCompleted}/${totalPossible} total penyelesaian (${overallPercentage}% tingkat keberhasilan). `;
+            prompt += `Berikan mereka wawasan motivasi berdasarkan performa tahunan ini. Sapa mereka sebagai ${collaboratorText}.`;
         }
-        if (percentage >= 70) {
-            return `Fantastic job in ${name}! ${collaboratorText} hit a ${percentage}% completion rate. ${collaboratorPronoun} building a seriously strong habit. What's one small thing you could tweak to aim for 90% next month?`;
-        }
-        if (percentage >= 50) {
-            return `Solid effort in ${name}, ${userName}. A ${percentage}% completion rate shows ${collaboratorAction} on the right track with "${goalTitle}". You're halfway there! Let's brainstorm: what's the biggest hurdle you faced this month? Overcoming that is the key to the next level.`;
-        }
-        if (percentage > 0) {
-            return `Progress is progress! ${collaboratorText} completed this ${completedCount} out of ${possibleCount} times in ${name}. Every step forward counts. Let's reflect: what was the biggest challenge? Acknowledging it is the first step to beating it next time.`;
-        }
-        return `It looks like ${name} was a tough month for "${goalTitle}". That's okay, it happens to everyone. The most important thing is to not get discouraged. A new month is a fresh start. Let's get back on track together! What support do you need?`;
+        return prompt;
     };
 
-    const getYearlyInsight = () => {
-        if (totalPossible === 0) {
-            return `Welcome to your goal: "${goalTitle}"! This is the beginning of an exciting journey. Remember why you started: "${goalDescription}". Let's start tracking and make ${displayYear} a year of growth!`;
-        }
-        if (overallPercentage >= 80) {
-            return `Phenomenal consistency, ${userName}! An overall completion rate of ${overallPercentage}% for the year shows incredible dedication. ${collaboratorText} have truly embodied the spirit of this goal. What has been the most rewarding part of this journey so far?`;
-        }
-        if (overallPercentage >= 50) {
-            return `Great work this year! With a ${overallPercentage}% success rate, ${collaboratorPronoun} well on your way to making "${goalTitle}" a long-term habit. Think back to where you started. The progress is real. Keep building on this strong foundation.`;
-        }
-        if (overallPercentage > 20) {
-            return `A great start to the year for "${goalTitle}"! You've completed it ${totalCompleted} times. Consistency is built one day at a time. Remember your "why": *${goalDescription}*. Keep that in mind as you continue to build this positive habit.`;
-        }
-        return `The journey of a thousand miles begins with a single step. You've started tracking "${goalTitle}" and that's the most important part. Every check-in is a win. Let's keep building from here!`;
+    const fetchInsight = async () => {
+        setIsLoading(true);
+        const prompt = buildPrompt();
+        const generatedInsight = await generateAiInsight(prompt);
+        setInsight(generatedInsight);
+        setIsLoading(false);
     };
 
-    const insight = selectedMonth ? getMonthlyInsight(selectedMonth) : getYearlyInsight();
+    useEffect(() => {
+        fetchInsight();
+    }, [selectedMonth, displayYear, totalCompleted, totalPossible]);
 
     const insightBoxStyle = {
         backgroundColor: `${color}1A`,
@@ -92,9 +92,29 @@ const AiCoachInsight = ({
     };
 
     return (
-        <div className="mt-4 flex items-start gap-3 rounded-lg border p-3" style={insightBoxStyle}>
-            <Lightbulb className="h-5 w-5 flex-shrink-0 mt-0.5" style={insightTextStyle} />
-            <p className="text-sm leading-relaxed" style={pStyle}>{insight}</p>
+        <div className="mt-4 rounded-lg border p-3" style={insightBoxStyle}>
+            <div className="flex items-start gap-3">
+                <Lightbulb className="h-5 w-5 flex-shrink-0 mt-0.5" style={insightTextStyle} />
+                <div className="flex-1">
+                    {isLoading ? (
+                        <p className="text-sm leading-relaxed animate-pulse" style={pStyle}>AI Coach sedang berpikir...</p>
+                    ) : (
+                        <p className="text-sm leading-relaxed" style={pStyle}>{insight}</p>
+                    )}
+                </div>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={fetchInsight} disabled={isLoading}>
+                                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} style={insightTextStyle} />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Segarkan Wawasan</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            </div>
         </div>
     );
 };
