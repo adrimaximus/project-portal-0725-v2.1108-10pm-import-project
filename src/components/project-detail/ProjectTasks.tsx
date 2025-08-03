@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Task, AssignedUser, Project } from "@/data/projects";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -148,9 +148,35 @@ const ProjectTasks = ({ project, tasks, assignableUsers, onTasksUpdate }: Projec
     return assignableUsers.find(u => u.id === userId);
   };
 
-  const parseTaskName = (name: string) => {
-    // Removes mention syntax like @[User Name](user-id) from the task name
-    return name.replace(/@\[[^\]]+\]\([^)]+\)/g, '').trim();
+  const renderTaskNameWithLinks = (name: string) => {
+    const userMentionRegex = /@\[[^\]]+\]\([^)]+\)/g;
+    const projectMentionRegex = /(\/\[[^\]]+\]\([^)]+\))/g;
+
+    const nameWithoutUserMentions = name.replace(userMentionRegex, '').trim();
+    const parts = nameWithoutUserMentions.split(projectMentionRegex);
+
+    return (
+      <>
+        {parts.map((part, index) => {
+          const projectMentionMatch = /^\/\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+          if (projectMentionMatch) {
+            const projectName = projectMentionMatch[1];
+            const projectId = projectMentionMatch[2];
+            return (
+              <a
+                key={`${projectId}-${index}`}
+                href={`/projects/${projectId}`}
+                className="text-blue-600 hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {projectName}
+              </a>
+            );
+          }
+          return <span key={index}>{part}</span>;
+        })}
+      </>
+    );
   };
 
   return (
@@ -217,7 +243,7 @@ const ProjectTasks = ({ project, tasks, assignableUsers, onTasksUpdate }: Projec
                   />
                 </TableCell>
                 <TableCell className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
-                  {parseTaskName(task.name)}
+                  {renderTaskNameWithLinks(task.name)}
                 </TableCell>
                 <TableCell>
                   <div className="flex -space-x-2">
