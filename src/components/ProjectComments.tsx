@@ -161,13 +161,15 @@ const ProjectComments = ({
             </div>
           )}
           <div className="flex items-center justify-between gap-1 px-3 py-2 border-t bg-muted/50 rounded-b-lg">
-            <div className="flex items-center gap-1">
+            <div>
               <Button variant="ghost" size="icon" asChild>
                 <Label htmlFor="comment-attachment" className="cursor-pointer">
                   <Paperclip className="h-4 w-4" />
                   <input id="comment-attachment" type="file" className="sr-only" onChange={handleFileChange} />
                 </Label>
               </Button>
+            </div>
+            <div className="flex items-center gap-1">
               <Button 
                 variant={isTicket ? "secondary" : "ghost"} 
                 size="icon" 
@@ -176,10 +178,10 @@ const ProjectComments = ({
               >
                 <Ticket className="h-4 w-4" />
               </Button>
+              <Button size="icon" onClick={handleSubmit} disabled={!newCommentText.trim() && !attachment}>
+                <Send className="h-4 w-4" />
+              </Button>
             </div>
-            <Button size="icon" onClick={handleSubmit} disabled={!newCommentText.trim() && !attachment}>
-              <Send className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </div>
