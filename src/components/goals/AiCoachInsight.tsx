@@ -3,7 +3,7 @@ import { Goal } from '@/data/goals';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lightbulb, Loader2 } from 'lucide-react';
-import { generateAiInsight } from '@/lib/openai';
+import { getAiCoachInsight } from '@/lib/openai';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 
@@ -20,7 +20,7 @@ const AiCoachInsight = ({ goal, progress }: AiCoachInsightProps) => {
     setIsLoading(true);
     setInsight(null);
     try {
-      const newInsight = await generateAiInsight(goal, progress);
+      const newInsight = await getAiCoachInsight(goal, progress);
       setInsight(newInsight);
     } catch (error) {
       console.error("Failed to generate AI insight:", error);
