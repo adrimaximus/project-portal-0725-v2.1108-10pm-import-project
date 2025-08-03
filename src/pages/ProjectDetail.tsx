@@ -1,121 +1,256 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import PortalLayout from '@/components/PortalLayout';
-import { dummyProjects, Project, AssignedUser, Task, ProjectFile, Comment } from '@/data/projects';
-import { User } from '@/data/users';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, GripVertical } from 'lucide-react';
-import ProjectMainContent from '@/components/project-detail/ProjectMainContent';
-import ProjectSidebar from '@/components/project-detail/ProjectSidebar';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { dummyProjects, Project, AssignedUser, Task, ProjectFile, Comment } from "@/data/projects";
+import PortalLayout from "@/components/PortalLayout";
+import ProjectHeader from "@/components/project-detail/ProjectHeader";
+import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
+import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
+import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
+import { useUser } from "@/contexts/UserContext";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
+  const { user: currentUser } = useUser();
+  
   const [project, setProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [editedProject, setEditedProject] = useState<Project | null>(null);
+
+  const canEdit = currentUser.role === 'Admin';
 
   useEffect(() => {
-    const projectData = dummyProjects.find(p => p.id === projectId);
-    if (projectData) {
-      setProject(projectData);
+    const foundProject = dummyProjects.find(p => p.id === projectId);
+    if (foundProject) {
+      const projectComments = foundProject.comments || [];
+      const projectWithData = {
+        ...foundProject,
+        tasks: foundProject.tasks || [],
+        comments: projectComments,
+      };
+      setProject(projectWithData);
+      setEditedProject(structuredClone(projectWithData));
+    } else {
+      navigate('/');
     }
-    setIsLoading(false);
-  }, [projectId]);
+  }, [projectId, navigate]);
 
-  const handleDescriptionChange = (newDescription: string) => {
-    if (project) {
-      setProject({ ...project, description: newDescription });
-    }
-  };
-
-  const handleBudgetChange = (newBudget: number) => {
-    if (project) {
-      setProject({ ...project, budget: newBudget });
-    }
-  };
-
-  const handleTeamChange = (newTeam: AssignedUser[]) => {
-    if (project) {
-      setProject({ ...project, assignedTo: newTeam });
-    }
-  };
-
-  const handleFilesChange = (newFiles: File[]) => {
-    if (project) {
-      const newProjectFiles: ProjectFile[] = newFiles.map(f => ({ name: f.name, size: `${(f.size / 1024).toFixed(2)} KB`, url: '#' }));
-      setProject({ ...project, briefFiles: [...(project.briefFiles || []), ...newProjectFiles] });
-    }
-  };
-
-  const handleServicesChange = (newServices: string[]) => {
-    if (project) {
-      setProject({ ...project, services: newServices });
-    }
-  };
-
-  const handleTaskUpdate = (updatedTask: Task) => {
-    if (project && project.tasks) {
-      const newTasks = project.tasks.map(task => task.id === updatedTask.id ? updatedTask : task);
-      setProject({ ...project, tasks: newTasks });
-    }
-  };
-
-  const handleCommentAdd = (newComment: Comment) => {
-    if (project) {
-      setProject({ ...project, comments: [...(project.comments || []), newComment] });
-    }
-  };
-
-  if (isLoading) {
-    return <PortalLayout><div>Loading...</div></PortalLayout>;
-  }
-
-  if (!project) {
+  if (!project || !editedProject) {
     return (
       <PortalLayout>
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Project Not Found</h2>
-          <Button asChild><Link to="/projects"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link></Button>
+        <div className="flex items-center justify-center h-full">
+          <p>Loading project...</p>
         </div>
       </PortalLayout>
     );
   }
 
+  const handleSaveChanges = () => {
+    const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
+    if (projectIndex !== -1 && editedProject) {
+      dummyProjects[projectIndex] = editedProject;
+      setProject(editedProject);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancelChanges = () => {
+    if (project) {
+      setEditedProject(structuredClone(project));
+    }
+    setIsEditing(false);
+  };
+
+  const handleProjectNameChange = (name: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, name });
+    }
+  };
+
+  const handleSelectChange = (name: 'status' | 'paymentStatus', value: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, [name]: value as any });
+    }
+  };
+
+  const handleDateChange = (name: 'deadline' | 'startDate', date: Date | undefined) => {
+    if (editedProject) {
+      const originalDate = (project as any)[name];
+      const dateString = date ? format(date, 'yyyy-MM-dd') : originalDate;
+      setEditedProject({ ...editedProject, [name]: dateString });
+    }
+  };
+
+  const handleBudgetChange = (value: number | undefined) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, budget: value || 0 });
+    }
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, description: value });
+    }
+  };
+
+  const handleTeamChange = (selectedUsers: AssignedUser[]) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, assignedTo: selectedUsers });
+    }
+  };
+  
+  const handleFilesChange = (newFiles: File[]) => {
+    if (editedProject) {
+      const newProjectFiles: ProjectFile[] = newFiles.map(file => ({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: URL.createObjectURL(file),
+      }));
+      const existingFiles = editedProject.briefFiles || [];
+      setEditedProject({ ...editedProject, briefFiles: [...existingFiles, ...newProjectFiles] });
+    }
+  };
+
+  const handleServicesChange = (services: string[]) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, services });
+    }
+  };
+
+  const handleTasksUpdate = (updatedTasks: Task[]) => {
+    if (editedProject) {
+      const completedTasks = updatedTasks.filter(task => task.completed).length;
+      const totalTasks = updatedTasks.length;
+      const newProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      setEditedProject({
+        ...editedProject,
+        tasks: updatedTasks,
+        progress: newProgress,
+      });
+    }
+  };
+
+  const handleAddCommentOrTicket = (newComment: Comment) => {
+    setEditedProject(currentEditedProject => {
+      if (!currentEditedProject) return null;
+  
+      const updatedProject = { ...currentEditedProject };
+      updatedProject.comments = [...(currentEditedProject.comments || []), newComment];
+  
+      if (newComment.isTicket) {
+        const mentionedUsersToAssign: AssignedUser[] = [];
+        let textForTask = newComment.text;
+  
+        const sortedAssignableUsers = [...updatedProject.assignedTo].sort((a, b) => b.name.length - a.name.length);
+
+        sortedAssignableUsers.forEach(user => {
+          const userMentionRegex = new RegExp(`@${user.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}(?!\\w)`, 'g');
+          
+          if (textForTask.match(userMentionRegex)) {
+            if (!mentionedUsersToAssign.find(u => u.id === user.id)) {
+              mentionedUsersToAssign.push(user);
+            }
+            textForTask = textForTask.replace(userMentionRegex, '');
+          }
+        });
+  
+        const projectMentionRegex = /#\/[a-zA-Z0-9\s._-]+/g;
+        textForTask = textForTask.replace(projectMentionRegex, '');
+  
+        let newTaskText = textForTask.replace(/\s\s+/g, ' ').trim();
+  
+        if (!newTaskText && newComment.attachment) {
+          newTaskText = `Review attachment: ${newComment.attachment.name}`;
+        }
+  
+        if (!newTaskText && mentionedUsersToAssign.length > 0) {
+          newTaskText = "New task assigned";
+        }
+  
+        if (newTaskText) {
+          const newTask: Task = {
+            id: `task-${Date.now()}`,
+            name: newTaskText,
+            completed: false,
+            assignedTo: mentionedUsersToAssign.map(user => user.id),
+            originTicketId: newComment.id,
+          };
+          updatedProject.tasks = [...(currentEditedProject.tasks || []), newTask];
+          
+          const currentTasks = updatedProject.tasks || [];
+          const completedTasks = currentTasks.filter(task => task.completed).length;
+          const totalTasks = currentTasks.length;
+          updatedProject.progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        }
+      }
+  
+      if (!isEditing) {
+        setProject(updatedProject);
+        const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
+        if (projectIndex !== -1) {
+          dummyProjects[projectIndex] = updatedProject;
+        }
+      }
+      
+      return updatedProject;
+    });
+  };
+
+  const openTicketCount = editedProject.comments?.filter(comment => {
+    if (!comment.isTicket) {
+      return false;
+    }
+    const task = editedProject.tasks?.find(t => t.originTicketId === comment.id);
+    return !task || !task.completed;
+  }).length || 0;
+
   return (
-    <PortalLayout>
-      <div className="flex justify-between items-center mb-4">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/projects"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link>
-        </Button>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{isEditing ? 'Editing Mode' : 'Read-only Mode'}</span>
-          <Button variant="outline" size="sm" onClick={() => setIsEditing(!isEditing)}>
-            <Edit className="mr-2 h-4 w-4" />
-            {isEditing ? 'Save' : 'Edit'}
-          </Button>
-        </div>
-      </div>
-      <ResizablePanelGroup direction="horizontal" className="rounded-lg border">
-        <ResizablePanel defaultSize={65}>
-          <ProjectMainContent
+    <PortalLayout
+      pageHeader={
+        <ProjectHeader 
+          project={project} 
+          isEditing={isEditing}
+          projectName={editedProject.name}
+          onProjectNameChange={handleProjectNameChange}
+          onEditToggle={() => setIsEditing(!isEditing)}
+          onSaveChanges={handleSaveChanges}
+          onCancelChanges={handleCancelChanges}
+          canEdit={canEdit}
+        />
+      }
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <ProjectInfoCards 
             project={project}
+            isEditing={isEditing}
+            editedProject={editedProject}
+            onSelectChange={handleSelectChange}
+            onDateChange={handleDateChange}
+            onBudgetChange={handleBudgetChange}
+          />
+          <ProjectMainContent
+            project={editedProject}
             isEditing={isEditing}
             onDescriptionChange={handleDescriptionChange}
             onTeamChange={handleTeamChange}
             onFilesChange={handleFilesChange}
             onServicesChange={handleServicesChange}
-            onTaskUpdate={handleTaskUpdate}
-            onCommentAdd={handleCommentAdd}
+            onAddCommentOrTicket={handleAddCommentOrTicket}
+            onTasksUpdate={handleTasksUpdate}
+            ticketCount={openTicketCount}
+            allProjects={dummyProjects}
           />
-        </ResizablePanel>
-        <ResizableHandle withHandle>
-          <GripVertical />
-        </ResizableHandle>
-        <ResizablePanel defaultSize={35}>
-          <ProjectSidebar project={project} isEditing={isEditing} onBudgetChange={handleBudgetChange} />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        </div>
+        <div className="lg:col-span-1 space-y-6">
+          <ProjectProgressCard 
+            project={editedProject}
+          />
+        </div>
+      </div>
     </PortalLayout>
   );
 };
