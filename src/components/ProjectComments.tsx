@@ -160,16 +160,14 @@ const ProjectComments = ({
               </Button>
             </div>
           )}
-          <div className="flex items-center justify-between gap-1 px-3 py-2 border-t bg-muted/50 rounded-b-lg">
-            <div>
+          <div className="flex items-center justify-end gap-1 px-3 py-2 border-t bg-muted/50 rounded-b-lg">
+            <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon" asChild>
                 <Label htmlFor="comment-attachment" className="cursor-pointer">
                   <Paperclip className="h-4 w-4" />
                   <input id="comment-attachment" type="file" className="sr-only" onChange={handleFileChange} />
                 </Label>
               </Button>
-            </div>
-            <div className="flex items-center gap-1">
               <Button 
                 variant={isTicket ? "secondary" : "ghost"} 
                 size="icon" 
