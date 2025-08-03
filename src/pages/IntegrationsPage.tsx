@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { GitBranch } from "lucide-react";
 import React from "react";
 
-const IntegrationItem = ({ name, description, icon }: { name: string, description: string, icon: React.ReactNode }) => (
+const IntegrationItem = ({ name, description, icon, noBg = false }: { name: string, description: string, icon: React.ReactNode, noBg?: boolean }) => (
     <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="flex items-center gap-4">
-            <div className="p-2 bg-muted rounded-md">
+            <div className={`p-2 rounded-md ${noBg ? "" : "bg-muted"}`}>
                 {icon}
             </div>
             <div>
@@ -61,6 +61,7 @@ const IntegrationsPage = () => {
             <IntegrationItem 
                 name="Google Drive" 
                 description="Access your files from Google Drive." 
+                noBg={true}
                 icon={
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
                         <path d="M8.25 14.25 3 22.5h7.5l5.25-8.25H8.25Z" fill="#34A853"/>
