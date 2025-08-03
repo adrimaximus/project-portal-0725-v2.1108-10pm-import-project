@@ -11,10 +11,12 @@ import { MoreHorizontal, PlusCircle, Search, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
 
 type Invite = {
   id: number;
@@ -68,6 +70,8 @@ const TeamSettingsPage = () => {
   const [customRoleName, setCustomRoleName] = useState('');
   const [customRolePermissions, setCustomRolePermissions] = useState<Record<string, boolean>>({});
   const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
 
   useEffect(() => {
     const storedRoles = localStorage.getItem('customRoles');
@@ -81,6 +85,13 @@ const TeamSettingsPage = () => {
   }, [customRoles]);
 
   const allRoles = useMemo(() => [...defaultRoles, ...customRoles], [customRoles]);
+
+  const filteredMembers = useMemo(() => {
+    return members.filter(member =>
+        member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [members, searchTerm]);
 
   const roleNameExists = useMemo(() => {
     const trimmedName = customRoleName.trim().toLowerCase();
@@ -118,6 +129,7 @@ const TeamSettingsPage = () => {
 
     setCustomRoles(prev => [...prev, newRole]);
     setCustomRoleDialogOpen(false);
+    toast.success(`Custom role "${newRole.label}" created.`);
   };
 
   const handleInviteChange = (id: number, field: 'email' | 'role', value: string) => {
@@ -137,9 +149,13 @@ const TeamSettingsPage = () => {
   };
 
   const handleSendInvites = () => {
-    const newMembers: Member[] = invites
-      .filter(invite => invite.email.trim() !== '')
-      .map(invite => {
+    const validInvites = invites.filter(invite => invite.email.trim() !== '');
+    if (validInvites.length === 0) {
+      toast.error("Please enter at least one email address.");
+      return;
+    }
+
+    const newMembers: Member[] = validInvites.map(invite => {
         const roleInfo = allRoles.find(r => r.value === invite.role);
         return {
           name: invite.email.split('@')[0],
@@ -152,29 +168,56 @@ const TeamSettingsPage = () => {
       });
 
     const membersWithNewInvites = [...members];
+    let addedCount = 0;
     newMembers.forEach(newMember => {
       if (!members.some(member => member.email === newMember.email)) {
         membersWithNewInvites.push(newMember);
+        addedCount++;
       }
     });
 
     setMembers(membersWithNewInvites);
     setInvites([{ id: Date.now(), email: '', role: 'member' }]);
+    toast.success(`${addedCount} invite(s) sent successfully!`);
   };
 
-  const handleToggleSuspend = (memberName: string) => {
+  const handleRoleChange = (memberEmail: string, newRoleValue: string) => {
+    const newRole = allRoles.find(r => r.value === newRoleValue);
+    if (!newRole) return;
+
     setMembers(currentMembers =>
-      currentMembers.map(member => {
-        if (member.name === memberName) {
-          if (member.status === 'Pending invite') return member;
-          return {
-            ...member,
-            status: member.status === 'Suspended' ? 'Active' : 'Suspended',
-          };
+        currentMembers.map(member =>
+            member.email === memberEmail ? { ...member, role: newRole.label } : member
+        )
+    );
+    toast.success(`Role for ${memberEmail} updated to ${newRole.label}.`);
+  };
+
+  const handleToggleSuspend = (member: Member) => {
+    setMembers(currentMembers =>
+      currentMembers.map(m => {
+        if (m.email === member.email) {
+          if (m.status === 'Pending invite') return m;
+          const newStatus = m.status === 'Suspended' ? 'Active' : 'Suspended';
+          toast.success(`Member ${m.name} has been ${newStatus.toLowerCase()}.`);
+          return { ...m, status: newStatus };
         }
-        return member;
+        return m;
       })
     );
+  };
+
+  const openDeleteDialog = (member: Member) => {
+    setMemberToDelete(member);
+  };
+
+  const confirmDeleteMember = () => {
+    if (!memberToDelete) return;
+    setMembers(currentMembers =>
+        currentMembers.filter(member => member.email !== memberToDelete.email)
+    );
+    toast.success(`Member ${memberToDelete.name} has been deleted.`);
+    setMemberToDelete(null);
   };
 
   const getStatusBadgeVariant = (status: string): "destructive" | "secondary" | "outline" => {
@@ -311,7 +354,12 @@ const TeamSettingsPage = () => {
                 </div>
                 <div className="relative flex-1 max-w-xs">
                   <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search by name..." className="pl-8 w-full" />
+                  <Input
+                    placeholder="Search by name..."
+                    className="pl-8 w-full"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
               </div>
           </CardHeader>
@@ -328,7 +376,7 @@ const TeamSettingsPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {members.map((member, index) => (
+                  {filteredMembers.map((member, index) => (
                     <TableRow key={index}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -352,7 +400,10 @@ const TeamSettingsPage = () => {
                         ) : member.status === 'Pending invite' ? (
                           <span className="text-muted-foreground">{member.role}</span>
                         ) : (
-                          <Select defaultValue={allRoles.find(r => r.label === member.role)?.value}>
+                          <Select
+                            defaultValue={allRoles.find(r => r.label === member.role)?.value}
+                            onValueChange={(value) => handleRoleChange(member.email, value)}
+                          >
                             <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent">
                               <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
@@ -381,12 +432,17 @@ const TeamSettingsPage = () => {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-red-600"
-                              onSelect={() => handleToggleSuspend(member.name)}
+                              onSelect={() => handleToggleSuspend(member)}
                               disabled={member.status === 'Pending invite'}
                             >
                               {member.status === 'Suspended' ? 'Unsuspend' : 'Suspend'}
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onSelect={() => openDeleteDialog(member)}
+                            >
+                              Delete
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -445,6 +501,21 @@ const TeamSettingsPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!memberToDelete} onOpenChange={(open) => !open && setMemberToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will permanently delete {memberToDelete?.name} from the team. This action cannot be undone.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDeleteMember}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </PortalLayout>
   );
 };
