@@ -99,7 +99,7 @@ export async function generateAiInsight(
     const response = await openai.chat.completions.create({
       model: 'gpt-4-turbo',
       messages: [{ role: 'user', content: basePrompt + contextPrompt }],
-      max_tokens: 500,
+      max_tokens: 1024,
       temperature: 0.75,
     });
     return response.choices[0].message.content;
