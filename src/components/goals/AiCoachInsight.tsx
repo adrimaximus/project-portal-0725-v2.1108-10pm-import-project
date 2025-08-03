@@ -18,6 +18,8 @@ interface AiCoachInsightProps {
     goalTitle: string;
     userName: string;
     selectedMonth: MonthlyData | null;
+    frequency: string;
+    goalTags: string[];
 }
 
 const AiCoachInsight = ({

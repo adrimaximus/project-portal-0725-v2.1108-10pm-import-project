@@ -4,8 +4,8 @@ import { GoalsProvider } from './context/GoalsContext';
 import { SettingsProvider } from './context/SettingsContext';
 import Layout from './components/layout/Layout';
 import IndexPage from './pages/Index';
-import GoalsPage from './pages/Goals';
-import GoalDetailPage from './pages/GoalDetail';
+import GoalsPage from './pages/GoalsPage';
+import GoalDetailPage from './pages/GoalDetailPage';
 import SettingsPage from './pages/Settings';
 
 function App() {
