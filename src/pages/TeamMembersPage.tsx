@@ -1,6 +1,5 @@
-import { useParams, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
-import { useFeatures } from '@/contexts/FeaturesContext';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,36 +11,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Combobox } from '@/components/ui/combobox';
 import React from 'react';
 
 // Data dummy untuk semua pengguna yang ada di aplikasi
 const allAppUsers = [
-  { value: 'theresa.webb@example.com', label: 'Theresa Webb' },
-  { value: 'darlene.robertson@example.com', label: 'Darlene Robertson' },
-  { value: 'anne.black@example.com', label: 'Anne Black' },
-  { value: 'floyd.miles@example.com', label: 'Floyd Miles' },
-  { value: 'cody.fisher@example.com', label: 'Cody Fisher' },
-  { value: 'kristin.watson@example.com', label: 'Kristin Watson' },
-  { value: 'leslie.alexander@example.com', label: 'Leslie Alexander' },
-  { value: 'john.doe@example.com', label: 'John Doe' },
-  { value: 'jane.smith@example.com', label: 'Jane Smith' },
+    { name: 'Theresa Webb', email: 'theresa.webb@example.com', avatar: 'TW', role: 'Owner', status: 'Active', lastActive: '23 Dec 2022' },
+    { name: 'Darlene Robertson', email: 'darlene.robertson@example.com', avatar: 'DR', role: 'User', status: 'Suspended', lastActive: '23 Dec 2022' },
+    { name: 'Anne Black', email: 'anne.black@example.com', avatar: 'AB', role: 'User', status: 'Active', lastActive: '23 Dec 2022' },
+    { name: 'Floyd Miles', email: 'floyd.miles@example.com', avatar: 'FM', role: 'Read only', status: 'Pending invite', lastActive: '23 Dec 2022' },
+    { name: 'Cody Fisher', email: 'cody.fisher@example.com', avatar: 'CF', role: 'Admin', status: 'Active', lastActive: '23 Dec 2022' },
+    { name: 'Kristin Watson', email: 'kristin.watson@example.com', avatar: 'KW', role: 'Read only', status: 'Pending invite', lastActive: '23 Dec 2022' },
+    { name: 'Leslie Alexander', email: 'leslie.alexander@example.com', avatar: 'LA', role: 'Read only', status: 'Pending invite', lastActive: '23 Dec 2022' },
 ];
 
-const FeatureSettingsPage = () => {
-  const { featureId } = useParams<{ featureId: string }>();
-  const { features } = useFeatures();
-  const [selectedUser, setSelectedUser] = React.useState('');
-
-  const feature = features.find(f => f.id === featureId);
-
-  // Data dummy untuk anggota proyek ini (subset dari semua pengguna aplikasi)
-  const projectMembers = [
-    { name: 'Theresa Webb', email: 'david@withlantern.com', avatar: 'TW', role: 'Owner', status: 'Active', lastActive: '23 Dec 2022' },
-    { name: 'Cody Fisher', email: 'sagar@withlantern.com', avatar: 'CF', role: 'Admin', status: 'Active', lastActive: '23 Dec 2022' },
-    { name: 'Anne Black', email: 'sagar@withlantern.com', avatar: 'AB', role: 'User', status: 'Active', lastActive: '23 Dec 2022' },
-  ];
-
+const TeamMembersPage = () => {
   const getStatusBadgeVariant = (status: string): "destructive" | "secondary" | "outline" => {
     switch (status) {
       case 'Suspended':
@@ -65,17 +48,17 @@ const FeatureSettingsPage = () => {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Project Members</BreadcrumbPage>
+              <BreadcrumbPage>Team Members</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
         
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Project Members
+            Team Members
           </h1>
           <p className="text-muted-foreground">
-            Manage members for the "{feature ? feature.name : 'Feature'}" project.
+            Invite and manage members for your entire application.
           </p>
         </div>
 
@@ -90,7 +73,7 @@ const FeatureSettingsPage = () => {
                 <DialogTrigger asChild>
                   <Button>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Add project member
+                    Add member
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[480px]">
@@ -98,43 +81,34 @@ const FeatureSettingsPage = () => {
                     <div className="p-3 rounded-full bg-primary-foreground mb-2 inline-block">
                       <Users className="h-6 w-6 text-primary" />
                     </div>
-                    <DialogTitle className="text-xl">Add member to project</DialogTitle>
+                    <DialogTitle className="text-xl">Invite your team members</DialogTitle>
                     <DialogDescription>
-                      Select an existing user from your application to add them to this project.
-                      <br />
-                      <span className="text-xs">
-                        Need to invite someone new? Go to{' '}
-                        <Link to="/team-members" className="text-primary underline">
-                          Team Members
-                        </Link>
-                        {' '}to invite them to the app.
-                      </span>
+                      Invite new members to your application by email. They can then be assigned to projects.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="py-4 space-y-4">
-                    <Combobox
-                      options={allAppUsers}
-                      value={selectedUser}
-                      onChange={setSelectedUser}
-                      placeholder="Select a user..."
-                      searchPlaceholder="Search user by name or email..."
-                      emptyMessage="No user found."
-                    />
-                    <Select defaultValue="user">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="owner">Owner</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="read-only">Read only</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                      <Input id="email" placeholder="name@example.com" />
+                      <Select defaultValue="user">
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="owner">Owner</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="read-only">Read only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button variant="link" className="p-0 h-auto text-primary">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add another
+                    </Button>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
-                    <Button className="w-full sm:w-auto">Add Member</Button>
+                    <Button className="w-full sm:w-auto">Send Invite</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -153,7 +127,7 @@ const FeatureSettingsPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {projectMembers.map((member, index) => (
+                  {allAppUsers.map((member, index) => (
                     <TableRow key={index}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -214,4 +188,4 @@ const FeatureSettingsPage = () => {
   );
 };
 
-export default FeatureSettingsPage;
+export default TeamMembersPage;
