@@ -111,11 +111,9 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
                       />
                       {monthlyTarget && targetHeightPercentage > 0 && (
                          <div
-                          className="absolute left-0 w-full border-t"
+                          className="absolute left-0 w-full border-t-2 border-dashed border-foreground/50"
                           style={{
                             bottom: `${targetHeightPercentage}%`,
-                            borderColor: goal.color,
-                            opacity: 0.6,
                           }}
                           aria-label={`Monthly Target: ${formatProgress(monthlyTarget)}`}
                         />
