@@ -214,33 +214,31 @@ const ProjectDetail = () => {
           canEdit={true}
         />
       </LayoutHeader>
-      <LayoutBody className="space-y-8 p-4 md:p-6">
-        <ProjectInfoCards
-          project={project}
-          isEditing={isEditing}
-          editedProject={editedProject}
-          onSelectChange={handleCardSelectChange}
-          onDateChange={handleCardDateChange}
-          onBudgetChange={handleCardBudgetChange}
-        />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <ProjectMainContent
-              project={project}
-              onUpdateTasks={handleUpdateTasks}
-              onTaskStatusChange={handleTaskStatusChange}
-              onTaskDelete={handleTaskDelete}
-              onAddCommentOrTicket={handleAddCommentOrTicket}
-            />
-          </div>
-          <div className="lg:col-span-1">
-            <ProjectSidebar
-              project={project}
-              onUpdateProject={handleUpdateProjectDetails}
-              onUpdateTeam={handleUpdateTeam}
-              onFileUpload={handleFileUpload}
-            />
-          </div>
+      <LayoutBody className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 md:p-6">
+        <div className="lg:col-span-2 space-y-8">
+          <ProjectInfoCards
+            project={project}
+            isEditing={isEditing}
+            editedProject={editedProject}
+            onSelectChange={handleCardSelectChange}
+            onDateChange={handleCardDateChange}
+            onBudgetChange={handleCardBudgetChange}
+          />
+          <ProjectMainContent
+            project={project}
+            onUpdateTasks={handleUpdateTasks}
+            onTaskStatusChange={handleTaskStatusChange}
+            onTaskDelete={handleTaskDelete}
+            onAddCommentOrTicket={handleAddCommentOrTicket}
+          />
+        </div>
+        <div className="lg:col-span-1">
+          <ProjectSidebar
+            project={project}
+            onUpdateProject={handleUpdateProjectDetails}
+            onUpdateTeam={handleUpdateTeam}
+            onFileUpload={handleFileUpload}
+          />
         </div>
       </LayoutBody>
     </Layout>
