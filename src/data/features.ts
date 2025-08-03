@@ -60,5 +60,11 @@ export const defaultFeatures: Feature[] = [
     name: 'Settings',
     description: 'Manage platform features and user profile.',
     status: 'enabled'
+  },
+  {
+    id: 'custom-links',
+    name: 'Custom Links',
+    description: 'Add your own custom links to the sidebar for quick access.',
+    status: 'enabled'
   }
 ];

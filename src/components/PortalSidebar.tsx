@@ -257,7 +257,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   };
 
   const visibleDefaultNavItems = defaultNavItems.filter(item => isFeatureEnabled(item.id));
-  const allVisibleNavItems = [...visibleDefaultNavItems, ...customNavItems];
+  const allVisibleNavItems = isFeatureEnabled('custom-links')
+    ? [...visibleDefaultNavItems, ...customNavItems]
+    : visibleDefaultNavItems;
 
   return (
     <div
@@ -299,7 +301,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
               </SortableContext>
             </DndContext>
           </TooltipProvider>
-          {!isCollapsed && (
+          {!isCollapsed && isFeatureEnabled('custom-links') && (
             <div className="px-2 lg:px-4 mt-2">
               <Button variant="outline" className="w-full" onClick={() => setIsNewLinkOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
