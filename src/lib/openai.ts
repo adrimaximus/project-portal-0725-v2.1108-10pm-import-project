@@ -58,11 +58,12 @@ export const generateAiIcon = async (prompt: string): Promise<string> => {
   }
 
   try {
+    // Menggunakan DALL-E 3 untuk hasil yang lebih baik dan prompt yang lebih disempurnakan
     const response = await openai.images.generate({
-      model: 'dall-e-2',
-      prompt: `Ikon stiker sederhana, datar, minimalis, gaya WhatsApp untuk sebuah tujuan: "${prompt}". Latar belakang putih bersih, tanpa teks, gaya vektor.`,
+      model: 'dall-e-3',
+      prompt: `Stiker ikon datar yang cerah dan sederhana untuk aplikasi pelacak tujuan. Konsep: "${prompt}". Gaya vektor minimalis, latar belakang putih bersih, tanpa bayangan, tanpa teks.`,
       n: 1,
-      size: '256x256',
+      size: '1024x1024', // DALL-E 3 menggunakan ukuran yang berbeda
       quality: 'standard',
     });
     const imageUrl = response.data[0]?.url;
