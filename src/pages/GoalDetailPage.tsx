@@ -21,8 +21,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
-import { isBefore, startOfDay, format } from 'date-fns';
+import { isBefore, startOfDay, format, parseISO } from 'date-fns';
 import GoalFormDialog from '@/components/goals/GoalFormDialog';
+import GoalQuantityTracker from '@/components/goals/GoalQuantityTracker';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -34,7 +35,7 @@ const GoalDetailPage = () => {
   useEffect(() => {
     const goalData = dummyGoals.find(g => g.id === goalId);
     if (goalData) {
-      if (!goalData.completions || goalData.completions.length === 0) {
+      if (goalData.type === 'frequency' && (!goalData.completions || goalData.completions.length === 0)) {
         goalData.completions = generateInitialCompletions(goalData);
       }
       setGoal(goalData);
@@ -55,7 +56,7 @@ const GoalDetailPage = () => {
       if (isScheduled) {
         completions.push({
           date: format(d, 'yyyy-MM-dd'),
-          completed: Math.random() > 0.4,
+          value: Math.random() > 0.4 ? 1 : 0,
         });
       }
     }
@@ -63,20 +64,35 @@ const GoalDetailPage = () => {
   };
 
   const handleToggleCompletion = (date: Date) => {
-    if (!goal) return;
+    if (!goal || goal.type !== 'frequency') return;
     const dateString = format(date, 'yyyy-MM-dd');
     const updatedGoal = { ...goal };
     const existingCompletionIndex = updatedGoal.completions.findIndex(c => c.date === dateString);
 
     if (existingCompletionIndex > -1) {
       const existing = updatedGoal.completions[existingCompletionIndex];
-      updatedGoal.completions[existingCompletionIndex] = { ...existing, completed: !existing.completed };
+      updatedGoal.completions[existingCompletionIndex] = { ...existing, value: existing.value === 1 ? 0 : 1 };
     } else {
-      updatedGoal.completions.push({ date: dateString, completed: true });
+      updatedGoal.completions.push({ date: dateString, value: 1 });
     }
     updatedGoal.completions.sort((a, b) => b.date.localeCompare(a.date));
     setGoal(updatedGoal);
     toast.success(`Progress for ${format(date, 'PPP')} has been updated.`);
+  };
+
+  const handleLogQuantity = (date: Date, value: number) => {
+    if (!goal || goal.type !== 'quantity') return;
+    const dateString = format(date, 'yyyy-MM-dd');
+    const updatedGoal = { ...goal };
+    const existingLogIndex = updatedGoal.completions.findIndex(c => c.date === dateString);
+
+    if (existingLogIndex > -1) {
+      updatedGoal.completions[existingLogIndex].value += value;
+    } else {
+      updatedGoal.completions.push({ date: dateString, value });
+    }
+    updatedGoal.completions.sort((a, b) => b.date.localeCompare(a.date));
+    setGoal(updatedGoal);
   };
 
   const handleDeleteGoal = () => {
@@ -128,6 +144,9 @@ const GoalDetailPage = () => {
   }
 
   const getFrequencyText = () => {
+    if (goal.type === 'quantity') {
+      return `${goal.targetQuantity} per ${goal.targetPeriod}`;
+    }
     if (goal.frequency === 'Daily') return 'Daily';
     if (goal.frequency === 'Weekly' && goal.specificDays.length > 0) {
       if (goal.specificDays.length === 7) return 'Daily';
@@ -184,17 +203,21 @@ const GoalDetailPage = () => {
           </div>
         </div>
 
-        <GoalYearlyProgress
-          completions={goal.completions}
-          color={goal.color}
-          onToggleCompletion={handleToggleCompletion}
-          frequency={goal.frequency}
-          specificDays={goal.specificDays}
-          goalTitle={goal.title}
-          goalDescription={goal.description}
-          goalTags={goal.tags.map(t => t.name)}
-          collaborators={goal.collaborators}
-        />
+        {goal.type === 'frequency' ? (
+          <GoalYearlyProgress
+            completions={goal.completions.map(c => ({ date: c.date, completed: c.value === 1 }))}
+            color={goal.color}
+            onToggleCompletion={handleToggleCompletion}
+            frequency={goal.frequency}
+            specificDays={goal.specificDays}
+            goalTitle={goal.title}
+            goalDescription={goal.description}
+            goalTags={goal.tags.map(t => t.name)}
+            collaborators={goal.collaborators}
+          />
+        ) : (
+          <GoalQuantityTracker goal={goal} onLogProgress={handleLogQuantity} />
+        )}
 
         <GoalCollaborationManager goal={goal} onCollaboratorsUpdate={handleCollaboratorsUpdate} />
       </div>

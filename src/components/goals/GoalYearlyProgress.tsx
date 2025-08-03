@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Goal } from '@/data/goals';
 import { User } from '@/data/users';
 import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
@@ -11,8 +10,13 @@ import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import AiCoachInsight from './AiCoachInsight';
 
+interface YearlyCompletion {
+  date: string;
+  completed: boolean;
+}
+
 interface GoalYearlyProgressProps {
-  completions: Goal['completions'];
+  completions: YearlyCompletion[];
   color: string;
   onToggleCompletion: (date: Date) => void;
   frequency: string;

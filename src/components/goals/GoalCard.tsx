@@ -4,16 +4,41 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
 interface GoalCardProps {
   goal: Goal;
 }
 
 const GoalCard = ({ goal }: GoalCardProps) => {
-  const completionPercentage = goal.completions && goal.completions.length > 0
-    ? (goal.completions.filter(c => c.completed).length / goal.completions.length) * 100
-    : 0;
-    
+  const calculateProgress = () => {
+    if (goal.type === 'quantity') {
+      const today = new Date();
+      let periodStart, periodEnd;
+
+      if (goal.targetPeriod === 'Weekly') {
+        periodStart = startOfWeek(today, { weekStartsOn: 1 });
+        periodEnd = endOfWeek(today, { weekStartsOn: 1 });
+      } else { // Monthly
+        periodStart = startOfMonth(today);
+        periodEnd = endOfMonth(today);
+      }
+
+      const completionsInPeriod = goal.completions.filter(c => {
+        const completionDate = parseISO(c.date);
+        return isWithinInterval(completionDate, { start: periodStart, end: periodEnd });
+      });
+
+      const currentTotal = completionsInPeriod.reduce((sum, c) => sum + c.value, 0);
+      return goal.targetQuantity ? (currentTotal / goal.targetQuantity) * 100 : 0;
+    } else { // frequency
+      const relevantCompletions = goal.completions.filter(c => c.value > 0);
+      const totalPossible = goal.completions.length;
+      return totalPossible > 0 ? (relevantCompletions.length / totalPossible) * 100 : 0;
+    }
+  };
+
+  const completionPercentage = calculateProgress();
   const isUrl = goal.icon.startsWith('http');
 
   return (

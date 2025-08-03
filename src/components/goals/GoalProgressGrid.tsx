@@ -14,7 +14,7 @@ const GoalProgressGrid = ({ completions, color }: GoalProgressGridProps) => {
   const totalDays = columns * 7;
   const startDate = startOfWeek(addDays(today, -totalDays + 1), { weekStartsOn: 1 });
 
-  const completionMap = new Map(completions.map(c => [c.date, c.completed]));
+  const completionMap = new Map(completions.map(c => [c.date, c.value > 0]));
 
   const daysByWeek: Date[][] = Array.from({ length: columns }, (_, weekIndex) => 
     Array.from({ length: 7 }, (_, dayIndex) => 

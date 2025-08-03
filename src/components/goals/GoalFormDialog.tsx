@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Goal } from '@/data/goals';
+import { Goal, GoalType, GoalPeriod } from '@/data/goals';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateAiIcon } from '@/lib/openai';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface GoalFormDialogProps {
   open: boolean;
@@ -38,8 +39,11 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [type, setType] = useState<GoalType>('frequency');
   const [frequency, setFrequency] = useState<Goal['frequency']>('Daily');
   const [specificDays, setSpecificDays] = useState<string[]>([]);
+  const [targetQuantity, setTargetQuantity] = useState<number | undefined>(undefined);
+  const [targetPeriod, setTargetPeriod] = useState<GoalPeriod>('Monthly');
   const [color, setColor] = useState('#BFDBFE');
   const [tags, setTags] = useState<Tag[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>(dummyTags);
@@ -50,15 +54,21 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
       if (isEditMode && goal) {
         setTitle(goal.title);
         setDescription(goal.description || '');
+        setType(goal.type);
         setFrequency(goal.frequency);
         setSpecificDays(goal.specificDays);
+        setTargetQuantity(goal.targetQuantity);
+        setTargetPeriod(goal.targetPeriod || 'Monthly');
         setColor(goal.color);
         setTags(goal.tags);
       } else {
         setTitle('');
         setDescription('');
+        setType('frequency');
         setFrequency('Daily');
         setSpecificDays([]);
+        setTargetQuantity(undefined);
+        setTargetPeriod('Monthly');
         setColor('#BFDBFE');
         setTags([]);
       }
@@ -88,8 +98,11 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
         ...goal,
         title,
         description,
+        type,
         frequency,
-        specificDays: frequency === 'Weekly' ? specificDays : [],
+        specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
+        targetQuantity,
+        targetPeriod,
         color,
         tags,
       };
@@ -117,11 +130,14 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
       onGoalCreate({
         title,
         description,
-        frequency,
-        specificDays: frequency === 'Weekly' ? specificDays : [],
         icon,
         color,
         tags,
+        type,
+        frequency,
+        specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
+        targetQuantity,
+        targetPeriod,
       });
       
       toast.success(`Goal "${title}" created!`);
@@ -146,24 +162,52 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
             <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="col-span-3" placeholder="Why is this goal important?" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="frequency" className="text-right">Frequency</Label>
-            <Select value={frequency} onValueChange={(value) => setFrequency(value as Goal['frequency'])}>
-              <SelectTrigger className="col-span-3"><SelectValue placeholder="Select frequency" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Daily">Daily</SelectItem>
-                <SelectItem value="Weekly">Weekly</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-right">Type</Label>
+            <RadioGroup value={type} onValueChange={(v) => setType(v as GoalType)} className="col-span-3 flex gap-4">
+              <div className="flex items-center space-x-2"><RadioGroupItem value="frequency" id="r1" /><Label htmlFor="r1">Frequency</Label></div>
+              <div className="flex items-center space-x-2"><RadioGroupItem value="quantity" id="r2" /><Label htmlFor="r2">Quantity</Label></div>
+            </RadioGroup>
           </div>
-          {frequency === 'Weekly' && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Days</Label>
-              <ToggleGroup type="multiple" variant="outline" value={specificDays} onValueChange={setSpecificDays} className="col-span-3 justify-start">
-                {weekDays.map(day => (
-                  <ToggleGroupItem key={day.value} value={day.value} aria-label={day.label}>{day.label}</ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </div>
+          {type === 'frequency' ? (
+            <>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="frequency" className="text-right">Frequency</Label>
+                <Select value={frequency} onValueChange={(value) => setFrequency(value as Goal['frequency'])}>
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select frequency" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Daily">Daily</SelectItem>
+                    <SelectItem value="Weekly">Weekly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {frequency === 'Weekly' && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Days</Label>
+                  <ToggleGroup type="multiple" variant="outline" value={specificDays} onValueChange={setSpecificDays} className="col-span-3 justify-start">
+                    {weekDays.map(day => (
+                      <ToggleGroupItem key={day.value} value={day.value} aria-label={day.label}>{day.label}</ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="target-quantity" className="text-right">Target</Label>
+                <Input id="target-quantity" type="number" value={targetQuantity || ''} onChange={(e) => setTargetQuantity(parseInt(e.target.value) || undefined)} className="col-span-3" placeholder="e.g., 300" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Period</Label>
+                <Select value={targetPeriod} onValueChange={(value) => setTargetPeriod(value as GoalPeriod)}>
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select period" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Weekly">Per Week</SelectItem>
+                    <SelectItem value="Monthly">Per Month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
           )}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right">Color</Label>
