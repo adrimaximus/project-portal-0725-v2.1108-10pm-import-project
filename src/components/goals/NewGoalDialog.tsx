@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import IconPicker from './IconPicker';
 import ColorPicker from './ColorPicker';
 import { Textarea } from '@/components/ui/textarea';
 import { TagInput } from './TagInput';
@@ -34,7 +33,6 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
   const [description, setDescription] = useState('');
   const [frequency, setFrequency] = useState<Goal['frequency']>('Daily');
   const [specificDays, setSpecificDays] = useState<string[]>([]);
-  const [icon, setIcon] = useState('target');
   const [color, setColor] = useState('#BFDBFE');
   const [tags, setTags] = useState<Tag[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>(dummyTags);
@@ -56,7 +54,7 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
       description,
       frequency,
       specificDays: frequency === 'Weekly' ? specificDays : [],
-      icon,
+      icon: '🎯', // Set default icon
       color,
       tags,
     });
@@ -64,7 +62,6 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
     setDescription('');
     setFrequency('Daily');
     setSpecificDays([]);
-    setIcon('target');
     setColor('#BFDBFE');
     setTags([]);
     onOpenChange(false);
@@ -121,12 +118,6 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
               </ToggleGroup>
             </div>
           )}
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">Icon</Label>
-            <div className="col-span-3">
-              <IconPicker value={icon} onChange={setIcon} color={color} />
-            </div>
-          </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right">Color</Label>
             <div className="col-span-3">

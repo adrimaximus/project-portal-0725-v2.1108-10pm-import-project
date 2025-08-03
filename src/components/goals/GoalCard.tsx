@@ -1,87 +1,74 @@
 import { Goal } from '@/data/goals';
-import { User } from '@/data/users';
-import { getIconComponent } from '@/data/icons';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { parseISO, isWithinInterval, startOfToday, subDays } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-const GoalCard = ({ goal }: { goal: Goal }) => {
-  const Icon = getIconComponent(goal.icon);
+interface GoalCardProps {
+  goal: Goal;
+}
 
-  const calculateProgress = () => {
-    const now = startOfToday();
-    const completions = goal.completions.filter(c => c.completed);
-    const frequency = goal.frequency.toLowerCase();
+const GoalCard = ({ goal }: GoalCardProps) => {
+  const completionPercentage = goal.completions && goal.completions.length > 0
+    ? (goal.completions.filter(c => c.completed).length / goal.completions.length) * 100
+    : 0;
     
-    if (frequency === 'daily') {
-      const thirtyDaysAgo = subDays(now, 30);
-      const relevantCompletions = completions.filter(c => isWithinInterval(parseISO(c.date), { start: thirtyDaysAgo, end: now })).length;
-      return (relevantCompletions / 30) * 100;
-    }
-    
-    if (frequency === 'weekly') {
-        const sevenDaysAgo = subDays(now, 7);
-        const completedLast7Days = completions.some(c => isWithinInterval(parseISO(c.date), { start: sevenDaysAgo, end: now }));
-        return completedLast7Days ? 100 : 0;
-    }
-
-    if (frequency === 'monthly') {
-        const thirtyDaysAgo = subDays(now, 30);
-        const completedLast30Days = completions.some(c => isWithinInterval(parseISO(c.date), { start: thirtyDaysAgo, end: now }));
-        return completedLast30Days ? 100 : 0;
-    }
-
-    return 0;
-  };
-
-  const progress = calculateProgress();
+  const isUrl = goal.icon.startsWith('http');
 
   return (
     <Link to={`/goals/${goal.id}`} className="block">
-      <Card className="h-full flex flex-col hover:border-primary/50 transition-colors">
-        <CardHeader>
-          <div className="flex justify-between items-start gap-4">
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-              <div className="p-3 rounded-lg flex-shrink-0" style={{ backgroundColor: `${goal.color}20` }}>
-                <Icon className="h-6 w-6" style={{ color: goal.color }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-lg truncate" title={goal.title}>{goal.title}</CardTitle>
-                <p className="text-sm text-muted-foreground capitalize">{goal.frequency}</p>
-              </div>
-            </div>
-            {goal.collaborators && goal.collaborators.length > 0 && (
-              <div className="flex -space-x-2 overflow-hidden flex-shrink-0">
-                {goal.collaborators.slice(0, 3).map((user: User) => (
-                  <Avatar key={user.id} className="inline-block h-8 w-8 rounded-full border-2 border-background">
-                    <AvatarFallback>{user.initials}</AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
+      <div className="bg-card border rounded-lg p-4 h-full flex flex-col hover:shadow-md transition-shadow duration-200">
+        <div className="flex justify-between items-start">
+          <div 
+            className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl flex-shrink-0 mr-4 overflow-hidden"
+            style={{ backgroundColor: `${goal.color}30`, color: goal.color }}
+          >
+            {isUrl ? (
+              <img src={goal.icon} alt={goal.title} className="w-full h-full object-cover" />
+            ) : (
+              <span>{goal.icon}</span>
             )}
           </div>
-        </CardHeader>
-        <CardContent className="flex-grow flex flex-col justify-end">
-          {goal.tags && goal.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-4">
-              {goal.tags.map(tag => (
-                  <Badge key={tag.id} className={cn("font-normal")} style={{ backgroundColor: `${tag.color}20`, color: tag.color, borderColor: tag.color }}>{tag.name}</Badge>
-              ))}
-            </div>
-          )}
-          <div>
-            <div className="flex justify-between items-center text-sm text-muted-foreground mb-1">
-              <span>Progress</span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} className="h-2" />
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold truncate">{goal.title}</h3>
+            <p className="text-sm text-muted-foreground truncate">{goal.description || 'No description'}</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="mt-4">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-xs font-medium text-muted-foreground">Progress</span>
+            <span className="text-xs font-semibold" style={{ color: goal.color }}>{completionPercentage.toFixed(0)}%</span>
+          </div>
+          <Progress value={completionPercentage} style={{ '--primary-color': goal.color } as React.CSSProperties} className="h-2 [&>*]:bg-[var(--primary-color)]" />
+        </div>
+        <div className="mt-auto pt-4 flex justify-between items-end">
+          <div className="flex flex-wrap gap-1">
+            {goal.tags.slice(0, 2).map(tag => (
+              <Badge key={tag.id} variant="outline" className="text-xs" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+          <div className="flex -space-x-2">
+            {goal.collaborators.map(user => (
+              <TooltipProvider key={user.id}>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Avatar className="h-6 w-6 border-2 border-card">
+                      <AvatarImage src={user.avatar} />
+                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{user.name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+          </div>
+        </div>
+      </div>
     </Link>
   );
 };
