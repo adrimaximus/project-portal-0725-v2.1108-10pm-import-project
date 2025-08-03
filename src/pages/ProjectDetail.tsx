@@ -209,7 +209,7 @@ const ProjectDetail = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
+      <div className="-mt-4 md:-mt-8">
         <ProjectHeader 
           project={project} 
           isEditing={isEditing}
@@ -220,7 +220,7 @@ const ProjectDetail = () => {
           onCancelChanges={handleCancelChanges}
           canEdit={canEdit}
         />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
           <div className="lg:col-span-2 space-y-6">
             <ProjectInfoCards 
               project={project}
