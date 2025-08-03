@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Project, Comment, dummyProjects } from "@/data/projects";
 import { useUser } from "@/contexts/UserContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Paperclip, Send, Ticket, Folder } from "lucide-react";
+import { Paperclip, Send, Ticket, Folder, MessageSquare, X } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
+import { cn } from "@/lib/utils";
 import './mentions-style.css';
 
 interface ProjectCommentsProps {
@@ -23,6 +24,7 @@ const ProjectComments = ({
   const [newCommentText, setNewCommentText] = useState("");
   const [isTicket, setIsTicket] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [filter, setFilter] = useState<'all' | 'comments' | 'tickets'>('all');
 
   const usersForMentions = project.assignedTo.map(user => ({
     id: user.id,
@@ -54,7 +56,7 @@ const ProjectComments = ({
     if (newCommentText.trim() === "" && !attachment) return;
 
     const newComment: Comment = {
-      id: `comment-${Date.now()}`,
+      id: `item-${Date.now()}`,
       author: currentUser,
       text: newCommentText,
       timestamp: new Date().toISOString(),
@@ -101,19 +103,35 @@ const ProjectComments = ({
     </div>
   );
 
-  const sortedComments = [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const sortedItems = useMemo(() => 
+    [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+    [project.comments]
+  );
+
+  const filteredItems = useMemo(() => {
+    if (filter === 'comments') return sortedItems.filter(item => !item.isTicket);
+    if (filter === 'tickets') return sortedItems.filter(item => item.isTicket);
+    return sortedItems;
+  }, [filter, sortedItems]);
+
+  const placeholderText = isTicket
+    ? "Create a new ticket... Describe the issue or task."
+    : "Add a comment... Type '@' to mention, '/' to link.";
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Comments & Tickets</h3>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Discussion</h3>
         
-        <div className="rounded-lg border bg-background">
+        <div className={cn(
+          "rounded-lg border bg-background transition-all",
+          isTicket && "border-orange-500/50 ring-2 ring-orange-500/20"
+        )}>
           <div className="p-2">
             <MentionsInput
               value={newCommentText}
               onChange={(e) => setNewCommentText(e.target.value)}
-              placeholder="Add a comment or create a ticket... Type '@' to mention a user, '/' to link a project."
+              placeholder={placeholderText}
               className="mentions"
               a11ySuggestionsListLabel="Suggested mentions"
             >
@@ -134,64 +152,102 @@ const ProjectComments = ({
             </MentionsInput>
           </div>
           {attachment && (
-            <div className="text-sm text-muted-foreground flex items-center gap-2 px-2 pb-2">
+            <div className="text-sm text-muted-foreground flex items-center gap-2 px-3 pb-2">
               <Paperclip className="h-4 w-4 flex-shrink-0" />
               <span className="truncate flex-1">{attachment.name}</span>
               <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveAttachment}>
-                &times;
+                <X className="h-4 w-4" />
               </Button>
             </div>
           )}
-          <div className="flex items-center justify-end gap-1 p-2 border-t">
-            <Button variant="ghost" size="icon" asChild>
-              <Label htmlFor="comment-attachment" className="cursor-pointer">
-                <Paperclip className="h-4 w-4" />
-                <input id="comment-attachment" type="file" className="sr-only" onChange={handleFileChange} />
-              </Label>
-            </Button>
-            <Button variant={isTicket ? "secondary" : "ghost"} size="icon" onClick={() => setIsTicket(!isTicket)}>
-              <Ticket className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center justify-between gap-1 p-2 border-t bg-muted/50 rounded-b-lg">
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" asChild>
+                <Label htmlFor="comment-attachment" className="cursor-pointer">
+                  <Paperclip className="h-4 w-4" />
+                  <input id="comment-attachment" type="file" className="sr-only" onChange={handleFileChange} />
+                </Label>
+              </Button>
+              <Button 
+                variant={isTicket ? "secondary" : "ghost"} 
+                size="sm" 
+                onClick={() => setIsTicket(!isTicket)}
+                className={cn(isTicket && "text-orange-600")}
+              >
+                <Ticket className="h-4 w-4 mr-2" />
+                {isTicket ? 'Creating a Ticket' : 'Create Ticket'}
+              </Button>
+            </div>
             <Button onClick={handleSubmit} disabled={!newCommentText.trim() && !attachment}>
-              Send
+              <Send className="h-4 w-4 mr-2" />
+              {isTicket ? 'Create Ticket' : 'Send Comment'}
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="space-y-6">
-        {sortedComments.map(comment => (
-          <div key={comment.id} className="flex items-start space-x-3">
-            <Avatar>
-              <AvatarImage src={comment.author.avatar} />
-              <AvatarFallback>{comment.author.name.slice(0, 2)}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-card-foreground">
-                  {comment.author.name}
-                  {comment.isTicket && <span className="ml-2 text-xs font-semibold bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full">Ticket</span>}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true, locale: id })}
-                </p>
-              </div>
-              <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{
-                __html: comment.text
-                  .replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<span class="bg-primary/20 text-primary font-semibold rounded-sm px-1">@$1</span>')
-                  .replace(/\/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="/projects/$2" class="text-primary hover:underline">$1</a>')
-              }} />
-              {comment.attachment && (
-                <div className="mt-2">
-                  <a href={comment.attachment.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2">
-                    <Paperclip className="h-4 w-4" />
-                    {comment.attachment.name}
-                  </a>
-                </div>
-              )}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+            <h4 className="text-md font-semibold">History</h4>
+            <div className="flex items-center gap-1 rounded-md bg-muted p-1">
+                <Button variant={filter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilter('all')}>All</Button>
+                <Button variant={filter === 'comments' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilter('comments')}>Comments</Button>
+                <Button variant={filter === 'tickets' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilter('tickets')}>Tickets</Button>
             </div>
-          </div>
-        ))}
+        </div>
+        <div className="space-y-4">
+          {filteredItems.map(item => (
+            <div key={item.id} className={cn(
+              "flex items-start space-x-3 p-3 rounded-lg",
+              item.isTicket && "bg-orange-500/10 border border-orange-500/20"
+            )}>
+              <Avatar>
+                <AvatarImage src={item.author.avatar} />
+                <AvatarFallback>{item.author.name.slice(0, 2)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-card-foreground flex items-center gap-2">
+                    {item.author.name}
+                    {item.isTicket && (
+                      <span className="flex items-center gap-1.5 text-xs font-semibold bg-orange-500/20 text-orange-800 px-2 py-0.5 rounded-full">
+                        <Ticket className="h-3 w-3" />
+                        Ticket
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true, locale: id })}
+                  </p>
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{
+                  __html: item.text
+                    .replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<span class="bg-primary/20 text-primary font-semibold rounded-sm px-1">@$1</span>')
+                    .replace(/\/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="/projects/$2" class="text-primary hover:underline">$1</a>')
+                }} />
+                {item.attachment && (
+                  <div className="mt-2">
+                    <a href={item.attachment.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md">
+                      <Paperclip className="h-4 w-4" />
+                      {item.attachment.name}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          {filteredItems.length === 0 && (
+            <div className="text-center py-10 text-muted-foreground">
+                <MessageSquare className="mx-auto h-12 w-12" />
+                <h3 className="mt-2 text-sm font-semibold">No items to display</h3>
+                <p className="mt-1 text-sm">
+                    {filter === 'comments' && "There are no comments yet."}
+                    {filter === 'tickets' && "There are no tickets yet."}
+                    {filter === 'all' && "There are no comments or tickets yet."}
+                </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
