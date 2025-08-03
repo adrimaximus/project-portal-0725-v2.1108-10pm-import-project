@@ -32,7 +32,7 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
     if (!target || !goal.targetPeriod) return null;
 
     switch (goal.targetPeriod) {
-      case 'Weekly': return target * (52 / 12); // Average weeks in a month
+      case 'Weekly': return target * 4; // Simplified to 4 weeks per month for clarity
       case 'Monthly': return target;
       default: return null;
     }
