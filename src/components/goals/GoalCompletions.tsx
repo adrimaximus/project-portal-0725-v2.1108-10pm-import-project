@@ -1,24 +1,23 @@
-import { useState } from 'react';
 import { Goal, GoalCompletion } from '@/data/goals';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import GoalLogTable from './GoalLogTable';
-import { useGoals } from '@/context/GoalsContext';
 
-interface GoalQuantityTrackerProps {
+interface GoalCompletionsProps {
   goal: Goal;
+  onUpdate: (goal: Goal) => void;
 }
 
-const GoalQuantityTracker = ({ goal }: GoalQuantityTrackerProps) => {
-  const { updateGoal } = useGoals();
+const GoalCompletions = ({ goal, onUpdate }: GoalCompletionsProps) => {
   const [value, setValue] = useState('');
 
   const handleAddCompletion = () => {
-    const numericValue = parseInt(value, 10);
+    const numericValue = parseFloat(value);
     if (isNaN(numericValue) || numericValue <= 0) {
-      toast.error("Please enter a valid positive whole number.");
+      toast.error("Please enter a valid positive number for the contribution.");
       return;
     }
 
@@ -34,7 +33,7 @@ const GoalQuantityTracker = ({ goal }: GoalQuantityTrackerProps) => {
       completions: [...goal.completions, newCompletion],
     };
 
-    updateGoal(updatedGoal);
+    onUpdate(updatedGoal);
     setValue('');
     toast.success("Progress logged successfully!");
   };
@@ -43,13 +42,12 @@ const GoalQuantityTracker = ({ goal }: GoalQuantityTrackerProps) => {
     <Card>
       <CardHeader>
         <CardTitle>Log Progress</CardTitle>
-        <CardDescription>Log a new completion for this goal.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2">
           <Input
             type="number"
-            placeholder="e.g., 5"
+            placeholder={`Add contribution... (${goal.unit || 'units'})`}
             value={value}
             onChange={(e) => setValue(e.target.value)}
           />
@@ -61,4 +59,4 @@ const GoalQuantityTracker = ({ goal }: GoalQuantityTrackerProps) => {
   );
 };
 
-export default GoalQuantityTracker;
+export default GoalCompletions;

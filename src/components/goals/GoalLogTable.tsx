@@ -1,67 +1,60 @@
 import { Goal, GoalCompletion } from '@/data/goals';
-import { dummyUsers } from '@/data/users';
+import { allUsers } from '@/data/users';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
-import { formatValue } from '@/lib/formatting';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { format } from 'date-fns';
+import { formatNumber, formatValue } from '@/lib/formatting';
 
 interface GoalLogTableProps {
-  logs: GoalCompletion[];
-  unit?: string;
-  goalType: Goal['type'];
+  goal: Goal;
 }
 
-const userMap = new Map(dummyUsers.map(user => [user.id, user]));
-
-const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
-  if (logs.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center py-4">No logs yet.</p>;
-  }
-
-  const sortedLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+const GoalLogTable = ({ goal }: GoalLogTableProps) => {
+  const formatDisplayValue = (value: number) => {
+    return goal.type === 'value' ? formatValue(value, goal.unit) : formatNumber(value);
+  };
 
   return (
-    <div className="border rounded-md mt-4">
-      <Table>
-        <TableHeader>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Date</TableHead>
+          <TableHead>Contributor</TableHead>
+          <TableHead className="text-right">Contribution</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {goal.completions.length === 0 && (
           <TableRow>
-            <TableHead>Date & Time</TableHead>
-            <TableHead>Achiever</TableHead>
-            <TableHead className="text-right">
-              {goalType === 'quantity' ? 'Quantity' : 'Value'}
-            </TableHead>
+            <TableCell colSpan={3} className="text-center text-muted-foreground">
+              No progress logged yet.
+            </TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedLogs.map((log, index) => {
-            const achiever = log.achieverId ? userMap.get(log.achieverId) : null;
+        )}
+        {goal.completions
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .map((completion: GoalCompletion) => {
+            const user = allUsers.find(u => u.id === completion.userId);
             return (
-              <TableRow key={index}>
-                <TableCell className="text-muted-foreground text-xs">
-                  {format(new Date(log.date), 'MMM dd, yyyy, hh:mm a')}
-                </TableCell>
+              <TableRow key={completion.id}>
+                <TableCell>{format(new Date(completion.date), 'MMM d, yyyy')}</TableCell>
                 <TableCell>
-                  {achiever ? (
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={achiever.avatar} />
-                        <AvatarFallback>{achiever.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">{achiever.name}</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">-</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={user?.avatar} alt={user?.name} />
+                      <AvatarFallback>{user?.initials}</AvatarFallback>
+                    </Avatar>
+                    <span>{user?.name || 'Unknown User'}</span>
+                  </div>
                 </TableCell>
                 <TableCell className="text-right font-medium">
-                  {formatValue(log.value, unit)}
+                  {formatDisplayValue(completion.value)}
                 </TableCell>
               </TableRow>
             );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+        })}
+      </TableBody>
+    </Table>
   );
 };
 

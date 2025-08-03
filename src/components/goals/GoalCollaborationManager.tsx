@@ -1,99 +1,84 @@
 import { useState } from 'react';
-import { Goal } from '@/data/goals';
-import { User, dummyUsers } from '@/data/users';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { allUsers, User } from '@/data/users';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Check, PlusCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface GoalCollaborationManagerProps {
-  goal: Goal;
-  onCollaboratorsUpdate: (updatedCollaborators: User[]) => void;
+  selectedUserIds: string[];
+  onSelectionChange: (ids: string[]) => void;
 }
 
-const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollaborationManagerProps) => {
-  const [selectedUsers, setSelectedUsers] = useState<string[]>(goal.collaborators.map(c => c.id));
+const GoalCollaborationManager = ({ selectedUserIds, onSelectionChange }: GoalCollaborationManagerProps) => {
+  const [open, setOpen] = useState(false);
 
-  const handleUserSelect = (userId: string, isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedUsers(prev => [...prev, userId]);
-    } else {
-      setSelectedUsers(prev => prev.filter(id => id !== userId));
-    }
+  const selectedUsers = selectedUserIds
+    .map(id => allUsers.find(user => user.id === id))
+    .filter((u): u is User => !!u);
+
+  const handleSelect = (userId: string) => {
+    const newSelection = selectedUserIds.includes(userId)
+      ? selectedUserIds.filter(id => id !== userId)
+      : [...selectedUserIds, userId];
+    onSelectionChange(newSelection);
   };
-
-  const handleSaveChanges = () => {
-    const updatedCollaborators = dummyUsers.filter(u => selectedUsers.includes(u.id));
-    onCollaboratorsUpdate(updatedCollaborators);
-    toast.success('Collaborators updated successfully!');
-  };
-
-  const availableUsers = dummyUsers.filter(u => u.id !== 'user-0'); // Exclude current user
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Collaborators</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center space-x-2">
-          {goal.collaborators.map(user => (
-            <Avatar key={user.id}>
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback>{user.initials}</AvatarFallback>
-            </Avatar>
+    <div className="space-y-4">
+      <div>
+        <h4 className="font-medium text-sm mb-2">Collaborators</h4>
+        <div className="flex flex-wrap gap-2 items-center">
+          {selectedUsers.map(user => (
+            <div key={user.id} className="flex items-center gap-2 bg-muted text-sm px-2 py-1 rounded-full">
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarFallback>{user.initials}</AvatarFallback>
+              </Avatar>
+              <span>{user.name}</span>
+            </div>
           ))}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="icon" className="rounded-full">
-                <PlusCircle className="h-5 w-5" />
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 rounded-full px-2">
+                <PlusCircle className="h-4 w-4" />
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Invite Collaborators</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                {availableUsers.map(user => (
-                  <div key={user.id} className="flex items-center space-x-3">
-                    <Checkbox
-                      id={`user-${user.id}`}
-                      checked={selectedUsers.includes(user.id)}
-                      onCheckedChange={(checked) => handleUserSelect(user.id, !!checked)}
-                    />
-                    <Avatar>
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback>{user.initials}</AvatarFallback>
-                    </Avatar>
-                    <Label htmlFor={`user-${user.id}`} className="font-medium">{user.name}</Label>
-                  </div>
-                ))}
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="ghost">Cancel</Button>
-                </DialogClose>
-                <DialogClose asChild>
-                  <Button onClick={handleSaveChanges}>Save Changes</Button>
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            </PopoverTrigger>
+            <PopoverContent className="p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Add collaborators..." />
+                <CommandList>
+                  <CommandEmpty>No users found.</CommandEmpty>
+                  <CommandGroup>
+                    {allUsers.map(user => (
+                      <CommandItem
+                        key={user.id}
+                        onSelect={() => handleSelect(user.id)}
+                        className="flex items-center"
+                      >
+                        <Avatar className="mr-2 h-6 w-6">
+                          <AvatarImage src={user.avatar} alt={user.name} />
+                          <AvatarFallback>{user.initials}</AvatarFallback>
+                        </Avatar>
+                        <span>{user.name}</span>
+                        <Check
+                          className={cn(
+                            'ml-auto h-4 w-4',
+                            selectedUserIds.includes(user.id) ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

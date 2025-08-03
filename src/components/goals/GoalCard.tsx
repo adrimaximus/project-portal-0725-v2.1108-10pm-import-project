@@ -1,102 +1,95 @@
+import { useMemo } from 'react';
 import { Goal } from '@/data/goals';
-import { Link } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import GoalIcon from './GoalIcon';
+import { formatNumber, formatValue } from '@/lib/formatting';
+import { getYear, parseISO } from 'date-fns';
+import { allUsers, User } from '@/data/users';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { Link } from 'react-router-dom';
 
 interface GoalCardProps {
   goal: Goal;
 }
 
 const GoalCard = ({ goal }: GoalCardProps) => {
-  const calculateProgress = () => {
-    if (goal.type === 'quantity') {
-      const today = new Date();
-      let periodStart, periodEnd;
+  const { progress, total, target, unit, period } = useMemo(() => {
+    const currentYear = getYear(new Date());
+    const total = goal.completions
+      .filter(c => getYear(parseISO(c.date)) === currentYear)
+      .reduce((sum, c) => sum + c.value, 0);
 
-      if (goal.targetPeriod === 'Weekly') {
-        periodStart = startOfWeek(today, { weekStartsOn: 1 });
-        periodEnd = endOfWeek(today, { weekStartsOn: 1 });
-      } else { // Monthly
-        periodStart = startOfMonth(today);
-        periodEnd = endOfMonth(today);
-      }
+    let target: number | undefined;
+    if (goal.type === 'quantity') target = goal.targetQuantity;
+    if (goal.type === 'value') target = goal.targetValue;
 
-      const completionsInPeriod = goal.completions.filter(c => {
-        const completionDate = parseISO(c.date);
-        return isWithinInterval(completionDate, { start: periodStart, end: periodEnd });
-      });
+    const progress = target ? Math.min(Math.round((total / target) * 100), 100) : 0;
 
-      const currentTotal = completionsInPeriod.reduce((sum, c) => sum + c.value, 0);
-      return goal.targetQuantity ? (currentTotal / goal.targetQuantity) * 100 : 0;
-    } else if (goal.type === 'value') {
-      const currentTotal = goal.completions.reduce((sum, c) => sum + c.value, 0);
-      return goal.targetValue ? (currentTotal / goal.targetValue) * 100 : 0;
-    } else { // frequency
-      const relevantCompletions = goal.completions.filter(c => c.value > 0);
-      const totalPossible = goal.completions.length;
-      return totalPossible > 0 ? (relevantCompletions.length / totalPossible) * 100 : 0;
-    }
+    return {
+      progress,
+      total,
+      target,
+      unit: goal.unit,
+      period: goal.targetPeriod,
+    };
+  }, [goal]);
+
+  const collaborators = useMemo(() => {
+    return goal.collaborators
+      .map(userId => allUsers.find(u => u.id === userId))
+      .filter((u): u is User => !!u);
+  }, [goal.collaborators]);
+
+  const formatDisplayValue = (value: number) => {
+    return goal.type === 'value' ? formatValue(value, unit) : formatNumber(value);
   };
-
-  const completionPercentage = calculateProgress();
-  const isUrl = goal.icon.startsWith('http');
 
   return (
     <Link to={`/goals/${goal.id}`} className="block">
-      <div className="bg-card border rounded-lg p-4 h-full flex flex-col hover:shadow-md transition-shadow duration-200">
-        <div className="flex justify-between items-start">
-          <div 
-            className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl flex-shrink-0 mr-4 overflow-hidden"
-            style={{ backgroundColor: `${goal.color}30`, color: goal.color }}
-          >
-            {isUrl ? (
-              <img src={goal.icon} alt={goal.title} className="w-full h-full object-cover" />
-            ) : (
-              <span>{goal.icon}</span>
-            )}
+      <Card className="h-full flex flex-col hover:border-primary/80 transition-colors">
+        <CardHeader className="flex-row items-start gap-4 space-y-0">
+          <GoalIcon goal={goal} />
+          <div className="flex-1">
+            <h3 className="font-bold text-lg">{goal.title}</h3>
+            <p className="text-sm text-muted-foreground line-clamp-2">{goal.description}</p>
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold truncate">{goal.title}</h3>
-            <p className="text-sm text-muted-foreground truncate">{goal.description || 'No description'}</p>
-          </div>
-        </div>
-        <div className="mt-4">
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-xs font-medium text-muted-foreground">Progress</span>
-            <span className="text-xs font-semibold" style={{ color: goal.color }}>{completionPercentage.toFixed(0)}%</span>
-          </div>
-          <Progress value={completionPercentage} style={{ '--primary-color': goal.color } as React.CSSProperties} className="h-2 [&>*]:bg-[var(--primary-color)]" />
-        </div>
-        <div className="mt-auto pt-4 flex justify-between items-end">
-          <div className="flex flex-wrap gap-1">
-            {goal.tags.slice(0, 2).map(tag => (
-              <Badge key={tag.id} variant="outline" className="text-xs" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
-                {tag.name}
-              </Badge>
-            ))}
-          </div>
+        </CardHeader>
+        <CardContent className="flex-grow">
+          {goal.type === 'frequency' ? (
+            <div className="text-sm">
+              <span className="font-semibold text-2xl">{goal.frequency}</span> times / {goal.targetPeriod?.replace('ly', '')}
+            </div>
+          ) : (
+            <div>
+              <div className="flex justify-between items-baseline mb-1">
+                <span className="text-sm font-medium text-primary">{formatDisplayValue(total)}</span>
+                {target && <span className="text-xs text-muted-foreground">Target: {formatDisplayValue(target)}</span>}
+              </div>
+              <div className="w-full bg-muted rounded-full h-2.5">
+                <div className="h-2.5 rounded-full" style={{ width: `${progress}%`, backgroundColor: goal.color }}></div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-between items-center">
           <div className="flex -space-x-2">
-            {goal.collaborators.map(user => (
+            {collaborators.map(user => (
               <TooltipProvider key={user.id}>
                 <Tooltip>
                   <TooltipTrigger>
-                    <Avatar className="h-6 w-6 border-2 border-card">
-                      <AvatarImage src={user.avatar} />
-                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    <Avatar className="h-8 w-8 border-2 border-card">
+                      <AvatarImage src={user.avatar} alt={user.name} />
+                      <AvatarFallback>{user.initials}</AvatarFallback>
                     </Avatar>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{user.name}</p>
-                  </TooltipContent>
+                  <TooltipContent>{user.name}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ))}
           </div>
-        </div>
-      </div>
+        </CardFooter>
+      </Card>
     </Link>
   );
 };

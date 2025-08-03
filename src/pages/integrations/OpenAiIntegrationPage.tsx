@@ -77,7 +77,7 @@ const OpenAiIntegrationPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>Connect to OpenAI</CardTitle>
-            <CardDescription>Enter your OpenAI API key to activate the integration. This will enable AI-powered features across the application.</CardDescription>
+            <CardDescription>Enter your OpenAI API key to activate the integration. This will enable AI-powered features across the application, such as the AI Coach for goals and DALL-E for icon generation.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
