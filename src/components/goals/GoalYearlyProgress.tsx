@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Goal } from '@/data/goals';
 import { User } from '@/data/users';
 import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
@@ -11,19 +10,29 @@ import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import AiCoachInsight from './AiCoachInsight';
 
-interface GoalYearlyProgressProps {
-  goal: Goal;
-  onToggleCompletion: (date: Date) => void;
+interface YearlyCompletion {
+  date: string;
+  completed: boolean;
 }
 
-const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProps) => {
-  const { completions: rawCompletions, color, frequency, specificDays } = goal;
-  const completions = rawCompletions.map(c => ({ date: c.date, completed: c.value === 1 }));
+interface GoalYearlyProgressProps {
+  completions: YearlyCompletion[];
+  color: string;
+  onToggleCompletion: (date: Date) => void;
+  frequency: string;
+  specificDays?: string[];
+  goalTitle: string;
+  goalDescription: string;
+  goalTags: string[];
+  collaborators: User[];
+}
 
+const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency, specificDays, goalTitle, goalDescription, goalTags, collaborators }: GoalYearlyProgressProps) => {
   const today = new Date();
   const currentYear = getYear(today);
   const [displayYear, setDisplayYear] = useState(currentYear);
   const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
+  const userName = "Alex";
 
   const todayStart = startOfDay(today);
 
@@ -134,7 +143,20 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
             <Progress value={overallPercentage} className="w-full" indicatorStyle={{ backgroundColor: color }} />
             <span className="font-bold text-lg">{overallPercentage}%</span>
           </div>
-          <AiCoachInsight goal={goal} />
+          <AiCoachInsight 
+            totalCompleted={totalCompleted}
+            totalPossible={totalPossible}
+            overallPercentage={overallPercentage}
+            frequency={frequency}
+            displayYear={displayYear}
+            goalTitle={goalTitle}
+            goalDescription={goalDescription}
+            goalTags={goalTags}
+            userName={userName}
+            selectedMonth={selectedMonth}
+            collaborators={collaborators}
+            color={color}
+          />
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {monthlyData.map(month => {

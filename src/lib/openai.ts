@@ -1,54 +1,81 @@
-import { Goal } from '@/data/goals';
+import OpenAI from 'openai';
 
-/**
- * Simulates calling an AI to generate an icon based on a prompt.
- * In a real application, this would involve a server-side call to a service like DALL-E.
- * For now, it returns a relevant image from Unsplash to simulate the effect.
- * @param prompt The text prompt for the AI.
- * @returns A promise that resolves to an image URL.
- */
-export const generateAiIcon = async (prompt: string): Promise<string> => {
-  console.log(`Generating AI icon for prompt: "${prompt}"`);
-
-  // Simulate network delay for realism
-  await new Promise(resolve => setTimeout(resolve, 1500));
-
-  // Extract a relevant keyword from the prompt to use with the image service.
-  // We look for the first word that is reasonably long.
-  const keywords = prompt.match(/\b(\w{4,})\b/g);
-  const keyword = keywords ? keywords[0] : 'abstract';
-
-  // Simulate a potential failure (e.g., network error, API limit)
-  if (Math.random() < 0.1) { // 10% chance of failure
-    throw new Error("Simulated AI service failure.");
+// Fungsi ini sekarang membuat dan mengembalikan instance OpenAI baru setiap kali dipanggil.
+// Ini memastikan bahwa kunci API terbaru dari localStorage selalu digunakan.
+const getOpenAIClient = (): OpenAI | null => {
+  try {
+    const apiKey = localStorage.getItem('openai_api_key');
+    if (!apiKey) {
+      return null;
+    }
+    return new OpenAI({
+      apiKey: apiKey,
+      dangerouslyAllowBrowser: true,
+    });
+  } catch (error) {
+    console.warn('Tidak dapat mengakses localStorage atau menginisialisasi klien OpenAI.');
+    return null;
   }
-
-  // Return a dynamic image URL from Unsplash. 
-  // The `sig` parameter with a timestamp ensures we get a different image each time.
-  return `https://source.unsplash.com/128x128/?${keyword.toLowerCase()}&sig=${Date.now()}`;
 };
 
-const sampleInsights = [
-    "Breaking this goal into smaller, daily tasks can make it feel more manageable. Consistency is key!",
-    "Remember why you started this goal. Visualizing your success can be a powerful motivator.",
-    "Don't forget to celebrate small wins along the way. It helps maintain momentum.",
-    "Consider tracking your progress at the same time each day to build a strong habit.",
-    "If you miss a day, don't be discouraged. Just get back on track the next day. Progress over perfection!"
-];
+export const generateAiInsight = async (prompt: string): Promise<string> => {
+  const openai = getOpenAIClient();
 
-/**
- * Simulates generating an AI-powered insight for a specific goal.
- * @param goal The goal to generate an insight for.
- * @returns A promise that resolves to a string with the insight.
- */
-export const generateAiInsight = async (goal: Goal): Promise<string> => {
-    console.log(`Generating AI insight for goal: "${goal.title}"`);
+  if (!openai) {
+    return "Kunci OpenAI API tidak dikonfigurasi. Silakan tambahkan kunci Anda di pengaturan aplikasi.";
+  }
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: "Anda adalah seorang AI Coach yang personal, suportif, dan berwawasan untuk sebuah aplikasi pelacak tujuan. Peran Anda adalah untuk membantu pengguna mencapai tujuan mereka dengan memberikan umpan balik yang memotivasi, saran yang dapat ditindaklanjuti, dan meninjau konsistensi mereka. Sapa pengguna utama dengan nama mereka. Jika ada kolaborator, sebutkan mereka sebagai bagian dari tim. Gunakan *semua* detail yang diberikan—judul, deskripsi, tag, dan jadwal—untuk membuat respons Anda sangat relevan. Selalu balas dalam Bahasa Indonesia. Jaga agar respons tetap singkat dan berdampak, sekitar 2-4 kalimat."
+        },
+        {
+          role: 'user',
+          content: prompt,
+        }
+      ],
+      max_tokens: 150,
+    });
+    return completion.choices[0]?.message?.content || "Maaf, saya tidak dapat menghasilkan wawasan saat ini.";
+  } catch (error) {
+    console.error("Error fetching AI insight:", error);
+    if (error instanceof OpenAI.APIError && error.status === 401) {
+        return "Kunci OpenAI API tidak valid. Silakan periksa kembali kunci Anda di pengaturan.";
+    }
+    return "Terjadi kesalahan saat terhubung dengan AI Coach. Silakan coba lagi nanti.";
+  }
+};
 
-    // In a real app, you'd send goal data to an LLM.
-    // Here, we'll just pick a random insight.
-    const randomIndex = Math.floor(Math.random() * sampleInsights.length);
-    return sampleInsights[randomIndex];
+export const generateAiIcon = async (prompt: string): Promise<string> => {
+  const openai = getOpenAIClient();
+
+  if (!openai) {
+    return "Kunci OpenAI API tidak dikonfigurasi.";
+  }
+
+  try {
+    // Menggunakan DALL-E 3 untuk hasil yang lebih baik dan prompt yang lebih disempurnakan
+    const response = await openai.images.generate({
+      model: 'dall-e-3',
+      prompt: `Stiker ikon datar yang cerah dan sederhana untuk aplikasi pelacak tujuan. Konsep: "${prompt}". Gaya vektor minimalis, latar belakang putih bersih, tanpa bayangan, tanpa teks.`,
+      n: 1,
+      size: '1024x1024', // DALL-E 3 menggunakan ukuran yang berbeda
+      quality: 'standard',
+    });
+    const imageUrl = response.data[0]?.url;
+    if (!imageUrl) {
+      return "Gagal menghasilkan ikon. Tidak ada URL yang dikembalikan dari API.";
+    }
+    return imageUrl;
+  } catch (error) {
+    console.error("Error generating AI icon:", error);
+    if (error instanceof OpenAI.APIError && error.status === 401) {
+        return "Kunci OpenAI API tidak valid. Silakan periksa kembali kunci Anda di pengaturan.";
+    }
+    return "Terjadi kesalahan saat membuat ikon dengan AI. Silakan coba lagi nanti.";
+  }
 };
