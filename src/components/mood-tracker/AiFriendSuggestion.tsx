@@ -127,13 +127,13 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
         >
             <Lightbulb 
               className={cn("h-5 w-5 transition-colors duration-300", !dominantMood && "text-primary")}
-              style={dominantMood ? { color: dominantMood.color } : {}}
+              style={dominantMood ? { color: dominantMood.color, filter: 'brightness(75%)' } : {}}
             />
         </div>
         <div>
             <h4 
               className="font-semibold text-sm transition-colors duration-300"
-              style={dominantMood ? { color: dominantMood.color } : {}}
+              style={dominantMood ? { color: dominantMood.color, filter: 'brightness(75%)' } : {}}
             >
               Pikiran dari Teman AI-mu
             </h4>
