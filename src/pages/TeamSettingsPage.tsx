@@ -1,16 +1,16 @@
-import { useParams, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
 import { useFeatures } from '@/contexts/FeaturesContext';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Search, Users, X } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
@@ -96,7 +96,6 @@ const TeamSettingsPage = () => {
     setMembers(currentMembers =>
       currentMembers.map(member => {
         if (member.name === memberName) {
-          // Cannot suspend pending invites
           if (member.status === 'Pending invite') return member;
           return {
             ...member,
@@ -147,94 +146,89 @@ const TeamSettingsPage = () => {
 
         <Card>
           <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search by name..." className="pl-8 w-full max-w-xs" />
-              </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add member
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
-                  <DialogHeader className="text-center items-center pt-4">
-                    <div className="p-3 rounded-full bg-primary-foreground mb-2 inline-block">
-                      <Users className="h-6 w-6 text-primary" />
-                    </div>
-                    <DialogTitle className="text-xl">Invite your team members</DialogTitle>
-                    <DialogDescription>
-                      Add your colleagues to collaborate and assign them a role.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4 space-y-4">
-                    {invites.map((invite) => (
-                      <div key={invite.id} className="flex items-end gap-3">
-                        <div className="flex-grow space-y-1.5">
-                          <Label htmlFor={`email-${invite.id}`}>Email address</Label>
-                          <Input
-                            id={`email-${invite.id}`}
-                            placeholder="name@example.com"
-                            value={invite.email}
-                            onChange={(e) => handleInviteChange(invite.id, 'email', e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1.5 flex-shrink-0">
-                          <Label htmlFor={`role-${invite.id}`}>Role</Label>
-                          <Select
-                            value={invite.role}
-                            onValueChange={(value) => {
-                              if (value === 'create-custom') {
-                                setCustomRoleDialogOpen(true);
-                              } else {
-                                handleInviteChange(invite.id, 'role', value);
-                              }
-                            }}
-                          >
-                            <SelectTrigger id={`role-${invite.id}`} className="w-[220px]">
-                              {defaultRoles.find(r => r.value === invite.role)?.label ?? <span className="text-muted-foreground">Select a role</span>}
-                            </SelectTrigger>
-                            <SelectContent>
-                              {defaultRoles.map(role => (
-                                <SelectItem key={role.value} value={role.value}>
-                                  <div className="flex flex-col items-start py-1">
-                                    <span>{role.label}</span>
-                                    <span className="text-xs text-muted-foreground whitespace-normal">{role.description}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                              <SelectSeparator />
-                              <SelectItem value="create-custom">
-                                <div className="flex flex-col items-start py-1">
-                                  <span>Create Custom Role</span>
-                                  <span className="text-xs text-muted-foreground">Set granular permissions.</span>
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {invites.length > 1 && (
-                          <Button variant="ghost" size="icon" onClick={() => removeInviteField(invite.id)} className="flex-shrink-0">
-                            <X className="h-4 w-4" />
-                            <span className="sr-only">Remove</span>
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    <Button variant="link" className="p-0 h-auto text-primary" onClick={addInviteField}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add another
-                    </Button>
+            <CardTitle>Invite Team Members</CardTitle>
+            <CardDescription>
+              Add your colleagues to collaborate and assign them a role.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {invites.map((invite) => (
+                <div key={invite.id} className="flex flex-col sm:flex-row items-end gap-3">
+                  <div className="flex-grow space-y-1.5 w-full">
+                    <Label htmlFor={`email-${invite.id}`}>Email address</Label>
+                    <Input
+                      id={`email-${invite.id}`}
+                      placeholder="name@example.com"
+                      value={invite.email}
+                      onChange={(e) => handleInviteChange(invite.id, 'email', e.target.value)}
+                    />
                   </div>
-                  <DialogFooter>
-                    <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
-                    <Button className="w-full sm:w-auto">Send Invite</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  <div className="space-y-1.5 flex-shrink-0 w-full sm:w-auto">
+                    <Label htmlFor={`role-${invite.id}`}>Role</Label>
+                    <Select
+                      value={invite.role}
+                      onValueChange={(value) => {
+                        if (value === 'create-custom') {
+                          setCustomRoleDialogOpen(true);
+                        } else {
+                          handleInviteChange(invite.id, 'role', value);
+                        }
+                      }}
+                    >
+                      <SelectTrigger id={`role-${invite.id}`} className="w-full sm:w-[220px]">
+                        {defaultRoles.find(r => r.value === invite.role)?.label ?? <span className="text-muted-foreground">Select a role</span>}
+                      </SelectTrigger>
+                      <SelectContent>
+                        {defaultRoles.map(role => (
+                          <SelectItem key={role.value} value={role.value}>
+                            <div className="flex flex-col items-start py-1">
+                              <span>{role.label}</span>
+                              <span className="text-xs text-muted-foreground whitespace-normal">{role.description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        <SelectSeparator />
+                        <SelectItem value="create-custom">
+                          <div className="flex flex-col items-start py-1">
+                            <span>Create Custom Role</span>
+                            <span className="text-xs text-muted-foreground">Set granular permissions.</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {invites.length > 1 && (
+                    <Button variant="ghost" size="icon" onClick={() => removeInviteField(invite.id)} className="flex-shrink-0">
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">Remove</span>
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button variant="link" className="p-0 h-auto text-primary" onClick={addInviteField}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add another
+              </Button>
             </div>
+          </CardContent>
+          <CardFooter>
+            <Button className="w-full sm:w-auto">Send Invites</Button>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                    <CardTitle>Current Members</CardTitle>
+                    <CardDescription>Review and manage existing team members.</CardDescription>
+                </div>
+                <div className="relative flex-1 max-w-xs">
+                  <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search by name..." className="pl-8 w-full" />
+                </div>
+              </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
