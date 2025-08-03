@@ -44,27 +44,38 @@ const AiCoachInsight = ({
     const [insight, setInsight] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
-    const hasCollaborators = collaborators.length > 0;
-    const collaboratorText = hasCollaborators ? `Anda dan ${collaborators[0].name}${collaborators.length > 1 ? ` & tim Anda` : ''}` : userName;
-
     const buildPrompt = (): string => {
-        let prompt = `Tujuan: "${goalTitle}" (Deskripsi: "${goalDescription}"). Tag: #${goalTags.join(', #')}. Frekuensi: ${frequency}. `;
-        prompt += `Pengguna adalah ${userName}. `;
+        const hasCollaborators = collaborators.length > 0;
 
+        // Konteks Pengguna dan Tim
+        let prompt = `--- Konteks Pengguna ---\n`;
+        prompt += `Pengguna Utama: ${userName}\n`;
         if (hasCollaborators) {
-            prompt += `Mereka berkolaborasi dengan ${collaborators.map(c => c.name).join(', ')}. `;
+            prompt += `Berkolaborasi dengan: ${collaborators.map(c => c.name).join(', ')}\n`;
         }
 
+        // Konteks Tujuan
+        prompt += `\n--- Konteks Tujuan ---\n`;
+        prompt += `Tujuan: "${goalTitle}"\n`;
+        prompt += `Deskripsi: "${goalDescription}"\n`;
+        prompt += `Tag Terkait: ${goalTags.join(', ')}\n`;
+        prompt += `Frekuensi: ${frequency}\n`;
+
+        // Konteks Performa
+        prompt += `\n--- Konteks Performa ---\n`;
         if (selectedMonth) {
             const { name, percentage, completedCount, possibleCount } = selectedMonth;
-            prompt += `Analisis performa mereka untuk bulan ${name}, ${displayYear}. `;
-            prompt += `Statistik: ${completedCount}/${possibleCount} penyelesaian (${percentage}% tingkat keberhasilan). `;
-            prompt += `Berikan mereka wawasan motivasi berdasarkan performa bulanan ini. Sapa mereka sebagai ${collaboratorText}.`;
+            prompt += `Periode Analisis: Bulan ${name}, ${displayYear}\n`;
+            prompt += `Statistik: ${completedCount} dari ${possibleCount} kali selesai (${percentage}% tingkat keberhasilan).\n`;
         } else {
-            prompt += `Analisis performa keseluruhan mereka untuk tahun ${displayYear}. `;
-            prompt += `Statistik: ${totalCompleted}/${totalPossible} total penyelesaian (${overallPercentage}% tingkat keberhasilan). `;
-            prompt += `Berikan mereka wawasan motivasi berdasarkan performa tahunan ini. Sapa mereka sebagai ${collaboratorText}.`;
+            prompt += `Periode Analisis: Keseluruhan Tahun ${displayYear}\n`;
+            prompt += `Statistik: ${totalCompleted} dari ${totalPossible} total penyelesaian (${overallPercentage}% tingkat keberhasilan).\n`;
         }
+
+        // Instruksi untuk AI
+        prompt += `\n--- Tugas Anda ---\n`;
+        prompt += `Berdasarkan semua data di atas, berikan umpan balik yang memotivasi dan personal kepada ${userName}. Tinjau kedisiplinan mereka, berikan saran untuk perbaikan jika perlu, dan semangati mereka (dan tim mereka, jika ada) untuk terus maju. Jadilah seperti pelatih pribadi.`;
+        
         return prompt;
     };
 
