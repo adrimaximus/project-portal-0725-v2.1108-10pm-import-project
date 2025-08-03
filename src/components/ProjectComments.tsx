@@ -150,7 +150,7 @@ const ProjectComments = ({
                 className="mentions__mention"
               />
             </MentionsInput>
-            <div className="absolute bottom-2 right-2 flex items-center gap-1">
+            <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1">
               <Button variant="ghost" size="icon" asChild>
                 <Label htmlFor="comment-attachment" className="cursor-pointer h-9 w-9 flex items-center justify-center">
                   <Paperclip className="h-4 w-4" />
