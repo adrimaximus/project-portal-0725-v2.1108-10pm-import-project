@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { formatValue, formatNumber } from '@/lib/formatting';
 import GoalLogTable from './GoalLogTable';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, differenceInDays } from 'date-fns';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface GoalValueTrackerProps {
   goal: Goal;
@@ -17,18 +18,18 @@ interface GoalValueTrackerProps {
 const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
   const [logValue, setLogValue] = useState<number | ''>('');
 
-  const { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, valueToGo } = useMemo(() => {
+  const { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, valueToGo, achieverSummary } = useMemo(() => {
     const today = new Date();
     let periodStart, periodEnd, periodName;
 
     if (goal.targetPeriod === 'Weekly') {
       periodStart = startOfWeek(today, { weekStartsOn: 1 });
       periodEnd = endOfWeek(today, { weekStartsOn: 1 });
-      periodName = "this week";
+      periodName = "minggu ini";
     } else { // Monthly
       periodStart = startOfMonth(today);
       periodEnd = endOfMonth(today);
-      periodName = "this month";
+      periodName = "bulan ini";
     }
 
     const daysRemaining = differenceInDays(periodEnd, today);
@@ -42,17 +43,27 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
     const periodProgress = goal.targetValue ? Math.round((currentPeriodTotal / goal.targetValue) * 100) : 0;
     const valueToGo = Math.max(0, (goal.targetValue || 0) - currentPeriodTotal);
     
-    return { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, valueToGo };
+    const achieverSummary = goal.collaborators.map(collaborator => {
+        const collaboratorLogs = logsInPeriod.filter(log => log.userId === collaborator.id);
+        const totalValue = collaboratorLogs.reduce((sum, log) => sum + log.value, 0);
+        return {
+            ...collaborator,
+            totalValue,
+        };
+    }).filter(summary => summary.totalValue > 0)
+      .sort((a, b) => b.totalValue - a.totalValue);
+
+    return { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, valueToGo, achieverSummary };
   }, [goal]);
 
   const handleLog = () => {
     const value = Number(logValue);
     if (value > 0) {
       onLogValue(new Date(), value);
-      toast.success(`Logged ${formatValue(value, goal.unit)} for "${goal.title}"`);
+      toast.success(`Mencatat ${formatValue(value, goal.unit)} untuk "${goal.title}"`);
       setLogValue('');
     } else {
-      toast.error("Please enter a valid number.");
+      toast.error("Silakan masukkan angka yang valid.");
     }
   };
 
@@ -75,19 +86,19 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
     <Card>
       <CardHeader>
         <div className="flex justify-between items-start">
-          <CardTitle>Progress {periodName}</CardTitle>
+          <CardTitle>Progres {periodName}</CardTitle>
           {daysRemaining >= 0 && (
             <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-              {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left
+              {daysRemaining} hari lagi
             </span>
           )}
         </div>
         <CardDescription>
-          You've logged {formatValue(currentPeriodTotal, goal.unit)} of {formatValue(goal.targetValue || 0, goal.unit)}.
+          Anda telah mencatat {formatValue(currentPeriodTotal, goal.unit)} dari {formatValue(goal.targetValue || 0, goal.unit)}.
           {valueToGo > 0 ? (
-            <span className="font-medium"> {formatValue(valueToGo, goal.unit)} to go.</span>
+            <span className="font-medium"> {formatValue(valueToGo, goal.unit)} lagi.</span>
           ) : (
-            <span className="font-medium text-green-600"> Target met!</span>
+            <span className="font-medium text-green-600"> Target tercapai! 🎉</span>
           )}
         </CardDescription>
       </CardHeader>
@@ -100,13 +111,46 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
           <Input
             type="text"
             inputMode="numeric"
-            placeholder={`Log ${goal.unit || 'value'}...`}
+            placeholder={`Catat ${goal.unit || 'nilai'}...`}
             value={logValue !== '' ? formatNumber(logValue) : ''}
             onChange={handleNumericInputChange}
             onKeyPress={(e) => e.key === 'Enter' && handleLog()}
           />
-          <Button onClick={handleLog}>Log</Button>
+          <Button onClick={handleLog}>Catat</Button>
         </div>
+
+        {achieverSummary.length > 1 && (
+            <div className="mt-6 pt-4 border-t">
+                <h4 className="font-semibold text-sm mb-3 text-muted-foreground">Kontribusi per Anggota</h4>
+                <ul className="space-y-4">
+                    {achieverSummary.map(achiever => (
+                        <li key={achiever.id} className="flex items-center gap-3">
+                            <Avatar className="w-9 h-9">
+                                <AvatarImage src={achiever.avatar} alt={achiever.name} />
+                                <AvatarFallback>{achiever.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                                <div className="flex justify-between items-baseline">
+                                    <p className="font-semibold">{achiever.name}</p>
+                                    <p className="text-sm font-bold">{formatValue(achiever.totalValue, goal.unit)}</p>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <Progress 
+                                        value={currentPeriodTotal > 0 ? (achiever.totalValue / currentPeriodTotal) * 100 : 0} 
+                                        className="h-1.5 flex-1 [&>*]:bg-[var(--primary-color)]"
+                                        style={{ '--primary-color': goal.color } as React.CSSProperties}
+                                    />
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        {Math.round(currentPeriodTotal > 0 ? (achiever.totalValue / currentPeriodTotal) * 100 : 0)}%
+                                    </span>
+                                </div>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        )}
+
         <GoalLogTable logs={logsInPeriod} unit={goal.unit} goalType={goal.type} />
       </CardContent>
     </Card>
