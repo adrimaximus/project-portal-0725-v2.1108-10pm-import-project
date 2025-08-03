@@ -170,17 +170,15 @@ const ProjectComments = ({
               </Button>
               <Button 
                 variant={isTicket ? "secondary" : "ghost"} 
-                size="sm" 
+                size="icon" 
                 onClick={() => setIsTicket(!isTicket)}
                 className={cn(isTicket && "text-orange-600")}
               >
-                <Ticket className="h-4 w-4 mr-2" />
-                {isTicket ? 'Creating a Ticket' : 'Create Ticket'}
+                <Ticket className="h-4 w-4" />
               </Button>
             </div>
-            <Button onClick={handleSubmit} disabled={!newCommentText.trim() && !attachment}>
-              <Send className="h-4 w-4 mr-2" />
-              {isTicket ? 'Create Ticket' : 'Send Comment'}
+            <Button size="icon" onClick={handleSubmit} disabled={!newCommentText.trim() && !attachment}>
+              <Send className="h-4 w-4" />
             </Button>
           </div>
         </div>
