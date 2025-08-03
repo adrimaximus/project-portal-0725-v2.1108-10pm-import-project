@@ -25,24 +25,30 @@ export async function generateAiInsight(
 
   const basePrompt = `
     Anda adalah seorang Pelatih Sasaran AI yang ahli. Nada bicara Anda sangat memotivasi, berwawasan luas, dan kolaboratif. Anda memberikan nasihat yang jelas dan dapat ditindaklanjuti untuk membantu pengguna dan tim mereka mencapai tujuan. Respons Anda harus dalam Bahasa Indonesia.
+    Gunakan judul dan deskripsi sasaran sebagai konteks utama untuk memberikan saran.
+
+    **Data Sasaran Utama:**
+    - Judul: ${goal.title}
+    - Deskripsi: ${goal.description}
   `;
 
   let contextPrompt = '';
 
   if (context.month) {
+    const { name, percentage, completedCount, possibleCount } = context.month;
     contextPrompt = `
-      Fokus pada ulasan untuk bulan **${context.month.name}**.
+      Fokus pada ulasan untuk bulan **${name}**.
 
-      **Data Bulanan (${context.month.name}):**
-      - Performa: ${context.month.percentage}% tercapai.
-      - Detail: ${context.month.completedCount} dari ${context.month.possibleCount} hari target telah diselesaikan.
+      **Data Bulanan (${name}):**
+      - Performa: ${percentage}% tercapai.
+      - Detail: ${completedCount} dari ${possibleCount} hari target telah diselesaikan.
 
       **Instruksi Respons Bulanan:**
-      1. Berikan ulasan singkat tentang performa di bulan ${context.month.name}.
-      2. Jika performa bagus (>= 80%), berikan apresiasi dan soroti konsistensi.
-      3. Jika performa sedang (40-79%), berikan motivasi dan 1-2 tips konkret untuk meningkatkan di bulan berikutnya.
-      4. Jika performa rendah (< 40%), berikan dorongan semangat tanpa menghakimi. Identifikasi kemungkinan tantangan dan sarankan untuk memulai kembali dengan langkah kecil.
-      5. Jaga agar tetap singkat (2-4 kalimat) dan fokus pada bulan tersebut.
+      1. Berikan ulasan singkat tentang performa di bulan ${name}.
+      2. **Jika performa >= 100%:** Berikan apresiasi luar biasa.
+      3. **Jika performa antara 60% dan 99%:** Berikan motivasi dan penguatan positif, sebutkan mereka di jalur yang benar.
+      4. **Jika performa < 60%:** Berikan dorongan semangat. Berdasarkan **judul dan deskripsi sasaran**, berikan **1-2 tips praktis dan relevan** untuk meningkatkan konsistensi.
+      5. Jaga agar tetap singkat (2-4 kalimat).
     `;
   } else if (context.yearly) {
     const today = new Date();
@@ -69,18 +75,15 @@ export async function generateAiInsight(
     contextPrompt = `
       Analisis data sasaran tahunan berikut.
 
-      **Data Sasaran:**
-      - Judul: ${goal.title}
-      - Deskripsi: ${goal.description}
-      - Tipe & Target: ${goal.type}, menargetkan ${target || goal.frequency} per ${goal.targetPeriod}
+      **Data Tambahan Tahunan:**
       - Progres: ${progressSummary}
       - Sisa Waktu: ${daysLeft} hari tersisa di periode ini.
       - Kolaborator: ${collaboratorText}
 
       **Instruksi Respons Tahunan:**
       1.  **Jika progres >= 100%:** Mulai dengan **apresiasi** yang kuat.
-      2.  **Jika progres antara 50% dan 99%:** Berikan **motivasi** dan penguatan positif.
-      3.  **Jika progres < 50%:** Berikan **dorongan semangat** dan **Rencana Aksi** dengan 2-3 langkah sederhana.
+      2.  **Jika progres antara 60% dan 99%:** Berikan **motivasi** dan penguatan positif.
+      3.  **Jika progres < 60%:** Berikan **dorongan semangat** yang kuat. Berdasarkan **judul dan deskripsi sasaran**, berikan **2-3 tips dan strategi praktis** yang dapat ditindaklanjuti untuk membantu mereka kembali ke jalur yang benar.
       4.  Sebutkan pentingnya kolaborasi jika ada anggota tim.
       5.  Gunakan format markdown. Jaga agar respons tetap singkat dan padat (sekitar 3-5 kalimat).
     `;
