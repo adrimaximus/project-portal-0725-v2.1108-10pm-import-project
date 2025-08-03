@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Search, Users, X, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Users, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, Sele
 import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 type Invite = {
   id: number;
@@ -38,48 +37,26 @@ const FeatureSettingsPage = () => {
   const [invites, setInvites] = useState<Invite[]>([{ id: Date.now(), email: '', role: 'member' }]);
   const [isCustomRoleDialogOpen, setCustomRoleDialogOpen] = useState(false);
   const [customRoleName, setCustomRoleName] = useState('');
-  const [customRolePermissions, setCustomRolePermissions] = useState<Record<string, any>>({});
+  const [customRolePermissions, setCustomRolePermissions] = useState<Record<string, boolean>>({});
 
   const feature = features.find(f => f.id === featureId);
 
   useEffect(() => {
     if (isCustomRoleDialogOpen) {
       const initialPermissions = features.reduce((acc, feature) => {
-        if (feature.id === 'projects') {
-          acc[feature.id] = {
-            create: false,
-            edit: false,
-            comment: false,
-            view: false,
-          };
-        } else {
-          acc[feature.id] = false;
-        }
+        acc[feature.id] = false;
         return acc;
-      }, {} as Record<string, any>);
+      }, {} as Record<string, boolean>);
       setCustomRolePermissions(initialPermissions);
       setCustomRoleName('');
     }
   }, [isCustomRoleDialogOpen, features]);
 
-  const handlePermissionToggle = (featureId: string, subPermission?: string) => {
-    setCustomRolePermissions(prev => {
-      const newPermissions = JSON.parse(JSON.stringify(prev));
-      if (subPermission) {
-        newPermissions[featureId][subPermission] = !newPermissions[featureId][subPermission];
-      } else {
-        const currentValue = newPermissions[featureId];
-        if (typeof currentValue === 'object' && currentValue !== null) {
-          const allEnabled = Object.values(currentValue).every(v => v);
-          Object.keys(currentValue).forEach(key => {
-            newPermissions[featureId][key] = !allEnabled;
-          });
-        } else {
-          newPermissions[featureId] = !currentValue;
-        }
-      }
-      return newPermissions;
-    });
+  const handlePermissionToggle = (featureId: string) => {
+    setCustomRolePermissions(prev => ({
+      ...prev,
+      [featureId]: !prev[featureId],
+    }));
   };
 
   const handleInviteChange = (id: number, field: 'email' | 'role', value: string) => {
@@ -329,63 +306,7 @@ const FeatureSettingsPage = () => {
               <div className="space-y-2 pt-2 max-h-[300px] overflow-y-auto pr-3">
                 {features
                   .sort((a, b) => a.name.localeCompare(b.name))
-                  .map(feature => {
-                    if (feature.id === 'projects') {
-                      const projectPermissions = customRolePermissions.projects || {};
-                      const areAllProjectPermissionsEnabled = Object.values(projectPermissions).every(p => p === true);
-                      return (
-                        <Collapsible key={feature.id} className="space-y-2">
-                          <div className="flex items-center justify-between rounded-lg border p-3">
-                            <CollapsibleTrigger asChild>
-                              <div className="flex items-center gap-2 flex-1 cursor-pointer">
-                                <Label className="font-normal flex-1 cursor-pointer">{feature.name}</Label>
-                                <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-180" />
-                              </div>
-                            </CollapsibleTrigger>
-                            <Switch
-                              id={`perm-${feature.id}`}
-                              checked={areAllProjectPermissionsEnabled}
-                              onCheckedChange={() => handlePermissionToggle(feature.id)}
-                            />
-                          </div>
-                          <CollapsibleContent className="space-y-2 pl-6 pr-2">
-                            <div className="flex items-center justify-between rounded-lg border p-3">
-                              <Label htmlFor="perm-projects-create" className="font-normal">Create project</Label>
-                              <Switch
-                                id="perm-projects-create"
-                                checked={projectPermissions.create || false}
-                                onCheckedChange={() => handlePermissionToggle('projects', 'create')}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between rounded-lg border p-3">
-                              <Label htmlFor="perm-projects-edit" className="font-normal">Edit project</Label>
-                              <Switch
-                                id="perm-projects-edit"
-                                checked={projectPermissions.edit || false}
-                                onCheckedChange={() => handlePermissionToggle('projects', 'edit')}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between rounded-lg border p-3">
-                              <Label htmlFor="perm-projects-comment" className="font-normal">Comment</Label>
-                              <Switch
-                                id="perm-projects-comment"
-                                checked={projectPermissions.comment || false}
-                                onCheckedChange={() => handlePermissionToggle('projects', 'comment')}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between rounded-lg border p-3">
-                              <Label htmlFor="perm-projects-view" className="font-normal">View</Label>
-                              <Switch
-                                id="perm-projects-view"
-                                checked={projectPermissions.view || false}
-                                onCheckedChange={() => handlePermissionToggle('projects', 'view')}
-                              />
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      );
-                    }
-                    return (
+                  .map(feature => (
                       <div key={feature.id} className="flex items-center justify-between rounded-lg border p-3">
                         <Label htmlFor={`perm-${feature.id}`} className="font-normal">{feature.name}</Label>
                         <Switch
@@ -395,8 +316,7 @@ const FeatureSettingsPage = () => {
                           disabled={feature.id === 'settings'}
                         />
                       </div>
-                    );
-                  })}
+                    ))}
               </div>
             </div>
           </div>
