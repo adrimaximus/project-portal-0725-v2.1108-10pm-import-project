@@ -72,6 +72,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
   const [defaultNavItems, setDefaultNavItems] = useState<NavItem[]>(() => [
     { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
+    { id: "projects", href: "/projects", label: "Projects", icon: Package },
     { id: "request", href: "/request", label: "Request", icon: LayoutGrid },
     { 
       id: "chat",
