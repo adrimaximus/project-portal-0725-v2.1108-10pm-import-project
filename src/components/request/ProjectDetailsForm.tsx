@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import ModernTeamSelector from "./ModernTeamSelector";
 import FileUploader from "./FileUploader";
@@ -102,7 +102,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           <CardTitle>Project Details</CardTitle>
           <CardDescription>Fill out the form below to create a new project request.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 max-h-[60vh] overflow-y-auto">
           <div className="space-y-2">
             <Label htmlFor="project-name">Project Name</Label>
             <Input
@@ -192,11 +192,11 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
             <Label>Attach Files</Label>
             <FileUploader onFilesChange={setFiles} />
           </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onBack}>Back</Button>
-            <Button type="submit">Submit Project Request</Button>
-          </div>
         </CardContent>
+        <CardFooter className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onBack}>Back</Button>
+          <Button type="submit">Submit Project Request</Button>
+        </CardFooter>
       </Card>
     </form>
   );
