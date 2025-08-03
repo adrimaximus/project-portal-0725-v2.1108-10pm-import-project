@@ -3,7 +3,7 @@
 }
 
 .mentions__control {
-  @apply bg-transparent;
+  @apply bg-transparent border-none shadow-none outline-none;
 }
 
 .mentions__input {

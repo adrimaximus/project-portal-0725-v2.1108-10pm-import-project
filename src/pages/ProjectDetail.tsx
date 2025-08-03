@@ -245,7 +245,9 @@ const ProjectDetail = () => {
             mentionedUserIds.add(match[1]);
           }
 
-          const assignedTo = currentEditedProject.assignedTo.filter(user => mentionedUserIds.has(user.id));
+          const assignedTo = currentEditedProject.assignedTo
+            .filter(user => mentionedUserIds.has(user.id))
+            .map(user => user.id);
 
           const newTask: Task = {
             id: `task-${Date.now()}`,
