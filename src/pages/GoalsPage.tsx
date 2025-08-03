@@ -1,27 +1,53 @@
-import { useGoals } from '@/context/GoalsContext';
-import GoalCard from '@/components/goals/GoalCard';
+import { useState, useEffect } from 'react';
+import PortalLayout from '@/components/PortalLayout';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import { dummyGoals, Goal } from '@/data/goals';
 import GoalFormDialog from '@/components/goals/GoalFormDialog';
+import GoalCard from '@/components/goals/GoalCard';
+import { v4 as uuidv4 } from 'uuid';
 
 const GoalsPage = () => {
-  const { goals, addGoal, updateGoal, deleteGoal } = useGoals();
+  const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
+  const [goals, setGoals] = useState<Goal[]>([]);
+
+  useEffect(() => {
+    setGoals([...dummyGoals]);
+  }, []);
+
+  const handleGoalCreate = (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => {
+    const newGoal: Goal = {
+      ...newGoalData,
+      id: uuidv4(),
+      completions: [],
+      collaborators: [],
+    };
+    
+    dummyGoals.unshift(newGoal);
+    setGoals(prevGoals => [newGoal, ...prevGoals]);
+  };
 
   return (
-    <div className="container mx-auto p-4">
+    <PortalLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">My Goals</h1>
-        <GoalFormDialog onSave={addGoal} />
+        <Button onClick={() => setIsNewGoalDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> New Goal
+        </Button>
       </div>
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {goals.map(goal => (
-          <GoalCard
-            key={goal.id}
-            goal={goal}
-            onUpdate={updateGoal}
-            onDelete={() => deleteGoal(goal.id)}
-          />
+          <GoalCard key={goal.id} goal={goal} />
         ))}
       </div>
-    </div>
+
+      <GoalFormDialog
+        open={isNewGoalDialogOpen}
+        onOpenChange={setIsNewGoalDialogOpen}
+        onGoalCreate={handleGoalCreate}
+      />
+    </PortalLayout>
   );
 };
 

@@ -4,40 +4,31 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/formatting';
 import GoalLogTable from './GoalLogTable';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, differenceInDays, startOfDay, endOfDay } from 'date-fns';
 
 interface GoalQuantityTrackerProps {
   goal: Goal;
-  onLogValue: (date: Date, value: number) => void;
+  onLogProgress: (date: Date, value: number) => void;
 }
 
-const GoalQuantityTracker = ({ goal, onLogValue }: GoalQuantityTrackerProps) => {
+const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) => {
   const [logValue, setLogValue] = useState<number | ''>('');
 
   const { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, quantityToGo } = useMemo(() => {
     const today = new Date();
     let periodStart, periodEnd, periodName;
 
-    switch (goal.targetPeriod) {
-      case 'Daily':
-        periodStart = startOfDay(today);
-        periodEnd = endOfDay(today);
-        periodName = "today";
-        break;
-      case 'Weekly':
-        periodStart = startOfWeek(today, { weekStartsOn: 1 });
-        periodEnd = endOfWeek(today, { weekStartsOn: 1 });
-        periodName = "this week";
-        break;
-      case 'Monthly':
-      default:
-        periodStart = startOfMonth(today);
-        periodEnd = endOfMonth(today);
-        periodName = "this month";
-        break;
+    if (goal.targetPeriod === 'Weekly') {
+      periodStart = startOfWeek(today, { weekStartsOn: 1 });
+      periodEnd = endOfWeek(today, { weekStartsOn: 1 });
+      periodName = "this week";
+    } else { // Monthly
+      periodStart = startOfMonth(today);
+      periodEnd = endOfMonth(today);
+      periodName = "this month";
     }
 
     const daysRemaining = differenceInDays(periodEnd, today);
@@ -57,8 +48,8 @@ const GoalQuantityTracker = ({ goal, onLogValue }: GoalQuantityTrackerProps) => 
   const handleLog = () => {
     const value = Number(logValue);
     if (value > 0) {
-      onLogValue(new Date(), value);
-      toast.success(`Logged ${formatNumber(value)} ${goal.unit || ''} for "${goal.title}"`);
+      onLogProgress(new Date(), value);
+      toast.success(`Logged ${formatNumber(value)} for "${goal.title}"`);
       setLogValue('');
     } else {
       toast.error("Please enter a valid number.");
@@ -85,14 +76,14 @@ const GoalQuantityTracker = ({ goal, onLogValue }: GoalQuantityTrackerProps) => 
       <CardHeader>
         <div className="flex justify-between items-start">
           <CardTitle>Progress {periodName}</CardTitle>
-          {daysRemaining >= 0 && goal.targetPeriod !== 'Daily' && (
+          {daysRemaining >= 0 && (
             <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
               {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left
             </span>
           )}
         </div>
         <CardDescription>
-          You've logged {formatNumber(currentPeriodTotal)} of {formatNumber(goal.targetQuantity || 0)} {goal.unit || ''}.
+          You've completed {formatNumber(currentPeriodTotal)} of {formatNumber(goal.targetQuantity || 0)}.
           {quantityToGo > 0 ? (
             <span className="font-medium"> {formatNumber(quantityToGo)} to go.</span>
           ) : (
@@ -109,14 +100,14 @@ const GoalQuantityTracker = ({ goal, onLogValue }: GoalQuantityTrackerProps) => 
           <Input
             type="text"
             inputMode="numeric"
-            placeholder={`Log ${goal.unit || 'quantity'}...`}
+            placeholder="Log progress..."
             value={logValue !== '' ? formatNumber(logValue) : ''}
             onChange={handleNumericInputChange}
             onKeyPress={(e) => e.key === 'Enter' && handleLog()}
           />
           <Button onClick={handleLog}>Log</Button>
         </div>
-        <GoalLogTable logs={logsInPeriod} unit={goal.unit} goalType={goal.type} />
+        <GoalLogTable logs={logsInPeriod} goalType={goal.type} />
       </CardContent>
     </Card>
   );

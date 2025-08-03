@@ -1,106 +1,114 @@
-import { subDays, subMonths, subWeeks } from 'date-fns';
+import { User, dummyUsers } from './users';
+import { Tag, dummyTags } from './tags';
 
-export type GoalType = 'quantity' | 'value' | 'frequency';
-export type GoalPeriod = 'Daily' | 'Weekly' | 'Monthly';
-export type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
-
-export interface Completion {
-  date: string; // ISO 8601 format
+export interface GoalCompletion {
+  date: string; // ISO String for value/quantity logs, YYYY-MM-DD for frequency
   value: number;
-  achiever: string; // Name of the person who completed it
+  achieverId?: string;
 }
+
+export type GoalType = 'frequency' | 'quantity' | 'value';
+export type GoalPeriod = 'Weekly' | 'Monthly';
 
 export interface Goal {
   id: string;
   title: string;
   description: string;
   icon: string;
-  type: GoalType;
-  targetPeriod: GoalPeriod | null;
-  targetQuantity: number | null;
-  targetValue: number | null;
-  unit: string | null;
-  frequency: number | null; // e.g., 3 for "3 times a week"
-  specificDays: DayOfWeek[] | null;
   color: string;
-  tags: string[];
-  collaborators: string[];
-  completions: Completion[];
+  type: GoalType;
+  
+  // Frequency-specific
+  frequency: 'Daily' | 'Weekly';
+  specificDays: string[];
+
+  // Quantity-specific
+  targetQuantity?: number;
+  targetPeriod?: GoalPeriod;
+
+  // Value-specific
+  targetValue?: number;
+  unit?: string;
+
+  tags: Tag[];
+  completions: GoalCompletion[];
+  collaborators: User[];
 }
 
-const today = new Date();
-
-export const sampleGoals: Goal[] = [
+export const dummyGoals: Goal[] = [
   {
     id: '1',
-    title: 'Read 20 Pages a Day',
-    description: 'Cultivate a daily reading habit to expand knowledge.',
-    icon: 'book-open',
+    title: 'Read a Book',
+    description: 'Read at least 300 pages this month.',
+    icon: '📚',
+    color: '#3B82F6',
     type: 'quantity',
-    targetPeriod: 'Daily',
-    targetQuantity: 20,
-    targetValue: null,
-    unit: 'pages',
-    frequency: null,
-    specificDays: null,
-    color: '#3b82f6', // blue-500
-    tags: ['education', 'habit'],
-    collaborators: ['You'],
+    targetQuantity: 300,
+    targetPeriod: 'Monthly',
+    frequency: 'Daily',
+    specificDays: [],
+    tags: [dummyTags[0], dummyTags[1]],
     completions: [
-      { date: subDays(today, 1).toISOString(), value: 25, achiever: 'You' },
-      { date: subDays(today, 2).toISOString(), value: 18, achiever: 'You' },
-      { date: subDays(today, 3).toISOString(), value: 22, achiever: 'You' },
-      { date: subMonths(today, 1).toISOString(), value: 30, achiever: 'You' },
+      { date: '2024-08-01T09:00:00Z', value: 25, achieverId: '1' },
+      { date: '2024-08-02T09:05:00Z', value: 15, achieverId: '1' }
     ],
+    collaborators: [dummyUsers[0]],
   },
   {
     id: '2',
-    title: 'Save IDR 5,000,000 per Week',
-    description: 'Weekly savings goal for future investments.',
-    icon: 'piggy-bank',
-    type: 'value',
-    targetPeriod: 'Weekly',
-    targetQuantity: null,
-    targetValue: 5000000,
-    unit: 'IDR',
-    frequency: null,
-    specificDays: null,
-    color: '#22c55e', // green-500
-    tags: ['finance', 'savings'],
-    collaborators: ['You', 'Alex', 'Sarah'],
-    completions: [
-      { date: subDays(today, 2).toISOString(), value: 2500000, achiever: 'You' },
-      { date: subDays(today, 4).toISOString(), value: 1500000, achiever: 'Alex' },
-      { date: subWeeks(today, 1).toISOString(), value: 5500000, achiever: 'You' },
-      { date: subWeeks(today, 2).toISOString(), value: 4800000, achiever: 'Sarah' },
-      { date: subWeeks(today, 3).toISOString(), value: 6000000, achiever: 'You' },
-      { date: subMonths(today, 1).toISOString(), value: 4000000, achiever: 'Alex' },
-      { date: subMonths(today, 1).toISOString(), value: 1000000, achiever: 'You' },
-      { date: subMonths(today, 2).toISOString(), value: 5200000, achiever: 'Sarah' },
-      { date: subMonths(today, 3).toISOString(), value: 4900000, achiever: 'You' },
-    ],
+    title: 'Morning Run',
+    description: 'Go for a 30-minute run every weekday morning.',
+    icon: '🏃',
+    color: '#10B981',
+    type: 'frequency',
+    frequency: 'Weekly',
+    specificDays: ['Mo', 'Tu', 'We', 'Th', 'Fr'],
+    tags: [dummyTags[2], dummyTags[3], dummyTags[4]],
+    completions: [],
+    collaborators: [dummyUsers[0], dummyUsers[2]],
   },
   {
-    id: '3',
-    title: 'Workout 3 Times a Week',
-    description: 'Stay active and healthy with regular exercise.',
-    icon: 'dumbbell',
-    type: 'frequency',
-    targetPeriod: 'Weekly',
-    targetQuantity: null,
-    targetValue: null,
-    unit: null,
-    frequency: 3,
-    specificDays: ['Mon', 'Wed', 'Fri'],
-    color: '#ef4444', // red-500
-    tags: ['health', 'fitness'],
-    collaborators: ['You'],
+    id: '6',
+    title: 'Save Money',
+    description: 'Save Rp 5.000.000 for a new gadget.',
+    icon: '💰',
+    color: '#22C55E',
+    type: 'value',
+    targetValue: 5000000,
+    unit: 'IDR',
+    frequency: 'Daily',
+    specificDays: [],
+    tags: [{ id: 'tag-12', name: 'Finance', color: '#22C55E' }],
     completions: [
-      { date: subDays(today, 1).toISOString(), value: 1, achiever: 'You' },
-      { date: subDays(today, 3).toISOString(), value: 1, achiever: 'You' },
-      { date: subWeeks(today, 1).toISOString(), value: 1, achiever: 'You' },
-      { date: subWeeks(today, 1).toISOString(), value: 1, achiever: 'You' },
-      { date: subWeeks(today, 1).toISOString(), value: 1, achiever: 'You' },
+      { date: '2024-08-01T10:00:00Z', value: 500000, achieverId: '1' },
+      { date: '2024-08-05T14:30:00Z', value: 1250000, achieverId: '2' }
     ],
+    collaborators: [dummyUsers[0], dummyUsers[1]],
+  },
+  {
+    id: '4',
+    title: 'Drink 8 Glasses of Water',
+    description: 'Stay hydrated by drinking at least 8 glasses of water.',
+    icon: '💧',
+    color: '#0EA5E9',
+    type: 'frequency',
+    frequency: 'Daily',
+    specificDays: [],
+    tags: [dummyTags[8], dummyTags[2]],
+    completions: [],
+    collaborators: [dummyUsers[1]],
+  },
+  {
+    id: '5',
+    title: 'Meditate',
+    description: 'Meditate for 10 minutes every morning.',
+    icon: '🧘',
+    color: '#8B5CF6',
+    type: 'frequency',
+    frequency: 'Daily',
+    specificDays: [],
+    tags: [dummyTags[9], dummyTags[10]],
+    completions: [],
+    collaborators: [],
   },
 ];

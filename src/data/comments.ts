@@ -1,8 +1,8 @@
 import { Comment, AssignedUser } from '@/data/projects';
 
-const user1: AssignedUser = { id: 'user-1', name: 'Alice', avatar: 'https://i.pravatar.cc/150?u=alice', email: 'alice@example.com', initials: 'A', role: 'Member' };
-const user2: AssignedUser = { id: 'user-2', name: 'Bob', avatar: 'https://i.pravatar.cc/150?u=bob', email: 'bob@example.com', initials: 'B', role: 'Member' };
-const user3: AssignedUser = { id: 'user-3', name: 'Charlie', avatar: 'https://i.pravatar.cc/150?u=charlie', email: 'charlie@example.com', initials: 'C', role: 'Client' };
+const user1: AssignedUser = { id: 'user-1', name: 'Alice', avatar: 'https://i.pravatar.cc/150?u=alice', email: 'alice@example.com', initials: 'A' };
+const user2: AssignedUser = { id: 'user-2', name: 'Bob', avatar: 'https://i.pravatar.cc/150?u=bob', email: 'bob@example.com', initials: 'B' };
+const user3: AssignedUser = { id: 'user-3', name: 'Charlie', avatar: 'https://i.pravatar.cc/150?u=charlie', email: 'charlie@example.com', initials: 'C' };
 
 export const initialComments: Comment[] = [
   {

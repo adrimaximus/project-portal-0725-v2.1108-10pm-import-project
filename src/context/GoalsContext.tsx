@@ -1,40 +1,43 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
-import { Goal, sampleGoals } from '@/data/goals';
-import { v4 as uuidv4 } from 'uuid';
+import { Goal, dummyGoals } from '@/data/goals';
 
 interface GoalsContextType {
   goals: Goal[];
-  addGoal: (goal: Omit<Goal, 'id' | 'completions'>) => void;
-  updateGoal: (goal: Goal) => void;
+  addGoal: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => void;
+  updateGoal: (updatedGoal: Goal) => void;
   deleteGoal: (goalId: string) => void;
+  getGoalById: (id: string) => Goal | undefined;
 }
 
 const GoalsContext = createContext<GoalsContextType | undefined>(undefined);
 
 export const GoalsProvider = ({ children }: { children: ReactNode }) => {
-  const [goals, setGoals] = useState<Goal[]>(sampleGoals);
+  const [goals, setGoals] = useState<Goal[]>(dummyGoals);
 
-  const addGoal = (goalData: Omit<Goal, 'id' | 'completions'>) => {
+  const addGoal = (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => {
     const newGoal: Goal = {
-      ...goalData,
-      id: uuidv4(),
+      ...newGoalData,
+      id: `goal-${Date.now()}`,
       completions: [],
+      collaborators: [],
     };
     setGoals(prevGoals => [...prevGoals, newGoal]);
   };
 
   const updateGoal = (updatedGoal: Goal) => {
-    setGoals(prevGoals =>
-      prevGoals.map(goal => (goal.id === updatedGoal.id ? updatedGoal : goal))
-    );
+    setGoals(prevGoals => prevGoals.map(g => g.id === updatedGoal.id ? updatedGoal : g));
   };
 
   const deleteGoal = (goalId: string) => {
-    setGoals(prevGoals => prevGoals.filter(goal => goal.id !== goalId));
+    setGoals(prevGoals => prevGoals.filter(g => g.id !== goalId));
+  };
+
+  const getGoalById = (id: string) => {
+    return goals.find(g => g.id === id);
   };
 
   return (
-    <GoalsContext.Provider value={{ goals, addGoal, updateGoal, deleteGoal }}>
+    <GoalsContext.Provider value={{ goals, addGoal, updateGoal, deleteGoal, getGoalById }}>
       {children}
     </GoalsContext.Provider>
   );
