@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import AiCoachInsight from './AiCoachInsight';
 
 interface GoalYearlyProgressProps {
   completions: Goal['completions'];
@@ -114,6 +115,13 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
             <Progress value={overallPercentage} className="w-full" indicatorStyle={{ backgroundColor: color }} />
             <span className="font-bold text-lg">{overallPercentage}%</span>
           </div>
+          <AiCoachInsight 
+            totalCompleted={totalCompleted}
+            totalPossible={totalPossible}
+            overallPercentage={overallPercentage}
+            frequency={frequency}
+            displayYear={displayYear}
+          />
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {monthlyData.map(month => (
