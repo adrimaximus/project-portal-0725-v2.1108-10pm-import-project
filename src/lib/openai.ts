@@ -23,13 +23,17 @@ export async function generateAiInsight(
 ) {
   const openai = getOpenAIClient();
 
+  const tagsText = goal.tags && goal.tags.length > 0 ? goal.tags.join(', ') : 'Tidak ada';
+
   const basePrompt = `
     Anda adalah seorang Pelatih Sasaran AI yang ahli. Nada bicara Anda sangat memotivasi, berwawasan luas, dan kolaboratif. Anda memberikan nasihat yang jelas dan dapat ditindaklanjuti untuk membantu pengguna dan tim mereka mencapai tujuan. Respons Anda harus dalam Bahasa Indonesia.
-    Gunakan judul dan deskripsi sasaran sebagai konteks utama untuk memberikan saran.
+    Gunakan semua data sasaran yang tersedia untuk memberikan saran yang sangat relevan.
 
     **Data Sasaran Utama:**
     - Judul: ${goal.title}
     - Deskripsi: ${goal.description}
+    - Periode Target: ${goal.targetPeriod || 'Tidak ditentukan'}
+    - Tag Kustom: ${tagsText}
   `;
 
   let contextPrompt = '';
@@ -47,7 +51,7 @@ export async function generateAiInsight(
       1. Berikan ulasan singkat tentang performa di bulan ${name}.
       2. **Jika performa >= 100%:** Berikan apresiasi luar biasa.
       3. **Jika performa antara 60% dan 99%:** Berikan motivasi dan penguatan positif, sebutkan mereka di jalur yang benar.
-      4. **Jika performa < 60%:** Berikan dorongan semangat. Berdasarkan **judul dan deskripsi sasaran**, berikan **1-2 tips praktis dan relevan** untuk meningkatkan konsistensi.
+      4. **Jika performa < 60%:** Berikan dorongan semangat. Berdasarkan **semua data sasaran utama**, berikan **1-2 tips praktis dan relevan** untuk meningkatkan konsistensi.
       5. Jaga agar tetap singkat (2-4 kalimat) dan di bawah 650 karakter.
     `;
   } else if (context.yearly) {
@@ -83,7 +87,7 @@ export async function generateAiInsight(
       **Instruksi Respons Tahunan:**
       1.  **Jika progres >= 100%:** Mulai dengan **apresiasi** yang kuat.
       2.  **Jika progres antara 60% dan 99%:** Berikan **motivasi** dan penguatan positif.
-      3.  **Jika progres < 60%:** Berikan **dorongan semangat** yang kuat. Berdasarkan **judul dan deskripsi sasaran**, berikan **2-3 tips dan strategi praktis** yang dapat ditindaklanjuti untuk membantu mereka kembali ke jalur yang benar.
+      3.  **Jika progres < 60%:** Berikan **dorongan semangat** yang kuat. Berdasarkan **semua data sasaran utama**, berikan **2-3 tips dan strategi praktis** yang dapat ditindaklanjuti untuk membantu mereka kembali ke jalur yang benar.
       4.  Sebutkan pentingnya kolaborasi jika ada anggota tim.
       5.  Gunakan format markdown. Jaga agar respons tetap singkat dan padat (sekitar 3-5 kalimat) dan di bawah 650 karakter.
     `;
