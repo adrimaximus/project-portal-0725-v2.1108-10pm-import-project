@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/formatting';
 import GoalLogTable from './GoalLogTable';
@@ -17,7 +17,7 @@ interface GoalQuantityTrackerProps {
 const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) => {
   const [logValue, setLogValue] = useState<number | ''>('');
 
-  const { currentPeriodTotal, periodProgress, periodName, logsInPeriod } = useMemo(() => {
+  const { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, quantityToGo } = useMemo(() => {
     const today = new Date();
     let periodStart, periodEnd, periodName;
 
@@ -31,6 +31,8 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
       periodName = "this month";
     }
 
+    const daysRemaining = differenceInDays(periodEnd, today);
+
     const logsInPeriod = goal.completions.filter(c => {
       const completionDate = parseISO(c.date);
       return isWithinInterval(completionDate, { start: periodStart, end: periodEnd });
@@ -38,8 +40,9 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
 
     const currentPeriodTotal = logsInPeriod.reduce((sum, c) => sum + c.value, 0);
     const periodProgress = goal.targetQuantity ? Math.round((currentPeriodTotal / goal.targetQuantity) * 100) : 0;
+    const quantityToGo = Math.max(0, (goal.targetQuantity || 0) - currentPeriodTotal);
     
-    return { currentPeriodTotal, periodProgress, periodName, logsInPeriod };
+    return { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, quantityToGo };
   }, [goal]);
 
   const handleLog = () => {
@@ -71,9 +74,21 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Progress {periodName}</CardTitle>
+        <div className="flex justify-between items-start">
+          <CardTitle>Progress {periodName}</CardTitle>
+          {daysRemaining >= 0 && (
+            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+              {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left
+            </span>
+          )}
+        </div>
         <CardDescription>
-          You've completed {formatNumber(currentPeriodTotal)} of your {formatNumber(goal.targetQuantity || 0)} target.
+          You've completed {formatNumber(currentPeriodTotal)} of {formatNumber(goal.targetQuantity || 0)}.
+          {quantityToGo > 0 ? (
+            <span className="font-medium"> {formatNumber(quantityToGo)} to go.</span>
+          ) : (
+            <span className="font-medium text-green-600"> Target met!</span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
