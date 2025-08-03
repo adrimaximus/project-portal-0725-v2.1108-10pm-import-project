@@ -218,8 +218,8 @@ const ProjectComments = ({
                 </div>
                 <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{
                   __html: item.text
-                    .replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<span class="bg-primary/20 text-primary font-semibold rounded-sm px-1">@$1</span>')
-                    .replace(/\/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="/projects/$2" class="text-primary hover:underline">$1</a>')
+                    .replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<span class="bg-blue-100 text-blue-600 font-semibold rounded-sm px-1">@$1</span>')
+                    .replace(/\/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="/projects/$2" class="text-blue-600 hover:underline font-medium">$1</a>')
                 }} />
                 {item.attachment && (
                   <div className="mt-2">
