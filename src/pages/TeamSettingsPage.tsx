@@ -136,6 +136,32 @@ const TeamSettingsPage = () => {
     setInvites(currentInvites => currentInvites.filter(invite => invite.id !== id));
   };
 
+  const handleSendInvites = () => {
+    const newMembers: Member[] = invites
+      .filter(invite => invite.email.trim() !== '')
+      .map(invite => {
+        const roleInfo = allRoles.find(r => r.value === invite.role);
+        return {
+          name: invite.email.split('@')[0],
+          email: invite.email,
+          avatar: invite.email.substring(0, 2).toUpperCase(),
+          role: roleInfo ? roleInfo.label : 'Member',
+          status: 'Pending invite',
+          lastActive: '',
+        };
+      });
+
+    const membersWithNewInvites = [...members];
+    newMembers.forEach(newMember => {
+      if (!members.some(member => member.email === newMember.email)) {
+        membersWithNewInvites.push(newMember);
+      }
+    });
+
+    setMembers(membersWithNewInvites);
+    setInvites([{ id: Date.now(), email: '', role: 'member' }]);
+  };
+
   const handleToggleSuspend = (memberName: string) => {
     setMembers(currentMembers =>
       currentMembers.map(member => {
@@ -272,7 +298,7 @@ const TeamSettingsPage = () => {
             </div>
           </CardContent>
           <CardFooter>
-            <Button className="w-full sm:w-auto">Send Invites</Button>
+            <Button className="w-full sm:w-auto" onClick={handleSendInvites}>Send Invites</Button>
           </CardFooter>
         </Card>
 
@@ -323,8 +349,10 @@ const TeamSettingsPage = () => {
                       <TableCell>
                         {member.status === 'Suspended' ? (
                           <Badge variant={getStatusBadgeVariant(member.status)}>Suspended</Badge>
+                        ) : member.status === 'Pending invite' ? (
+                          <span className="text-muted-foreground">{member.role}</span>
                         ) : (
-                          <Select defaultValue={member.role.toLowerCase().replace(/\s+/g, '-')}>
+                          <Select defaultValue={allRoles.find(r => r.label === member.role)?.value}>
                             <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent">
                               <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
