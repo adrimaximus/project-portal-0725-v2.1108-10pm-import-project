@@ -23,7 +23,7 @@ export async function generateAiInsight(
 ) {
   const openai = getOpenAIClient();
 
-  const tagsText = goal.tags && goal.tags.length > 0 ? goal.tags.join(', ') : 'Tidak ada';
+  const tagsText = goal.tags && goal.tags.length > 0 ? goal.tags.map(t => t.name).join(', ') : 'Tidak ada';
 
   const basePrompt = `
     Anda adalah seorang Pelatih Sasaran AI yang ahli. Nada bicara Anda sangat memotivasi, berwawasan luas, dan kolaboratif. Anda memberikan nasihat yang jelas dan dapat ditindaklanjuti untuk membantu pengguna dan tim mereka mencapai tujuan. Respons Anda harus dalam Bahasa Indonesia.
@@ -144,9 +144,9 @@ export async function generateAiTasks(project: Project): Promise<string[]> {
     Detail Proyek:
     - Judul: ${project.name}
     - Deskripsi: ${project.description}
-    - Layanan: ${project.services.join(', ')}
+    - Layanan: ${(project.services || []).join(', ')}
     - Tanggal Mulai: ${project.startDate}
-    - Tanggal Selesai: ${project.deadline}
+    - Tanggal Selesai: ${project.dueDate}
 
     Instruksi:
     - Tugas harus jelas, dapat ditindaklanjuti, dan ringkas.

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { dummyProjects, Project, Task, Comment, User, Activity, ActivityType, ProjectFile } from "@/data/projects";
 import { useUser } from "@/contexts/UserContext";
 import { Layout, LayoutBody, LayoutHeader } from "@/components/custom/layout";
-import { ProjectHeader } from "@/components/project-detail/ProjectHeader";
+import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
 import { toast } from "sonner";
@@ -83,7 +83,8 @@ const ProjectDetail = () => {
     const newFiles: ProjectFile[] = files.map((file, index) => ({
       id: `file-${Date.now()}-${index}`,
       name: file.name,
-      size: `${(file.size / 1024).toFixed(2)} KB`,
+      size: file.size,
+      type: file.type,
       url: URL.createObjectURL(file),
       uploadedAt: new Date().toISOString(),
     }));
@@ -152,7 +153,16 @@ const ProjectDetail = () => {
   return (
     <Layout>
       <LayoutHeader>
-        <ProjectHeader project={project} />
+        <ProjectHeader 
+          project={project} 
+          isEditing={false}
+          projectName={project.name}
+          onProjectNameChange={() => {}}
+          onEditToggle={() => {}}
+          onSaveChanges={() => {}}
+          onCancelChanges={() => {}}
+          canEdit={true}
+        />
       </LayoutHeader>
       <LayoutBody className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">

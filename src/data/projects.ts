@@ -2,13 +2,18 @@ export interface User {
   id: string;
   name: string;
   avatar?: string;
-  initials?: string; // Made optional to support different user sources
+  initials?: string;
+  email?: string;
+  role?: string;
 }
+
+export type AssignedUser = User;
 
 export interface ProjectFile {
   id: string;
   name: string;
-  size: string;
+  size: number;
+  type: string;
   url: string;
   uploadedAt: string;
 }
@@ -58,7 +63,6 @@ export interface Project {
   comments?: Comment[];
   activities?: Activity[];
   progress: number;
-  // Added/updated fields
   startDate?: string;
   budget?: number;
   category?: string;
@@ -68,11 +72,11 @@ export interface Project {
   files?: ProjectFile[];
 }
 
-const alice: User = { id: 'user-1', name: 'Alice Johnson', initials: 'AJ', avatar: 'https://i.pravatar.cc/150?u=alice' };
-const bob: User = { id: 'user-2', name: 'Bob Williams', initials: 'BW', avatar: 'https://i.pravatar.cc/150?u=bob' };
-const charlie: User = { id: 'user-3', name: 'Charlie Brown', initials: 'CB', avatar: 'https://i.pravatar.cc/150?u=charlie' };
-const diana: User = { id: 'user-4', name: 'Diana Prince', initials: 'DP', avatar: 'https://i.pravatar.cc/150?u=diana' };
-const eva: User = { id: 'user-5', name: 'Eva Green', initials: 'EG', avatar: 'https://i.pravatar.cc/150?u=eva' };
+const alice: User = { id: 'user-1', name: 'Alice Johnson', initials: 'AJ', avatar: 'https://i.pravatar.cc/150?u=alice', email: 'alice@example.com', role: 'Admin' };
+const bob: User = { id: 'user-2', name: 'Bob Williams', initials: 'BW', avatar: 'https://i.pravatar.cc/150?u=bob', email: 'bob@example.com', role: 'Member' };
+const charlie: User = { id: 'user-3', name: 'Charlie Brown', initials: 'CB', avatar: 'https://i.pravatar.cc/150?u=charlie', email: 'charlie@example.com', role: 'Member' };
+const diana: User = { id: 'user-4', name: 'Diana Prince', initials: 'DP', avatar: 'https://i.pravatar.cc/150?u=diana', email: 'diana@example.com', role: 'Admin' };
+const eva: User = { id: 'user-5', name: 'Eva Green', initials: 'EG', avatar: 'https://i.pravatar.cc/150?u=eva', email: 'eva@example.com', role: 'Member' };
 
 export const dummyProjects: Project[] = [
   {

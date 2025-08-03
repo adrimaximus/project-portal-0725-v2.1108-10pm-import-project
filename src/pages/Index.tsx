@@ -47,12 +47,12 @@ const Index = () => {
       const pickerFrom = date.from;
       const pickerTo = date.to || date.from;
 
-      if (!project.startDate || !project.deadline) {
+      if (!project.startDate || !project.dueDate) {
         return false;
       }
 
       const projectStart = new Date(project.startDate);
-      const projectEnd = new Date(project.deadline);
+      const projectEnd = new Date(project.dueDate);
 
       if (projectStart > pickerTo || projectEnd < pickerFrom) {
         return false;
@@ -62,7 +62,7 @@ const Index = () => {
     return true;
   });
 
-  const totalValue = filteredProjects.reduce((sum, p) => sum + p.budget, 0);
+  const totalValue = filteredProjects.reduce((sum, p) => sum + (p.budget || 0), 0);
 
   const projectStatusCounts = filteredProjects.reduce((acc, p) => {
       acc[p.status] = (acc[p.status] || 0) + 1;
@@ -99,9 +99,9 @@ const Index = () => {
 
   filteredProjects.forEach(p => {
       p.tasks?.forEach(task => {
-          task.assignedTo.forEach(userId => {
-              if (collaboratorStats[userId]) {
-                  collaboratorStats[userId].taskCount++;
+          (task.assignedTo || []).forEach(user => {
+              if (collaboratorStats[user.id]) {
+                  collaboratorStats[user.id].taskCount++;
               }
           });
       });
@@ -115,7 +115,7 @@ const Index = () => {
           if (!acc[user.id]) {
               acc[user.id] = { ...user, totalValue: 0 };
           }
-          acc[user.id].totalValue += p.budget;
+          acc[user.id].totalValue += p.budget || 0;
       });
       return acc;
   }, {} as Record<string, any>);
@@ -129,7 +129,7 @@ const Index = () => {
             if (!acc[user.id]) {
                 acc[user.id] = { ...user, pendingValue: 0 };
             }
-            acc[user.id].pendingValue += p.budget;
+            acc[user.id].pendingValue += p.budget || 0;
         });
         return acc;
     }, {} as Record<string, any>);
@@ -422,12 +422,12 @@ const Index = () => {
                           </TableCell>
                           <TableCell>
                             <div className="font-medium whitespace-nowrap">
-                              {'Rp ' + project.budget.toLocaleString('id-ID')}
+                              {'Rp ' + (project.budget || 0).toLocaleString('id-ID')}
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="font-medium whitespace-nowrap">
-                              {project.deadline ? format(new Date(project.deadline), "MMM dd, yyyy") : 'N/A'}
+                              {project.dueDate ? format(new Date(project.dueDate), "MMM dd, yyyy") : 'N/A'}
                             </div>
                           </TableCell>
                           <TableCell>

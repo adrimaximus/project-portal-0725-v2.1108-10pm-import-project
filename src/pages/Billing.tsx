@@ -48,11 +48,11 @@ const Billing = () => {
   const invoices: Invoice[] = dummyProjects
     .map(project => {
       const status = getInvoiceStatus(project.paymentStatus);
-      if (!status) {
+      if (!status || !project.budget) {
         return null;
       }
       
-      const dueDate = addDays(new Date(project.deadline), 30);
+      const dueDate = addDays(new Date(project.dueDate), 30);
 
       let finalStatus = status;
       if (status === 'Due' && isPast(dueDate)) {

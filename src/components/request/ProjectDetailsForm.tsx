@@ -56,19 +56,20 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     e.preventDefault();
     
     const newProjectFiles: ProjectFile[] = files.map(file => ({
+      id: `file-${Date.now()}-${file.name}`,
       name: file.name,
       size: file.size,
       type: file.type,
       url: URL.createObjectURL(file),
+      uploadedAt: new Date().toISOString(),
     }));
 
     const numericBudget = parseInt(budget.replace(/[^0-9]/g, ''), 10) || 0;
-    const deadline = date?.to ?? addDays(new Date(), 30);
+    const dueDate = date?.to ?? addDays(new Date(), 30);
 
     const newProject: Project = {
       id: `proj-${Date.now()}`,
       name: projectName,
-      client: currentUser.name,
       category: selectedServices.length > 0 ? selectedServices[0].title : "General",
       description: description,
       assignedTo: team,
@@ -77,7 +78,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       progress: 0,
       budget: numericBudget,
       startDate: date?.from?.toISOString() ?? new Date().toISOString(),
-      deadline: deadline.toISOString(),
+      dueDate: dueDate.toISOString(),
       paymentStatus: "Proposed",
       createdBy: currentUser,
       services: selectedServices.map(s => s.title),

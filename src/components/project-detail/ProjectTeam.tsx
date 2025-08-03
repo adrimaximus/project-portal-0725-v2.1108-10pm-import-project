@@ -18,7 +18,7 @@ const ProjectTeam = ({ team }: ProjectTeamProps) => {
             </Avatar>
             <div className="ml-2">
               <p>{member.name}</p>
-              <p className="text-sm text-muted-foreground">{member.role}</p>
+              {member.role && <p className="text-sm text-muted-foreground">{member.role}</p>}
             </div>
           </div>
         ))}

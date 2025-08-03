@@ -10,7 +10,7 @@ const ProjectOverview = ({ project }: ProjectOverviewProps) => {
       <ProjectTeam team={project.assignedTo} />
       <div className="mt-4">
         <h4 className="font-semibold">Client</h4>
-        <p>{project.createdBy.name} ({project.createdBy.email})</p>
+        <p>{project.createdBy?.name} ({project.createdBy?.email})</p>
       </div>
     </div>
   );

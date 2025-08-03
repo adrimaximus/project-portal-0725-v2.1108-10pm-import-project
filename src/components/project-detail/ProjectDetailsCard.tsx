@@ -25,7 +25,7 @@ const ProjectDetailsCard = ({ project }: ProjectDetailsCardProps) => {
           <div>
             <p className="font-medium">Timeline</p>
             <p className="text-muted-foreground">
-              {format(new Date(project.startDate), "dd MMM yyyy")} - {format(new Date(project.deadline), "dd MMM yyyy")}
+              {format(new Date(project.startDate || Date.now()), "dd MMM yyyy")} - {format(new Date(project.dueDate), "dd MMM yyyy")}
             </p>
           </div>
         </div>
@@ -34,7 +34,7 @@ const ProjectDetailsCard = ({ project }: ProjectDetailsCardProps) => {
           <div>
             <p className="font-medium">Budget</p>
             <p className="text-muted-foreground">
-              {formatCurrency(project.budget)}
+              {formatCurrency(project.budget || 0)}
             </p>
           </div>
         </div>
@@ -43,7 +43,7 @@ const ProjectDetailsCard = ({ project }: ProjectDetailsCardProps) => {
           <div>
             <p className="font-medium">Services</p>
             <p className="text-muted-foreground">
-              {project.services.join(", ")}
+              {(project.services || []).join(", ")}
             </p>
           </div>
         </div>

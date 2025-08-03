@@ -10,28 +10,21 @@ import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-reac
 
 interface ProjectMainContentProps {
   project: Project;
-  isEditing: boolean;
-  onDescriptionChange: (value: string) => void;
-  onTeamChange: (users: AssignedUser[]) => void;
-  onFilesChange: (files: File[]) => void;
-  onServicesChange: (services: string[]) => void;
+  onUpdateTasks: (tasks: Task[]) => void;
+  onTaskStatusChange: (taskId: string, completed: boolean) => void;
+  onTaskDelete: (taskId: string) => void;
   onAddCommentOrTicket: (comment: Comment) => void;
-  onTasksUpdate: (tasks: Task[]) => void;
-  ticketCount: number;
 }
 
 const ProjectMainContent = ({
   project,
-  isEditing,
-  onDescriptionChange,
-  onTeamChange,
-  onFilesChange,
-  onServicesChange,
+  onUpdateTasks,
+  onTaskStatusChange,
+  onTaskDelete,
   onAddCommentOrTicket,
-  onTasksUpdate,
-  ticketCount,
 }: ProjectMainContentProps) => {
   const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
+  const ticketCount = project.comments?.filter(c => c.isTicket).length || 0;
 
   return (
     <Card>
@@ -60,19 +53,19 @@ const ProjectMainContent = ({
           <TabsContent value="overview">
             <ProjectOverviewTab
               project={project}
-              isEditing={isEditing}
-              onDescriptionChange={onDescriptionChange}
-              onTeamChange={onTeamChange}
-              onFilesChange={onFilesChange}
-              onServicesChange={onServicesChange}
+              isEditing={false} // Placeholder
+              onDescriptionChange={() => {}}
+              onTeamChange={() => {}}
+              onFilesChange={() => {}}
+              onServicesChange={() => {}}
             />
           </TabsContent>
           <TabsContent value="tasks">
             <ProjectTasks
               project={project}
-              tasks={project.tasks || []}
-              assignableUsers={project.assignedTo}
-              onTasksUpdate={onTasksUpdate}
+              onUpdateTasks={onUpdateTasks}
+              onTaskStatusChange={onTaskStatusChange}
+              onTaskDelete={onTaskDelete}
             />
           </TabsContent>
           <TabsContent value="discussion">
