@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
 import { dummyGoals, Goal, GoalCompletion } from '@/data/goals';
-import { User } from '@/data/users';
+import { User, dummyUsers } from '@/data/users';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
@@ -21,10 +21,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
-import { isBefore, startOfDay, format, parseISO } from 'date-fns';
+import { isBefore, startOfDay, format } from 'date-fns';
 import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import GoalQuantityTracker from '@/components/goals/GoalQuantityTracker';
 import GoalValueTracker from '@/components/goals/GoalValueTracker';
+import { formatNumber, formatValue } from '@/lib/formatting';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -76,33 +77,30 @@ const GoalDetailPage = () => {
     } else {
       updatedGoal.completions.push({ date: dateString, value: 1 });
     }
-    updatedGoal.completions.sort((a, b) => b.date.localeCompare(a.date));
+    updatedGoal.completions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setGoal(updatedGoal);
     toast.success(`Progress for ${format(date, 'PPP')} has been updated.`);
   };
 
   const handleLogQuantity = (date: Date, value: number) => {
     if (!goal || goal.type !== 'quantity') return;
-    const dateString = format(date, 'yyyy-MM-dd');
-    const updatedGoal = { ...goal };
-    const existingLogIndex = updatedGoal.completions.findIndex(c => c.date === dateString);
-
-    if (existingLogIndex > -1) {
-      updatedGoal.completions[existingLogIndex].value += value;
-    } else {
-      updatedGoal.completions.push({ date: dateString, value });
-    }
-    updatedGoal.completions.sort((a, b) => b.date.localeCompare(a.date));
+    const newLog: GoalCompletion = {
+      date: new Date().toISOString(),
+      value,
+      achieverId: dummyUsers[0].id, // Assume current user is Alex
+    };
+    const updatedGoal = { ...goal, completions: [...goal.completions, newLog] };
     setGoal(updatedGoal);
   };
 
   const handleLogValue = (date: Date, value: number) => {
     if (!goal || goal.type !== 'value') return;
-    const dateString = format(date, 'yyyy-MM-dd');
-    const updatedGoal = { ...goal };
-    // For value, we just add a new entry each time
-    updatedGoal.completions.push({ date: dateString, value });
-    updatedGoal.completions.sort((a, b) => b.date.localeCompare(a.date));
+    const newLog: GoalCompletion = {
+      date: new Date().toISOString(),
+      value,
+      achieverId: dummyUsers[0].id, // Assume current user is Alex
+    };
+    const updatedGoal = { ...goal, completions: [...goal.completions, newLog] };
     setGoal(updatedGoal);
   };
 
@@ -156,10 +154,10 @@ const GoalDetailPage = () => {
 
   const getFrequencyText = () => {
     if (goal.type === 'quantity') {
-      return `${goal.targetQuantity} per ${goal.targetPeriod}`;
+      return `${formatNumber(goal.targetQuantity!)} per ${goal.targetPeriod}`;
     }
     if (goal.type === 'value') {
-      return `Target: ${goal.targetValue} ${goal.unit || ''}`;
+      return `Target: ${formatValue(goal.targetValue!, goal.unit)}`;
     }
     if (goal.frequency === 'Daily') return 'Daily';
     if (goal.frequency === 'Weekly' && goal.specificDays.length > 0) {

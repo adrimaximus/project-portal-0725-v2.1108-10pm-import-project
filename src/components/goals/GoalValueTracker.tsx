@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
+import { formatValue } from '@/lib/formatting';
+import GoalLogTable from './GoalLogTable';
 
 interface GoalValueTrackerProps {
   goal: Goal;
@@ -15,18 +16,17 @@ interface GoalValueTrackerProps {
 const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
   const [logValue, setLogValue] = useState<number | ''>('');
 
-  const { currentTotal, progress, recentLogs } = useMemo(() => {
+  const { currentTotal, progress } = useMemo(() => {
     const currentTotal = goal.completions.reduce((sum, c) => sum + c.value, 0);
     const progress = goal.targetValue ? Math.min(Math.round((currentTotal / goal.targetValue) * 100), 100) : 0;
-    const recentLogs = [...goal.completions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-    return { currentTotal, progress, recentLogs };
+    return { currentTotal, progress };
   }, [goal]);
 
   const handleLog = () => {
     const value = Number(logValue);
     if (value > 0) {
       onLogValue(new Date(), value);
-      toast.success(`Logged ${value} ${goal.unit || ''} for "${goal.title}"`);
+      toast.success(`Logged ${formatValue(value, goal.unit)} for "${goal.title}"`);
       setLogValue('');
     } else {
       toast.error("Please enter a valid number.");
@@ -38,15 +38,15 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
       <CardHeader>
         <CardTitle>Overall Progress</CardTitle>
         <CardDescription>
-          You've logged {currentTotal} {goal.unit || ''} of your {goal.targetValue} {goal.unit || ''} target.
+          You've logged {formatValue(currentTotal, goal.unit)} of your {formatValue(goal.targetValue || 0, goal.unit)} target.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
         <div className="flex items-center gap-4">
           <Progress value={progress} style={{ '--primary-color': goal.color } as React.CSSProperties} className="h-3 [&>*]:bg-[var(--primary-color)]" />
           <span className="font-bold text-lg">{progress}%</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-4">
           <Input
             type="number"
             placeholder={`Log ${goal.unit || 'value'}...`}
@@ -56,21 +56,7 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
           />
           <Button onClick={handleLog}>Log</Button>
         </div>
-        <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">Recent Logs</h4>
-          {recentLogs.length > 0 ? (
-            <ul className="space-y-1 text-sm text-muted-foreground">
-              {recentLogs.map((log, index) => (
-                <li key={index} className="flex justify-between">
-                  <span>{format(parseISO(log.date), 'MMM dd, yyyy')}</span>
-                  <span className="font-medium">{log.value} {goal.unit || ''}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-2">No logs yet.</p>
-          )}
-        </div>
+        <GoalLogTable logs={goal.completions} unit={goal.unit} goalType={goal.type} />
       </CardContent>
     </Card>
   );

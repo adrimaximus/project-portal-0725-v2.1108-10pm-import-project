@@ -2,8 +2,9 @@ import { User, dummyUsers } from './users';
 import { Tag, dummyTags } from './tags';
 
 export interface GoalCompletion {
-  date: string; // YYYY-MM-DD
-  value: number; // 1 for completed frequency, actual number for quantity/value
+  date: string; // ISO String for value/quantity logs, YYYY-MM-DD for frequency
+  value: number;
+  achieverId?: string;
 }
 
 export type GoalType = 'frequency' | 'quantity' | 'value';
@@ -47,7 +48,10 @@ export const dummyGoals: Goal[] = [
     frequency: 'Daily',
     specificDays: [],
     tags: [dummyTags[0], dummyTags[1]],
-    completions: [{ date: '2024-08-01', value: 25 }, { date: '2024-08-02', value: 15 }],
+    completions: [
+      { date: '2024-08-01T09:00:00Z', value: 25, achieverId: '1' },
+      { date: '2024-08-02T09:05:00Z', value: 15, achieverId: '1' }
+    ],
     collaborators: [dummyUsers[0]],
   },
   {
@@ -66,17 +70,20 @@ export const dummyGoals: Goal[] = [
   {
     id: '6',
     title: 'Save Money',
-    description: 'Save $500 for a new gadget.',
+    description: 'Save Rp 5.000.000 for a new gadget.',
     icon: '💰',
     color: '#22C55E',
     type: 'value',
-    targetValue: 500,
-    unit: 'USD',
+    targetValue: 5000000,
+    unit: 'IDR',
     frequency: 'Daily',
     specificDays: [],
     tags: [{ id: 'tag-12', name: 'Finance', color: '#22C55E' }],
-    completions: [{ date: '2024-08-01', value: 50 }, { date: '2024-08-05', value: 125 }],
-    collaborators: [],
+    completions: [
+      { date: '2024-08-01T10:00:00Z', value: 500000, achieverId: '1' },
+      { date: '2024-08-05T14:30:00Z', value: 1250000, achieverId: '2' }
+    ],
+    collaborators: [dummyUsers[0], dummyUsers[1]],
   },
   {
     id: '4',

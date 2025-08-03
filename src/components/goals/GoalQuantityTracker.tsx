@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { toast } from 'sonner';
+import { formatNumber } from '@/lib/formatting';
+import GoalLogTable from './GoalLogTable';
 
 interface GoalQuantityTrackerProps {
   goal: Goal;
@@ -15,7 +17,7 @@ interface GoalQuantityTrackerProps {
 const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) => {
   const [logValue, setLogValue] = useState<number | ''>('');
 
-  const { currentPeriodTotal, periodProgress, periodName, recentLogs } = useMemo(() => {
+  const { currentPeriodTotal, periodProgress, periodName, logsInPeriod } = useMemo(() => {
     const today = new Date();
     let periodStart, periodEnd, periodName;
 
@@ -29,24 +31,22 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
       periodName = "this month";
     }
 
-    const completionsInPeriod = goal.completions.filter(c => {
+    const logsInPeriod = goal.completions.filter(c => {
       const completionDate = parseISO(c.date);
       return isWithinInterval(completionDate, { start: periodStart, end: periodEnd });
     });
 
-    const currentPeriodTotal = completionsInPeriod.reduce((sum, c) => sum + c.value, 0);
+    const currentPeriodTotal = logsInPeriod.reduce((sum, c) => sum + c.value, 0);
     const periodProgress = goal.targetQuantity ? Math.min(Math.round((currentPeriodTotal / goal.targetQuantity) * 100), 100) : 0;
     
-    const recentLogs = completionsInPeriod.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-
-    return { currentPeriodTotal, periodProgress, periodName, recentLogs };
+    return { currentPeriodTotal, periodProgress, periodName, logsInPeriod };
   }, [goal]);
 
   const handleLog = () => {
     const value = Number(logValue);
     if (value > 0) {
       onLogProgress(new Date(), value);
-      toast.success(`Logged ${value} for "${goal.title}"`);
+      toast.success(`Logged ${formatNumber(value)} for "${goal.title}"`);
       setLogValue('');
     } else {
       toast.error("Please enter a valid number.");
@@ -58,15 +58,15 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
       <CardHeader>
         <CardTitle>Progress {periodName}</CardTitle>
         <CardDescription>
-          You've completed {currentPeriodTotal} of your {goal.targetQuantity} target.
+          You've completed {formatNumber(currentPeriodTotal)} of your {formatNumber(goal.targetQuantity || 0)} target.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
         <div className="flex items-center gap-4">
           <Progress value={periodProgress} style={{ '--primary-color': goal.color } as React.CSSProperties} className="h-3 [&>*]:bg-[var(--primary-color)]" />
           <span className="font-bold text-lg">{periodProgress}%</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-4">
           <Input
             type="number"
             placeholder="Log progress..."
@@ -76,21 +76,7 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
           />
           <Button onClick={handleLog}>Log</Button>
         </div>
-        <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">Recent Logs</h4>
-          {recentLogs.length > 0 ? (
-            <ul className="space-y-1 text-sm text-muted-foreground">
-              {recentLogs.map(log => (
-                <li key={log.date} className="flex justify-between">
-                  <span>{format(parseISO(log.date), 'MMM dd, yyyy')}</span>
-                  <span className="font-medium">{log.value}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-2">No logs for this period yet.</p>
-          )}
-        </div>
+        <GoalLogTable logs={logsInPeriod} goalType={goal.type} />
       </CardContent>
     </Card>
   );
