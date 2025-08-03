@@ -1,4 +1,4 @@
-import { User } from '@/data/users';
+import { User } from './users';
 
 export interface GoalCompletion {
   date: string; // YYYY-MM-DD
