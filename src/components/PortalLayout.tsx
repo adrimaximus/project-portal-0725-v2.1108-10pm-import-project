@@ -1,62 +1,73 @@
-import { useState, ReactNode } from "react";
-import PortalSidebar from "./PortalSidebar";
-import { cn } from "@/lib/utils";
-import GlobalSearch from "./GlobalSearch";
-import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Link, useLocation } from 'react-router-dom';
+import { Home, Target, Settings } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import React from 'react';
 
-type PortalLayoutProps = {
-  children: ReactNode;
-  summary?: ReactNode;
-  pageHeader?: ReactNode;
-  disableMainScroll?: boolean;
+interface PortalLayoutProps {
+  children: React.ReactNode;
+  pageHeader?: React.ReactNode;
+  summary?: React.ReactNode;
   noPadding?: boolean;
-};
+  disableMainScroll?: boolean;
+}
 
-const PortalLayout = ({ children, summary, pageHeader, disableMainScroll, noPadding }: PortalLayoutProps) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+const PortalLayout = ({
+  children,
+  pageHeader,
+  summary,
+  noPadding,
+  disableMainScroll,
+}: PortalLayoutProps) => {
+  const location = useLocation();
 
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  const navLinks = [
+    { href: '/goals', label: 'Goals', icon: Target },
+    { href: '/settings', label: 'Settings', icon: Settings },
+  ];
 
   return (
-    <div className="flex h-screen w-full bg-muted/40">
-      {/* Desktop Sidebar: Hidden on small screens */}
-      <div className="hidden sm:block">
-        <PortalSidebar isCollapsed={isCollapsed} onToggle={toggleSidebar} />
-      </div>
-
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="relative z-30 flex h-14 shrink-0 items-center gap-4 border-b bg-background px-4 sm:h-[60px] sm:px-6">
-          {/* Mobile Sidebar: Uses a Sheet component */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button size="icon" variant="outline" className="sm:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle Menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="sm:max-w-xs p-0">
-              {/* Render the existing sidebar inside the sheet */}
-              <PortalSidebar isCollapsed={false} onToggle={() => {}} />
-            </SheetContent>
-          </Sheet>
-
-          {summary}
-          <GlobalSearch />
-        </header>
-        {pageHeader}
+    <div className="flex min-h-screen bg-background">
+      <aside className="w-64 flex-shrink-0 border-r bg-card text-card-foreground">
+        <div className="p-6">
+          <Link to="/" className="flex items-center gap-2">
+            <Home className="h-6 w-6" />
+            <h1 className="text-xl font-bold">GoalTracker</h1>
+          </Link>
+        </div>
+        <nav className="px-4">
+          <ul>
+            {navLinks.map(({ href, label, icon: Icon }) => (
+              <li key={href}>
+                <Link
+                  to={href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted',
+                    location.pathname.startsWith(href) ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'text-muted-foreground'
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </aside>
+      <div className="flex flex-1">
         <main
           className={cn(
-            "flex-1",
-            !disableMainScroll && "overflow-y-auto",
-            !noPadding && "p-4 md:p-8"
+            'flex-1 flex flex-col',
+            disableMainScroll ? 'overflow-y-hidden' : 'overflow-y-auto'
           )}
         >
-          {children}
+          {pageHeader}
+          <div className={cn('flex-1', !noPadding && 'p-8')}>{children}</div>
         </main>
+        {summary && (
+          <aside className="w-96 hidden lg:block border-l overflow-y-auto p-8">
+            {summary}
+          </aside>
+        )}
       </div>
     </div>
   );
