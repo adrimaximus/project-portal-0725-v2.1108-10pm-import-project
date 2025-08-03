@@ -15,6 +15,7 @@ import EmbedPage from './pages/EmbedPage';
 import SettingsPage from './pages/Settings';
 import SearchPage from './pages/SearchPage';
 import NotFound from './pages/NotFound';
+import FeatureSettingsPage from './pages/FeatureSettingsPage';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/settings/:featureId" element={<FeatureSettingsPage />} />
       <Route path="/search" element={<SearchPage />} />
       <Route path="/custom" element={<EmbedPage />} />
       <Route path="/404" element={<NotFound />} />

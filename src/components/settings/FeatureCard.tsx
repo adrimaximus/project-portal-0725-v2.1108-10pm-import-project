@@ -10,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useNavigate } from "react-router-dom";
 
 interface FeatureCardProps {
   feature: Feature;
@@ -17,12 +18,13 @@ interface FeatureCardProps {
 
 const FeatureCard = ({ feature }: FeatureCardProps) => {
   const { toggleFeatureStatus } = useFeatures();
+  const navigate = useNavigate();
   const isSettingsFeature = feature.id === 'settings';
   const isEnabled = feature.status === 'enabled';
 
   const handleAdvancedSettingsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    alert(`Pengaturan lanjutan untuk fitur "${feature.name}" akan diimplementasikan di sini.`);
+    navigate(`/settings/${feature.id}`);
   };
 
   return (
