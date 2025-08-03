@@ -7,7 +7,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { format, isPast, differenceInDays, addDays } from "date-fns";
+import { format, isPast, differenceInDays, addDays, startOfDay } from "date-fns";
 import { Activity, CreditCard, Wallet, CalendarDays, CalendarClock } from "lucide-react";
 
 interface ProjectInfoCardsProps {
@@ -81,18 +81,19 @@ const ProjectInfoCards = ({
       })
     : "Not Set";
 
-  const dueDateFormatted = new Date(project.dueDate).toLocaleDateString("en-US", {
+  const today = startOfDay(new Date());
+  
+  const projectDueDateObj = startOfDay(new Date(project.dueDate));
+  const dueDateFormatted = projectDueDateObj.toLocaleDateString("en-US", {
     year: 'numeric', month: 'long', day: 'numeric'
   });
+  const projectDaysDifference = differenceInDays(projectDueDateObj, today);
 
-  // Calculate Payment Due Date as 30 days after the project dueDate
-  const paymentDueDate = addDays(new Date(project.dueDate), 30);
+  const paymentDueDate = startOfDay(addDays(new Date(project.dueDate), 30));
   const paymentDueDateFormatted = paymentDueDate.toLocaleDateString("en-US", {
     year: 'numeric', month: 'long', day: 'numeric'
   });
-
-  const isPaymentOverdue = isPast(paymentDueDate) && !['Paid', 'Cancelled'].includes(project.paymentStatus);
-  const paymentOverdueDays = isPaymentOverdue ? differenceInDays(new Date(), paymentDueDate) : 0;
+  const paymentDaysDifference = differenceInDays(paymentDueDate, today);
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -208,6 +209,19 @@ const ProjectInfoCards = ({
           ) : (
             <div>
               <div className="text-xl font-bold">{dueDateFormatted}</div>
+              {!['Completed', 'Done', 'Cancelled'].includes(project.status) && (
+                <>
+                  {projectDaysDifference >= 0 ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {projectDaysDifference === 0 ? 'Due today' : `Due in ${projectDaysDifference} day${projectDaysDifference !== 1 ? 's' : ''}`}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-red-500 mt-1">
+                      Overdue by {Math.abs(projectDaysDifference)} day{Math.abs(projectDaysDifference) !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           )}
         </CardContent>
@@ -220,10 +234,18 @@ const ProjectInfoCards = ({
         <CardContent>
           <div>
             <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
-            {isPaymentOverdue && (
-              <p className="text-xs text-red-500 mt-1">
-                Overdue by {paymentOverdueDays} day{paymentOverdueDays !== 1 ? 's' : ''}
-              </p>
+            {!['Paid', 'Cancelled'].includes(project.paymentStatus) && (
+              <>
+                {paymentDaysDifference >= 0 ? (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {paymentDaysDifference === 0 ? 'Due today' : `Due in ${paymentDaysDifference} day${paymentDaysDifference !== 1 ? 's' : ''}`}
+                  </p>
+                ) : (
+                  <p className="text-xs text-red-500 mt-1">
+                    Overdue by {Math.abs(paymentDaysDifference)} day{Math.abs(paymentDaysDifference) !== 1 ? 's' : ''}
+                  </p>
+                )}
+              </>
             )}
           </div>
         </CardContent>
