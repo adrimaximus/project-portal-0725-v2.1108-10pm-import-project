@@ -1,73 +1,99 @@
+import OpenAI from 'openai';
 import { Goal } from '@/data/goals';
+import { User } from '@/data/users';
+import { getYear, parseISO, endOfYear, differenceInDays } from 'date-fns';
 
-const positiveFeedback = [
-  "You're doing an amazing job staying on track. Keep up the great momentum!",
-  "Fantastic progress! Your consistency is really paying off.",
-  "Excellent work! You're well on your way to achieving this goal.",
-  "You're crushing it! Your dedication is clear from these results.",
-];
-
-const improvementTips = [
-  {
-    title: "Break It Down",
-    tip: "Try breaking your goal into smaller, more manageable daily tasks. Ticking off small wins can build momentum."
-  },
-  {
-    title: "Schedule It",
-    tip: "Block out specific time in your calendar for your goal. Treat it like an important appointment."
-  },
-  {
-    title: "Find Your 'Why'",
-    tip: "Remind yourself of the reason you set this goal. Reconnecting with your motivation can be a powerful boost."
-  },
-  {
-    title: "Adjust Your Strategy",
-    tip: "What's one small thing you could change about your approach? Sometimes a minor tweak can make a big difference."
-  },
-  {
-    title: "Use Reminders",
-    tip: "Set up daily or weekly reminders on your phone or calendar to keep the goal top-of-mind."
-  },
-  {
-    title: "Reward Yourself",
-    tip: "Plan a small reward for when you hit a certain milestone. Positive reinforcement works!"
+function getOpenAIClient() {
+  const apiKey = localStorage.getItem("openai_api_key");
+  if (!apiKey) {
+    throw new Error("Kunci API OpenAI tidak ditemukan. Silakan hubungkan akun OpenAI Anda di pengaturan.");
   }
-];
+  return new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true,
+  });
+}
 
-const getRandomItems = <T>(arr: T[], num: number): T[] => {
-  const shuffled = [...arr].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, num);
-};
+export async function generateAiInsight(goal: Goal, progress: { percentage: number } | null) {
+  const openai = getOpenAIClient();
 
-// This function is updated to provide contextual feedback based on progress.
-export const generateAiInsight = async (goal: Goal, progress: { percentage: number } | null): Promise<string> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // --- Gather Rich Context Data ---
+  const today = new Date();
+  const currentYear = getYear(today);
+  const endOfPeriod = endOfYear(today);
+  const daysLeft = differenceInDays(endOfPeriod, today);
 
   const collaborators = goal.collaborators.map(c => c.name);
-  let collaboratorText = "";
-  if (collaborators.length > 0) {
-    const collaboratorList = collaborators.join(' and ');
-    collaboratorText = ` Don't forget to sync up with ${collaboratorList} to keep the teamwork flowing!`;
+  
+  const collaboratorText = collaborators.length > 0 
+    ? `Tim Anda (${collaborators.join(', ')}) juga terlibat dalam sasaran ini.` 
+    : "Anda mengerjakan sasaran ini sendirian.";
+
+  const target = goal.type === 'quantity' ? goal.targetQuantity : goal.targetValue;
+  const totalProgress = goal.completions
+      .filter(c => getYear(parseISO(c.date)) === currentYear)
+      .reduce((sum, c) => sum + c.value, 0);
+  const toGo = target ? Math.max(0, target - totalProgress) : 0;
+
+  let progressSummary = `Progres saat ini adalah ${progress?.percentage ?? 0}% dari target tahunan.`;
+  if (target) {
+    progressSummary += ` ${totalProgress.toLocaleString()} dari ${target.toLocaleString()} ${goal.unit || ''} telah tercapai. Sisa ${toGo.toLocaleString()} untuk mencapai target.`;
   }
 
-  if (!progress || progress.percentage === null) {
-    return `It looks like we're still gathering data for "${goal.title}". Keep logging your progress to get insights!${collaboratorText}`;
-  }
+  // --- Construct the Detailed Prompt ---
+  const prompt = `
+    Anda adalah seorang Pelatih Sasaran AI yang ahli. Nada bicara Anda sangat memotivasi, berwawasan luas, dan kolaboratif. Anda memberikan nasihat yang jelas dan dapat ditindaklanuti untuk membantu pengguna dan tim mereka mencapai tujuan. Respons Anda harus dalam Bahasa Indonesia.
 
-  if (progress.percentage >= 60) {
-    const feedback = getRandomItems(positiveFeedback, 1)[0];
-    return `${feedback} You've hit ${progress.percentage}% of your target. ${collaboratorText}`;
-  } else {
-    const tips = getRandomItems(improvementTips, 3);
-    const tipsText = tips.map(t => `\n\n**${t.title}:** ${t.tip}`).join('');
-    return `It looks like you're at ${progress.percentage}% for "${goal.title}". Consistency is key! Here are a few tips to help you get back on track:${tipsText}${collaboratorText}`;
-  }
-};
+    Analisis data sasaran berikut dan berikan umpan balik yang relevan.
 
-// This is a mock function for generating icons, assuming it exists.
-export const generateAiIcon = async (prompt: string): Promise<string> => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const randomImageId = Math.floor(Math.random() * 1000);
-    return `https://picsum.photos/id/${randomImageId}/100/100`;
-};
+    **Data Sasaran:**
+    - Judul: ${goal.title}
+    - Deskripsi: ${goal.description}
+    - Tipe & Target: ${goal.type}, menargetkan ${target || goal.frequency} per ${goal.targetPeriod}
+    - Progres: ${progressSummary}
+    - Sisa Waktu: ${daysLeft} hari tersisa di periode ini.
+    - Kolaborator: ${collaboratorText}
+
+    **Instruksi Respons:**
+    1.  **Jika progres >= 100%:** Mulai dengan **apresiasi** yang kuat. Puji pencapaian luar biasa ini. Sebutkan bagaimana momentum ini bisa dipertahankan atau ditingkatkan.
+    2.  **Jika progres antara 50% dan 99%:** Berikan **motivasi** dan penguatan positif. Sebutkan bahwa mereka berada di jalur yang benar. Berikan **saran** spesifik untuk memastikan sasaran tercapai.
+    3.  **Jika progres < 50%:** Berikan **dorongan semangat** yang kuat, jangan mengkritik. Akui bahwa masih ada waktu. Berikan **Rencana Aksi** yang jelas dengan 2-3 langkah sederhana dan dapat ditindaklanjuti untuk meningkatkan progres.
+    4.  Selalu sebutkan pentingnya kolaborasi jika ada anggota tim.
+    5.  Gunakan format markdown (seperti **bold** dan daftar bernomor/poin) untuk keterbacaan. Jaga agar respons tetap singkat dan padat (sekitar 3-5 kalimat).
+  `;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 250,
+      temperature: 0.7,
+    });
+    return response.choices[0].message.content;
+  } catch (error) {
+    console.error("Error fetching AI coach insight:", error);
+    return "Maaf, saya tidak dapat menghasilkan wawasan saat ini. Teruslah berusaha!";
+  }
+}
+
+export async function generateAiIcon(prompt: string): Promise<string> {
+  const openai = getOpenAIClient();
+  try {
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: `A minimalist, vector-style icon for a goal tracking app. The icon should be simple, clean, and on a solid, single-color background. The subject is: "${prompt}"`,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+
+    const imageUrl = response.data[0]?.url;
+    if (!imageUrl) {
+      throw new Error("Image generation failed, no URL returned.");
+    }
+    return imageUrl;
+  } catch (error) {
+    console.error("Error generating icon with DALL-E:", error);
+    throw new Error("Failed to generate icon. Please try again.");
+  }
+}

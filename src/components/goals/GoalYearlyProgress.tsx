@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Goal } from '@/data/goals';
+import { Goal, GoalCompletion } from '@/data/goals';
 import { User } from '@/data/users';
 import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';

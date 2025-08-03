@@ -15,11 +15,12 @@ import { generateAiIcon } from '@/lib/openai';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { User } from '@/data/users';
 
 interface GoalFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGoalCreate?: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => void;
+  onGoalCreate?: (newGoal: Omit<Goal, 'id' | 'completions'>) => void;
   onGoalUpdate?: (updatedGoal: Goal) => void;
   goal?: Goal | null;
 }
@@ -73,7 +74,6 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
         setSpecificDays([]);
         setTargetQuantity(undefined);
         setTargetPeriod('Monthly');
-        setTargetValue(undefined);
         setUnit('');
         setColor('#BFDBFE');
         setTags([]);
@@ -121,11 +121,13 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
     } else if (!isEditMode && onGoalCreate) {
       const toastId = toast.loading("Creating goal and generating icon...");
       let icon = '🎯';
+      let iconUrl: string | undefined = undefined;
       try {
         const prompt = `Goal: ${title}. Description: ${description || 'No description'}`;
         const generatedIcon = await generateAiIcon(prompt);
         if (generatedIcon.startsWith('http')) {
-          icon = generatedIcon;
+          icon = 'ImageIcon';
+          iconUrl = generatedIcon;
           toast.success("AI icon generated successfully!", { id: toastId });
         } else {
           toast.warning("Could not generate AI icon, using default. " + generatedIcon, { id: toastId });
@@ -139,6 +141,7 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
         title,
         description,
         icon,
+        iconUrl,
         color,
         tags,
         type,

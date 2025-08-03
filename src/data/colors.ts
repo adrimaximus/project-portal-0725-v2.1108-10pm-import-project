@@ -1,4 +1,4 @@
-export const colorOptions = [
+export const colors = [
   '#FF6B6B', // Red
   '#4ECDC4', // Teal
   '#45B7D1', // Blue

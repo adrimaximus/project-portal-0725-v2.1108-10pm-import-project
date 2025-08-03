@@ -34,7 +34,7 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
         </TableHeader>
         <TableBody>
           {sortedLogs.map((log, index) => {
-            const achiever = log.achieverId ? userMap.get(log.achieverId) : null;
+            const achiever = log.userId ? userMap.get(log.userId) : null;
             return (
               <TableRow key={index}>
                 <TableCell className="text-muted-foreground text-xs">

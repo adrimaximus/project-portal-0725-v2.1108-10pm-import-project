@@ -58,8 +58,10 @@ const GoalDetailPage = () => {
       
       if (isScheduled) {
         completions.push({
+          id: `comp-${d.getTime()}`,
           date: format(d, 'yyyy-MM-dd'),
           value: Math.random() > 0.4 ? 1 : 0,
+          userId: dummyUsers[0].id,
         });
       }
     }
@@ -76,7 +78,7 @@ const GoalDetailPage = () => {
       const existing = updatedGoal.completions[existingCompletionIndex];
       updatedGoal.completions[existingCompletionIndex] = { ...existing, value: existing.value === 1 ? 0 : 1 };
     } else {
-      updatedGoal.completions.push({ date: dateString, value: 1 });
+      updatedGoal.completions.push({ id: `comp-${date.getTime()}`, date: dateString, value: 1, userId: dummyUsers[0].id });
     }
     updatedGoal.completions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setGoal(updatedGoal);
@@ -86,9 +88,10 @@ const GoalDetailPage = () => {
   const handleLogQuantity = (date: Date, value: number) => {
     if (!goal || goal.type !== 'quantity') return;
     const newLog: GoalCompletion = {
+      id: `comp-${date.getTime()}`,
       date: new Date().toISOString(),
       value,
-      achieverId: dummyUsers[0].id, // Assume current user is Alex
+      userId: dummyUsers[0].id, // Assume current user is Alex
     };
     const updatedGoal = { ...goal, completions: [...goal.completions, newLog] };
     setGoal(updatedGoal);
@@ -97,9 +100,10 @@ const GoalDetailPage = () => {
   const handleLogValue = (date: Date, value: number) => {
     if (!goal || goal.type !== 'value') return;
     const newLog: GoalCompletion = {
+      id: `comp-${date.getTime()}`,
       date: new Date().toISOString(),
       value,
-      achieverId: dummyUsers[0].id, // Assume current user is Alex
+      userId: dummyUsers[0].id, // Assume current user is Alex
     };
     const updatedGoal = { ...goal, completions: [...goal.completions, newLog] };
     setGoal(updatedGoal);
@@ -120,11 +124,12 @@ const GoalDetailPage = () => {
 
   const handleIconUpdate = (newIconUrl: string) => {
     if (goal) {
-      const updatedGoal = { ...goal, icon: newIconUrl };
+      const updatedGoal = { ...goal, iconUrl: newIconUrl, icon: 'ImageIcon' };
       setGoal(updatedGoal);
       const goalIndex = dummyGoals.findIndex(g => g.id === goal.id);
       if (goalIndex > -1) {
-        dummyGoals[goalIndex].icon = newIconUrl;
+        dummyGoals[goalIndex].iconUrl = newIconUrl;
+        dummyGoals[goalIndex].icon = 'ImageIcon';
       }
     }
   };
@@ -179,7 +184,7 @@ const GoalDetailPage = () => {
           </Button>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div className="flex items-center gap-4">
-              <GoalIcon goal={goal} onIconUpdate={handleIconUpdate} />
+              <GoalIcon goal={goal} onIconUpdate={handleIconUpdate} className="h-16 w-16" />
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">{goal.title}</h1>
                 <p className="text-muted-foreground">{goal.description}</p>

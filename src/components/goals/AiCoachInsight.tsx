@@ -6,6 +6,7 @@ import { Lightbulb, Loader2 } from 'lucide-react';
 import { generateAiInsight } from '@/lib/openai';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import { Link } from 'react-router-dom';
 
 interface AiCoachInsightProps {
   goal: Goal;
@@ -15,6 +16,17 @@ interface AiCoachInsightProps {
 const AiCoachInsight = ({ goal, progress }: AiCoachInsightProps) => {
   const [insight, setInsight] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const checkConnection = () => {
+      const storedStatus = localStorage.getItem("openai_connected");
+      setIsConnected(storedStatus === "true");
+    };
+    checkConnection();
+    window.addEventListener('storage', checkConnection);
+    return () => window.removeEventListener('storage', checkConnection);
+  }, []);
 
   const fetchInsight = useCallback(async () => {
     setIsLoading(true);
@@ -31,11 +43,29 @@ const AiCoachInsight = ({ goal, progress }: AiCoachInsightProps) => {
   }, [goal, progress]);
 
   useEffect(() => {
-    // Automatically fetch insight when component mounts with valid progress
-    if (progress !== null) {
+    if (progress !== null && isConnected) {
       fetchInsight();
     }
-  }, [fetchInsight, progress]);
+  }, [fetchInsight, progress, isConnected]);
+
+  if (!isConnected) {
+    return (
+      <Card className="mt-4 bg-muted/50 border-dashed">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-yellow-500" />
+            AI Coach
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-2">Connect your OpenAI account to get personalized insights and coaching.</p>
+          <Button asChild size="sm" variant="link" className="px-0 h-auto text-yellow-600">
+            <Link to="/settings/integrations/openai">Connect OpenAI</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="mt-4 bg-muted/50 border-dashed">
