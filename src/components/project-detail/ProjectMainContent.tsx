@@ -71,6 +71,7 @@ const ProjectMainContent = ({
           </TabsContent>
           <TabsContent value="tasks">
             <ProjectTasks
+              project={project}
               tasks={project.tasks || []}
               assignableUsers={project.assignedTo}
               onTasksUpdate={onTasksUpdate}

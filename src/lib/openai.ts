@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { Goal } from '@/data/goals';
-import { User } from '@/data/users';
+import { Project } from '@/data/projects';
 import { getYear, parseISO, endOfYear, differenceInDays } from 'date-fns';
 
 function getOpenAIClient() {
@@ -132,5 +132,57 @@ export async function generateAiIcon(prompt: string): Promise<string> {
   } catch (error) {
     console.error("Error generating icon with DALL-E:", error);
     throw new Error("Failed to generate icon. Please try again.");
+  }
+}
+
+export async function generateAiTasks(project: Project): Promise<string[]> {
+  const openai = getOpenAIClient();
+
+  const prompt = `
+    Berdasarkan detail proyek berikut, buatlah daftar 5 tugas awal yang dipecah. Tugas-tugas ini harus menjadi langkah-langkah logis pertama untuk memulai proyek.
+
+    Detail Proyek:
+    - Judul: ${project.name}
+    - Deskripsi: ${project.description}
+    - Layanan: ${project.services.join(', ')}
+    - Tanggal Mulai: ${project.startDate}
+    - Tanggal Selesai: ${project.deadline}
+
+    Instruksi:
+    - Tugas harus jelas, dapat ditindaklanjuti, dan ringkas.
+    - Kembalikan respons sebagai array JSON dari string. Contoh: ["Tentukan ruang lingkup proyek", "Buat mockup awal", "Siapkan lingkungan pengembangan"].
+    - Jangan sertakan penjelasan atau teks pengantar di luar array JSON.
+    - Respons harus dalam Bahasa Indonesia.
+  `;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: "json_object" },
+      max_tokens: 500,
+      temperature: 0.5,
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("AI mengembalikan respons kosong.");
+    }
+
+    const parsed = JSON.parse(content);
+    
+    const tasksArray = Array.isArray(parsed) 
+      ? parsed 
+      : Object.values(parsed).find(value => Array.isArray(value) && value.every(item => typeof item === 'string'));
+
+    if (!tasksArray) {
+      throw new Error("Tidak dapat menemukan array tugas dalam respons AI.");
+    }
+
+    return tasksArray;
+
+  } catch (error) {
+    console.error("Error generating AI tasks:", error);
+    throw new Error("Gagal menghasilkan tugas dari AI. Silakan periksa koneksi OpenAI Anda dan coba lagi.");
   }
 }

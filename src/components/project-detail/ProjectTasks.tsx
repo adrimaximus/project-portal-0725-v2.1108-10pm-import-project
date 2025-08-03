@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Task, AssignedUser } from "@/data/projects";
+import { Task, AssignedUser, Project } from "@/data/projects";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Plus, UserPlus, Trash2, Sparkles } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { generateAiTasks } from "@/lib/openai";
+import { toast } from "sonner";
 
 const TaskAssigneeSelector = ({
   assignableUsers,
@@ -51,12 +53,13 @@ const TaskAssigneeSelector = ({
 
 
 interface ProjectTasksProps {
+  project: Project;
   tasks: Task[];
   assignableUsers: AssignedUser[];
   onTasksUpdate: (tasks: Task[]) => void;
 }
 
-const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksProps) => {
+const ProjectTasks = ({ project, tasks, assignableUsers, onTasksUpdate }: ProjectTasksProps) => {
   const [newTaskText, setNewTaskText] = useState("");
   const [newTaskAssignees, setNewTaskAssignees] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -108,20 +111,37 @@ const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksPro
     setNewTaskAssignees([]);
   };
 
-  const handleGenerateTasks = () => {
+  const handleGenerateTasks = async () => {
+    const isConnected = localStorage.getItem("openai_connected") === "true";
+    if (!isConnected) {
+      toast.error("OpenAI not connected.", {
+        description: "Please connect your OpenAI account in Settings > Integrations to use this feature.",
+      });
+      return;
+    }
+
     setIsGenerating(true);
-    // Simulate AI generation
-    setTimeout(() => {
-      const generatedTasks: Task[] = [
-        { id: `ai-task-${Date.now()}-1`, name: "Definisikan ruang lingkup dan tujuan proyek", completed: false, assignedTo: [] },
-        { id: `ai-task-${Date.now()}-2`, name: "Identifikasi pemangku kepentingan utama", completed: false, assignedTo: [] },
-        { id: `ai-task-${Date.now()}-3`, name: "Buat rencana proyek awal dan timeline", completed: false, assignedTo: [] },
-        { id: `ai-task-${Date.now()}-4`, name: "Siapkan sumber daya dan tim yang dibutuhkan", completed: false, assignedTo: [] },
-        { id: `ai-task-${Date.now()}-5`, name: "Lakukan kick-off meeting dengan tim", completed: false, assignedTo: [] },
-      ];
-      onTasksUpdate([...tasks, ...generatedTasks]);
+    const toastId = toast.loading("AI is generating tasks...");
+
+    try {
+      const taskNames = await generateAiTasks(project);
+      const newTasks: Task[] = taskNames.map(name => ({
+        id: `ai-task-${Date.now()}-${Math.random()}`,
+        name,
+        completed: false,
+        assignedTo: [],
+      }));
+
+      onTasksUpdate([...tasks, ...newTasks]);
+      toast.success("AI generated new tasks!", { id: toastId });
+    } catch (error: any) {
+      toast.error("Failed to generate tasks", {
+        description: error.message || "An unknown error occurred.",
+        id: toastId,
+      });
+    } finally {
       setIsGenerating(false);
-    }, 1000);
+    }
   };
 
   const getAssigneeDetails = (userId: string) => {
