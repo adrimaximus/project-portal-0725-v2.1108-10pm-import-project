@@ -1,29 +1,22 @@
-const CURRENCY_SYMBOLS = ['$', '€', '£', '¥'];
-const CURRENCY_CODES = ['USD', 'EUR', 'GBP', 'JPY', 'IDR'];
-
-export const isCurrency = (unit?: string): boolean => {
-  if (!unit) return false;
-  const upperUnit = unit.toUpperCase();
-  return CURRENCY_SYMBOLS.includes(unit) || CURRENCY_CODES.includes(upperUnit);
+export const formatNumber = (num: number): string => {
+  return new Intl.NumberFormat('en-US').format(num);
 };
 
-export const formatNumber = (value: number): string => {
-  return new Intl.NumberFormat('en-US').format(value);
-};
-
-export const formatValue = (value: number, unit?: string): string => {
-  const formattedNumber = formatNumber(value);
-  if (!unit) {
-    return formattedNumber;
+export const formatValue = (value: number, unit?: string, compact = false): string => {
+  const options: Intl.NumberFormatOptions = {};
+  if (compact) {
+    options.notation = 'compact';
+    options.maximumFractionDigits = 1;
   }
-  if (isCurrency(unit)) {
-    if (unit.toUpperCase() === 'IDR') {
-        return `Rp ${formattedNumber}`;
-    }
-    if (CURRENCY_SYMBOLS.includes(unit)) {
+
+  const formattedNumber = new Intl.NumberFormat('en-US', options).format(value);
+  
+  if (unit) {
+    if (unit === '$' || unit === '€') {
       return `${unit}${formattedNumber}`;
     }
-    return `${formattedNumber} ${unit.toUpperCase()}`;
+    return `${formattedNumber} ${unit}`;
   }
-  return `${formattedNumber} ${unit}`;
+  
+  return formattedNumber;
 };

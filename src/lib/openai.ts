@@ -14,58 +14,84 @@ function getOpenAIClient() {
   });
 }
 
-export async function generateAiInsight(goal: Goal, progress: { percentage: number } | null) {
+export async function generateAiInsight(
+  goal: Goal, 
+  context: { 
+    yearly?: { percentage: number };
+    month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
+  }
+) {
   const openai = getOpenAIClient();
 
-  // --- Gather Rich Context Data ---
-  const today = new Date();
-  const currentYear = getYear(today);
-  const endOfPeriod = endOfYear(today);
-  const daysLeft = differenceInDays(endOfPeriod, today);
-
-  const collaborators = goal.collaborators.map(c => c.name);
-  
-  const collaboratorText = collaborators.length > 0 
-    ? `Tim Anda (${collaborators.join(', ')}) juga terlibat dalam sasaran ini.` 
-    : "Anda mengerjakan sasaran ini sendirian.";
-
-  const target = goal.type === 'quantity' ? goal.targetQuantity : goal.targetValue;
-  const totalProgress = goal.completions
-      .filter(c => getYear(parseISO(c.date)) === currentYear)
-      .reduce((sum, c) => sum + c.value, 0);
-  const toGo = target ? Math.max(0, target - totalProgress) : 0;
-
-  let progressSummary = `Progres saat ini adalah ${progress?.percentage ?? 0}% dari target tahunan.`;
-  if (target) {
-    progressSummary += ` ${totalProgress.toLocaleString()} dari ${target.toLocaleString()} ${goal.unit || ''} telah tercapai. Sisa ${toGo.toLocaleString()} untuk mencapai target.`;
-  }
-
-  // --- Construct the Detailed Prompt ---
-  const prompt = `
-    Anda adalah seorang Pelatih Sasaran AI yang ahli. Nada bicara Anda sangat memotivasi, berwawasan luas, dan kolaboratif. Anda memberikan nasihat yang jelas dan dapat ditindaklanuti untuk membantu pengguna dan tim mereka mencapai tujuan. Respons Anda harus dalam Bahasa Indonesia.
-
-    Analisis data sasaran berikut dan berikan umpan balik yang relevan.
-
-    **Data Sasaran:**
-    - Judul: ${goal.title}
-    - Deskripsi: ${goal.description}
-    - Tipe & Target: ${goal.type}, menargetkan ${target || goal.frequency} ${goal.unit || ''} per ${goal.targetPeriod}
-    - Progres: ${progressSummary}
-    - Sisa Waktu: ${daysLeft} hari tersisa di periode ini.
-    - Kolaborator: ${collaboratorText}
-
-    **Instruksi Respons:**
-    1.  **Jika progres >= 100%:** Mulai dengan **apresiasi** yang kuat. Puji pencapaian luar biasa ini. Sebutkan bagaimana momentum ini bisa dipertahankan atau ditingkatkan.
-    2.  **Jika progres antara 50% dan 99%:** Berikan **motivasi** dan penguatan positif. Sebutkan bahwa mereka berada di jalur yang benar. Berikan **saran** spesifik untuk memastikan sasaran tercapai.
-    3.  **Jika progres < 50%:** Berikan **dorongan semangat** yang kuat, jangan mengkritik. Akui bahwa masih ada waktu. Berikan **Rencana Aksi** yang jelas dengan 2-3 langkah sederhana dan dapat ditindaklanjuti untuk meningkatkan progres.
-    4.  Selalu sebutkan pentingnya kolaborasi jika ada anggota tim.
-    5.  Gunakan format markdown (seperti **bold** dan daftar bernomor/poin) untuk keterbacaan. Jaga agar respons tetap singkat dan padat (sekitar 3-5 kalimat).
+  const basePrompt = `
+    Anda adalah seorang Pelatih Sasaran AI yang ahli. Nada bicara Anda sangat memotivasi, berwawasan luas, dan kolaboratif. Anda memberikan nasihat yang jelas dan dapat ditindaklanjuti untuk membantu pengguna dan tim mereka mencapai tujuan. Respons Anda harus dalam Bahasa Indonesia.
   `;
+
+  let contextPrompt = '';
+
+  if (context.month) {
+    contextPrompt = `
+      Fokus pada ulasan untuk bulan **${context.month.name}**.
+
+      **Data Bulanan (${context.month.name}):**
+      - Performa: ${context.month.percentage}% tercapai.
+      - Detail: ${context.month.completedCount} dari ${context.month.possibleCount} hari target telah diselesaikan.
+
+      **Instruksi Respons Bulanan:**
+      1. Berikan ulasan singkat tentang performa di bulan ${context.month.name}.
+      2. Jika performa bagus (>= 80%), berikan apresiasi dan soroti konsistensi.
+      3. Jika performa sedang (40-79%), berikan motivasi dan 1-2 tips konkret untuk meningkatkan di bulan berikutnya.
+      4. Jika performa rendah (< 40%), berikan dorongan semangat tanpa menghakimi. Identifikasi kemungkinan tantangan dan sarankan untuk memulai kembali dengan langkah kecil.
+      5. Jaga agar tetap singkat (2-4 kalimat) dan fokus pada bulan tersebut.
+    `;
+  } else if (context.yearly) {
+    const today = new Date();
+    const currentYear = getYear(today);
+    const endOfPeriod = endOfYear(today);
+    const daysLeft = differenceInDays(endOfPeriod, today);
+
+    const collaborators = goal.collaborators.map(c => c.name);
+    const collaboratorText = collaborators.length > 0 
+      ? `Tim Anda (${collaborators.join(', ')}) juga terlibat dalam sasaran ini.` 
+      : "Anda mengerjakan sasaran ini sendirian.";
+
+    const target = goal.type === 'quantity' ? goal.targetQuantity : goal.targetValue;
+    const totalProgress = goal.completions
+        .filter(c => getYear(parseISO(c.date)) === currentYear)
+        .reduce((sum, c) => sum + c.value, 0);
+    const toGo = target ? Math.max(0, target - totalProgress) : 0;
+
+    let progressSummary = `Progres saat ini adalah ${context.yearly.percentage}% dari target tahunan.`;
+    if (target) {
+      progressSummary += ` ${totalProgress.toLocaleString()} dari ${target.toLocaleString()} ${goal.unit || ''} telah tercapai. Sisa ${toGo.toLocaleString()} untuk mencapai target.`;
+    }
+
+    contextPrompt = `
+      Analisis data sasaran tahunan berikut.
+
+      **Data Sasaran:**
+      - Judul: ${goal.title}
+      - Deskripsi: ${goal.description}
+      - Tipe & Target: ${goal.type}, menargetkan ${target || goal.frequency} per ${goal.targetPeriod}
+      - Progres: ${progressSummary}
+      - Sisa Waktu: ${daysLeft} hari tersisa di periode ini.
+      - Kolaborator: ${collaboratorText}
+
+      **Instruksi Respons Tahunan:**
+      1.  **Jika progres >= 100%:** Mulai dengan **apresiasi** yang kuat.
+      2.  **Jika progres antara 50% dan 99%:** Berikan **motivasi** dan penguatan positif.
+      3.  **Jika progres < 50%:** Berikan **dorongan semangat** dan **Rencana Aksi** dengan 2-3 langkah sederhana.
+      4.  Sebutkan pentingnya kolaborasi jika ada anggota tim.
+      5.  Gunakan format markdown. Jaga agar respons tetap singkat dan padat (sekitar 3-5 kalimat).
+    `;
+  } else {
+    return "Konteks tidak cukup untuk memberikan wawasan.";
+  }
 
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-4-turbo',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: basePrompt + contextPrompt }],
       max_tokens: 250,
       temperature: 0.7,
     });

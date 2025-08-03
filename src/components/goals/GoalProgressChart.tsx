@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import { Goal } from '@/data/goals';
-import { format, getMonth, getYear, parseISO } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { formatNumber, formatValue } from '@/lib/formatting';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar } from 'recharts';
+import { getYear, parseISO, format } from 'date-fns';
+import { formatValue } from '@/lib/formatting';
 import AiCoachInsight from './AiCoachInsight';
 
 interface GoalProgressChartProps {
@@ -10,134 +11,64 @@ interface GoalProgressChartProps {
 }
 
 const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
-  if (goal.type === 'frequency') {
-    return null; // This chart is for quantity and value goals
-  }
+  const { chartData, total, target, percentage, unit } = useMemo(() => {
+    const currentYear = getYear(new Date());
+    const monthlyData: { [key: string]: number } = {};
 
-  const currentYear = getYear(new Date());
-  const monthlyTotals = Array(12).fill(0);
-  let totalProgress = 0;
-
-  goal.completions.forEach(completion => {
-    const completionDate = parseISO(completion.date);
-    if (getYear(completionDate) === currentYear) {
-      const monthIndex = getMonth(completionDate);
-      monthlyTotals[monthIndex] += completion.value;
-      totalProgress += completion.value;
+    for (let i = 0; i < 12; i++) {
+      const monthName = format(new Date(currentYear, i, 1), 'MMM');
+      monthlyData[monthName] = 0;
     }
-  });
 
-  const getMonthlyTarget = () => {
+    goal.completions
+      .filter(c => getYear(parseISO(c.date)) === currentYear)
+      .forEach(c => {
+        const monthName = format(parseISO(c.date), 'MMM');
+        if (monthlyData.hasOwnProperty(monthName)) {
+          monthlyData[monthName] += c.value;
+        }
+      });
+
+    const chartData = Object.entries(monthlyData).map(([name, value]) => ({ name, value }));
+    
+    const total = chartData.reduce((sum, item) => sum + item.value, 0);
     const target = goal.type === 'quantity' ? goal.targetQuantity : goal.targetValue;
-    if (!target || !goal.targetPeriod) return null;
+    const percentage = target ? Math.min(Math.round((total / target) * 100), 100) : 0;
 
-    switch (goal.targetPeriod) {
-      case 'Weekly': return target * 4; // Simplified to 4 weeks per month for clarity
-      case 'Monthly': return target;
-      default: return null;
-    }
-  };
+    return { chartData, total, target, percentage, unit: goal.unit };
+  }, [goal]);
 
-  const monthlyTarget = getMonthlyTarget();
-  // The chart's vertical scale should be based on the monthly target,
-  // but if any month's progress exceeds the target, the scale should adjust to the highest value.
-  // We also ensure it's at least 1 to avoid division by zero.
-  const chartMax = Math.max(monthlyTarget || 0, ...monthlyTotals, 1);
-
-  const unit = goal.type === 'value' ? goal.unit : '';
-
-  const formatProgress = (value: number) => {
-    return goal.type === 'quantity' ? formatNumber(value) : formatValue(value, unit);
-  };
-
-  const getYearlyTarget = () => {
-    if (goal.type === 'quantity' && goal.targetQuantity && goal.targetPeriod) {
-      switch (goal.targetPeriod) {
-        case 'Weekly': return goal.targetQuantity * 52;
-        case 'Monthly': return goal.targetQuantity * 12;
-        default: return null;
-      }
-    }
-    if (goal.type === 'value' && goal.targetValue && goal.targetPeriod) {
-      switch (goal.targetPeriod) {
-        case 'Weekly': return goal.targetValue * 52;
-        case 'Monthly': return goal.targetValue * 12;
-        default: return null;
-      }
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="p-2 bg-background border rounded-md shadow-md">
+          <p className="font-bold">{label}</p>
+          <p style={{ color: goal.color }}>
+            {`Progress: ${formatValue(payload[0].value, unit)}`}
+          </p>
+        </div>
+      );
     }
     return null;
-  };
-
-  const yearlyTarget = getYearlyTarget();
-  const overallPercentage = yearlyTarget ? Math.round((totalProgress / yearlyTarget) * 100) : null;
-
-  const getTargetText = () => {
-    if (goal.type === 'quantity' && goal.targetQuantity && goal.targetPeriod) {
-      return `Target: ${formatProgress(goal.targetQuantity)} / ${goal.targetPeriod.replace('ly', '')}`;
-    }
-    if (goal.type === 'value' && goal.targetValue && goal.targetPeriod) {
-      return `Target: ${formatProgress(goal.targetValue)} / ${goal.targetPeriod.replace('ly', '')}`;
-    }
-    return 'No target set';
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Yearly Overview - {currentYear}</CardTitle>
-        <CardDescription>
-          Total progress this year: <strong>{formatProgress(totalProgress)}</strong>. {getTargetText()}
-        </CardDescription>
+        <CardTitle>Monthly Progress Overview</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex h-48 w-full items-end gap-2 rounded-md bg-muted/50 p-4" aria-label="Monthly progress chart">
-          {monthlyTotals.map((value, index) => {
-            const monthName = format(new Date(currentYear, index, 1), 'MMM');
-            const heightPercentage = (value / chartMax) * 100;
-            const targetHeightPercentage = monthlyTarget ? (monthlyTarget / chartMax) * 100 : 0;
-
-            return (
-              <TooltipProvider key={index}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="relative h-full flex-1">
-                      <div
-                        className="absolute bottom-0 w-full rounded-t-md transition-all duration-300 hover:opacity-80"
-                        style={{
-                          height: `${heightPercentage}%`,
-                          backgroundColor: goal.color,
-                        }}
-                        aria-label={`Progress for ${monthName}: ${formatProgress(value)}`}
-                      />
-                      {monthlyTarget && targetHeightPercentage > 0 && (
-                         <div
-                          className="absolute left-0 w-full border-t-2 border-dashed border-foreground/50"
-                          style={{
-                            bottom: `${targetHeightPercentage}%`,
-                          }}
-                          aria-label={`Monthly Target: ${formatProgress(monthlyTarget)}`}
-                        />
-                      )}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-bold">{monthName}</p>
-                    <p>Progress: {formatProgress(value)}</p>
-                    {monthlyTarget && <p>Target: {formatProgress(monthlyTarget)}</p>}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            );
-          })}
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+              <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatValue(value, unit, true)} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
+              <Bar dataKey="value" fill={goal.color} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
-        <div className="mt-2 flex w-full gap-2" aria-hidden="true">
-          {monthlyTotals.map((_, index) => (
-            <div key={index} className="flex-1 text-center text-xs text-muted-foreground">
-              {format(new Date(currentYear, index, 1), 'MMM')}
-            </div>
-          ))}
-        </div>
-        <AiCoachInsight goal={goal} progress={overallPercentage !== null ? { percentage: overallPercentage } : null} />
+        <AiCoachInsight goal={goal} yearlyProgress={{ percentage }} />
       </CardContent>
     </Card>
   );

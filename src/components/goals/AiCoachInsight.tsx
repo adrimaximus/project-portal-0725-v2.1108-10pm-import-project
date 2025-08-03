@@ -10,10 +10,11 @@ import { Link } from 'react-router-dom';
 
 interface AiCoachInsightProps {
   goal: Goal;
-  progress: { percentage: number } | null;
+  yearlyProgress?: { percentage: number } | null;
+  monthlyProgress?: { name: string; percentage: number; completedCount: number; possibleCount: number; } | null;
 }
 
-const AiCoachInsight = ({ goal, progress }: AiCoachInsightProps) => {
+const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsightProps) => {
   const [insight, setInsight] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -32,7 +33,21 @@ const AiCoachInsight = ({ goal, progress }: AiCoachInsightProps) => {
     setIsLoading(true);
     setInsight(null);
     try {
-      const newInsight = await generateAiInsight(goal, progress);
+      const context: { 
+        yearly?: { percentage: number }; 
+        month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
+      } = {};
+
+      if (monthlyProgress) {
+        context.month = monthlyProgress;
+      } else if (yearlyProgress) {
+        context.yearly = yearlyProgress;
+      } else {
+        setIsLoading(false);
+        return;
+      }
+      
+      const newInsight = await generateAiInsight(goal, context);
       setInsight(newInsight);
     } catch (error) {
       console.error("Failed to generate AI insight:", error);
@@ -40,13 +55,13 @@ const AiCoachInsight = ({ goal, progress }: AiCoachInsightProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [goal, progress]);
+  }, [goal, yearlyProgress, monthlyProgress]);
 
   useEffect(() => {
-    if (progress !== null && isConnected) {
+    if (isConnected && (yearlyProgress || monthlyProgress)) {
       fetchInsight();
     }
-  }, [fetchInsight, progress, isConnected]);
+  }, [fetchInsight, isConnected, yearlyProgress, monthlyProgress]);
 
   if (!isConnected) {
     return (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Goal, GoalCompletion } from '@/data/goals';
 import { User } from '@/data/users';
 import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
@@ -86,12 +86,31 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
   });
 
   const [selectedMonth, setSelectedMonth] = useState<(typeof monthlyData)[0] | null>(null);
+  const [aiContext, setAiContext] = useState<{
+    yearly?: { percentage: number };
+    month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
+  }>({ yearly: { percentage: overallPercentage } });
+
+  useEffect(() => {
+    if (!selectedMonth) {
+      setAiContext({ yearly: { percentage: overallPercentage } });
+    }
+  }, [overallPercentage, selectedMonth]);
 
   const handleMonthClick = (month: (typeof monthlyData)[0]) => {
     if (selectedMonth?.name === month.name) {
       setSelectedMonth(null);
+      setAiContext({ yearly: { percentage: overallPercentage } });
     } else {
       setSelectedMonth(month);
+      setAiContext({
+        month: {
+          name: month.name,
+          percentage: month.percentage,
+          completedCount: month.completedCount,
+          possibleCount: month.possibleCount,
+        },
+      });
     }
   };
 
@@ -134,7 +153,11 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
             <Progress value={overallPercentage} className="w-full" indicatorStyle={{ backgroundColor: color }} />
             <span className="font-bold text-lg">{overallPercentage}%</span>
           </div>
-          <AiCoachInsight goal={goal} progress={{ percentage: overallPercentage }} />
+          <AiCoachInsight 
+            goal={goal} 
+            yearlyProgress={aiContext.yearly}
+            monthlyProgress={aiContext.month}
+          />
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {monthlyData.map(month => {
