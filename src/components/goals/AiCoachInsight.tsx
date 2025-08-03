@@ -18,7 +18,8 @@ const AiCoachInsight = ({ goal }: AiCoachInsightProps) => {
     setIsLoading(true);
     setInsight(null);
     try {
-      const newInsight = await generateAiInsight(goal);
+      const prompt = `Generate an insight for the following goal: "${goal.title}". Description: ${goal.description || 'N/A'}`;
+      const newInsight = await generateAiInsight(prompt);
       setInsight(newInsight);
     } catch (error) {
       console.error("Failed to generate AI insight:", error);
