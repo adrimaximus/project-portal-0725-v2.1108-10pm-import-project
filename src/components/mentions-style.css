@@ -3,11 +3,18 @@
 }
 
 .mentions__control {
-  @apply bg-transparent border-none shadow-none outline-none;
+  @apply relative bg-transparent border-none shadow-none outline-none;
 }
 
+/* This div mirrors the textarea and displays the styled text */
+.mentions__highlighter {
+  @apply absolute top-0 left-0 w-full p-2 min-h-[40px] text-sm leading-snug pointer-events-none overflow-hidden whitespace-pre-wrap break-words;
+  font-family: inherit;
+}
+
+/* The actual textarea, text is hidden but caret is visible */
 .mentions__input {
-  @apply w-full p-2 min-h-[40px] max-h-[200px] text-sm bg-transparent focus:outline-none resize-none leading-snug text-transparent caret-transparent;
+  @apply w-full p-2 min-h-[40px] max-h-[200px] text-sm bg-transparent focus:outline-none resize-none leading-snug text-transparent caret-foreground;
   font-family: inherit;
 }
 

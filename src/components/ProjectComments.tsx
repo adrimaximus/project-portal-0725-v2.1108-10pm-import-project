@@ -108,40 +108,41 @@ const ProjectComments = ({
       <div className="space-y-2">
         <h3 className="text-lg font-semibold">Comments & Tickets</h3>
         
-        {attachment && (
-          <div className="text-sm text-muted-foreground flex items-center gap-2 p-2 bg-muted/50 rounded-md">
-            <Paperclip className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate flex-1">{attachment.name}</span>
-            <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveAttachment}>
-              &times;
-            </Button>
+        <div className="rounded-lg border bg-background">
+          <div className="p-2">
+            <MentionsInput
+              value={newCommentText}
+              onChange={(e) => setNewCommentText(e.target.value)}
+              placeholder="Add a comment or create a ticket... Type '@' to mention a user, '/' to link a project."
+              className="mentions"
+              a11ySuggestionsListLabel="Suggested mentions"
+            >
+              <Mention
+                trigger="@"
+                data={usersForMentions}
+                renderSuggestion={renderUserSuggestion}
+                markup="@[__display__](__id__)"
+                className="mentions__mention"
+              />
+              <Mention
+                trigger="/"
+                data={projectsForMentions}
+                renderSuggestion={renderProjectSuggestion}
+                markup="/[__display__](__id__)"
+                className="mentions__mention"
+              />
+            </MentionsInput>
           </div>
-        )}
-
-        <div className="rounded-lg border bg-background flex p-1">
-          <MentionsInput
-            value={newCommentText}
-            onChange={(e) => setNewCommentText(e.target.value)}
-            placeholder="Add a comment or create a ticket... Type '@' to mention a user, '/' to link a project."
-            className="mentions"
-            a11ySuggestionsListLabel="Suggested mentions"
-          >
-            <Mention
-              trigger="@"
-              data={usersForMentions}
-              renderSuggestion={renderUserSuggestion}
-              markup="@[__display__](__id__)"
-              className="mentions__mention"
-            />
-            <Mention
-              trigger="/"
-              data={projectsForMentions}
-              renderSuggestion={renderProjectSuggestion}
-              markup="/[__display__](__id__)"
-              className="mentions__mention"
-            />
-          </MentionsInput>
-          <div className="flex items-center gap-1 p-1 self-end">
+          {attachment && (
+            <div className="text-sm text-muted-foreground flex items-center gap-2 px-2 pb-2">
+              <Paperclip className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate flex-1">{attachment.name}</span>
+              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveAttachment}>
+                &times;
+              </Button>
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-1 p-2 border-t">
             <Button variant="ghost" size="icon" asChild>
               <Label htmlFor="comment-attachment" className="cursor-pointer">
                 <Paperclip className="h-4 w-4" />
