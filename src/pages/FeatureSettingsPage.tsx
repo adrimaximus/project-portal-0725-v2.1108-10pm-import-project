@@ -24,7 +24,7 @@ type Invite = {
 
 const defaultRoles = [
   { value: 'owner', label: 'Owner', description: 'Full access to the project and billing.' },
-  { value: 'admin', label: 'Admin', description: 'Can fully manage the project.' },
+  { value: 'admin', label: 'Admin', description: 'Full access to manage the application and all its features.' },
   { value: 'member', label: 'Member', description: 'Can access the project and create new projects.' },
   { value: 'client', label: 'Client', description: 'Can access the project but cannot create new projects.' },
   { value: 'comment-only', label: 'Comment Only', description: 'Can comment in the project but cannot create or delete anything.' },
