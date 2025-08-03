@@ -171,8 +171,8 @@ const FeatureSettingsPage = () => {
                   </DialogHeader>
                   <div className="py-4 space-y-4">
                     {invites.map((invite) => (
-                      <div key={invite.id} className="grid grid-cols-1 sm:grid-cols-[1fr_150px_auto] gap-3 items-end">
-                        <div className="space-y-1.5">
+                      <div key={invite.id} className="flex items-end gap-3">
+                        <div className="flex-grow space-y-1.5">
                           <Label htmlFor={`email-${invite.id}`}>Email address</Label>
                           <Input
                             id={`email-${invite.id}`}
@@ -181,7 +181,7 @@ const FeatureSettingsPage = () => {
                             onChange={(e) => handleInviteChange(invite.id, 'email', e.target.value)}
                           />
                         </div>
-                        <div className="space-y-1.5">
+                        <div className="w-[180px] flex-shrink-0 space-y-1.5">
                           <Label htmlFor={`role-${invite.id}`}>Role</Label>
                           <Select
                             value={invite.role}
@@ -216,7 +216,7 @@ const FeatureSettingsPage = () => {
                           </Select>
                         </div>
                         {invites.length > 1 && (
-                          <Button variant="ghost" size="icon" onClick={() => removeInviteField(invite.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => removeInviteField(invite.id)} className="flex-shrink-0">
                             <X className="h-4 w-4" />
                             <span className="sr-only">Remove</span>
                           </Button>
