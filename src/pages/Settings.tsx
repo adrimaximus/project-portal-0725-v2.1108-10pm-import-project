@@ -1,6 +1,7 @@
 import PortalLayout from "@/components/PortalLayout";
 import FeatureCard from "@/components/settings/FeatureCard";
 import IntegrationCard from "@/components/settings/IntegrationCard";
+import NavigationCard from "@/components/settings/NavigationCard";
 import { useFeatures } from "@/contexts/FeaturesContext";
 
 const SettingsPage = () => {
@@ -22,6 +23,7 @@ const SettingsPage = () => {
               <FeatureCard key={feature.id} feature={feature} />
             ))}
           <IntegrationCard />
+          <NavigationCard />
         </div>
       </div>
     </PortalLayout>
