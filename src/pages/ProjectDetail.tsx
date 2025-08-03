@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { dummyProjects, Project, Task, Comment, User, Activity, ActivityType, ProjectFile } from "@/data/projects";
+import { dummyProjects, Project, Task, Comment, User, Activity, ActivityType, ProjectFile, ProjectStatus, PaymentStatus } from "@/data/projects";
 import { useUser } from "@/contexts/UserContext";
 import { Layout, LayoutBody, LayoutHeader } from "@/components/custom/layout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
+import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import { toast } from "sonner";
 
 const ProjectDetail = () => {
@@ -13,6 +14,8 @@ const ProjectDetail = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useUser();
   const [project, setProject] = useState<Project | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProject, setEditedProject] = useState<Project | null>(null);
 
   useEffect(() => {
     const foundProject = dummyProjects.find((p) => p.id === projectId);
@@ -22,6 +25,53 @@ const ProjectDetail = () => {
       navigate("/"); // Redirect if project not found
     }
   }, [projectId, navigate]);
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      setEditedProject(null);
+    } else {
+      setEditedProject(project);
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleSaveChanges = () => {
+    if (editedProject) {
+      handleUpdateProjectDetails(editedProject);
+      setProject(editedProject);
+    }
+    setIsEditing(false);
+    setEditedProject(null);
+  };
+
+  const handleCancelChanges = () => {
+    setIsEditing(false);
+    setEditedProject(null);
+  };
+
+  const handleProjectNameChange = (newName: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, name: newName });
+    }
+  };
+
+  const handleCardSelectChange = (name: 'status' | 'paymentStatus', value: string) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, [name]: value as ProjectStatus | PaymentStatus });
+    }
+  };
+
+  const handleCardDateChange = (name: 'dueDate' | 'startDate', date: Date | undefined) => {
+    if (editedProject && date) {
+      setEditedProject({ ...editedProject, [name]: date.toISOString() });
+    }
+  };
+
+  const handleCardBudgetChange = (value: number | undefined) => {
+    if (editedProject) {
+      setEditedProject({ ...editedProject, budget: value });
+    }
+  };
 
   const createActivity = (type: ActivityType, details: any): Activity => {
     const newActivity: Activity = {
@@ -155,32 +205,42 @@ const ProjectDetail = () => {
       <LayoutHeader>
         <ProjectHeader 
           project={project} 
-          isEditing={false}
-          projectName={project.name}
-          onProjectNameChange={() => {}}
-          onEditToggle={() => {}}
-          onSaveChanges={() => {}}
-          onCancelChanges={() => {}}
+          isEditing={isEditing}
+          projectName={isEditing && editedProject ? editedProject.name : project.name}
+          onProjectNameChange={handleProjectNameChange}
+          onEditToggle={handleEditToggle}
+          onSaveChanges={handleSaveChanges}
+          onCancelChanges={handleCancelChanges}
           canEdit={true}
         />
       </LayoutHeader>
-      <LayoutBody className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <ProjectMainContent
-            project={project}
-            onUpdateTasks={handleUpdateTasks}
-            onTaskStatusChange={handleTaskStatusChange}
-            onTaskDelete={handleTaskDelete}
-            onAddCommentOrTicket={handleAddCommentOrTicket}
-          />
-        </div>
-        <div className="lg:col-span-1">
-          <ProjectSidebar
-            project={project}
-            onUpdateProject={handleUpdateProjectDetails}
-            onUpdateTeam={handleUpdateTeam}
-            onFileUpload={handleFileUpload}
-          />
+      <LayoutBody className="space-y-8 p-4 md:p-6">
+        <ProjectInfoCards
+          project={project}
+          isEditing={isEditing}
+          editedProject={editedProject}
+          onSelectChange={handleCardSelectChange}
+          onDateChange={handleCardDateChange}
+          onBudgetChange={handleCardBudgetChange}
+        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <ProjectMainContent
+              project={project}
+              onUpdateTasks={handleUpdateTasks}
+              onTaskStatusChange={handleTaskStatusChange}
+              onTaskDelete={handleTaskDelete}
+              onAddCommentOrTicket={handleAddCommentOrTicket}
+            />
+          </div>
+          <div className="lg:col-span-1">
+            <ProjectSidebar
+              project={project}
+              onUpdateProject={handleUpdateProjectDetails}
+              onUpdateTeam={handleUpdateTeam}
+              onFileUpload={handleFileUpload}
+            />
+          </div>
         </div>
       </LayoutBody>
     </Layout>
