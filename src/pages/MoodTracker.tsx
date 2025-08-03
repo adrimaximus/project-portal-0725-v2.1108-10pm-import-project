@@ -4,6 +4,7 @@ import MoodSelector from '@/components/mood-tracker/MoodSelector';
 import MoodOverview from '@/components/mood-tracker/MoodOverview';
 import MoodHistory from '@/components/mood-tracker/MoodHistory';
 import MoodStats from '@/components/mood-tracker/MoodStats';
+import AiFriendSuggestion from '@/components/mood-tracker/AiFriendSuggestion';
 import { moods, dummyHistory, Mood, MoodHistoryEntry } from '@/data/mood';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -123,6 +124,7 @@ const MoodTracker = () => {
                 <MoodOverview data={moodDataForPeriod} />
                 <MoodStats data={moodDataForPeriod} />
               </div>
+              <AiFriendSuggestion data={moodDataForPeriod} period={period} userName={user.name} />
             </CardContent>
           </Card>
 
