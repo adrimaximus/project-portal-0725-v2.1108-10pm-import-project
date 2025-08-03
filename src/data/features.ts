@@ -5,19 +5,59 @@ export type Feature = {
 };
 
 export const features: Feature[] = [
-  { name: 'Agents', description: 'AI assistants that can help automate tasks and workflows', status: 'enabled' },
-  { name: 'Project Roles', description: 'Control who can view, edit, or manage different projects', status: 'enabled' },
-  { name: 'Team Collaboration via Git', description: 'Work together on projects with version control and team features', status: 'upgrade' },
-  { name: 'Analytics', description: 'View reports and insights about your workflow performance', status: 'upgrade' },
-  { name: 'Audit Log', description: 'Track all changes and activities in your workspace', status: 'upgrade' },
-  { name: 'Embedding', description: 'Add workflows directly into your website or application', status: 'upgrade' },
-  { name: 'Global Connections', description: 'Create centralized connections for your projects', status: 'upgrade' },
-  { name: 'Manage Pieces', description: 'Create and organize custom building blocks for workflows', status: 'upgrade' },
-  { name: 'Manage Templates', description: 'Save and share workflow templates across your team', status: 'upgrade' },
-  { name: 'Brand Activepieces', description: 'Customize the look and feel with your company branding', status: 'upgrade' },
-  { name: 'Manage Projects', description: 'Organize workflows into separate projects and workspaces', status: 'upgrade' },
-  { name: 'Custom Domains', description: 'Use your own web address instead of the default domain', status: 'upgrade' },
-  { name: 'API Keys', description: 'Connect external services and applications to your workflows', status: 'upgrade' },
-  { name: 'Single Sign On', description: 'Log in using your company account without separate passwords', status: 'upgrade' },
-  { name: 'Custom Roles', description: 'Create and manage custom roles for your team', status: 'upgrade' },
+  { 
+    name: 'Dashboard', 
+    description: 'Get a complete overview of all your projects and activities.', 
+    status: 'enabled' 
+  },
+  { 
+    name: 'Projects', 
+    description: 'Organize your work into distinct projects with tasks and deadlines.', 
+    status: 'enabled' 
+  },
+  { 
+    name: 'Request', 
+    description: 'Submit new work requests through a formal, trackable process.', 
+    status: 'enabled' 
+  },
+  { 
+    name: 'Chat', 
+    description: 'Real-time communication with your team and collaborators.', 
+    status: 'enabled' 
+  },
+  { 
+    name: 'Mood Tracker', 
+    description: 'Log and monitor team morale and well-being over time.', 
+    status: 'enabled' 
+  },
+  { 
+    name: 'Goals', 
+    description: 'Set, track, and manage project and personal objectives.', 
+    status: 'enabled' 
+  },
+  { 
+    name: 'Billing', 
+    description: 'Manage invoices, payments, and view your subscription details.', 
+    status: 'enabled' 
+  },
+  { 
+    name: 'Notifications', 
+    description: 'Receive timely updates on important activities and mentions.', 
+    status: 'enabled' 
+  },
+  { 
+    name: 'Advanced Analytics', 
+    description: 'In-depth reports on project performance and team productivity.', 
+    status: 'upgrade' 
+  },
+  { 
+    name: 'Custom Branding', 
+    description: 'Apply your own company branding to the client portal.', 
+    status: 'upgrade' 
+  },
+  { 
+    name: 'API Access', 
+    description: 'Integrate the portal with your other tools and services.', 
+    status: 'upgrade' 
+  },
 ];
