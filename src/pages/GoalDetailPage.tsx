@@ -22,12 +22,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
 import { isBefore, startOfDay, format } from 'date-fns';
+import GoalFormDialog from '@/components/goals/GoalFormDialog';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
   const navigate = useNavigate();
   const [goal, setGoal] = useState<Goal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     const goalData = dummyGoals.find(g => g.id === goalId);
@@ -94,14 +96,20 @@ const GoalDetailPage = () => {
     if (goal) {
       const updatedGoal = { ...goal, icon: newIconUrl };
       setGoal(updatedGoal);
-      
-      // In a real app, this would be an API call. For now, we update the dummy data
-      // to make the change persist during the user's session.
       const goalIndex = dummyGoals.findIndex(g => g.id === goal.id);
       if (goalIndex > -1) {
         dummyGoals[goalIndex].icon = newIconUrl;
       }
     }
+  };
+
+  const handleGoalUpdate = (updatedGoal: Goal) => {
+    const goalIndex = dummyGoals.findIndex(g => g.id === updatedGoal.id);
+    if (goalIndex > -1) {
+      dummyGoals[goalIndex] = updatedGoal;
+    }
+    setGoal(updatedGoal);
+    setIsEditDialogOpen(false);
   };
 
   if (isLoading) {
@@ -146,8 +154,8 @@ const GoalDetailPage = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" asChild>
-                <Link to={`/goals/edit/${goal.id}`}><Edit className="h-4 w-4" /></Link>
+              <Button variant="outline" size="icon" onClick={() => setIsEditDialogOpen(true)}>
+                <Edit className="h-4 w-4" />
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -190,6 +198,13 @@ const GoalDetailPage = () => {
 
         <GoalCollaborationManager goal={goal} onCollaboratorsUpdate={handleCollaboratorsUpdate} />
       </div>
+      
+      <GoalFormDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onGoalUpdate={handleGoalUpdate}
+        goal={goal}
+      />
     </PortalLayout>
   );
 };

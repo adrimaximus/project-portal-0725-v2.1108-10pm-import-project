@@ -3,7 +3,7 @@ import PortalLayout from '@/components/PortalLayout';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { dummyGoals, Goal } from '@/data/goals';
-import NewGoalDialog from '@/components/goals/NewGoalDialog';
+import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import GoalCard from '@/components/goals/GoalCard';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -12,7 +12,6 @@ const GoalsPage = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
 
   useEffect(() => {
-    // This ensures we are working with a fresh copy and not mutating the original
     setGoals([...dummyGoals]);
   }, []);
 
@@ -24,9 +23,7 @@ const GoalsPage = () => {
       collaborators: [],
     };
     
-    // Update the dummyGoals array so the change persists across navigation
     dummyGoals.unshift(newGoal);
-    // Update the local state to re-render the component
     setGoals(prevGoals => [newGoal, ...prevGoals]);
   };
 
@@ -45,7 +42,7 @@ const GoalsPage = () => {
         ))}
       </div>
 
-      <NewGoalDialog
+      <GoalFormDialog
         open={isNewGoalDialogOpen}
         onOpenChange={setIsNewGoalDialogOpen}
         onGoalCreate={handleGoalCreate}
