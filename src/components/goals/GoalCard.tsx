@@ -33,7 +33,7 @@ const GoalCard = ({ goal }: GoalCardProps) => {
     };
   }, [goal]);
 
-  const collaborators = goal.collaborators;
+  const collaborators = goal.collaborators || [];
 
   const formatDisplayValue = (value: number) => {
     return goal.type === 'value' ? formatValue(value, unit) : formatNumber(value);

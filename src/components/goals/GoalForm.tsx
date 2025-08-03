@@ -29,9 +29,11 @@ const goalFormSchema = z.object({
   type: z.enum(['quantity', 'value', 'frequency']),
   targetQuantity: z.coerce.number().optional(),
   targetValue: z.coerce.number().optional(),
-  frequency: z.coerce.number().optional(),
+  frequency: z.enum(['Daily', 'Weekly']),
   targetPeriod: z.enum(['Daily', 'Weekly', 'Monthly', 'Yearly']).optional(),
   unit: z.string().optional(),
+  tags: z.array(z.any()).optional(),
+  specificDays: z.array(z.string()).optional(),
 });
 
 export type GoalFormValues = z.infer<typeof goalFormSchema>;
@@ -55,6 +57,9 @@ export const GoalForm = ({ goal, onSubmit, onCancel }: GoalFormProps) => {
       color: '#3B82F6',
       collaborators: ['user-1'],
       type: 'quantity',
+      frequency: 'Daily',
+      tags: [],
+      specificDays: [],
     },
   });
 
@@ -233,8 +238,14 @@ export const GoalForm = ({ goal, onSubmit, onCancel }: GoalFormProps) => {
                 name="frequency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>How many times?</FormLabel>
-                    <FormControl><Input type="number" placeholder="e.g., 5" {...field} /></FormControl>
+                    <FormLabel>Frequency</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select a frequency" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="Daily">Daily</SelectItem>
+                        <SelectItem value="Weekly">Weekly</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

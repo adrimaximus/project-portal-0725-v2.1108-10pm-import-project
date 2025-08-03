@@ -20,7 +20,7 @@ import { User } from '@/data/users';
 interface GoalFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGoalCreate?: (newGoal: Omit<Goal, 'id' | 'completions'>) => void;
+  onGoalCreate?: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => void;
   onGoalUpdate?: (updatedGoal: Goal) => void;
   goal?: Goal | null;
 }

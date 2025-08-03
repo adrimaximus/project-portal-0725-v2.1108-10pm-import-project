@@ -16,11 +16,12 @@ const GoalsPage = () => {
     setGoals([...dummyGoals]);
   }, []);
 
-  const handleGoalCreate = (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators'> & { collaborators: User[] }) => {
+  const handleGoalCreate = (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => {
     const newGoal: Goal = {
       ...newGoalData,
       id: uuidv4(),
       completions: [],
+      collaborators: [],
     };
     
     dummyGoals.unshift(newGoal);
@@ -45,7 +46,7 @@ const GoalsPage = () => {
       <GoalFormDialog
         open={isNewGoalDialogOpen}
         onOpenChange={setIsNewGoalDialogOpen}
-        onGoalCreate={handleGoalCreate as any}
+        onGoalCreate={handleGoalCreate}
       />
     </PortalLayout>
   );

@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TagInput } from '@/components/ui/TagInput';
-import { iconList, getIconComponent } from '@/data/icons';
-import { colorOptions } from '@/data/colors';
+import { allIcons, getIconComponent } from '@/data/icons';
+import { colors } from '@/data/colors';
 
 type EditableGoal = Goal & { tags?: string[] };
 
@@ -73,17 +73,17 @@ const GoalDetail = ({ goal, onUpdate, onDelete, onClose }: GoalDetailProps) => {
               <SelectValue>
                 <div className="flex items-center gap-2">
                   <Icon className="h-5 w-5" />
-                  <span>{iconList.find(i => i.value === editedGoal.icon)?.label}</span>
+                  <span>{allIcons.find(i => i === editedGoal.icon)}</span>
                 </div>
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {iconList.map(icon => {
-                const OptIcon = getIconComponent(icon.value);
+              {allIcons.map(icon => {
+                const OptIcon = getIconComponent(icon);
                 return (
-                  <SelectItem key={icon.value} value={icon.value}>
+                  <SelectItem key={icon} value={icon}>
                     <div className="flex items-center gap-2">
-                      <OptIcon className="h-5 w-5" /> {icon.label}
+                      <OptIcon className="h-5 w-5" /> {icon}
                     </div>
                   </SelectItem>
                 );
@@ -99,7 +99,7 @@ const GoalDetail = ({ goal, onUpdate, onDelete, onClose }: GoalDetailProps) => {
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {colorOptions.map(color => (
+              {colors.map(color => (
                 <SelectItem key={color} value={color}>
                   <div className="flex items-center gap-2">
                     <div className="h-4 w-4 rounded-full" style={{ backgroundColor: color }} />

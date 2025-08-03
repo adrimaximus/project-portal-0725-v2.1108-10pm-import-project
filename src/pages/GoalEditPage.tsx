@@ -25,7 +25,12 @@ const GoalEditPage = () => {
       .map(id => allUsers.find(u => u.id === id))
       .filter((u): u is User => !!u);
     
-    const submissionData = { ...rest, collaborators };
+    const submissionData = { 
+      ...rest, 
+      collaborators,
+      tags: [], // Placeholder
+      specificDays: [], // Placeholder
+    };
 
     if (isNew) {
       addGoal(submissionData as Omit<Goal, 'id' | 'completions'>);

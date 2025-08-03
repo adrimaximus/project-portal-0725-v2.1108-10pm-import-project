@@ -1,5 +1,5 @@
 import { User, dummyUsers } from './users';
-import { Tag, dummyTags } from './tags';
+import { Tag } from './tags';
 
 export type GoalType = 'quantity' | 'value' | 'frequency';
 export type GoalPeriod = 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
@@ -45,7 +45,7 @@ export const dummyGoals: Goal[] = [
     completions: [
       { id: 'comp-1', date: '2024-08-15T00:00:00.000Z', value: 1, userId: 'user-1' },
     ],
-    tags: [dummyTags[0], dummyTags[7]],
+    tags: [],
     specificDays: [],
     frequency: 'Daily',
   },
@@ -64,7 +64,7 @@ export const dummyGoals: Goal[] = [
       { id: 'comp-2', date: '2024-01-20T00:00:00.000Z', value: 8000, userId: 'user-1' },
       { id: 'comp-3', date: '2024-02-18T00:00:00.000Z', value: 9500, userId: 'user-1' },
     ],
-    tags: [dummyTags[1]],
+    tags: [],
     specificDays: [],
     frequency: 'Daily',
   },
@@ -82,7 +82,7 @@ export const dummyGoals: Goal[] = [
       { id: 'comp-7', date: '2024-05-02T00:00:00.000Z', value: 1, userId: 'user-3' },
       { id: 'comp-8', date: '2024-05-06T00:00:00.000Z', value: 1, userId: 'user-3' },
     ],
-    tags: [dummyTags[6]],
-    specificDays: ['Mo', 'We', 'Fr'],
+    tags: [],
+    specificDays: [],
   },
 ];

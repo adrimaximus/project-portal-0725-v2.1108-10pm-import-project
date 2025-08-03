@@ -49,7 +49,7 @@ export async function generateAiInsight(goal: Goal, progress: { percentage: numb
     **Data Sasaran:**
     - Judul: ${goal.title}
     - Deskripsi: ${goal.description}
-    - Tipe & Target: ${goal.type}, menargetkan ${target || goal.frequency} per ${goal.targetPeriod}
+    - Tipe & Target: ${goal.type}, menargetkan ${target || goal.frequency} ${goal.unit || ''} per ${goal.targetPeriod}
     - Progres: ${progressSummary}
     - Sisa Waktu: ${daysLeft} hari tersisa di periode ini.
     - Kolaborator: ${collaboratorText}
