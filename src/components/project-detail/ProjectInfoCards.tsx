@@ -240,8 +240,13 @@ const ProjectInfoCards = ({
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Payment Due</CardTitle>
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+          <div>
+            <CardTitle className="text-sm font-medium">Payment Due</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground pt-1">
+              14 working days from project due date
+            </CardDescription>
+          </div>
           <CalendarClock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
