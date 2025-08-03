@@ -28,7 +28,7 @@ const ProjectHeader = ({
   canEdit,
 }: ProjectHeaderProps) => {
   return (
-    <header className="flex flex-col gap-4">
+    <header className="sticky top-0 z-10 flex flex-col gap-4 border-b bg-background py-4">
       <div>
         <Button variant="ghost" asChild className="-ml-4">
           <Link to="/">
@@ -43,7 +43,7 @@ const ProjectHeader = ({
             <Input
               value={projectName}
               onChange={(e) => onProjectNameChange(e.target.value)}
-              className="text-2xl font-bold h-auto p-0 border-0 focus-visible:ring-0"
+              className="text-2xl font-bold h-auto p-0 border-0 focus-visible:ring-0 bg-transparent"
             />
           ) : (
             <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
