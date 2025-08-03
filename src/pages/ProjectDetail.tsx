@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { dummyProjects, Project, Task, Comment, User, Activity, ActivityType, ProjectFile, ProjectStatus, PaymentStatus } from "@/data/projects";
 import { useUser } from "@/contexts/UserContext";
-import { Layout, LayoutBody, LayoutHeader } from "@/components/custom/layout";
+import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
@@ -197,12 +197,12 @@ const ProjectDetail = () => {
   };
 
   if (!project) {
-    return <div>Loading...</div>;
+    return <PortalLayout><div>Loading...</div></PortalLayout>;
   }
 
   return (
-    <Layout>
-      <LayoutHeader>
+    <PortalLayout
+      pageHeader={
         <ProjectHeader 
           project={project} 
           isEditing={isEditing}
@@ -213,9 +213,12 @@ const ProjectDetail = () => {
           onCancelChanges={handleCancelChanges}
           canEdit={true}
         />
-      </LayoutHeader>
-      <LayoutBody className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 md:p-6">
-        <div className="lg:col-span-2 space-y-8">
+      }
+      disableMainScroll
+      noPadding
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 md:p-6 h-full">
+        <div className="lg:col-span-2 space-y-8 overflow-y-auto">
           <ProjectInfoCards
             project={project}
             isEditing={isEditing}
@@ -232,7 +235,7 @@ const ProjectDetail = () => {
             onAddCommentOrTicket={handleAddCommentOrTicket}
           />
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 overflow-y-auto">
           <ProjectSidebar
             project={project}
             onUpdateProject={handleUpdateProjectDetails}
@@ -240,8 +243,8 @@ const ProjectDetail = () => {
             onFileUpload={handleFileUpload}
           />
         </div>
-      </LayoutBody>
-    </Layout>
+      </div>
+    </PortalLayout>
   );
 };
 
