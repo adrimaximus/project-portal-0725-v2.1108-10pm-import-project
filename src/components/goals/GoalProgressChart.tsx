@@ -27,7 +27,22 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
     }
   });
 
-  const maxMonthlyValue = Math.max(...monthlyTotals, 1); // Use 1 to avoid division by zero
+  const getMonthlyTarget = () => {
+    const target = goal.type === 'quantity' ? goal.targetQuantity : goal.targetValue;
+    if (!target || !goal.targetPeriod) return null;
+
+    switch (goal.targetPeriod) {
+      case 'Weekly': return target * (52 / 12); // Average weeks in a month
+      case 'Monthly': return target;
+      default: return null;
+    }
+  };
+
+  const monthlyTarget = getMonthlyTarget();
+  // The chart's vertical scale should be based on the monthly target,
+  // but if any month's progress exceeds the target, the scale should adjust to the highest value.
+  // We also ensure it's at least 1 to avoid division by zero.
+  const chartMax = Math.max(monthlyTarget || 0, ...monthlyTotals, 1);
 
   const unit = goal.type === 'value' ? goal.unit : '';
 
@@ -78,7 +93,7 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
         <div className="flex h-48 w-full items-end gap-2 rounded-md bg-muted/50 p-4" aria-label="Monthly progress chart">
           {monthlyTotals.map((value, index) => {
             const monthName = format(new Date(currentYear, index, 1), 'MMM');
-            const heightPercentage = (value / maxMonthlyValue) * 100;
+            const heightPercentage = (value / chartMax) * 100;
 
             return (
               <TooltipProvider key={index}>
@@ -98,6 +113,7 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
                   <TooltipContent>
                     <p className="font-bold">{monthName}</p>
                     <p>Progress: {formatProgress(value)}</p>
+                    {monthlyTarget && <p>Target: {formatProgress(monthlyTarget)}</p>}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
