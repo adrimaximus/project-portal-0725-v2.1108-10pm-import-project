@@ -3,7 +3,7 @@ import { DateRange } from "react-day-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import PortalLayout from '@/components/PortalLayout';
 import MoodSelector from '@/components/mood-tracker/MoodSelector';
@@ -120,6 +120,19 @@ const MoodTracker = () => {
     })).filter(mood => mood.value > 0);
   }, [history, period, dateRange]);
 
+  const effectivePeriodForSuggestion = useMemo(() => {
+    if (period === 'custom' && dateRange?.from && dateRange?.to) {
+      const days = differenceInDays(dateRange.to, dateRange.from);
+      if (days <= 7) return 'week';
+      if (days <= 31) return 'month';
+      return 'year';
+    }
+    if (period !== 'custom') {
+      return period;
+    }
+    return null;
+  }, [period, dateRange]);
+
   return (
     <PortalLayout>
       <div className="space-y-4">
@@ -191,7 +204,13 @@ const MoodTracker = () => {
                 <MoodOverview data={moodDataForPeriod} />
                 <MoodStats data={moodDataForPeriod} />
               </div>
-              {period !== 'custom' && <AiFriendSuggestion data={moodDataForPeriod} period={period} userName={user.name} />}
+              {effectivePeriodForSuggestion && (
+                <AiFriendSuggestion 
+                  data={moodDataForPeriod} 
+                  period={effectivePeriodForSuggestion} 
+                  userName={user.name} 
+                />
+              )}
             </CardContent>
           </Card>
 
