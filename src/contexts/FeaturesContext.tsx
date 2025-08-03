@@ -14,13 +14,18 @@ const FeaturesContext = createContext<FeaturesContextType | undefined>(undefined
 export const FeaturesProvider = ({ children }: { children: ReactNode }) => {
   const [features, setFeatures] = useState<Feature[]>(() => {
     try {
-      const storedFeatures = localStorage.getItem(FEATURES_STORAGE_KEY);
-      if (storedFeatures) {
-        // Basic validation to ensure stored data structure is not completely off
-        const parsed = JSON.parse(storedFeatures);
-        if (Array.isArray(parsed) && parsed.length > 0 && 'id' in parsed[0]) {
-          return parsed;
-        }
+      const storedFeaturesJSON = localStorage.getItem(FEATURES_STORAGE_KEY);
+      if (storedFeaturesJSON) {
+        const storedFeatures: Feature[] = JSON.parse(storedFeaturesJSON);
+        const storedFeaturesMap = new Map(storedFeatures.map(f => [f.id, f]));
+        
+        // Merge default features with stored features to add new ones
+        const mergedFeatures = defaultFeatures.map(defaultFeature => {
+          const storedFeature = storedFeaturesMap.get(defaultFeature.id);
+          return storedFeature ? storedFeature : defaultFeature;
+        });
+        
+        return mergedFeatures;
       }
     } catch (error) {
       console.error("Failed to load features from localStorage", error);
