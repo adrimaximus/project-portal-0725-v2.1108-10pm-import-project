@@ -11,9 +11,12 @@ interface AiCoachInsightProps {
   overallPercentage: number;
   frequency: string;
   displayYear: number;
+  goalTitle: string;
+  goalTags: string[];
+  userName: string;
 }
 
-const AiCoachInsight: React.FC<AiCoachInsightProps> = ({ totalCompleted, totalPossible, overallPercentage, frequency, displayYear }) => {
+const AiCoachInsight: React.FC<AiCoachInsightProps> = ({ totalCompleted, totalPossible, overallPercentage, frequency, displayYear, goalTitle, goalTags, userName }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [insight, setInsight] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +31,7 @@ const AiCoachInsight: React.FC<AiCoachInsightProps> = ({ totalCompleted, totalPo
       fetchAiInsight();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalCompleted, totalPossible, overallPercentage, frequency, displayYear]);
+  }, [totalCompleted, totalPossible, overallPercentage, frequency, displayYear, goalTitle, goalTags, userName]);
 
   const fetchAiInsight = async () => {
     setIsLoading(true);
@@ -43,7 +46,7 @@ const AiCoachInsight: React.FC<AiCoachInsightProps> = ({ totalCompleted, totalPo
     }
 
     if (totalPossible === 0) {
-        setInsight(`Tahun ${displayYear} belum ada target yang dijadwalkan. Mari kita siapkan rencana untuk sukses!`);
+        setInsight(`Tahun ${displayYear} belum ada target yang dijadwalkan untuk "${goalTitle}". Mari kita siapkan rencana untuk sukses!`);
         setIsLoading(false);
         return;
     }
@@ -52,12 +55,15 @@ const AiCoachInsight: React.FC<AiCoachInsightProps> = ({ totalCompleted, totalPo
 
     const prompt = `
       Analisis data kemajuan tujuan pengguna untuk tahun ${displayYear}:
+      - Nama Pengguna: ${userName}
+      - Judul Tujuan: "${goalTitle}"
+      - Tag Tujuan: ${goalTags.join(', ')}
       - Frekuensi Target: ${frequency}
       - Total Sesi yang Direncanakan: ${totalPossible}
       - Total Sesi yang Selesai: ${totalCompleted}
       - Persentase Penyelesaian Keseluruhan: ${overallPercentage}%
 
-      Berikan tanggapan sebagai pelatih profesional, motivator, dan trainer AI. Berikan wawasan, latihan (drill) singkat jika perlu, dan motivasi untuk menjaga pengguna tetap fokus, tekun, dan tidak mudah patah semangat.
+      Berikan tanggapan sebagai pelatih profesional, motivator, dan trainer AI. Perhatikan judul dan tag tujuan untuk memberikan masukan yang lebih relevan dan personal (misalnya, jika tagnya 'kesehatan' atau 'belajar', sesuaikan sarannya). Berikan wawasan, latihan (drill) singkat jika perlu, dan motivasi untuk menjaga pengguna tetap fokus, tekun, dan tidak mudah patah semangat.
       Tanggapan harus dalam Bahasa Indonesia, tajam, profesional, dan memotivasi. Jaga agar tetap singkat (2-3 kalimat).
     `;
 
@@ -65,7 +71,7 @@ const AiCoachInsight: React.FC<AiCoachInsightProps> = ({ totalCompleted, totalPo
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
-          { role: "system", content: "Anda adalah pelatih profesional, motivator, dan trainer AI. Tugas Anda adalah menganalisis kemajuan tujuan pengguna dan memberikan wawasan, latihan (drill), dan motivasi untuk menjaga mereka tetap fokus, tekun, dan tidak mudah menyerah. Berikan tanggapan yang tajam, profesional, dan memotivasi dalam Bahasa Indonesia. Jaga agar tetap singkat (2-3 kalimat)." },
+          { role: "system", content: "Anda adalah pelatih profesional, motivator, dan trainer AI. Tugas Anda adalah menganalisis kemajuan tujuan pengguna dan memberikan wawasan, latihan (drill), dan motivasi untuk menjaga mereka tetap fokus, tekun, dan tidak mudah menyerah. Perhatikan detail tujuan (judul, tag) untuk memberikan saran yang sangat relevan dan personal. Berikan tanggapan yang tajam, profesional, dan memotivasi dalam Bahasa Indonesia. Jaga agar tetap singkat (2-3 kalimat)." },
           { role: "user", content: prompt }
         ],
       });

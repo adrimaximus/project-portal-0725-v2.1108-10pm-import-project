@@ -1,220 +1,197 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
-import { Goal } from '@/data/goals';
-import { User } from '@/data/users';
-import GoalDetail from '@/components/goals/GoalDetail';
-import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import NotFound from './NotFound';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { Pencil, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
-import { DateRange } from 'react-day-picker';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-fns';
-import { enUS } from 'date-fns/locale';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import GoalCollaborationManager from '@/components/goals/GoalCollaborationManager';
-import { getIconComponent } from '@/data/icons';
-import { useGoals } from '@/context/GoalsContext';
+import { dummyGoals, Goal, GoalCompletion } from '@/data/goals';
 import { Badge } from '@/components/ui/badge';
-import { getColorForTag } from '@/lib/utils';
-
-type GoalWithTags = Goal & { tags?: string[] };
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from 'sonner';
+import { isBefore, startOfDay, parseISO, format } from 'date-fns';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
-  const { getGoalById, updateGoal, deleteGoal } = useGoals();
   const navigate = useNavigate();
-  
-  const goal = goalId ? getGoalById(goalId) as GoalWithTags : undefined;
+  const [goal, setGoal] = useState<Goal | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  useEffect(() => {
+    const goalData = dummyGoals.find(g => g.id === goalId);
+    if (goalData) {
+      // Simulate generating completions if they don't exist
+      if (!goalData.completions || goalData.completions.length === 0) {
+        goalData.completions = generateInitialCompletions(goalData);
+      }
+      setGoal(goalData);
+    }
+    setIsLoading(false);
+  }, [goalId]);
 
-  const handleUpdateGoal = (updatedGoal: GoalWithTags) => {
-    updateGoal(updatedGoal);
-    setIsEditModalOpen(false);
-    setIsInviteModalOpen(false);
-  };
+  const generateInitialCompletions = (g: Goal): GoalCompletion[] => {
+    const completions: GoalCompletion[] = [];
+    const today = startOfDay(new Date());
+    const yearStart = new Date(today.getFullYear(), 0, 1);
+    const dayKeys = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-  const handleDeleteGoal = (id: string) => {
-    deleteGoal(id);
-    navigate('/goals');
+    for (let d = yearStart; isBefore(d, today); d.setDate(d.getDate() + 1)) {
+      const dayOfWeek = dayKeys[d.getDay()];
+      const isScheduled = g.frequency === 'Daily' || (g.frequency === 'Weekly' && g.specificDays.includes(dayOfWeek));
+      
+      if (isScheduled) {
+        completions.push({
+          date: format(d, 'yyyy-MM-dd'),
+          completed: Math.random() > 0.4, // Randomly mark as completed for demo
+        });
+      }
+    }
+    return completions;
   };
 
   const handleToggleCompletion = (date: Date) => {
     if (!goal) return;
 
-    const dateString = format(startOfDay(date), 'yyyy-MM-dd');
-    const existingCompletion = goal.completions.find(c => format(parseISO(c.date), 'yyyy-MM-dd') === dateString);
+    const dateString = format(date, 'yyyy-MM-dd');
+    const existingCompletionIndex = goal.completions.findIndex(c => c.date === dateString);
 
-    let newCompletions;
-    if (existingCompletion) {
-      newCompletions = goal.completions.map(c => 
-        format(parseISO(c.date), 'yyyy-MM-dd') === dateString 
-          ? { ...c, completed: !c.completed } 
-          : c
-      );
+    const updatedGoal = { ...goal };
+
+    if (existingCompletionIndex > -1) {
+      const existing = updatedGoal.completions[existingCompletionIndex];
+      updatedGoal.completions[existingCompletionIndex] = { ...existing, completed: !existing.completed };
     } else {
-      newCompletions = [...goal.completions, { date: date.toISOString(), completed: true }];
+      // This case handles adding a new completion for a day that wasn't pre-generated
+      updatedGoal.completions.push({ date: dateString, completed: true });
     }
 
-    const updatedGoal = { ...goal, completions: newCompletions };
-    updateGoal(updatedGoal);
+    // Sort completions by date descending
+    updatedGoal.completions.sort((a, b) => b.date.localeCompare(a.date));
+
+    setGoal(updatedGoal);
+    toast.success(`Progress for ${format(date, 'PPP')} has been updated.`);
   };
 
-  if (!goal) {
-    return <PortalLayout><NotFound /></PortalLayout>;
+  const handleDeleteGoal = () => {
+    if (!goal) return;
+    // In a real app, you would make an API call here.
+    // For now, we'll just navigate away and show a toast.
+    toast.success(`Goal "${goal.title}" has been deleted.`);
+    navigate('/goals');
+  };
+
+  if (isLoading) {
+    return (
+      <PortalLayout>
+        <div className="text-center">Loading goal details...</div>
+      </PortalLayout>
+    );
   }
 
-  const filteredCompletions = dateRange?.from
-    ? goal.completions.filter(c => {
-        const completionDate = parseISO(c.date);
-        const intervalEnd = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from!);
-        return isWithinInterval(completionDate, { start: dateRange.from!, end: intervalEnd });
-      })
-    : goal.completions;
+  if (!goal) {
+    return (
+      <PortalLayout>
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Goal Not Found</h2>
+          <p className="text-muted-foreground mb-4">The goal you are looking for does not exist.</p>
+          <Button asChild>
+            <Link to="/goals">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Goals
+            </Link>
+          </Button>
+        </div>
+      </PortalLayout>
+    );
+  }
 
-  const Icon = getIconComponent(goal.icon);
-
-  const dayKeys = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-  const specificDayKeys = goal.specificDays?.map(dayIndex => dayKeys[dayIndex]);
+  const getFrequencyText = () => {
+    if (goal.frequency === 'Daily') {
+      return 'Daily';
+    }
+    if (goal.frequency === 'Weekly' && goal.specificDays.length > 0) {
+      if (goal.specificDays.length === 7) return 'Daily';
+      if (goal.specificDays.length === 2 && goal.specificDays.includes('Sa') && goal.specificDays.includes('Su')) return 'Weekends';
+      if (goal.specificDays.length === 5 && !goal.specificDays.includes('Sa') && !goal.specificDays.includes('Su')) return 'Weekdays';
+      return `Weekly on ${goal.specificDays.join(', ')}`;
+    }
+    return 'Weekly';
+  };
 
   return (
     <PortalLayout>
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/goals">Goals</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{goal.title}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <div className="space-y-6">
+        <div>
+          <Button variant="ghost" size="sm" asChild className="mb-4">
+            <Link to="/goals">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to All Goals
+            </Link>
+          </Button>
 
-      <div className="mt-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <div className="flex items-center gap-4 flex-grow min-w-0">
-            <div className="p-3 rounded-lg flex-shrink-0" style={{ backgroundColor: `${goal.color}20` }}>
-              <Icon className="h-8 w-8" style={{ color: goal.color }} />
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl" style={{ backgroundColor: `${goal.color}30`, color: goal.color }}>
+                {goal.icon}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">{goal.title}</h1>
+                <p className="text-muted-foreground">{goal.description}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h1 className="text-3xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">{goal.title}</h1>
-              <p className="text-muted-foreground">{goal.frequency}</p>
-              {goal.tags && goal.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {goal.tags.map(tag => {
-                    const { bg, text, border } = getColorForTag(tag);
-                    return (
-                      <Badge key={tag} className={cn("font-normal", bg, text, border)}>{tag}</Badge>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="flex -space-x-2 overflow-hidden ml-2">
-              {goal.collaborators?.map((user: User) => (
-                <Avatar key={user.id} className="inline-block h-8 w-8 rounded-full border-2 border-background">
-                  <AvatarFallback>{user.initials}</AvatarFallback>
-                </Avatar>
-              ))}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" asChild>
+                <Link to={`/goals/edit/${goal.id}`}>
+                  <Edit className="h-4 w-4" />
+                </Link>
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="icon">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete your goal and all of its progress data.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteGoal}>Continue</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-[260px] justify-start text-left font-normal",
-                    !dateRange && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "LLL dd, y", { locale: enUS })} -{" "}
-                        {format(dateRange.to, "LLL dd, y", { locale: enUS })}
-                      </>
-                    ) : (
-                      format(dateRange.from, "LLL dd, y", { locale: enUS })
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit Goal
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Edit Goal</DialogTitle>
-                </DialogHeader>
-                <GoalDetail 
-                  goal={goal} 
-                  onUpdate={handleUpdateGoal}
-                  onDelete={handleDeleteGoal}
-                  onClose={() => setIsEditModalOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-            <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Invite
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Manage Collaborators</DialogTitle>
-                  <DialogDescription>
-                    Invite users to collaborate on "{goal.title}".
-                  </DialogDescription>
-                </DialogHeader>
-                <GoalCollaborationManager
-                  goal={goal}
-                  onUpdate={handleUpdateGoal}
-                  onClose={() => setIsInviteModalOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">{getFrequencyText()}</Badge>
+            {goal.tags.map(tag => (
+              <Badge key={tag} variant="outline">{tag}</Badge>
+            ))}
           </div>
         </div>
-        
-        <GoalYearlyProgress 
-          completions={filteredCompletions} 
+
+        <GoalYearlyProgress
+          completions={goal.completions}
           color={goal.color}
           onToggleCompletion={handleToggleCompletion}
           frequency={goal.frequency}
-          specificDays={specificDayKeys}
+          specificDays={goal.specificDays}
+          goalTitle={goal.title}
+          goalTags={goal.tags}
         />
       </div>
     </PortalLayout>

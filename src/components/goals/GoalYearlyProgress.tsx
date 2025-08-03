@@ -16,13 +16,16 @@ interface GoalYearlyProgressProps {
   onToggleCompletion: (date: Date) => void;
   frequency: string;
   specificDays?: string[];
+  goalTitle: string;
+  goalTags: string[];
 }
 
-const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency, specificDays }: GoalYearlyProgressProps) => {
+const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency, specificDays, goalTitle, goalTags }: GoalYearlyProgressProps) => {
   const today = new Date();
   const currentYear = getYear(today);
   const [displayYear, setDisplayYear] = useState(currentYear);
   const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
+  const userName = "Alex"; // Placeholder, idealnya ini datang dari state manajemen atau konteks autentikasi
 
   const todayStart = startOfDay(today);
 
@@ -121,6 +124,9 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
             overallPercentage={overallPercentage}
             frequency={frequency}
             displayYear={displayYear}
+            goalTitle={goalTitle}
+            goalTags={goalTags}
+            userName={userName}
           />
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
