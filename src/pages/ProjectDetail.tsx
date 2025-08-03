@@ -211,7 +211,7 @@ const ProjectDetail = () => {
 
   const handleAddCommentOrTicket = (newComment: Comment) => {
     const activityType = newComment.isTicket ? 'TICKET_CREATED' : 'COMMENT_ADDED';
-    const textPreview = newComment.text.substring(0, 50);
+    const textPreview = newComment.text.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '@$1').substring(0, 50);
     const activityDescription = newComment.isTicket 
       ? `membuat tiket baru: "${textPreview}${newComment.text.length > 50 ? '...' : ''}"`
       : `memberi komentar: "${textPreview}${newComment.text.length > 50 ? '...' : ''}"`;
@@ -238,11 +238,20 @@ const ProjectDetail = () => {
         }
 
         if (newTaskText) {
+          const mentionRegex = /@\[[^\]]+\]\(([^)]+)\)/g;
+          let match;
+          const mentionedUserIds = new Set<string>();
+          while ((match = mentionRegex.exec(newComment.text)) !== null) {
+            mentionedUserIds.add(match[1]);
+          }
+
+          const assignedTo = currentEditedProject.assignedTo.filter(user => mentionedUserIds.has(user.id));
+
           const newTask: Task = {
             id: `task-${Date.now()}`,
-            name: newTaskText,
+            name: newTaskText.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '@$1'),
             completed: false,
-            assignedTo: [], // Task is created unassigned
+            assignedTo: assignedTo,
             originTicketId: newComment.id,
           };
           updatedProject.tasks = [...(currentEditedProject.tasks || []), newTask];
