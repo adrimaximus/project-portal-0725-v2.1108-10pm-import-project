@@ -99,6 +99,7 @@ const FeatureSettingsPage = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="owner">Owner</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                           <SelectItem value="user">User</SelectItem>
                           <SelectItem value="read-only">Read only</SelectItem>
