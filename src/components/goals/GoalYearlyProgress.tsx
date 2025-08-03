@@ -25,7 +25,7 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
   const currentYear = getYear(today);
   const [displayYear, setDisplayYear] = useState(currentYear);
   const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
-  const userName = "Alex"; // Placeholder, idealnya ini datang dari state manajemen atau konteks autentikasi
+  const userName = "Alex";
 
   const todayStart = startOfDay(today);
 
@@ -56,28 +56,46 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
   };
 
   const monthlyData = months.map(monthDate => {
-    const monthCompletions = relevantCompletions.filter(c => isSameMonth(parseISO(c.date), monthDate));
-    const completedCount = monthCompletions.filter(c => c.completed).length;
-    const possibleCount = monthCompletions.length;
+    const monthStart = startOfMonth(monthDate);
+    const monthEnd = endOfMonth(monthDate);
+    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const completionMap = new Map(relevantCompletions.map(c => [format(parseISO(c.date), 'yyyy-MM-dd'), c.completed]));
+
+    const daysWithStatus = daysInMonth.map(day => {
+        const dayStr = format(day, 'yyyy-MM-dd');
+        const isValid = isDayValidForGoal(day);
+        let isCompleted: boolean | undefined = completionMap.get(dayStr);
+        
+        if (isCompleted === undefined && isValid && isBefore(day, todayStart)) {
+            isCompleted = false;
+        }
+        return { date: day, isCompleted, isValid };
+    });
+
+    const possibleDaysInPast = daysWithStatus.filter(d => d.isValid && isBefore(d.date, todayStart));
+    const completedCount = possibleDaysInPast.filter(d => d.isCompleted === true).length;
+    const possibleCount = possibleDaysInPast.length;
     const percentage = possibleCount > 0 ? Math.round((completedCount / possibleCount) * 100) : 0;
-    
-    const daysInMonth = eachDayOfInterval({ start: startOfMonth(monthDate), end: endOfMonth(monthDate) });
-    const completionMap = new Map(monthCompletions.map(c => [format(parseISO(c.date), 'yyyy-MM-dd'), c.completed]));
 
     return {
-      date: monthDate,
-      name: format(monthDate, 'MMMM', { locale: enUS }),
-      percentage,
-      days: daysInMonth.map(day => {
-        const dayStr = format(day, 'yyyy-MM-dd');
-        let isCompleted: boolean | undefined = completionMap.get(dayStr);
-        if (isCompleted === undefined && isBefore(day, todayStart) && isDayValidForGoal(day)) {
-          isCompleted = false;
-        }
-        return { date: day, isCompleted };
-      })
+        date: monthDate,
+        name: format(monthDate, 'MMMM', { locale: enUS }),
+        percentage,
+        completedCount,
+        possibleCount,
+        days: daysWithStatus.map(d => ({ date: d.date, isCompleted: d.isCompleted }))
     };
   });
+
+  const [selectedMonth, setSelectedMonth] = useState<(typeof monthlyData)[0] | null>(null);
+
+  const handleMonthClick = (month: (typeof monthlyData)[0]) => {
+    if (selectedMonth?.name === month.name) {
+      setSelectedMonth(null);
+    } else {
+      setSelectedMonth(month);
+    }
+  };
 
   const handleDayClick = (day: Date) => {
     if (isAfter(day, todayStart)) return;
@@ -127,66 +145,75 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
             goalTitle={goalTitle}
             goalTags={goalTags}
             userName={userName}
+            selectedMonth={selectedMonth}
           />
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {monthlyData.map(month => (
-            <div key={month.name} className="p-3 border rounded-lg">
-              <div className="flex justify-between items-center mb-2">
-                <p className="font-semibold text-sm">{month.name}</p>
-                <p className="text-sm font-bold">{month.percentage}%</p>
-              </div>
-              <div className="grid grid-cols-7 gap-1">
-                {Array.from({ length: (month.days[0].date.getDay() + 6) % 7 }).map((_, i) => <div key={`empty-${i}`} />)}
-                {month.days.map(day => {
-                  const isFutureDay = isAfter(day.date, todayStart);
-                  const isValidDay = isDayValidForGoal(day.date);
-                  const isDisabled = isFutureDay || !isValidDay;
-                  const isMissed = isValidDay && day.isCompleted === false;
+          {monthlyData.map(month => {
+            const isSelected = selectedMonth?.name === month.name;
+            return (
+              <div 
+                key={month.name} 
+                onClick={() => handleMonthClick(month)}
+                className="p-3 border rounded-lg cursor-pointer transition-all"
+                style={isSelected ? { boxShadow: `0 0 0 2px ${color}` } : {}}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <p className="font-semibold text-sm">{month.name}</p>
+                  <p className="text-sm font-bold">{month.percentage}%</p>
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {Array.from({ length: (month.days[0].date.getDay() + 6) % 7 }).map((_, i) => <div key={`empty-${i}`} />)}
+                  {month.days.map(day => {
+                    const isFutureDay = isAfter(day.date, todayStart);
+                    const isValidDay = isDayValidForGoal(day.date);
+                    const isDisabled = isFutureDay || !isValidDay;
+                    const isMissed = isValidDay && day.isCompleted === false;
 
-                  const buttonStyle: React.CSSProperties = {};
-                  let buttonClasses = "w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed";
+                    const buttonStyle: React.CSSProperties = {};
+                    let buttonClasses = "w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed";
 
-                  if (isMissed) {
-                    buttonStyle.backgroundColor = 'transparent';
-                    buttonStyle.border = `1px solid ${color}80`;
-                    buttonClasses += ' box-border';
-                  } else {
-                    let bgColor = '#E5E7EB'; // Default for non-valid, or untracked valid days
-                    if (isValidDay && day.isCompleted === true) {
-                      bgColor = color;
+                    if (isMissed) {
+                      buttonStyle.backgroundColor = 'transparent';
+                      buttonStyle.border = `1px solid ${color}80`;
+                      buttonClasses += ' box-border';
+                    } else {
+                      let bgColor = '#E5E7EB';
+                      if (isValidDay && day.isCompleted === true) {
+                        bgColor = color;
+                      }
+                      buttonStyle.backgroundColor = bgColor;
                     }
-                    buttonStyle.backgroundColor = bgColor;
-                  }
 
-                  if (isFutureDay) {
-                    buttonStyle.opacity = 0.2;
-                  }
+                    if (isFutureDay) {
+                      buttonStyle.opacity = 0.2;
+                    }
 
-                  return (
-                    <TooltipProvider key={day.date.toString()} delayDuration={100}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => handleDayClick(day.date)}
-                            disabled={isDisabled}
-                            className={buttonClasses}
-                            style={buttonStyle}
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{format(day.date, 'PPP', { locale: enUS })}</p>
-                          {isFutureDay ? <p>Future date</p> : 
-                           !isValidDay ? <p>Not a scheduled day</p> :
-                           day.isCompleted !== undefined ? <p>{day.isCompleted ? 'Completed' : 'Not completed'}</p> : <p>Track now</p>}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
-                })}
+                    return (
+                      <TooltipProvider key={day.date.toString()} delayDuration={100}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDayClick(day.date); }}
+                              disabled={isDisabled}
+                              className={buttonClasses}
+                              style={buttonStyle}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{format(day.date, 'PPP', { locale: enUS })}</p>
+                            {isFutureDay ? <p>Future date</p> : 
+                             !isValidDay ? <p>Not a scheduled day</p> :
+                             day.isCompleted !== undefined ? <p>{day.isCompleted ? 'Completed' : 'Not completed'}</p> : <p>Track now</p>}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </CardContent>
       </Card>
       <AlertDialog open={!!dayToConfirm} onOpenChange={() => setDayToConfirm(null)}>

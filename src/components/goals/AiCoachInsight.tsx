@@ -1,137 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import { Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import OpenAI from 'openai';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Lightbulb } from 'lucide-react';
 
-interface AiCoachInsightProps {
-  totalCompleted: number;
-  totalPossible: number;
-  overallPercentage: number;
-  frequency: string;
-  displayYear: number;
-  goalTitle: string;
-  goalTags: string[];
-  userName: string;
+interface MonthlyData {
+    name: string;
+    percentage: number;
+    completedCount: number;
+    possibleCount: number;
 }
 
-const AiCoachInsight: React.FC<AiCoachInsightProps> = ({ totalCompleted, totalPossible, overallPercentage, frequency, displayYear, goalTitle, goalTags, userName }) => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [insight, setInsight] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+interface AiCoachInsightProps {
+    totalCompleted: number;
+    totalPossible: number;
+    overallPercentage: number;
+    frequency: string;
+    displayYear: number;
+    goalTitle: string;
+    goalTags: string[];
+    userName: string;
+    selectedMonth: MonthlyData | null;
+}
 
-  useEffect(() => {
-    const storedStatus = localStorage.getItem("openai_connected");
-    const isNowConnected = storedStatus === "true";
-    setIsConnected(isNowConnected);
+const AiCoachInsight = ({
+    totalCompleted,
+    totalPossible,
+    overallPercentage,
+    displayYear,
+    goalTitle,
+    userName,
+    selectedMonth
+}: AiCoachInsightProps) => {
 
-    if (isNowConnected) {
-      fetchAiInsight();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalCompleted, totalPossible, overallPercentage, frequency, displayYear, goalTitle, goalTags, userName]);
+    const getMonthlyInsight = (month: MonthlyData) => {
+        const { name, percentage, completedCount, possibleCount } = month;
+        if (possibleCount === 0) {
+            return `Sepertinya tidak ada jadwal untuk "${goalTitle}" di bulan ${name}, jadi tidak ada progres yang bisa dilaporkan.`;
+        }
+        if (percentage >= 90) {
+            return `Luar biasa, ${userName}! Di bulan ${name}, Anda berhasil mencapai ${completedCount} dari ${possibleCount} hari, tingkat keberhasilan ${percentage}%. Konsistensi Anda untuk "${goalTitle}" sangat mengesankan. Pertahankan momentum ini!`;
+        }
+        if (percentage >= 70) {
+            return `Kerja bagus di bulan ${name}! Anda mencapai tingkat penyelesaian ${percentage}% untuk "${goalTitle}". Anda sedang membangun kebiasaan yang kuat. Perubahan kecil apa yang bisa membantu Anda di bulan berikutnya?`;
+        }
+        if (percentage >= 50) {
+            return `Usaha yang bagus di bulan ${name}, ${userName}. Anda menyelesaikan "${goalTitle}" sebanyak ${percentage}% dari hari yang dijadwalkan. Anda sudah setengah jalan! Mari kita coba kalahkan skor itu bulan depan.`;
+        }
+        if (percentage > 0) {
+            return `Anda membuat kemajuan untuk "${goalTitle}" di bulan ${name}, menyelesaikannya ${completedCount} dari ${possibleCount} kali. Setiap langkah berarti. Apa tantangan terbesar Anda bulan ini?`;
+        }
+        return `Sepertinya ${name} adalah bulan yang sulit untuk "${goalTitle}", dengan penyelesaian 0%. Jangan berkecil hati, ${userName}. Bulan baru adalah awal yang baru. Mari kembali ke jalur yang benar!`;
+    };
 
-  const fetchAiInsight = async () => {
-    setIsLoading(true);
-    setError('');
-    setInsight('');
+    const getYearlyInsight = () => {
+        if (totalPossible === 0) {
+            return `Sepertinya belum ada data untuk "${goalTitle}" di tahun ${displayYear}. Mari mulai lacak progres Anda!`;
+        }
+        if (overallPercentage >= 80) {
+            return `Konsistensi yang luar biasa, ${userName}! Dengan tingkat penyelesaian ${overallPercentage}% tahun ini, Anda menunjukkan dedikasi yang luar biasa pada "${goalTitle}".`;
+        }
+        if (overallPercentage >= 50) {
+            return `Anda melakukan pekerjaan hebat dengan "${goalTitle}" tahun ini, mempertahankan tingkat keberhasilan ${overallPercentage}%. Anda berada di jalur yang tepat untuk menjadikannya kebiasaan jangka panjang.`;
+        }
+        if (overallPercentage > 20) {
+            return `Awal yang baik untuk "${goalTitle}" di tahun ${displayYear}! Anda telah menyelesaikannya ${totalCompleted} kali. Konsistensi adalah kunci, mari terus membangun fondasi ini.`;
+        }
+        return `Anda sudah mulai melacak "${goalTitle}". Setiap progres adalah langkah maju. Terus catat kemajuan Anda untuk melihat trennya!`;
+    };
 
-    const apiKey = localStorage.getItem("openai_api_key");
-    if (!apiKey) {
-      setError("Kunci API OpenAI tidak ditemukan. Silakan hubungkan di halaman pengaturan.");
-      setIsLoading(false);
-      return;
-    }
+    const insight = selectedMonth ? getMonthlyInsight(selectedMonth) : getYearlyInsight();
 
-    if (totalPossible === 0) {
-        setInsight(`Tahun ${displayYear} belum ada target yang dijadwalkan untuk "${goalTitle}". Mari kita siapkan rencana untuk sukses!`);
-        setIsLoading(false);
-        return;
-    }
-
-    const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
-
-    const prompt = `
-      Analisis data kemajuan tujuan pengguna untuk tahun ${displayYear}:
-      - Nama Pengguna: ${userName}
-      - Judul Tujuan: "${goalTitle}"
-      - Tag Tujuan: ${goalTags.join(', ')}
-      - Frekuensi Target: ${frequency}
-      - Total Sesi yang Direncanakan: ${totalPossible}
-      - Total Sesi yang Selesai: ${totalCompleted}
-      - Persentase Penyelesaian Keseluruhan: ${overallPercentage}%
-
-      Berikan tanggapan sebagai pelatih profesional, motivator, dan trainer AI. Perhatikan judul dan tag tujuan untuk memberikan masukan yang lebih relevan dan personal (misalnya, jika tagnya 'kesehatan' atau 'belajar', sesuaikan sarannya). Berikan wawasan, latihan (drill) singkat jika perlu, dan motivasi untuk menjaga pengguna tetap fokus, tekun, dan tidak mudah patah semangat.
-      Tanggapan harus dalam Bahasa Indonesia, tajam, profesional, dan memotivasi. Jaga agar tetap singkat (2-3 kalimat).
-    `;
-
-    try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: "Anda adalah pelatih profesional, motivator, dan trainer AI. Tugas Anda adalah menganalisis kemajuan tujuan pengguna dan memberikan wawasan, latihan (drill), dan motivasi untuk menjaga mereka tetap fokus, tekun, dan tidak mudah menyerah. Perhatikan detail tujuan (judul, tag) untuk memberikan saran yang sangat relevan dan personal. Berikan tanggapan yang tajam, profesional, dan memotivasi dalam Bahasa Indonesia. Jaga agar tetap singkat (2-3 kalimat)." },
-          { role: "user", content: prompt }
-        ],
-      });
-
-      const result = completion.choices[0]?.message?.content;
-      if (result) {
-        setInsight(result);
-      } else {
-        setError("Gagal mendapatkan wawasan dari AI. Coba lagi nanti.");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Terjadi kesalahan saat menghubungi AI. Pastikan kunci API Anda valid.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (!isConnected) {
     return (
-      <div className="mt-4 p-3 bg-secondary rounded-lg text-center border border-dashed">
-        <p className="text-xs text-muted-foreground mb-2">Aktifkan Pelatih AI Anda dengan menghubungkan akun OpenAI untuk mendapatkan wawasan dan motivasi yang dipersonalisasi.</p>
-        <Button asChild size="sm" variant="outline">
-          <Link to="/settings/integrations/openai">Hubungkan OpenAI</Link>
-        </Button>
-      </div>
+        <div className="mt-4 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-blue-800 dark:bg-blue-900/20 dark:border-blue-500/30 dark:text-blue-300">
+            <Lightbulb className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <p className="text-sm leading-relaxed">{insight}</p>
+        </div>
     );
-  }
-
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-        </div>
-      );
-    }
-    if (error) {
-      return <p className="text-sm text-destructive mt-1">{error}</p>;
-    }
-    if (insight) {
-      return <p className="text-sm text-muted-foreground mt-1">{insight}</p>;
-    }
-    return null;
-  };
-
-  return (
-    <div className="mt-4 p-3 bg-secondary/50 rounded-lg">
-      <div className="flex items-start gap-3">
-        <div className="bg-primary/10 p-2 rounded-full">
-            <Zap className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-            <h4 className="font-semibold text-sm">Wawasan dari Pelatih AI</h4>
-            {renderContent()}
-        </div>
-      </div>
-    </div>
-  );
 };
 
 export default AiCoachInsight;
