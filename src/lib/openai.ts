@@ -1,12 +1,17 @@
 import OpenAI from 'openai';
 import { Goal } from '@/data/goals';
 
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
-
 export async function getAiCoachInsight(goal: Goal, progress: { percentage: number } | null) {
+  const apiKey = localStorage.getItem("openai_api_key");
+  if (!apiKey) {
+    throw new Error("OpenAI API key not found. Please connect your OpenAI account in the settings.");
+  }
+
+  const openai = new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true,
+  });
+
   const progressText = progress
     ? `Current progress is ${progress.percentage}% of the yearly target.`
     : "There is no yearly target set, so progress cannot be calculated.";
