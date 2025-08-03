@@ -35,11 +35,15 @@ const FeatureSettingsPage = () => {
 
   const feature = features.find(f => f.id === featureId);
 
-  // Data dummy untuk anggota proyek ini (subset dari semua pengguna aplikasi)
-  const projectMembers = [
+  // Data dummy berdasarkan desain
+  const members = [
     { name: 'Theresa Webb', email: 'david@withlantern.com', avatar: 'TW', role: 'Owner', status: 'Active', lastActive: '23 Dec 2022' },
-    { name: 'Cody Fisher', email: 'sagar@withlantern.com', avatar: 'CF', role: 'Admin', status: 'Active', lastActive: '23 Dec 2022' },
+    { name: 'Darlene Robertson', email: 'darrell.steward@withlantern.com', avatar: 'DR', role: 'User', status: 'Suspended', lastActive: '23 Dec 2022' },
     { name: 'Anne Black', email: 'sagar@withlantern.com', avatar: 'AB', role: 'User', status: 'Active', lastActive: '23 Dec 2022' },
+    { name: 'Floyd Miles', email: 'sagar@withlantern.com', avatar: 'FM', role: 'Read only', status: 'Pending invite', lastActive: '23 Dec 2022' },
+    { name: 'Cody Fisher', email: 'sagar@withlantern.com', avatar: 'CF', role: 'Admin', status: 'Active', lastActive: '23 Dec 2022' },
+    { name: 'Kristin Watson', email: 'darrell.steward@withlantern.com', avatar: 'KW', role: 'Read only', status: 'Pending invite', lastActive: '23 Dec 2022' },
+    { name: 'Leslie Alexander', email: 'sagar@withlantern.com', avatar: 'LA', role: 'Read only', status: 'Pending invite', lastActive: '23 Dec 2022' },
   ];
 
   const getStatusBadgeVariant = (status: string): "destructive" | "secondary" | "outline" => {
@@ -65,17 +69,17 @@ const FeatureSettingsPage = () => {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Project Members</BreadcrumbPage>
+              <BreadcrumbPage>Team Members</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
         
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Project Members
+            Team Members
           </h1>
           <p className="text-muted-foreground">
-            Manage members for the "{feature ? feature.name : 'Feature'}" project.
+            Manage your team members for the "{feature ? feature.name : 'Feature'}" feature.
           </p>
         </div>
 
@@ -90,7 +94,7 @@ const FeatureSettingsPage = () => {
                 <DialogTrigger asChild>
                   <Button>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Add project member
+                    Add member
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[480px]">
@@ -101,14 +105,6 @@ const FeatureSettingsPage = () => {
                     <DialogTitle className="text-xl">Add member to project</DialogTitle>
                     <DialogDescription>
                       Select an existing user from your application to add them to this project.
-                      <br />
-                      <span className="text-xs">
-                        Need to invite someone new? Go to{' '}
-                        <Link to="/team-members" className="text-primary underline">
-                          Team Members
-                        </Link>
-                        {' '}to invite them to the app.
-                      </span>
                     </DialogDescription>
                   </DialogHeader>
                   <div className="py-4 space-y-4">
@@ -153,7 +149,7 @@ const FeatureSettingsPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {projectMembers.map((member, index) => (
+                  {members.map((member, index) => (
                     <TableRow key={index}>
                       <TableCell>
                         <div className="flex items-center gap-3">
