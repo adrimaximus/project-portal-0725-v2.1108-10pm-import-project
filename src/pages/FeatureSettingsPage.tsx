@@ -12,9 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 
 type Invite = {
   id: number;
@@ -35,8 +35,28 @@ const FeatureSettingsPage = () => {
   const { features } = useFeatures();
   const [invites, setInvites] = useState<Invite[]>([{ id: Date.now(), email: '', role: 'member' }]);
   const [isCustomRoleDialogOpen, setCustomRoleDialogOpen] = useState(false);
+  const [customRoleName, setCustomRoleName] = useState('');
+  const [customRolePermissions, setCustomRolePermissions] = useState<Record<string, boolean>>({});
 
   const feature = features.find(f => f.id === featureId);
+
+  useEffect(() => {
+    if (isCustomRoleDialogOpen) {
+      const initialPermissions = features.reduce((acc, feature) => {
+        acc[feature.id] = false;
+        return acc;
+      }, {} as Record<string, boolean>);
+      setCustomRolePermissions(initialPermissions);
+      setCustomRoleName('');
+    }
+  }, [isCustomRoleDialogOpen, features]);
+
+  const handlePermissionToggle = (featureId: string) => {
+    setCustomRolePermissions(prev => ({
+      ...prev,
+      [featureId]: !prev[featureId],
+    }));
+  };
 
   const handleInviteChange = (id: number, field: 'email' | 'role', value: string) => {
     setInvites(currentInvites =>
@@ -256,7 +276,7 @@ const FeatureSettingsPage = () => {
       </div>
 
       <Dialog open={isCustomRoleDialogOpen} onOpenChange={setCustomRoleDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create Custom Role</DialogTitle>
             <DialogDescription>
@@ -266,27 +286,29 @@ const FeatureSettingsPage = () => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="role-name">Role Name</Label>
-              <Input id="role-name" placeholder="e.g., Contractor" />
+              <Input
+                id="role-name"
+                placeholder="e.g., Contractor"
+                value={customRoleName}
+                onChange={(e) => setCustomRoleName(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label>Permissions</Label>
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="perm-create" />
-                  <Label htmlFor="perm-create" className="font-normal">Create projects</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="perm-delete" />
-                  <Label htmlFor="perm-delete" className="font-normal">Delete projects</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="perm-comment" />
-                  <Label htmlFor="perm-comment" className="font-normal">Comment on tasks</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="perm-view" />
-                  <Label htmlFor="perm-view" className="font-normal">View-only access</Label>
-                </div>
+              <div className="space-y-2 pt-2 max-h-[300px] overflow-y-auto pr-3">
+                {features
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map(feature => (
+                    <div key={feature.id} className="flex items-center justify-between rounded-lg border p-3">
+                      <Label htmlFor={`perm-${feature.id}`} className="font-normal">{feature.name}</Label>
+                      <Switch
+                        id={`perm-${feature.id}`}
+                        checked={customRolePermissions[feature.id] || false}
+                        onCheckedChange={() => handlePermissionToggle(feature.id)}
+                        disabled={feature.id === 'settings'}
+                      />
+                    </div>
+                  ))}
               </div>
             </div>
           </div>
