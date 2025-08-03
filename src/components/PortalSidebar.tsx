@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, PlusCircle, Trash2, LucideIcon } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -23,24 +23,6 @@ import { dummyConversations } from "@/data/chat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/contexts/UserContext";
 import { dummyNotifications } from "@/data/notifications";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import NewLinkDialog from "./NewLinkDialog";
 import { useFeatures } from "@/contexts/FeaturesContext";
 
 type PortalSidebarProps = {
@@ -62,7 +44,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [isNewLinkOpen, setIsNewLinkOpen] = useState(false);
   const { isFeatureEnabled } = useFeatures();
 
   const totalUnreadChatCount = dummyConversations.reduce(
@@ -72,7 +53,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
   const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 
-  const [defaultNavItems, setDefaultNavItems] = useState<NavItem[]>(() => [
+  const [defaultNavItems] = useState<NavItem[]>(() => [
     { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
     { id: "projects", href: "/projects", label: "Projects", icon: Package },
     { id: "request", href: "/request", label: "Request", icon: LayoutGrid },
@@ -93,131 +74,71 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const [customNavItems, setCustomNavItems] = useState<NavItem[]>([]);
   const localStorageKey = `customNavItems_${user.id}`;
 
-  const updateCustomItemsInStorage = (items: NavItem[]) => {
-    const itemsToStore = items.map(({ icon, ...rest }) => rest);
-    localStorage.setItem(localStorageKey, JSON.stringify(itemsToStore));
-  };
-
   useEffect(() => {
-    try {
-      const storedItems = localStorage.getItem(localStorageKey);
-      if (storedItems) {
-        const parsedItems: Omit<NavItem, 'icon'>[] = JSON.parse(storedItems);
-        const hydratedItems = parsedItems.map(item => ({
-          ...item,
-          icon: LinkIcon,
-        }));
-        setCustomNavItems(hydratedItems);
-      } else {
-        setCustomNavItems([]);
-      }
-    } catch (error) {
-      console.error("Failed to parse custom nav items from localStorage", error);
-      setCustomNavItems([]);
+    const loadCustomItems = () => {
+        try {
+          const storedItems = localStorage.getItem(localStorageKey);
+          if (storedItems) {
+            const parsedItems: {id: string, name: string, url: string}[] = JSON.parse(storedItems);
+            const hydratedItems: NavItem[] = parsedItems.map(item => ({
+              id: item.id,
+              href: `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}`,
+              label: item.name,
+              icon: LinkIcon,
+              isCustom: true,
+            }));
+            setCustomNavItems(hydratedItems);
+          } else {
+            setCustomNavItems([]);
+          }
+        } catch (error) {
+          console.error("Failed to parse custom nav items from localStorage", error);
+          setCustomNavItems([]);
+        }
+    };
+    
+    loadCustomItems();
+
+    const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === localStorageKey) {
+            loadCustomItems();
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
     }
   }, [localStorageKey]);
 
-  const handleAddLink = (label: string, url: string) => {
-    const newId = `custom-${Date.now()}`;
-    const newItem: NavItem = {
-      id: newId,
-      href: `/custom?url=${encodeURIComponent(url)}&title=${encodeURIComponent(label)}`,
-      label,
-      icon: LinkIcon,
-      isCustom: true,
-    };
-    const updatedItems = [...customNavItems, newItem];
-    setCustomNavItems(updatedItems);
-    updateCustomItemsInStorage(updatedItems);
-  };
-
-  const handleDeleteLink = (id: string) => {
-    const updatedItems = customNavItems.filter(item => item.id !== id);
-    setCustomNavItems(updatedItems);
-    updateCustomItemsInStorage(updatedItems);
-  };
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const allItemsForLookup = [...defaultNavItems, ...customNavItems];
-    const activeItem = allItemsForLookup.find(item => item.id === active.id);
-    const overItem = allItemsForLookup.find(item => item.id === over.id);
-
-    if (!activeItem || !overItem || overItem.id === 'dashboard') return;
-
-    if (activeItem.isCustom && overItem.isCustom) {
-        setCustomNavItems(items => {
-            const oldIndex = items.findIndex(item => item.id === active.id);
-            const newIndex = items.findIndex(item => item.id === over.id);
-            if (oldIndex === -1 || newIndex === -1) return items;
-            const newItems = arrayMove(items, oldIndex, newIndex);
-            updateCustomItemsInStorage(newItems);
-            return newItems;
-        });
-    } else if (!activeItem.isCustom && !overItem.isCustom) {
-        setDefaultNavItems(items => {
-            const oldIndex = items.findIndex(item => item.id === active.id);
-            const newIndex = items.findIndex(item => item.id === over.id);
-            if (oldIndex === -1 || newIndex === -1) return items;
-            return arrayMove(items, oldIndex, newIndex);
-        });
+  const NavLink = ({ item }: { item: NavItem }) => {
+    if (isCollapsed) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link
+              to={item.href}
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative",
+                location.pathname === item.href && "bg-muted text-primary"
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+              <span className="sr-only">{item.label}</span>
+              {item.badge && (
+                <Badge className="absolute -top-1 -right-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full p-0 text-xs">
+                  {item.badge}
+                </Badge>
+              )}
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="right">{item.label}</TooltipContent>
+        </Tooltip>
+      );
     }
-  }
 
-  const SortableNavItem = ({ item }: { item: NavItem }) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: item.id, disabled: item.id === 'dashboard' });
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.5 : 1,
-      cursor: item.id === 'dashboard' ? 'default' : 'grab',
-      zIndex: isDragging ? 10 : 0,
-      position: 'relative' as 'relative',
-    };
-
-    const navLink = isCollapsed ? (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Link
-            to={item.href}
-            className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative",
-              location.pathname === item.href && "bg-muted text-primary"
-            )}
-          >
-            <item.icon className="h-5 w-5" />
-            <span className="sr-only">{item.label}</span>
-            {item.badge && (
-              <Badge className="absolute -top-1 -right-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full p-0 text-xs">
-                {item.badge}
-              </Badge>
-            )}
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="right">{item.label}</TooltipContent>
-      </Tooltip>
-    ) : (
+    return (
       <Link
         to={item.href}
         className={cn(
@@ -233,26 +154,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           </Badge>
         )}
       </Link>
-    );
-
-    return (
-      <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="group">
-        {navLink}
-        {!isCollapsed && item.isCustom && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover:opacity-100"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleDeleteLink(item.id);
-            }}
-          >
-            <Trash2 className="h-4 w-4 text-muted-foreground" />
-          </Button>
-        )}
-      </div>
     );
   };
 
@@ -286,29 +187,17 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         </div>
         <div className="flex-1 overflow-y-auto py-2">
           <TooltipProvider delayDuration={0}>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={allVisibleNavItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
-                <nav
-                  className={cn(
-                    "grid items-start gap-1 text-sm font-medium",
-                    isCollapsed ? "px-2" : "px-2 lg:px-4"
-                  )}
-                >
-                  {allVisibleNavItems.map((item) => (
-                    <SortableNavItem key={item.id} item={item} />
-                  ))}
-                </nav>
-              </SortableContext>
-            </DndContext>
+            <nav
+              className={cn(
+                "grid items-start gap-1 text-sm font-medium",
+                isCollapsed ? "px-2" : "px-2 lg:px-4"
+              )}
+            >
+              {allVisibleNavItems.map((item) => (
+                <NavLink key={item.id} item={item} />
+              ))}
+            </nav>
           </TooltipProvider>
-          {!isCollapsed && isFeatureEnabled('custom-links') && (
-            <div className="px-2 lg:px-4 mt-2">
-              <Button variant="outline" className="w-full" onClick={() => setIsNewLinkOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Link
-              </Button>
-            </div>
-          )}
         </div>
         <div className="mt-auto">
           <div className="border-t">
@@ -404,11 +293,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           </div>
         </div>
       </div>
-      <NewLinkDialog
-        open={isNewLinkOpen}
-        onOpenChange={setIsNewLinkOpen}
-        onAddLink={handleAddLink}
-      />
     </div>
   );
 };

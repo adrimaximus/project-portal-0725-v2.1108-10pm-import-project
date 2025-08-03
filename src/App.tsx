@@ -20,6 +20,7 @@ import RequestPage from "./pages/Request";
 import SearchPage from "./pages/SearchPage";
 import SettingsPage from "./pages/Settings";
 import UserManagementPage from "./pages/UserManagement";
+import NavigationSettingsPage from "./pages/NavigationSettingsPage";
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
           element={<FeatureSettingsPage />}
         />
         <Route path="/settings/integrations" element={<IntegrationsPage />} />
+        <Route path="/settings/navigation" element={<NavigationSettingsPage />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/search" element={<SearchPage />} />
