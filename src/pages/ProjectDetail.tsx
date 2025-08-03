@@ -214,11 +214,10 @@ const ProjectDetail = () => {
           canEdit={true}
         />
       }
-      disableMainScroll
       noPadding
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 md:p-6 h-full">
-        <div className="lg:col-span-2 space-y-8 overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 md:p-6">
+        <div className="lg:col-span-2 space-y-8">
           <ProjectInfoCards
             project={project}
             isEditing={isEditing}
@@ -235,7 +234,7 @@ const ProjectDetail = () => {
             onAddCommentOrTicket={handleAddCommentOrTicket}
           />
         </div>
-        <div className="lg:col-span-1 overflow-y-auto">
+        <div className="lg:col-span-1 space-y-8">
           <ProjectSidebar
             project={project}
             onUpdateProject={handleUpdateProjectDetails}
