@@ -1,8 +1,10 @@
 .mentions {
+  position: relative;
   width: 100%;
 }
 
-.mentions__input, .mentions__highlighter {
+.mentions__input,
+.mentions__highlighter {
   box-sizing: border-box;
   width: 100%;
   padding: 12px;
@@ -13,7 +15,11 @@
   border: none !important;
   outline: none !important;
   background-color: transparent;
-  color: hsl(var(--foreground));
+}
+
+.mentions__input {
+  color: transparent;
+  caret-color: hsl(var(--foreground));
 }
 
 .mentions__input:focus {
@@ -22,7 +28,12 @@
 }
 
 .mentions__highlighter {
-  color: transparent;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
   white-space: pre-wrap;
   word-wrap: break-word;
 }
