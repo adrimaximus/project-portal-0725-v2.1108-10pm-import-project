@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import PortalLayout from '@/components/PortalLayout';
 import { Input } from '@/components/ui/input';
-import { dummyProjects } from '@/data/projects';
+import { allProjects } from '@/data/projects';
 import { dummyUsers } from '@/data/users';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
@@ -11,7 +11,7 @@ const SearchPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const lowerCaseSearch = searchTerm.toLowerCase();
-  const filteredProjects = searchTerm ? dummyProjects.filter(p => p.name.toLowerCase().includes(lowerCaseSearch)) : [];
+  const filteredProjects = searchTerm ? allProjects.filter(p => p.name.toLowerCase().includes(lowerCaseSearch)) : [];
   const filteredUsers = searchTerm ? dummyUsers.filter(u => u.name.toLowerCase().includes(lowerCaseSearch)) : [];
 
   return (

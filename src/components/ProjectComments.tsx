@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, Ticket, File, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Project, AssignedUser, Comment, dummyProjects } from '@/data/projects';
+import { Project, AssignedUser, Comment } from '@/data/projects';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/UserContext';
@@ -18,6 +18,7 @@ interface ProjectCommentsProps {
   project: Project;
   onAddCommentOrTicket: (comment: Comment) => void;
   assignableUsers: AssignedUser[];
+  allProjects: Project[];
 }
 
 const renderWithMentions = (text: string, allProjects: Project[]) => {
@@ -51,7 +52,7 @@ const renderWithMentions = (text: string, allProjects: Project[]) => {
   });
 };
 
-const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddCommentOrTicket, assignableUsers }) => {
+const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddCommentOrTicket, assignableUsers, allProjects }) => {
   const { user: currentUser } = useUser();
   const [newComment, setNewComment] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
@@ -68,7 +69,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
   const tasks = project.tasks || [];
 
   const getTicketStatus = (commentId: string) => {
-    const task = tasks.find(t => (t as any).originTicketId === commentId);
+    const task = tasks.find(t => t.originTicketId === commentId);
     if (task && task.completed) {
       return 'Done';
     }
@@ -139,7 +140,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
   const handleSendComment = (isTicket = false) => {
     if (newComment.trim() === "" && !attachmentFile) return;
 
-    const comment: any = {
+    const comment: Comment = {
       id: `comment-${Date.now()}`,
       user: currentUser,
       text: newComment,
@@ -165,7 +166,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
   const handleSendTicket = () => handleSendComment(true);
 
   const filteredUsers = assignableUsers.filter(u => u.name.toLowerCase().includes(suggestionQuery.toLowerCase()));
-  const filteredProjects = dummyProjects.filter(p => p.id !== project.id && p.name.toLowerCase().includes(suggestionQuery.toLowerCase()));
+  const filteredProjects = allProjects.filter(p => p.id !== project.id && p.name.toLowerCase().includes(suggestionQuery.toLowerCase()));
 
   return (
     <Card>
@@ -181,7 +182,7 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{comment.user.id === currentUser.id ? "You" : comment.user.name}</p>
-                      {(comment as any).isTicket && (
+                      {comment.isTicket && (
                         <Badge
                           variant={ticketStatus === 'Done' ? 'default' : 'destructive'}
                           className={cn(
@@ -194,12 +195,12 @@ const ProjectComments: React.FC<ProjectCommentsProps> = ({ project, onAddComment
                     </div>
                     <p className="text-xs text-muted-foreground">{new Date(comment.timestamp).toLocaleString()}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{renderWithMentions(comment.text, dummyProjects)}</p>
-                  {(comment as any).attachment && (
+                  <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{renderWithMentions(comment.text, allProjects)}</p>
+                  {comment.attachment && (
                     <div className="mt-2">
-                      <a href={(comment as any).attachment.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md border p-2 text-sm text-muted-foreground transition-colors hover:bg-accent">
+                      <a href={comment.attachment.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md border p-2 text-sm text-muted-foreground transition-colors hover:bg-accent">
                         <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted"><File className="h-5 w-5" /></div>
-                        <span>{(comment as any).attachment.name}</span>
+                        <span>{comment.attachment.name}</span>
                       </a>
                     </div>
                   )}

@@ -30,7 +30,6 @@ const activityIcons: Record<ActivityType, LucideIcon> = {
   member_add: UserPlus,
   task_assign: UserPlus,
   commit: GitCommit,
-  assignment: UserPlus, // Added missing icon
 };
 
 const activityDescriptions: Record<ActivityType, string> = {
@@ -47,7 +46,6 @@ const activityDescriptions: Record<ActivityType, string> = {
     member_add: 'menambahkan anggota baru',
     task_assign: 'menugaskan tugas',
     commit: 'mendorong sebuah commit',
-    assignment: 'membuat penugasan', // Added missing description
 };
 
 const ProjectActivityFeed = ({ activities }: { activities: Activity[] }) => {
