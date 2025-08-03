@@ -134,7 +134,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
             <Progress value={overallPercentage} className="w-full" indicatorStyle={{ backgroundColor: color }} />
             <span className="font-bold text-lg">{overallPercentage}%</span>
           </div>
-          <AiCoachInsight goal={goal} />
+          <AiCoachInsight goal={goal} progress={{ percentage: overallPercentage }} />
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {monthlyData.map(month => {

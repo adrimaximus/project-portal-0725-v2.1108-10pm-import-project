@@ -5,12 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lightbulb, Loader2 } from 'lucide-react';
 import { generateAiInsight } from '@/lib/openai';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 
 interface AiCoachInsightProps {
   goal: Goal;
+  progress: { percentage: number } | null;
 }
 
-const AiCoachInsight = ({ goal }: AiCoachInsightProps) => {
+const AiCoachInsight = ({ goal, progress }: AiCoachInsightProps) => {
   const [insight, setInsight] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -18,8 +20,7 @@ const AiCoachInsight = ({ goal }: AiCoachInsightProps) => {
     setIsLoading(true);
     setInsight(null);
     try {
-      const prompt = `Generate an insight for the following goal: "${goal.title}". Description: ${goal.description || 'N/A'}`;
-      const newInsight = await generateAiInsight(prompt);
+      const newInsight = await generateAiInsight(goal, progress);
       setInsight(newInsight);
     } catch (error) {
       console.error("Failed to generate AI insight:", error);
@@ -27,11 +28,14 @@ const AiCoachInsight = ({ goal }: AiCoachInsightProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [goal]);
+  }, [goal, progress]);
 
   useEffect(() => {
-    fetchInsight();
-  }, [fetchInsight]);
+    // Automatically fetch insight when component mounts with valid progress
+    if (progress !== null) {
+      fetchInsight();
+    }
+  }, [fetchInsight, progress]);
 
   return (
     <Card className="mt-4 bg-muted/50 border-dashed">
@@ -49,9 +53,16 @@ const AiCoachInsight = ({ goal }: AiCoachInsightProps) => {
           </div>
         )}
         {!isLoading && insight && (
-          <blockquote className="text-sm text-muted-foreground italic border-l-2 pl-3 border-yellow-500">
-            {insight}
-          </blockquote>
+          <div className="text-sm text-muted-foreground prose prose-sm max-w-none">
+            <ReactMarkdown
+              components={{
+                p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                strong: ({node, ...props}) => <strong className="font-semibold text-foreground/90" {...props} />,
+              }}
+            >
+              {insight}
+            </ReactMarkdown>
+          </div>
         )}
         {!isLoading && !insight && (
            <p className="text-sm text-muted-foreground">Click "Get New Insight" to see what the AI coach thinks.</p>

@@ -3,6 +3,7 @@ import { format, getMonth, getYear, parseISO } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatNumber, formatValue } from '@/lib/formatting';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import AiCoachInsight from './AiCoachInsight';
 
 interface GoalProgressChartProps {
   goal: Goal;
@@ -33,6 +34,24 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
   const formatProgress = (value: number) => {
     return goal.type === 'quantity' ? formatNumber(value) : formatValue(value, unit);
   };
+
+  const getYearlyTarget = () => {
+    if (goal.type === 'quantity' && goal.targetQuantity && goal.targetPeriod) {
+      switch (goal.targetPeriod) {
+        case 'day': return goal.targetQuantity * 365;
+        case 'week': return goal.targetQuantity * 52;
+        case 'month': return goal.targetQuantity * 12;
+        default: return null;
+      }
+    }
+    if (goal.type === 'value' && goal.targetValue) {
+      return goal.targetValue;
+    }
+    return null;
+  };
+
+  const yearlyTarget = getYearlyTarget();
+  const overallPercentage = yearlyTarget ? Math.round((totalProgress / yearlyTarget) * 100) : null;
 
   const getTargetText = () => {
     if (goal.type === 'quantity' && goal.targetQuantity) {
@@ -89,6 +108,7 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
             </div>
           ))}
         </div>
+        <AiCoachInsight goal={goal} progress={overallPercentage !== null ? { percentage: overallPercentage } : null} />
       </CardContent>
     </Card>
   );
