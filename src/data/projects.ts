@@ -69,7 +69,8 @@ export type ActivityType =
   | 'TASK_COMPLETED'
   | 'TASK_DELETED'
   | 'COMMENT_ADDED'
-  | 'TICKET_CREATED';
+  | 'TICKET_CREATED'
+  | 'TASK_REOPENED';
 
 export interface Activity {
   id: string;

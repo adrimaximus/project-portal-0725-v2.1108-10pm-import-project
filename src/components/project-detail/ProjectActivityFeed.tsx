@@ -15,6 +15,7 @@ import {
   Pencil,
   FileUp,
   Ticket,
+  Undo2,
 } from "lucide-react";
 
 const activityIcons: { [key: string]: React.ReactNode } = {
@@ -30,6 +31,7 @@ const activityIcons: { [key: string]: React.ReactNode } = {
   PROJECT_DETAILS_UPDATED: <Pencil className="h-4 w-4" />,
   FILE_UPLOADED: <FileUp className="h-4 w-4" />,
   TICKET_CREATED: <Ticket className="h-4 w-4" />,
+  TASK_REOPENED: <Undo2 className="h-4 w-4" />,
 };
 
 const renderActivityDescription = (description: string) => {

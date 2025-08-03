@@ -193,6 +193,13 @@ const ProjectDetail = () => {
       updatedTasks.filter(ut => ut.completed && !originalTasks.find(ot => ot.id === ut.id)?.completed)
         .forEach(task => newActivities.push(createActivity('TASK_COMPLETED', `menyelesaikan tugas: "${task.name}"`)));
       
+      updatedTasks.forEach(updatedTask => {
+        const originalTask = originalTasks.find(ot => ot.id === updatedTask.id);
+        if (originalTask && originalTask.completed && !updatedTask.completed) {
+          newActivities.push(createActivity('TASK_REOPENED', `membuka kembali tugas: "${updatedTask.name}"`));
+        }
+      });
+
       originalTasks.filter(ot => !updatedTasks.some(ut => ut.id === ot.id))
         .forEach(task => newActivities.push(createActivity('TASK_DELETED', `menghapus tugas: "${task.name}"`)));
 
