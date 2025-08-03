@@ -251,7 +251,7 @@ const ProjectDetail = () => {
 
           const newTask: Task = {
             id: `task-${Date.now()}`,
-            name: newTaskText.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '@$1'),
+            name: newTaskText.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '').trim(),
             completed: false,
             assignedTo: assignedTo,
             originTicketId: newComment.id,
