@@ -127,7 +127,7 @@ const ProjectComments = ({
           "rounded-lg border bg-background transition-all",
           isTicket && "border-orange-500/50 ring-2 ring-orange-500/20"
         )}>
-          <div className="p-2">
+          <div>
             <MentionsInput
               value={newCommentText}
               onChange={(e) => setNewCommentText(e.target.value)}
@@ -160,7 +160,7 @@ const ProjectComments = ({
               </Button>
             </div>
           )}
-          <div className="flex items-center justify-between gap-1 p-2 border-t bg-muted/50 rounded-b-lg">
+          <div className="flex items-center justify-between gap-1 px-3 py-2 border-t bg-muted/50 rounded-b-lg">
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon" asChild>
                 <Label htmlFor="comment-attachment" className="cursor-pointer">
