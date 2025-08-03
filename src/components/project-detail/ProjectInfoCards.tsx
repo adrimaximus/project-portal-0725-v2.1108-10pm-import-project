@@ -7,7 +7,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { format, isPast, differenceInDays, addDays, startOfDay } from "date-fns";
+import { format, isPast, differenceInDays, startOfDay } from "date-fns";
 import { Activity, CreditCard, Wallet, CalendarDays, CalendarClock } from "lucide-react";
 
 interface ProjectInfoCardsProps {
@@ -71,6 +71,19 @@ const ProjectInfoCards = ({
     }
   };
 
+  const addWorkingDays = (date: Date, days: number): Date => {
+    let currentDate = new Date(date);
+    let addedDays = 0;
+    while (addedDays < days) {
+      currentDate.setDate(currentDate.getDate() + 1);
+      const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        addedDays++;
+      }
+    }
+    return currentDate;
+  };
+
   const budgetFormatted = new Intl.NumberFormat("id-ID", {
     style: "currency", currency: "IDR", minimumFractionDigits: 0,
   }).format(project.budget || 0);
@@ -89,7 +102,7 @@ const ProjectInfoCards = ({
   });
   const projectDaysDifference = differenceInDays(projectDueDateObj, today);
 
-  const paymentDueDate = startOfDay(addDays(new Date(project.dueDate), 30));
+  const paymentDueDate = startOfDay(addWorkingDays(projectDueDateObj, 14));
   const paymentDueDateFormatted = paymentDueDate.toLocaleDateString("en-US", {
     year: 'numeric', month: 'long', day: 'numeric'
   });
