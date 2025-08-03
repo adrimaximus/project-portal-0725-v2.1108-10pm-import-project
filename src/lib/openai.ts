@@ -53,6 +53,7 @@ export async function generateAiInsight(
       3. **Jika performa antara 60% dan 99%:** Berikan motivasi dan penguatan positif, sebutkan mereka di jalur yang benar.
       4. **Jika performa < 60%:** Berikan dorongan semangat. Berdasarkan **semua data sasaran utama**, berikan **1-2 tips praktis dan relevan** untuk meningkatkan konsistensi.
       5. Pastikan kalimat Anda selesai dan tidak terpotong.
+      6. Jangan tambahkan salam penutup atau tanda tangan.
     `;
   } else if (context.yearly) {
     const today = new Date();
@@ -90,6 +91,7 @@ export async function generateAiInsight(
       3.  **Jika progres < 60%:** Berikan **dorongan semangat** yang kuat. Berdasarkan **semua data sasaran utama**, berikan **2-3 tips dan strategi praktis** yang dapat ditindaklanjuti untuk membantu mereka kembali ke jalur yang benar.
       4.  Sebutkan pentingnya kolaborasi jika ada anggota tim.
       5.  Gunakan format markdown. Pastikan kalimat Anda selesai dan tidak terpotong.
+      6.  Jangan tambahkan salam penutup atau tanda tangan.
     `;
   } else {
     return "Konteks tidak cukup untuk memberikan wawasan.";
