@@ -36,6 +36,7 @@
   pointer-events: none;
   white-space: pre-wrap;
   word-wrap: break-word;
+  color: hsl(var(--foreground));
 }
 
 .mentions__suggestions {
