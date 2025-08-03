@@ -36,7 +36,11 @@
   pointer-events: none;
   white-space: pre-wrap;
   word-wrap: break-word;
-  color: hsl(var(--foreground)) !important;
+}
+
+/* Perbaikan: Terapkan warna pada div internal tempat teks sebenarnya dirender. */
+.mentions__highlighter > div {
+  color: hsl(var(--foreground));
 }
 
 .mentions__suggestions {
