@@ -11,6 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { TagInput } from './TagInput';
 import { Tag, dummyTags } from '@/data/tags';
 import { v4 as uuidv4 } from 'uuid';
+import { generateAiIcon } from '@/lib/openai';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 interface NewGoalDialogProps {
   open: boolean;
@@ -36,6 +39,7 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
   const [color, setColor] = useState('#BFDBFE');
   const [tags, setTags] = useState<Tag[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>(dummyTags);
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleTagCreate = (tagName: string): Tag => {
     const newTag: Tag = {
@@ -47,17 +51,7 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
     return newTag;
   };
 
-  const handleSave = () => {
-    if (!title) return;
-    onGoalCreate({
-      title,
-      description,
-      frequency,
-      specificDays: frequency === 'Weekly' ? specificDays : [],
-      icon: '🎯', // Set default icon
-      color,
-      tags,
-    });
+  const resetForm = () => {
     setTitle('');
     setDescription('');
     setFrequency('Daily');
@@ -67,8 +61,52 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
     onOpenChange(false);
   };
 
+  const handleSave = async () => {
+    if (!title) {
+      toast.error("Please enter a title for your goal.");
+      return;
+    }
+    
+    setIsCreating(true);
+    const toastId = toast.loading("Creating goal and generating icon...");
+
+    let icon = '🎯'; // Default fallback icon
+    try {
+      const prompt = `Goal: ${title}. Description: ${description || 'No description'}`;
+      const generatedIcon = await generateAiIcon(prompt);
+      if (generatedIcon.startsWith('http')) {
+        icon = generatedIcon;
+        toast.success("AI icon generated successfully!", { id: toastId });
+      } else {
+        toast.warning("Could not generate AI icon, using default. " + generatedIcon, { id: toastId });
+      }
+    } catch (error) {
+      console.error("Icon generation failed:", error);
+      toast.error("An error occurred during icon generation, using default.", { id: toastId });
+    }
+
+    onGoalCreate({
+      title,
+      description,
+      frequency,
+      specificDays: frequency === 'Weekly' ? specificDays : [],
+      icon,
+      color,
+      tags,
+    });
+    
+    toast.success(`Goal "${title}" created!`);
+    
+    setIsCreating(false);
+    resetForm();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isCreating) {
+        onOpenChange(isOpen);
+      }
+    }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create a New Goal</DialogTitle>
@@ -137,8 +175,11 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave}>Create Goal</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isCreating}>Cancel</Button>
+          <Button onClick={handleSave} disabled={isCreating}>
+            {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Goal
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
