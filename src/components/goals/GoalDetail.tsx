@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { Goal } from '@/data/goals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,7 +118,7 @@ const GoalDetail = ({ goal, onUpdate, onDelete, onClose }: GoalDetailProps) => {
         <div className="col-span-3">
           <TagInput
             tags={(editedGoal.tags || []).map(t => ({ id: t, text: t }))}
-            setTags={(newTags) => handleChange('tags', newTags.map(t => t.text))}
+            setTags={(newTags: Tag[]) => handleChange('tags', newTags.map(t => t.text))}
             placeholder="Add tags and press Enter"
           />
         </div>
