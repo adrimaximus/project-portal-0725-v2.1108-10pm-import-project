@@ -23,6 +23,7 @@ type Invite = {
 };
 
 const defaultRoles = [
+  { value: 'owner', label: 'Owner', description: 'Full access to the project and billing.' },
   { value: 'admin', label: 'Admin', description: 'Can fully manage the project.' },
   { value: 'member', label: 'Member', description: 'Can access the project and create new projects.' },
   { value: 'client', label: 'Client', description: 'Can access the project but cannot create new projects.' },
@@ -75,7 +76,7 @@ const FeatureSettingsPage = () => {
   };
 
   const members = [
-    { name: 'Theresa Webb', email: 'david@withlantern.com', avatar: 'TW', role: 'Admin', status: 'Active', lastActive: '23 Dec 2022' },
+    { name: 'Theresa Webb', email: 'david@withlantern.com', avatar: 'TW', role: 'Owner', status: 'Active', lastActive: '23 Dec 2022' },
     { name: 'Darlene Robertson', email: 'darrell.steward@withlantern.com', avatar: 'DR', role: 'Member', status: 'Suspended', lastActive: '23 Dec 2022' },
     { name: 'Anne Black', email: 'sagar@withlantern.com', avatar: 'AB', role: 'Client', status: 'Active', lastActive: '23 Dec 2022' },
     { name: 'Floyd Miles', email: 'sagar@withlantern.com', avatar: 'FM', role: 'View Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
