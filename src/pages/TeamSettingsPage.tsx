@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
@@ -31,6 +31,16 @@ type Member = {
   lastActive: string;
 };
 
+type Role = {
+  value: string;
+  label: string;
+  description: string;
+};
+
+type CustomRole = Role & {
+  permissions: Record<string, boolean>;
+};
+
 const initialMembers: Member[] = [
   { name: 'Theresa Webb', email: 'david@withlantern.com', avatar: 'TW', role: 'Owner', status: 'Active', lastActive: '23 Dec 2022' },
   { name: 'Darlene Robertson', email: 'darrell.steward@withlantern.com', avatar: 'DR', role: 'Member', status: 'Suspended', lastActive: '23 Dec 2022' },
@@ -41,7 +51,7 @@ const initialMembers: Member[] = [
   { name: 'Leslie Alexander', email: 'sagar@withlantern.com', avatar: 'LA', role: 'View Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
 ];
 
-const defaultRoles = [
+const defaultRoles: Role[] = [
   { value: 'owner', label: 'Owner', description: 'Full access to the project and billing.' },
   { value: 'admin', label: 'Admin', description: 'Full access to manage the application and all its features.' },
   { value: 'member', label: 'Member', description: 'Can access the project and create new projects.' },
@@ -57,6 +67,26 @@ const TeamSettingsPage = () => {
   const [isCustomRoleDialogOpen, setCustomRoleDialogOpen] = useState(false);
   const [customRoleName, setCustomRoleName] = useState('');
   const [customRolePermissions, setCustomRolePermissions] = useState<Record<string, boolean>>({});
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
+
+  useEffect(() => {
+    const storedRoles = localStorage.getItem('customRoles');
+    if (storedRoles) {
+      setCustomRoles(JSON.parse(storedRoles));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('customRoles', JSON.stringify(customRoles));
+  }, [customRoles]);
+
+  const allRoles = useMemo(() => [...defaultRoles, ...customRoles], [customRoles]);
+
+  const roleNameExists = useMemo(() => {
+    const trimmedName = customRoleName.trim().toLowerCase();
+    if (!trimmedName) return false;
+    return allRoles.some(role => role.label.toLowerCase() === trimmedName);
+  }, [customRoleName, allRoles]);
 
   useEffect(() => {
     if (isCustomRoleDialogOpen) {
@@ -74,6 +104,20 @@ const TeamSettingsPage = () => {
       ...prev,
       [featureId]: !prev[featureId],
     }));
+  };
+
+  const handleSaveCustomRole = () => {
+    if (!customRoleName.trim() || roleNameExists) return;
+
+    const newRole: CustomRole = {
+      label: customRoleName.trim(),
+      value: customRoleName.trim().toLowerCase().replace(/\s+/g, '-'),
+      description: 'Custom role with specific permissions.',
+      permissions: customRolePermissions,
+    };
+
+    setCustomRoles(prev => [...prev, newRole]);
+    setCustomRoleDialogOpen(false);
   };
 
   const handleInviteChange = (id: number, field: 'email' | 'role', value: string) => {
@@ -117,6 +161,35 @@ const TeamSettingsPage = () => {
         return 'outline';
     }
   };
+
+  const renderRoleOptions = (roles: Role[], customRoles: CustomRole[]) => (
+    <>
+      {roles.map(role => (
+        <SelectItem key={role.value} value={role.value}>
+          <div className="flex flex-col items-start py-1">
+            <span>{role.label}</span>
+            <span className="text-xs text-muted-foreground whitespace-normal">{role.description}</span>
+          </div>
+        </SelectItem>
+      ))}
+      {customRoles.length > 0 && <SelectSeparator />}
+      {customRoles.map(role => (
+        <SelectItem key={role.value} value={role.value}>
+          <div className="flex flex-col items-start py-1">
+            <span>{role.label}</span>
+            <span className="text-xs text-muted-foreground whitespace-normal">{role.description}</span>
+          </div>
+        </SelectItem>
+      ))}
+      <SelectSeparator />
+      <SelectItem value="create-custom">
+        <div className="flex flex-col items-start py-1">
+          <span>Create Custom Role</span>
+          <span className="text-xs text-muted-foreground">Set granular permissions.</span>
+        </div>
+      </SelectItem>
+    </>
+  );
 
   return (
     <PortalLayout>
@@ -177,24 +250,10 @@ const TeamSettingsPage = () => {
                       }}
                     >
                       <SelectTrigger id={`role-${invite.id}`} className="w-full sm:w-[220px]">
-                        {defaultRoles.find(r => r.value === invite.role)?.label ?? <span className="text-muted-foreground">Select a role</span>}
+                        {allRoles.find(r => r.value === invite.role)?.label ?? <span className="text-muted-foreground">Select a role</span>}
                       </SelectTrigger>
                       <SelectContent>
-                        {defaultRoles.map(role => (
-                          <SelectItem key={role.value} value={role.value}>
-                            <div className="flex flex-col items-start py-1">
-                              <span>{role.label}</span>
-                              <span className="text-xs text-muted-foreground whitespace-normal">{role.description}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                        <SelectSeparator />
-                        <SelectItem value="create-custom">
-                          <div className="flex flex-col items-start py-1">
-                            <span>Create Custom Role</span>
-                            <span className="text-xs text-muted-foreground">Set granular permissions.</span>
-                          </div>
-                        </SelectItem>
+                        {renderRoleOptions(defaultRoles, customRoles)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -267,10 +326,14 @@ const TeamSettingsPage = () => {
                         ) : (
                           <Select defaultValue={member.role.toLowerCase().replace(/\s+/g, '-')}>
                             <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent">
-                              <SelectValue />
+                              <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                             <SelectContent>
                               {defaultRoles.map(role => (
+                                <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
+                              ))}
+                              {customRoles.length > 0 && <SelectSeparator />}
+                              {customRoles.map(role => (
                                 <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
                               ))}
                             </SelectContent>
@@ -325,6 +388,9 @@ const TeamSettingsPage = () => {
                 value={customRoleName}
                 onChange={(e) => setCustomRoleName(e.target.value)}
               />
+              {roleNameExists && (
+                <p className="text-sm text-red-500">A role with this name already exists.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Permissions</Label>
@@ -347,7 +413,7 @@ const TeamSettingsPage = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCustomRoleDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => setCustomRoleDialogOpen(false)}>Save Role</Button>
+            <Button onClick={handleSaveCustomRole} disabled={!customRoleName.trim() || roleNameExists}>Save Role</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
