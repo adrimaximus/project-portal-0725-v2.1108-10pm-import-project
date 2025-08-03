@@ -302,8 +302,8 @@ const Index = () => {
                 <Collapsible open={isCollaboratorsOpen} onOpenChange={setIsCollaboratorsOpen}>
                   <CollapsibleTrigger className="w-full p-6">
                     <div className="flex items-center justify-between">
+                      <CardTitle>Collaborators</CardTitle>
                       <div className="flex items-center gap-4">
-                        <CardTitle>Collaborators</CardTitle>
                         {!isCollaboratorsOpen && (
                           <div className="flex items-center -space-x-2">
                             {collaborators.slice(0, 5).map(c => (
@@ -321,8 +321,8 @@ const Index = () => {
                             ))}
                           </div>
                         )}
+                        <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
