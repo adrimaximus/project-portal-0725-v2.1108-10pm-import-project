@@ -46,6 +46,7 @@ const AiCoachInsight = ({
 
     const buildPrompt = (): string => {
         const hasCollaborators = collaborators.length > 0;
+        const performancePercentage = selectedMonth ? selectedMonth.percentage : overallPercentage;
 
         // Konteks Pengguna dan Tim
         let prompt = `--- Konteks Pengguna ---\n`;
@@ -76,6 +77,10 @@ const AiCoachInsight = ({
         prompt += `\n--- Tugas Anda ---\n`;
         prompt += `Berdasarkan semua data di atas, berikan umpan balik yang memotivasi dan personal kepada ${userName}. Tinjau kedisiplinan mereka, berikan saran untuk perbaikan jika perlu, dan semangati mereka (dan tim mereka, jika ada) untuk terus maju. Jadilah seperti pelatih pribadi.`;
         
+        if (performancePercentage < 50) {
+            prompt += `\n\nPENTING: Karena tingkat keberhasilan saat ini di bawah 50%, berikan 2-3 poin saran yang konkret dan dapat ditindaklanjuti (sebagai daftar bernomor atau berpoin) untuk membantu ${userName} mencapai tingkat keberhasilan di atas 90%. Saran harus spesifik terkait tujuan mereka.`;
+        }
+
         return prompt;
     };
 
@@ -110,7 +115,7 @@ const AiCoachInsight = ({
                     {isLoading ? (
                         <p className="text-sm leading-relaxed animate-pulse" style={pStyle}>AI Coach sedang berpikir...</p>
                     ) : (
-                        <p className="text-sm leading-relaxed" style={pStyle}>{insight}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap" style={pStyle}>{insight}</p>
                     )}
                 </div>
                 <TooltipProvider>
