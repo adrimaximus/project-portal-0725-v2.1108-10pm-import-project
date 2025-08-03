@@ -22,6 +22,25 @@ type Invite = {
   role: string;
 };
 
+type Member = {
+  name: string;
+  email: string;
+  avatar: string;
+  role: string;
+  status: 'Active' | 'Suspended' | 'Pending invite';
+  lastActive: string;
+};
+
+const initialMembers: Member[] = [
+  { name: 'Theresa Webb', email: 'david@withlantern.com', avatar: 'TW', role: 'Owner', status: 'Active', lastActive: '23 Dec 2022' },
+  { name: 'Darlene Robertson', email: 'darrell.steward@withlantern.com', avatar: 'DR', role: 'Member', status: 'Suspended', lastActive: '23 Dec 2022' },
+  { name: 'Anne Black', email: 'sagar@withlantern.com', avatar: 'AB', role: 'Client', status: 'Active', lastActive: '23 Dec 2022' },
+  { name: 'Floyd Miles', email: 'sagar@withlantern.com', avatar: 'FM', role: 'View Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
+  { name: 'Cody Fisher', email: 'sagar@withlantern.com', avatar: 'CF', role: 'Admin', status: 'Active', lastActive: '23 Dec 2022' },
+  { name: 'Kristin Watson', email: 'darrell.steward@withlantern.com', avatar: 'KW', role: 'Comment Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
+  { name: 'Leslie Alexander', email: 'sagar@withlantern.com', avatar: 'LA', role: 'View Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
+];
+
 const defaultRoles = [
   { value: 'owner', label: 'Owner', description: 'Full access to the project and billing.' },
   { value: 'admin', label: 'Admin', description: 'Full access to manage the application and all its features.' },
@@ -34,6 +53,7 @@ const defaultRoles = [
 const FeatureSettingsPage = () => {
   const { featureId } = useParams<{ featureId: string }>();
   const { features } = useFeatures();
+  const [members, setMembers] = useState<Member[]>(initialMembers);
   const [invites, setInvites] = useState<Invite[]>([{ id: Date.now(), email: '', role: 'member' }]);
   const [isCustomRoleDialogOpen, setCustomRoleDialogOpen] = useState(false);
   const [customRoleName, setCustomRoleName] = useState('');
@@ -75,15 +95,21 @@ const FeatureSettingsPage = () => {
     setInvites(currentInvites => currentInvites.filter(invite => invite.id !== id));
   };
 
-  const members = [
-    { name: 'Theresa Webb', email: 'david@withlantern.com', avatar: 'TW', role: 'Owner', status: 'Active', lastActive: '23 Dec 2022' },
-    { name: 'Darlene Robertson', email: 'darrell.steward@withlantern.com', avatar: 'DR', role: 'Member', status: 'Suspended', lastActive: '23 Dec 2022' },
-    { name: 'Anne Black', email: 'sagar@withlantern.com', avatar: 'AB', role: 'Client', status: 'Active', lastActive: '23 Dec 2022' },
-    { name: 'Floyd Miles', email: 'sagar@withlantern.com', avatar: 'FM', role: 'View Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
-    { name: 'Cody Fisher', email: 'sagar@withlantern.com', avatar: 'CF', role: 'Admin', status: 'Active', lastActive: '23 Dec 2022' },
-    { name: 'Kristin Watson', email: 'darrell.steward@withlantern.com', avatar: 'KW', role: 'Comment Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
-    { name: 'Leslie Alexander', email: 'sagar@withlantern.com', avatar: 'LA', role: 'View Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
-  ];
+  const handleToggleSuspend = (memberName: string) => {
+    setMembers(currentMembers =>
+      currentMembers.map(member => {
+        if (member.name === memberName) {
+          // Cannot suspend pending invites
+          if (member.status === 'Pending invite') return member;
+          return {
+            ...member,
+            status: member.status === 'Suspended' ? 'Active' : 'Suspended',
+          };
+        }
+        return member;
+      })
+    );
+  };
 
   const getStatusBadgeVariant = (status: string): "destructive" | "secondary" | "outline" => {
     switch (status) {
@@ -271,7 +297,13 @@ const FeatureSettingsPage = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem>Edit</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">Suspend</DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onSelect={() => handleToggleSuspend(member.name)}
+                              disabled={member.status === 'Pending invite'}
+                            >
+                              {member.status === 'Suspended' ? 'Unsuspend' : 'Suspend'}
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
