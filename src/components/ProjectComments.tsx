@@ -22,7 +22,6 @@ const ProjectComments = ({
 }: ProjectCommentsProps) => {
   const { user: currentUser } = useUser();
   const [newCommentText, setNewCommentText] = useState("");
-  const [isTicket, setIsTicket] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [filter, setFilter] = useState<'all' | 'comments' | 'tickets'>('all');
 
@@ -52,7 +51,7 @@ const ProjectComments = ({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (isTicketSubmit: boolean) => {
     if (newCommentText.trim() === "" && !attachment) return;
 
     const newComment: Comment = {
@@ -60,13 +59,12 @@ const ProjectComments = ({
       author: currentUser,
       text: newCommentText,
       timestamp: new Date().toISOString(),
-      isTicket: isTicket,
+      isTicket: isTicketSubmit,
       attachment: attachment ? { name: attachment.name, url: URL.createObjectURL(attachment) } : undefined,
     };
 
     onAddCommentOrTicket(newComment);
     setNewCommentText("");
-    setIsTicket(false);
     setAttachment(null);
     const fileInput = document.getElementById('comment-attachment') as HTMLInputElement;
     if (fileInput) {
@@ -114,19 +112,14 @@ const ProjectComments = ({
     return sortedItems;
   }, [filter, sortedItems]);
 
-  const placeholderText = isTicket
-    ? "Create a new ticket... Describe the issue or task."
-    : "Add a comment... Type '@' to mention, '/' to link.";
+  const placeholderText = "Add a comment or create a ticket...";
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Discussion</h3>
         
-        <div className={cn(
-          "rounded-lg border bg-background transition-all",
-          isTicket && "border-orange-500/50 ring-2 ring-orange-500/20"
-        )}>
+        <div className="rounded-lg border bg-background transition-all">
           <div className="relative">
             <MentionsInput
               value={newCommentText}
@@ -152,20 +145,28 @@ const ProjectComments = ({
             </MentionsInput>
             <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1">
               <Button variant="ghost" size="icon" asChild>
-                <Label htmlFor="comment-attachment" className="cursor-pointer h-9 w-9 flex items-center justify-center">
+                <Label htmlFor="comment-attachment" className="cursor-pointer h-9 w-9 flex items-center justify-center" title="Attach file">
                   <Paperclip className="h-4 w-4" />
                   <input id="comment-attachment" type="file" className="sr-only" onChange={handleFileChange} />
                 </Label>
               </Button>
               <Button 
-                variant={isTicket ? "secondary" : "ghost"} 
+                variant="ghost"
                 size="icon" 
-                onClick={() => setIsTicket(!isTicket)}
-                className={cn("h-9 w-9", isTicket && "text-orange-600")}
+                onClick={() => handleSubmit(true)}
+                disabled={!newCommentText.trim() && !attachment}
+                className="h-9 w-9 text-orange-600"
+                title="Create Ticket"
               >
                 <Ticket className="h-4 w-4" />
               </Button>
-              <Button size="icon" onClick={handleSubmit} disabled={!newCommentText.trim() && !attachment} className="h-9 w-9">
+              <Button 
+                size="icon" 
+                onClick={() => handleSubmit(false)} 
+                disabled={!newCommentText.trim() && !attachment} 
+                className="h-9 w-9"
+                title="Add Comment"
+              >
                 <Send className="h-4 w-4" />
               </Button>
             </div>
@@ -193,10 +194,7 @@ const ProjectComments = ({
         </div>
         <div className="space-y-4">
           {filteredItems.map(item => (
-            <div key={item.id} className={cn(
-              "flex items-start space-x-3 p-3 rounded-lg",
-              item.isTicket && "bg-orange-500/10 border border-orange-500/20"
-            )}>
+            <div key={item.id} className="flex items-start space-x-3 p-3 rounded-lg">
               <Avatar>
                 <AvatarImage src={item.author.avatar} />
                 <AvatarFallback>{item.author.name.slice(0, 2)}</AvatarFallback>
