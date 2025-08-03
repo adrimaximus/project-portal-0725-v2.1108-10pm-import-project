@@ -48,12 +48,13 @@ export async function generateAiInsight(
       - Detail: ${completedCount} dari ${possibleCount} hari target telah diselesaikan.
 
       **Instruksi Respons Bulanan:**
-      1. Berikan ulasan singkat tentang performa di bulan ${name}.
-      2. **Jika performa >= 100%:** Berikan apresiasi luar biasa.
-      3. **Jika performa antara 60% dan 99%:** Berikan motivasi dan penguatan positif, sebutkan mereka di jalur yang benar.
-      4. **Jika performa < 60%:** Berikan dorongan semangat. Berdasarkan **semua data sasaran utama**, berikan **1-2 tips praktis dan relevan** untuk meningkatkan konsistensi.
-      5. Pastikan kalimat Anda selesai dan tidak terpotong.
-      6. Jangan tambahkan salam penutup atau tanda tangan.
+      1. Berikan **analisis tajam dan ringkas** tentang performa di bulan ${name}.
+      2. Gunakan format markdown **bold** untuk menyorot angka-angka penting (seperti **${percentage}%**, **${completedCount}**, dan **${possibleCount}**).
+      3. **Jika performa >= 100%:** Berikan apresiasi luar biasa.
+      4. **Jika performa antara 60% dan 99%:** Berikan motivasi dan penguatan positif.
+      5. **Jika performa < 60%:** Berikan dorongan semangat dan **satu tips paling berdampak** untuk meningkatkan konsistensi.
+      6. Pastikan kalimat Anda selesai dan tidak terpotong.
+      7. Jangan tambahkan salam penutup atau tanda tangan.
     `;
   } else if (context.yearly) {
     const today = new Date();
@@ -78,7 +79,7 @@ export async function generateAiInsight(
     }
 
     contextPrompt = `
-      Analisis data sasaran tahunan berikut.
+      Berikan **analisis tahunan yang tajam dan ringkas**.
 
       **Data Tambahan Tahunan:**
       - Progres: ${progressSummary}
@@ -86,12 +87,13 @@ export async function generateAiInsight(
       - Kolaborator: ${collaboratorText}
 
       **Instruksi Respons Tahunan:**
-      1.  **Jika progres >= 100%:** Mulai dengan **apresiasi** yang kuat.
-      2.  **Jika progres antara 60% dan 99%:** Berikan **motivasi** dan penguatan positif.
-      3.  **Jika progres < 60%:** Berikan **dorongan semangat** yang kuat. Berdasarkan **semua data sasaran utama**, berikan **2-3 tips dan strategi praktis** yang dapat ditindaklanjuti untuk membantu mereka kembali ke jalur yang benar.
-      4.  Sebutkan pentingnya kolaborasi jika ada anggota tim.
-      5.  Gunakan format markdown. Pastikan kalimat Anda selesai dan tidak terpotong.
-      6.  Jangan tambahkan salam penutup atau tanda tangan.
+      1. Gunakan format markdown **bold** untuk menyorot angka-angka penting (seperti persentase, progres total, target, sisa hari) dan nama kolaborator.
+      2.  **Jika progres >= 100%:** Mulai dengan **apresiasi** yang kuat.
+      3.  **Jika progres antara 60% dan 99%:** Berikan **motivasi** dan penguatan positif.
+      4.  **Jika progres < 60%:** Berikan **dorongan semangat** yang kuat dan **1-2 strategi paling berdampak** untuk membantu mereka kembali ke jalur yang benar.
+      5.  Sebutkan pentingnya kolaborasi jika ada anggota tim.
+      6.  Gunakan format markdown. Pastikan kalimat Anda selesai dan tidak terpotong.
+      7.  Jangan tambahkan salam penutup atau tanda tangan.
     `;
   } else {
     return "Konteks tidak cukup untuk memberikan wawasan.";
