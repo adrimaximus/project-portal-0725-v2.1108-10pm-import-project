@@ -1,18 +1,12 @@
+import { Collaborator } from "@/types";
+
 export interface GoalCompletion {
   date: string; // YYYY-MM-DD
   completed: boolean;
 }
 
-export interface Collaborator {
-  id: string;
-  name: string;
-  avatar: string;
-  initials: string;
-  email: string;
-}
-
 export interface Goal {
-  id:string;
+  id: string;
   title: string;
   description: string;
   icon: string;

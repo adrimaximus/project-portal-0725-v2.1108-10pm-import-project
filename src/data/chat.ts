@@ -1,114 +1,74 @@
 import { Collaborator } from "@/types";
 
 export interface Attachment {
-  name: string;
-  url: string;
   type: 'image' | 'file';
+  url: string;
+  name: string;
 }
 
 export interface Message {
   id: string;
-  text: string;
-  timestamp: string;
-  sender: "me" | "other";
+  senderId: string;
   senderName: string;
   senderAvatar: string;
+  text: string;
+  timestamp: string;
   attachment?: Attachment;
 }
 
 export interface Conversation {
   id: string;
-  userName: string; // For groups, this will be the group name
-  userAvatar?: string; // Optional for groups
+  userName: string;
+  userAvatar: string;
   lastMessage: string;
   lastMessageTimestamp: string;
   unreadCount: number;
+  isGroup: boolean;
   messages: Message[];
-  isGroup?: boolean;
   members?: Collaborator[];
 }
 
+const currentUser = {
+  id: 'user-alex',
+  name: 'Alex',
+  avatar: 'https://i.pravatar.cc/150?u=alex'
+};
+
 export const dummyConversations: Conversation[] = [
   {
-    id: "1",
-    userName: "John Doe",
-    userAvatar: "https://i.pravatar.cc/150?u=john",
-    lastMessage: "Hey, how's the project going?",
-    lastMessageTimestamp: "10:30 AM",
+    id: 'convo-1',
+    userName: 'Budi',
+    userAvatar: 'https://i.pravatar.cc/150?u=budi',
+    lastMessage: 'Oke, saya akan cek sekarang.',
+    lastMessageTimestamp: '10:40 AM',
     unreadCount: 2,
     isGroup: false,
     messages: [
-      {
-        id: 'msg-1',
-        text: "Hey, how's the project going?",
-        timestamp: "10:30 AM",
-        sender: "other",
-        senderName: "John Doe",
-        senderAvatar: "https://i.pravatar.cc/150?u=john",
-      },
-      {
-        id: 'msg-2',
-        text: "Pretty good! I'm almost done with the new feature.",
-        timestamp: "10:31 AM",
-        sender: "me",
-        senderName: "You",
-        senderAvatar: "https://i.pravatar.cc/150?u=me",
-      },
+      { id: 'msg-1-1', senderId: 'user-budi', senderName: 'Budi', senderAvatar: 'https://i.pravatar.cc/150?u=budi', text: 'Hey Alex, apa kabar?', timestamp: '10:38 AM' },
+      { id: 'msg-1-2', senderId: currentUser.id, senderName: currentUser.name, senderAvatar: currentUser.avatar, text: 'Baik, Budi. Kamu gimana?', timestamp: '10:39 AM' },
+      { id: 'msg-1-3', senderId: 'user-budi', senderName: 'Budi', senderAvatar: 'https://i.pravatar.cc/150?u=budi', text: 'Bisa tolong cek laporan penjualan terakhir?', timestamp: '10:39 AM' },
+      { id: 'msg-1-4', senderId: 'user-budi', senderName: 'Budi', senderAvatar: 'https://i.pravatar.cc/150?u=budi', text: 'Oke, saya akan cek sekarang.', timestamp: '10:40 AM' },
     ],
   },
   {
-    id: "2",
-    userName: "Jane Smith",
-    userAvatar: "https://i.pravatar.cc/150?u=jane",
-    lastMessage: "Can you send me the report?",
-    lastMessageTimestamp: "Yesterday",
+    id: 'convo-2',
+    userName: 'Project Alpha Team',
+    userAvatar: '', // For group chat, we use a generic icon
+    lastMessage: 'Jangan lupa meeting jam 3 sore ya.',
+    lastMessageTimestamp: 'Kemarin',
     unreadCount: 0,
-    isGroup: false,
-    messages: [
-      {
-        id: 'msg-3',
-        text: "Can you send me the report?",
-        timestamp: "Yesterday",
-        sender: "other",
-        senderName: "Jane Smith",
-        senderAvatar: "https://i.pravatar.cc/150?u=jane",
-      },
-    ],
-  },
-  {
-    id: "3",
-    userName: "Project Team",
-    lastMessage: "I've attached the agenda.",
-    lastMessageTimestamp: "Yesterday",
-    unreadCount: 5,
     isGroup: true,
     members: [
-        { id: '1', name: 'Alex', src: 'https://i.pravatar.cc/150?u=alex', fallback: 'A', online: true },
-        { id: '2', name: 'Beth', src: 'https://i.pravatar.cc/150?u=beth', fallback: 'B', online: false },
-        { id: '3', name: 'Charlie', src: 'https://i.pravatar.cc/150?u=charlie', fallback: 'C', online: true },
+      { id: 'user-cindy', name: 'Cindy', email: 'cindy@example.com', src: 'https://i.pravatar.cc/150?u=cindy', fallback: 'C', online: true },
+      { id: 'user-dodi', name: 'Dodi', email: 'dodi@example.com', src: 'https://i.pravatar.cc/150?u=dodi', fallback: 'D', online: false },
+      { id: currentUser.id, name: currentUser.name, email: 'alex@example.com', src: currentUser.avatar, fallback: 'A', online: true },
     ],
     messages: [
-      {
-        id: 'msg-4',
-        text: "Don't forget the meeting at 3 PM.",
-        timestamp: "Yesterday",
-        sender: "other",
-        senderName: "Alex",
-        senderAvatar: "https://i.pravatar.cc/150?u=alex",
-      },
-      {
-        id: 'msg-5',
-        text: "I've attached the agenda.",
-        timestamp: "Yesterday",
-        sender: "other",
-        senderName: "Alex",
-        senderAvatar: "https://i.pravatar.cc/150?u=alex",
-        attachment: {
-          name: "meeting-agenda.pdf",
-          url: "#",
-          type: "file"
-        }
-      }
+      { id: 'msg-2-1', senderId: 'user-cindy', senderName: 'Cindy', senderAvatar: 'https://i.pravatar.cc/150?u=cindy', text: 'Tim, laporan mingguan sudah saya kirim ke email.', timestamp: 'Kemarin' },
+      { id: 'msg-2-2', senderId: 'user-dodi', senderName: 'Dodi', senderAvatar: 'https://i.pravatar.cc/150?u=dodi', text: 'Siap, sudah saya terima. Thanks Cindy!', timestamp: 'Kemarin' },
+      { id: 'msg-2-3', senderId: 'user-cindy', senderName: 'Cindy', senderAvatar: 'https://i.pravatar.cc/150?u=cindy', text: 'Jangan lupa meeting jam 3 sore ya.', timestamp: 'Kemarin' },
     ],
   },
 ];
+
+export const currentUserId = currentUser.id;

@@ -1,9 +1,9 @@
-export type Role = 'Admin' | 'Member' | 'Client' | 'Comment Only' | 'View Only';
-
-export type Collaborator = {
+export interface Collaborator {
   id: string;
   name: string;
-  src: string;
-  fallback: string;
-  online: boolean;
-};
+  email: string;
+  // Digunakan untuk komponen Avatar
+  src: string;      // URL gambar
+  fallback: string; // Teks fallback (misal: inisial)
+  online?: boolean; // Status online untuk obrolan
+}
