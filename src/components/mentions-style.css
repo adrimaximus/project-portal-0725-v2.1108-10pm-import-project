@@ -7,7 +7,7 @@
 }
 
 .mentions__input {
-  @apply w-full p-2 min-h-[40px] max-h-[200px] text-sm bg-transparent focus:outline-none resize-none leading-snug;
+  @apply w-full p-2 min-h-[40px] max-h-[200px] text-sm bg-transparent focus:outline-none resize-none leading-snug text-transparent caret-transparent;
   font-family: inherit;
 }
 
