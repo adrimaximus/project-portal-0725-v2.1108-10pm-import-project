@@ -87,7 +87,7 @@ const ProjectComments = ({
           </div>
         )}
 
-        <div className="rounded-lg border bg-background flex items-end p-1">
+        <div className="rounded-lg border bg-background flex p-1">
           <MentionsInput
             value={newCommentText}
             onChange={(e) => setNewCommentText(e.target.value)}
@@ -108,7 +108,7 @@ const ProjectComments = ({
               className="mentions__mention"
             />
           </MentionsInput>
-          <div className="flex items-center gap-1 p-1">
+          <div className="flex items-center gap-1 p-1 self-end">
             <Button variant="ghost" size="icon" asChild>
               <Label htmlFor="comment-attachment" className="cursor-pointer">
                 <Paperclip className="h-4 w-4" />
