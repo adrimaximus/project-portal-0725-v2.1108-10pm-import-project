@@ -159,7 +159,7 @@ const FeatureSettingsPage = () => {
                     Add member
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[480px]">
+                <DialogContent className="sm:max-w-lg">
                   <DialogHeader className="text-center items-center pt-4">
                     <div className="p-3 rounded-full bg-primary-foreground mb-2 inline-block">
                       <Users className="h-6 w-6 text-primary" />
@@ -171,47 +171,54 @@ const FeatureSettingsPage = () => {
                   </DialogHeader>
                   <div className="py-4 space-y-4">
                     {invites.map((invite) => (
-                      <div key={invite.id} className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
-                        <Input
-                          id={`email-${invite.id}`}
-                          placeholder="name@example.com"
-                          value={invite.email}
-                          onChange={(e) => handleInviteChange(invite.id, 'email', e.target.value)}
-                        />
-                        <Select
-                          value={invite.role}
-                          onValueChange={(value) => {
-                            if (value === 'create-custom') {
-                              setCustomRoleDialogOpen(true);
-                            } else {
-                              handleInviteChange(invite.id, 'role', value);
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="w-[140px]">
-                            <SelectValue placeholder="Select a role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {defaultRoles.map(role => (
-                              <SelectItem key={role.value} value={role.value}>
+                      <div key={invite.id} className="grid grid-cols-1 sm:grid-cols-[1fr_150px_auto] gap-3 items-end">
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`email-${invite.id}`}>Email address</Label>
+                          <Input
+                            id={`email-${invite.id}`}
+                            placeholder="name@example.com"
+                            value={invite.email}
+                            onChange={(e) => handleInviteChange(invite.id, 'email', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`role-${invite.id}`}>Role</Label>
+                          <Select
+                            value={invite.role}
+                            onValueChange={(value) => {
+                              if (value === 'create-custom') {
+                                setCustomRoleDialogOpen(true);
+                              } else {
+                                handleInviteChange(invite.id, 'role', value);
+                              }
+                            }}
+                          >
+                            <SelectTrigger id={`role-${invite.id}`} className="w-full">
+                              <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {defaultRoles.map(role => (
+                                <SelectItem key={role.value} value={role.value}>
+                                  <div className="flex flex-col items-start py-1">
+                                    <span>{role.label}</span>
+                                    <span className="text-xs text-muted-foreground whitespace-normal">{role.description}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                              <SelectSeparator />
+                              <SelectItem value="create-custom">
                                 <div className="flex flex-col items-start py-1">
-                                  <span>{role.label}</span>
-                                  <span className="text-xs text-muted-foreground">{role.description}</span>
+                                  <span>Create Custom Role</span>
+                                  <span className="text-xs text-muted-foreground">Set granular permissions.</span>
                                 </div>
                               </SelectItem>
-                            ))}
-                            <SelectSeparator />
-                            <SelectItem value="create-custom">
-                              <div className="flex flex-col items-start py-1">
-                                <span>Create Custom Role</span>
-                                <span className="text-xs text-muted-foreground">Set granular permissions.</span>
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         {invites.length > 1 && (
                           <Button variant="ghost" size="icon" onClick={() => removeInviteField(invite.id)}>
                             <X className="h-4 w-4" />
+                            <span className="sr-only">Remove</span>
                           </Button>
                         )}
                       </div>
