@@ -1,79 +1,114 @@
-import { User } from './users';
+import { User, dummyUsers } from './users';
+import { Tag, dummyTags } from './tags';
 
 export interface GoalCompletion {
-  id: string;
-  date: string; // ISO 8601 date string
+  date: string; // ISO String for value/quantity logs, YYYY-MM-DD for frequency
   value: number;
-  notes?: string;
-  userId: string;
+  achieverId?: string;
 }
+
+export type GoalType = 'frequency' | 'quantity' | 'value';
+export type GoalPeriod = 'Weekly' | 'Monthly';
 
 export interface Goal {
   id: string;
   title: string;
   description: string;
-  icon: string; // Icon name from lucide-react, or a placeholder if iconUrl is used
-  iconUrl?: string; // URL for AI-generated icon
+  icon: string;
   color: string;
-  type: 'quantity' | 'value' | 'frequency';
+  type: GoalType;
+  
+  // Frequency-specific
+  frequency: 'Daily' | 'Weekly';
+  specificDays: string[];
+
+  // Quantity-specific
   targetQuantity?: number;
+  targetPeriod?: GoalPeriod;
+
+  // Value-specific
   targetValue?: number;
-  frequency?: number;
-  targetPeriod?: 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
-  unit?: string; // e.g., '$', '€', 'Tasks', 'Miles'
-  collaborators: string[]; // Array of user IDs
+  unit?: string;
+
+  tags: Tag[];
   completions: GoalCompletion[];
+  collaborators: User[];
 }
 
-export const initialGoals: Goal[] = [
+export const dummyGoals: Goal[] = [
   {
-    id: 'goal-1',
-    title: 'Launch New Feature',
-    description: 'Successfully launch the new "Teams" feature by the end of Q3.',
-    icon: 'Rocket',
-    color: '#6D28D9',
+    id: '1',
+    title: 'Read a Book',
+    description: 'Read at least 300 pages this month.',
+    icon: '📚',
+    color: '#3B82F6',
     type: 'quantity',
-    targetQuantity: 1,
-    targetPeriod: 'Yearly',
-    collaborators: ['user-1', 'user-2', 'user-3'],
+    targetQuantity: 300,
+    targetPeriod: 'Monthly',
+    frequency: 'Daily',
+    specificDays: [],
+    tags: [dummyTags[0], dummyTags[1]],
     completions: [
-      { id: 'comp-1', date: '2024-08-15T00:00:00.000Z', value: 1, userId: 'user-1' },
+      { date: '2024-08-01T09:00:00Z', value: 25, achieverId: '1' },
+      { date: '2024-08-02T09:05:00Z', value: 15, achieverId: '1' }
     ],
+    collaborators: [dummyUsers[0]],
   },
   {
-    id: 'goal-2',
-    title: 'Increase MRR',
-    description: 'Grow Monthly Recurring Revenue by 20% in the second half of the year.',
-    icon: 'DollarSign',
-    color: '#16A34A',
-    type: 'value',
-    targetValue: 120000,
-    targetPeriod: 'Yearly',
-    unit: '$',
-    collaborators: ['user-1', 'user-4'],
-    completions: [
-      { id: 'comp-2', date: '2024-01-20T00:00:00.000Z', value: 8000, userId: 'user-1' },
-      { id: 'comp-3', date: '2024-02-18T00:00:00.000Z', value: 9500, userId: 'user-1' },
-      { id: 'comp-4', date: '2024-03-22T00:00:00.000Z', value: 11000, userId: 'user-2' },
-      { id: 'comp-5', date: '2024-04-19T00:00:00.000Z', value: 10500, userId: 'user-2' },
-      { id: 'comp-6', date: '2024-05-21T00:00:00.000Z', value: 13000, userId: 'user-1' },
-    ],
-  },
-  {
-    id: 'goal-3',
-    title: 'Publish Blog Posts',
-    description: 'Publish insightful content to drive organic traffic.',
-    icon: 'FileText',
-    color: '#EA580C',
+    id: '2',
+    title: 'Morning Run',
+    description: 'Go for a 30-minute run every weekday morning.',
+    icon: '🏃',
+    color: '#10B981',
     type: 'frequency',
-    frequency: 2,
-    targetPeriod: 'Weekly',
-    collaborators: ['user-3', 'user-5'],
+    frequency: 'Weekly',
+    specificDays: ['Mo', 'Tu', 'We', 'Th', 'Fr'],
+    tags: [dummyTags[2], dummyTags[3], dummyTags[4]],
+    completions: [],
+    collaborators: [dummyUsers[0], dummyUsers[2]],
+  },
+  {
+    id: '6',
+    title: 'Save Money',
+    description: 'Save Rp 5.000.000 for a new gadget.',
+    icon: '💰',
+    color: '#22C55E',
+    type: 'value',
+    targetValue: 5000000,
+    unit: 'IDR',
+    frequency: 'Daily',
+    specificDays: [],
+    tags: [{ id: 'tag-12', name: 'Finance', color: '#22C55E' }],
     completions: [
-      { id: 'comp-7', date: '2024-05-02T00:00:00.000Z', value: 1, userId: 'user-3' },
-      { id: 'comp-8', date: '2024-05-06T00:00:00.000Z', value: 1, userId: 'user-3' },
-      { id: 'comp-9', date: '2024-05-09T00:00:00.000Z', value: 1, userId: 'user-5' },
-      { id: 'comp-10', date: '2024-05-15T00:00:00.000Z', value: 1, userId: 'user-3' },
+      { date: '2024-08-01T10:00:00Z', value: 500000, achieverId: '1' },
+      { date: '2024-08-05T14:30:00Z', value: 1250000, achieverId: '2' }
     ],
+    collaborators: [dummyUsers[0], dummyUsers[1]],
+  },
+  {
+    id: '4',
+    title: 'Drink 8 Glasses of Water',
+    description: 'Stay hydrated by drinking at least 8 glasses of water.',
+    icon: '💧',
+    color: '#0EA5E9',
+    type: 'frequency',
+    frequency: 'Daily',
+    specificDays: [],
+    tags: [dummyTags[8], dummyTags[2]],
+    completions: [],
+    collaborators: [dummyUsers[1]],
+  },
+  {
+    id: '5',
+    title: 'Meditate',
+    description: 'Meditate for 10 minutes every morning.',
+    icon: '🧘',
+    color: '#8B5CF6',
+    type: 'frequency',
+    frequency: 'Daily',
+    specificDays: [],
+    tags: [dummyTags[9], dummyTags[10]],
+    completions: [],
+    collaborators: [],
   },
 ];
