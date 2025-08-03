@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Project, Comment, dummyProjects } from "@/data/projects";
+import { Project, Comment, dummyProjects, User } from "@/data/projects";
 import { useUser } from "@/contexts/UserContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ const ProjectComments = ({
     id: user.id,
     display: user.name,
     avatar: user.avatar,
-    initials: user.initials,
+    initials: user.initials || user.name.slice(0, 2).toUpperCase(),
   }));
 
   const projectsForMentions = dummyProjects.map(p => ({
@@ -209,7 +209,7 @@ const ProjectComments = ({
               <div key={item.id} className="flex items-start space-x-3 p-3 rounded-lg">
                 <Avatar>
                   <AvatarImage src={item.author.avatar} />
-                  <AvatarFallback>{item.author.name.slice(0, 2)}</AvatarFallback>
+                  <AvatarFallback>{item.author.initials || item.author.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
