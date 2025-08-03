@@ -1,3 +1,5 @@
+import { User } from '@/data/users';
+
 export interface GoalCompletion {
   date: string; // YYYY-MM-DD
   completed: boolean;
@@ -13,6 +15,7 @@ export interface Goal {
   specificDays: string[];
   tags: string[];
   completions: GoalCompletion[];
+  collaborators: User[];
 }
 
 export const dummyGoals: Goal[] = [
@@ -26,6 +29,7 @@ export const dummyGoals: Goal[] = [
     specificDays: [],
     tags: ['Learning', 'Personal Growth'],
     completions: [],
+    collaborators: [],
   },
   {
     id: '2',
@@ -37,6 +41,7 @@ export const dummyGoals: Goal[] = [
     specificDays: ['Mo', 'Tu', 'We', 'Th', 'Fr'],
     tags: ['Health', 'Fitness', 'Cardio'],
     completions: [],
+    collaborators: [],
   },
   {
     id: '3',
@@ -48,6 +53,7 @@ export const dummyGoals: Goal[] = [
     specificDays: ['Mo', 'We', 'Fr'],
     tags: ['Music', 'Hobby', 'Skill'],
     completions: [],
+    collaborators: [],
   },
   {
     id: '4',
@@ -59,6 +65,7 @@ export const dummyGoals: Goal[] = [
     specificDays: [],
     tags: ['Health', 'Hydration'],
     completions: [],
+    collaborators: [],
   },
   {
     id: '5',
@@ -70,5 +77,6 @@ export const dummyGoals: Goal[] = [
     specificDays: [],
     tags: ['Mindfulness', 'Mental Health'],
     completions: [],
+    collaborators: [],
   },
 ];

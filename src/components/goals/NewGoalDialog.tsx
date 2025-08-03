@@ -16,13 +16,13 @@ interface NewGoalDialogProps {
 }
 
 const weekDays = [
-  { label: 'S', value: '0' },
-  { label: 'M', value: '1' },
-  { label: 'T', value: '2' },
-  { label: 'W', value: '3' },
-  { label: 'T', value: '4' },
-  { label: 'F', value: '5' },
-  { label: 'S', value: '6' },
+  { label: 'S', value: 'Su' },
+  { label: 'M', value: 'Mo' },
+  { label: 'T', value: 'Tu' },
+  { label: 'W', value: 'We' },
+  { label: 'T', value: 'Th' },
+  { label: 'F', value: 'Fr' },
+  { label: 'S', value: 'Sa' },
 ];
 
 const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps) => {
@@ -36,10 +36,12 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
     if (!title) return;
     onGoalCreate({
       title,
+      description: '',
       frequency,
-      specificDays: frequency === 'Weekly' ? specificDays.map(Number) : undefined,
+      specificDays: frequency === 'Weekly' ? specificDays : [],
       icon,
       color,
+      tags: [],
     });
     setTitle('');
     setFrequency('Daily');
