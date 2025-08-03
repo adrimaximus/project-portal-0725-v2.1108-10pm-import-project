@@ -1,24 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Puzzle } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
 
 const IntegrationCard = () => {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate('/settings/integrations');
+  };
+
   return (
-    <Link to="/settings/integrations" className="block">
-      <Card className="h-full hover:border-primary/50 hover:shadow-md transition-all duration-200">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium">Integrations</CardTitle>
-            <Puzzle className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Connect and manage your third-party application integrations.
-          </p>
-        </CardContent>
-      </Card>
-    </Link>
+    <Card onClick={handleClick} className="cursor-pointer hover:bg-muted/50 transition-colors h-full">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-base font-medium">Integrations</CardTitle>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          Connect and manage your third-party application integrations.
+        </p>
+      </CardContent>
+    </Card>
   );
 };
 

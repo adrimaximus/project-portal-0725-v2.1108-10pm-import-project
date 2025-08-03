@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PanelLeft, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 export interface NavItem {
   id: string;
@@ -46,7 +46,6 @@ const NavigationCard = () => {
       try {
         new URL(newItemUrl);
       } catch (_) {
-        // Silently fail on invalid URL, button is disabled anyway for empty url
         return;
       }
       
@@ -68,19 +67,14 @@ const NavigationCard = () => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Card className="cursor-pointer hover:bg-muted/50 transition-colors h-full">
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-muted rounded-md">
-                  <PanelLeft className="h-6 w-6" />
-                </div>
-                <div>
-                  <CardTitle>Navigation</CardTitle>
-                  <CardDescription>
-                    Add custom pages to your sidebar menu.
-                  </CardDescription>
-                </div>
-              </div>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium">Navigation</CardTitle>
             </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Add custom pages to your sidebar menu.
+              </p>
+            </CardContent>
           </Card>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[525px]">
