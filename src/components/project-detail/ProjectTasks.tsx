@@ -148,6 +148,28 @@ const ProjectTasks = ({ project, tasks, assignableUsers, onTasksUpdate }: Projec
     return assignableUsers.find(u => u.id === userId);
   };
 
+  const renderTaskName = (name: string) => {
+    const nameWithoutMentions = name.replace(/@\[[^\]]+\]\([^)]+\)/g, '').trim();
+    const parts = nameWithoutMentions.split(/(\/\[[^\]]+\]\([^)]+\))/g);
+
+    return (
+      <>
+        {parts.map((part, index) => {
+          const match = part.match(/\/\[([^\]]+)\]\(([^)]+)\)/);
+          if (match) {
+            const [, text, id] = match;
+            return (
+              <a key={index} href={`/projects/${id}`} className="text-blue-600 hover:underline font-medium">
+                {text}
+              </a>
+            );
+          }
+          return <span key={index}>{part}</span>;
+        })}
+      </>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex space-x-2">
@@ -212,7 +234,7 @@ const ProjectTasks = ({ project, tasks, assignableUsers, onTasksUpdate }: Projec
                   />
                 </TableCell>
                 <TableCell className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
-                  {task.name}
+                  {renderTaskName(task.name)}
                 </TableCell>
                 <TableCell>
                   <div className="flex -space-x-2">
