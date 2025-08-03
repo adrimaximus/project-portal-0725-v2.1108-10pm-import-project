@@ -209,45 +209,43 @@ const ProjectDetail = () => {
 
   return (
     <PortalLayout>
-      <div className="-mt-4 md:-mt-8">
-        <ProjectHeader 
-          project={project} 
-          isEditing={isEditing}
-          projectName={editedProject.name}
-          onProjectNameChange={handleProjectNameChange}
-          onEditToggle={() => setIsEditing(!isEditing)}
-          onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleCancelChanges}
-          canEdit={canEdit}
-        />
-        <div className="relative z-0 grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-          <div className="lg:col-span-2 space-y-6">
-            <ProjectInfoCards 
-              project={project}
-              isEditing={isEditing}
-              editedProject={editedProject}
-              onSelectChange={handleSelectChange}
-              onDateChange={handleDateChange}
-              onBudgetChange={handleBudgetChange}
-            />
-            <ProjectMainContent
-              project={editedProject}
-              isEditing={isEditing}
-              onDescriptionChange={handleDescriptionChange}
-              onTeamChange={handleTeamChange}
-              onFilesChange={handleFilesChange}
-              onServicesChange={handleServicesChange}
-              onAddCommentOrTicket={handleAddCommentOrTicket}
-              onTasksUpdate={handleTasksUpdate}
-              ticketCount={openTicketCount}
-              allProjects={dummyProjects}
-            />
-          </div>
-          <div className="lg:col-span-1 space-y-6">
-            <ProjectProgressCard 
-              project={editedProject}
-            />
-          </div>
+      <ProjectHeader 
+        project={project} 
+        isEditing={isEditing}
+        projectName={editedProject.name}
+        onProjectNameChange={handleProjectNameChange}
+        onEditToggle={() => setIsEditing(!isEditing)}
+        onSaveChanges={handleSaveChanges}
+        onCancelChanges={handleCancelChanges}
+        canEdit={canEdit}
+      />
+      <div className="relative z-0 grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div className="lg:col-span-2 space-y-6">
+          <ProjectInfoCards 
+            project={project}
+            isEditing={isEditing}
+            editedProject={editedProject}
+            onSelectChange={handleSelectChange}
+            onDateChange={handleDateChange}
+            onBudgetChange={handleBudgetChange}
+          />
+          <ProjectMainContent
+            project={editedProject}
+            isEditing={isEditing}
+            onDescriptionChange={handleDescriptionChange}
+            onTeamChange={handleTeamChange}
+            onFilesChange={handleFilesChange}
+            onServicesChange={handleServicesChange}
+            onAddCommentOrTicket={handleAddCommentOrTicket}
+            onTasksUpdate={handleTasksUpdate}
+            ticketCount={openTicketCount}
+            allProjects={dummyProjects}
+          />
+        </div>
+        <div className="lg:col-span-1 space-y-6">
+          <ProjectProgressCard 
+            project={editedProject}
+          />
         </div>
       </div>
     </PortalLayout>
