@@ -107,7 +107,7 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
           />
           <Button onClick={handleLog}>Log</Button>
         </div>
-        <GoalLogTable logs={logsInPeriod} goalType={goal.type} />
+        <GoalLogTable goal={{ ...goal, completions: logsInPeriod }} />
       </CardContent>
     </Card>
   );

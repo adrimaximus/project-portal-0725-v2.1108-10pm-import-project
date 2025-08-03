@@ -32,17 +32,21 @@ const GoalDetailPage = () => {
     updateGoal(updatedGoal);
   };
 
-  const handleAddCompletion = (value: number, notes?: string) => {
+  const handleAddCompletion = (value: number, notes?: string, date: Date = new Date()) => {
     if (!goal) return;
     const newCompletion: GoalCompletion = {
       id: `comp-${Date.now()}`,
-      date: new Date().toISOString(),
+      date: date.toISOString(),
       value: value,
       notes: notes,
       collaboratorId: user.id,
     };
     const updatedGoal = { ...goal, completions: [...goal.completions, newCompletion] };
     updateGoal(updatedGoal);
+  };
+
+  const handleLogProgress = (date: Date, value: number) => {
+    handleAddCompletion(value, undefined, date);
   };
 
   const handleToggleCompletion = (date: Date) => {
@@ -67,7 +71,7 @@ const GoalDetailPage = () => {
   const renderTracker = () => {
     switch (goal.type) {
       case "quantity":
-        return <GoalQuantityTracker goal={goal} onLogProgress={handleAddCompletion} />;
+        return <GoalQuantityTracker goal={goal} onLogProgress={handleLogProgress} />;
       case "value":
         return <GoalValueTracker goal={goal} onAddCompletion={handleAddCompletion} />;
       case "frequency":

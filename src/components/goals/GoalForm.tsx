@@ -47,7 +47,7 @@ export function GoalForm({ goal, users, onSubmit, onCancel }: GoalFormProps) {
       : {
           title: "",
           collaborators: [],
-          tags: [],
+          tags: [] as Tag[],
         },
   });
 
@@ -77,9 +77,7 @@ export function GoalForm({ goal, users, onSubmit, onCancel }: GoalFormProps) {
                 <TagInput
                   placeholder="Enter a tag"
                   tags={field.value}
-                  setTags={(newTags) => {
-                    form.setValue("tags", newTags);
-                  }}
+                  setTags={(newTags: Tag[]) => field.onChange(newTags)}
                 />
               </FormControl>
               <FormMessage />
