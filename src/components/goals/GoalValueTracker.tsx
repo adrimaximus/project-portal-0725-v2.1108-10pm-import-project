@@ -1,160 +1,92 @@
-import { useState, useMemo } from 'react';
-import { Goal } from '@/data/goals';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
-import { formatValue, formatNumber } from '@/lib/formatting';
-import GoalLogTable from './GoalLogTable';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, differenceInDays } from 'date-fns';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useState } from "react";
+import { Goal, GoalCompletion } from "@/data/goals";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { useUser } from "@/contexts/UserContext";
+import { getProgress } from "@/lib/progress";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
 interface GoalValueTrackerProps {
   goal: Goal;
-  onLogValue: (date: Date, value: number) => void;
+  onAddCompletion: (value: number, notes?: string) => void;
 }
 
-const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
-  const [logValue, setLogValue] = useState<number | ''>('');
+export function GoalValueTracker({ goal, onAddCompletion }: GoalValueTrackerProps) {
+  const [value, setValue] = useState<number | string>("");
+  const { user } = useUser();
 
-  const { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, valueToGo, achieverSummary } = useMemo(() => {
-    const today = new Date();
-    let periodStart, periodEnd, periodName;
-
-    if (goal.targetPeriod === 'Weekly') {
-      periodStart = startOfWeek(today, { weekStartsOn: 1 });
-      periodEnd = endOfWeek(today, { weekStartsOn: 1 });
-      periodName = "minggu ini";
-    } else { // Monthly
-      periodStart = startOfMonth(today);
-      periodEnd = endOfMonth(today);
-      periodName = "bulan ini";
-    }
-
-    const daysRemaining = differenceInDays(periodEnd, today);
-
-    const logsInPeriod = goal.completions.filter(c => {
-      const completionDate = parseISO(c.date);
-      return isWithinInterval(completionDate, { start: periodStart, end: periodEnd });
-    });
-
-    const currentPeriodTotal = logsInPeriod.reduce((sum, c) => sum + c.value, 0);
-    const periodProgress = goal.targetValue ? Math.round((currentPeriodTotal / goal.targetValue) * 100) : 0;
-    const valueToGo = Math.max(0, (goal.targetValue || 0) - currentPeriodTotal);
-    
-    const achieverSummary = goal.collaborators.map(collaborator => {
-        const collaboratorLogs = logsInPeriod.filter(log => log.userId === collaborator.id);
-        const totalValue = collaboratorLogs.reduce((sum, log) => sum + log.value, 0);
-        return {
-            ...collaborator,
-            totalValue,
-        };
-    }).filter(summary => summary.totalValue > 0)
-      .sort((a, b) => b.totalValue - a.totalValue);
-
-    return { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, valueToGo, achieverSummary };
-  }, [goal]);
-
-  const handleLog = () => {
-    const value = Number(logValue);
-    if (value > 0) {
-      onLogValue(new Date(), value);
-      toast.success(`Mencatat ${formatValue(value, goal.unit)} untuk "${goal.title}"`);
-      setLogValue('');
-    } else {
-      toast.error("Silakan masukkan angka yang valid.");
+  const getPeriodDateRange = () => {
+    const now = new Date();
+    switch (goal.targetPeriod) {
+      case 'Daily': return { start: now, end: now };
+      case 'Weekly': return { start: startOfWeek(now), end: endOfWeek(now) };
+      case 'Monthly': return { start: startOfMonth(now), end: endOfMonth(now) };
+      case 'Yearly': return { start: startOfYear(now), end: endOfYear(now) };
+      default: return { start: now, end: now };
     }
   };
 
-  const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
-    const sanitizedValue = rawValue.replace(/,/g, '');
+  const { start, end } = getPeriodDateRange();
+  const completionsInPeriod = goal.completions.filter(c => {
+    const cDate = new Date(c.date);
+    return cDate >= start && cDate <= end;
+  });
 
-    if (sanitizedValue === '') {
-      setLogValue('');
-      return;
-    }
+  const currentTotal = completionsInPeriod.reduce((sum, c) => sum + (c.value || 0), 0);
+  const progress = getProgress(goal, currentTotal);
+  const isOwnCompletion = (c: GoalCompletion) => !c.collaboratorId || c.collaboratorId === user.id;
+  const userCompletionsInPeriod = completionsInPeriod.filter(isOwnCompletion);
 
-    const numValue = parseInt(sanitizedValue, 10);
-    if (!isNaN(numValue)) {
-      setLogValue(numValue);
+  const handleAdd = () => {
+    const numValue = Number(value);
+    if (numValue > 0) {
+      onAddCompletion(numValue);
+      setValue("");
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <CardTitle>Progres {periodName}</CardTitle>
-          {daysRemaining >= 0 && (
-            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-              {daysRemaining} hari lagi
-            </span>
-          )}
-        </div>
+        <CardTitle>Log Value for {format(new Date(), "MMMM do")}</CardTitle>
         <CardDescription>
-          Anda telah mencatat {formatValue(currentPeriodTotal, goal.unit)} dari {formatValue(goal.targetValue || 0, goal.unit)}.
-          {valueToGo > 0 ? (
-            <span className="font-medium"> {formatValue(valueToGo, goal.unit)} lagi.</span>
-          ) : (
-            <span className="font-medium text-green-600"> Target tercapai! 🎉</span>
-          )}
+          Current total this {goal.targetPeriod.toLowerCase().slice(0, -2)}: {currentTotal.toLocaleString()} {goal.unit || ''}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-4">
-          <Progress value={periodProgress} style={{ '--primary-color': goal.color } as React.CSSProperties} className="h-3 [&>*]:bg-[var(--primary-color)]" />
-          <span className="font-bold text-lg">{periodProgress}%</span>
-        </div>
-        <div className="flex gap-2 mt-4">
+        <div className="flex gap-2">
           <Input
-            type="text"
-            inputMode="numeric"
-            placeholder={`Catat ${goal.unit || 'nilai'}...`}
-            value={logValue !== '' ? formatNumber(logValue) : ''}
-            onChange={handleNumericInputChange}
-            onKeyPress={(e) => e.key === 'Enter' && handleLog()}
+            type="number"
+            placeholder={`Enter value in ${goal.unit || ''}`}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleAdd()}
           />
-          <Button onClick={handleLog}>Catat</Button>
+          <Button onClick={handleAdd}>Add</Button>
         </div>
-
-        {achieverSummary.length > 1 && (
-            <div className="mt-6 pt-4 border-t">
-                <h4 className="font-semibold text-sm mb-3 text-muted-foreground">Kontribusi per Anggota</h4>
-                <ul className="space-y-4">
-                    {achieverSummary.map(achiever => (
-                        <li key={achiever.id} className="flex items-center gap-3">
-                            <Avatar className="w-9 h-9">
-                                <AvatarImage src={achiever.avatar} alt={achiever.name} />
-                                <AvatarFallback>{achiever.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                                <div className="flex justify-between items-baseline">
-                                    <p className="font-semibold">{achiever.name}</p>
-                                    <p className="text-sm font-bold">{formatValue(achiever.totalValue, goal.unit)}</p>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <Progress 
-                                        value={currentPeriodTotal > 0 ? (achiever.totalValue / currentPeriodTotal) * 100 : 0} 
-                                        className="h-1.5 flex-1 [&>*]:bg-[var(--primary-color)]"
-                                        style={{ '--primary-color': goal.color } as React.CSSProperties}
-                                    />
-                                    <span className="text-xs font-medium text-muted-foreground">
-                                        {Math.round(currentPeriodTotal > 0 ? (achiever.totalValue / currentPeriodTotal) * 100 : 0)}%
-                                    </span>
-                                </div>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        )}
-
-        <GoalLogTable logs={logsInPeriod} unit={goal.unit} goalType={goal.type} />
+        <div className="mt-4">
+          <div className="flex justify-between mb-1">
+            <span className="text-sm font-medium">
+              Period Progress ({currentTotal.toLocaleString()} / {goal.targetValue?.toLocaleString()} {goal.unit || ''})
+            </span>
+            <span className="text-sm font-medium">{progress.toFixed(0)}%</span>
+          </div>
+          <Progress value={progress} className="w-full" style={{'--progress-color': goal.color} as React.CSSProperties} />
+        </div>
+        <div className="mt-4">
+          <h4 className="font-semibold">Your contributions this period:</h4>
+          <ul className="list-disc list-inside text-sm text-muted-foreground">
+            {userCompletionsInPeriod.map(c => (
+              <li key={c.id}>
+                {c.value?.toLocaleString()} {goal.unit || ''} on {format(new Date(c.date), 'MMM d')}
+              </li>
+            ))}
+             {userCompletionsInPeriod.length === 0 && <li>No contributions yet.</li>}
+          </ul>
+        </div>
       </CardContent>
     </Card>
   );
-};
-
-export default GoalValueTracker;
+}

@@ -1,60 +1,56 @@
-import { Goal, GoalCompletion } from '@/data/goals';
-import { dummyUsers } from '@/data/users';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
-import { formatValue } from '@/lib/formatting';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Goal, GoalCompletion } from "@/data/goals";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatDistanceToNow } from "date-fns";
 
 interface GoalLogTableProps {
-  logs: GoalCompletion[];
-  unit?: string;
-  goalType: Goal['type'];
+  goal: Goal;
 }
 
-const userMap = new Map(dummyUsers.map(user => [user.id, user]));
+export function GoalLogTable({ goal }: GoalLogTableProps) {
+  const getCompletionText = (completion: GoalCompletion) => {
+    if (goal.type === 'value' && completion.value) {
+      return `Logged ${completion.value.toLocaleString()} ${goal.unit || ''}`;
+    }
+    if (goal.type === 'quantity') {
+      return `Completed 1 item`;
+    }
+    return "Completed";
+  };
 
-const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
-  if (logs.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center py-4">No logs yet.</p>;
-  }
-
-  const sortedLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const sortedCompletions = [...goal.completions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="border rounded-md mt-4">
+    <div className="max-h-96 overflow-y-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Date & Time</TableHead>
-            <TableHead>Achiever</TableHead>
-            <TableHead className="text-right">
-              {goalType === 'quantity' ? 'Quantity' : 'Value'}
-            </TableHead>
+            <TableHead>Activity</TableHead>
+            <TableHead>User</TableHead>
+            <TableHead className="text-right">Date</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedLogs.map((log, index) => {
-            const achiever = log.userId ? userMap.get(log.userId) : null;
+          {sortedCompletions.map(completion => {
+            const collaborator = goal.collaborators.find(c => c.id === completion.collaboratorId);
             return (
-              <TableRow key={index}>
-                <TableCell className="text-muted-foreground text-xs">
-                  {format(new Date(log.date), 'MMM dd, yyyy, hh:mm a')}
-                </TableCell>
+              <TableRow key={completion.id}>
+                <TableCell className="font-medium">{getCompletionText(completion)}</TableCell>
                 <TableCell>
-                  {achiever ? (
+                  {collaborator ? (
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={achiever.avatar} />
-                        <AvatarFallback>{achiever.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={collaborator.avatar} />
+                        <AvatarFallback>{collaborator.initials}</AvatarFallback>
                       </Avatar>
-                      <span className="text-sm font-medium">{achiever.name}</span>
+                      <span className="text-sm">{collaborator.name}</span>
                     </div>
                   ) : (
-                    <span className="text-sm text-muted-foreground">-</span>
+                    <span className="text-sm text-muted-foreground">System</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right font-medium">
-                  {formatValue(log.value, unit)}
+                <TableCell className="text-right text-sm text-muted-foreground">
+                  {formatDistanceToNow(new Date(completion.date), { addSuffix: true })}
                 </TableCell>
               </TableRow>
             );
@@ -63,6 +59,4 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
       </Table>
     </div>
   );
-};
-
-export default GoalLogTable;
+}

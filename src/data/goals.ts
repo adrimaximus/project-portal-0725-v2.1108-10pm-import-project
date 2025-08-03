@@ -1,88 +1,95 @@
-import { User, dummyUsers } from './users';
-import { Tag } from './tags';
+import { User } from './projects';
 
-export type GoalType = 'quantity' | 'value' | 'frequency';
+export type GoalType = 'value' | 'quantity' | 'frequency';
 export type GoalPeriod = 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
+export type GoalFrequency = 'Daily' | 'Weekly';
 
 export interface GoalCompletion {
   id: string;
-  date: string; // ISO 8601 date string
-  value: number;
+  date: string;
+  value?: number;
   notes?: string;
-  userId: string;
+  collaboratorId?: string;
 }
 
 export interface Goal {
   id: string;
   title: string;
-  description: string;
-  icon: string;
-  iconUrl?: string;
-  color: string;
+  description?: string;
   type: GoalType;
+  targetPeriod: GoalPeriod;
   targetQuantity?: number;
   targetValue?: number;
-  frequency: 'Daily' | 'Weekly';
-  targetPeriod?: GoalPeriod;
   unit?: string;
-  collaborators: User[];
+  frequency?: GoalFrequency;
+  specificDays?: number[];
+  color: string;
+  icon: string;
+  iconUrl?: string;
   completions: GoalCompletion[];
-  tags: Tag[];
-  specificDays: string[];
+  collaborators: User[];
+  tags: string[];
+  targetDate: string;
+  status: 'On Track' | 'At Risk' | 'Completed';
 }
 
+const dummyUser1: User = { id: 'user-1', name: 'Alex Doe', avatar: 'https://i.pravatar.cc/150?u=alex', initials: 'AD' };
+const dummyUser2: User = { id: 'user-2', name: 'Jane Smith', avatar: 'https://i.pravatar.cc/150?u=jane', initials: 'JS' };
+
 export const dummyGoals: Goal[] = [
-  {
-    id: 'goal-1',
-    title: 'Launch New Feature',
-    description: 'Successfully launch the new "Teams" feature by the end of Q3.',
-    icon: 'Rocket',
-    color: '#6D28D9',
+  { 
+    id: 'goal-001', 
+    title: 'Launch new marketing campaign', 
+    description: 'Plan and execute a multi-channel marketing campaign for the new product.',
+    targetDate: '2024-09-30', 
+    status: 'On Track',
     type: 'quantity',
-    targetQuantity: 1,
-    targetPeriod: 'Yearly',
-    collaborators: [dummyUsers[0], dummyUsers[1], dummyUsers[2]],
+    targetPeriod: 'Monthly',
+    targetQuantity: 5,
+    color: '#4A90E2',
+    icon: 'Megaphone',
     completions: [
-      { id: 'comp-1', date: '2024-08-15T00:00:00.000Z', value: 1, userId: 'user-1' },
+      { id: 'c-1', date: '2024-07-15', value: 1, notes: 'Published blog post', collaboratorId: 'user-1' },
+      { id: 'c-2', date: '2024-07-22', value: 1, notes: 'Launched social media ads', collaboratorId: 'user-1' },
     ],
-    tags: [],
-    specificDays: [],
-    frequency: 'Daily',
+    collaborators: [dummyUser1],
+    tags: ['marketing', 'launch'],
   },
-  {
-    id: 'goal-2',
-    title: 'Increase MRR',
-    description: 'Grow Monthly Recurring Revenue by 20% in the second half of the year.',
-    icon: 'DollarSign',
-    color: '#16A34A',
+  { 
+    id: 'goal-002', 
+    title: 'Increase user engagement by 15%', 
+    description: 'Implement features to improve user retention and daily active users.',
+    targetDate: '2024-12-31', 
+    status: 'At Risk',
     type: 'value',
-    targetValue: 120000,
     targetPeriod: 'Yearly',
-    unit: '$',
-    collaborators: [dummyUsers[0], dummyUsers[3]],
+    targetValue: 15,
+    unit: '%',
+    color: '#F5A623',
+    icon: 'TrendingUp',
     completions: [
-      { id: 'comp-2', date: '2024-01-20T00:00:00.000Z', value: 8000, userId: 'user-1' },
-      { id: 'comp-3', date: '2024-02-18T00:00:00.000Z', value: 9500, userId: 'user-1' },
+      { id: 'c-3', date: '2024-07-20', value: 5, notes: 'Initial increase after feature A', collaboratorId: 'user-2' },
     ],
-    tags: [],
-    specificDays: [],
-    frequency: 'Daily',
+    collaborators: [dummyUser1, dummyUser2],
+    tags: ['product', 'growth', 'kpi'],
   },
-  {
-    id: 'goal-3',
-    title: 'Publish Blog Posts',
-    description: 'Publish insightful content to drive organic traffic.',
-    icon: 'FileText',
-    color: '#EA580C',
+  { 
+    id: 'goal-003', 
+    title: 'Complete Q2 financial audit', 
+    description: 'Finalize and submit all financial documents for the second quarter.',
+    targetDate: '2024-06-30', 
+    status: 'Completed',
     type: 'frequency',
-    frequency: 'Weekly',
     targetPeriod: 'Weekly',
-    collaborators: [dummyUsers[2], dummyUsers[4]],
+    frequency: 'Weekly',
+    specificDays: [1, 3, 5],
+    color: '#7ED321',
+    icon: 'ClipboardCheck',
     completions: [
-      { id: 'comp-7', date: '2024-05-02T00:00:00.000Z', value: 1, userId: 'user-3' },
-      { id: 'comp-8', date: '2024-05-06T00:00:00.000Z', value: 1, userId: 'user-3' },
+      { id: 'c-4', date: '2024-06-03', value: 1, collaboratorId: 'user-2' },
+      { id: 'c-5', date: '2024-06-05', value: 1, collaboratorId: 'user-2' },
     ],
-    tags: [],
-    specificDays: [],
+    collaborators: [dummyUser2],
+    tags: ['finance', 'audit'],
   },
 ];
