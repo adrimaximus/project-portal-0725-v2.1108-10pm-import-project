@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { formatValue } from '@/lib/formatting';
+import { formatValue, formatNumber } from '@/lib/formatting';
 import GoalLogTable from './GoalLogTable';
 
 interface GoalValueTrackerProps {
@@ -33,6 +33,21 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
     }
   };
 
+  const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const sanitizedValue = rawValue.replace(/,/g, '');
+
+    if (sanitizedValue === '') {
+      setLogValue('');
+      return;
+    }
+
+    const numValue = parseInt(sanitizedValue, 10);
+    if (!isNaN(numValue)) {
+      setLogValue(numValue);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -48,10 +63,11 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
         </div>
         <div className="flex gap-2 mt-4">
           <Input
-            type="number"
+            type="text"
+            inputMode="numeric"
             placeholder={`Log ${goal.unit || 'value'}...`}
-            value={logValue}
-            onChange={(e) => setLogValue(e.target.value === '' ? '' : Number(e.target.value))}
+            value={logValue !== '' ? formatNumber(logValue) : ''}
+            onChange={handleNumericInputChange}
             onKeyPress={(e) => e.key === 'Enter' && handleLog()}
           />
           <Button onClick={handleLog}>Log</Button>
