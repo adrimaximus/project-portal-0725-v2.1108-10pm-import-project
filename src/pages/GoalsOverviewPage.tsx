@@ -7,7 +7,7 @@ import { Plus } from 'lucide-react';
 import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import { toast } from 'sonner';
 
-const GoalsPage = () => {
+const GoalsOverviewPage = () => {
   const [goals, setGoals] = useState<Goal[]>(dummyGoals);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
@@ -48,4 +48,4 @@ const GoalsPage = () => {
   );
 };
 
-export default GoalsPage;
+export default GoalsOverviewPage;
