@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Goal } from '@/data/goals';
+import { User } from '@/data/users';
 import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,10 +18,12 @@ interface GoalYearlyProgressProps {
   frequency: string;
   specificDays?: string[];
   goalTitle: string;
+  goalDescription: string;
   goalTags: string[];
+  collaborators: User[];
 }
 
-const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency, specificDays, goalTitle, goalTags }: GoalYearlyProgressProps) => {
+const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency, specificDays, goalTitle, goalDescription, goalTags, collaborators }: GoalYearlyProgressProps) => {
   const today = new Date();
   const currentYear = getYear(today);
   const [displayYear, setDisplayYear] = useState(currentYear);
@@ -143,9 +146,12 @@ const GoalYearlyProgress = ({ completions, color, onToggleCompletion, frequency,
             frequency={frequency}
             displayYear={displayYear}
             goalTitle={goalTitle}
+            goalDescription={goalDescription}
             goalTags={goalTags}
             userName={userName}
             selectedMonth={selectedMonth}
+            collaborators={collaborators}
+            color={color}
           />
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

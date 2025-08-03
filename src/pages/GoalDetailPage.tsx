@@ -171,7 +171,9 @@ const GoalDetailPage = () => {
           frequency={goal.frequency}
           specificDays={goal.specificDays}
           goalTitle={goal.title}
+          goalDescription={goal.description}
           goalTags={goal.tags.map(t => t.name)}
+          collaborators={goal.collaborators}
         />
 
         <GoalCollaborationManager goal={goal} onCollaboratorsUpdate={handleCollaboratorsUpdate} />
