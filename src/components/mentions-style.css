@@ -8,7 +8,7 @@
 
 /* This div mirrors the textarea and displays the styled text */
 .mentions__highlighter {
-  @apply absolute top-0 left-0 w-full p-2 min-h-[40px] text-sm leading-snug pointer-events-none overflow-hidden whitespace-pre-wrap break-words;
+  @apply absolute top-0 left-0 w-full p-2 min-h-[40px] text-sm leading-snug pointer-events-none overflow-hidden whitespace-pre-wrap break-words text-foreground;
   font-family: inherit;
 }
 
