@@ -18,7 +18,7 @@ const getStatusBadgeVariant = (status: Project['status']) => {
       return 'success';
     case 'At Risk':
     case 'On Hold':
-      return 'warning';
+      return 'secondary';
     case 'Off Track':
     case 'Cancelled':
       return 'destructive';

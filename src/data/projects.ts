@@ -3,8 +3,22 @@ import { Tag } from './tags';
 import { dummyComments } from './comments';
 
 export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'Completed' | 'Done' | 'Billed' | 'On Hold' | 'Cancelled' | 'In Progress' | 'Requested';
-export type PaymentStatus = 'Paid' | 'Pending' | 'Overdue' | 'Draft';
-export type ActivityType = 'comment' | 'status_change' | 'file_upload' | 'assignment';
+export type PaymentStatus = 'Paid' | 'Pending' | 'Overdue' | 'Draft' | 'Proposed' | 'Approved' | 'PO Created' | 'On Process' | 'Cancelled';
+export type ActivityType = 
+  | 'comment' 
+  | 'status_change' 
+  | 'file_upload' 
+  | 'assignment' 
+  | 'ticket_created' 
+  | 'ticket_resolved' 
+  | 'payment_status_change' 
+  | 'progress_update' 
+  | 'budget_change' 
+  | 'deadline_change' 
+  | 'start_date_change' 
+  | 'member_add' 
+  | 'task_assign' 
+  | 'commit';
 
 export type AssignedUser = User;
 
@@ -12,7 +26,7 @@ export interface Task {
   id: string;
   title: string;
   completed: boolean;
-  assignedTo?: AssignedUser;
+  assignedTo?: string[];
 }
 
 export interface Comment {
@@ -20,12 +34,14 @@ export interface Comment {
   user: User;
   text: string;
   timestamp: string;
+  isTicket?: boolean;
 }
 
 export interface ProjectFile {
   name: string;
-  size: string;
+  size: number;
   url: string;
+  type: string;
 }
 
 export interface Activity {
@@ -34,6 +50,7 @@ export interface Activity {
   user: User;
   timestamp: string;
   details: string;
+  target?: string;
 }
 
 export interface Project {
@@ -79,11 +96,11 @@ export const dummyProjects: Project[] = [
     deadline: '2024-08-30',
     comments: dummyComments,
     tasks: [
-      { id: 'task-1', title: 'Design mockups', completed: true, assignedTo: dummyUsers[0] },
-      { id: 'task-2', title: 'Develop homepage', completed: true, assignedTo: dummyUsers[1] },
-      { id: 'task-3', title: 'Develop product pages', completed: false, assignedTo: dummyUsers[1] },
+      { id: 'task-1', title: 'Design mockups', completed: true, assignedTo: [dummyUsers[0].id] },
+      { id: 'task-2', title: 'Develop homepage', completed: true, assignedTo: [dummyUsers[1].id] },
+      { id: 'task-3', title: 'Develop product pages', completed: false, assignedTo: [dummyUsers[1].id] },
     ],
-    briefFiles: [{ name: 'brief.pdf', size: '2.5MB', url: '#' }],
+    briefFiles: [{ name: 'brief.pdf', size: 2500000, url: '#', type: 'application/pdf' }],
     services: ['Web Design', 'Development'],
     activities: [
       { id: 'act-1', type: 'comment', user: dummyUsers[0], timestamp: '2024-07-24T10:00:00Z', details: 'Posted a new comment.' },
@@ -109,8 +126,8 @@ export const dummyProjects: Project[] = [
     deadline: '2024-12-01',
     comments: [],
     tasks: [
-      { id: 'task-4', title: 'Setup CI/CD pipeline', completed: true, assignedTo: dummyUsers[1] },
-      { id: 'task-5', title: 'Implement authentication', completed: false, assignedTo: dummyUsers[1] },
+      { id: 'task-4', title: 'Setup CI/CD pipeline', completed: true, assignedTo: [dummyUsers[1].id] },
+      { id: 'task-5', title: 'Implement authentication', completed: false, assignedTo: [dummyUsers[1].id] },
     ],
     briefFiles: [],
     services: ['Mobile Development'],

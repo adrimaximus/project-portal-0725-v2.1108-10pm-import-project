@@ -41,15 +41,15 @@ const ProjectMainContent = ({
         <TabsContent value="tasks" className="mt-4">
           <ProjectTasks
             tasks={project.tasks || []}
-            team={project.assignedTo || []}
-            onTaskUpdate={onTaskUpdate}
+            assignableUsers={project.assignedTo || []}
+            onTasksUpdate={(updatedTasks) => project.tasks = updatedTasks}
           />
         </TabsContent>
         <TabsContent value="comments" className="mt-4">
           <ProjectComments
-            comments={project.comments || []}
-            team={project.assignedTo || []}
-            onCommentAdd={onCommentAdd}
+            project={project}
+            assignableUsers={project.assignedTo || []}
+            onAddCommentOrTicket={onCommentAdd}
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-4">

@@ -29,12 +29,6 @@ const ProjectDetail = () => {
     }
   };
 
-  const handleBudgetChange = (newBudget: number) => {
-    if (project) {
-      setProject({ ...project, budget: newBudget });
-    }
-  };
-
   const handleTeamChange = (newTeam: AssignedUser[]) => {
     if (project) {
       setProject({ ...project, assignedTo: newTeam });
@@ -43,7 +37,7 @@ const ProjectDetail = () => {
 
   const handleFilesChange = (newFiles: File[]) => {
     if (project) {
-      const newProjectFiles: ProjectFile[] = newFiles.map(f => ({ name: f.name, size: `${(f.size / 1024).toFixed(2)} KB`, url: '#' }));
+      const newProjectFiles: ProjectFile[] = newFiles.map(f => ({ name: f.name, size: f.size, url: '#', type: f.type }));
       setProject({ ...project, briefFiles: [...(project.briefFiles || []), ...newProjectFiles] });
     }
   };
@@ -113,7 +107,7 @@ const ProjectDetail = () => {
           <GripVertical />
         </ResizableHandle>
         <ResizablePanel defaultSize={35}>
-          <ProjectSidebar project={project} isEditing={isEditing} onBudgetChange={handleBudgetChange} />
+          <ProjectSidebar project={project} />
         </ResizablePanel>
       </ResizablePanelGroup>
     </PortalLayout>

@@ -5,8 +5,23 @@ import { ProjectDetailsForm } from "@/components/request/ProjectDetailsForm";
 import ModernTeamSelector from "@/components/request/ModernTeamSelector";
 import ServiceSelector from "@/components/request/ServiceSelector";
 import FileUploader from "@/components/request/FileUploader";
+import { useState } from "react";
+import { AssignedUser } from "@/data/projects";
+import { dummyUsers } from "@/data/users";
 
 const Request = () => {
+  const [selectedUsers, setSelectedUsers] = useState<AssignedUser[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+
+  const handleUserSelectionChange = (user: AssignedUser) => {
+    setSelectedUsers((prev) =>
+      prev.some((u) => u.id === user.id)
+        ? prev.filter((u) => u.id !== user.id)
+        : [...prev, user]
+    );
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6 max-w-4xl mx-auto">
@@ -30,7 +45,11 @@ const Request = () => {
               <CardDescription>Select the team members for this project.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ModernTeamSelector />
+              <ModernTeamSelector 
+                users={dummyUsers}
+                selectedUsers={selectedUsers}
+                onSelectionChange={handleUserSelectionChange}
+              />
             </CardContent>
           </Card>
           <Card>
@@ -39,7 +58,10 @@ const Request = () => {
               <CardDescription>Choose the services required for this project.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ServiceSelector />
+              <ServiceSelector 
+                selectedServices={selectedServices}
+                onSelectServices={setSelectedServices}
+              />
             </CardContent>
           </Card>
           <Card>
@@ -48,7 +70,7 @@ const Request = () => {
               <CardDescription>Upload any relevant documents.</CardDescription>
             </CardHeader>
             <CardContent>
-              <FileUploader />
+              <FileUploader onFilesChange={setFiles} />
             </CardContent>
           </Card>
           <div className="flex justify-end">

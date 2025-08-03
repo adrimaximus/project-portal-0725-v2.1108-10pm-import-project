@@ -98,7 +98,7 @@ const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksPro
     if (newTaskText.trim() === "") return;
     const newTask: Task = {
       id: `task-${Date.now()}`,
-      name: newTaskText.trim(),
+      title: newTaskText.trim(),
       completed: false,
       assignedTo: newTaskAssignees,
     };
@@ -162,7 +162,7 @@ const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksPro
                   />
                 </TableCell>
                 <TableCell className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
-                  {task.name}
+                  {task.title}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
