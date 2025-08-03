@@ -34,6 +34,9 @@ const GoalDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
+  // Assuming 'Alex Ray' is the logged-in user. Their ID is '2'.
+  const currentUserId = '2';
+
   useEffect(() => {
     const goalData = dummyGoals.find(g => g.id === goalId);
     if (goalData) {
@@ -87,7 +90,7 @@ const GoalDetailPage = () => {
     const newLog: GoalCompletion = {
       date: new Date().toISOString(),
       value,
-      achieverId: dummyUsers[0].id, // Assume current user is Alex
+      achieverId: currentUserId, // Use the correct user ID
     };
     const updatedGoal = { ...goal, completions: [...goal.completions, newLog] };
     setGoal(updatedGoal);
@@ -98,7 +101,7 @@ const GoalDetailPage = () => {
     const newLog: GoalCompletion = {
       date: new Date().toISOString(),
       value,
-      achieverId: dummyUsers[0].id, // Assume current user is Alex
+      achieverId: currentUserId, // Use the correct user ID
     };
     const updatedGoal = { ...goal, completions: [...goal.completions, newLog] };
     setGoal(updatedGoal);

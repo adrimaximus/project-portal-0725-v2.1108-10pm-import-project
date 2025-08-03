@@ -1,71 +1,63 @@
-import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
-import { Service } from "@/data/services";
-import SelectedServicesSummary from "@/components/SelectedServicesSummary";
-import ServiceSelection from "@/components/request/ServiceSelection";
-import ProjectDetailsForm from "@/components/request/ProjectDetailsForm";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProjectDetailsForm } from "@/components/request/ProjectDetailsForm";
+import ModernTeamSelector from "@/components/request/ModernTeamSelector";
+import ServiceSelector from "@/components/request/ServiceSelector";
+import FileUploader from "@/components/request/FileUploader";
 
-const RequestPage = () => {
-  const [step, setStep] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
-
-  const handleServiceSelect = (service: Service) => {
-    const isFeatured = service.title === "End to End Services";
-    const isAlreadySelected = selectedServices.some(
-      (s) => s.title === service.title
-    );
-
-    if (isFeatured) {
-      setSelectedServices(isAlreadySelected ? [] : [service]);
-    } else {
-      let newSelectedServices = selectedServices.filter(
-        (s) => s.title !== "End to End Services"
-      );
-      if (isAlreadySelected) {
-        newSelectedServices = newSelectedServices.filter(
-          (s) => s.title !== service.title
-        );
-      } else {
-        newSelectedServices.push(service);
-      }
-      setSelectedServices(newSelectedServices);
-    }
-  };
-
-  const renderContent = () => {
-    if (step === 1) {
-      return (
-        <ServiceSelection
-          searchTerm={searchTerm}
-          onSearchTermChange={setSearchTerm}
-          selectedServices={selectedServices}
-          onServiceSelect={handleServiceSelect}
-        />
-      );
-    } else {
-      return (
-        <ProjectDetailsForm
-          selectedServices={selectedServices}
-          onBack={() => setStep(1)}
-        />
-      );
-    }
-  };
-
-  const summaryComponent =
-    step === 1 ? (
-      <SelectedServicesSummary
-        selectedServices={selectedServices}
-        onContinue={() => setStep(2)}
-      />
-    ) : null;
-
+const Request = () => {
   return (
-    <PortalLayout summary={summaryComponent} disableMainScroll={step === 2}>
-      {renderContent()}
+    <PortalLayout>
+      <div className="space-y-6 max-w-4xl mx-auto">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Submit a New Project Request</h1>
+          <p className="text-muted-foreground">Fill out the details below to get your project started.</p>
+        </div>
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Details</CardTitle>
+              <CardDescription>The what, why, and who of your project.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ProjectDetailsForm />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Team</CardTitle>
+              <CardDescription>Select the team members for this project.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ModernTeamSelector />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Services</CardTitle>
+              <CardDescription>Choose the services required for this project.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ServiceSelector />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Brief & Files</CardTitle>
+              <CardDescription>Upload any relevant documents.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FileUploader />
+            </CardContent>
+          </Card>
+          <div className="flex justify-end">
+            <Button size="lg">Submit Request</Button>
+          </div>
+        </div>
+      </div>
     </PortalLayout>
   );
 };
 
-export default RequestPage;
+export default Request;

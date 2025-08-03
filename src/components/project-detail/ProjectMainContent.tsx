@@ -1,12 +1,9 @@
-import { Project, AssignedUser, Comment, Task } from "@/data/projects";
+import { Project, AssignedUser, Task, Comment } from "@/data/projects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectComments from "@/components/ProjectComments";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import ProjectOverviewTab from "./ProjectOverviewTab";
-import ProjectActivityFeed from "./ProjectActivityFeed";
 import ProjectTasks from "./ProjectTasks";
-import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-react";
+import ProjectComments from "../ProjectComments";
+import ProjectActivityFeed from "./ProjectActivityFeed";
 
 interface ProjectMainContentProps {
   project: Project;
@@ -15,10 +12,8 @@ interface ProjectMainContentProps {
   onTeamChange: (users: AssignedUser[]) => void;
   onFilesChange: (files: File[]) => void;
   onServicesChange: (services: string[]) => void;
-  onAddCommentOrTicket: (comment: Comment) => void;
-  onTasksUpdate: (tasks: Task[]) => void;
-  ticketCount: number;
-  allProjects: Project[];
+  onTaskUpdate: (task: Task) => void;
+  onCommentAdd: (comment: Comment) => void;
 }
 
 const ProjectMainContent = ({
@@ -28,68 +23,40 @@ const ProjectMainContent = ({
   onTeamChange,
   onFilesChange,
   onServicesChange,
-  onAddCommentOrTicket,
-  onTasksUpdate,
-  ticketCount,
-  allProjects,
+  onTaskUpdate,
+  onCommentAdd,
 }: ProjectMainContentProps) => {
-  const totalTasks = project.tasks?.length || 0;
-
   return (
-    <Card>
-      <CardContent className="p-4 md:p-6">
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
-            <TabsTrigger value="overview">
-              <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline ml-2">Overview</span>
-            </TabsTrigger>
-            <TabsTrigger value="tasks">
-              <ListChecks className="h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline ml-2">Tasks</span>
-              {totalTasks > 0 && <Badge className="ml-2">{totalTasks}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="comments">
-              <MessageSquare className="h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline ml-2">Tickets</span>
-              {ticketCount > 0 && <Badge className="ml-2 bg-orange-500">{ticketCount}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="activity">
-              <History className="h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline ml-2">Activity</span>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="overview">
-            <ProjectOverviewTab
-              project={project}
-              isEditing={isEditing}
-              onDescriptionChange={onDescriptionChange}
-              onTeamChange={onTeamChange}
-              onFilesChange={onFilesChange}
-              onServicesChange={onServicesChange}
-            />
-          </TabsContent>
-          <TabsContent value="tasks">
-            <ProjectTasks
-              tasks={project.tasks || []}
-              assignableUsers={project.assignedTo}
-              onTasksUpdate={onTasksUpdate}
-            />
-          </TabsContent>
-          <TabsContent value="comments">
-            <ProjectComments
-              project={project}
-              assignableUsers={project.assignedTo}
-              allProjects={allProjects}
-              onAddCommentOrTicket={onAddCommentOrTicket}
-            />
-          </TabsContent>
-          <TabsContent value="activity">
-            <ProjectActivityFeed activities={project.activities || []} />
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+    <div className="p-6">
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks ({project.tasks?.length || 0})</TabsTrigger>
+          <TabsTrigger value="comments">Comments ({project.comments?.length || 0})</TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="mt-4">
+          <ProjectOverviewTab project={project} />
+        </TabsContent>
+        <TabsContent value="tasks" className="mt-4">
+          <ProjectTasks
+            tasks={project.tasks || []}
+            team={project.assignedTo || []}
+            onTaskUpdate={onTaskUpdate}
+          />
+        </TabsContent>
+        <TabsContent value="comments" className="mt-4">
+          <ProjectComments
+            comments={project.comments || []}
+            team={project.assignedTo || []}
+            onCommentAdd={onCommentAdd}
+          />
+        </TabsContent>
+        <TabsContent value="activity" className="mt-4">
+          <ProjectActivityFeed activities={project.activities || []} />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

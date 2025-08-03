@@ -1,29 +1,23 @@
-import { Comment, AssignedUser } from '@/data/projects';
+import { Comment } from '@/data/projects';
+import { dummyUsers } from '@/data/users';
 
-const user1: AssignedUser = { id: 'user-1', name: 'Alice', avatar: 'https://i.pravatar.cc/150?u=alice', email: 'alice@example.com', initials: 'A' };
-const user2: AssignedUser = { id: 'user-2', name: 'Bob', avatar: 'https://i.pravatar.cc/150?u=bob', email: 'bob@example.com', initials: 'B' };
-const user3: AssignedUser = { id: 'user-3', name: 'Charlie', avatar: 'https://i.pravatar.cc/150?u=charlie', email: 'charlie@example.com', initials: 'C' };
-
-export const initialComments: Comment[] = [
+export const dummyComments: Comment[] = [
   {
     id: 'comment-1',
-    user: user2,
-    text: 'Hey @Alice, can you review the latest design mockups?',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    isTicket: false,
+    user: dummyUsers[0],
+    text: 'Here are the latest mockups. Let me know what you think!',
+    timestamp: '2024-07-24T10:00:00Z',
   },
   {
     id: 'comment-2',
-    user: user1,
-    text: '@Bob Sure, I will take a look this afternoon.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1).toISOString(),
-    isTicket: false,
+    user: dummyUsers[2],
+    text: 'Looks great, Alice! Approved.',
+    timestamp: '2024-07-24T11:30:00Z',
   },
   {
     id: 'comment-3',
-    user: user3,
-    text: '@Bob The new auth flow needs to be documented in Confluence.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    isTicket: true,
+    user: dummyUsers[1],
+    text: 'I will start implementing this right away.',
+    timestamp: '2024-07-24T11:35:00Z',
   },
 ];
