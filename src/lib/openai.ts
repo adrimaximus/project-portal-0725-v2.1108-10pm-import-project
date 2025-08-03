@@ -1,29 +1,26 @@
 import OpenAI from 'openai';
 
-// Fungsi ini mengambil kunci API dari penyimpanan lokal.
-// Di aplikasi nyata, kunci API harus disimpan dan diakses dengan aman melalui backend.
-const getApiKey = (): string | null => {
+// Fungsi ini sekarang membuat dan mengembalikan instance OpenAI baru setiap kali dipanggil.
+// Ini memastikan bahwa kunci API terbaru dari localStorage selalu digunakan.
+const getOpenAIClient = (): OpenAI | null => {
   try {
-    // Asumsi kunci disimpan dengan nama 'openai_api_key' dari halaman pengaturan Anda.
-    return localStorage.getItem('openai_api_key');
+    const apiKey = localStorage.getItem('openai_api_key');
+    if (!apiKey) {
+      return null;
+    }
+    return new OpenAI({
+      apiKey: apiKey,
+      dangerouslyAllowBrowser: true,
+    });
   } catch (error) {
-    console.warn('Could not access localStorage.');
+    console.warn('Tidak dapat mengakses localStorage atau menginisialisasi klien OpenAI.');
     return null;
   }
 };
 
-let openai: OpenAI | null = null;
-const apiKey = getApiKey();
-
-if (apiKey) {
-  openai = new OpenAI({
-    apiKey: apiKey,
-    // Opsi ini diperlukan untuk menggunakan API dari sisi klien (browser).
-    dangerouslyAllowBrowser: true,
-  });
-}
-
 export const generateAiInsight = async (prompt: string): Promise<string> => {
+  const openai = getOpenAIClient();
+
   if (!openai) {
     return "Kunci OpenAI API tidak dikonfigurasi. Silakan tambahkan kunci Anda di pengaturan aplikasi.";
   }
