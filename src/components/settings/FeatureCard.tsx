@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Feature } from "@/data/features";
 import { useFeatures } from "@/contexts/FeaturesContext";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface FeatureCardProps {
   feature: Feature;
@@ -11,23 +11,25 @@ interface FeatureCardProps {
 const FeatureCard = ({ feature }: FeatureCardProps) => {
   const { toggleFeatureStatus } = useFeatures();
   const isSettingsFeature = feature.id === 'settings';
+  const isEnabled = feature.status === 'enabled';
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-medium">{feature.name}</CardTitle>
-        <div className="flex items-center space-x-2">
-          <Switch
-            id={`feature-switch-${feature.id}`}
-            checked={feature.status === 'enabled'}
-            onCheckedChange={() => toggleFeatureStatus(feature.id)}
-            disabled={isSettingsFeature}
-            aria-label={`Toggle ${feature.name} feature`}
-          />
-          <Label htmlFor={`feature-switch-${feature.id}`} className="text-sm text-muted-foreground">
-            {feature.status === 'enabled' ? 'Enabled' : 'Upgrade'}
-          </Label>
-        </div>
+        <Button
+          onClick={() => toggleFeatureStatus(feature.id)}
+          disabled={isSettingsFeature}
+          variant={isEnabled ? "outline" : "default"}
+          size="sm"
+          className={cn(
+            "capitalize",
+            isEnabled && "border-green-500 text-green-500 hover:bg-green-50/50 hover:text-green-600",
+            isSettingsFeature && "cursor-not-allowed opacity-50"
+          )}
+        >
+          {feature.status}
+        </Button>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">{feature.description}</p>
