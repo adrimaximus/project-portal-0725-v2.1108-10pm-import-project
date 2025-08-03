@@ -44,6 +44,8 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
   const [specificDays, setSpecificDays] = useState<string[]>([]);
   const [targetQuantity, setTargetQuantity] = useState<number | undefined>(undefined);
   const [targetPeriod, setTargetPeriod] = useState<GoalPeriod>('Monthly');
+  const [targetValue, setTargetValue] = useState<number | undefined>(undefined);
+  const [unit, setUnit] = useState<string>('');
   const [color, setColor] = useState('#BFDBFE');
   const [tags, setTags] = useState<Tag[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>(dummyTags);
@@ -59,6 +61,8 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
         setSpecificDays(goal.specificDays);
         setTargetQuantity(goal.targetQuantity);
         setTargetPeriod(goal.targetPeriod || 'Monthly');
+        setTargetValue(goal.targetValue);
+        setUnit(goal.unit || '');
         setColor(goal.color);
         setTags(goal.tags);
       } else {
@@ -69,6 +73,8 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
         setSpecificDays([]);
         setTargetQuantity(undefined);
         setTargetPeriod('Monthly');
+        setTargetValue(undefined);
+        setUnit('');
         setColor('#BFDBFE');
         setTags([]);
       }
@@ -103,6 +109,8 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
         specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
         targetQuantity,
         targetPeriod,
+        targetValue,
+        unit,
         color,
         tags,
       };
@@ -138,6 +146,8 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
         specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
         targetQuantity,
         targetPeriod,
+        targetValue,
+        unit,
       });
       
       toast.success(`Goal "${title}" created!`);
@@ -166,6 +176,7 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
             <RadioGroup value={type} onValueChange={(v) => setType(v as GoalType)} className="col-span-3 flex gap-4">
               <div className="flex items-center space-x-2"><RadioGroupItem value="frequency" id="r1" /><Label htmlFor="r1">Frequency</Label></div>
               <div className="flex items-center space-x-2"><RadioGroupItem value="quantity" id="r2" /><Label htmlFor="r2">Quantity</Label></div>
+              <div className="flex items-center space-x-2"><RadioGroupItem value="value" id="r3" /><Label htmlFor="r3">Value</Label></div>
             </RadioGroup>
           </div>
           {type === 'frequency' ? (
@@ -191,7 +202,7 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
                 </div>
               )}
             </>
-          ) : (
+          ) : type === 'quantity' ? (
             <>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="target-quantity" className="text-right">Target</Label>
@@ -206,6 +217,17 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
                     <SelectItem value="Monthly">Per Month</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="target-value" className="text-right">Target Value</Label>
+                <Input id="target-value" type="number" value={targetValue || ''} onChange={(e) => setTargetValue(parseInt(e.target.value) || undefined)} className="col-span-3" placeholder="e.g., 500" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="unit" className="text-right">Unit</Label>
+                <Input id="unit" value={unit} onChange={(e) => setUnit(e.target.value)} className="col-span-3" placeholder="e.g., USD, km, pages" />
               </div>
             </>
           )}

@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { isBefore, startOfDay, format, parseISO } from 'date-fns';
 import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import GoalQuantityTracker from '@/components/goals/GoalQuantityTracker';
+import GoalValueTracker from '@/components/goals/GoalValueTracker';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -95,6 +96,16 @@ const GoalDetailPage = () => {
     setGoal(updatedGoal);
   };
 
+  const handleLogValue = (date: Date, value: number) => {
+    if (!goal || goal.type !== 'value') return;
+    const dateString = format(date, 'yyyy-MM-dd');
+    const updatedGoal = { ...goal };
+    // For value, we just add a new entry each time
+    updatedGoal.completions.push({ date: dateString, value });
+    updatedGoal.completions.sort((a, b) => b.date.localeCompare(a.date));
+    setGoal(updatedGoal);
+  };
+
   const handleDeleteGoal = () => {
     if (!goal) return;
     toast.success(`Goal "${goal.title}" has been deleted.`);
@@ -146,6 +157,9 @@ const GoalDetailPage = () => {
   const getFrequencyText = () => {
     if (goal.type === 'quantity') {
       return `${goal.targetQuantity} per ${goal.targetPeriod}`;
+    }
+    if (goal.type === 'value') {
+      return `Target: ${goal.targetValue} ${goal.unit || ''}`;
     }
     if (goal.frequency === 'Daily') return 'Daily';
     if (goal.frequency === 'Weekly' && goal.specificDays.length > 0) {
@@ -215,8 +229,10 @@ const GoalDetailPage = () => {
             goalTags={goal.tags.map(t => t.name)}
             collaborators={goal.collaborators}
           />
-        ) : (
+        ) : goal.type === 'quantity' ? (
           <GoalQuantityTracker goal={goal} onLogProgress={handleLogQuantity} />
+        ) : (
+          <GoalValueTracker goal={goal} onLogValue={handleLogValue} />
         )}
 
         <GoalCollaborationManager goal={goal} onCollaboratorsUpdate={handleCollaboratorsUpdate} />

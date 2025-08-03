@@ -3,10 +3,10 @@ import { Tag, dummyTags } from './tags';
 
 export interface GoalCompletion {
   date: string; // YYYY-MM-DD
-  value: number; // 1 for completed frequency, actual number for quantity
+  value: number; // 1 for completed frequency, actual number for quantity/value
 }
 
-export type GoalType = 'frequency' | 'quantity';
+export type GoalType = 'frequency' | 'quantity' | 'value';
 export type GoalPeriod = 'Weekly' | 'Monthly';
 
 export interface Goal {
@@ -25,6 +25,10 @@ export interface Goal {
   targetQuantity?: number;
   targetPeriod?: GoalPeriod;
 
+  // Value-specific
+  targetValue?: number;
+  unit?: string;
+
   tags: Tag[];
   completions: GoalCompletion[];
   collaborators: User[];
@@ -40,7 +44,7 @@ export const dummyGoals: Goal[] = [
     type: 'quantity',
     targetQuantity: 300,
     targetPeriod: 'Monthly',
-    frequency: 'Daily', // Fallback/default
+    frequency: 'Daily',
     specificDays: [],
     tags: [dummyTags[0], dummyTags[1]],
     completions: [{ date: '2024-08-01', value: 25 }, { date: '2024-08-02', value: 15 }],
@@ -60,16 +64,18 @@ export const dummyGoals: Goal[] = [
     collaborators: [dummyUsers[0], dummyUsers[2]],
   },
   {
-    id: '3',
-    title: 'Practice Guitar',
-    description: 'Practice guitar for 20 minutes.',
-    icon: '🎸',
-    color: '#F59E0B',
-    type: 'frequency',
-    frequency: 'Weekly',
-    specificDays: ['Mo', 'We', 'Fr'],
-    tags: [dummyTags[5], dummyTags[6], dummyTags[7]],
-    completions: [],
+    id: '6',
+    title: 'Save Money',
+    description: 'Save $500 for a new gadget.',
+    icon: '💰',
+    color: '#22C55E',
+    type: 'value',
+    targetValue: 500,
+    unit: 'USD',
+    frequency: 'Daily',
+    specificDays: [],
+    tags: [{ id: 'tag-12', name: 'Finance', color: '#22C55E' }],
+    completions: [{ date: '2024-08-01', value: 50 }, { date: '2024-08-05', value: 125 }],
     collaborators: [],
   },
   {

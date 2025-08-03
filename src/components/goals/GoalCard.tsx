@@ -31,6 +31,9 @@ const GoalCard = ({ goal }: GoalCardProps) => {
 
       const currentTotal = completionsInPeriod.reduce((sum, c) => sum + c.value, 0);
       return goal.targetQuantity ? (currentTotal / goal.targetQuantity) * 100 : 0;
+    } else if (goal.type === 'value') {
+      const currentTotal = goal.completions.reduce((sum, c) => sum + c.value, 0);
+      return goal.targetValue ? (currentTotal / goal.targetValue) * 100 : 0;
     } else { // frequency
       const relevantCompletions = goal.completions.filter(c => c.value > 0);
       const totalPossible = goal.completions.length;
