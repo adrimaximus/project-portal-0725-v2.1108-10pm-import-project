@@ -33,19 +33,21 @@ const activityIcons: { [key: string]: React.ReactNode } = {
 };
 
 const renderActivityDescription = (description: string) => {
-  const projectMentionRegex = /(\/\[[^\]]+\]\([^)]+\))/g;
-  const parts = description.split(projectMentionRegex);
+  const mentionRegex = /(\/\[[^\]]+\]\([^)]+\)|@\[[^\]]+\]\([^)]+\))/g;
+  const parts = description.split(mentionRegex);
 
   return (
     <>
       {parts.map((part, index) => {
+        if (!part) return null;
+
         const projectMentionMatch = /^\/\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
         if (projectMentionMatch) {
           const projectName = projectMentionMatch[1];
           const projectId = projectMentionMatch[2];
           return (
             <a
-              key={`${projectId}-${index}`}
+              key={`project-${projectId}-${index}`}
               href={`/projects/${projectId}`}
               className="text-blue-600 hover:underline"
               onClick={(e) => e.stopPropagation()}
@@ -54,7 +56,18 @@ const renderActivityDescription = (description: string) => {
             </a>
           );
         }
-        return <span key={index}>{part}</span>;
+
+        const userMentionMatch = /^@\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+        if (userMentionMatch) {
+          const userName = userMentionMatch[1];
+          return (
+            <span key={`user-${userName}-${index}`} className="font-semibold text-primary">
+              @{userName}
+            </span>
+          );
+        }
+
+        return <span key={`text-${index}`}>{part}</span>;
       })}
     </>
   );
