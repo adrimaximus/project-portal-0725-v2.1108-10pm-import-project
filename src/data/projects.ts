@@ -1,67 +1,44 @@
-import { id } from 'date-fns/locale';
+import { User } from '@/contexts/UserContext';
+
+export type ProjectStatus = 
+  | 'On Track' 
+  | 'At Risk' 
+  | 'Off Track' 
+  | 'On Hold' 
+  | 'Completed'
+  | 'Done'
+  | 'Billed'
+  | 'Cancelled'
+  | 'In Progress'
+  | 'Requested';
+
+export type PaymentStatus = 
+  | 'Unpaid' 
+  | 'Partially Paid' 
+  | 'Paid' 
+  | 'Overdue'
+  | 'Pending'
+  | 'Approved'
+  | 'PO Created'
+  | 'On Process'
+  | 'Cancelled'
+  | 'Proposed';
 
 export interface AssignedUser {
   id: string;
   name: string;
-  avatar?: string;
+  avatar?: string; // Made optional to match User type
   initials?: string;
   role?: string;
-  email?: string;
+  email?: string; // Added optional email to fix property access error
 }
 
 export interface Task {
   id: string;
   name: string;
   completed: boolean;
-  assignedTo?: string[];
+  assignedTo: string[];
   originTicketId?: string;
-}
-
-export interface Comment {
-  id: string;
-  author: AssignedUser;
-  text: string;
-  timestamp: string;
-  isTicket?: boolean;
-  attachment?: {
-    name: string;
-    url: string;
-    type: string;
-    size: number;
-  };
-}
-
-export type ProjectStatus = 'Active' | 'On Hold' | 'Completed' | 'On Track' | 'Done' | 'Billed' | 'At Risk' | 'Off Track' | 'Cancelled' | 'In Progress' | 'Requested';
-export type PaymentStatus = 'Paid' | 'Unpaid' | 'Overdue' | 'Pending' | 'Approved' | 'PO Created' | 'On Process' | 'Cancelled' | 'Proposed';
-
-
-export type ActivityType =
-  | 'PROJECT_CREATED'
-  | 'COMMENT_ADDED'
-  | 'TASK_CREATED'
-  | 'TASK_COMPLETED'
-  | 'TASK_DELETED'
-  | 'TASK_REOPENED'
-  | 'TEAM_MEMBER_ADDED'
-  | 'TEAM_MEMBER_REMOVED'
-  | 'PAYMENT_STATUS_UPDATED'
-  | 'PROJECT_STATUS_UPDATED'
-  | 'PROJECT_DETAILS_UPDATED'
-  | 'FILE_UPLOADED'
-  | 'TICKET_CREATED';
-
-export interface Activity {
-  id: string;
-  type: ActivityType;
-  timestamp: string;
-  user: {
-    id: string;
-    name: string;
-  };
-  details: {
-    description: string;
-    [key: string]: any;
-  };
 }
 
 export interface ProjectFile {
@@ -71,126 +48,141 @@ export interface ProjectFile {
   url: string;
 }
 
-export interface Project {
+export interface Comment {
   id: string;
+  author: User;
+  text: string;
+  timestamp: string;
+  isTicket: boolean;
+  attachment?: { name: string; url: string; };
+}
+
+export type ActivityType = 
+  | 'PROJECT_CREATED'
+  | 'PROJECT_STATUS_UPDATED'
+  | 'PAYMENT_STATUS_UPDATED'
+  | 'PROJECT_DETAILS_UPDATED'
+  | 'TEAM_MEMBER_ADDED'
+  | 'TEAM_MEMBER_REMOVED'
+  | 'FILE_UPLOADED'
+  | 'TASK_CREATED'
+  | 'TASK_COMPLETED'
+  | 'TASK_DELETED'
+  | 'COMMENT_ADDED'
+  | 'TICKET_CREATED';
+
+export interface Activity {
+  id: string;
+  type: ActivityType;
+  timestamp: string; // ISO string
+  user: {
+    id: string;
+    name: string;
+  };
+  details: {
+    description: string;
+  };
+}
+
+export interface Project {
+  id:string;
   name: string;
-  status: ProjectStatus;
   client: string;
   startDate: string;
   deadline: string;
-  progress: number;
-  assignedTo: AssignedUser[];
-  budget: number;
+  status: ProjectStatus;
   paymentStatus: PaymentStatus;
+  progress: number;
+  budget: number;
   description: string;
-  services: string[];
+  assignedTo: AssignedUser[];
   briefFiles?: ProjectFile[];
+  services: string[];
   tasks?: Task[];
   comments?: Comment[];
   activities?: Activity[];
-  category?: string;
-  createdBy?: AssignedUser;
+  category: string;
+  createdBy: AssignedUser;
 }
 
-const today = new Date();
-const tomorrow = new Date(today);
-tomorrow.setDate(tomorrow.getDate() + 1);
-const nextWeek = new Date(today);
-nextWeek.setDate(nextWeek.getDate() + 7);
-const nextMonth = new Date(today);
-nextMonth.setMonth(nextMonth.getMonth() + 1);
-
-const formatDate = (date: Date) => date.toISOString().split('T')[0];
-
 export const dummyUsers: AssignedUser[] = [
-  { id: 'user-1', name: 'Alice Johnson', avatar: '/avatars/01.png', initials: 'AJ', role: 'Project Manager', email: 'alice@example.com' },
-  { id: 'user-2', name: 'Bob Williams', avatar: '/avatars/02.png', initials: 'BW', role: 'Developer', email: 'bob@example.com' },
-  { id: 'user-3', name: 'Charlie Brown', avatar: '/avatars/03.png', initials: 'CB', role: 'Designer', email: 'charlie@example.com' },
-  { id: 'user-4', name: 'Diana Miller', avatar: '/avatars/04.png', initials: 'DM', role: 'QA Tester', email: 'diana@example.com' },
-  { id: 'user-5', name: 'Ethan Davis', avatar: '/avatars/05.png', initials: 'ED', role: 'Developer', email: 'ethan@example.com' },
+  { id: 'user-1', name: 'Alice Johnson', email: 'alice.j@example.com', avatar: 'https://i.pravatar.cc/150?u=alice', initials: 'AJ', role: 'Project Manager' },
+  { id: 'user-2', name: 'Michael Chen', email: 'michael.c@example.com', avatar: 'https://i.pravatar.cc/150?u=michael', initials: 'MC', role: 'Lead Developer' },
+  { id: 'user-3', name: 'Samantha Bee', email: 'samantha.b@example.com', avatar: 'https://i.pravatar.cc/150?u=samantha', initials: 'SB', role: 'UI/UX Designer' },
+  { id: 'user-4', name: 'David Wilson', email: 'david.w@example.com', avatar: 'https://i.pravatar.cc/150?u=david', initials: 'DW', role: 'Developer' },
 ];
 
-export let dummyProjects: Project[] = [
+export const dummyProjects: Project[] = [
   {
-    id: 'proj-1',
-    name: 'Website Redesign',
-    status: 'Active',
+    id: 'proj-001',
+    name: 'Website Redesign for Innovate Inc.',
     client: 'Innovate Inc.',
-    startDate: formatDate(today),
-    deadline: formatDate(nextMonth),
-    progress: 60,
+    startDate: '2024-05-01',
+    deadline: '2024-08-30',
+    status: 'On Track',
+    paymentStatus: 'Partially Paid',
+    progress: 75,
+    budget: 50000,
+    description: 'Complete overhaul of the corporate website to improve user experience and modernize the design. The project includes a new CMS, e-commerce integration, and a responsive layout for all devices.',
     assignedTo: [dummyUsers[0], dummyUsers[1]],
-    budget: 5000,
-    paymentStatus: 'Paid',
-    description: 'Complete redesign of the main corporate website to improve user experience and mobile responsiveness. The project involves UI/UX design, front-end development, and back-end integration.',
-    services: ['UI/UX Design', 'Web Development'],
     briefFiles: [
-      { name: 'project-brief.pdf', size: 1200000, type: 'application/pdf', url: '#' },
-      { name: 'style-guide.docx', size: 850000, type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', url: '#' },
+      { name: 'Initial_Brief_v1.pdf', size: 1200000, type: 'application/pdf', url: '#' },
+      { name: 'Brand_Guidelines.pdf', size: 850000, type: 'application/pdf', url: '#' },
     ],
+    services: ['Web Design', 'Development', 'SEO'],
     tasks: [
-      { id: 'task-1-1', name: 'Finalize UI/UX mockups', completed: true, assignedTo: ['user-1'] },
-      { id: 'task-1-2', name: 'Develop homepage layout', completed: true, assignedTo: ['user-2'] },
-      { id: 'task-1-3', name: 'Integrate CMS', completed: false, assignedTo: ['user-2'] },
-      { id: 'task-1-4', name: 'Setup staging server', completed: false, assignedTo: ['user-1', 'user-2'] },
+      { id: 'task-1', name: 'Finalize design mockups', completed: true, assignedTo: ['user-1'] },
+      { id: 'task-2', name: 'Develop front-end components', completed: true, assignedTo: ['user-2'] },
+      { id: 'task-3', name: 'Integrate payment gateway', completed: false, assignedTo: ['user-2'] },
+      { id: 'task-4', name: 'Setup staging server', completed: true, assignedTo: ['user-1', 'user-2'] },
     ],
     comments: [
-      { id: 'comment-1-1', author: dummyUsers[0], text: 'Hey @[Bob Williams](user-2), can you check the latest mockups? I\'ve pushed them to the repo.', timestamp: new Date(Date.now() - 86400000).toISOString() },
-      { id: 'comment-1-2', author: dummyUsers[1], text: 'Sure, I\'ll take a look this afternoon.', timestamp: new Date(Date.now() - 80000000).toISOString() },
-      { id: 'comment-1-3', author: dummyUsers[0], text: 'I\'ve created a ticket for the bug on the contact form.', timestamp: new Date(Date.now() - 70000000).toISOString(), isTicket: true },
+      { id: 'comment-1', author: { id: 'user-1', name: 'Alice Johnson', email: 'alice@example.com', role: 'Admin' }, text: 'Great progress on the API. Let\'s sync up about the payment gateway options tomorrow.', timestamp: new Date(Date.now() - 86400000 * 2).toISOString(), isTicket: true },
+      { id: 'comment-2', author: { id: 'user-2', name: 'Michael Chen', email: 'michael@example.com', role: 'Member' }, text: 'Sounds good. I\'ve prepared a comparison of Stripe vs. Braintree.', timestamp: new Date(Date.now() - 86400000).toISOString(), isTicket: false },
     ],
-    activities: [
-      { id: 'activity-1-1', type: 'PROJECT_CREATED', timestamp: new Date(Date.now() - 2 * 86400000).toISOString(), user: { id: 'user-1', name: 'Alice Johnson' }, details: { description: 'membuat proyek baru' } },
-      { id: 'activity-1-2', type: 'TEAM_MEMBER_ADDED', timestamp: new Date(Date.now() - 1.5 * 86400000).toISOString(), user: { id: 'user-1', name: 'Alice Johnson' }, details: { description: 'menambahkan Bob Williams ke tim' } },
-      { id: 'activity-1-3', type: 'TASK_CREATED', timestamp: new Date(Date.now() - 1 * 86400000).toISOString(), user: { id: 'user-1', name: 'Alice Johnson' }, details: { description: 'membuat tugas baru: "Finalize UI/UX mockups"' } },
-      { id: 'activity-1-4', type: 'TASK_COMPLETED', timestamp: new Date(Date.now() - 0.5 * 86400000).toISOString(), user: { id: 'user-1', name: 'Alice Johnson' }, details: { description: 'menyelesaikan tugas: "Finalize UI/UX mockups"' } },
-    ],
+    activities: [],
     category: 'Web Development',
     createdBy: dummyUsers[0],
   },
   {
-    id: 'proj-2',
-    name: 'Mobile App Development',
-    status: 'On Hold',
-    client: 'Connect Co.',
-    startDate: formatDate(new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000)),
-    deadline: formatDate(new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000)),
-    progress: 25,
-    assignedTo: [dummyUsers[2], dummyUsers[3]],
-    budget: 12000,
+    id: 'proj-002',
+    name: 'Mobile App for "FitLife"',
+    client: 'FitLife Tracker',
+    startDate: '2024-06-15',
+    deadline: '2024-12-01',
+    status: 'At Risk',
     paymentStatus: 'Unpaid',
-    description: 'Development of a new cross-platform mobile application for social networking. The project is currently on hold pending client feedback on the initial prototype.',
-    services: ['Mobile App Development', 'API Development'],
+    progress: 20,
+    budget: 75000,
+    description: 'A new mobile application for iOS and Android that tracks fitness activities, diet, and provides personalized workout plans.',
+    assignedTo: [dummyUsers[2], dummyUsers[3]],
+    services: ['Mobile App Development', 'UI/UX Design'],
     tasks: [
-      { id: 'task-2-1', name: 'Design database schema', completed: true },
-      { id: 'task-2-2', name: 'Build user authentication API', completed: false },
+      { id: 'task-5', name: 'User flow diagrams', completed: true, assignedTo: ['user-3'] },
+      { id: 'task-6', name: 'Setup React Native environment', completed: false, assignedTo: ['user-4'] },
     ],
-    activities: [
-      { id: 'activity-2-1', type: 'PROJECT_CREATED', timestamp: new Date(Date.now() - 14 * 86400000).toISOString(), user: { id: 'user-2', name: 'Bob Williams' }, details: { description: 'membuat proyek baru' } },
-    ],
+    comments: [],
+    activities: [],
     category: 'Mobile Development',
-    createdBy: dummyUsers[1],
+    createdBy: dummyUsers[2],
   },
   {
-    id: 'proj-3',
-    name: 'E-commerce Platform',
-    status: 'Completed',
-    client: 'Shopify',
-    startDate: formatDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000)),
-    deadline: formatDate(new Date(today.getTime() - 10 * 24 * 60 * 60 * 1000)),
-    progress: 100,
-    assignedTo: [dummyUsers[0], dummyUsers[4]],
-    budget: 25000,
+    id: 'proj-003',
+    name: 'SEO & Content Marketing Campaign',
+    client: 'Global Exports Ltd.',
+    startDate: '2024-07-01',
+    deadline: '2024-10-31',
+    status: 'On Hold',
     paymentStatus: 'Paid',
-    description: 'Full-stack development of a scalable e-commerce platform with features like product management, order processing, and payment gateway integration.',
-    services: ['Web Development', 'Database Management'],
-    tasks: [
-      { id: 'task-3-1', name: 'Deploy to production', completed: true },
-    ],
-    activities: [
-      { id: 'activity-3-1', type: 'PROJECT_CREATED', timestamp: new Date(Date.now() - 90 * 86400000).toISOString(), user: { id: 'user-1', name: 'Alice Johnson' }, details: { description: 'membuat proyek baru' } },
-    ],
-    category: 'E-commerce',
+    progress: 10,
+    budget: 25000,
+    description: 'A comprehensive SEO and content marketing strategy to increase organic traffic and improve search engine rankings for key terms.',
+    assignedTo: [dummyUsers[0], dummyUsers[2]],
+    services: ['SEO', 'Content Marketing'],
+    tasks: [],
+    comments: [],
+    activities: [],
+    category: 'Marketing',
     createdBy: dummyUsers[0],
   },
 ];

@@ -1,256 +1,246 @@
-import { useState, useRef, useMemo } from "react";
-import { Project, Comment, AssignedUser, dummyUsers } from "@/data/projects";
+import { useState, useMemo } from "react";
+import { Project, Comment, dummyProjects } from "@/data/projects";
 import { useUser } from "@/contexts/UserContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Paperclip, Send, X, File as FileIcon, Image as ImageIcon, Ticket } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { id } from "date-fns/locale";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandInput,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Paperclip, Send, Ticket, Folder, MessageSquare, X } from "lucide-react";
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
+import { cn } from "@/lib/utils";
+import './mentions-style.css';
 
 interface ProjectCommentsProps {
   project: Project;
   onAddCommentOrTicket: (comment: Comment) => void;
 }
 
-const CommentItem = ({ comment }: { comment: Comment }) => {
-  const renderText = (text: string) => {
-    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-    const parts = text.split(mentionRegex);
-
-    return (
-      <>
-        {parts.map((part, index) => {
-          if (index % 3 === 1) {
-            const userName = part;
-            return (
-              <span key={index} className="font-semibold text-blue-600">
-                @{userName}
-              </span>
-            );
-          }
-          return <span key={index}>{part}</span>;
-        })}
-      </>
-    );
-  };
-
-  return (
-    <div className="flex space-x-3">
-      <Avatar>
-        <AvatarImage src={comment.author.avatar} />
-        <AvatarFallback>{comment.author.initials}</AvatarFallback>
-      </Avatar>
-      <div className="flex-1 space-y-1">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold">{comment.author.name}</p>
-            {comment.isTicket && (
-              <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Ticket size={12} /> Tiket
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true, locale: id })}
-          </p>
-        </div>
-        <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-          {renderText(comment.text)}
-        </div>
-        {comment.attachment && (
-          <div className="mt-2 p-2 border rounded-md flex items-center space-x-2 text-sm">
-            {comment.attachment.type.startsWith("image/") ? (
-              <ImageIcon className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <FileIcon className="h-4 w-4 text-muted-foreground" />
-            )}
-            <a href={comment.attachment.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-              {comment.attachment.name}
-            </a>
-            <span className="text-xs text-muted-foreground">({(comment.attachment.size / 1024).toFixed(2)} KB)</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps) => {
+const ProjectComments = ({
+  project,
+  onAddCommentOrTicket,
+}: ProjectCommentsProps) => {
   const { user: currentUser } = useUser();
-  const [commentText, setCommentText] = useState("");
-  const [isTicket, setIsTicket] = useState(false);
-  const [attachment, setAttachment] = useState<{ file: File; preview: string } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [mentionQuery, setMentionQuery] = useState('');
-  const [isMentioning, setIsMentioning] = useState(false);
+  const [newCommentText, setNewCommentText] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [filter, setFilter] = useState<'all' | 'comments' | 'tickets'>('all');
 
-  const availableUsers = useMemo(() => {
-    return dummyUsers.filter(u => u.id !== currentUser.id);
-  }, [currentUser.id]);
+  const usersForMentions = project.assignedTo.map(user => ({
+    id: user.id,
+    display: user.name,
+    avatar: user.avatar,
+    initials: user.initials,
+  }));
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAttachment({ file, preview: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+  const projectsForMentions = dummyProjects.map(p => ({
+    id: p.id,
+    display: p.name,
+  }));
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setAttachment(e.target.files[0]);
     }
   };
 
-  const handleSendComment = () => {
-    if (!commentText.trim() && !attachment) return;
-
-    let attachmentData: Comment['attachment'] | undefined = undefined;
-    if (attachment) {
-      attachmentData = {
-        name: attachment.file.name,
-        url: attachment.preview,
-        type: attachment.file.type,
-        size: attachment.file.size,
-      };
+  const handleRemoveAttachment = () => {
+    setAttachment(null);
+    const fileInput = document.getElementById('comment-attachment') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = "";
     }
+  };
+
+  const handleSubmit = (isTicketSubmit: boolean) => {
+    if (newCommentText.trim() === "" && !attachment) return;
 
     const newComment: Comment = {
-      id: `comment-${Date.now()}`,
-      author: { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar, initials: currentUser.initials },
-      text: commentText,
+      id: `item-${Date.now()}`,
+      author: currentUser,
+      text: newCommentText,
       timestamp: new Date().toISOString(),
-      isTicket,
-      attachment: attachmentData,
+      isTicket: isTicketSubmit,
+      attachment: attachment ? { name: attachment.name, url: URL.createObjectURL(attachment) } : undefined,
     };
 
     onAddCommentOrTicket(newComment);
-    setCommentText("");
+    setNewCommentText("");
     setAttachment(null);
-    setIsTicket(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    const fileInput = document.getElementById('comment-attachment') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = "";
     }
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value;
-    setCommentText(text);
+  const renderUserSuggestion = (
+    suggestion: SuggestionDataItem & { avatar?: string; initials?: string },
+    search: string,
+    highlightedDisplay: React.ReactNode,
+    index: number,
+    focused: boolean
+  ) => (
+    <div className={`mentions__suggestions__item ${focused ? 'mentions__suggestions__item--focused' : ''}`}>
+      <Avatar className="h-8 w-8">
+        <AvatarImage src={suggestion.avatar} />
+        <AvatarFallback>{suggestion.initials}</AvatarFallback>
+      </Avatar>
+      <span>{highlightedDisplay}</span>
+    </div>
+  );
 
-    const cursorPos = e.target.selectionStart;
-    const textBeforeCursor = text.substring(0, cursorPos);
-    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+  const renderProjectSuggestion = (
+    suggestion: SuggestionDataItem,
+    search: string,
+    highlightedDisplay: React.ReactNode,
+    index: number,
+    focused: boolean
+  ) => (
+    <div className={`mentions__suggestions__item ${focused ? 'mentions__suggestions__item--focused' : ''}`}>
+      <Folder className="h-5 w-5 text-muted-foreground" />
+      <span>{highlightedDisplay}</span>
+    </div>
+  );
 
-    if (mentionMatch) {
-      setIsMentioning(true);
-      setMentionQuery(mentionMatch[1]);
-    } else {
-      setIsMentioning(false);
-    }
-  };
+  const sortedItems = useMemo(() => 
+    [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+    [project.comments]
+  );
 
-  const handleMentionSelect = (user: AssignedUser) => {
-    if (textareaRef.current) {
-      const text = commentText;
-      const cursorPos = textareaRef.current.selectionStart;
-      const textBeforeCursor = text.substring(0, cursorPos);
-      const textAfterCursor = text.substring(cursorPos);
+  const filteredItems = useMemo(() => {
+    if (filter === 'comments') return sortedItems.filter(item => !item.isTicket);
+    if (filter === 'tickets') return sortedItems.filter(item => item.isTicket);
+    return sortedItems;
+  }, [filter, sortedItems]);
 
-      const newText = textBeforeCursor.replace(/@(\w*)$/, `@\[${user.name}\](${user.id}) `) + textAfterCursor;
-      setCommentText(newText);
-      setIsMentioning(false);
-      textareaRef.current.focus();
-    }
-  };
+  const placeholderText = "Add a comment or create a ticket...";
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        {project.comments?.map((comment) => (
-          <CommentItem key={comment.id} comment={comment} />
-        ))}
-      </div>
-      <div className="flex space-x-3">
-        <Avatar>
-          <AvatarImage src={currentUser.avatar} />
-          <AvatarFallback>{currentUser.initials}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1">
-          <Popover open={isMentioning} onOpenChange={setIsMentioning}>
-            <PopoverTrigger asChild>
-              <Textarea
-                ref={textareaRef}
-                value={commentText}
-                onChange={handleTextChange}
-                placeholder="Tulis komentar atau buat tiket..."
-                className="mb-2"
+        <h3 className="text-lg font-semibold">Discussion</h3>
+        
+        <div className="rounded-lg border bg-background transition-all">
+          <div className="relative">
+            <MentionsInput
+              value={newCommentText}
+              onChange={(e) => setNewCommentText(e.target.value)}
+              placeholder={placeholderText}
+              className="mentions"
+              a11ySuggestionsListLabel="Suggested mentions"
+            >
+              <Mention
+                trigger="@"
+                data={usersForMentions}
+                renderSuggestion={renderUserSuggestion}
+                markup="@[__display__](__id__)"
+                className="mentions__mention"
               />
-            </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Sebut nama..." value={mentionQuery} onValueChange={setMentionQuery} />
-                <CommandList>
-                  <CommandEmpty>Tidak ada pengguna ditemukan.</CommandEmpty>
-                  <CommandGroup>
-                    {availableUsers
-                      .filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase()))
-                      .map(user => (
-                        <CommandItem key={user.id} onSelect={() => handleMentionSelect(user)}>
-                          {user.name}
-                        </CommandItem>
-                      ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-
+              <Mention
+                trigger="/"
+                data={projectsForMentions}
+                renderSuggestion={renderProjectSuggestion}
+                markup="/[__display__](__id__)"
+                className="mentions__mention"
+              />
+            </MentionsInput>
+            <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1">
+              <Button variant="ghost" size="icon" asChild>
+                <Label htmlFor="comment-attachment" className="cursor-pointer h-9 w-9 flex items-center justify-center" title="Attach file">
+                  <Paperclip className="h-4 w-4" />
+                  <input id="comment-attachment" type="file" className="sr-only" onChange={handleFileChange} />
+                </Label>
+              </Button>
+              <Button 
+                variant="ghost"
+                size="icon" 
+                onClick={() => handleSubmit(true)}
+                disabled={!newCommentText.trim() && !attachment}
+                className="h-9 w-9 text-orange-600"
+                title="Create Ticket"
+              >
+                <Ticket className="h-4 w-4" />
+              </Button>
+              <Button 
+                size="icon" 
+                onClick={() => handleSubmit(false)} 
+                disabled={!newCommentText.trim() && !attachment} 
+                className="h-9 w-9"
+                title="Add Comment"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
           {attachment && (
-            <div className="mb-2 p-2 border rounded-md flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-2">
-                {attachment.file.type.startsWith("image/") ? (
-                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <FileIcon className="h-4 w-4 text-muted-foreground" />
-                )}
-                <span>{attachment.file.name}</span>
-              </div>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAttachment(null)}>
+            <div className="text-sm text-muted-foreground flex items-center gap-2 px-3 py-2 border-t">
+              <Paperclip className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate flex-1">{attachment.name}</span>
+              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveAttachment}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
           )}
+        </div>
+      </div>
 
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
-              <div className="flex items-center space-x-2">
-                <Switch id="ticket-mode" checked={isTicket} onCheckedChange={setIsTicket} />
-                <Label htmlFor="ticket-mode" className="text-sm">Jadikan Tiket</Label>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+            <h4 className="text-md font-semibold">History</h4>
+            <div className="flex items-center gap-1 rounded-md bg-muted p-1">
+                <Button variant={filter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilter('all')}>All</Button>
+                <Button variant={filter === 'comments' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilter('comments')}>Comments</Button>
+                <Button variant={filter === 'tickets' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilter('tickets')}>Tickets</Button>
+            </div>
+        </div>
+        <div className="space-y-4">
+          {filteredItems.map(item => (
+            <div key={item.id} className="flex items-start space-x-3 p-3 rounded-lg">
+              <Avatar>
+                <AvatarImage src={item.author.avatar} />
+                <AvatarFallback>{item.author.name.slice(0, 2)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-card-foreground flex items-center gap-2">
+                    {item.author.name}
+                    {item.isTicket && (
+                      <span className="flex items-center gap-1.5 text-xs font-semibold bg-orange-500/20 text-orange-800 px-2 py-0.5 rounded-full">
+                        <Ticket className="h-3 w-3" />
+                        Ticket
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true, locale: id })}
+                  </p>
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{
+                  __html: item.text
+                    .replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<span class="bg-blue-100 text-blue-600 font-semibold rounded-sm px-1">@$1</span>')
+                    .replace(/\/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="/projects/$2" class="text-blue-600 hover:underline font-medium">$1</a>')
+                }} />
+                {item.attachment && (
+                  <div className="mt-2">
+                    <a href={item.attachment.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md">
+                      <Paperclip className="h-4 w-4" />
+                      {item.attachment.name}
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
-            <Button onClick={handleSendComment} disabled={!commentText.trim() && !attachment}>
-              <Send className="h-4 w-4 mr-2" />
-              Kirim
-            </Button>
-          </div>
+          ))}
+          {filteredItems.length === 0 && (
+            <div className="text-center py-10 text-muted-foreground">
+                <MessageSquare className="mx-auto h-12 w-12" />
+                <h3 className="mt-2 text-sm font-semibold">No items to display</h3>
+                <p className="mt-1 text-sm">
+                    {filter === 'comments' && "There are no comments yet."}
+                    {filter === 'tickets' && "There are no tickets yet."}
+                    {filter === 'all' && "There are no comments or tickets yet."}
+                </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

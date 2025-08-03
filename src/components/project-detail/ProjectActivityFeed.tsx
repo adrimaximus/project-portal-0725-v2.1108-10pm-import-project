@@ -15,7 +15,6 @@ import {
   Pencil,
   FileUp,
   Ticket,
-  Undo2,
 } from "lucide-react";
 
 const activityIcons: { [key: string]: React.ReactNode } = {
@@ -23,7 +22,6 @@ const activityIcons: { [key: string]: React.ReactNode } = {
   COMMENT_ADDED: <MessageSquare className="h-4 w-4" />,
   TASK_CREATED: <ListChecks className="h-4 w-4" />,
   TASK_COMPLETED: <CheckCircle className="h-4 w-4" />,
-  TASK_REOPENED: <Undo2 className="h-4 w-4" />,
   TASK_DELETED: <Trash2 className="h-4 w-4" />,
   TEAM_MEMBER_ADDED: <UserPlus className="h-4 w-4" />,
   TEAM_MEMBER_REMOVED: <UserMinus className="h-4 w-4" />,

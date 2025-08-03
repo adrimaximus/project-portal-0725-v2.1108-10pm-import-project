@@ -1,44 +1,50 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-// Define the User type
 export interface User {
   id: string;
   name: string;
+  email: string;
+  role: 'Admin' | 'Member';
   avatar?: string;
-  initials?: string;
-  role: 'Admin' | 'User';
 }
 
-// Define the context type
 interface UserContextType {
   user: User;
-  setUser: (user: User) => void;
+  login: (user: User) => void;
+  logout: () => void;
+  updateUser: (updates: Partial<User>) => void; // Added updateUser
 }
 
-// Create the context with a default value
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-// Dummy user for initial state
-const dummyUser: User = {
-  id: 'user-1',
-  name: 'Alice Johnson',
-  avatar: '/avatars/01.png',
-  initials: 'AJ',
-  role: 'Admin',
-};
-
-// Create the provider component
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User>(dummyUser);
+  const [user, setUser] = useState<User>({
+    id: 'user-1',
+    name: 'Alice Johnson',
+    email: 'alice.j@example.com',
+    role: 'Admin',
+    avatar: 'https://i.pravatar.cc/150?u=alice'
+  });
+
+  const login = (userData: User) => {
+    setUser(userData);
+  };
+
+  const logout = () => {
+    console.log("User logged out");
+  };
+
+  const updateUser = (updates: Partial<User>) => {
+    setUser(prevUser => ({ ...prevUser, ...updates }));
+  };
 
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, login, logout, updateUser }}>
       {children}
     </UserContext.Provider>
   );
 };
 
-// Custom hook to use the user context
 export const useUser = () => {
   const context = useContext(UserContext);
   if (context === undefined) {
