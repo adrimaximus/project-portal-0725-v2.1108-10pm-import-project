@@ -12,26 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Combobox } from '@/components/ui/combobox';
-import React from 'react';
-
-// Data dummy untuk semua pengguna yang ada di aplikasi
-const allAppUsers = [
-  { value: 'theresa.webb@example.com', label: 'Theresa Webb' },
-  { value: 'darlene.robertson@example.com', label: 'Darlene Robertson' },
-  { value: 'anne.black@example.com', label: 'Anne Black' },
-  { value: 'floyd.miles@example.com', label: 'Floyd Miles' },
-  { value: 'cody.fisher@example.com', label: 'Cody Fisher' },
-  { value: 'kristin.watson@example.com', label: 'Kristin Watson' },
-  { value: 'leslie.alexander@example.com', label: 'Leslie Alexander' },
-  { value: 'john.doe@example.com', label: 'John Doe' },
-  { value: 'jane.smith@example.com', label: 'Jane Smith' },
-];
 
 const FeatureSettingsPage = () => {
   const { featureId } = useParams<{ featureId: string }>();
   const { features } = useFeatures();
-  const [selectedUser, setSelectedUser] = React.useState('');
 
   const feature = features.find(f => f.id === featureId);
 
@@ -102,35 +86,34 @@ const FeatureSettingsPage = () => {
                     <div className="p-3 rounded-full bg-primary-foreground mb-2 inline-block">
                       <Users className="h-6 w-6 text-primary" />
                     </div>
-                    <DialogTitle className="text-xl">Add member to project</DialogTitle>
+                    <DialogTitle className="text-xl">Invite your team members</DialogTitle>
                     <DialogDescription>
-                      Select an existing user from your application to add them to this project.
+                      Add your colleagues to collaborate and assign them a role.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="py-4 space-y-4">
-                    <Combobox
-                      options={allAppUsers}
-                      value={selectedUser}
-                      onChange={setSelectedUser}
-                      placeholder="Select a user..."
-                      searchPlaceholder="Search user by name or email..."
-                      emptyMessage="No user found."
-                    />
-                    <Select defaultValue="user">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="owner">Owner</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="read-only">Read only</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                      <Input id="email" placeholder="name@example.com" />
+                      <Select defaultValue="user">
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="owner">Owner</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="read-only">Read only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button variant="link" className="p-0 h-auto text-primary">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add another
+                    </Button>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
-                    <Button className="w-full sm:w-auto">Add Member</Button>
+                    <Button className="w-full sm:w-auto">Send Invite</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
