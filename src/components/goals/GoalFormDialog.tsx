@@ -119,20 +119,16 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
       setIsSaving(false);
       onOpenChange(false);
     } else if (!isEditMode && onGoalCreate) {
-      const toastId = toast.loading("Creating goal and generating icon...");
-      let icon = '🎯';
+      const toastId = toast.loading("Generating AI icon...");
+      let icon = '🎯'; // Default icon
       try {
-        const prompt = `Goal: ${title}. Description: ${description || 'No description'}`;
-        const generatedIcon = await generateAiIcon(prompt);
-        if (generatedIcon.startsWith('http')) {
-          icon = generatedIcon;
-          toast.success("AI icon generated successfully!", { id: toastId });
-        } else {
-          toast.warning("Could not generate AI icon, using default. " + generatedIcon, { id: toastId });
-        }
+        const prompt = `Icon for goal: ${title}. ${description || ''}`;
+        const generatedIconUrl = await generateAiIcon(prompt);
+        icon = generatedIconUrl;
+        toast.success("AI icon generated successfully!", { id: toastId });
       } catch (error) {
         console.error("Icon generation failed:", error);
-        toast.error("An error occurred during icon generation, using default.", { id: toastId });
+        toast.error("Could not generate AI icon, using default.", { id: toastId });
       }
 
       onGoalCreate({
