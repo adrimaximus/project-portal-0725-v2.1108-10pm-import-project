@@ -1,7 +1,11 @@
 import { Badge } from "@/components/ui/badge";
-import { allServices } from "@/data/services";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { services as allServices, Service } from "@/data/services";
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { useState } from "react";
 
 interface ProjectServicesProps {
   selectedServices: string[];
@@ -9,43 +13,82 @@ interface ProjectServicesProps {
   onServicesChange: (services: string[]) => void;
 }
 
-const ProjectServices = ({ selectedServices, isEditing, onServicesChange }: ProjectServicesProps) => {
-  const handleServiceToggle = (service: string) => {
-    const newServices = selectedServices.includes(service)
-      ? selectedServices.filter(s => s !== service)
-      : [...selectedServices, service];
-    onServicesChange(newServices);
+const ProjectServices = ({ selectedServices = [], isEditing, onServicesChange }: ProjectServicesProps) => {
+  const [open, setOpen] = useState(false);
+
+  const serviceDetails = selectedServices
+    .map((serviceName) => allServices.find((s) => s.title === serviceName))
+    .filter((s): s is Service => s !== undefined);
+
+  const handleSelect = (serviceTitle: string) => {
+    const isSelected = selectedServices.includes(serviceTitle);
+    if (isSelected) {
+      onServicesChange(selectedServices.filter(s => s !== serviceTitle));
+    } else {
+      onServicesChange([...selectedServices, serviceTitle]);
+    }
   };
 
-  if (isEditing) {
+  if (!isEditing) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        {allServices.map(service => (
-          <div key={service} className="flex items-center space-x-2">
-            <Checkbox
-              id={`service-${service}`}
-              checked={selectedServices.includes(service)}
-              onCheckedChange={() => handleServiceToggle(service)}
-            />
-            <Label htmlFor={`service-${service}`} className="font-normal cursor-pointer">
-              {service}
-            </Label>
-          </div>
-        ))}
+      <div className="flex flex-wrap gap-2">
+        {serviceDetails.length > 0 ? serviceDetails.map((service) => (
+          <Badge
+            key={service.title}
+            variant="secondary"
+            className="flex items-center gap-2"
+          >
+            <service.icon className={cn("h-4 w-4", service.iconColor)} />
+            <span>{service.title}</span>
+          </Badge>
+        )) : <p>No services selected.</p>}
       </div>
     );
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {selectedServices && selectedServices.length > 0 ? (
-        selectedServices.map(service => (
-          <Badge key={service} variant="secondary">{service}</Badge>
-        ))
-      ) : (
-        <p className="text-sm text-muted-foreground">No services selected.</p>
-      )}
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
+          <span className="truncate">
+            {selectedServices.length > 0 ? `${selectedServices.length} service(s) selected` : "Select services..."}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <Command>
+          <CommandInput placeholder="Search services..." />
+          <CommandList>
+            <CommandEmpty>No services found.</CommandEmpty>
+            <CommandGroup>
+              {allServices.map((service) => (
+                <CommandItem
+                  key={service.title}
+                  value={service.title}
+                  onSelect={() => handleSelect(service.title)}
+                  className="cursor-pointer"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedServices.includes(service.title) ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <service.icon className={cn("mr-2 h-4 w-4", service.iconColor)} />
+                  {service.title}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 };
 
