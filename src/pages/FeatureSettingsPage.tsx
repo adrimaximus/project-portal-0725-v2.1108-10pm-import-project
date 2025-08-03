@@ -7,17 +7,41 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Search, Users } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Users, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import React, { useState } from 'react';
+
+type Invite = {
+  id: number;
+  email: string;
+  role: 'owner' | 'admin' | 'user' | 'read-only';
+};
 
 const FeatureSettingsPage = () => {
   const { featureId } = useParams<{ featureId: string }>();
   const { features } = useFeatures();
+  const [invites, setInvites] = useState<Invite[]>([{ id: Date.now(), email: '', role: 'user' }]);
 
   const feature = features.find(f => f.id === featureId);
+
+  const handleInviteChange = (id: number, field: 'email' | 'role', value: string) => {
+    setInvites(currentInvites =>
+      currentInvites.map(invite =>
+        invite.id === id ? { ...invite, [field]: value as any } : invite
+      )
+    );
+  };
+
+  const addInviteField = () => {
+    setInvites(currentInvites => [...currentInvites, { id: Date.now(), email: '', role: 'user' }]);
+  };
+
+  const removeInviteField = (id: number) => {
+    setInvites(currentInvites => currentInvites.filter(invite => invite.id !== id));
+  };
 
   // Data dummy berdasarkan desain
   const members = [
@@ -92,21 +116,36 @@ const FeatureSettingsPage = () => {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="py-4 space-y-4">
-                    <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-                      <Input id="email" placeholder="name@example.com" />
-                      <Select defaultValue="user">
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="owner">Owner</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="read-only">Read only</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button variant="link" className="p-0 h-auto text-primary">
+                    {invites.map((invite) => (
+                      <div key={invite.id} className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
+                        <Input
+                          id={`email-${invite.id}`}
+                          placeholder="name@example.com"
+                          value={invite.email}
+                          onChange={(e) => handleInviteChange(invite.id, 'email', e.target.value)}
+                        />
+                        <Select
+                          value={invite.role}
+                          onValueChange={(value) => handleInviteChange(invite.id, 'role', value)}
+                        >
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="owner">Owner</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="user">User</SelectItem>
+                            <SelectItem value="read-only">Read only</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {invites.length > 1 && (
+                          <Button variant="ghost" size="icon" onClick={() => removeInviteField(invite.id)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button variant="link" className="p-0 h-auto text-primary" onClick={addInviteField}>
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Add another
                     </Button>
