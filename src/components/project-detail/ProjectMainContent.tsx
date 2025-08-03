@@ -51,7 +51,7 @@ const ProjectMainContent = ({
             </TabsTrigger>
             <TabsTrigger value="comments">
               <MessageSquare className="h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline ml-2">Comments & Tickets</span>
+              <span className="hidden sm:inline ml-2">Tickets</span>
               {ticketCount > 0 && <Badge className="ml-2 bg-orange-500">{ticketCount}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="activity">
