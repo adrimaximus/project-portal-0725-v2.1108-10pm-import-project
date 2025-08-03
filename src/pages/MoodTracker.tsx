@@ -1,4 +1,10 @@
 import { useState, useMemo } from 'react';
+import { DateRange } from "react-day-picker";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
 import PortalLayout from '@/components/PortalLayout';
 import MoodSelector from '@/components/mood-tracker/MoodSelector';
 import MoodOverview from '@/components/mood-tracker/MoodOverview';
@@ -10,12 +16,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 
-type Period = 'week' | 'month' | 'year';
+type MoodTrackerPeriod = 'week' | 'month' | 'year' | 'custom';
 
 const MoodTracker = () => {
   const [selectedMoodId, setSelectedMoodId] = useState<Mood['id']>(moods[0].id);
   const [history, setHistory] = useState<MoodHistoryEntry[]>(dummyHistory);
-  const [period, setPeriod] = useState<Period>('week');
+  const [period, setPeriod] = useState<MoodTrackerPeriod>('week');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const user = { name: 'Alex' }; // Data pengguna tiruan
 
   const handleSubmit = () => {
@@ -47,12 +54,29 @@ const MoodTracker = () => {
     toast.success(`Your mood has been recorded: ${selectedMood.label} ${selectedMood.emoji}`);
   };
 
+  const handlePeriodChange = (newPeriod: MoodTrackerPeriod) => {
+    setPeriod(newPeriod);
+    if (newPeriod !== 'custom') {
+      setDateRange(undefined);
+    }
+  };
+
+  const handleDateRangeSelect = (range: DateRange | undefined) => {
+    setDateRange(range);
+    setPeriod('custom');
+  };
+
   const getOverviewTitle = () => {
     switch (period) {
       case 'month':
         return "This Month's Overview";
       case 'year':
         return "This Year's Overview";
+      case 'custom':
+        if (dateRange?.from && dateRange?.to) {
+          return `Overview: ${format(dateRange.from, "LLL dd")} - ${format(dateRange.to, "LLL dd, y")}`;
+        }
+        return "Custom Range Overview";
       case 'week':
       default:
         return "This Week's Overview";
@@ -80,14 +104,21 @@ const MoodTracker = () => {
       if (period === 'year') {
         return entryDate.getFullYear() === today.getFullYear();
       }
-      return true;
+      if (period === 'custom' && dateRange?.from && dateRange?.to) {
+        const from = new Date(dateRange.from);
+        from.setHours(0, 0, 0, 0);
+        const to = new Date(dateRange.to);
+        to.setHours(23, 59, 59, 999);
+        return entryDate >= from && entryDate <= to;
+      }
+      return false;
     });
 
     return moods.map(mood => ({
       ...mood,
       value: filteredHistory.filter(entry => entry.moodId === mood.id).length,
     })).filter(mood => mood.value > 0);
-  }, [history, period]);
+  }, [history, period, dateRange]);
 
   return (
     <PortalLayout>
@@ -113,10 +144,46 @@ const MoodTracker = () => {
           <Card className="lg:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle>{getOverviewTitle()}</CardTitle>
-              <div className="flex items-center gap-1 rounded-md bg-secondary p-1">
-                <Button variant={period === 'week' ? 'default' : 'ghost'} size="sm" onClick={() => setPeriod('week')} className="h-7">This Week</Button>
-                <Button variant={period === 'month' ? 'default' : 'ghost'} size="sm" onClick={() => setPeriod('month')} className="h-7">This Month</Button>
-                <Button variant={period === 'year' ? 'default' : 'ghost'} size="sm" onClick={() => setPeriod('year')} className="h-7">This Year</Button>
+              <div className="flex flex-wrap items-center gap-1 rounded-md bg-secondary p-1">
+                <Button variant={period === 'week' ? 'default' : 'ghost'} size="sm" onClick={() => handlePeriodChange('week')} className="h-7">This Week</Button>
+                <Button variant={period === 'month' ? 'default' : 'ghost'} size="sm" onClick={() => handlePeriodChange('month')} className="h-7">This Month</Button>
+                <Button variant={period === 'year' ? 'default' : 'ghost'} size="sm" onClick={() => handlePeriodChange('year')} className="h-7">This Year</Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="date"
+                      variant={period === 'custom' ? 'default' : 'ghost'}
+                      size="sm"
+                      className={cn(
+                        "h-7 w-full sm:w-auto justify-start text-left font-normal",
+                        !dateRange && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange?.from ? (
+                        dateRange.to ? (
+                          <>
+                            {format(dateRange.from, "LLL dd")} - {format(dateRange.to, "LLL dd")}
+                          </>
+                        ) : (
+                          format(dateRange.from, "LLL dd, y")
+                        )
+                      ) : (
+                        <span>Custom</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={dateRange?.from}
+                      selected={dateRange}
+                      onSelect={handleDateRangeSelect}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </CardHeader>
             <CardContent>
@@ -124,7 +191,7 @@ const MoodTracker = () => {
                 <MoodOverview data={moodDataForPeriod} />
                 <MoodStats data={moodDataForPeriod} />
               </div>
-              <AiFriendSuggestion data={moodDataForPeriod} period={period} userName={user.name} />
+              {period !== 'custom' && <AiFriendSuggestion data={moodDataForPeriod} period={period} userName={user.name} />}
             </CardContent>
           </Card>
 
