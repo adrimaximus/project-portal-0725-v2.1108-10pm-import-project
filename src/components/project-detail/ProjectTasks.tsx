@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, UserPlus, Trash2 } from "lucide-react";
+import { Plus, UserPlus, Trash2, Sparkles } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
@@ -59,6 +59,7 @@ interface ProjectTasksProps {
 const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksProps) => {
   const [newTaskText, setNewTaskText] = useState("");
   const [newTaskAssignees, setNewTaskAssignees] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleToggleTask = (taskId: string) => {
     const updatedTasks = tasks.map(task =>
@@ -107,6 +108,22 @@ const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksPro
     setNewTaskAssignees([]);
   };
 
+  const handleGenerateTasks = () => {
+    setIsGenerating(true);
+    // Simulate AI generation
+    setTimeout(() => {
+      const generatedTasks: Task[] = [
+        { id: `ai-task-${Date.now()}-1`, name: "Definisikan ruang lingkup dan tujuan proyek", completed: false, assignedTo: [] },
+        { id: `ai-task-${Date.now()}-2`, name: "Identifikasi pemangku kepentingan utama", completed: false, assignedTo: [] },
+        { id: `ai-task-${Date.now()}-3`, name: "Buat rencana proyek awal dan timeline", completed: false, assignedTo: [] },
+        { id: `ai-task-${Date.now()}-4`, name: "Siapkan sumber daya dan tim yang dibutuhkan", completed: false, assignedTo: [] },
+        { id: `ai-task-${Date.now()}-5`, name: "Lakukan kick-off meeting dengan tim", completed: false, assignedTo: [] },
+      ];
+      onTasksUpdate([...tasks, ...generatedTasks]);
+      setIsGenerating(false);
+    }, 1000);
+  };
+
   const getAssigneeDetails = (userId: string) => {
     return assignableUsers.find(u => u.id === userId);
   };
@@ -142,6 +159,18 @@ const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksPro
         <Button onClick={handleAddTask} size="icon">
           <Plus className="h-4 w-4" />
         </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button onClick={handleGenerateTasks} variant="outline" size="icon" disabled={isGenerating}>
+                <Sparkles className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Generate with AI</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       <div className="border rounded-md overflow-x-auto">
         <Table>
@@ -211,7 +240,7 @@ const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksPro
             )) : (
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center">
-                  No tasks yet.
+                  No tasks yet. Click "Generate with AI" to start!
                 </TableCell>
               </TableRow>
             )}
