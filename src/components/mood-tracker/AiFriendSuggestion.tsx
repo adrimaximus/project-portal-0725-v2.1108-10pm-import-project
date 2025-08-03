@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import OpenAI from 'openai';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 type Period = 'week' | 'month' | 'year';
 
@@ -94,6 +95,8 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
     );
   }
 
+  const dominantMood = data.length > 0 ? data.reduce((prev, current) => (prev.value > current.value) ? prev : current) : null;
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -113,13 +116,27 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
   };
 
   return (
-    <div className="mt-4 p-4 bg-secondary rounded-lg">
+    <div 
+      className={cn("mt-4 p-4 rounded-lg transition-colors duration-300", !dominantMood && "bg-secondary")}
+      style={dominantMood ? { backgroundColor: `${dominantMood.color}20` } : {}}
+    >
       <div className="flex items-start gap-3">
-        <div className="bg-primary/10 p-2 rounded-full">
-            <Lightbulb className="h-5 w-5 text-primary" />
+        <div 
+          className={cn("p-2 rounded-full transition-colors duration-300", !dominantMood && "bg-primary/10")}
+          style={dominantMood ? { backgroundColor: `${dominantMood.color}30` } : {}}
+        >
+            <Lightbulb 
+              className={cn("h-5 w-5 transition-colors duration-300", !dominantMood && "text-primary")}
+              style={dominantMood ? { color: dominantMood.color } : {}}
+            />
         </div>
         <div>
-            <h4 className="font-semibold text-sm">Pikiran dari Teman AI-mu</h4>
+            <h4 
+              className="font-semibold text-sm transition-colors duration-300"
+              style={dominantMood ? { color: dominantMood.color } : {}}
+            >
+              Pikiran dari Teman AI-mu
+            </h4>
             {renderContent()}
         </div>
       </div>
