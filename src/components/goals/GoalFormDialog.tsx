@@ -156,6 +156,24 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
     }
   };
 
+  const handleNumericInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>, 
+    setter: (value: number | undefined) => void
+  ) => {
+    const rawValue = e.target.value;
+    const sanitizedValue = rawValue.replace(/,/g, '');
+
+    if (sanitizedValue === '') {
+      setter(undefined);
+      return;
+    }
+
+    const numValue = parseInt(sanitizedValue, 10);
+    if (!isNaN(numValue)) {
+      setter(numValue);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isSaving && onOpenChange(isOpen)}>
       <DialogContent className="sm:max-w-[425px]">
@@ -206,7 +224,15 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
             <>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="target-quantity" className="text-right">Target</Label>
-                <Input id="target-quantity" type="number" value={targetQuantity || ''} onChange={(e) => setTargetQuantity(parseInt(e.target.value) || undefined)} className="col-span-3" placeholder="e.g., 300" />
+                <Input
+                  id="target-quantity"
+                  type="text"
+                  inputMode="numeric"
+                  value={targetQuantity !== undefined ? new Intl.NumberFormat('en-US').format(targetQuantity) : ''}
+                  onChange={(e) => handleNumericInputChange(e, setTargetQuantity)}
+                  className="col-span-3"
+                  placeholder="e.g., 300"
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Period</Label>
@@ -223,7 +249,15 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
             <>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="target-value" className="text-right">Target Value</Label>
-                <Input id="target-value" type="number" value={targetValue || ''} onChange={(e) => setTargetValue(parseInt(e.target.value) || undefined)} className="col-span-3" placeholder="e.g., 500" />
+                <Input
+                  id="target-value"
+                  type="text"
+                  inputMode="numeric"
+                  value={targetValue !== undefined ? new Intl.NumberFormat('en-US').format(targetValue) : ''}
+                  onChange={(e) => handleNumericInputChange(e, setTargetValue)}
+                  className="col-span-3"
+                  placeholder="e.g., 500"
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="unit" className="text-right">Unit</Label>
