@@ -72,6 +72,14 @@ const ProjectComments = ({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const suggestionsOpen = document.querySelector('.mentions__suggestions__list');
+    if (e.key === 'Enter' && !e.shiftKey && !suggestionsOpen) {
+      e.preventDefault();
+      handleSubmit(false);
+    }
+  };
+
   const renderUserSuggestion = (
     suggestion: SuggestionDataItem & { avatar?: string; initials?: string },
     search: string,
@@ -127,6 +135,7 @@ const ProjectComments = ({
               placeholder={placeholderText}
               className="mentions"
               a11ySuggestionsListLabel="Suggested mentions"
+              onKeyDown={handleKeyDown}
             >
               <Mention
                 trigger="@"
