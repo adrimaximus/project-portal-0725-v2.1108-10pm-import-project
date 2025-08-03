@@ -1,5 +1,4 @@
 import { Goal } from '@/data/goals';
-import { User } from '@/data/users';
 import { getIconComponent } from '@/data/icons';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { parseISO, isWithinInterval, startOfToday, subDays } from 'date-fns';
 import { getColorForTag } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { Collaborator } from '@/types';
 
 type GoalWithTags = Goal & { tags?: string[] };
 
@@ -59,7 +59,7 @@ const GoalCard = ({ goal }: { goal: GoalWithTags }) => {
             </div>
             {goal.collaborators && goal.collaborators.length > 0 && (
               <div className="flex -space-x-2 overflow-hidden flex-shrink-0">
-                {goal.collaborators.slice(0, 3).map((user: User) => (
+                {goal.collaborators.slice(0, 3).map((user: Collaborator) => (
                   <Avatar key={user.id} className="inline-block h-8 w-8 rounded-full border-2 border-background">
                     <AvatarFallback>{user.initials}</AvatarFallback>
                   </Avatar>

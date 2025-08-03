@@ -1,7 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { GoalsProvider } from "@/context/GoalsContext";
-import { Route, BrowserRouter as Router, Routes, Navigate } from "react-router-dom";
+import { Route, Routes, Navigate } from "react-router-dom";
 import ChatPage from "./pages/ChatPage";
 import GoalsPage from "./pages/GoalsPage";
 import GoalDetailPage from "./pages/GoalDetailPage";
@@ -9,17 +8,13 @@ import GoalDetailPage from "./pages/GoalDetailPage";
 function App() {
   return (
     <TooltipProvider>
-      <GoalsProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<Navigate to="/chat" />} />
-            <Route path="/goals" element={<GoalsPage />} />
-            <Route path="/goals/:goalId" element={<GoalDetailPage />} />
-            <Route path="/chat" element={<ChatPage />} />
-          </Routes>
-        </Router>
-        <Toaster />
-      </GoalsProvider>
+      <Routes>
+        <Route path="/" element={<Navigate to="/chat" />} />
+        <Route path="/goals" element={<GoalsPage />} />
+        <Route path="/goals/:goalId" element={<GoalDetailPage />} />
+        <Route path="/chat" element={<ChatPage />} />
+      </Routes>
+      <Toaster />
     </TooltipProvider>
   );
 }

@@ -81,8 +81,8 @@ const NewGroupChatDialog = ({ onStartNewGroupChat, setOpen }: NewGroupChatDialog
                     className="flex-1 flex items-center gap-3 cursor-pointer"
                   >
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={collaborator.src} alt={collaborator.name} />
-                      <AvatarFallback>{collaborator.fallback}</AvatarFallback>
+                      <AvatarImage src={collaborator.avatar} alt={collaborator.name} />
+                      <AvatarFallback>{collaborator.initials}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <p className="text-sm font-medium leading-none">{collaborator.name}</p>

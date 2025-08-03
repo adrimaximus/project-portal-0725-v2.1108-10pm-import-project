@@ -1,14 +1,5 @@
 import { createContext, useContext, ReactNode, useState } from 'react';
-import { Role } from '@/types';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  initials: string;
-  role: Role;
-}
+import { Role, Collaborator as User } from '@/types';
 
 interface UserContextType {
   user: User;

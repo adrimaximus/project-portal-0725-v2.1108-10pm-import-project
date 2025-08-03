@@ -59,9 +59,9 @@ export const dummyConversations: Conversation[] = [
     unreadCount: 0,
     isGroup: true,
     members: [
-      { id: 'user-cindy', name: 'Cindy', email: 'cindy@example.com', src: 'https://i.pravatar.cc/150?u=cindy', fallback: 'C', online: true },
-      { id: 'user-dodi', name: 'Dodi', email: 'dodi@example.com', src: 'https://i.pravatar.cc/150?u=dodi', fallback: 'D', online: false },
-      { id: currentUser.id, name: currentUser.name, email: 'alex@example.com', src: currentUser.avatar, fallback: 'A', online: true },
+      { id: 'user-cindy', name: 'Cindy', email: 'cindy@example.com', avatar: 'https://i.pravatar.cc/150?u=cindy', initials: 'C', online: true },
+      { id: 'user-dodi', name: 'Dodi', email: 'dodi@example.com', avatar: 'https://i.pravatar.cc/150?u=dodi', initials: 'D', online: false },
+      { id: currentUser.id, name: currentUser.name, email: 'alex@example.com', avatar: currentUser.avatar, initials: 'A', online: true },
     ],
     messages: [
       { id: 'msg-2-1', senderId: 'user-cindy', senderName: 'Cindy', senderAvatar: 'https://i.pravatar.cc/150?u=cindy', text: 'Tim, laporan mingguan sudah saya kirim ke email.', timestamp: 'Kemarin' },

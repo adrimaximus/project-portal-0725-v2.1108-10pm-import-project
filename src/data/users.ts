@@ -1,10 +1,4 @@
-export interface User {
-  id: string;
-  name: string;
-  initials: string;
-  email: string;
-  avatar: string;
-}
+import { Collaborator as User } from '@/types';
 
 export const user1: User = { id: 'user-1', name: 'Alice', initials: 'A', email: 'alice@example.com', avatar: 'https://i.pravatar.cc/150?u=alice' };
 export const user2: User = { id: 'user-2', name: 'Bob', initials: 'B', email: 'bob@example.com', avatar: 'https://i.pravatar.cc/150?u=bob' };
