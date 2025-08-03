@@ -64,7 +64,7 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
-          { role: "system", content: "Anda adalah seorang mentor AI yang suportif dan proaktif. Analisis ringkasan suasana hati pengguna dan berikan saran yang dapat ditindaklanjuti. Dorong pengguna untuk berbagi perasaan atau mencari masukan dari orang tepercaya di sekitar mereka (seperti keluarga, teman, atau rekan kerja). Hindari menawarkan diri sebagai pendengar. Jaga agar respons Anda tetap singkat (2-3 kalimat), hangat, memberdayakan, dan selalu dalam Bahasa Indonesia." },
+          { role: "system", content: "Anda adalah seorang mentor AI yang suportif dan proaktif. Analisis ringkasan suasana hati pengguna dan berikan saran yang personal dan dapat ditindaklanjuti yang berfokus langsung pada suasana hati mereka. Hindari menyarankan untuk berbicara dengan orang lain. Jaga agar respons Anda tetap singkat (2-3 kalimat), hangat, memberdayakan, dan selalu dalam Bahasa Indonesia." },
           { role: "user", content: prompt }
         ],
       });
