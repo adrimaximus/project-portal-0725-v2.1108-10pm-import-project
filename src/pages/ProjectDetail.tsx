@@ -211,10 +211,9 @@ const ProjectDetail = () => {
 
   const handleAddCommentOrTicket = (newComment: Comment) => {
     const activityType = newComment.isTicket ? 'TICKET_CREATED' : 'COMMENT_ADDED';
-    const textPreview = newComment.text.replace(/@\[[^\]]+\]\(([^)]+)\)/g, '@$1').substring(0, 50);
-    const activityDescription = newComment.isTicket 
-      ? `membuat tiket baru: "${textPreview}${newComment.text.length > 50 ? '...' : ''}"`
-      : `memberi komentar: "${textPreview}${newComment.text.length > 50 ? '...' : ''}"`;
+    const activityDescription = newComment.isTicket
+      ? `membuat tiket baru: ${newComment.text}`
+      : `memberi komentar: ${newComment.text}`;
 
     const activity: Activity = {
       id: `activity-${Date.now()}`,
