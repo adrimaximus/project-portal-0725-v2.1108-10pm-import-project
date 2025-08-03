@@ -1,10 +1,10 @@
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { Goal } from '@/data/goals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tag, TagInput } from '@/components/ui/TagInput';
+import { TagInput } from '@/components/ui/TagInput';
 import { allIcons, getIconComponent } from '@/data/icons';
 import { colors } from '@/data/colors';
 
@@ -117,8 +117,8 @@ const GoalDetail = ({ goal, onUpdate, onDelete, onClose }: GoalDetailProps) => {
         </Label>
         <div className="col-span-3">
           <TagInput
-            tags={(editedGoal.tags || []).map(t => ({ id: t, text: t }))}
-            setTags={(newTags: Tag[]) => handleChange('tags', newTags.map(t => t.text))}
+            value={editedGoal.tags || []}
+            onChange={(tags) => handleChange('tags', tags)}
             placeholder="Add tags and press Enter"
           />
         </div>

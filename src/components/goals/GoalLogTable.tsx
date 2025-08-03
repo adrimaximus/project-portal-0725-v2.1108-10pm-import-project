@@ -1,56 +1,60 @@
-import { Goal, GoalCompletion } from "@/data/goals";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { formatDistanceToNow } from "date-fns";
+import { Goal, GoalCompletion } from '@/data/goals';
+import { dummyUsers } from '@/data/users';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { formatValue } from '@/lib/formatting';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface GoalLogTableProps {
-  goal: Goal;
+  logs: GoalCompletion[];
+  unit?: string;
+  goalType: Goal['type'];
 }
 
-export function GoalLogTable({ goal }: GoalLogTableProps) {
-  const getCompletionText = (completion: GoalCompletion) => {
-    if (goal.type === 'value' && completion.value) {
-      return `Logged ${completion.value.toLocaleString()} ${goal.unit || ''}`;
-    }
-    if (goal.type === 'quantity') {
-      return `Completed 1 item`;
-    }
-    return "Completed";
-  };
+const userMap = new Map(dummyUsers.map(user => [user.id, user]));
 
-  const sortedCompletions = [...goal.completions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
+  if (logs.length === 0) {
+    return <p className="text-sm text-muted-foreground text-center py-4">No logs yet.</p>;
+  }
+
+  const sortedLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="max-h-96 overflow-y-auto">
+    <div className="border rounded-md mt-4">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Activity</TableHead>
-            <TableHead>User</TableHead>
-            <TableHead className="text-right">Date</TableHead>
+            <TableHead>Date & Time</TableHead>
+            <TableHead>Achiever</TableHead>
+            <TableHead className="text-right">
+              {goalType === 'quantity' ? 'Quantity' : 'Value'}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedCompletions.map(completion => {
-            const collaborator = goal.collaborators.find(c => c.id === completion.collaboratorId);
+          {sortedLogs.map((log, index) => {
+            const achiever = log.userId ? userMap.get(log.userId) : null;
             return (
-              <TableRow key={completion.id}>
-                <TableCell className="font-medium">{getCompletionText(completion)}</TableCell>
+              <TableRow key={index}>
+                <TableCell className="text-muted-foreground text-xs">
+                  {format(new Date(log.date), 'MMM dd, yyyy, hh:mm a')}
+                </TableCell>
                 <TableCell>
-                  {collaborator ? (
+                  {achiever ? (
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={collaborator.avatar} />
-                        <AvatarFallback>{collaborator.initials}</AvatarFallback>
+                        <AvatarImage src={achiever.avatar} />
+                        <AvatarFallback>{achiever.name.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <span className="text-sm">{collaborator.name}</span>
+                      <span className="text-sm font-medium">{achiever.name}</span>
                     </div>
                   ) : (
-                    <span className="text-sm text-muted-foreground">System</span>
+                    <span className="text-sm text-muted-foreground">-</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right text-sm text-muted-foreground">
-                  {formatDistanceToNow(new Date(completion.date), { addSuffix: true })}
+                <TableCell className="text-right font-medium">
+                  {formatValue(log.value, unit)}
                 </TableCell>
               </TableRow>
             );
@@ -59,4 +63,6 @@ export function GoalLogTable({ goal }: GoalLogTableProps) {
       </Table>
     </div>
   );
-}
+};
+
+export default GoalLogTable;

@@ -3,7 +3,7 @@ import PortalLayout from '@/components/PortalLayout';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Goal, dummyGoals } from '@/data/goals';
-import { GoalFormDialog } from '@/components/goals/GoalFormDialog';
+import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import GoalCard from '@/components/goals/GoalCard';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '@/data/users';

@@ -5,15 +5,14 @@ export interface User {
   name: string;
   email: string;
   role: 'Admin' | 'Member';
-  avatar: string;
-  initials: string;
+  avatar?: string;
 }
 
 interface UserContextType {
   user: User;
   login: (user: User) => void;
   logout: () => void;
-  updateUser: (updates: Partial<User>) => void;
+  updateUser: (updates: Partial<User>) => void; // Added updateUser
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -24,8 +23,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     name: 'Alice Johnson',
     email: 'alice.j@example.com',
     role: 'Admin',
-    avatar: 'https://i.pravatar.cc/150?u=alice',
-    initials: 'AJ'
+    avatar: 'https://i.pravatar.cc/150?u=alice'
   });
 
   const login = (userData: User) => {

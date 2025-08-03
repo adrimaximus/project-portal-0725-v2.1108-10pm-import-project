@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/formatting';
-import { GoalLogTable } from './GoalLogTable';
+import GoalLogTable from './GoalLogTable';
 
 interface GoalQuantityTrackerProps {
   goal: Goal;
@@ -107,7 +107,7 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
           />
           <Button onClick={handleLog}>Log</Button>
         </div>
-        <GoalLogTable goal={{ ...goal, completions: logsInPeriod }} />
+        <GoalLogTable logs={logsInPeriod} goalType={goal.type} />
       </CardContent>
     </Card>
   );
