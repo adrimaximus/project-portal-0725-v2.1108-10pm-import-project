@@ -217,15 +217,8 @@ const GoalDetailPage = () => {
 
         {goal.type === 'frequency' ? (
           <GoalYearlyProgress
-            completions={goal.completions.map(c => ({ date: c.date, completed: c.value === 1 }))}
-            color={goal.color}
+            goal={goal}
             onToggleCompletion={handleToggleCompletion}
-            frequency={goal.frequency}
-            specificDays={goal.specificDays}
-            goalTitle={goal.title}
-            goalDescription={goal.description}
-            goalTags={goal.tags.map(t => t.name)}
-            collaborators={goal.collaborators}
           />
         ) : goal.type === 'quantity' ? (
           <GoalQuantityTracker goal={goal} onLogProgress={handleLogQuantity} />
