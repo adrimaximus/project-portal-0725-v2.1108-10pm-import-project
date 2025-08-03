@@ -5,7 +5,7 @@ import { Route, Routes } from "react-router-dom";
 import Billing from "./pages/Billing";
 import ChatPage from "./pages/ChatPage";
 import EmbedPage from "./pages/EmbedPage";
-import FeatureSettingsPage from "./pages/FeatureSettingsPage";
+import TeamSettingsPage from "./pages/TeamSettingsPage";
 import GoalDetailPage from "./pages/GoalDetailPage";
 import GoalsPage from "./pages/GoalsPage";
 import Index from "./pages/Index";
@@ -37,8 +37,8 @@ function App() {
         <Route path="/billing" element={<Billing />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route
-          path="/settings/features/:featureId"
-          element={<FeatureSettingsPage />}
+          path="/settings/team"
+          element={<TeamSettingsPage />}
         />
         <Route path="/settings/integrations" element={<IntegrationsPage />} />
         <Route path="/settings/navigation" element={<NavigationSettingsPage />} />

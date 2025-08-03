@@ -3,14 +3,6 @@ import { Feature } from "@/data/features";
 import { useFeatures } from "@/contexts/FeaturesContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { SlidersHorizontal } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useNavigate } from "react-router-dom";
 
 interface FeatureCardProps {
   feature: Feature;
@@ -18,14 +10,8 @@ interface FeatureCardProps {
 
 const FeatureCard = ({ feature }: FeatureCardProps) => {
   const { toggleFeatureStatus } = useFeatures();
-  const navigate = useNavigate();
   const isSettingsFeature = feature.id === 'settings';
   const isEnabled = feature.status === 'enabled';
-
-  const handleAdvancedSettingsClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/settings/${feature.id}`);
-  };
 
   return (
     <Card>
@@ -45,21 +31,6 @@ const FeatureCard = ({ feature }: FeatureCardProps) => {
           >
             {feature.status}
           </Button>
-          {!isSettingsFeature && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={handleAdvancedSettingsClick}>
-                    <SlidersHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Advanced Settings</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Advanced Settings</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
         </div>
       </CardHeader>
       <CardContent>

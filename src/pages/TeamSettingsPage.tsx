@@ -50,16 +50,13 @@ const defaultRoles = [
   { value: 'view-only', label: 'View Only', description: 'Can view the project but cannot do anything else.' },
 ];
 
-const FeatureSettingsPage = () => {
-  const { featureId } = useParams<{ featureId: string }>();
+const TeamSettingsPage = () => {
   const { features } = useFeatures();
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [invites, setInvites] = useState<Invite[]>([{ id: Date.now(), email: '', role: 'member' }]);
   const [isCustomRoleDialogOpen, setCustomRoleDialogOpen] = useState(false);
   const [customRoleName, setCustomRoleName] = useState('');
   const [customRolePermissions, setCustomRolePermissions] = useState<Record<string, boolean>>({});
-
-  const feature = features.find(f => f.id === featureId);
 
   useEffect(() => {
     if (isCustomRoleDialogOpen) {
@@ -134,17 +131,17 @@ const FeatureSettingsPage = () => {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Team Members</BreadcrumbPage>
+              <BreadcrumbPage>Team Members & Access</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
         
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Team Members
+            Team Members & Access
           </h1>
           <p className="text-muted-foreground">
-            Manage your team members for the "{feature ? feature.name : 'Feature'}" feature.
+            Manage your team members and their roles across the application.
           </p>
         </div>
 
@@ -364,4 +361,4 @@ const FeatureSettingsPage = () => {
   );
 };
 
-export default FeatureSettingsPage;
+export default TeamSettingsPage;

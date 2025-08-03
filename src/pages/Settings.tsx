@@ -2,6 +2,7 @@ import PortalLayout from "@/components/PortalLayout";
 import FeatureCard from "@/components/settings/FeatureCard";
 import IntegrationCard from "@/components/settings/IntegrationCard";
 import NavigationCard from "@/components/settings/NavigationCard";
+import TeamCard from "@/components/settings/TeamCard";
 import { useFeatures } from "@/contexts/FeaturesContext";
 
 const SettingsPage = () => {
@@ -18,10 +19,12 @@ const SettingsPage = () => {
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {features
+            .filter(f => f.id !== 'user-management')
             .sort((a, b) => a.name.localeCompare(b.name))
             .map((feature) => (
               <FeatureCard key={feature.id} feature={feature} />
             ))}
+          <TeamCard />
           <IntegrationCard />
           <NavigationCard />
         </div>
