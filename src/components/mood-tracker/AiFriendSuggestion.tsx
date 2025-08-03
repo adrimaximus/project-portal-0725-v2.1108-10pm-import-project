@@ -57,15 +57,14 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
 
     const prompt = `
       Nama saya ${userName}. Selama ${periodInIndonesian} terakhir, ringkasan suasana hati saya adalah: ${moodSummary}.
-      Tolong bertindak sebagai teman AI yang bijak, ramah, dan pengertian. Berikan saya penghiburan, masukan yang bijak, dan jadilah pendengar yang baik.
-      Tanggapan Anda harus dalam Bahasa Indonesia, hangat, lembut, dan singkat (sekitar 2-3 kalimat).
+      Berdasarkan data ini, berikan saya saran yang membangun.
     `;
 
     try {
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
-          { role: "system", content: "Anda adalah teman AI yang bijak, ramah, dan pengertian. Peran Anda adalah menjadi pendengar yang baik dan memberikan penghiburan serta masukan yang bijak berdasarkan data suasana hati pengguna. Berbicaralah dengan nada yang hangat dan lembut. Jaga agar respons Anda tetap singkat, sekitar 2-3 kalimat, dan selalu dalam Bahasa Indonesia." },
+          { role: "system", content: "Anda adalah seorang mentor AI yang suportif dan proaktif. Analisis ringkasan suasana hati pengguna dan berikan saran yang dapat ditindaklanjuti. Dorong pengguna untuk berbagi perasaan atau mencari masukan dari orang tepercaya di sekitar mereka (seperti keluarga, teman, atau rekan kerja). Hindari menawarkan diri sebagai pendengar. Jaga agar respons Anda tetap singkat (2-3 kalimat), hangat, memberdayakan, dan selalu dalam Bahasa Indonesia." },
           { role: "user", content: prompt }
         ],
       });
