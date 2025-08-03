@@ -75,7 +75,7 @@ const Index = () => {
   }, {} as Record<string, number>);
 
   const ownerCounts = filteredProjects.reduce((acc, p) => {
-      if (p.assignedTo.length > 0) {
+      if (p.assignedTo && p.assignedTo.length > 0) {
           const owner = p.assignedTo[0];
           if (!acc[owner.id]) {
               acc[owner.id] = { ...owner, projectCount: 0 };
@@ -88,35 +88,41 @@ const Index = () => {
   const topOwner = Object.values(ownerCounts).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
 
   const collaboratorStats = filteredProjects.reduce((acc, p) => {
-      p.assignedTo.forEach(user => {
-          if (!acc[user.id]) {
-              acc[user.id] = { ...user, projectCount: 0, taskCount: 0 };
-          }
-          acc[user.id].projectCount++;
-      });
+      if (p.assignedTo) {
+        p.assignedTo.forEach(user => {
+            if (!acc[user.id]) {
+                acc[user.id] = { ...user, projectCount: 0, taskCount: 0 };
+            }
+            acc[user.id].projectCount++;
+        });
+      }
       return acc;
   }, {} as Record<string, any>);
 
   filteredProjects.forEach(p => {
-      p.tasks?.forEach(task => {
-          task.assignedTo.forEach(userId => {
-              if (collaboratorStats[userId]) {
-                  collaboratorStats[userId].taskCount++;
-              }
-          });
-      });
+      if (p.tasks && p.assignedTo) {
+        p.tasks?.forEach(task => {
+            task.assignedTo?.forEach(userId => {
+                if (collaboratorStats[userId]) {
+                    collaboratorStats[userId].taskCount++;
+                }
+            });
+        });
+      }
   });
 
   const collaborators = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount);
   const topCollaborator = collaborators[0] || null;
 
   const userValueCounts = filteredProjects.reduce((acc, p) => {
-      p.assignedTo.forEach(user => {
-          if (!acc[user.id]) {
-              acc[user.id] = { ...user, totalValue: 0 };
-          }
-          acc[user.id].totalValue += p.budget;
-      });
+      if (p.assignedTo) {
+        p.assignedTo.forEach(user => {
+            if (!acc[user.id]) {
+                acc[user.id] = { ...user, totalValue: 0 };
+            }
+            acc[user.id].totalValue += p.budget;
+        });
+      }
       return acc;
   }, {} as Record<string, any>);
 
@@ -125,12 +131,14 @@ const Index = () => {
   const pendingPaymentCounts = filteredProjects
     .filter(p => p.paymentStatus === 'Pending')
     .reduce((acc, p) => {
-        p.assignedTo.forEach(user => {
-            if (!acc[user.id]) {
-                acc[user.id] = { ...user, pendingValue: 0 };
-            }
-            acc[user.id].pendingValue += p.budget;
-        });
+        if (p.assignedTo) {
+            p.assignedTo.forEach(user => {
+                if (!acc[user.id]) {
+                    acc[user.id] = { ...user, pendingValue: 0 };
+                }
+                acc[user.id].pendingValue += p.budget;
+            });
+        }
         return acc;
     }, {} as Record<string, any>);
 
