@@ -19,7 +19,7 @@
 
 .mentions__input {
   color: transparent;
-  caret-color: hsl(var(--foreground));
+  caret-color: #1e293b; /* Dark navy blue cursor */
 }
 
 .mentions__input:focus {
@@ -36,7 +36,7 @@
   pointer-events: none;
   white-space: pre-wrap;
   word-wrap: break-word;
-  color: hsl(var(--foreground)) !important;
+  color: #1e293b !important; /* Dark navy blue text */
 }
 
 .mentions__suggestions {
