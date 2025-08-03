@@ -181,7 +181,7 @@ const FeatureSettingsPage = () => {
                             onChange={(e) => handleInviteChange(invite.id, 'email', e.target.value)}
                           />
                         </div>
-                        <div className="w-[180px] flex-shrink-0 space-y-1.5">
+                        <div className="space-y-1.5 flex-shrink-0">
                           <Label htmlFor={`role-${invite.id}`}>Role</Label>
                           <Select
                             value={invite.role}
@@ -193,7 +193,7 @@ const FeatureSettingsPage = () => {
                               }
                             }}
                           >
-                            <SelectTrigger id={`role-${invite.id}`} className="w-full">
+                            <SelectTrigger id={`role-${invite.id}`} className="w-[220px]">
                               <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                             <SelectContent>
