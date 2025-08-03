@@ -76,7 +76,18 @@ const ProjectComments = ({
     <div className="space-y-6">
       <div className="space-y-2">
         <h3 className="text-lg font-semibold">Comments & Tickets</h3>
-        <div className="rounded-lg border bg-background">
+        
+        {attachment && (
+          <div className="text-sm text-muted-foreground flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+            <Paperclip className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate flex-1">{attachment.name}</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveAttachment}>
+              &times;
+            </Button>
+          </div>
+        )}
+
+        <div className="rounded-lg border bg-background flex items-end p-1">
           <MentionsInput
             value={newCommentText}
             onChange={(e) => setNewCommentText(e.target.value)}
@@ -97,26 +108,16 @@ const ProjectComments = ({
               className="mentions__mention"
             />
           </MentionsInput>
-          <div className="flex items-center justify-between p-2 border-t bg-muted/50">
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" asChild>
-                <Label htmlFor="comment-attachment" className="cursor-pointer">
-                  <Paperclip className="h-4 w-4" />
-                  <input id="comment-attachment" type="file" className="sr-only" onChange={handleFileChange} />
-                </Label>
-              </Button>
-              <Button variant={isTicket ? "secondary" : "ghost"} size="icon" onClick={() => setIsTicket(!isTicket)}>
-                <Ticket className="h-4 w-4" />
-              </Button>
-              {attachment && (
-                <div className="text-sm text-muted-foreground flex items-center gap-2 pl-2">
-                  <span>{attachment.name}</span>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleRemoveAttachment}>
-                    &times;
-                  </Button>
-                </div>
-              )}
-            </div>
+          <div className="flex items-center gap-1 p-1">
+            <Button variant="ghost" size="icon" asChild>
+              <Label htmlFor="comment-attachment" className="cursor-pointer">
+                <Paperclip className="h-4 w-4" />
+                <input id="comment-attachment" type="file" className="sr-only" onChange={handleFileChange} />
+              </Label>
+            </Button>
+            <Button variant={isTicket ? "secondary" : "ghost"} size="icon" onClick={() => setIsTicket(!isTicket)}>
+              <Ticket className="h-4 w-4" />
+            </Button>
             <Button onClick={handleSubmit} disabled={!newCommentText.trim() && !attachment}>
               Send
             </Button>
