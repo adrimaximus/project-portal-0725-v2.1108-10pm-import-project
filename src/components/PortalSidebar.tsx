@@ -41,6 +41,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import NewLinkDialog from "./NewLinkDialog";
+import { useFeatures } from "@/contexts/FeaturesContext";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -62,6 +63,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isNewLinkOpen, setIsNewLinkOpen] = useState(false);
+  const { isFeatureEnabled } = useFeatures();
 
   const totalUnreadChatCount = dummyConversations.reduce(
     (sum, convo) => sum + convo.unreadCount,
@@ -135,8 +137,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     updateCustomItemsInStorage(updatedItems);
   };
 
-  const allNavItems = [...defaultNavItems, ...customNavItems];
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -152,8 +152,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const activeItem = allNavItems.find(item => item.id === active.id);
-    const overItem = allNavItems.find(item => item.id === over.id);
+    const allItemsForLookup = [...defaultNavItems, ...customNavItems];
+    const activeItem = allItemsForLookup.find(item => item.id === active.id);
+    const overItem = allItemsForLookup.find(item => item.id === over.id);
 
     if (!activeItem || !overItem || overItem.id === 'dashboard') return;
 
@@ -161,6 +162,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         setCustomNavItems(items => {
             const oldIndex = items.findIndex(item => item.id === active.id);
             const newIndex = items.findIndex(item => item.id === over.id);
+            if (oldIndex === -1 || newIndex === -1) return items;
             const newItems = arrayMove(items, oldIndex, newIndex);
             updateCustomItemsInStorage(newItems);
             return newItems;
@@ -169,10 +171,10 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         setDefaultNavItems(items => {
             const oldIndex = items.findIndex(item => item.id === active.id);
             const newIndex = items.findIndex(item => item.id === over.id);
+            if (oldIndex === -1 || newIndex === -1) return items;
             return arrayMove(items, oldIndex, newIndex);
         });
     }
-    // Note: Dragging between default and custom lists is not implemented for simplicity.
   }
 
   const SortableNavItem = ({ item }: { item: NavItem }) => {
@@ -254,6 +256,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     );
   };
 
+  const visibleDefaultNavItems = defaultNavItems.filter(item => isFeatureEnabled(item.id));
+  const allVisibleNavItems = [...visibleDefaultNavItems, ...customNavItems];
+
   return (
     <div
       className="h-screen border-r bg-muted/40 transition-all duration-300 ease-in-out"
@@ -280,14 +285,14 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         <div className="flex-1 overflow-y-auto py-2">
           <TooltipProvider delayDuration={0}>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={allNavItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={allVisibleNavItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
                 <nav
                   className={cn(
                     "grid items-start gap-1 text-sm font-medium",
                     isCollapsed ? "px-2" : "px-2 lg:px-4"
                   )}
                 >
-                  {allNavItems.map((item) => (
+                  {allVisibleNavItems.map((item) => (
                     <SortableNavItem key={item.id} item={item} />
                   ))}
                 </nav>

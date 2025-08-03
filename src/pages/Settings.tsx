@@ -1,9 +1,11 @@
 import PortalLayout from "@/components/PortalLayout";
 import FeatureCard from "@/components/settings/FeatureCard";
-import { features } from "@/data/features";
+import { useFeatures } from "@/contexts/FeaturesContext";
 import { Wand2 } from "lucide-react";
 
 const SettingsPage = () => {
+  const { features } = useFeatures();
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -15,12 +17,14 @@ const SettingsPage = () => {
             <h1 className="text-2xl font-bold tracking-tight">Enabled Features</h1>
           </div>
           <p className="text-muted-foreground">
-            The following features are currently enabled as part of your platform plan.
+            Enable or disable features available in your plan. Disabled features will be hidden from the sidebar.
           </p>
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {features.sort((a, b) => (a.status === 'enabled' ? -1 : 1)).map((feature) => (
-            <FeatureCard key={feature.name} feature={feature} />
+          {features
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((feature) => (
+              <FeatureCard key={feature.id} feature={feature} />
           ))}
         </div>
       </div>
