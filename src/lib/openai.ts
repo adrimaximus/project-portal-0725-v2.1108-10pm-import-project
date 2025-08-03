@@ -52,7 +52,7 @@ export async function generateAiInsight(
       2. **Jika performa >= 100%:** Berikan apresiasi luar biasa.
       3. **Jika performa antara 60% dan 99%:** Berikan motivasi dan penguatan positif, sebutkan mereka di jalur yang benar.
       4. **Jika performa < 60%:** Berikan dorongan semangat. Berdasarkan **semua data sasaran utama**, berikan **1-2 tips praktis dan relevan** untuk meningkatkan konsistensi.
-      5. Jaga agar tetap singkat (2-4 kalimat) dan di bawah 650 karakter.
+      5. Jaga agar tetap singkat (2-4 kalimat).
     `;
   } else if (context.yearly) {
     const today = new Date();
@@ -89,7 +89,7 @@ export async function generateAiInsight(
       2.  **Jika progres antara 60% dan 99%:** Berikan **motivasi** dan penguatan positif.
       3.  **Jika progres < 60%:** Berikan **dorongan semangat** yang kuat. Berdasarkan **semua data sasaran utama**, berikan **2-3 tips dan strategi praktis** yang dapat ditindaklanjuti untuk membantu mereka kembali ke jalur yang benar.
       4.  Sebutkan pentingnya kolaborasi jika ada anggota tim.
-      5.  Gunakan format markdown. Jaga agar respons tetap singkat dan padat (sekitar 3-5 kalimat) dan di bawah 650 karakter.
+      5.  Gunakan format markdown. Jaga agar respons tetap singkat dan padat (sekitar 3-5 kalimat).
     `;
   } else {
     return "Konteks tidak cukup untuk memberikan wawasan.";
@@ -99,7 +99,7 @@ export async function generateAiInsight(
     const response = await openai.chat.completions.create({
       model: 'gpt-4-turbo',
       messages: [{ role: 'user', content: basePrompt + contextPrompt }],
-      max_tokens: 170,
+      max_tokens: 300,
       temperature: 0.7,
     });
     return response.choices[0].message.content;
