@@ -11,47 +11,57 @@ import { MoreHorizontal, PlusCircle, Search, Users, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import React, { useState } from 'react';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type Invite = {
   id: number;
   email: string;
-  role: 'owner' | 'admin' | 'user' | 'read-only';
+  role: string;
 };
+
+const defaultRoles = [
+  { value: 'admin', label: 'Admin', description: 'Can fully manage the project.' },
+  { value: 'member', label: 'Member', description: 'Can access the project and create new projects.' },
+  { value: 'client', label: 'Client', description: 'Can access the project but cannot create new projects.' },
+  { value: 'comment-only', label: 'Comment Only', description: 'Can comment in the project but cannot create or delete anything.' },
+  { value: 'view-only', label: 'View Only', description: 'Can view the project but cannot do anything else.' },
+];
 
 const FeatureSettingsPage = () => {
   const { featureId } = useParams<{ featureId: string }>();
   const { features } = useFeatures();
-  const [invites, setInvites] = useState<Invite[]>([{ id: Date.now(), email: '', role: 'user' }]);
+  const [invites, setInvites] = useState<Invite[]>([{ id: Date.now(), email: '', role: 'member' }]);
+  const [isCustomRoleDialogOpen, setCustomRoleDialogOpen] = useState(false);
 
   const feature = features.find(f => f.id === featureId);
 
   const handleInviteChange = (id: number, field: 'email' | 'role', value: string) => {
     setInvites(currentInvites =>
       currentInvites.map(invite =>
-        invite.id === id ? { ...invite, [field]: value as any } : invite
+        invite.id === id ? { ...invite, [field]: value } : invite
       )
     );
   };
 
   const addInviteField = () => {
-    setInvites(currentInvites => [...currentInvites, { id: Date.now(), email: '', role: 'user' }]);
+    setInvites(currentInvites => [...currentInvites, { id: Date.now(), email: '', role: 'member' }]);
   };
 
   const removeInviteField = (id: number) => {
     setInvites(currentInvites => currentInvites.filter(invite => invite.id !== id));
   };
 
-  // Data dummy berdasarkan desain
   const members = [
-    { name: 'Theresa Webb', email: 'david@withlantern.com', avatar: 'TW', role: 'Owner', status: 'Active', lastActive: '23 Dec 2022' },
-    { name: 'Darlene Robertson', email: 'darrell.steward@withlantern.com', avatar: 'DR', role: 'User', status: 'Suspended', lastActive: '23 Dec 2022' },
-    { name: 'Anne Black', email: 'sagar@withlantern.com', avatar: 'AB', role: 'User', status: 'Active', lastActive: '23 Dec 2022' },
-    { name: 'Floyd Miles', email: 'sagar@withlantern.com', avatar: 'FM', role: 'Read only', status: 'Pending invite', lastActive: '23 Dec 2022' },
+    { name: 'Theresa Webb', email: 'david@withlantern.com', avatar: 'TW', role: 'Admin', status: 'Active', lastActive: '23 Dec 2022' },
+    { name: 'Darlene Robertson', email: 'darrell.steward@withlantern.com', avatar: 'DR', role: 'Member', status: 'Suspended', lastActive: '23 Dec 2022' },
+    { name: 'Anne Black', email: 'sagar@withlantern.com', avatar: 'AB', role: 'Client', status: 'Active', lastActive: '23 Dec 2022' },
+    { name: 'Floyd Miles', email: 'sagar@withlantern.com', avatar: 'FM', role: 'View Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
     { name: 'Cody Fisher', email: 'sagar@withlantern.com', avatar: 'CF', role: 'Admin', status: 'Active', lastActive: '23 Dec 2022' },
-    { name: 'Kristin Watson', email: 'darrell.steward@withlantern.com', avatar: 'KW', role: 'Read only', status: 'Pending invite', lastActive: '23 Dec 2022' },
-    { name: 'Leslie Alexander', email: 'sagar@withlantern.com', avatar: 'LA', role: 'Read only', status: 'Pending invite', lastActive: '23 Dec 2022' },
+    { name: 'Kristin Watson', email: 'darrell.steward@withlantern.com', avatar: 'KW', role: 'Comment Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
+    { name: 'Leslie Alexander', email: 'sagar@withlantern.com', avatar: 'LA', role: 'View Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
   ];
 
   const getStatusBadgeVariant = (status: string): "destructive" | "secondary" | "outline" => {
@@ -126,16 +136,33 @@ const FeatureSettingsPage = () => {
                         />
                         <Select
                           value={invite.role}
-                          onValueChange={(value) => handleInviteChange(invite.id, 'role', value)}
+                          onValueChange={(value) => {
+                            if (value === 'create-custom') {
+                              setCustomRoleDialogOpen(true);
+                            } else {
+                              handleInviteChange(invite.id, 'role', value);
+                            }
+                          }}
                         >
-                          <SelectTrigger className="w-[120px]">
-                            <SelectValue />
+                          <SelectTrigger className="w-[140px]">
+                            <SelectValue placeholder="Select a role" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="owner">Owner</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="read-only">Read only</SelectItem>
+                            {defaultRoles.map(role => (
+                              <SelectItem key={role.value} value={role.value}>
+                                <div className="flex flex-col items-start py-1">
+                                  <span>{role.label}</span>
+                                  <span className="text-xs text-muted-foreground">{role.description}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                            <SelectSeparator />
+                            <SelectItem value="create-custom">
+                              <div className="flex flex-col items-start py-1">
+                                <span>Create Custom Role</span>
+                                <span className="text-xs text-muted-foreground">Set granular permissions.</span>
+                              </div>
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                         {invites.length > 1 && (
@@ -193,15 +220,14 @@ const FeatureSettingsPage = () => {
                         {member.status === 'Suspended' ? (
                           <Badge variant={getStatusBadgeVariant(member.status)}>Suspended</Badge>
                         ) : (
-                          <Select defaultValue={member.role.toLowerCase().replace(' ', '-')}>
+                          <Select defaultValue={member.role.toLowerCase().replace(/\s+/g, '-')}>
                             <SelectTrigger className="w-[120px] h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="owner">Owner</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="user">User</SelectItem>
-                              <SelectItem value="read-only">Read only</SelectItem>
+                              {defaultRoles.map(role => (
+                                <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         )}
@@ -228,6 +254,48 @@ const FeatureSettingsPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isCustomRoleDialogOpen} onOpenChange={setCustomRoleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Custom Role</DialogTitle>
+            <DialogDescription>
+              Set granular permissions for people based on roles. With custom roles, you're in complete control of locking down your project.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="role-name">Role Name</Label>
+              <Input id="role-name" placeholder="e.g., Contractor" />
+            </div>
+            <div className="space-y-2">
+              <Label>Permissions</Label>
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="perm-create" />
+                  <Label htmlFor="perm-create" className="font-normal">Create projects</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="perm-delete" />
+                  <Label htmlFor="perm-delete" className="font-normal">Delete projects</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="perm-comment" />
+                  <Label htmlFor="perm-comment" className="font-normal">Comment on tasks</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="perm-view" />
+                  <Label htmlFor="perm-view" className="font-normal">View-only access</Label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCustomRoleDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => setCustomRoleDialogOpen(false)}>Save Role</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PortalLayout>
   );
 };
