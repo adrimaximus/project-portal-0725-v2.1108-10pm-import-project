@@ -4,10 +4,10 @@ import { useUser } from "@/contexts/UserContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Paperclip, Send, Ticket } from "lucide-react";
+import { Paperclip, Send, Ticket, Folder } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { MentionsInput, Mention } from 'react-mentions';
+import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import './mentions-style.css';
 
 interface ProjectCommentsProps {
@@ -27,6 +27,8 @@ const ProjectComments = ({
   const usersForMentions = project.assignedTo.map(user => ({
     id: user.id,
     display: user.name,
+    avatar: user.avatar,
+    initials: user.initials,
   }));
 
   const projectsForMentions = dummyProjects.map(p => ({
@@ -70,6 +72,35 @@ const ProjectComments = ({
     }
   };
 
+  const renderUserSuggestion = (
+    suggestion: SuggestionDataItem & { avatar?: string; initials?: string },
+    search: string,
+    highlightedDisplay: React.ReactNode,
+    index: number,
+    focused: boolean
+  ) => (
+    <div className={`mentions__suggestions__item ${focused ? 'mentions__suggestions__item--focused' : ''}`}>
+      <Avatar className="h-8 w-8">
+        <AvatarImage src={suggestion.avatar} />
+        <AvatarFallback>{suggestion.initials}</AvatarFallback>
+      </Avatar>
+      <span>{highlightedDisplay}</span>
+    </div>
+  );
+
+  const renderProjectSuggestion = (
+    suggestion: SuggestionDataItem,
+    search: string,
+    highlightedDisplay: React.ReactNode,
+    index: number,
+    focused: boolean
+  ) => (
+    <div className={`mentions__suggestions__item ${focused ? 'mentions__suggestions__item--focused' : ''}`}>
+      <Folder className="h-5 w-5 text-muted-foreground" />
+      <span>{highlightedDisplay}</span>
+    </div>
+  );
+
   const sortedComments = [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return (
@@ -98,12 +129,14 @@ const ProjectComments = ({
             <Mention
               trigger="@"
               data={usersForMentions}
+              renderSuggestion={renderUserSuggestion}
               markup="@[__display__](__id__)"
               className="mentions__mention"
             />
             <Mention
               trigger="/"
               data={projectsForMentions}
+              renderSuggestion={renderProjectSuggestion}
               markup="/[__display__](__id__)"
               className="mentions__mention"
             />

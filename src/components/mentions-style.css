@@ -1,5 +1,5 @@
 .mentions {
-  @apply w-full text-sm flex-1;
+  @apply w-full text-sm flex-1 relative;
 }
 
 .mentions__control {
@@ -12,7 +12,7 @@
 }
 
 .mentions__suggestions {
-  @apply bg-popover text-popover-foreground border rounded-md shadow-md mt-1 p-1 z-10;
+  @apply bg-popover text-popover-foreground border rounded-md shadow-md mt-1 p-1 z-10 w-full;
 }
 
 .mentions__suggestions__list {
@@ -20,7 +20,7 @@
 }
 
 .mentions__suggestions__item {
-  @apply p-2 rounded-sm text-sm cursor-pointer;
+  @apply p-2 rounded-sm text-sm cursor-pointer flex items-center gap-2;
 }
 
 .mentions__suggestions__item--focused {
