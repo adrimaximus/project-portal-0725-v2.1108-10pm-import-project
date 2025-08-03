@@ -1,0 +1,77 @@
+.mentions {
+  position: relative;
+  width: 100%;
+  z-index: 10;
+}
+
+.mentions__input,
+.mentions__highlighter {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 80px;
+  padding-right: 130px; /* Space for 3 icon buttons */
+  border: none !important;
+  outline: none !important;
+  background-color: transparent;
+}
+
+.mentions__input {
+  color: transparent;
+  caret-color: #1e293b; /* Dark navy blue cursor */
+}
+
+.mentions__input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.mentions__highlighter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #1e293b !important; /* Dark navy blue text */
+}
+
+.mentions__suggestions {
+  margin-top: 4px;
+  z-index: 50;
+}
+
+.mentions__suggestions__list {
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  font-size: 14px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  overflow: hidden;
+}
+
+.mentions__suggestions__item {
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.mentions__suggestions__item--focused {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.mentions__mention {
+  background-color: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary));
+  font-weight: 600;
+  border-radius: 3px;
+  padding: 1px 2px;
+}
