@@ -68,6 +68,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     const newProject: Project = {
       id: `proj-${Date.now()}`,
       name: projectName,
+      client: currentUser.name,
       category: selectedServices.length > 0 ? selectedServices[0].title : "General",
       description: description,
       assignedTo: team,
