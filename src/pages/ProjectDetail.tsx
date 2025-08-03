@@ -79,6 +79,19 @@ const ProjectDetail = () => {
       newActivities.push(createActivity('PROJECT_DETAILS_UPDATED', `memperbarui deskripsi proyek`));
     }
 
+    const oldServices = new Set(project.services);
+    const newServices = new Set(editedProject.services);
+    editedProject.services.forEach(service => {
+      if (!oldServices.has(service)) {
+        newActivities.push(createActivity('PROJECT_DETAILS_UPDATED', `menambahkan layanan: '${service}'`));
+      }
+    });
+    project.services.forEach(service => {
+      if (!newServices.has(service)) {
+        newActivities.push(createActivity('PROJECT_DETAILS_UPDATED', `menghapus layanan: '${service}'`));
+      }
+    });
+
     const oldTeamIds = new Set(project.assignedTo.map(u => u.id));
     const newTeamIds = new Set(editedProject.assignedTo.map(u => u.id));
     editedProject.assignedTo.forEach(user => {
