@@ -31,7 +31,7 @@ const ProjectMainContent = ({
   onTasksUpdate,
   ticketCount,
 }: ProjectMainContentProps) => {
-  const totalTasks = project.tasks?.length || 0;
+  const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
 
   return (
     <Card>
@@ -45,7 +45,7 @@ const ProjectMainContent = ({
             <TabsTrigger value="tasks">
               <ListChecks className="h-4 w-4 flex-shrink-0" />
               <span className="hidden sm:inline ml-2">Tasks</span>
-              {totalTasks > 0 && <Badge className="ml-2">{totalTasks}</Badge>}
+              {openTasksCount > 0 && <Badge className="ml-2">{openTasksCount}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="discussion">
               <MessageSquare className="h-4 w-4 flex-shrink-0" />
