@@ -1,4 +1,7 @@
-import { Lightbulb } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Lightbulb, Bot, AlertTriangle } from 'lucide-react';
+import OpenAI from 'openai';
+import { useSettings } from '@/context/SettingsContext';
 
 interface MonthlyData {
     name: string;
@@ -11,10 +14,8 @@ interface AiCoachInsightProps {
     totalCompleted: number;
     totalPossible: number;
     overallPercentage: number;
-    frequency: string;
     displayYear: number;
     goalTitle: string;
-    goalTags: string[];
     userName: string;
     selectedMonth: MonthlyData | null;
 }
@@ -28,49 +29,87 @@ const AiCoachInsight = ({
     userName,
     selectedMonth
 }: AiCoachInsightProps) => {
+    const { apiKey } = useSettings();
+    const [insight, setInsight] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    const getMonthlyInsight = (month: MonthlyData) => {
-        const { name, percentage, completedCount, possibleCount } = month;
-        if (possibleCount === 0) {
-            return `Sepertinya tidak ada jadwal untuk "${goalTitle}" di bulan ${name}, jadi tidak ada progres yang bisa dilaporkan.`;
+    useEffect(() => {
+        const generateInsight = async () => {
+            if (!apiKey) {
+                setError('Kunci API OpenAI belum diatur. Silakan atur di halaman Pengaturan.');
+                return;
+            }
+
+            setIsLoading(true);
+            setError('');
+            setInsight('');
+
+            const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+
+            let promptContent = '';
+            if (selectedMonth) {
+                promptContent = `Sebagai seorang pelatih motivasi, berikan masukan singkat (maksimal 2 kalimat) dalam Bahasa Indonesia untuk pengguna bernama ${userName} mengenai progres tujuannya "${goalTitle}". 
+                Data untuk bulan ${selectedMonth.name} ${displayYear}:
+                - Persentase penyelesaian: ${selectedMonth.percentage}%
+                - Berhasil diselesaikan: ${selectedMonth.completedCount} kali
+                - Total hari yang dijadwalkan: ${selectedMonth.possibleCount} kali.
+                Fokus pada pencapaian dan berikan dorongan semangat.`;
+            } else {
+                promptContent = `Sebagai seorang pelatih motivasi, berikan masukan singkat (maksimal 2 kalimat) dalam Bahasa Indonesia untuk pengguna bernama ${userName} mengenai progres tahunan untuk tujuannya "${goalTitle}".
+                Data untuk tahun ${displayYear}:
+                - Persentase penyelesaian keseluruhan: ${overallPercentage}%
+                - Total berhasil diselesaikan: ${totalCompleted} kali
+                - Total hari yang dijadwalkan: ${totalPossible} kali.
+                Berikan gambaran umum dan motivasi untuk melanjutkan.`;
+            }
+
+            try {
+                const completion = await openai.chat.completions.create({
+                    model: "gpt-3.5-turbo",
+                    messages: [{ role: "system", content: promptContent }],
+                    max_tokens: 100,
+                });
+                setInsight(completion.choices[0].message.content || 'Tidak dapat menghasilkan masukan saat ini.');
+            } catch (err: any) {
+                console.error(err);
+                setError(`Gagal mengambil masukan dari OpenAI. Error: ${err.message}`);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        generateInsight();
+    }, [selectedMonth, displayYear, apiKey, goalTitle, userName, totalCompleted, totalPossible, overallPercentage]);
+
+    const renderContent = () => {
+        if (isLoading) {
+            return (
+                <div className="flex items-center gap-2">
+                    <Bot className="h-5 w-5 flex-shrink-0 animate-spin" />
+                    <p className="text-sm">AI Coach sedang berpikir...</p>
+                </div>
+            );
         }
-        if (percentage >= 90) {
-            return `Luar biasa, ${userName}! Di bulan ${name}, Anda berhasil mencapai ${completedCount} dari ${possibleCount} hari, tingkat keberhasilan ${percentage}%. Konsistensi Anda untuk "${goalTitle}" sangat mengesankan. Pertahankan momentum ini!`;
+        if (error) {
+            return (
+                <div className="flex items-start gap-3 text-yellow-800 dark:text-yellow-300">
+                    <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm leading-relaxed">{error}</p>
+                </div>
+            );
         }
-        if (percentage >= 70) {
-            return `Kerja bagus di bulan ${name}! Anda mencapai tingkat penyelesaian ${percentage}% untuk "${goalTitle}". Anda sedang membangun kebiasaan yang kuat. Perubahan kecil apa yang bisa membantu Anda di bulan berikutnya?`;
-        }
-        if (percentage >= 50) {
-            return `Usaha yang bagus di bulan ${name}, ${userName}. Anda menyelesaikan "${goalTitle}" sebanyak ${percentage}% dari hari yang dijadwalkan. Anda sudah setengah jalan! Mari kita coba kalahkan skor itu bulan depan.`;
-        }
-        if (percentage > 0) {
-            return `Anda membuat kemajuan untuk "${goalTitle}" di bulan ${name}, menyelesaikannya ${completedCount} dari ${possibleCount} kali. Setiap langkah berarti. Apa tantangan terbesar Anda bulan ini?`;
-        }
-        return `Sepertinya ${name} adalah bulan yang sulit untuk "${goalTitle}", dengan penyelesaian 0%. Jangan berkecil hati, ${userName}. Bulan baru adalah awal yang baru. Mari kembali ke jalur yang benar!`;
+        return (
+            <div className="flex items-start gap-3">
+                <Lightbulb className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <p className="text-sm leading-relaxed">{insight}</p>
+            </div>
+        );
     };
-
-    const getYearlyInsight = () => {
-        if (totalPossible === 0) {
-            return `Sepertinya belum ada data untuk "${goalTitle}" di tahun ${displayYear}. Mari mulai lacak progres Anda!`;
-        }
-        if (overallPercentage >= 80) {
-            return `Konsistensi yang luar biasa, ${userName}! Dengan tingkat penyelesaian ${overallPercentage}% tahun ini, Anda menunjukkan dedikasi yang luar biasa pada "${goalTitle}".`;
-        }
-        if (overallPercentage >= 50) {
-            return `Anda melakukan pekerjaan hebat dengan "${goalTitle}" tahun ini, mempertahankan tingkat keberhasilan ${overallPercentage}%. Anda berada di jalur yang tepat untuk menjadikannya kebiasaan jangka panjang.`;
-        }
-        if (overallPercentage > 20) {
-            return `Awal yang baik untuk "${goalTitle}" di tahun ${displayYear}! Anda telah menyelesaikannya ${totalCompleted} kali. Konsistensi adalah kunci, mari terus membangun fondasi ini.`;
-        }
-        return `Anda sudah mulai melacak "${goalTitle}". Setiap progres adalah langkah maju. Terus catat kemajuan Anda untuk melihat trennya!`;
-    };
-
-    const insight = selectedMonth ? getMonthlyInsight(selectedMonth) : getYearlyInsight();
 
     return (
-        <div className="mt-4 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-blue-800 dark:bg-blue-900/20 dark:border-blue-500/30 dark:text-blue-300">
-            <Lightbulb className="h-5 w-5 flex-shrink-0 mt-0.5" />
-            <p className="text-sm leading-relaxed">{insight}</p>
+        <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-blue-800 dark:bg-blue-900/20 dark:border-blue-500/30 dark:text-blue-300 min-h-[68px]">
+            {renderContent()}
         </div>
     );
 };
