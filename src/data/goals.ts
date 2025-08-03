@@ -1,4 +1,5 @@
-import { User } from './users';
+import { User, dummyUsers } from './users';
+import { Tag, dummyTags } from './tags';
 
 export interface GoalCompletion {
   date: string; // YYYY-MM-DD
@@ -13,7 +14,7 @@ export interface Goal {
   color: string;
   frequency: 'Daily' | 'Weekly';
   specificDays: string[];
-  tags: string[];
+  tags: Tag[];
   completions: GoalCompletion[];
   collaborators: User[];
 }
@@ -27,9 +28,9 @@ export const dummyGoals: Goal[] = [
     color: '#3B82F6',
     frequency: 'Daily',
     specificDays: [],
-    tags: ['Learning', 'Personal Growth'],
+    tags: [dummyTags[0], dummyTags[1]],
     completions: [],
-    collaborators: [],
+    collaborators: [dummyUsers[0]],
   },
   {
     id: '2',
@@ -39,9 +40,9 @@ export const dummyGoals: Goal[] = [
     color: '#10B981',
     frequency: 'Weekly',
     specificDays: ['Mo', 'Tu', 'We', 'Th', 'Fr'],
-    tags: ['Health', 'Fitness', 'Cardio'],
+    tags: [dummyTags[2], dummyTags[3], dummyTags[4]],
     completions: [],
-    collaborators: [],
+    collaborators: [dummyUsers[0], dummyUsers[2]],
   },
   {
     id: '3',
@@ -51,7 +52,7 @@ export const dummyGoals: Goal[] = [
     color: '#F59E0B',
     frequency: 'Weekly',
     specificDays: ['Mo', 'We', 'Fr'],
-    tags: ['Music', 'Hobby', 'Skill'],
+    tags: [dummyTags[5], dummyTags[6], dummyTags[7]],
     completions: [],
     collaborators: [],
   },
@@ -63,9 +64,9 @@ export const dummyGoals: Goal[] = [
     color: '#0EA5E9',
     frequency: 'Daily',
     specificDays: [],
-    tags: ['Health', 'Hydration'],
+    tags: [dummyTags[8], dummyTags[2]],
     completions: [],
-    collaborators: [],
+    collaborators: [dummyUsers[1]],
   },
   {
     id: '5',
@@ -75,7 +76,7 @@ export const dummyGoals: Goal[] = [
     color: '#8B5CF6',
     frequency: 'Daily',
     specificDays: [],
-    tags: ['Mindfulness', 'Mental Health'],
+    tags: [dummyTags[9], dummyTags[10]],
     completions: [],
     collaborators: [],
   },

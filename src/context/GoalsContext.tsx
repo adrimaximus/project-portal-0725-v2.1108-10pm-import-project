@@ -3,7 +3,7 @@ import { Goal, dummyGoals } from '@/data/goals';
 
 interface GoalsContextType {
   goals: Goal[];
-  addGoal: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators' | 'description' | 'tags'>) => void;
+  addGoal: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => void;
   updateGoal: (updatedGoal: Goal) => void;
   deleteGoal: (goalId: string) => void;
   getGoalById: (id: string) => Goal | undefined;
@@ -14,10 +14,8 @@ const GoalsContext = createContext<GoalsContextType | undefined>(undefined);
 export const GoalsProvider = ({ children }: { children: ReactNode }) => {
   const [goals, setGoals] = useState<Goal[]>(dummyGoals);
 
-  const addGoal = (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators' | 'description' | 'tags'>) => {
+  const addGoal = (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => {
     const newGoal: Goal = {
-      description: '',
-      tags: [],
       ...newGoalData,
       id: `goal-${Date.now()}`,
       completions: [],

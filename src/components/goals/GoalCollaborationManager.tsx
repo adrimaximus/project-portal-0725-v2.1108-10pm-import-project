@@ -1,69 +1,99 @@
 import { useState } from 'react';
 import { Goal } from '@/data/goals';
-import { User, allUsers } from '@/data/users';
+import { User, dummyUsers } from '@/data/users';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Check, Plus } from 'lucide-react';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { DialogFooter } from '@/components/ui/dialog';
+import { PlusCircle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 interface GoalCollaborationManagerProps {
   goal: Goal;
-  onUpdate: (updatedGoal: Goal) => void;
-  onClose: () => void;
+  onCollaboratorsUpdate: (updatedCollaborators: User[]) => void;
 }
 
-const GoalCollaborationManager = ({ goal, onUpdate, onClose }: GoalCollaborationManagerProps) => {
-  const [collaborators, setCollaborators] = useState<User[]>(goal.collaborators || []);
+const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollaborationManagerProps) => {
+  const [selectedUsers, setSelectedUsers] = useState<string[]>(goal.collaborators.map(c => c.id));
 
-  const toggleCollaborator = (user: User) => {
-    setCollaborators(prev =>
-      prev.some(c => c.id === user.id)
-        ? prev.filter(c => c.id !== user.id)
-        : [...prev, user]
-    );
+  const handleUserSelect = (userId: string, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedUsers(prev => [...prev, userId]);
+    } else {
+      setSelectedUsers(prev => prev.filter(id => id !== userId));
+    }
   };
 
   const handleSaveChanges = () => {
-    onUpdate({ ...goal, collaborators });
+    const updatedCollaborators = dummyUsers.filter(u => selectedUsers.includes(u.id));
+    onCollaboratorsUpdate(updatedCollaborators);
+    toast.success('Collaborators updated successfully!');
   };
 
-  const availableUsers = allUsers.filter(u => u.id !== 'user-1'); // Assuming user-1 is the current user
+  const availableUsers = dummyUsers.filter(u => u.id !== 'user-0'); // Exclude current user
 
   return (
-    <>
-      <Command className="rounded-lg border shadow-md">
-        <CommandInput placeholder="Search users..." />
-        <CommandList>
-          <CommandEmpty>No users found.</CommandEmpty>
-          <CommandGroup>
-            {availableUsers.map(user => (
-              <CommandItem
-                key={user.id}
-                onSelect={() => toggleCollaborator(user)}
-                className="flex items-center justify-between cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>{user.initials || user.name?.slice(0, 2) || '??'}</AvatarFallback>
-                  </Avatar>
-                  <span>{user.name}</span>
-                </div>
-                {collaborators.some(c => c.id === user.id) ? (
-                  <Check className="h-4 w-4 text-primary" />
-                ) : (
-                  <Plus className="h-4 w-4 text-muted-foreground" />
-                )}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
-      </Command>
-      <DialogFooter className="pt-4">
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSaveChanges}>Save Changes</Button>
-      </DialogFooter>
-    </>
+    <Card>
+      <CardHeader>
+        <CardTitle>Collaborators</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center space-x-2">
+          {goal.collaborators.map(user => (
+            <Avatar key={user.id}>
+              <AvatarImage src={user.avatarUrl} alt={user.name} />
+              <AvatarFallback>{user.initials}</AvatarFallback>
+            </Avatar>
+          ))}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" className="rounded-full">
+                <PlusCircle className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Invite Collaborators</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                {availableUsers.map(user => (
+                  <div key={user.id} className="flex items-center space-x-3">
+                    <Checkbox
+                      id={`user-${user.id}`}
+                      checked={selectedUsers.includes(user.id)}
+                      onCheckedChange={(checked) => handleUserSelect(user.id, !!checked)}
+                    />
+                    <Avatar>
+                      <AvatarImage src={user.avatarUrl} alt={user.name} />
+                      <AvatarFallback>{user.initials}</AvatarFallback>
+                    </Avatar>
+                    <Label htmlFor={`user-${user.id}`} className="font-medium">{user.name}</Label>
+                  </div>
+                ))}
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="ghost">Cancel</Button>
+                </DialogClose>
+                <DialogClose asChild>
+                  <Button onClick={handleSaveChanges}>Save Changes</Button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -8,11 +8,15 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import IconPicker from './IconPicker';
 import ColorPicker from './ColorPicker';
+import { Textarea } from '@/components/ui/textarea';
+import { TagInput } from './TagInput';
+import { Tag, dummyTags } from '@/data/tags';
+import { v4 as uuidv4 } from 'uuid';
 
 interface NewGoalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGoalCreate: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators' | 'description' | 'tags'>) => void;
+  onGoalCreate: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => void;
 }
 
 const weekDays = [
@@ -27,25 +31,42 @@ const weekDays = [
 
 const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps) => {
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [frequency, setFrequency] = useState<Goal['frequency']>('Daily');
   const [specificDays, setSpecificDays] = useState<string[]>([]);
   const [icon, setIcon] = useState('target');
   const [color, setColor] = useState('#BFDBFE');
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>(dummyTags);
+
+  const handleTagCreate = (tagName: string): Tag => {
+    const newTag: Tag = {
+      id: uuidv4(),
+      name: tagName,
+      color: color,
+    };
+    setAllTags(prev => [...prev, newTag]);
+    return newTag;
+  };
 
   const handleSave = () => {
     if (!title) return;
     onGoalCreate({
       title,
+      description,
       frequency,
       specificDays: frequency === 'Weekly' ? specificDays : [],
       icon,
       color,
+      tags,
     });
     setTitle('');
+    setDescription('');
     setFrequency('Daily');
     setSpecificDays([]);
     setIcon('target');
     setColor('#BFDBFE');
+    setTags([]);
     onOpenChange(false);
   };
 
@@ -61,6 +82,12 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
               Title
             </Label>
             <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} className="col-span-3" placeholder="e.g., Drink more water" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="description" className="text-right">
+              Description
+            </Label>
+            <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="col-span-3" placeholder="Why is this goal important?" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="frequency" className="text-right">
@@ -104,6 +131,17 @@ const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps)
             <Label className="text-right">Color</Label>
             <div className="col-span-3">
               <ColorPicker color={color} setColor={setColor} />
+            </div>
+          </div>
+           <div className="grid grid-cols-4 items-start gap-4">
+            <Label className="text-right pt-2">Tags</Label>
+            <div className="col-span-3">
+              <TagInput
+                allTags={allTags}
+                selectedTags={tags}
+                onTagsChange={setTags}
+                onTagCreate={handleTagCreate}
+              />
             </div>
           </div>
         </div>

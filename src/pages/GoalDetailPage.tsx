@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
 import { dummyGoals, Goal, GoalCompletion } from '@/data/goals';
+import { User } from '@/data/users';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
+import GoalCollaborationManager from '@/components/goals/GoalCollaborationManager';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +20,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
-import { isBefore, startOfDay, parseISO, format } from 'date-fns';
+import { isBefore, startOfDay, format } from 'date-fns';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -27,9 +29,9 @@ const GoalDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // In a real app, you'd fetch this from your context or an API
     const goalData = dummyGoals.find(g => g.id === goalId);
     if (goalData) {
-      // Simulate generating completions if they don't exist
       if (!goalData.completions || goalData.completions.length === 0) {
         goalData.completions = generateInitialCompletions(goalData);
       }
@@ -51,7 +53,7 @@ const GoalDetailPage = () => {
       if (isScheduled) {
         completions.push({
           date: format(d, 'yyyy-MM-dd'),
-          completed: Math.random() > 0.4, // Randomly mark as completed for demo
+          completed: Math.random() > 0.4,
         });
       }
     }
@@ -60,41 +62,36 @@ const GoalDetailPage = () => {
 
   const handleToggleCompletion = (date: Date) => {
     if (!goal) return;
-
     const dateString = format(date, 'yyyy-MM-dd');
-    const existingCompletionIndex = goal.completions.findIndex(c => c.date === dateString);
-
     const updatedGoal = { ...goal };
+    const existingCompletionIndex = updatedGoal.completions.findIndex(c => c.date === dateString);
 
     if (existingCompletionIndex > -1) {
       const existing = updatedGoal.completions[existingCompletionIndex];
       updatedGoal.completions[existingCompletionIndex] = { ...existing, completed: !existing.completed };
     } else {
-      // This case handles adding a new completion for a day that wasn't pre-generated
       updatedGoal.completions.push({ date: dateString, completed: true });
     }
-
-    // Sort completions by date descending
     updatedGoal.completions.sort((a, b) => b.date.localeCompare(a.date));
-
     setGoal(updatedGoal);
     toast.success(`Progress for ${format(date, 'PPP')} has been updated.`);
   };
 
   const handleDeleteGoal = () => {
     if (!goal) return;
-    // In a real app, you would make an API call here.
-    // For now, we'll just navigate away and show a toast.
     toast.success(`Goal "${goal.title}" has been deleted.`);
     navigate('/goals');
   };
 
+  const handleCollaboratorsUpdate = (updatedCollaborators: User[]) => {
+    if (goal) {
+      const updatedGoal = { ...goal, collaborators: updatedCollaborators };
+      setGoal(updatedGoal);
+    }
+  };
+
   if (isLoading) {
-    return (
-      <PortalLayout>
-        <div className="text-center">Loading goal details...</div>
-      </PortalLayout>
-    );
+    return <PortalLayout><div className="text-center">Loading goal details...</div></PortalLayout>;
   }
 
   if (!goal) {
@@ -102,22 +99,14 @@ const GoalDetailPage = () => {
       <PortalLayout>
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Goal Not Found</h2>
-          <p className="text-muted-foreground mb-4">The goal you are looking for does not exist.</p>
-          <Button asChild>
-            <Link to="/goals">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Goals
-            </Link>
-          </Button>
+          <Button asChild><Link to="/goals"><ArrowLeft className="mr-2 h-4 w-4" />Back to Goals</Link></Button>
         </div>
       </PortalLayout>
     );
   }
 
   const getFrequencyText = () => {
-    if (goal.frequency === 'Daily') {
-      return 'Daily';
-    }
+    if (goal.frequency === 'Daily') return 'Daily';
     if (goal.frequency === 'Weekly' && goal.specificDays.length > 0) {
       if (goal.specificDays.length === 7) return 'Daily';
       if (goal.specificDays.length === 2 && goal.specificDays.includes('Sa') && goal.specificDays.includes('Su')) return 'Weekends';
@@ -132,12 +121,8 @@ const GoalDetailPage = () => {
       <div className="space-y-6">
         <div>
           <Button variant="ghost" size="sm" asChild className="mb-4">
-            <Link to="/goals">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to All Goals
-            </Link>
+            <Link to="/goals"><ArrowLeft className="mr-2 h-4 w-4" />Back to All Goals</Link>
           </Button>
-
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl" style={{ backgroundColor: `${goal.color}30`, color: goal.color }}>
@@ -150,22 +135,16 @@ const GoalDetailPage = () => {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" asChild>
-                <Link to={`/goals/edit/${goal.id}`}>
-                  <Edit className="h-4 w-4" />
-                </Link>
+                <Link to={`/goals/edit/${goal.id}`}><Edit className="h-4 w-4" /></Link>
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="icon">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <Button variant="destructive" size="icon"><Trash2 className="h-4 w-4" /></Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete your goal and all of its progress data.
-                    </AlertDialogDescription>
+                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -175,11 +154,12 @@ const GoalDetailPage = () => {
               </AlertDialog>
             </div>
           </div>
-
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Badge variant="secondary">{getFrequencyText()}</Badge>
             {goal.tags.map(tag => (
-              <Badge key={tag} variant="outline">{tag}</Badge>
+              <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
+                {tag.name}
+              </Badge>
             ))}
           </div>
         </div>
@@ -191,8 +171,10 @@ const GoalDetailPage = () => {
           frequency={goal.frequency}
           specificDays={goal.specificDays}
           goalTitle={goal.title}
-          goalTags={goal.tags}
+          goalTags={goal.tags.map(t => t.name)}
         />
+
+        <GoalCollaborationManager goal={goal} onCollaboratorsUpdate={handleCollaboratorsUpdate} />
       </div>
     </PortalLayout>
   );
