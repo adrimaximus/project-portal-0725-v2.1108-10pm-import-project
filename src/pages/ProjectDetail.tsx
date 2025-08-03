@@ -232,34 +232,17 @@ const ProjectDetail = () => {
       updatedProject.activities = [activity, ...(currentEditedProject.activities || [])];
   
       if (newComment.isTicket) {
-        // ... (existing ticket to task logic)
-        const mentionedUsersToAssign: AssignedUser[] = [];
-        let textForTask = newComment.text;
-        const sortedAssignableUsers = [...updatedProject.assignedTo].sort((a, b) => b.name.length - a.name.length);
-        sortedAssignableUsers.forEach(user => {
-          const userMentionRegex = new RegExp(`@${user.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}(?!\\w)`, 'g');
-          if (textForTask.match(userMentionRegex)) {
-            if (!mentionedUsersToAssign.find(u => u.id === user.id)) {
-              mentionedUsersToAssign.push(user);
-            }
-            textForTask = textForTask.replace(userMentionRegex, '');
-          }
-        });
-        const projectMentionRegex = /#\/[a-zA-Z0-9\s._-]+/g;
-        textForTask = textForTask.replace(projectMentionRegex, '');
-        let newTaskText = textForTask.replace(/\s\s+/g, ' ').trim();
+        let newTaskText = newComment.text.trim();
         if (!newTaskText && newComment.attachment) {
           newTaskText = `Review attachment: ${newComment.attachment.name}`;
         }
-        if (!newTaskText && mentionedUsersToAssign.length > 0) {
-          newTaskText = "New task assigned";
-        }
+
         if (newTaskText) {
           const newTask: Task = {
             id: `task-${Date.now()}`,
             name: newTaskText,
             completed: false,
-            assignedTo: mentionedUsersToAssign.map(user => user.id),
+            assignedTo: [], // Task is created unassigned
             originTicketId: newComment.id,
           };
           updatedProject.tasks = [...(currentEditedProject.tasks || []), newTask];
@@ -325,7 +308,6 @@ const ProjectDetail = () => {
             onAddCommentOrTicket={handleAddCommentOrTicket}
             onTasksUpdate={handleTasksUpdate}
             ticketCount={openTicketCount}
-            allProjects={dummyProjects}
           />
         </div>
         <div className="lg:col-span-1 space-y-6">

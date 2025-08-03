@@ -18,7 +18,6 @@ interface ProjectMainContentProps {
   onAddCommentOrTicket: (comment: Comment) => void;
   onTasksUpdate: (tasks: Task[]) => void;
   ticketCount: number;
-  allProjects: Project[];
 }
 
 const ProjectMainContent = ({
@@ -31,7 +30,6 @@ const ProjectMainContent = ({
   onAddCommentOrTicket,
   onTasksUpdate,
   ticketCount,
-  allProjects,
 }: ProjectMainContentProps) => {
   const totalTasks = project.tasks?.length || 0;
 
@@ -80,8 +78,6 @@ const ProjectMainContent = ({
           <TabsContent value="comments">
             <ProjectComments
               project={project}
-              assignableUsers={project.assignedTo}
-              allProjects={allProjects}
               onAddCommentOrTicket={onAddCommentOrTicket}
             />
           </TabsContent>

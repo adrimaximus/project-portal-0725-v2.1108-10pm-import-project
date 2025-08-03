@@ -1,27 +1,22 @@
 import { useState } from "react";
-import { Project, Comment, AssignedUser } from "@/data/projects";
+import { Project, Comment } from "@/data/projects";
 import { useUser } from "@/contexts/UserContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Mention, MentionsInput } from 'react-mentions';
-import './mentions-style.css';
 
 interface ProjectCommentsProps {
   project: Project;
-  assignableUsers: AssignedUser[];
-  allProjects: Project[];
   onAddCommentOrTicket: (comment: Comment) => void;
 }
 
 const ProjectComments = ({
   project,
-  assignableUsers,
-  allProjects,
   onAddCommentOrTicket,
 }: ProjectCommentsProps) => {
   const { user: currentUser } = useUser();
@@ -65,40 +60,18 @@ const ProjectComments = ({
     }
   };
 
-  const usersForMentions = assignableUsers.map(user => ({
-    id: user.id,
-    display: user.name,
-  }));
-
-  const projectsForMentions = allProjects.map(p => ({
-    id: p.id,
-    display: `/${p.name}`,
-  }));
-
   const sortedComments = [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="relative">
-          <MentionsInput
+          <Textarea
             value={newCommentText}
             onChange={(e) => setNewCommentText(e.target.value)}
-            placeholder="Add a comment or create a ticket... Use @ to mention users, # to link projects."
-            className="mentions"
-            a11ySuggestionsListLabel={"Suggested mentions"}
-          >
-            <Mention
-              trigger="@"
-              data={usersForMentions}
-              className="mentions__mention"
-            />
-            <Mention
-              trigger="#/"
-              data={projectsForMentions}
-              className="mentions__mention"
-            />
-          </MentionsInput>
+            placeholder="Add a comment or create a ticket..."
+            className="min-h-[80px]"
+          />
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
