@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Goal } from '@/data/goals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar } from 'recharts';
+import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, ReferenceLine, Label } from 'recharts';
 import { getYear, parseISO, format } from 'date-fns';
 import { formatValue } from '@/lib/formatting';
 import AiCoachInsight from './AiCoachInsight';
@@ -52,6 +52,8 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
     return null;
   };
 
+  const monthlyTarget = target > 0 ? target / 12 : 0;
+
   return (
     <Card>
       <CardHeader>
@@ -70,6 +72,11 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
               <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatValue(value, unit, true)} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
               <Bar dataKey="value" fill={goal.color} radius={[4, 4, 0, 0]} />
+              {monthlyTarget > 0 && (
+                <ReferenceLine y={monthlyTarget} stroke="hsl(var(--primary))" strokeDasharray="3 3">
+                  <Label value="Avg. Target" position="insideTopRight" fill="hsl(var(--primary))" fontSize={12} />
+                </ReferenceLine>
+              )}
             </BarChart>
           </ResponsiveContainer>
         </div>
