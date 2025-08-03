@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -14,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Goal } from "@/data/goals";
 import { User } from "@/data/projects";
-import { Tag, TagInput } from "../ui/tag-input";
+import { Tag, TagInput } from "@/components/ui/TagInput";
 
 const goalFormSchema = z.object({
   title: z.string().min(2, {
@@ -27,15 +26,17 @@ const goalFormSchema = z.object({
   })),
 });
 
+export type GoalFormValues = z.infer<typeof goalFormSchema>;
+
 interface GoalFormProps {
   goal?: Goal;
   users: User[];
-  onSubmit: (values: z.infer<typeof goalFormSchema>) => void;
+  onSubmit: (values: GoalFormValues) => void;
   onCancel: () => void;
 }
 
 export function GoalForm({ goal, users, onSubmit, onCancel }: GoalFormProps) {
-  const form = useForm<z.infer<typeof goalFormSchema>>({
+  const form = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
     defaultValues: goal
       ? {
@@ -74,11 +75,10 @@ export function GoalForm({ goal, users, onSubmit, onCancel }: GoalFormProps) {
               <FormLabel>Tags</FormLabel>
               <FormControl>
                 <TagInput
-                  {...field}
                   placeholder="Enter a tag"
                   tags={field.value}
                   setTags={(newTags) => {
-                    form.setValue("tags", newTags as Tag[]);
+                    form.setValue("tags", newTags);
                   }}
                 />
               </FormControl>

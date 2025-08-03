@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/formatting';
-import GoalLogTable from './GoalLogTable';
+import { GoalLogTable } from './GoalLogTable';
 
 interface GoalQuantityTrackerProps {
   goal: Goal;

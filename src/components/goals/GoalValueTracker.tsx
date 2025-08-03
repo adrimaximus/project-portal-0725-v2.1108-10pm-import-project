@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Goal, GoalCompletion } from "@/data/goals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useUser } from "@/contexts/UserContext";
 import { getProgress } from "@/lib/progress";
@@ -35,7 +35,7 @@ export function GoalValueTracker({ goal, onAddCompletion }: GoalValueTrackerProp
   });
 
   const currentTotal = completionsInPeriod.reduce((sum, c) => sum + (c.value || 0), 0);
-  const progress = getProgress(goal, currentTotal);
+  const progress = getProgress({ ...goal, completions: completionsInPeriod });
   const isOwnCompletion = (c: GoalCompletion) => !c.collaboratorId || c.collaboratorId === user.id;
   const userCompletionsInPeriod = completionsInPeriod.filter(isOwnCompletion);
 
@@ -71,9 +71,9 @@ export function GoalValueTracker({ goal, onAddCompletion }: GoalValueTrackerProp
             <span className="text-sm font-medium">
               Period Progress ({currentTotal.toLocaleString()} / {goal.targetValue?.toLocaleString()} {goal.unit || ''})
             </span>
-            <span className="text-sm font-medium">{progress.toFixed(0)}%</span>
+            <span className="text-sm font-medium">{progress.percentage.toFixed(0)}%</span>
           </div>
-          <Progress value={progress} className="w-full" style={{'--progress-color': goal.color} as React.CSSProperties} />
+          <Progress value={progress.percentage} className="w-full" style={{'--progress-color': goal.color} as React.CSSProperties} />
         </div>
         <div className="mt-4">
           <h4 className="font-semibold">Your contributions this period:</h4>

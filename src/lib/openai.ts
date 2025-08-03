@@ -1,41 +1,22 @@
-import OpenAI from "openai";
 import { Goal } from "@/data/goals";
 
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
-
-export async function getAIInsightForGoal(goal: Goal): Promise<string> {
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: `You are a helpful assistant providing insights on goals. Analyze the provided goal JSON and give a brief, actionable insight or suggestion. Be encouraging and concise. The user is providing the goal details in the next message.`,
-        },
-        {
-          role: "user",
-          content: `
-            Here is my goal:
-            - Title: ${goal.title}
-            - Description: ${goal.description || 'Not provided'}
-            - Type: ${goal.type}
-            - Target: ${goal.targetQuantity || goal.targetValue}${goal.unit || ''} per ${goal.targetPeriod}
-            - Tags: ${goal.tags.join(', ')}
-            - Status: ${goal.status}
-            - Collaborators: ${goal.collaborators.map(c => c.name).join(', ')}
-            - Completions so far: ${goal.completions.length}
-            
-            Please provide a short insight or suggestion based on this.
-          `,
-        },
-      ],
-    });
-    return completion.choices[0].message.content || "No insight available.";
-  } catch (error) {
-    console.error("Error fetching AI insight:", error);
-    return "Could not fetch AI insight at this time.";
+const getOpenAIClient = () => {
+  const apiKey = localStorage.getItem("openai_api_key");
+  if (!apiKey) {
+    throw new Error("OpenAI API key not found. Please connect your account in settings.");
   }
+  // In a real app, you would initialize your OpenAI client here.
+  // For this mock, we don't need to return anything.
+};
+
+export async function generateAiInsight(goal: Goal, context: any): Promise<string> {
+  console.log("Generating AI insight for:", goal, context);
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+  return `Based on your progress for "${goal.title}", you're doing great! Keep focusing on consistency to hit your target.`;
+}
+
+export async function generateAiIcon(prompt: string): Promise<string> {
+  console.log("Generating AI icon with prompt:", prompt);
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+  return `https://placehold.co/128x128/a2d2ff/ffffff?text=AI`;
 }

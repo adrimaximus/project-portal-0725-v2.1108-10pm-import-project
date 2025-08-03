@@ -7,7 +7,7 @@ export type GoalFrequency = 'Daily' | 'Weekly';
 export interface GoalCompletion {
   id: string;
   date: string;
-  value?: number;
+  value: number;
   notes?: string;
   collaboratorId?: string;
 }
@@ -22,7 +22,7 @@ export interface Goal {
   targetValue?: number;
   unit?: string;
   frequency?: GoalFrequency;
-  specificDays?: number[];
+  specificDays?: string[];
   color: string;
   icon: string;
   iconUrl?: string;
@@ -82,7 +82,7 @@ export const dummyGoals: Goal[] = [
     type: 'frequency',
     targetPeriod: 'Weekly',
     frequency: 'Weekly',
-    specificDays: [1, 3, 5],
+    specificDays: ['Mo', 'We', 'Fr'],
     color: '#7ED321',
     icon: 'ClipboardCheck',
     completions: [

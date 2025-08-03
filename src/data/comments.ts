@@ -1,9 +1,9 @@
 import { Comment } from './projects';
-import { User } from '@/contexts/UserContext';
+import { User } from './projects';
 
-const user1: User = { id: 'user-1', name: 'Alice Johnson', email: 'alice@example.com', role: 'Admin', avatar: 'https://i.pravatar.cc/150?u=alice' };
-const user2: User = { id: 'user-2', name: 'Michael Chen', email: 'michael@example.com', role: 'Member', avatar: 'https://i.pravatar.cc/150?u=michael' };
-const user3: User = { id: 'user-3', name: 'Samantha Bee', email: 'samantha@example.com', role: 'Member', avatar: 'https://i.pravatar.cc/150?u=samantha' };
+const user1: User = { id: 'user-1', name: 'Alice Johnson', email: 'alice@example.com', role: 'Admin', avatar: 'https://i.pravatar.cc/150?u=alice', initials: 'AJ' };
+const user2: User = { id: 'user-2', name: 'Michael Chen', email: 'michael@example.com', role: 'Member', avatar: 'https://i.pravatar.cc/150?u=michael', initials: 'MC' };
+const user3: User = { id: 'user-3', name: 'Samantha Bee', email: 'samantha@example.com', role: 'Member', avatar: 'https://i.pravatar.cc/150?u=samantha', initials: 'SB' };
 
 export const comments: Comment[] = [
   {

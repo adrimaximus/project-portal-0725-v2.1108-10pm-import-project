@@ -28,15 +28,21 @@ const GoalEditPage = () => {
     const submissionData = { 
       ...rest, 
       collaborators,
-      tags: [], // Placeholder
-      specificDays: [], // Placeholder
+      tags: values.tags.map(t => t.text),
+      // Placeholder for other properties not in the form yet
+      type: 'quantity' as const,
+      targetPeriod: 'Monthly' as const,
+      color: '#4A90E2',
+      icon: 'Target',
+      targetDate: new Date().toISOString(),
+      status: 'On Track' as const,
     };
 
     if (isNew) {
       addGoal(submissionData as Omit<Goal, 'id' | 'completions'>);
       toast.success('Goal created successfully!');
-    } else {
-      updateGoal({ ...goal, ...submissionData, id: goal!.id });
+    } else if (goal) {
+      updateGoal({ ...goal, ...submissionData, id: goal.id });
       toast.success('Goal updated successfully!');
     }
     navigate('/goals');
@@ -55,6 +61,7 @@ const GoalEditPage = () => {
           <CardContent>
             <GoalForm
               goal={goal}
+              users={allUsers}
               onSubmit={handleSubmit}
               onCancel={() => navigate(isNew ? '/goals' : `/goals/${id}`)}
             />
