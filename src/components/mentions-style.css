@@ -1,6 +1,7 @@
 .mentions {
   position: relative;
   width: 100%;
+  z-index: 10;
 }
 
 .mentions__input,
