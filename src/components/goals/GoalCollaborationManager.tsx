@@ -51,7 +51,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
         <div className="flex items-center space-x-2">
           {goal.collaborators.map(user => (
             <Avatar key={user.id}>
-              <AvatarImage src={user.avatarUrl} alt={user.name} />
+              <AvatarImage src={user.avatar} alt={user.name} />
               <AvatarFallback>{user.initials}</AvatarFallback>
             </Avatar>
           ))}
@@ -74,7 +74,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
                       onCheckedChange={(checked) => handleUserSelect(user.id, !!checked)}
                     />
                     <Avatar>
-                      <AvatarImage src={user.avatarUrl} alt={user.name} />
+                      <AvatarImage src={user.avatar} alt={user.name} />
                       <AvatarFallback>{user.initials}</AvatarFallback>
                     </Avatar>
                     <Label htmlFor={`user-${user.id}`} className="font-medium">{user.name}</Label>

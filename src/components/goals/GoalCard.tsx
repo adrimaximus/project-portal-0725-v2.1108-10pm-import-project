@@ -7,12 +7,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { parseISO, isWithinInterval, startOfToday, subDays } from 'date-fns';
-import { getColorForTag } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
-type GoalWithTags = Goal & { tags?: string[] };
-
-const GoalCard = ({ goal }: { goal: GoalWithTags }) => {
+const GoalCard = ({ goal }: { goal: Goal }) => {
   const Icon = getIconComponent(goal.icon);
 
   const calculateProgress = () => {
@@ -71,12 +68,9 @@ const GoalCard = ({ goal }: { goal: GoalWithTags }) => {
         <CardContent className="flex-grow flex flex-col justify-end">
           {goal.tags && goal.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-4">
-              {goal.tags.map(tag => {
-                const { bg, text, border } = getColorForTag(tag);
-                return (
-                  <Badge key={tag} className={cn("font-normal", bg, text, border)}>{tag}</Badge>
-                );
-              })}
+              {goal.tags.map(tag => (
+                  <Badge key={tag.id} className={cn("font-normal")} style={{ backgroundColor: `${tag.color}20`, color: tag.color, borderColor: tag.color }}>{tag.name}</Badge>
+              ))}
             </div>
           )}
           <div>

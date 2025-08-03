@@ -1,11 +1,6 @@
-export interface AssignedUser {
-  id: string;
-  name: string;
-  avatar: string;
-  role?: string;
-  email: string;
-  initials: string;
-}
+import { User as AssignedUser, allUsers } from './users';
+
+export type { AssignedUser };
 
 export interface Task {
   id: string;
@@ -83,14 +78,6 @@ export interface Project {
   activities: Activity[];
 }
 
-const teamMembers: AssignedUser[] = [
-  { id: 'user-1', name: 'Alex Johnson', avatar: 'https://i.pravatar.cc/150?u=alex', role: 'Project Manager', email: 'alex@example.com', initials: 'AJ' },
-  { id: 'user-2', name: 'Samantha Bee', avatar: 'https://i.pravatar.cc/150?u=samantha', role: 'Lead Designer', email: 'samantha@example.com', initials: 'SB' },
-  { id: 'user-3', name: 'Michael Chen', avatar: 'https://i.pravatar.cc/150?u=michael', role: 'Lead Developer', email: 'michael@example.com', initials: 'MC' },
-  { id: 'user-4', name: 'Emily Davis', avatar: 'https://i.pravatar.cc/150?u=emily', role: 'UX Researcher', email: 'emily@example.com', initials: 'ED' },
-  { id: 'user-5', name: 'David Wilson', avatar: 'https://i.pravatar.cc/150?u=david', role: 'QA Tester', email: 'david@example.com', initials: 'DW' },
-];
-
 export const dummyProjects: Project[] = [
   {
     id: 'proj-001',
@@ -103,17 +90,17 @@ export const dummyProjects: Project[] = [
     status: 'On Track',
     paymentStatus: 'Pending',
     progress: 65,
-    createdBy: teamMembers[0],
-    assignedTo: [teamMembers[0], teamMembers[2], teamMembers[4]],
+    createdBy: allUsers[0],
+    assignedTo: [allUsers[0], allUsers[2], allUsers[4]],
     tasks: [
-      { id: 't1-1', name: 'Setup project structure', completed: true, assignedTo: [teamMembers[2].id] },
-      { id: 't1-2', name: 'Design product pages', completed: true, assignedTo: [teamMembers[1].id] },
-      { id: 't1-3', name: 'Develop API for products', completed: false, assignedTo: [teamMembers[2].id] },
+      { id: 't1-1', name: 'Setup project structure', completed: true, assignedTo: [allUsers[2].id] },
+      { id: 't1-2', name: 'Design product pages', completed: true, assignedTo: [allUsers[1].id] },
+      { id: 't1-3', name: 'Develop API for products', completed: false, assignedTo: [allUsers[2].id] },
       { id: 't1-4', name: 'Implement payment gateway', completed: false, assignedTo: [] },
     ],
     comments: [
-      { id: 'c1-1', user: teamMembers[0], timestamp: '2024-07-28T10:30:00Z', text: 'Great progress on the API. Let\'s sync up about the payment gateway options tomorrow.', isTicket: true },
-      { id: 'c1-2', user: teamMembers[2], timestamp: '2024-07-28T11:00:00Z', text: 'Sounds good. I\'ve prepared a comparison of Stripe vs. Braintree.', attachment: { name: 'Payment-Gateways.pdf', url: '#' } },
+      { id: 'c1-1', user: allUsers[0], timestamp: '2024-07-28T10:30:00Z', text: 'Great progress on the API. Let\'s sync up about the payment gateway options tomorrow.', isTicket: true },
+      { id: 'c1-2', user: allUsers[2], timestamp: '2024-07-28T11:00:00Z', text: 'Sounds good. I\'ve prepared a comparison of Stripe vs. Braintree.', attachment: { name: 'Payment-Gateways.pdf', url: '#' } },
     ],
     briefFiles: [
       { name: 'Project-Brief.pdf', size: 1.2 * 1024 * 1024, type: 'application/pdf', url: '#' },
@@ -121,12 +108,12 @@ export const dummyProjects: Project[] = [
     ],
     services: ['Web Development', 'UI/UX Design', 'API Integration'],
     activities: [
-        { id: 'a1-1', type: 'commit', user: teamMembers[2], timestamp: '2024-07-29T14:00:00Z', details: 'to `feature/product-api`', target: 'Git Repository' },
-        { id: 'a1-2', type: 'file_upload', user: teamMembers[1], timestamp: '2024-07-29T11:20:00Z', details: '`Homepage_Mockup_v3.png`', target: 'Project Files' },
-        { id: 'a1-3', type: 'status_change', user: teamMembers[0], timestamp: '2024-07-28T16:45:00Z', details: "from 'At Risk' to 'On Track'", target: 'Project Status' },
-        { id: 'a1-4', type: 'ticket_created', user: teamMembers[0], timestamp: '2024-07-28T10:30:00Z', details: 'Great progress on the API. Let\'s sync up about the payment gateway options tomorrow.', target: 'Ticket C1-1' },
-        { id: 'a1-5', type: 'comment', user: teamMembers[2], timestamp: '2024-07-28T11:00:00Z', details: 'Sounds good. I\'ve prepared a comparison of Stripe vs. Braintree.', target: 'Ticket C1-1' },
-        { id: 'a1-6', type: 'member_add', user: teamMembers[0], timestamp: '2024-07-27T09:00:00Z', details: 'Added David Wilson to the project.', target: 'Team' },
+        { id: 'a1-1', type: 'commit', user: allUsers[2], timestamp: '2024-07-29T14:00:00Z', details: 'to `feature/product-api`', target: 'Git Repository' },
+        { id: 'a1-2', type: 'file_upload', user: allUsers[1], timestamp: '2024-07-29T11:20:00Z', details: '`Homepage_Mockup_v3.png`', target: 'Project Files' },
+        { id: 'a1-3', type: 'status_change', user: allUsers[0], timestamp: '2024-07-28T16:45:00Z', details: "from 'At Risk' to 'On Track'", target: 'Project Status' },
+        { id: 'a1-4', type: 'ticket_created', user: allUsers[0], timestamp: '2024-07-28T10:30:00Z', details: 'Great progress on the API. Let\'s sync up about the payment gateway options tomorrow.', target: 'Ticket C1-1' },
+        { id: 'a1-5', type: 'comment', user: allUsers[2], timestamp: '2024-07-28T11:00:00Z', details: 'Sounds good. I\'ve prepared a comparison of Stripe vs. Braintree.', target: 'Ticket C1-1' },
+        { id: 'a1-6', type: 'member_add', user: allUsers[0], timestamp: '2024-07-27T09:00:00Z', details: 'Added David Wilson to the project.', target: 'Team' },
     ]
   },
   {
@@ -140,11 +127,11 @@ export const dummyProjects: Project[] = [
     status: 'At Risk',
     paymentStatus: 'Paid',
     progress: 30,
-    createdBy: teamMembers[1],
-    assignedTo: [teamMembers[1], teamMembers[3]],
+    createdBy: allUsers[1],
+    assignedTo: [allUsers[1], allUsers[3]],
     tasks: [
-      { id: 't2-1', name: 'Conduct user interviews', completed: true, assignedTo: [teamMembers[3].id] },
-      { id: 't2-2', name: 'Create low-fidelity wireframes', completed: false, assignedTo: [teamMembers[1].id] },
+      { id: 't2-1', name: 'Conduct user interviews', completed: true, assignedTo: [allUsers[3].id] },
+      { id: 't2-2', name: 'Create low-fidelity wireframes', completed: false, assignedTo: [allUsers[1].id] },
     ],
     comments: [],
     briefFiles: [
@@ -152,8 +139,8 @@ export const dummyProjects: Project[] = [
     ],
     services: ['UI/UX Design', 'User Research'],
     activities: [
-        { id: 'a2-1', type: 'comment', user: teamMembers[3], timestamp: '2024-07-25T09:00:00Z', details: 'The user interviews are complete, summary attached.', target: 'Task T2-1' },
-        { id: 'a2-2', type: 'deadline_change', user: teamMembers[1], timestamp: '2024-07-24T10:00:00Z', details: 'extended to 2024-11-30', target: 'Project Deadline' },
+        { id: 'a2-1', type: 'comment', user: allUsers[3], timestamp: '2024-07-25T09:00:00Z', details: 'The user interviews are complete, summary attached.', target: 'Task T2-1' },
+        { id: 'a2-2', type: 'deadline_change', user: allUsers[1], timestamp: '2024-07-24T10:00:00Z', details: 'extended to 2024-11-30', target: 'Project Deadline' },
     ]
   },
   {
@@ -167,15 +154,15 @@ export const dummyProjects: Project[] = [
     status: 'Completed',
     paymentStatus: 'Paid',
     progress: 100,
-    createdBy: teamMembers[0],
-    assignedTo: [teamMembers[0]],
+    createdBy: allUsers[0],
+    assignedTo: [allUsers[0]],
     tasks: [],
     comments: [],
     briefFiles: [],
     services: ['Social Media', 'Email Marketing'],
     activities: [
-        { id: 'a3-1', type: 'payment_status_change', user: teamMembers[0], timestamp: '2024-07-20T14:00:00Z', details: "from 'Pending' to 'Paid'", target: 'Payment' },
-        { id: 'a3-2', type: 'progress_update', user: teamMembers[0], timestamp: '2024-07-19T18:00:00Z', details: 'to 100%', target: 'Project Progress' },
+        { id: 'a3-1', type: 'payment_status_change', user: allUsers[0], timestamp: '2024-07-20T14:00:00Z', details: "from 'Pending' to 'Paid'", target: 'Payment' },
+        { id: 'a3-2', type: 'progress_update', user: allUsers[0], timestamp: '2024-07-19T18:00:00Z', details: 'to 100%', target: 'Project Progress' },
     ]
   },
   {
@@ -189,8 +176,8 @@ export const dummyProjects: Project[] = [
     status: 'On Track',
     paymentStatus: 'Pending',
     progress: 15,
-    createdBy: teamMembers[2],
-    assignedTo: [teamMembers[2], teamMembers[4]],
+    createdBy: allUsers[2],
+    assignedTo: [allUsers[2], allUsers[4]],
     tasks: [],
     comments: [],
     briefFiles: [],
@@ -208,8 +195,8 @@ export const dummyProjects: Project[] = [
     status: 'Off Track',
     paymentStatus: 'Overdue',
     progress: 80,
-    createdBy: teamMembers[1],
-    assignedTo: [teamMembers[1]],
+    createdBy: allUsers[1],
+    assignedTo: [allUsers[1]],
     tasks: [],
     comments: [],
     briefFiles: [],
