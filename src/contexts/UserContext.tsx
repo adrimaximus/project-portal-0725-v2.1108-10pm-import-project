@@ -1,41 +1,45 @@
-import { createContext, useContext, ReactNode, useState } from 'react';
-import { Role } from '@/types';
+import { createContext, useContext, useState, ReactNode } from 'react';
 
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
-  avatar: string;
-  initials: string;
-  role: Role;
+  role: 'Admin' | 'Member';
+  avatar?: string;
 }
 
 interface UserContextType {
   user: User;
-  updateUser: (data: Partial<User>) => void;
+  login: (user: User) => void;
+  logout: () => void;
+  updateUser: (updates: Partial<User>) => void; // Added updateUser
 }
-
-// In a real application, this user data would come from an authentication service.
-const defaultUser: User = {
-  id: 'user-1',
-  name: 'Alex',
-  email: 'alex@example.com',
-  avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
-  initials: 'A',
-  role: 'Admin',
-};
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User>(defaultUser);
+  const [user, setUser] = useState<User>({
+    id: 'user-1',
+    name: 'Alice Johnson',
+    email: 'alice.j@example.com',
+    role: 'Admin',
+    avatar: 'https://i.pravatar.cc/150?u=alice'
+  });
 
-  const updateUser = (data: Partial<User>) => {
-    setUser(prevUser => ({ ...prevUser, ...data }));
+  const login = (userData: User) => {
+    setUser(userData);
+  };
+
+  const logout = () => {
+    console.log("User logged out");
+  };
+
+  const updateUser = (updates: Partial<User>) => {
+    setUser(prevUser => ({ ...prevUser, ...updates }));
   };
 
   return (
-    <UserContext.Provider value={{ user, updateUser }}>
+    <UserContext.Provider value={{ user, login, logout, updateUser }}>
       {children}
     </UserContext.Provider>
   );

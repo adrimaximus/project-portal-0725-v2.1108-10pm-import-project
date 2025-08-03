@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { dummyProjects, Project, AssignedUser, Task, ProjectFile, Comment } from "@/data/projects";
+import { dummyProjects, Project, AssignedUser, Task, ProjectFile, Comment, Activity, ActivityType } from "@/data/projects";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
@@ -23,11 +23,11 @@ const ProjectDetail = () => {
   useEffect(() => {
     const foundProject = dummyProjects.find(p => p.id === projectId);
     if (foundProject) {
-      const projectComments = foundProject.comments || [];
       const projectWithData = {
         ...foundProject,
         tasks: foundProject.tasks || [],
-        comments: projectComments,
+        comments: foundProject.comments || [],
+        activities: foundProject.activities || [],
       };
       setProject(projectWithData);
       setEditedProject(structuredClone(projectWithData));
@@ -47,11 +47,66 @@ const ProjectDetail = () => {
   }
 
   const handleSaveChanges = () => {
-    const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
-    if (projectIndex !== -1 && editedProject) {
-      dummyProjects[projectIndex] = editedProject;
-      setProject(editedProject);
+    if (!editedProject || !project) return;
+
+    let tempProject = { ...editedProject };
+    let newActivities: Activity[] = [];
+
+    const createActivity = (type: ActivityType, description: string): Activity => ({
+      id: `activity-${Date.now()}-${Math.random()}`,
+      type,
+      timestamp: new Date().toISOString(),
+      user: { id: currentUser.id, name: currentUser.name },
+      details: { description }
+    });
+
+    if (editedProject.name !== project.name) {
+      newActivities.push(createActivity('PROJECT_DETAILS_UPDATED', `memperbarui nama proyek menjadi '${editedProject.name}'`));
     }
+    if (editedProject.status !== project.status) {
+      newActivities.push(createActivity('PROJECT_STATUS_UPDATED', `mengubah status proyek dari '${project.status}' menjadi '${editedProject.status}'`));
+    }
+    if (editedProject.paymentStatus !== project.paymentStatus) {
+      newActivities.push(createActivity('PAYMENT_STATUS_UPDATED', `mengubah status pembayaran dari '${project.paymentStatus}' menjadi '${editedProject.paymentStatus}'`));
+    }
+    if (editedProject.deadline !== project.deadline) {
+      newActivities.push(createActivity('PROJECT_DETAILS_UPDATED', `memperbarui tanggal selesai menjadi ${format(new Date(editedProject.deadline), 'dd MMM yyyy')}`));
+    }
+    if (editedProject.budget !== project.budget) {
+      newActivities.push(createActivity('PROJECT_DETAILS_UPDATED', `memperbarui anggaran proyek`));
+    }
+    if (editedProject.description !== project.description) {
+      newActivities.push(createActivity('PROJECT_DETAILS_UPDATED', `memperbarui deskripsi proyek`));
+    }
+
+    const oldTeamIds = new Set(project.assignedTo.map(u => u.id));
+    const newTeamIds = new Set(editedProject.assignedTo.map(u => u.id));
+    editedProject.assignedTo.forEach(user => {
+      if (!oldTeamIds.has(user.id)) {
+        newActivities.push(createActivity('TEAM_MEMBER_ADDED', `menambahkan ${user.name} ke tim`));
+      }
+    });
+    project.assignedTo.forEach(user => {
+      if (!newTeamIds.has(user.id)) {
+        newActivities.push(createActivity('TEAM_MEMBER_REMOVED', `menghapus ${user.name} dari tim`));
+      }
+    });
+
+    const oldFiles = new Set(project.briefFiles?.map(f => f.name) || []);
+    (editedProject.briefFiles || []).forEach(file => {
+      if (!oldFiles.has(file.name)) {
+        newActivities.push(createActivity('FILE_UPLOADED', `mengunggah file: '${file.name}'`));
+      }
+    });
+
+    tempProject.activities = [...newActivities.reverse(), ...(tempProject.activities || [])];
+
+    const projectIndex = dummyProjects.findIndex(p => p.id === projectId);
+    if (projectIndex !== -1) {
+      dummyProjects[projectIndex] = tempProject;
+    }
+    setProject(tempProject);
+    setEditedProject(structuredClone(tempProject));
     setIsEditing(false);
   };
 
@@ -121,6 +176,26 @@ const ProjectDetail = () => {
 
   const handleTasksUpdate = (updatedTasks: Task[]) => {
     if (editedProject) {
+      const originalTasks = editedProject.tasks || [];
+      let newActivities: Activity[] = [];
+
+      const createActivity = (type: ActivityType, description: string): Activity => ({
+        id: `activity-${Date.now()}-${Math.random()}`,
+        type,
+        timestamp: new Date().toISOString(),
+        user: { id: currentUser.id, name: currentUser.name },
+        details: { description }
+      });
+
+      updatedTasks.filter(ut => !originalTasks.some(ot => ot.id === ut.id))
+        .forEach(task => newActivities.push(createActivity('TASK_CREATED', `membuat tugas baru: "${task.name}"`)));
+
+      updatedTasks.filter(ut => ut.completed && !originalTasks.find(ot => ot.id === ut.id)?.completed)
+        .forEach(task => newActivities.push(createActivity('TASK_COMPLETED', `menyelesaikan tugas: "${task.name}"`)));
+      
+      originalTasks.filter(ot => !updatedTasks.some(ut => ut.id === ot.id))
+        .forEach(task => newActivities.push(createActivity('TASK_DELETED', `menghapus tugas: "${task.name}"`)));
+
       const completedTasks = updatedTasks.filter(task => task.completed).length;
       const totalTasks = updatedTasks.length;
       const newProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -129,26 +204,40 @@ const ProjectDetail = () => {
         ...editedProject,
         tasks: updatedTasks,
         progress: newProgress,
+        activities: [...newActivities, ...(editedProject.activities || [])],
       });
     }
   };
 
   const handleAddCommentOrTicket = (newComment: Comment) => {
+    const activityType = newComment.isTicket ? 'TICKET_CREATED' : 'COMMENT_ADDED';
+    const textPreview = newComment.text.substring(0, 50);
+    const activityDescription = newComment.isTicket 
+      ? `membuat tiket baru: "${textPreview}${newComment.text.length > 50 ? '...' : ''}"`
+      : `memberi komentar: "${textPreview}${newComment.text.length > 50 ? '...' : ''}"`;
+
+    const activity: Activity = {
+      id: `activity-${Date.now()}`,
+      type: activityType,
+      timestamp: new Date().toISOString(),
+      user: { id: newComment.author.id, name: newComment.author.name },
+      details: { description: activityDescription }
+    };
+
     setEditedProject(currentEditedProject => {
       if (!currentEditedProject) return null;
   
-      const updatedProject = { ...currentEditedProject };
+      let updatedProject = { ...currentEditedProject };
       updatedProject.comments = [...(currentEditedProject.comments || []), newComment];
+      updatedProject.activities = [activity, ...(currentEditedProject.activities || [])];
   
       if (newComment.isTicket) {
+        // ... (existing ticket to task logic)
         const mentionedUsersToAssign: AssignedUser[] = [];
         let textForTask = newComment.text;
-  
         const sortedAssignableUsers = [...updatedProject.assignedTo].sort((a, b) => b.name.length - a.name.length);
-
         sortedAssignableUsers.forEach(user => {
           const userMentionRegex = new RegExp(`@${user.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}(?!\\w)`, 'g');
-          
           if (textForTask.match(userMentionRegex)) {
             if (!mentionedUsersToAssign.find(u => u.id === user.id)) {
               mentionedUsersToAssign.push(user);
@@ -156,20 +245,15 @@ const ProjectDetail = () => {
             textForTask = textForTask.replace(userMentionRegex, '');
           }
         });
-  
         const projectMentionRegex = /#\/[a-zA-Z0-9\s._-]+/g;
         textForTask = textForTask.replace(projectMentionRegex, '');
-  
         let newTaskText = textForTask.replace(/\s\s+/g, ' ').trim();
-  
         if (!newTaskText && newComment.attachment) {
           newTaskText = `Review attachment: ${newComment.attachment.name}`;
         }
-  
         if (!newTaskText && mentionedUsersToAssign.length > 0) {
           newTaskText = "New task assigned";
         }
-  
         if (newTaskText) {
           const newTask: Task = {
             id: `task-${Date.now()}`,
@@ -179,7 +263,6 @@ const ProjectDetail = () => {
             originTicketId: newComment.id,
           };
           updatedProject.tasks = [...(currentEditedProject.tasks || []), newTask];
-          
           const currentTasks = updatedProject.tasks || [];
           const completedTasks = currentTasks.filter(task => task.completed).length;
           const totalTasks = currentTasks.length;
