@@ -1,108 +1,73 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Goal } from '@/data/goals';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { useGoals } from '@/context/GoalsContext';
-import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import IconPicker from './IconPicker';
+import ColorPicker from './ColorPicker';
 
-const iconOptions = ['📚', '🏃', '🎸', '💧', '🧘', '🎨', '💻', '💰', '✈️'];
-const colorOptions = ['#3B82F6', '#10B981', '#F59E0B', '#0EA5E9', '#8B5CF6', '#EF4444', '#6366F1', '#F97316'];
-const dayOptions = [
-  { value: 'Su', label: 'S' },
-  { value: 'Mo', label: 'M' },
-  { value: 'Tu', label: 'T' },
-  { value: 'We', label: 'W' },
-  { value: 'Th', label: 'T' },
-  { value: 'Fr', label: 'F' },
-  { value: 'Sa', label: 'S' },
+interface NewGoalDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onGoalCreate: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => void;
+}
+
+const weekDays = [
+  { label: 'S', value: '0' },
+  { label: 'M', value: '1' },
+  { label: 'T', value: '2' },
+  { label: 'W', value: '3' },
+  { label: 'T', value: '4' },
+  { label: 'F', value: '5' },
+  { label: 'S', value: '6' },
 ];
 
-const NewGoalDialog = ({ setOpen }: { setOpen: (open: boolean) => void }) => {
-  const { addGoal } = useGoals();
+const NewGoalDialog = ({ open, onOpenChange, onGoalCreate }: NewGoalDialogProps) => {
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [icon, setIcon] = useState(iconOptions[0]);
-  const [color, setColor] = useState(colorOptions[0]);
-  const [frequency, setFrequency] = useState<'Daily' | 'Weekly'>('Daily');
+  const [frequency, setFrequency] = useState<Goal['frequency']>('Daily');
   const [specificDays, setSpecificDays] = useState<string[]>([]);
-  const [tags, setTags] = useState('');
+  const [icon, setIcon] = useState('target');
+  const [color, setColor] = useState('#BFDBFE');
 
-  const handleSubmit = () => {
-    if (!title) {
-      toast.error('Please enter a title for your goal.');
-      return;
-    }
-
-    addGoal({
+  const handleSave = () => {
+    if (!title) return;
+    onGoalCreate({
       title,
-      description,
+      frequency,
+      specificDays: frequency === 'Weekly' ? specificDays.map(Number) : undefined,
       icon,
       color,
-      frequency,
-      specificDays: frequency === 'Weekly' ? specificDays : [],
-      tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
     });
-
-    toast.success(`New goal "${title}" has been created!`);
-    setOpen(false);
+    setTitle('');
+    setFrequency('Daily');
+    setSpecificDays([]);
+    setIcon('target');
+    setColor('#BFDBFE');
+    onOpenChange(false);
   };
 
   return (
-    <DialogContent className="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle>Create New Goal</DialogTitle>
-        <DialogDescription>Set up a new goal to track your progress. Click save when you're done.</DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-4">
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="title" className="text-right">Title</Label>
-          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} className="col-span-3" />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="description" className="text-right">Description</Label>
-          <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="col-span-3" />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label className="text-right">Icon & Color</Label>
-          <div className="col-span-3 flex gap-2">
-            <Select value={icon} onValueChange={setIcon}>
-              <SelectTrigger className="w-[80px]">
-                <SelectValue>{icon}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {iconOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={color} onValueChange={setColor}>
-              <SelectTrigger className="flex-1">
-                <SelectValue asChild>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color }} />
-                    {color}
-                  </div>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {colorOptions.map(opt => (
-                  <SelectItem key={opt} value={opt}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: opt }} />
-                      {opt}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create a New Goal</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="title" className="text-right">
+              Title
+            </Label>
+            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} className="col-span-3" placeholder="e.g., Drink more water" />
           </div>
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="frequency" className="text-right">Frequency</Label>
-          <div className="col-span-3">
-            <Select value={frequency} onValueChange={(v: 'Daily' | 'Weekly') => setFrequency(v)}>
-              <SelectTrigger>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="frequency" className="text-right">
+              Frequency
+            </Label>
+            <Select value={frequency} onValueChange={(value) => setFrequency(value as Goal['frequency'])}>
+              <SelectTrigger className="col-span-3">
                 <SelectValue placeholder="Select frequency" />
               </SelectTrigger>
               <SelectContent>
@@ -111,29 +76,43 @@ const NewGoalDialog = ({ setOpen }: { setOpen: (open: boolean) => void }) => {
               </SelectContent>
             </Select>
           </div>
-        </div>
-        {frequency === 'Weekly' && (
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Days</Label>
-            <div className="col-span-3">
-              <ToggleGroup type="multiple" value={specificDays} onValueChange={setSpecificDays} variant="outline" className="flex-wrap justify-start">
-                {dayOptions.map(day => (
-                  <ToggleGroupItem key={day.value} value={day.value} aria-label={day.value}>{day.label}</ToggleGroupItem>
+          {frequency === 'Weekly' && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Days</Label>
+              <ToggleGroup
+                type="multiple"
+                variant="outline"
+                value={specificDays}
+                onValueChange={setSpecificDays}
+                className="col-span-3 justify-start"
+              >
+                {weekDays.map(day => (
+                  <ToggleGroupItem key={day.value} value={day.value} aria-label={day.label}>
+                    {day.label}
+                  </ToggleGroupItem>
                 ))}
               </ToggleGroup>
             </div>
+          )}
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label className="text-right pt-2">Icon</Label>
+            <div className="col-span-3">
+              <IconPicker value={icon} onChange={setIcon} color={color} />
+            </div>
           </div>
-        )}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="tags" className="text-right">Tags</Label>
-          <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} className="col-span-3" placeholder="e.g. Health, Fitness" />
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Color</Label>
+            <div className="col-span-3">
+              <ColorPicker color={color} setColor={setColor} />
+            </div>
+          </div>
         </div>
-      </div>
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-        <Button type="submit" onClick={handleSubmit}>Save Goal</Button>
-      </DialogFooter>
-    </DialogContent>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSave}>Create Goal</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

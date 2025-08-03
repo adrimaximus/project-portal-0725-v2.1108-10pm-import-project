@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, UserPlus, Users, Bot } from "lucide-react";
+import { Search, UserPlus, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -34,19 +34,6 @@ const ChatList = ({
 }: ChatListProps) => {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isNewGroupChatOpen, setIsNewGroupChatOpen] = useState(false);
-
-  const aiAgentConversation: Conversation = {
-    id: 'ai-agent',
-    userName: 'AI Agent',
-    lastMessage: 'Saya bisa bantu soal fitur & proyek.',
-    lastMessageTimestamp: 'Online',
-    unreadCount: 0,
-    isGroup: false,
-    userAvatar: '',
-    messages: [],
-  };
-
-  const displayedConversations = [aiAgentConversation, ...conversations];
 
   return (
     <div className="flex flex-col border-r bg-muted/40 h-full">
@@ -108,7 +95,7 @@ const ChatList = ({
       </div>
       <div className="flex-1 overflow-y-auto">
         <nav className="p-2 space-y-1">
-          {displayedConversations.map((convo) => (
+          {conversations.map((convo) => (
             <button
               key={convo.id}
               onClick={() => onConversationSelect(convo.id)}
@@ -120,11 +107,7 @@ const ChatList = ({
               )}
             >
               <Avatar className="h-10 w-10 border">
-                {convo.id === 'ai-agent' ? (
-                  <AvatarFallback className="bg-primary/10">
-                    <Bot className="h-5 w-5 text-primary" />
-                  </AvatarFallback>
-                ) : convo.isGroup ? (
+                {convo.isGroup ? (
                   <AvatarFallback>
                     <Users className="h-5 w-5" />
                   </AvatarFallback>

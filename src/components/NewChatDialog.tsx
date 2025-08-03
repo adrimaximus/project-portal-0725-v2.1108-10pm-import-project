@@ -51,8 +51,8 @@ const NewChatDialog = ({ onSelectCollaborator, setOpen }: NewChatDialogProps) =>
             >
               <div className="relative">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={collaborator.avatar} alt={collaborator.name} />
-                  <AvatarFallback>{collaborator.initials}</AvatarFallback>
+                  <AvatarImage src={collaborator.src} alt={collaborator.name} />
+                  <AvatarFallback>{collaborator.fallback}</AvatarFallback>
                 </Avatar>
                 <span className={cn(
                   "absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background",

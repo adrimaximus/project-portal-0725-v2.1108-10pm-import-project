@@ -126,7 +126,7 @@ const ChatInput = ({ onSendMessage, members = [], projects = [] }: ChatInputProp
       >
         <form onSubmit={handleSubmit} className="flex w-full items-start space-x-4">
           <Avatar className="h-9 w-9 border">
-            <AvatarImage src={currentUser.avatar} alt="You" />
+            <AvatarImage src={currentUser.src} alt="You" />
             <AvatarFallback>ME</AvatarFallback>
           </Avatar>
           <div className="w-full">
@@ -178,8 +178,8 @@ const ChatInput = ({ onSendMessage, members = [], projects = [] }: ChatInputProp
                 {filteredMembers.map((member) => (
                   <CommandItem key={member.id} onSelect={() => handleSelect(member.name)}>
                     <Avatar className="h-8 w-8 mr-2">
-                      <AvatarImage src={member.avatar} />
-                      <AvatarFallback>{member.initials}</AvatarFallback>
+                      <AvatarImage src={member.src} />
+                      <AvatarFallback>{member.fallback}</AvatarFallback>
                     </Avatar>
                     <span>{member.name}</span>
                   </CommandItem>

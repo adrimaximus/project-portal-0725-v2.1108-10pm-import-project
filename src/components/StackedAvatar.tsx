@@ -14,7 +14,7 @@ const StackedAvatar = ({ members, maxVisible = 2 }: StackedAvatarProps) => {
     <div className="flex -space-x-4 rtl:space-x-reverse items-center">
       {visibleMembers.map((member) => (
         <Avatar key={member.id} className="h-10 w-10 border-2 border-background">
-          <AvatarImage src={member.avatar} alt={member.name} />
+          <AvatarImage src={member.src} alt={member.name} />
           <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
         </Avatar>
       ))}

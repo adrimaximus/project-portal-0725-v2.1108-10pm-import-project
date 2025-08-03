@@ -110,7 +110,7 @@ const ChatConversation = ({ messages, members = [], projects = [] }: ChatConvers
           >
             <Avatar className="h-9 w-9 border">
               <AvatarImage
-                src={message.senderName === "You" ? currentUser.avatar : message.senderAvatar}
+                src={message.senderName === "You" ? currentUser.src : message.senderAvatar}
                 alt={message.senderName}
               />
               <AvatarFallback>

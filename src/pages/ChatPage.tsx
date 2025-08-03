@@ -1,95 +1,185 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import ChatList from "@/components/ChatList";
-import ChatView from "@/components/ChatView";
-import { dummyConversations, Conversation, Message, currentUserId } from "@/data/chat";
+import ChatWindow from "@/components/ChatWindow";
+import PortalLayout from "@/components/PortalLayout";
+import { dummyConversations, Conversation, Message } from "@/data/chat";
 import { Collaborator } from "@/types";
+import { dummyProjects } from "@/data/projects";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const ChatPage = () => {
-  const [conversations, setConversations] = useState<Conversation[]>(dummyConversations);
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] =
+    useState<Conversation[]>(dummyConversations);
+  const [selectedConversationId, setSelectedConversationId] = useState<
+    string | null
+  >(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (!isMobile) {
+      setSelectedConversationId(dummyConversations[0]?.id || null);
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (location.state?.selectedCollaborator) {
+      const collaborator = location.state.selectedCollaborator as Collaborator;
+      
+      setConversations(prevConvos => {
+        const existingConversation = prevConvos.find(
+          (convo) => !convo.isGroup && convo.members?.some(m => m.id === collaborator.id)
+        );
+
+        if (existingConversation) {
+          return prevConvos;
+        }
+
+        const newConversation: Conversation = {
+          id: `conv-${collaborator.id}`,
+          userName: collaborator.name,
+          userAvatar: collaborator.src,
+          lastMessage: "Say hello!",
+          lastMessageTimestamp: "Just now",
+          unreadCount: 0,
+          messages: [],
+          isGroup: false,
+          members: [collaborator]
+        };
+        
+        return [newConversation, ...prevConvos];
+      });
+
+      const conversationId = `conv-${collaborator.id}`;
+      setSelectedConversationId(conversationId);
+
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state]);
 
   const handleConversationSelect = (id: string) => {
     setSelectedConversationId(id);
   };
 
-  const handleSendMessage = (conversationId: string, messageText: string) => {
-    const newConversations = conversations.map(convo => {
-      if (convo.id === conversationId) {
-        const newMessage: Message = {
-          id: `msg-${Date.now()}`,
-          senderId: currentUserId,
-          senderName: 'Alex', // Hardcoded for demo
-          senderAvatar: 'https://i.pravatar.cc/150?u=alex', // Hardcoded for demo
-          text: messageText,
-          timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-        };
-        return {
-          ...convo,
-          messages: [...convo.messages, newMessage],
-          lastMessage: messageText,
-          lastMessageTimestamp: newMessage.timestamp,
-        };
-      }
-      return convo;
-    });
-    setConversations(newConversations);
+  const handleSendMessage = (messageText: string, file?: File) => {
+    if (!selectedConversationId) return;
+
+    const newMessage: Message = {
+      id: `msg-${Date.now()}`,
+      text: messageText,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      sender: "me",
+      senderName: "You",
+      senderAvatar: "https://i.pravatar.cc/150?u=me",
+    };
+
+    if (file) {
+      newMessage.attachment = {
+        name: file.name,
+        url: URL.createObjectURL(file),
+        type: file.type.startsWith('image/') ? 'image' : 'file',
+      };
+    }
+
+    const lastMessage = messageText || `Sent an attachment: ${file?.name}`;
+
+    setConversations((prev) =>
+      prev.map((convo) =>
+        convo.id === selectedConversationId
+          ? {
+              ...convo,
+              messages: [...convo.messages, newMessage],
+              lastMessage: lastMessage,
+              lastMessageTimestamp: newMessage.timestamp,
+            }
+          : convo
+      )
+    );
   };
 
   const handleStartNewChat = (collaborator: Collaborator) => {
-    console.log("Starting new chat with:", collaborator);
-    // Di aplikasi nyata, di sini akan ada logika untuk membuat obrolan baru
+    navigate('/chat', { state: { selectedCollaborator: collaborator } });
   };
 
-  const handleStartNewGroupChat = (collaborators: Collaborator[], groupName: string) => {
-    console.log("Starting new group chat:", groupName, "with", collaborators);
-    // Di aplikasi nyata, di sini akan ada logika untuk membuat obrolan grup baru
+  const handleStartNewGroupChat = (
+    members: Collaborator[],
+    groupName: string
+  ) => {
+    const newConversation: Conversation = {
+      id: `group-${Date.now()}`,
+      userName: groupName,
+      lastMessage: "Group created. Say hello!",
+      lastMessageTimestamp: "Just now",
+      unreadCount: 0,
+      messages: [
+        {
+          id: `msg-${Date.now()}`,
+          text: `Group "${groupName}" was created.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sender: "me",
+          senderName: "System",
+          senderAvatar: "",
+        },
+      ],
+      isGroup: true,
+      members: members,
+    };
+
+    setConversations((prev) => [newConversation, ...prev]);
+    setSelectedConversationId(newConversation.id);
   };
 
-  const getSelectedConversation = (): Conversation | null => {
-    if (!selectedConversationId) return null;
-    
-    if (selectedConversationId === 'ai-agent') {
-      // Cari di state dulu, kalau tidak ada, buat objek baru
-      const existingAiConvo = conversations.find(c => c.id === 'ai-agent');
-      if (existingAiConvo) return existingAiConvo;
+  const selectedConversation = conversations.find(
+    (c) => c.id === selectedConversationId
+  );
 
-      return {
-        id: 'ai-agent',
-        userName: 'AI Agent',
-        userAvatar: '',
-        lastMessage: 'Saya bisa bantu soal fitur & proyek.',
-        lastMessageTimestamp: 'Online',
-        unreadCount: 0,
-        isGroup: false,
-        messages: [
-            {
-                id: 'ai-msg-1',
-                senderId: 'ai-system',
-                senderName: 'AI Agent',
-                senderAvatar: '',
-                text: 'Halo! Saya adalah asisten AI Anda. Tanyakan apa saja tentang fitur atau proyek Anda.',
-                timestamp: 'Online'
-            }
-        ],
-      };
-    }
-    return conversations.find(c => c.id === selectedConversationId) || null;
+  if (isMobile) {
+    return (
+      <PortalLayout noPadding>
+        <div className="h-full">
+          {!selectedConversation ? (
+            <ChatList
+              conversations={conversations}
+              selectedConversationId={selectedConversationId}
+              onConversationSelect={handleConversationSelect}
+              onStartNewChat={handleStartNewChat}
+              onStartNewGroupChat={handleStartNewGroupChat}
+            />
+          ) : (
+            <ChatWindow
+              selectedConversation={selectedConversation}
+              onSendMessage={handleSendMessage}
+              projects={dummyProjects}
+              onBack={() => setSelectedConversationId(null)}
+            />
+          )}
+        </div>
+      </PortalLayout>
+    );
   }
 
   return (
-    <div className="grid grid-cols-[320px_1fr] h-screen bg-background">
-      <ChatList
-        conversations={conversations}
-        selectedConversationId={selectedConversationId}
-        onConversationSelect={handleConversationSelect}
-        onStartNewChat={handleStartNewChat}
-        onStartNewGroupChat={handleStartNewGroupChat}
-      />
-      <ChatView
-        conversation={getSelectedConversation()}
-        onSendMessage={handleSendMessage}
-      />
-    </div>
+    <PortalLayout noPadding>
+      <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full">
+        <ChatList
+          conversations={conversations}
+          selectedConversationId={selectedConversationId}
+          onConversationSelect={handleConversationSelect}
+          onStartNewChat={handleStartNewChat}
+          onStartNewGroupChat={handleStartNewGroupChat}
+        />
+        <ChatWindow
+          selectedConversation={selectedConversation}
+          onSendMessage={handleSendMessage}
+          projects={dummyProjects}
+        />
+      </div>
+    </PortalLayout>
   );
 };
 
