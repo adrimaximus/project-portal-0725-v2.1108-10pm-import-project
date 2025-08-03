@@ -56,6 +56,11 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
     <Card>
       <CardHeader>
         <CardTitle>Monthly Progress Overview</CardTitle>
+        {target > 0 && (
+          <p className="text-sm text-muted-foreground pt-1">
+            {formatValue(total, unit)} / {formatValue(target, unit)}
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         <div className="h-64 w-full">
