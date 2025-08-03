@@ -25,14 +25,15 @@ const OpenAiIntegrationPage = () => {
       toast.error("Please enter your OpenAI API key.");
       return;
     }
-    // In a real app, you would validate the key with your backend here.
     localStorage.setItem("openai_connected", "true");
+    localStorage.setItem("openai_api_key", apiKey);
     setIsConnected(true);
     toast.success("Successfully connected to OpenAI!");
   };
 
   const handleDisconnect = () => {
     localStorage.removeItem("openai_connected");
+    localStorage.removeItem("openai_api_key");
     setIsConnected(false);
     setApiKey("");
     toast.info("Disconnected from OpenAI.");
