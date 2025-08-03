@@ -149,6 +149,7 @@ const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksPro
             <TableRow>
               <TableHead className="w-[50px]"></TableHead>
               <TableHead>Task</TableHead>
+              <TableHead className="w-[150px]">Assignees</TableHead>
               <TableHead className="text-right w-[120px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -164,27 +165,29 @@ const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksPro
                 <TableCell className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
                   {task.name}
                 </TableCell>
+                <TableCell>
+                  <div className="flex -space-x-2">
+                    {task.assignedTo?.map(userId => {
+                      const user = getAssigneeDetails(userId);
+                      if (!user) return null;
+                      return (
+                        <TooltipProvider key={user.id} delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Avatar className="h-6 w-6 border-2 border-background">
+                                <AvatarImage src={user.avatar} />
+                                <AvatarFallback>{user.initials || user.name?.slice(0, 1) || '??'}</AvatarFallback>
+                              </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent><p>{user.name}</p></TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })}
+                  </div>
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="flex -space-x-2 mr-1">
-                      {task.assignedTo?.map(userId => {
-                        const user = getAssigneeDetails(userId);
-                        if (!user) return null;
-                        return (
-                          <TooltipProvider key={user.id} delayDuration={100}>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Avatar className="h-6 w-6 border-2 border-background">
-                                  <AvatarImage src={user.avatar} />
-                                  <AvatarFallback>{user.initials || user.name?.slice(0, 1) || '??'}</AvatarFallback>
-                                </Avatar>
-                              </TooltipTrigger>
-                              <TooltipContent><p>{user.name}</p></TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        );
-                      })}
-                    </div>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -207,7 +210,7 @@ const ProjectTasks = ({ tasks, assignableUsers, onTasksUpdate }: ProjectTasksPro
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={3} className="h-24 text-center">
+                <TableCell colSpan={4} className="h-24 text-center">
                   No tasks yet.
                 </TableCell>
               </TableRow>
