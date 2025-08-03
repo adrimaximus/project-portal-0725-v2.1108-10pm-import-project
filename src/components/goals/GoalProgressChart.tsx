@@ -43,8 +43,12 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
         default: return null;
       }
     }
-    if (goal.type === 'value' && goal.targetValue) {
-      return goal.targetValue;
+    if (goal.type === 'value' && goal.targetValue && goal.targetPeriod) {
+      switch (goal.targetPeriod) {
+        case 'Weekly': return goal.targetValue * 52;
+        case 'Monthly': return goal.targetValue * 12;
+        default: return null;
+      }
     }
     return null;
   };
@@ -53,11 +57,11 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
   const overallPercentage = yearlyTarget ? Math.round((totalProgress / yearlyTarget) * 100) : null;
 
   const getTargetText = () => {
-    if (goal.type === 'quantity' && goal.targetQuantity) {
-      return `Target: ${formatProgress(goal.targetQuantity)} / ${goal.targetPeriod}`;
+    if (goal.type === 'quantity' && goal.targetQuantity && goal.targetPeriod) {
+      return `Target: ${formatProgress(goal.targetQuantity)} / ${goal.targetPeriod.replace('ly', '')}`;
     }
-    if (goal.type === 'value' && goal.targetValue) {
-      return `Target: ${formatProgress(goal.targetValue)}`;
+    if (goal.type === 'value' && goal.targetValue && goal.targetPeriod) {
+      return `Target: ${formatProgress(goal.targetValue)} / ${goal.targetPeriod.replace('ly', '')}`;
     }
     return 'No target set';
   };

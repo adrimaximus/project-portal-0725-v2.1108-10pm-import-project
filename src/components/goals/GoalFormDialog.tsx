@@ -263,6 +263,16 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
                 <Label htmlFor="unit" className="text-right">Unit</Label>
                 <Input id="unit" value={unit} onChange={(e) => setUnit(e.target.value)} className="col-span-3" placeholder="e.g., USD, km, pages" />
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Period</Label>
+                <Select value={targetPeriod} onValueChange={(value) => setTargetPeriod(value as GoalPeriod)}>
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select period" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Weekly">Per Week</SelectItem>
+                    <SelectItem value="Monthly">Per Month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </>
           )}
           <div className="grid grid-cols-4 items-center gap-4">
