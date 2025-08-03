@@ -85,26 +85,37 @@ const ProjectActivityFeed = ({ activities }: { activities: Activity[] }) => {
   }
 
   return (
-    <div className="space-y-6">
-      {activities.map((activity) => (
-        <div key={activity.id} className="flex items-start space-x-4">
-          <div className="bg-muted rounded-full p-2">
-            {activityIcons[activity.type] || <FileText className="h-4 w-4" />}
-          </div>
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground">
-              <span className="font-semibold text-primary">{activity.user.name}</span>{" "}
-              {renderActivityDescription(activity.details.description)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(activity.timestamp), {
-                addSuffix: true,
-                locale: id,
-              })}
-            </p>
-          </div>
-        </div>
-      ))}
+    <div className="flow-root">
+      <ul role="list" className="-mb-8">
+        {activities.map((activity, activityIdx) => (
+          <li key={activity.id}>
+            <div className="relative pb-8">
+              {activityIdx !== activities.length - 1 ? (
+                <span className="absolute left-5 top-5 -ml-px h-full w-0.5 bg-border" aria-hidden="true" />
+              ) : null}
+              <div className="relative flex items-start space-x-4">
+                <div className="relative">
+                  <span className="h-10 w-10 rounded-full bg-muted flex items-center justify-center ring-8 ring-background">
+                    {activityIcons[activity.type] || <FileText className="h-4 w-4" />}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1 pt-2">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-primary">{activity.user.name}</span>{' '}
+                    {renderActivityDescription(activity.details.description)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatDistanceToNow(new Date(activity.timestamp), {
+                      addSuffix: true,
+                      locale: id,
+                    })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
