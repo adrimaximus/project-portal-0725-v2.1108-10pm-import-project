@@ -26,6 +26,7 @@ import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import GoalQuantityTracker from '@/components/goals/GoalQuantityTracker';
 import GoalValueTracker from '@/components/goals/GoalValueTracker';
 import { formatNumber, formatValue } from '@/lib/formatting';
+import GoalProgressChart from '@/components/goals/GoalProgressChart';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -215,22 +216,22 @@ const GoalDetailPage = () => {
           </div>
         </div>
 
-        {goal.type === 'frequency' ? (
+        {goal.type === 'frequency' && (
           <GoalYearlyProgress
-            completions={goal.completions.map(c => ({ date: c.date, completed: c.value === 1 }))}
-            color={goal.color}
+            goal={goal}
             onToggleCompletion={handleToggleCompletion}
-            frequency={goal.frequency}
-            specificDays={goal.specificDays}
-            goalTitle={goal.title}
-            goalDescription={goal.description}
-            goalTags={goal.tags.map(t => t.name)}
-            collaborators={goal.collaborators}
           />
-        ) : goal.type === 'quantity' ? (
-          <GoalQuantityTracker goal={goal} onLogProgress={handleLogQuantity} />
-        ) : (
-          <GoalValueTracker goal={goal} onLogValue={handleLogValue} />
+        )}
+
+        {(goal.type === 'quantity' || goal.type === 'value') && (
+          <div className="space-y-6">
+            <GoalProgressChart goal={goal} />
+            {goal.type === 'quantity' ? (
+              <GoalQuantityTracker goal={goal} onLogProgress={handleLogQuantity} />
+            ) : (
+              <GoalValueTracker goal={goal} onLogValue={handleLogValue} />
+            )}
+          </div>
         )}
 
         <GoalCollaborationManager goal={goal} onCollaboratorsUpdate={handleCollaboratorsUpdate} />
