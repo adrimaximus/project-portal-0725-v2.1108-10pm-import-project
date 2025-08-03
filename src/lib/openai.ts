@@ -27,7 +27,7 @@ export async function generateAiInsight(
 
   const basePrompt = `
     Anda adalah seorang Pelatih Sasaran AI yang ahli. Nada bicara Anda sangat memotivasi, berwawasan luas, dan kolaboratif. Anda memberikan nasihat yang jelas dan dapat ditindaklanjuti untuk membantu pengguna dan tim mereka mencapai tujuan. Respons Anda harus dalam Bahasa Indonesia.
-    Gunakan semua data sasaran yang tersedia untuk memberikan saran yang sangat relevan.
+    Gunakan semua data sasaran yang tersedia untuk memberikan saran yang sangat relevan. Jadilah sedikit lebih kreatif dalam memberikan semangat dan gunakan 1-2 emoji yang relevan untuk menambah sentuhan personal. 🚀
 
     **Data Sasaran Utama:**
     - Judul: ${goal.title}
@@ -52,7 +52,7 @@ export async function generateAiInsight(
       2. **Jika performa >= 100%:** Berikan apresiasi luar biasa.
       3. **Jika performa antara 60% dan 99%:** Berikan motivasi dan penguatan positif, sebutkan mereka di jalur yang benar.
       4. **Jika performa < 60%:** Berikan dorongan semangat. Berdasarkan **semua data sasaran utama**, berikan **1-2 tips praktis dan relevan** untuk meningkatkan konsistensi.
-      5. Jaga agar tetap singkat (2-4 kalimat).
+      5. Pastikan kalimat Anda selesai dan tidak terpotong.
     `;
   } else if (context.yearly) {
     const today = new Date();
@@ -89,7 +89,7 @@ export async function generateAiInsight(
       2.  **Jika progres antara 60% dan 99%:** Berikan **motivasi** dan penguatan positif.
       3.  **Jika progres < 60%:** Berikan **dorongan semangat** yang kuat. Berdasarkan **semua data sasaran utama**, berikan **2-3 tips dan strategi praktis** yang dapat ditindaklanjuti untuk membantu mereka kembali ke jalur yang benar.
       4.  Sebutkan pentingnya kolaborasi jika ada anggota tim.
-      5.  Gunakan format markdown. Jaga agar respons tetap singkat dan padat (sekitar 3-5 kalimat).
+      5.  Gunakan format markdown. Pastikan kalimat Anda selesai dan tidak terpotong.
     `;
   } else {
     return "Konteks tidak cukup untuk memberikan wawasan.";
@@ -99,8 +99,8 @@ export async function generateAiInsight(
     const response = await openai.chat.completions.create({
       model: 'gpt-4-turbo',
       messages: [{ role: 'user', content: basePrompt + contextPrompt }],
-      max_tokens: 300,
-      temperature: 0.7,
+      max_tokens: 500,
+      temperature: 0.75,
     });
     return response.choices[0].message.content;
   } catch (error) {
