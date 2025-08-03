@@ -18,7 +18,7 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
 
   const { currentTotal, progress } = useMemo(() => {
     const currentTotal = goal.completions.reduce((sum, c) => sum + c.value, 0);
-    const progress = goal.targetValue ? Math.min(Math.round((currentTotal / goal.targetValue) * 100), 100) : 0;
+    const progress = goal.targetValue ? Math.round((currentTotal / goal.targetValue) * 100) : 0;
     return { currentTotal, progress };
   }, [goal]);
 

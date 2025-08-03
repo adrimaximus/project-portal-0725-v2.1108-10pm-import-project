@@ -37,7 +37,7 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
     });
 
     const currentPeriodTotal = logsInPeriod.reduce((sum, c) => sum + c.value, 0);
-    const periodProgress = goal.targetQuantity ? Math.min(Math.round((currentPeriodTotal / goal.targetQuantity) * 100), 100) : 0;
+    const periodProgress = goal.targetQuantity ? Math.round((currentPeriodTotal / goal.targetQuantity) * 100) : 0;
     
     return { currentPeriodTotal, periodProgress, periodName, logsInPeriod };
   }, [goal]);
