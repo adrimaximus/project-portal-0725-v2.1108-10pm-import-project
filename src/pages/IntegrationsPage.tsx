@@ -63,11 +63,7 @@ const IntegrationsPage = () => {
                 description="Access your files from Google Drive." 
                 noBg={true}
                 icon={
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
-                        <path d="M8.25 14.25 3 22.5h7.5l5.25-8.25H8.25Z" fill="#34A853"/>
-                        <path d="m9.75 3-6.75 11.25h13.5L21 3H9.75Z" fill="#4285F4"/>
-                        <path d="M21.75 14.25 16.5 22.5H24l-2.25-8.25h-7.5Z" fill="#FBBC05"/>
-                    </svg>
+                    <img src="/google-drive-icon.png" alt="Google Drive icon" className="h-5 w-5" />
                 } 
             />
           </CardContent>
