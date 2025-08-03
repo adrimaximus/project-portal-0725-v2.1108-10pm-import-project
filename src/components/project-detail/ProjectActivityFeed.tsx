@@ -1,83 +1,95 @@
-import { Activity, ActivityType } from '@/data/projects';
-import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { Activity } from "@/data/projects";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { formatDistanceToNow } from "date-fns";
+import { id } from "date-fns/locale";
 import {
-  UploadCloud,
-  ArrowRightCircle,
+  FileText,
   MessageSquare,
-  Ticket,
+  ListChecks,
+  CheckCircle,
+  Trash2,
   UserPlus,
   UserMinus,
-  ListChecks,
-  FileText,
-  Trash2,
-  CheckCircle2,
-  DollarSign,
+  CreditCard,
+  Calendar,
   Pencil,
-} from 'lucide-react';
+  FileUp,
+  Ticket,
+} from "lucide-react";
 
-const activityIcons: Record<ActivityType, React.ElementType> = {
-  PROJECT_CREATED: Pencil,
-  PROJECT_STATUS_UPDATED: ArrowRightCircle,
-  PAYMENT_STATUS_UPDATED: DollarSign,
-  PROJECT_DETAILS_UPDATED: FileText,
-  TEAM_MEMBER_ADDED: UserPlus,
-  TEAM_MEMBER_REMOVED: UserMinus,
-  FILE_UPLOADED: UploadCloud,
-  TASK_CREATED: ListChecks,
-  TASK_COMPLETED: CheckCircle2,
-  TASK_DELETED: Trash2,
-  COMMENT_ADDED: MessageSquare,
-  TICKET_CREATED: Ticket,
+const activityIcons: { [key: string]: React.ReactNode } = {
+  PROJECT_CREATED: <FileText className="h-4 w-4" />,
+  COMMENT_ADDED: <MessageSquare className="h-4 w-4" />,
+  TASK_CREATED: <ListChecks className="h-4 w-4" />,
+  TASK_COMPLETED: <CheckCircle className="h-4 w-4" />,
+  TASK_DELETED: <Trash2 className="h-4 w-4" />,
+  TEAM_MEMBER_ADDED: <UserPlus className="h-4 w-4" />,
+  TEAM_MEMBER_REMOVED: <UserMinus className="h-4 w-4" />,
+  PAYMENT_STATUS_UPDATED: <CreditCard className="h-4 w-4" />,
+  PROJECT_STATUS_UPDATED: <Pencil className="h-4 w-4" />,
+  PROJECT_DETAILS_UPDATED: <Pencil className="h-4 w-4" />,
+  FILE_UPLOADED: <FileUp className="h-4 w-4" />,
+  TICKET_CREATED: <Ticket className="h-4 w-4" />,
+};
+
+const renderActivityDescription = (description: string) => {
+  const projectMentionRegex = /(\/\[[^\]]+\]\([^)]+\))/g;
+  const parts = description.split(projectMentionRegex);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        const projectMentionMatch = /^\/\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+        if (projectMentionMatch) {
+          const projectName = projectMentionMatch[1];
+          const projectId = projectMentionMatch[2];
+          return (
+            <a
+              key={`${projectId}-${index}`}
+              href={`/projects/${projectId}`}
+              className="text-blue-600 hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {projectName}
+            </a>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
 };
 
 const ProjectActivityFeed = ({ activities }: { activities: Activity[] }) => {
   if (!activities || activities.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-10">
-        No activity to show yet.
+      <div className="text-center text-muted-foreground py-8">
+        No activity yet.
       </div>
     );
   }
 
-  const sortedActivities = [...activities].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
   return (
-    <div className="flow-root">
-      <ul className="-mb-8">
-        {sortedActivities.map((activity, index) => {
-          const Icon = activityIcons[activity.type] || Pencil;
-          const isLast = index === sortedActivities.length - 1;
-
-          return (
-            <li key={activity.id}>
-              <div className="relative pb-8">
-                {!isLast ? (
-                  <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-border" aria-hidden="true" />
-                ) : null}
-                <div className="relative flex items-start space-x-3">
-                  <div>
-                    <div className="relative px-1">
-                      <div className="h-8 w-8 bg-muted rounded-full ring-8 ring-card flex items-center justify-center">
-                        <Icon className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1 py-1.5">
-                    <div className="text-sm text-muted-foreground">
-                      <span className="font-semibold text-card-foreground">{activity.user.name}</span>
-                      {' '}{activity.details.description}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true, locale: id })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+    <div className="space-y-6">
+      {activities.map((activity) => (
+        <div key={activity.id} className="flex items-start space-x-4">
+          <div className="bg-muted rounded-full p-2">
+            {activityIcons[activity.type] || <FileText className="h-4 w-4" />}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold text-primary">{activity.user.name}</span>{" "}
+              {renderActivityDescription(activity.details.description)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(activity.timestamp), {
+                addSuffix: true,
+                locale: id,
+              })}
+            </p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
