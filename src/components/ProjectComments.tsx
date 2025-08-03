@@ -127,7 +127,7 @@ const ProjectComments = ({
           "rounded-lg border bg-background transition-all",
           isTicket && "border-orange-500/50 ring-2 ring-orange-500/20"
         )}>
-          <div>
+          <div className="relative">
             <MentionsInput
               value={newCommentText}
               onChange={(e) => setNewCommentText(e.target.value)}
@@ -150,20 +150,9 @@ const ProjectComments = ({
                 className="mentions__mention"
               />
             </MentionsInput>
-          </div>
-          {attachment && (
-            <div className="text-sm text-muted-foreground flex items-center gap-2 px-3 pb-2">
-              <Paperclip className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate flex-1">{attachment.name}</span>
-              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveAttachment}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-          <div className="flex items-center justify-end gap-1 px-3 py-2 border-t bg-muted/50 rounded-b-lg">
-            <div className="flex items-center gap-1">
+            <div className="absolute bottom-2 right-2 flex items-center gap-1">
               <Button variant="ghost" size="icon" asChild>
-                <Label htmlFor="comment-attachment" className="cursor-pointer">
+                <Label htmlFor="comment-attachment" className="cursor-pointer h-9 w-9 flex items-center justify-center">
                   <Paperclip className="h-4 w-4" />
                   <input id="comment-attachment" type="file" className="sr-only" onChange={handleFileChange} />
                 </Label>
@@ -172,15 +161,24 @@ const ProjectComments = ({
                 variant={isTicket ? "secondary" : "ghost"} 
                 size="icon" 
                 onClick={() => setIsTicket(!isTicket)}
-                className={cn(isTicket && "text-orange-600")}
+                className={cn("h-9 w-9", isTicket && "text-orange-600")}
               >
                 <Ticket className="h-4 w-4" />
               </Button>
-              <Button size="icon" onClick={handleSubmit} disabled={!newCommentText.trim() && !attachment}>
+              <Button size="icon" onClick={handleSubmit} disabled={!newCommentText.trim() && !attachment} className="h-9 w-9">
                 <Send className="h-4 w-4" />
               </Button>
             </div>
           </div>
+          {attachment && (
+            <div className="text-sm text-muted-foreground flex items-center gap-2 px-3 py-2 border-t">
+              <Paperclip className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate flex-1">{attachment.name}</span>
+              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveAttachment}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
