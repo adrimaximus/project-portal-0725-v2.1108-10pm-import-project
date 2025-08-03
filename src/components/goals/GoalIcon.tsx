@@ -44,7 +44,7 @@ const GoalIcon = ({ goal, onIconUpdate, className }: GoalIconProps) => {
         style={{ backgroundColor: `${goal.color}30`, color: goal.color }}
       >
         {isUrl ? (
-          <img src={goal.iconUrl} alt={goal.title} className="w-full h-full object-cover" />
+          <img src={goal.iconUrl} alt={goal.title} className="w-1/2 h-1/2 object-cover rounded-md" />
         ) : (
           <IconComponent className="h-1/2 w-1/2" />
         )}
