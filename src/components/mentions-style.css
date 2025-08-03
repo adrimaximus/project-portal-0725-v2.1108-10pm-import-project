@@ -8,13 +8,13 @@
 
 /* This div mirrors the textarea and displays the styled text */
 .mentions__highlighter {
-  @apply absolute top-0 left-0 w-full p-2 min-h-[40px] text-sm leading-snug pointer-events-none overflow-hidden whitespace-pre-wrap break-words text-foreground;
+  @apply absolute top-0 left-0 w-full p-2 min-h-[40px] text-sm leading-snug pointer-events-none overflow-hidden whitespace-pre-wrap break-words text-slate-700 dark:text-slate-300;
   font-family: inherit;
 }
 
 /* The actual textarea, text is hidden but caret is visible */
 .mentions__input {
-  @apply w-full p-2 min-h-[40px] max-h-[200px] text-sm bg-transparent focus:outline-none resize-none leading-snug caret-foreground;
+  @apply w-full p-2 min-h-[40px] max-h-[200px] text-sm bg-transparent focus:outline-none resize-none leading-snug caret-slate-700 dark:caret-slate-300;
   font-family: inherit;
   color: transparent;
 }
