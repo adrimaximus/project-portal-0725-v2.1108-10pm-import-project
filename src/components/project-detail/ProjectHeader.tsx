@@ -28,8 +28,8 @@ const ProjectHeader = ({
   canEdit,
 }: ProjectHeaderProps) => {
   return (
-    <header className="sticky top-0 z-10 flex flex-col gap-4 border-b bg-background -mx-4 md:-mx-8 px-4 md:px-8 pb-4 pt-4 md:pt-8">
-      <div>
+    <header className="sticky top-0 z-10 flex flex-col gap-4 border-b bg-background -mx-4 md:-mx-8 px-4 md:px-8 pb-4">
+      <div className="pt-4 md:pt-8">
         <Button variant="ghost" asChild className="-ml-4">
           <Link to="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
