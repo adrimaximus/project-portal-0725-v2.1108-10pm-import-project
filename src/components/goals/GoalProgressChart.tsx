@@ -94,20 +94,30 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
           {monthlyTotals.map((value, index) => {
             const monthName = format(new Date(currentYear, index, 1), 'MMM');
             const heightPercentage = (value / chartMax) * 100;
+            const targetHeightPercentage = monthlyTarget ? (monthlyTarget / chartMax) * 100 : 0;
 
             return (
               <TooltipProvider key={index}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex h-full flex-1 flex-col justify-end">
+                    <div className="relative h-full flex-1">
                       <div
-                        className="rounded-t-md transition-all duration-300 hover:opacity-80"
+                        className="absolute bottom-0 w-full rounded-t-md transition-all duration-300 hover:opacity-80"
                         style={{
                           height: `${heightPercentage}%`,
                           backgroundColor: goal.color,
                         }}
                         aria-label={`Progress for ${monthName}: ${formatProgress(value)}`}
                       />
+                      {monthlyTarget && targetHeightPercentage > 0 && (
+                         <div
+                          className="absolute left-0 w-full border-t-2 border-dashed border-foreground/50"
+                          style={{
+                            bottom: `${targetHeightPercentage}%`,
+                          }}
+                          aria-label={`Monthly Target: ${formatProgress(monthlyTarget)}`}
+                        />
+                      )}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
