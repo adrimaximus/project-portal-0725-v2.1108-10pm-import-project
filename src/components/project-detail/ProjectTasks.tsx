@@ -148,6 +148,11 @@ const ProjectTasks = ({ project, tasks, assignableUsers, onTasksUpdate }: Projec
     return assignableUsers.find(u => u.id === userId);
   };
 
+  const parseTaskName = (name: string) => {
+    // Removes mention syntax like @[User Name](user-id) from the task name
+    return name.replace(/@\[[^\]]+\]\([^)]+\)/g, '').trim();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex space-x-2">
@@ -212,7 +217,7 @@ const ProjectTasks = ({ project, tasks, assignableUsers, onTasksUpdate }: Projec
                   />
                 </TableCell>
                 <TableCell className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
-                  {task.name}
+                  {parseTaskName(task.name)}
                 </TableCell>
                 <TableCell>
                   <div className="flex -space-x-2">
