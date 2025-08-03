@@ -49,3 +49,32 @@ export const generateAiInsight = async (prompt: string): Promise<string> => {
     return "Terjadi kesalahan saat terhubung dengan AI Coach. Silakan coba lagi nanti.";
   }
 };
+
+export const generateAiIcon = async (prompt: string): Promise<string> => {
+  const openai = getOpenAIClient();
+
+  if (!openai) {
+    return "Kunci OpenAI API tidak dikonfigurasi.";
+  }
+
+  try {
+    const response = await openai.images.generate({
+      model: 'dall-e-2',
+      prompt: `Ikon stiker sederhana, datar, minimalis, gaya WhatsApp untuk sebuah tujuan: "${prompt}". Latar belakang putih bersih, tanpa teks, gaya vektor.`,
+      n: 1,
+      size: '256x256',
+      quality: 'standard',
+    });
+    const imageUrl = response.data[0]?.url;
+    if (!imageUrl) {
+      return "Gagal menghasilkan ikon. Tidak ada URL yang dikembalikan dari API.";
+    }
+    return imageUrl;
+  } catch (error) {
+    console.error("Error generating AI icon:", error);
+    if (error instanceof OpenAI.APIError && error.status === 401) {
+        return "Kunci OpenAI API tidak valid. Silakan periksa kembali kunci Anda di pengaturan.";
+    }
+    return "Terjadi kesalahan saat membuat ikon dengan AI. Silakan coba lagi nanti.";
+  }
+};

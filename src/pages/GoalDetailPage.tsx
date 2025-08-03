@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import GoalYearlyProgress from '@/components/goals/GoalYearlyProgress';
 import GoalCollaborationManager from '@/components/goals/GoalCollaborationManager';
+import GoalIcon from '@/components/goals/GoalIcon';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +30,6 @@ const GoalDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, you'd fetch this from your context or an API
     const goalData = dummyGoals.find(g => g.id === goalId);
     if (goalData) {
       if (!goalData.completions || goalData.completions.length === 0) {
@@ -90,6 +90,20 @@ const GoalDetailPage = () => {
     }
   };
 
+  const handleIconUpdate = (newIconUrl: string) => {
+    if (goal) {
+      const updatedGoal = { ...goal, icon: newIconUrl };
+      setGoal(updatedGoal);
+      
+      // In a real app, this would be an API call. For now, we update the dummy data
+      // to make the change persist during the user's session.
+      const goalIndex = dummyGoals.findIndex(g => g.id === goal.id);
+      if (goalIndex > -1) {
+        dummyGoals[goalIndex].icon = newIconUrl;
+      }
+    }
+  };
+
   if (isLoading) {
     return <PortalLayout><div className="text-center">Loading goal details...</div></PortalLayout>;
   }
@@ -125,9 +139,7 @@ const GoalDetailPage = () => {
           </Button>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl" style={{ backgroundColor: `${goal.color}30`, color: goal.color }}>
-                {goal.icon}
-              </div>
+              <GoalIcon goal={goal} onIconUpdate={handleIconUpdate} />
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">{goal.title}</h1>
                 <p className="text-muted-foreground">{goal.description}</p>
