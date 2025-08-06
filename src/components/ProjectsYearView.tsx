@@ -1,53 +1,41 @@
 import { Project } from '@/data/projects';
-import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Badge } from './ui/badge';
 
 interface ProjectsYearViewProps {
   projects: Project[];
 }
 
-const MiniCalendar = ({ year, month, projects }: { year: number, month: number, projects: Project[] }) => {
+const MonthProjectList = ({ month, year, projects }: { month: number, year: number, projects: Project[] }) => {
   const monthName = new Date(year, month).toLocaleString('id-ID', { month: 'long' });
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const projectDates = new Set(
-    projects
-      .filter(p => p.startDate)
-      .map(p => new Date(p.startDate!).toDateString())
-  );
-
-  const days = Array.from({ length: firstDay }, (_, i) => <div key={`empty-${i}`} />);
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(year, month, day);
-    const isToday = date.toDateString() === new Date().toDateString();
-    const hasProject = projectDates.has(date.toDateString());
-
-    days.push(
-      <div
-        key={day}
-        className={cn(
-          "flex items-center justify-center h-6 w-6 rounded-full text-xs",
-          isToday && "bg-primary text-primary-foreground",
-          hasProject && !isToday && "bg-accent text-accent-foreground",
-        )}
-      >
-        {day}
-      </div>
-    );
-  }
+  // Sort projects by start date within the month
+  const sortedProjects = [...projects].sort((a, b) => new Date(a.startDate!).getDate() - new Date(b.startDate!).getDate());
 
   return (
-    <div className="p-3 border rounded-lg">
-      <h3 className="font-semibold text-center mb-2">{monthName}</h3>
-      <div className="grid grid-cols-7 gap-1 text-center text-muted-foreground text-xs">
-        <div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div>
-      </div>
-      <div className="grid grid-cols-7 gap-1 mt-2">
-        {days}
-      </div>
+    <div className="p-3 border rounded-lg flex flex-col h-full min-h-[150px]">
+      <h3 className="font-semibold mb-3 text-center">{monthName}</h3>
+      {sortedProjects.length > 0 ? (
+        <div className="space-y-1.5 overflow-y-auto -mr-2 pr-2 flex-grow">
+          {sortedProjects.map(project => (
+            <Link key={project.id} to={`/projects/${project.id}`} className="block" title={project.name}>
+              <Badge 
+                variant="secondary" 
+                className="w-full text-left font-normal truncate flex items-center justify-start h-7 border-transparent hover:bg-accent hover:text-accent-foreground"
+              >
+                {project.name}
+              </Badge>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-xs text-muted-foreground italic">Tidak ada proyek</p>
+        </div>
+      )}
     </div>
   );
 };
@@ -79,7 +67,7 @@ const ProjectsYearView = ({ projects }: ProjectsYearViewProps) => {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {Array.from({ length: 12 }).map((_, i) => (
-          <MiniCalendar key={i} year={year} month={i} projects={projectsByMonth[i]} />
+          <MonthProjectList key={i} year={year} month={i} projects={projectsByMonth[i]} />
         ))}
       </div>
     </div>
