@@ -6,7 +6,6 @@ import { FeaturesProvider } from './contexts/FeaturesContext';
 import { UserProvider } from './contexts/UserContext';
 import { GoalsProvider } from './context/GoalsContext';
 import './index.css';
-import 'antd/dist/reset.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -1,74 +1,89 @@
-import { Calendar, Badge } from 'antd';
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
+import { Calendar, momentLocalizer, EventProps } from 'react-big-calendar';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Project } from '@/data/projects';
-import { Link } from 'react-router-dom';
-import isBetween from 'dayjs/plugin/isBetween';
+import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
-dayjs.extend(isBetween);
+const localizer = momentLocalizer(moment);
+
+interface CalendarEvent {
+  title: string;
+  start: Date;
+  end: Date;
+  allDay: boolean;
+  resource: Project;
+}
+
+const getStatusColorClass = (status: Project['status']) => {
+  switch (status) {
+    case 'On Track':
+    case 'Completed':
+    case 'Done':
+    case 'Billed':
+      return 'bg-green-500 hover:bg-green-600';
+    case 'At Risk':
+    case 'On Hold':
+      return 'bg-yellow-500 hover:bg-yellow-600';
+    case 'Off Track':
+    case 'Cancelled':
+      return 'bg-red-500 hover:bg-red-600';
+    case 'In Progress':
+    case 'Requested':
+      return 'bg-blue-500 hover:bg-blue-600';
+    default:
+      return 'bg-gray-500 hover:bg-gray-600';
+  }
+};
+
+const CustomEvent = ({ event }: EventProps<CalendarEvent>) => {
+  return (
+    <div className={cn("text-white p-1 rounded-md text-xs h-full w-full truncate cursor-pointer", getStatusColorClass(event.resource.status))}>
+      {event.title}
+    </div>
+  );
+};
 
 interface ProjectsCalendarProps {
   projects: Project[];
 }
 
 const ProjectsCalendar = ({ projects }: ProjectsCalendarProps) => {
-  const getListData = (value: Dayjs) => {
-    const listData = projects
-      .filter(project => {
-        if (!project.startDate || !project.dueDate) return false;
-        const start = dayjs(project.startDate);
-        const end = dayjs(project.dueDate);
-        return value.isBetween(start, end, 'day', '[]'); // '[]' includes start and end dates
-      })
-      .map(project => ({
-        type: getStatusBadgeType(project.status),
-        content: project.name,
-        id: project.id,
-      }));
-    return listData || [];
-  };
+  const navigate = useNavigate();
 
-  const getStatusBadgeType = (status: Project['status']): 'success' | 'processing' | 'warning' | 'error' | 'default' => {
-    switch (status) {
-      case 'On Track':
-      case 'Completed':
-      case 'Done':
-      case 'Billed':
-        return 'success';
-      case 'In Progress':
-      case 'Requested':
-        return 'processing';
-      case 'At Risk':
-      case 'On Hold':
-        return 'warning';
-      case 'Off Track':
-      case 'Cancelled':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
+  const events: CalendarEvent[] = projects.map((project, index) => {
+    // CATATAN: Proyek Anda tidak memiliki tanggal mulai/selesai.
+    // Tanggal placeholder digunakan di sini.
+    const duration = project.name.length % 5 + 2; // Durasi 2-6 hari
+    const startDate = moment().add(index * 2, 'days').startOf('day').toDate();
+    const endDate = moment(startDate).add(duration, 'days').endOf('day').toDate();
 
-  const dateCellRender = (value: Dayjs) => {
-    const listData = getListData(value);
-    if (listData.length === 0) return null;
+    return {
+      title: project.name,
+      start: startDate,
+      end: endDate,
+      allDay: true,
+      resource: project,
+    };
+  });
 
-    return (
-      <ul className="events space-y-1" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-        {listData.map(item => (
-          <li key={item.id}>
-            <Link to={`/projects/${item.id}`} className="block hover:bg-muted/50 rounded-sm px-1">
-              <Badge status={item.type as any} text={item.content} className="text-xs truncate w-full" />
-            </Link>
-          </li>
-        ))}
-      </ul>
-    );
+  const handleSelectEvent = (event: CalendarEvent) => {
+    navigate(`/projects/${event.resource.id}`);
   };
 
   return (
-    <div className="h-[70vh] overflow-y-auto">
-      <Calendar dateCellRender={dateCellRender} />
+    <div className="h-[70vh]">
+      <Calendar
+        localizer={localizer}
+        events={events}
+        startAccessor="start"
+        endAccessor="end"
+        style={{ height: '100%' }}
+        onSelectEvent={handleSelectEvent}
+        components={{
+          event: CustomEvent,
+        }}
+      />
     </div>
   );
 };
