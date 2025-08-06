@@ -1,40 +1,74 @@
-import { Calendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { Calendar, Badge } from 'antd';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import { Project } from '@/data/projects';
+import { Link } from 'react-router-dom';
+import isBetween from 'dayjs/plugin/isBetween';
 
-const localizer = momentLocalizer(moment);
+dayjs.extend(isBetween);
 
 interface ProjectsCalendarProps {
   projects: Project[];
 }
 
 const ProjectsCalendar = ({ projects }: ProjectsCalendarProps) => {
-  const events = projects.map((project, index) => {
-    // CATATAN: Proyek Anda tidak memiliki tanggal mulai/selesai.
-    // Tanggal placeholder digunakan di sini.
-    // Anda mungkin ingin menambahkan data tanggal ke proyek Anda.
-    const startDate = moment().add(index * 2, 'days').toDate();
-    const endDate = moment(startDate).add(3, 'days').toDate();
+  const getListData = (value: Dayjs) => {
+    const listData = projects
+      .filter(project => {
+        if (!project.startDate || !project.dueDate) return false;
+        const start = dayjs(project.startDate);
+        const end = dayjs(project.dueDate);
+        return value.isBetween(start, end, 'day', '[]'); // '[]' includes start and end dates
+      })
+      .map(project => ({
+        type: getStatusBadgeType(project.status),
+        content: project.name,
+        id: project.id,
+      }));
+    return listData || [];
+  };
 
-    return {
-      title: project.name,
-      start: startDate,
-      end: endDate,
-      allDay: true,
-      resource: project,
-    };
-  });
+  const getStatusBadgeType = (status: Project['status']): 'success' | 'processing' | 'warning' | 'error' | 'default' => {
+    switch (status) {
+      case 'On Track':
+      case 'Completed':
+      case 'Done':
+      case 'Billed':
+        return 'success';
+      case 'In Progress':
+      case 'Requested':
+        return 'processing';
+      case 'At Risk':
+      case 'On Hold':
+        return 'warning';
+      case 'Off Track':
+      case 'Cancelled':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  const dateCellRender = (value: Dayjs) => {
+    const listData = getListData(value);
+    if (listData.length === 0) return null;
+
+    return (
+      <ul className="events space-y-1" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+        {listData.map(item => (
+          <li key={item.id}>
+            <Link to={`/projects/${item.id}`} className="block hover:bg-muted/50 rounded-sm px-1">
+              <Badge status={item.type as any} text={item.content} className="text-xs truncate w-full" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    );
+  };
 
   return (
-    <div className="h-[70vh]">
-      <Calendar
-        localizer={localizer}
-        events={events}
-        startAccessor="start"
-        endAccessor="end"
-        style={{ height: '100%' }}
-      />
+    <div className="h-[70vh] overflow-y-auto">
+      <Calendar dateCellRender={dateCellRender} />
     </div>
   );
 };
