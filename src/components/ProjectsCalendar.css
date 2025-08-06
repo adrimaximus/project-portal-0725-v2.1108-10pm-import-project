@@ -1,0 +1,73 @@
+/* Custom styles for React Big Calendar to match the app's theme */
+
+/* General container */
+.rbc-calendar {
+  font-family: inherit;
+  border: none;
+  border-radius: var(--radius);
+}
+
+/* Toolbar (header with navigation) */
+.rbc-toolbar {
+  @apply mb-4 flex flex-wrap items-center justify-between;
+}
+
+.rbc-toolbar .rbc-toolbar-label {
+  @apply text-xl font-bold tracking-tight;
+}
+
+.rbc-btn-group {
+  @apply inline-flex gap-1;
+}
+
+.rbc-btn-group button {
+  @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+  @apply px-3 py-1.5;
+}
+
+.rbc-btn-group button.rbc-active {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+}
+
+/* Calendar grid headers (Sun, Mon, etc.) */
+.rbc-header {
+  @apply text-center text-sm font-medium text-muted-foreground p-2 border-b;
+}
+
+/* Day cells */
+.rbc-day-bg {
+  @apply border-l;
+}
+.rbc-day-bg:first-child {
+  border-left: none;
+}
+
+.rbc-month-row {
+  @apply border-t;
+}
+
+/* Today's date highlight */
+.rbc-day-bg.rbc-today {
+  background-color: hsl(var(--accent));
+}
+
+/* Event styles (handled by component, but some overrides might be needed) */
+.rbc-event {
+  border: none !important;
+  background-color: transparent !important;
+  padding: 0 !important;
+  border-radius: var(--radius);
+}
+
+.rbc-event:focus {
+  outline: none;
+}
+
+.rbc-event-label {
+  display: none; /* Hide the default time label on events */
+}
+
+.rbc-show-more {
+  @apply text-primary text-xs hover:underline;
+}
