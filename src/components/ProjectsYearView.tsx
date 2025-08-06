@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format, getDay, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO, isAfter, startOfDay } from 'date-fns';
+import { Link } from 'react-router-dom';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface ProjectsYearViewProps {
   projects: Project[];
@@ -84,20 +86,54 @@ const MonthCalendarCard = ({ month, year, projects }: { month: number, year: num
                                 <TooltipTrigger asChild>
                                     <div className={classes} style={style} />
                                 </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="font-semibold">{format(day, 'PPP')}</p>
-                                    {hasProject ? (
-                                        <ul className="mt-1 space-y-1">
-                                            {projectsOnDay!.map(p => (
-                                                <li key={p.id} className="text-xs flex items-center gap-2">
-                                                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: getStatusColor(p.status) }} />
-                                                    {p.name}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <p className="text-xs text-muted-foreground">Tidak ada proyek</p>
-                                    )}
+                                <TooltipContent className="p-0" onMouseDown={(e) => e.stopPropagation()}>
+                                    <div className="p-2">
+                                        <p className="font-semibold">{format(day, 'PPP')}</p>
+                                        {hasProject ? (
+                                            <ul className="mt-1 space-y-1">
+                                                {projectsOnDay!.map((p: any) => (
+                                                    <li key={p.id}>
+                                                        <Link to={`/projects/${p.id}`} className="block p-2 -m-2 rounded-md hover:bg-accent">
+                                                            <div className="flex items-center gap-2 mb-1.5">
+                                                                <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(p.status) }} />
+                                                                <span className="text-xs font-medium truncate">{p.name}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1 pl-4">
+                                                                {p.owner && (
+                                                                    <TooltipProvider>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger>
+                                                                                <Avatar className="h-5 w-5 border">
+                                                                                    <AvatarImage src={p.owner.avatar} alt={p.owner.name} />
+                                                                                    <AvatarFallback className="text-[8px]">{p.owner.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                                                                </Avatar>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent><p>{p.owner.name}</p></TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
+                                                                )}
+                                                                {p.collaborators?.map((c: any) => (
+                                                                    <TooltipProvider key={c.id}>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger>
+                                                                                <Avatar className="h-5 w-5 border">
+                                                                                    <AvatarImage src={c.avatar} alt={c.name} />
+                                                                                    <AvatarFallback className="text-[8px]">{c.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                                                                </Avatar>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent><p>{c.name}</p></TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
+                                                                ))}
+                                                            </div>
+                                                        </Link>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">Tidak ada proyek</p>
+                                        )}
+                                    </div>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
