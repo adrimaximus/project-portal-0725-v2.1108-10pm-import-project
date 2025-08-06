@@ -5,6 +5,8 @@ import './ProjectsCalendar.css'; // Import custom styles
 import { Project } from '@/data/projects';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const localizer = momentLocalizer(moment);
 
@@ -16,34 +18,46 @@ interface CalendarEvent {
   resource: Project;
 }
 
-const getStatusColorClass = (status: Project['status']) => {
+const getStatusProgressClass = (status: Project['status']) => {
   switch (status) {
     case 'On Track':
     case 'Completed':
     case 'Done':
     case 'Billed':
-      return 'bg-green-500 hover:bg-green-600';
+      return '[&>div]:bg-green-500';
     case 'At Risk':
     case 'On Hold':
-      return 'bg-yellow-500 hover:bg-yellow-600';
+      return '[&>div]:bg-yellow-500';
     case 'Off Track':
     case 'Cancelled':
-      return 'bg-red-500 hover:bg-red-600';
+      return '[&>div]:bg-red-500';
     case 'In Progress':
     case 'Requested':
-      return 'bg-blue-500 hover:bg-blue-600';
+      return '[&>div]:bg-blue-500';
     default:
-      return 'bg-gray-500 hover:bg-gray-600';
+      return '[&>div]:bg-gray-500';
   }
 };
 
 const CustomEvent = ({ event }: EventProps<CalendarEvent>) => {
+  const project = event.resource;
+
   return (
-    <div className={cn(
-      "text-white p-1 rounded-md text-xs h-full w-full truncate cursor-pointer transition-colors",
-      getStatusColorClass(event.resource.status)
-    )}>
-      {event.title}
+    <div className="bg-background rounded-md shadow-sm h-full w-full flex flex-col justify-between cursor-pointer border border-border/60 hover:border-primary/50 transition-all p-2">
+      <div className="flex flex-col justify-between h-full">
+        <div>
+          <Progress value={project.progress} className={cn("h-1 mb-1.5", getStatusProgressClass(project.status))} />
+          <p className="text-xs font-medium text-foreground leading-tight truncate">{project.name}</p>
+        </div>
+        <div className="flex -space-x-2 justify-end mt-1">
+          {project.assignedTo.slice(0, 3).map((user) => (
+            <Avatar key={user.id} className="h-5 w-5 border-2 border-background">
+              <AvatarImage src={user.avatar} alt={user.name} />
+              <AvatarFallback>{user.initials}</AvatarFallback>
+            </Avatar>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
@@ -56,10 +70,9 @@ const ProjectsCalendar = ({ projects }: ProjectsCalendarProps) => {
   const navigate = useNavigate();
 
   const events: CalendarEvent[] = projects
-    .filter(p => p.startDate && p.dueDate) // Only include projects with dates
+    .filter(p => p.startDate && p.dueDate)
     .map((project) => {
       const startDate = moment(project.startDate).startOf('day').toDate();
-      // Add 1 day to the end date to make it inclusive in the calendar view
       const endDate = moment(project.dueDate).endOf('day').toDate();
 
       return {
@@ -87,6 +100,9 @@ const ProjectsCalendar = ({ projects }: ProjectsCalendarProps) => {
         components={{
           event: CustomEvent,
         }}
+        eventPropGetter={() => ({
+          className: 'rbc-event-custom'
+        })}
       />
     </div>
   );
