@@ -15,12 +15,16 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Calendar as CalendarIcon, Table as TableIcon } from "lucide-react";
-import ProjectsCalendar from "./ProjectsCalendar";
+import { List, CalendarDays, Calendar as CalendarIcon, Table as TableIcon } from "lucide-react";
+import ProjectsList from "./ProjectsList";
+import ProjectsMonthView from "./ProjectsMonthView";
+import ProjectsYearView from "./ProjectsYearView";
 
 interface ProjectsTableProps {
   projects: Project[];
 }
+
+type ViewMode = 'table' | 'list' | 'month' | 'year';
 
 const getStatusBadgeClass = (status: Project['status']) => {
   switch (status) {
@@ -44,30 +48,12 @@ const getStatusBadgeClass = (status: Project['status']) => {
 };
 
 const ProjectsTable = ({ projects }: ProjectsTableProps) => {
-  const [view, setView] = useState<'table' | 'calendar'>('table');
+  const [view, setView] = useState<ViewMode>('table');
 
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-4">
-        <CardTitle>Projects</CardTitle>
-        <ToggleGroup 
-          type="single" 
-          value={view} 
-          onValueChange={(value) => {
-            if (value) setView(value as 'table' | 'calendar');
-          }}
-          aria-label="View mode"
-        >
-          <ToggleGroupItem value="table" aria-label="Table view">
-            <TableIcon className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="calendar" aria-label="Calendar view">
-            <CalendarIcon className="h-4 w-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </CardHeader>
-      <CardContent>
-        {view === 'table' ? (
+  const renderContent = () => {
+    switch (view) {
+      case 'table':
+        return (
           <Table>
             <TableHeader>
               <TableRow>
@@ -115,9 +101,46 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
               ))}
             </TableBody>
           </Table>
-        ) : (
-          <ProjectsCalendar projects={projects} />
-        )}
+        );
+      case 'list':
+        return <ProjectsList projects={projects} />;
+      case 'month':
+        return <ProjectsMonthView projects={projects} />;
+      case 'year':
+        return <ProjectsYearView projects={projects} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-4">
+        <CardTitle>Projects</CardTitle>
+        <ToggleGroup 
+          type="single" 
+          value={view} 
+          onValueChange={(value) => {
+            if (value) setView(value as ViewMode);
+          }}
+          aria-label="View mode"
+        >
+          <ToggleGroupItem value="table" aria-label="Table view">
+            <TableIcon className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="list" aria-label="List view">
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="month" aria-label="Month view">
+            <CalendarDays className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="year" aria-label="Year view">
+            <CalendarIcon className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </CardHeader>
+      <CardContent>
+        {renderContent()}
       </CardContent>
     </Card>
   );

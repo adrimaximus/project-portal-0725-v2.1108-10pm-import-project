@@ -26,11 +26,11 @@ const formatEndDate = (date: Date) => {
   return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 };
 
-interface ProjectsCalendarProps {
+interface ProjectsListProps {
   projects: Project[];
 }
 
-const ProjectsCalendar = ({ projects }: ProjectsCalendarProps) => {
+const ProjectsList = ({ projects }: ProjectsListProps) => {
   const navigate = useNavigate();
 
   const sortedProjects = projects
@@ -155,4 +155,4 @@ const ProjectsCalendar = ({ projects }: ProjectsCalendarProps) => {
   );
 };
 
-export default ProjectsCalendar;
+export default ProjectsList;

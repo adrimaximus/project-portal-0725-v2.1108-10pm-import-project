@@ -1,0 +1,96 @@
+/* Custom styles for React Big Calendar to match the app's theme */
+
+/* General container */
+.rbc-calendar {
+  font-family: inherit;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+/* Toolbar (header with navigation) */
+.rbc-toolbar {
+  @apply mb-4 flex flex-wrap items-center justify-between px-3 pt-3;
+}
+
+.rbc-toolbar .rbc-toolbar-label {
+  @apply text-lg font-semibold tracking-tight;
+}
+
+.rbc-btn-group {
+  @apply inline-flex gap-1;
+}
+
+.rbc-btn-group button,
+.rbc-toolbar button {
+  @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  @apply border border-input bg-transparent hover:bg-accent hover:text-accent-foreground;
+  @apply px-3 py-1.5;
+}
+
+.rbc-btn-group button.rbc-active {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+}
+
+/* Calendar grid headers (Sun, Mon, etc.) */
+.rbc-header {
+  @apply text-center text-sm font-normal text-muted-foreground p-2 border-b border-l;
+  border-top: none;
+}
+.rbc-header:first-child {
+  border-left: none;
+}
+
+/* Day cells */
+.rbc-day-bg {
+  @apply border-l;
+}
+.rbc-day-bg:first-child {
+  border-left: none;
+}
+
+.rbc-month-row {
+  @apply border-t;
+  min-height: 120px; /* Give cells more height */
+}
+
+/* Date number in cell */
+.rbc-date-cell {
+  @apply text-sm text-muted-foreground text-left p-1.5;
+}
+
+/* Today's date highlight */
+.rbc-day-bg.rbc-today {
+  background-color: hsl(var(--accent));
+}
+.rbc-date-cell.rbc-now {
+  @apply font-bold text-primary;
+}
+
+/* Event styles */
+.rbc-event-custom {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 2px 4px !important; /* Add some space around the card */
+  border-radius: var(--radius);
+}
+
+.rbc-event-custom:focus {
+  outline: none;
+}
+
+.rbc-event-label {
+  display: none; /* Hide the default time label on events */
+}
+
+.rbc-show-more {
+  @apply text-primary text-xs hover:underline p-1;
+}
+
+/* Ensure events can visually overflow their containers */
+.rbc-row-segment {
+  position: relative;
+}
+
+.rbc-event-content {
+  height: 100%;
+}
