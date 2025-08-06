@@ -47,6 +47,16 @@ const getStatusBadgeClass = (status: Project['status']) => {
   }
 };
 
+const getStatusColor = (status: Project['status']): string => {
+  switch (status) {
+    case 'On Track': case 'Completed': case 'Done': case 'Billed': return '#22c55e';
+    case 'At Risk': case 'On Hold': return '#eab308';
+    case 'Off Track': case 'Cancelled': return '#ef4444';
+    case 'In Progress': case 'Requested': return '#3b82f6';
+    default: return 'transparent';
+  }
+};
+
 const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [view, setView] = useState<ViewMode>('table');
 
@@ -67,7 +77,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
             <TableBody>
               {projects.map((project) => (
                 <TableRow key={project.id}>
-                  <TableCell>
+                  <TableCell style={{ borderLeft: `4px solid ${getStatusColor(project.status)}` }}>
                     <Link to={`/projects/${project.id}`} className="font-medium text-primary hover:underline">
                       {project.name}
                     </Link>
