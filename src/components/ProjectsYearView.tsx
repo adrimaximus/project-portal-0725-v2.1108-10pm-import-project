@@ -4,30 +4,30 @@ import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { format, getDay, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO } from 'date-fns';
+import { format, getDay, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO, isAfter, startOfDay } from 'date-fns';
 
 interface ProjectsYearViewProps {
   projects: Project[];
 }
 
-const getStatusColorClass = (status: Project['status']): string => {
+const getStatusColor = (status: Project['status']): string => {
   switch (status) {
     case 'On Track':
     case 'Completed':
     case 'Done':
     case 'Billed':
-      return 'bg-green-500';
+      return '#22c55e'; // Equivalent to Tailwind's green-500
     case 'At Risk':
     case 'On Hold':
-      return 'bg-yellow-500';
+      return '#eab308'; // Equivalent to Tailwind's yellow-500
     case 'Off Track':
     case 'Cancelled':
-      return 'bg-red-500';
+      return '#ef4444'; // Equivalent to Tailwind's red-500
     case 'In Progress':
     case 'Requested':
-      return 'bg-blue-500';
+      return '#3b82f6'; // Equivalent to Tailwind's blue-500
     default:
-      return 'bg-gray-400';
+      return '#9ca3af'; // Equivalent to Tailwind's gray-400
   }
 };
 
@@ -36,13 +36,14 @@ const MonthCalendarCard = ({ month, year, projects }: { month: number, year: num
     const monthStart = startOfMonth(new Date(year, month));
     const monthEnd = endOfMonth(monthStart);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const today = startOfDay(new Date());
 
     const projectsByDay: Map<string, Project[]> = new Map();
     daysInMonth.forEach(day => {
         const projectsOnDay = projects.filter(p => {
             if (!p.startDate || !p.dueDate) return false;
-            const projectStart = startOfMonth(parseISO(p.startDate));
-            const projectEnd = endOfMonth(parseISO(p.dueDate));
+            const projectStart = parseISO(p.startDate);
+            const projectEnd = parseISO(p.dueDate);
             return isWithinInterval(day, { start: projectStart, end: projectEnd });
         });
         if (projectsOnDay.length > 0) {
@@ -50,7 +51,7 @@ const MonthCalendarCard = ({ month, year, projects }: { month: number, year: num
         }
     });
 
-    const firstDayOfMonth = getDay(monthStart);
+    const firstDayOfMonth = getDay(monthStart); // Sunday is 0
 
     return (
         <div className="p-3 border rounded-lg">
@@ -61,19 +62,27 @@ const MonthCalendarCard = ({ month, year, projects }: { month: number, year: num
                     const dayStr = format(day, 'yyyy-MM-dd');
                     const projectsOnDay = projectsByDay.get(dayStr);
                     const hasProject = projectsOnDay && projectsOnDay.length > 0;
+                    const isFutureDay = isAfter(day, today);
+
+                    const style: React.CSSProperties = {};
+                    let classes = "w-full h-3 rounded-sm transition-colors";
+
+                    if (isFutureDay) {
+                        style.backgroundColor = 'hsl(var(--muted))';
+                        style.opacity = 0.5;
+                    } else if (hasProject) {
+                        style.backgroundColor = getStatusColor(projectsOnDay![0].status);
+                    } else {
+                        style.backgroundColor = 'transparent';
+                        style.border = `1px solid hsl(var(--border))`;
+                        classes += ' box-border';
+                    }
 
                     return (
                         <TooltipProvider key={dayStr} delayDuration={100}>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <div className="w-full aspect-square flex items-center justify-center">
-                                        <div
-                                            className={cn(
-                                                "h-3 w-3 rounded-full transition-transform hover:scale-125",
-                                                hasProject ? getStatusColorClass(projectsOnDay![0].status) : 'bg-muted'
-                                            )}
-                                        />
-                                    </div>
+                                    <div className={classes} style={style} />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                     <p className="font-semibold">{format(day, 'PPP')}</p>
@@ -81,7 +90,7 @@ const MonthCalendarCard = ({ month, year, projects }: { month: number, year: num
                                         <ul className="mt-1 space-y-1">
                                             {projectsOnDay!.map(p => (
                                                 <li key={p.id} className="text-xs flex items-center gap-2">
-                                                    <div className={cn("h-2 w-2 rounded-full", getStatusColorClass(p.status))} />
+                                                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: getStatusColor(p.status) }} />
                                                     {p.name}
                                                 </li>
                                             ))}
@@ -102,9 +111,14 @@ const MonthCalendarCard = ({ month, year, projects }: { month: number, year: num
 const ProjectsYearView = ({ projects }: ProjectsYearViewProps) => {
   const [year, setYear] = useState(new Date().getFullYear());
 
-  const projectsForYear = projects.filter(p => 
-    p.startDate && new Date(p.startDate).getFullYear() === year
-  );
+  const projectsForYear = projects.filter(p => {
+    if (!p.startDate || !p.dueDate) return false;
+    const yearStart = new Date(year, 0, 1);
+    const yearEnd = new Date(year, 11, 31, 23, 59, 59);
+    const projectStart = parseISO(p.startDate);
+    const projectEnd = parseISO(p.dueDate);
+    return projectStart <= yearEnd && projectEnd >= yearStart;
+  });
 
   return (
     <div>
