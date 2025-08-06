@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 // Helper to format dates
 const formatDate = (date: Date) => {
@@ -19,6 +20,10 @@ const formatDate = (date: Date) => {
 
 const formatMonthYear = (date: Date) => {
   return date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+};
+
+const formatEndDate = (date: Date) => {
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 };
 
 interface ProjectsCalendarProps {
@@ -73,65 +78,74 @@ const ProjectsCalendar = ({ projects }: ProjectsCalendarProps) => {
                 <span className="text-3xl font-bold text-primary">{dayOfMonth}</span>
               </div>
               <div className="flex-1 space-y-3 pt-1">
-                {projectsOnDay.map(project => (
-                  <div 
-                    key={project.id} 
-                    className="bg-card border rounded-lg p-3 flex items-center justify-between hover:shadow-md transition-shadow group"
-                  >
+                {projectsOnDay.map(project => {
+                  const isMultiDay = project.startDate && project.dueDate && new Date(project.startDate).toDateString() !== new Date(project.dueDate).toDateString();
+
+                  return (
                     <div 
-                      className="flex-1 flex items-center space-x-4 cursor-pointer"
-                      onClick={() => navigate(`/projects/${project.id}`)}
+                      key={project.id} 
+                      className="bg-card border rounded-lg p-3 flex items-center justify-between hover:shadow-md transition-shadow group"
                     >
-                      <div className="w-32 text-sm text-muted-foreground hidden md:block">
-                        <div className="flex items-center gap-2">
-                          <Clock size={14} />
-                          <span>Seharian</span>
+                      <div 
+                        className="flex-1 flex items-center space-x-4 cursor-pointer"
+                        onClick={() => navigate(`/projects/${project.id}`)}
+                      >
+                        <div className="w-32 text-sm text-muted-foreground hidden md:block">
+                          <div className="flex items-center gap-2">
+                            <Clock size={14} />
+                            <span>Seharian</span>
+                          </div>
+                          {isMultiDay && project.dueDate && (
+                            <Badge variant="outline" className="mt-1.5 font-normal text-xs">
+                              Hingga {formatEndDate(new Date(project.dueDate))}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="font-medium truncate" title={project.name}>{project.name}</div>
+                        <div className="flex -space-x-2 ml-auto pr-4">
+                          {project.assignedTo.slice(0, 3).map((user) => (
+                            <Avatar key={user.id} className="h-8 w-8 border-2 border-card">
+                              <AvatarImage src={user.avatar} alt={user.name} />
+                              <AvatarFallback>{user.initials}</AvatarFallback>
+                            </Avatar>
+                          ))}
                         </div>
                       </div>
-                      <div className="font-medium truncate" title={project.name}>{project.name}</div>
-                      <div className="flex -space-x-2 ml-auto pr-4">
-                        {project.assignedTo.slice(0, 3).map((user) => (
-                          <Avatar key={user.id} className="h-8 w-8 border-2 border-card">
-                            <AvatarImage src={user.avatar} alt={user.name} />
-                            <AvatarFallback>{user.initials}</AvatarFallback>
-                          </Avatar>
-                        ))}
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              Edit
+                              <MoreHorizontal className="h-4 w-4 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Clock className="mr-2 h-4 w-4" />
+                              <span>Jadwalkan ulang</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Send className="mr-2 h-4 w-4" />
+                              <span>Minta penjadwalan ulang</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              <span>Edit detail</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <UserPlus className="mr-2 h-4 w-4" />
+                              <span>Undang orang</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">
+                              <CalendarOff className="mr-2 h-4 w-4" />
+                              <span>Batalkan proyek</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            Edit
-                            <MoreHorizontal className="h-4 w-4 ml-1" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Clock className="mr-2 h-4 w-4" />
-                            <span>Jadwalkan ulang</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Send className="mr-2 h-4 w-4" />
-                            <span>Minta penjadwalan ulang</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            <span>Edit detail</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            <span>Undang orang</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            <CalendarOff className="mr-2 h-4 w-4" />
-                            <span>Batalkan proyek</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
