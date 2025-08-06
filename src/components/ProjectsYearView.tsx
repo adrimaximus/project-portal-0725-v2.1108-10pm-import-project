@@ -18,19 +18,28 @@ const getStatusColor = (status: Project['status']): string => {
     case 'Completed':
     case 'Done':
     case 'Billed':
-      return '#22c55e'; // Equivalent to Tailwind's green-500
+      return '#22c55e'; // green-500
     case 'At Risk':
     case 'On Hold':
-      return '#eab308'; // Equivalent to Tailwind's yellow-500
+      return '#eab308'; // yellow-500
     case 'Off Track':
     case 'Cancelled':
-      return '#ef4444'; // Equivalent to Tailwind's red-500
+      return '#ef4444'; // red-500
     case 'In Progress':
     case 'Requested':
-      return '#3b82f6'; // Equivalent to Tailwind's blue-500
+      return '#3b82f6'; // blue-500
     default:
-      return '#9ca3af'; // Equivalent to Tailwind's gray-400
+      return '#9ca3af'; // gray-400
   }
+};
+
+const getPriorityStatusColor = (projects: Project[]): string => {
+    const statuses = projects.map(p => p.status);
+    if (statuses.includes('Off Track') || statuses.includes('Cancelled')) return getStatusColor('Off Track');
+    if (statuses.includes('At Risk') || statuses.includes('On Hold')) return getStatusColor('At Risk');
+    if (statuses.includes('In Progress') || statuses.includes('Requested')) return getStatusColor('In Progress');
+    if (statuses.includes('On Track') || statuses.includes('Completed') || statuses.includes('Done') || statuses.includes('Billed')) return getStatusColor('On Track');
+    return getStatusColor(projects[0]?.status);
 };
 
 const MonthCalendarCard = ({ month, year, projects }: { month: number, year: number, projects: Project[] }) => {
@@ -73,7 +82,7 @@ const MonthCalendarCard = ({ month, year, projects }: { month: number, year: num
                         style.backgroundColor = 'hsl(var(--muted))';
                         style.opacity = 0.5;
                     } else if (hasProject) {
-                        style.backgroundColor = getStatusColor(projectsOnDay![0].status);
+                        style.backgroundColor = getPriorityStatusColor(projectsOnDay!);
                     } else {
                         style.backgroundColor = 'transparent';
                         style.border = `1px solid hsl(var(--border))`;
