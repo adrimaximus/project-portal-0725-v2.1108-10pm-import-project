@@ -1,5 +1,5 @@
 import { Project } from '@/data/projects';
-import { GoogleCalendarEvent } from '@/data/google-calendar';
+import { GoogleCalendarEvent } from '@/types';
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
@@ -31,10 +31,14 @@ import { cn } from '@/lib/utils';
 import { gapi } from 'gapi-script';
 import { toast } from 'sonner';
 
-type CalendarItem = (Project | GoogleCalendarEvent) & { lane?: number };
+type CalendarItem = (Project | (GoogleCalendarEvent & { isGoogleEvent: true })) & { lane?: number };
+
+function isGCalEvent(item: CalendarItem): item is GoogleCalendarEvent & { isGoogleEvent: true; lane?: number } {
+    return 'isGoogleEvent' in item && item.isGoogleEvent === true;
+}
 
 const getProjectColorClasses = (item: CalendarItem): string => {
-  if ('isGoogleEvent' in item && item.isGoogleEvent) {
+  if (isGCalEvent(item)) {
     return 'bg-purple-100 border-l-purple-500 text-purple-800 dark:bg-purple-900/30 dark:border-l-purple-500 dark:text-purple-200';
   }
   const status = (item as Project).status;
@@ -102,6 +106,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
             creator: { email: item.creator?.email || 'Unknown' },
             attendees: item.attendees,
             isGoogleEvent: true,
+            htmlLink: item.htmlLink,
           }));
           setGcalEvents(events);
         } catch (error: any) {
@@ -134,31 +139,31 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         weeks.push(days.slice(i, i + 7));
     }
 
-    const combinedItems: CalendarItem[] = [...projects, ...gcalEvents];
+    const combinedItems: CalendarItem[] = [...projects, ...gcalEvents.map(e => ({...e, isGoogleEvent: true as const}))];
 
     const activeItems = combinedItems
         .filter(p => {
-            const startDate = 'isGoogleEvent' in p ? p.start.dateTime : p.startDate;
-            const dueDate = 'isGoogleEvent' in p ? p.end.dateTime : p.dueDate;
+            const startDate = isGCalEvent(p) ? p.start.dateTime : p.startDate;
+            const dueDate = isGCalEvent(p) ? p.end.dateTime : p.dueDate;
             if (!startDate || !dueDate) return false;
             const projectStart = startOfDay(parseISO(startDate));
             const projectEnd = endOfDay(parseISO(dueDate));
             return projectStart <= calendarEnd && projectEnd >= calendarStart;
         })
         .sort((a, b) => {
-            const startA = startOfDay(parseISO('isGoogleEvent' in a ? a.start.dateTime : a.startDate!));
-            const startB = startOfDay(parseISO('isGoogleEvent' in b ? b.start.dateTime : b.startDate!));
-            const durationA = differenceInDays(parseISO('isGoogleEvent' in a ? a.end.dateTime : a.dueDate!), startA);
-            const durationB = differenceInDays(parseISO('isGoogleEvent' in b ? b.end.dateTime : b.dueDate!), startB);
+            const startA = startOfDay(parseISO((isGCalEvent(a) ? a.start.dateTime : a.startDate)!));
+            const startB = startOfDay(parseISO((isGCalEvent(b) ? b.start.dateTime : b.startDate)!));
+            const durationA = differenceInDays(parseISO((isGCalEvent(a) ? a.end.dateTime : a.dueDate)!), startA);
+            const durationB = differenceInDays(parseISO((isGCalEvent(b) ? b.end.dateTime : b.dueDate)!), startB);
             if (durationA !== durationB) return durationB - durationA;
             return startA.getTime() - startB.getTime();
         });
 
     const laneMatrix: (string | null)[][] = Array.from({ length: 10 }, () => Array(days.length).fill(null));
 
-    for (const item of activeItems) {
-        const startDate = 'isGoogleEvent' in item ? item.start.dateTime : item.startDate!;
-        const dueDate = 'isGoogleEvent' in item ? item.end.dateTime : item.dueDate!;
+    for (const item of activeItems as CalendarItem[]) {
+        const startDate = isGCalEvent(item) ? item.start.dateTime : item.startDate!;
+        const dueDate = isGCalEvent(item) ? item.end.dateTime : item.dueDate!;
         const projectStart = startOfDay(parseISO(startDate));
         const projectEnd = endOfDay(parseISO(dueDate));
 
@@ -193,14 +198,14 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
     const weeklyLayouts = weeks.map(() => []);
     const processedInLayout = new Set<string>();
 
-    activeItems.forEach(item => {
+    (activeItems as CalendarItem[]).forEach(item => {
         if (item.lane === undefined || item.lane >= MAX_VISIBLE_LANES || processedInLayout.has(item.id)) {
             return;
         }
         processedInLayout.add(item.id);
 
-        const startDate = 'isGoogleEvent' in item ? item.start.dateTime : item.startDate!;
-        const dueDate = 'isGoogleEvent' in item ? item.end.dateTime : item.dueDate!;
+        const startDate = isGCalEvent(item) ? item.start.dateTime : item.startDate!;
+        const dueDate = isGCalEvent(item) ? item.end.dateTime : item.dueDate!;
         const projectStart = startOfDay(parseISO(startDate));
         const projectEnd = endOfDay(parseISO(dueDate));
 
@@ -249,7 +254,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         for (let laneIndex = MAX_VISIBLE_LANES; laneIndex < laneMatrix.length; laneIndex++) {
             const itemId = laneMatrix[laneIndex][globalDayIndex];
             if (itemId) {
-                const item = activeItems.find(p => p.id === itemId);
+                const item = activeItems.find(p => p.id === itemId) as CalendarItem;
                 if (item) hiddenItems.add(item);
             }
         }
@@ -264,12 +269,12 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
   const dayHeaders = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
   const renderItem = (item: CalendarItem, isStart: boolean, startCol: number) => {
-    const name = 'name' in item ? item.name : item.summary;
-    const assignedTo = 'assignedTo' in item ? item.assignedTo : [];
+    const name = isGCalEvent(item) ? item.summary : item.name;
+    const assignedTo = isGCalEvent(item) ? [] : item.assignedTo;
 
     const content = (
       <div className="flex items-center gap-2 truncate">
-        {'isGoogleEvent' in item && item.isGoogleEvent && <Calendar className="h-3 w-3 flex-shrink-0" />}
+        {isGCalEvent(item) && <Calendar className="h-3 w-3 flex-shrink-0" />}
         <div className="flex-1 truncate">
           <p className="font-semibold truncate">{name}</p>
         </div>
@@ -284,8 +289,8 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
       </div>
     );
 
-    if ('isGoogleEvent' in item && item.isGoogleEvent) {
-      return <div>{content}</div>;
+    if (isGCalEvent(item)) {
+      return <a href={item.htmlLink} target="_blank" rel="noopener noreferrer">{content}</a>;
     }
     
     return <Link to={`/projects/${item.id}`}>{content}</Link>;
