@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useGoogleLogin } from "@react-oauth/google";
 import { toast } from "sonner";
-import { Loader2, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { Loader2, XCircle, RefreshCw, Link2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -21,22 +27,29 @@ interface Calendar {
 }
 
 export function GoogleCalendarPage() {
-  const { user, googleAccessToken, refreshGoogleToken } = useAuth();
-  const navigate = useNavigate();
+  const { googleAccessToken, setGoogleAccessToken } = useAuth();
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
+  const login = useGoogleLogin({
+    onSuccess: (tokenResponse) => {
+      setGoogleAccessToken(tokenResponse.access_token);
+      setError(null);
+      toast.success("Successfully connected to Google Calendar!");
+    },
+    onError: () => {
+      setError("Failed to connect to Google Calendar. Please try again.");
+      toast.error("Failed to connect to Google Calendar.");
+    },
+    scope:
+      "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events.readonly",
+  });
 
+  useEffect(() => {
     if (!googleAccessToken) {
-      setError("Google account not connected. Please connect your account.");
       setIsLoading(false);
       return;
     }
@@ -57,26 +70,19 @@ export function GoogleCalendarPage() {
         }
 
         if (syncedList) {
-          setSelectedCalendarIds(syncedList.map((c: any) => c.google_calendar_id));
+          setSelectedCalendarIds(
+            syncedList.map((c: any) => c.google_calendar_id)
+          );
         }
       } catch (e: any) {
         if (e.message.includes("401")) {
-          // Token might be expired
-          try {
-            const newAccessToken = await refreshGoogleToken();
-            if (newAccessToken) {
-              fetchCalendars(newAccessToken); // Retry with new token
-            } else {
-              throw new Error("Failed to refresh token.");
-            }
-          } catch (refreshError) {
-            setError(
-              "Your session has expired. Please disconnect and reconnect your Google account."
-            );
-            toast.error(
-              "Your session has expired. Please disconnect and reconnect your Google account."
-            );
-          }
+          setError(
+            "Your session has expired. Please reconnect your Google account."
+          );
+          toast.error(
+            "Your session has expired. Please reconnect your Google account."
+          );
+          setGoogleAccessToken(null);
         } else {
           setError("Failed to load calendars. Please try again.");
           toast.error("Failed to load calendars. Please try again.");
@@ -87,7 +93,7 @@ export function GoogleCalendarPage() {
     };
 
     fetchCalendars(googleAccessToken);
-  }, [user, googleAccessToken, navigate, refreshGoogleToken]);
+  }, [googleAccessToken, setGoogleAccessToken]);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -104,76 +110,101 @@ export function GoogleCalendarPage() {
     }
   };
 
+  const handleDisconnect = () => {
+    setGoogleAccessToken(null);
+    setCalendars([]);
+    setSelectedCalendarIds([]);
+    setError(null);
+    toast.info("Disconnected from Google Calendar.");
+  };
+
   const calendarOptions = calendars.map((cal) => ({
     value: cal.id,
     label: cal.summary,
   }));
 
-  return (
-    <div className="container mx-auto p-4 md:p-8">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl">Google Calendar Sync</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-40">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="ml-4 text-muted-foreground">
-                Loading your calendars...
-              </p>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center h-40 text-destructive">
-              <XCircle className="h-8 w-8" />
-              <p className="mt-4 text-center">{error}</p>
-              <Button
-                variant="destructive"
-                className="mt-4"
-                onClick={() => {
-                  // Here you would typically have a function to disconnect the account
-                  // For now, we just show a message.
-                  toast.info(
-                    "Please go to settings to disconnect your account."
-                  );
-                }}
-              >
-                Disconnect Account
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold mb-2">
-                  Select calendars to sync
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Events from selected calendars will be synced to your project
-                  management board.
-                </p>
-                <MultiSelect
-                  options={calendarOptions}
-                  defaultValue={selectedCalendarIds}
-                  onValueChange={setSelectedCalendarIds}
-                  placeholder="Select calendars to sync..."
-                />
-              </div>
-              <Button
-                onClick={handleSync}
-                disabled={isSyncing || selectedCalendarIds.length === 0}
-                className="w-full"
-              >
-                {isSyncing ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                {isSyncing ? "Syncing..." : "Sync Selected Calendars"}
-              </Button>
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-40">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-4 text-muted-foreground">
+            Loading your calendars...
+          </p>
+        </div>
+      );
+    }
+
+    if (!googleAccessToken || error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-40 text-center">
+          {error && (
+            <div className="text-destructive mb-4">
+              <XCircle className="h-8 w-8 mx-auto" />
+              <p className="mt-2">{error}</p>
             </div>
           )}
-        </CardContent>
-      </Card>
-    </div>
+          <Button onClick={() => login()}>
+            <Link2 className="h-4 w-4 mr-2" />
+            Connect to Google Calendar
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2">
+            You'll be redirected to Google to authorize access.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-semibold">Select calendars to sync</h3>
+            <Button
+              variant="link"
+              className="text-destructive h-auto p-0"
+              onClick={handleDisconnect}
+            >
+              Disconnect
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Events from selected calendars will be synced to your project
+            management board.
+          </p>
+          <MultiSelect
+            options={calendarOptions}
+            defaultValue={selectedCalendarIds}
+            onValueChange={setSelectedCalendarIds}
+            placeholder="Select calendars to sync..."
+          />
+        </div>
+        <Button
+          onClick={handleSync}
+          disabled={isSyncing || selectedCalendarIds.length === 0}
+          className="w-full"
+        >
+          {isSyncing ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
+          {isSyncing ? "Syncing..." : "Sync Selected Calendars"}
+        </Button>
+      </div>
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-2xl">Google Calendar Sync</CardTitle>
+        <CardDescription>
+          Connect your Google Calendar to sync events and keep your schedules
+          aligned.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>{renderContent()}</CardContent>
+    </Card>
   );
 }

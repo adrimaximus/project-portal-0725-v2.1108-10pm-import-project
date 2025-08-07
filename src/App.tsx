@@ -24,6 +24,7 @@ import EmbedPage from "./pages/EmbedPage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
 import UserManagementPage from "./pages/UserManagement";
+import SettingsLayout from "./components/settings/SettingsLayout";
 
 function App() {
   return (
@@ -46,15 +47,16 @@ function App() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/search" element={<SearchPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/team" element={<TeamSettingsPage />} />
-          <Route path="/settings/navigation" element={<NavigationSettingsPage />} />
-          <Route path="/settings/integrations" element={<IntegrationsPage />} />
-          <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
-          <Route
-            path="/settings/integrations/google-calendar"
-            element={<GoogleCalendarPage />}
-          />
+          
+          <Route path="/settings" element={<SettingsLayout />}>
+            <Route index element={<SettingsPage />} />
+            <Route path="team" element={<TeamSettingsPage />} />
+            <Route path="navigation" element={<NavigationSettingsPage />} />
+            <Route path="integrations" element={<IntegrationsPage />} />
+            <Route path="integrations/openai" element={<OpenAiIntegrationPage />} />
+            <Route path="integrations/google-calendar" element={<GoogleCalendarPage />} />
+          </Route>
+
           <Route path="/users" element={<UserManagementPage />} />
           <Route path="/custom" element={<EmbedPage />} />
         </Route>
