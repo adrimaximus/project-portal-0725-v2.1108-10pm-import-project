@@ -34,13 +34,27 @@ export function GoogleCalendarPage() {
   const { googleAccessToken, setGoogleAccessToken } = useAuth();
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleDisconnect = () => {
+    setGoogleAccessToken(null);
+    setCalendars([]);
+    setSelectedCalendarIds([]);
+    setError(null);
+    localStorage.removeItem("gcal_connected");
+    localStorage.removeItem("gcal_access_token");
+    localStorage.removeItem("gcal_calendar_ids");
+    toast.info("Disconnected from Google Calendar.");
+  };
+
   const login = useGoogleLogin({
     onSuccess: (tokenResponse) => {
-      setGoogleAccessToken(tokenResponse.access_token);
+      const token = tokenResponse.access_token;
+      setGoogleAccessToken(token);
+      localStorage.setItem("gcal_connected", "true");
+      localStorage.setItem("gcal_access_token", token);
       setError(null);
       toast.success("Successfully connected to Google Calendar!");
     },
@@ -51,6 +65,15 @@ export function GoogleCalendarPage() {
     scope:
       "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events.readonly",
   });
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem("gcal_access_token");
+    if (storedToken) {
+      setGoogleAccessToken(storedToken);
+    } else {
+      setIsLoading(false);
+    }
+  }, [setGoogleAccessToken]);
 
   useEffect(() => {
     if (!googleAccessToken) {
@@ -74,7 +97,6 @@ export function GoogleCalendarPage() {
         }
 
         if (syncedList && calendarList) {
-          // Ensure we only select calendars that still exist in the user's Google account.
           const availableCalendarIds = new Set(calendarList.map(c => c.id));
           const validSyncedIds = syncedList
             .map((c: any) => c.google_calendar_id)
@@ -83,14 +105,14 @@ export function GoogleCalendarPage() {
           setSelectedCalendarIds(validSyncedIds);
         }
       } catch (e: any) {
-        if (e.message.includes("401")) {
+        if (e.message.includes("401") || e.message.includes("403")) {
           setError(
             "Your session has expired. Please reconnect your Google account."
           );
           toast.error(
             "Your session has expired. Please reconnect your Google account."
           );
-          setGoogleAccessToken(null);
+          handleDisconnect();
         } else {
           setError("Failed to load calendars. Please try again.");
           toast.error("Failed to load calendars. Please try again.");
@@ -101,7 +123,7 @@ export function GoogleCalendarPage() {
     };
 
     fetchCalendars(googleAccessToken);
-  }, [googleAccessToken, setGoogleAccessToken]);
+  }, [googleAccessToken]);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -116,14 +138,6 @@ export function GoogleCalendarPage() {
     } finally {
       setIsSyncing(false);
     }
-  };
-
-  const handleDisconnect = () => {
-    setGoogleAccessToken(null);
-    setCalendars([]);
-    setSelectedCalendarIds([]);
-    setError(null);
-    toast.info("Disconnected from Google Calendar.");
   };
 
   const calendarOptions = calendars.map((cal) => ({
@@ -189,7 +203,7 @@ export function GoogleCalendarPage() {
         </div>
         <Button
           onClick={handleSync}
-          disabled={isSyncing || selectedCalendarIds.length === 0}
+          disabled={isSyncing}
           className="w-full"
         >
           {isSyncing ? (
@@ -197,7 +211,7 @@ export function GoogleCalendarPage() {
           ) : (
             <RefreshCw className="h-4 w-4 mr-2" />
           )}
-          {isSyncing ? "Syncing..." : "Sync Selected Calendars"}
+          {isSyncing ? "Syncing..." : "Save & Sync Calendars"}
         </Button>
       </div>
     );

@@ -36,16 +36,27 @@ export const getGoogleCalendarList = async (
 export const getSyncedCalendars = async (): Promise<
   { google_calendar_id: string }[]
 > => {
-  console.log("Fetching synced calendars");
-  // This is still mock data, returns one calendar as synced by default.
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return [{ google_calendar_id: "primary" }];
+  try {
+    const storedIds = localStorage.getItem('gcal_calendar_ids');
+    if (storedIds) {
+      const ids = JSON.parse(storedIds);
+      if (Array.isArray(ids)) {
+        return ids.map(id => ({ google_calendar_id: id }));
+      }
+    }
+  } catch (error) {
+    console.error("Failed to parse synced calendars from localStorage", error);
+  }
+  return [];
 };
 
 export const syncGoogleCalendars = async (
   calendarIds: string[]
 ): Promise<void> => {
-  console.log("Syncing calendar IDs:", calendarIds);
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-  console.log("Sync complete!");
+  try {
+    localStorage.setItem('gcal_calendar_ids', JSON.stringify(calendarIds));
+  } catch (error) {
+    console.error("Failed to save synced calendars to localStorage", error);
+    throw new Error("Could not save calendar selection.");
+  }
 };
