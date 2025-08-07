@@ -1,7 +1,8 @@
 import { Project } from '@/data/projects';
-import { useState, useMemo } from 'react';
+import { GoogleCalendarEvent, dummyGcalEvents } from '@/data/google-calendar';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -28,7 +29,13 @@ import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-const getProjectColorClasses = (status: Project['status']): string => {
+type CalendarItem = (Project | GoogleCalendarEvent) & { lane?: number };
+
+const getProjectColorClasses = (item: CalendarItem): string => {
+  if ('isGoogleEvent' in item && item.isGoogleEvent) {
+    return 'bg-purple-100 border-l-purple-500 text-purple-800 dark:bg-purple-900/30 dark:border-l-purple-500 dark:text-purple-200';
+  }
+  const status = (item as Project).status;
   switch (status) {
     case 'On Track': case 'Completed': case 'Done': case 'Billed': return 'bg-green-100 border-l-green-500 text-green-800 dark:bg-green-900/30 dark:border-l-green-500 dark:text-green-200';
     case 'At Risk': case 'On Hold': return 'bg-yellow-100 border-l-yellow-500 text-yellow-800 dark:bg-yellow-900/30 dark:border-l-yellow-500 dark:text-yellow-200';
@@ -46,6 +53,16 @@ const MAX_VISIBLE_LANES = 2;
 
 const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isGcalConnected, setIsGcalConnected] = useState(false);
+
+  useEffect(() => {
+    const checkConnection = () => {
+      setIsGcalConnected(localStorage.getItem('gcal_connected') === 'true');
+    };
+    checkConnection();
+    window.addEventListener('storage', checkConnection);
+    return () => window.removeEventListener('storage', checkConnection);
+  }, []);
 
   const { weeks, weeklyLayouts, moreByDay } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -58,27 +75,36 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         weeks.push(days.slice(i, i + 7));
     }
 
-    const activeProjects = projects
+    const combinedItems: CalendarItem[] = [...projects];
+    if (isGcalConnected) {
+        combinedItems.push(...dummyGcalEvents);
+    }
+
+    const activeItems = combinedItems
         .filter(p => {
-            if (!p.startDate || !p.dueDate) return false;
-            const projectStart = startOfDay(parseISO(p.startDate));
-            const projectEnd = endOfDay(parseISO(p.dueDate));
+            const startDate = 'startDate' in p ? p.startDate : p.start.dateTime;
+            const dueDate = 'dueDate' in p ? p.dueDate : p.end.dateTime;
+            if (!startDate || !dueDate) return false;
+            const projectStart = startOfDay(parseISO(startDate));
+            const projectEnd = endOfDay(parseISO(dueDate));
             return projectStart <= calendarEnd && projectEnd >= calendarStart;
         })
         .sort((a, b) => {
-            const startA = startOfDay(parseISO(a.startDate!));
-            const startB = startOfDay(parseISO(b.startDate!));
-            const durationA = differenceInDays(parseISO(a.dueDate!), startA);
-            const durationB = differenceInDays(parseISO(b.dueDate!), startB);
+            const startA = startOfDay(parseISO('startDate' in a ? a.startDate! : a.start.dateTime));
+            const startB = startOfDay(parseISO('startDate' in b ? b.startDate! : b.start.dateTime));
+            const durationA = differenceInDays(parseISO('dueDate' in a ? a.dueDate! : a.end.dateTime), startA);
+            const durationB = differenceInDays(parseISO('dueDate' in b ? b.dueDate! : b.end.dateTime), startB);
             if (durationA !== durationB) return durationB - durationA;
             return startA.getTime() - startB.getTime();
         });
 
     const laneMatrix: (string | null)[][] = Array.from({ length: 10 }, () => Array(days.length).fill(null));
 
-    for (const project of activeProjects) {
-        const projectStart = startOfDay(parseISO(project.startDate!));
-        const projectEnd = endOfDay(parseISO(project.dueDate!));
+    for (const item of activeItems) {
+        const startDate = 'startDate' in item ? item.startDate! : item.start.dateTime;
+        const dueDate = 'dueDate' in item ? item.dueDate! : item.end.dateTime;
+        const projectStart = startOfDay(parseISO(startDate));
+        const projectEnd = endOfDay(parseISO(dueDate));
 
         const startIndex = Math.max(0, differenceInDays(projectStart, calendarStart));
         const endIndex = Math.min(days.length - 1, differenceInDays(projectEnd, calendarStart));
@@ -101,25 +127,26 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         if (assignedLane !== -1) {
             for (let d = startIndex; d <= endIndex; d++) {
                 if (d < laneMatrix[assignedLane].length) {
-                    laneMatrix[assignedLane][d] = project.id;
+                    laneMatrix[assignedLane][d] = item.id;
                 }
             }
-            (project as any).lane = assignedLane;
+            item.lane = assignedLane;
         }
     }
 
     const weeklyLayouts = weeks.map(() => []);
     const processedInLayout = new Set<string>();
 
-    activeProjects.forEach(project => {
-        const lane = (project as any).lane;
-        if (lane === undefined || lane >= MAX_VISIBLE_LANES || processedInLayout.has(project.id)) {
+    activeItems.forEach(item => {
+        if (item.lane === undefined || item.lane >= MAX_VISIBLE_LANES || processedInLayout.has(item.id)) {
             return;
         }
-        processedInLayout.add(project.id);
+        processedInLayout.add(item.id);
 
-        const projectStart = startOfDay(parseISO(project.startDate!));
-        const projectEnd = endOfDay(parseISO(project.dueDate!));
+        const startDate = 'startDate' in item ? item.startDate! : item.start.dateTime;
+        const dueDate = 'dueDate' in item ? item.dueDate! : item.end.dateTime;
+        const projectStart = startOfDay(parseISO(startDate));
+        const projectEnd = endOfDay(parseISO(dueDate));
 
         let currentDay = projectStart;
         while (isBefore(currentDay, projectEnd) || isSameDay(currentDay, projectEnd)) {
@@ -145,7 +172,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
 
             if (span > 0) {
                 weeklyLayouts[weekIndex].push({
-                    project: project as Project & { lane: number },
+                    item: item,
                     startCol,
                     span,
                     isStart: isSameDay(projectStart, segmentStart),
@@ -157,28 +184,56 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         }
     });
 
-    const moreByDay = new Map<string, Project[]>();
+    const moreByDay = new Map<string, CalendarItem[]>();
     days.forEach(day => {
         const dayKey = format(day, 'yyyy-MM-dd');
-        const hiddenProjects = new Set<Project>();
+        const hiddenItems = new Set<CalendarItem>();
         const globalDayIndex = differenceInDays(day, calendarStart);
 
         for (let laneIndex = MAX_VISIBLE_LANES; laneIndex < laneMatrix.length; laneIndex++) {
-            const projectId = laneMatrix[laneIndex][globalDayIndex];
-            if (projectId) {
-                const project = activeProjects.find(p => p.id === projectId);
-                if (project) hiddenProjects.add(project);
+            const itemId = laneMatrix[laneIndex][globalDayIndex];
+            if (itemId) {
+                const item = activeItems.find(p => p.id === itemId);
+                if (item) hiddenItems.add(item);
             }
         }
-        if (hiddenProjects.size > 0) {
-            moreByDay.set(dayKey, Array.from(hiddenProjects).sort((a,b) => (a as any).lane - (b as any).lane));
+        if (hiddenItems.size > 0) {
+            moreByDay.set(dayKey, Array.from(hiddenItems).sort((a,b) => a.lane! - b.lane!));
         }
     });
 
     return { weeks, weeklyLayouts, moreByDay };
-  }, [projects, currentDate]);
+  }, [projects, currentDate, isGcalConnected]);
 
   const dayHeaders = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+  const renderItem = (item: CalendarItem, isStart: boolean, startCol: number) => {
+    const name = 'name' in item ? item.name : item.summary;
+    const assignedTo = 'assignedTo' in item ? item.assignedTo : [];
+
+    const content = (
+      <div className="flex items-center gap-2 truncate">
+        {'isGoogleEvent' in item && item.isGoogleEvent && <Calendar className="h-3 w-3 flex-shrink-0" />}
+        <div className="flex-1 truncate">
+          <p className="font-semibold truncate">{name}</p>
+        </div>
+        <div className="flex -space-x-2">
+          {assignedTo.slice(0, 2).map(user => (
+            <Avatar key={user.id} className="h-4 w-4 border border-background">
+              <AvatarImage src={user.avatar} />
+              <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
+            </Avatar>
+          ))}
+        </div>
+      </div>
+    );
+
+    if ('isGoogleEvent' in item && item.isGoogleEvent) {
+      return <div>{content}</div>;
+    }
+    
+    return <Link to={`/projects/${item.id}`}>{content}</Link>;
+  };
 
   return (
     <div className="flex flex-col h-[85vh]">
@@ -206,7 +261,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
           <div key={weekIndex} className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700 relative">
             {week.map((day, dayIndex) => {
               const dayKey = format(day, 'yyyy-MM-dd');
-              const hiddenProjects = moreByDay.get(dayKey);
+              const hiddenItems = moreByDay.get(dayKey);
               return (
                 <div key={day.toString()} className={cn("p-1.5 flex flex-col border-r border-gray-200 dark:border-gray-700", dayIndex === 6 && "border-r-0")}>
                   <span className={cn(
@@ -217,23 +272,23 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
                     {format(day, 'd')}
                   </span>
                   <div className="flex-grow mt-1 pt-[5.5rem]">
-                    {hiddenProjects && (
+                    {hiddenItems && (
                        <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="ghost" className="h-auto w-full justify-start p-1 text-xs text-primary hover:bg-primary/10">
-                            + {hiddenProjects.length} lainnya
+                            + {hiddenItems.length} lainnya
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-64 z-50">
                           <div className="font-semibold text-sm mb-2 px-1">
-                            Proyek pada {format(day, 'd MMM', { locale: id })}
+                            Acara pada {format(day, 'd MMM', { locale: id })}
                           </div>
                           <ul className="space-y-1">
-                            {hiddenProjects.map(p => (
-                              <li key={p.id}>
-                                <Link to={`/projects/${p.id}`} className={cn("block hover:bg-accent p-2 rounded-md border-l-4", getProjectColorClasses(p.status))}>
-                                  <span className="text-sm font-medium truncate">{p.name}</span>
-                                </Link>
+                            {hiddenItems.map(item => (
+                              <li key={item.id}>
+                                <div className={cn("block p-2 rounded-md border-l-4", getProjectColorClasses(item))}>
+                                  {renderItem(item, true, 1)}
+                                </div>
                               </li>
                             ))}
                           </ul>
@@ -245,31 +300,24 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
               )
             })}
             <div className="absolute inset-0 pointer-events-none">
-              {weeklyLayouts[weekIndex].map(({ project, startCol, span, isStart, isEnd }) => (
-                <Link
-                  to={`/projects/${project.id}`}
-                  key={project.id}
+              {weeklyLayouts[weekIndex].map(({ item, startCol, span, isStart, isEnd }) => (
+                <div
+                  key={item.id}
                   className={cn(
                     "absolute flex items-center p-1.5 text-xs border-l-4 pointer-events-auto",
-                    getProjectColorClasses(project.status),
+                    getProjectColorClasses(item),
                     isStart ? "rounded-l-lg" : "",
                     isEnd ? "rounded-r-lg" : "",
                   )}
                   style={{
-                    top: `calc(2.25rem + ${project.lane * 2.75}rem)`,
+                    top: `calc(2.25rem + ${item.lane! * 2.75}rem)`,
                     left: `calc(${(startCol - 1) / 7 * 100}% + 2px)`,
                     width: `calc(${span / 7 * 100}% - 4px)`,
                     height: '2.5rem',
                   }}
                 >
-                  {(isStart || startCol === 1) && (
-                    <div className="flex items-center gap-2 truncate">
-                      <div className="flex-1 truncate">
-                        <p className="font-semibold truncate">{project.name}</p>
-                      </div>
-                    </div>
-                  )}
-                </Link>
+                  {(isStart || startCol === 1) && renderItem(item, isStart, startCol)}
+                </div>
               ))}
             </div>
           </div>

@@ -3,7 +3,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Link } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GitBranch } from "lucide-react";
+import { GitBranch, Calendar } from "lucide-react";
 import React from "react";
 
 const IntegrationItem = ({ name, description, icon, path, noBg = false, disabled = false }: { name: string, description: string, icon: React.ReactNode, path: string, noBg?: boolean, disabled?: boolean }) => (
@@ -58,6 +58,12 @@ const IntegrationsPage = () => {
             <CardDescription>Connect your tools to streamline your workflow.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <IntegrationItem 
+                name="Google Calendar" 
+                description="Sync your events and meetings." 
+                icon={<Calendar className="h-5 w-5" />} 
+                path="/settings/integrations/google-calendar"
+            />
             <IntegrationItem name="GitHub" description="Sync your repositories and issues." icon={<GitBranch className="h-5 w-5" />} path="#" disabled />
             <IntegrationItem name="Slack" description="Get notifications in your Slack channels." icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.83 12.83a2 2 0 0 0-2.83 0 2 2 0 0 0 0 2.83 2 2 0 0 0 2.83 0 2 2 0 0 0 0-2.83z"></path><path d="M18.36 18.36a2 2 0 0 0 0-2.83 2 2 0 0 0-2.83 0 2 2 0 0 0 0 2.83 2 2 0 0 0 2.83 0z"></path><path d="M11.17 12.83a2 2 0 0 0 0-2.83 2 2 0 0 0-2.83 0 2 2 0 0 0 0 2.83 2 2 0 0 0 2.83 0z"></path><path d="M5.64 5.64a2 2 0 0 0 0 2.83 2 2 0 0 0 2.83 0 2 2 0 0 0 0-2.83 2 2 0 0 0-2.83 0z"></path><path d="M12.83 11.17a2 2 0 0 0-2.83 0 2 2 0 0 0 0 2.83 2 2 0 0 0 2.83 0 2 2 0 0 0 0-2.83z"></path><path d="M18.36 5.64a2 2 0 0 0 0 2.83 2 2 0 0 0 2.83 0 2 2 0 0 0 0-2.83 2 2 0 0 0-2.83 0z"></path><path d="M11.17 11.17a2 2 0 0 0 0 2.83 2 2 0 0 0 2.83 0 2 2 0 0 0 0-2.83 2 2 0 0 0-2.83 0z"></path><path d="M5.64 18.36a2 2 0 0 0 2.83 0 2 2 0 0 0 0-2.83 2 2 0 0 0-2.83 0 2 2 0 0 0 0 2.83z"></path></svg>} path="#" disabled />
             <IntegrationItem 
