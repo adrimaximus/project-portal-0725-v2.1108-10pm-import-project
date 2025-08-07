@@ -4,7 +4,6 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Link } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -13,47 +12,25 @@ import { gapi } from 'gapi-script';
 import { GoogleCalendarListEntry } from '@/types';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { Loader2 } from 'lucide-react';
+import { GOOGLE_CLIENT_ID } from '@/config';
 
 const GoogleLoginButton = ({ onConnectSuccess, onConnectError }: { onConnectSuccess: (tokenResponse: Omit<TokenResponse, "error" | "error_description" | "error_uri">) => void, onConnectError: () => void }) => {
   const login = useGoogleLogin({
     onSuccess: onConnectSuccess,
     onError: onConnectError,
-    scope: 'https://www.googleapis.com/auth/calendar.events',
+    scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.readonly',
   });
 
   return <Button onClick={() => login()}>Connect with Google</Button>;
 };
 
 const GoogleCalendarPage = () => {
-  const [clientId, setClientId] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [calendars, setCalendars] = useState<GoogleCalendarListEntry[]>([]);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
 
-  useEffect(() => {
-    const storedStatus = localStorage.getItem("gcal_connected");
-    const storedClientId = localStorage.getItem("gcal_clientId");
-    const storedCalendarIds = localStorage.getItem("gcal_calendar_ids");
-
-    if (storedStatus === "true" && storedClientId) {
-      setIsConnected(true);
-      setClientId(storedClientId);
-      if (storedCalendarIds) {
-        try {
-          const ids = JSON.parse(storedCalendarIds);
-          if (Array.isArray(ids)) {
-            setSelectedCalendarIds(ids);
-          }
-        } catch (e) {
-          console.error("Failed to parse stored calendar IDs", e);
-        }
-      }
-      fetchCalendars(storedClientId);
-    }
-  }, []);
-
-  const fetchCalendars = async (currentClientId: string) => {
+  const fetchCalendars = async () => {
     const accessToken = localStorage.getItem('gcal_access_token');
     if (!accessToken) return;
 
@@ -61,7 +38,7 @@ const GoogleCalendarPage = () => {
     try {
       await new Promise<void>((resolve) => gapi.load('client', resolve));
       await gapi.client.init({
-        clientId: currentClientId,
+        clientId: GOOGLE_CLIENT_ID,
         discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
       });
       gapi.client.setToken({ access_token: accessToken });
@@ -92,17 +69,37 @@ const GoogleCalendarPage = () => {
     }
   };
 
+  useEffect(() => {
+    const storedStatus = localStorage.getItem("gcal_connected");
+    const storedCalendarIds = localStorage.getItem("gcal_calendar_ids");
+
+    if (storedStatus === "true") {
+      setIsConnected(true);
+      if (storedCalendarIds) {
+        try {
+          const ids = JSON.parse(storedCalendarIds);
+          if (Array.isArray(ids)) {
+            setSelectedCalendarIds(ids);
+          }
+        } catch (e) {
+          console.error("Failed to parse stored calendar IDs", e);
+        }
+      }
+      fetchCalendars();
+    }
+  }, []);
+
   const handleConnectSuccess = (tokenResponse: Omit<TokenResponse, "error" | "error_description" | "error_uri">) => {
     localStorage.setItem("gcal_connected", "true");
-    localStorage.setItem("gcal_clientId", clientId);
+    localStorage.setItem("gcal_clientId", GOOGLE_CLIENT_ID);
     localStorage.setItem("gcal_access_token", tokenResponse.access_token);
     setIsConnected(true);
     toast.success("Successfully connected to Google Calendar!");
-    fetchCalendars(clientId);
+    fetchCalendars();
   };
 
   const handleConnectError = () => {
-    toast.error("Google Calendar connection failed. Please check your Client ID and try again.");
+    toast.error("Google Calendar connection failed. Please try again.");
   };
 
   const handleDisconnect = () => {
@@ -111,7 +108,6 @@ const GoogleCalendarPage = () => {
     localStorage.removeItem("gcal_access_token");
     localStorage.removeItem("gcal_calendar_ids");
     setIsConnected(false);
-    setClientId("");
     setCalendars([]);
     setSelectedCalendarIds([]);
     toast.info("Disconnected from Google Calendar.");
@@ -149,22 +145,11 @@ const GoogleCalendarPage = () => {
           <CardHeader>
             <CardTitle>Connect to Google Calendar</CardTitle>
             <CardDescription>
-              Enter your Google Cloud Client ID to activate the integration. This will allow the application to read and manage your calendar events.
-              Your credentials are stored locally in your browser and never sent to our servers.
+              Connect your Google account to allow this application to read your calendar events. Your credentials are handled securely by Google and are not stored on our servers.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="client-id">Google Client ID</Label>
-                <Input 
-                  id="client-id" 
-                  placeholder={isConnected ? "••••••••••••••••••••••••.apps.googleusercontent.com" : "Enter your Client ID"}
-                  value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
-                  disabled={isConnected}
-                />
-            </div>
-            {isConnected && (
+          {isConnected && (
+            <CardContent className="space-y-4">
               <div className="space-y-2 pt-4 border-t">
                 <Label htmlFor="calendar-select">Select Calendars to Sync</Label>
                 {isLoadingCalendars ? (
@@ -193,8 +178,8 @@ const GoogleCalendarPage = () => {
                     <p className="text-sm text-muted-foreground h-10 flex items-center">Could not find any calendars. Please ensure you have granted calendar permissions.</p>
                 )}
               </div>
-            )}
-          </CardContent>
+            </CardContent>
+          )}
           <CardFooter className="flex justify-end gap-2">
             {isConnected ? (
                 <>
@@ -202,13 +187,9 @@ const GoogleCalendarPage = () => {
                     <Button onClick={handleSaveSelection} disabled={isLoadingCalendars}>Save Selection</Button>
                 </>
             ) : (
-              clientId.trim() ? (
-                <GoogleOAuthProvider clientId={clientId} key={clientId}>
-                  <GoogleLoginButton onConnectSuccess={handleConnectSuccess} onConnectError={handleConnectError} />
-                </GoogleOAuthProvider>
-              ) : (
-                <Button disabled>Connect with Google</Button>
-              )
+              <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                <GoogleLoginButton onConnectSuccess={handleConnectSuccess} onConnectError={handleConnectError} />
+              </GoogleOAuthProvider>
             )}
           </CardFooter>
         </Card>
