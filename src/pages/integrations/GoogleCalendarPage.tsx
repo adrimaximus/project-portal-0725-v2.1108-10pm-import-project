@@ -21,7 +21,7 @@ const GoogleLoginButton = ({ onConnectSuccess, onConnectError }: { onConnectSucc
   return <Button onClick={() => login()}>Connect with Google</Button>;
 };
 
-const GoogleCalendarPageContent = () => {
+const GoogleCalendarPage = () => {
   const [clientId, setClientId] = useState('');
   const [isConnected, setIsConnected] = useState(false);
 
@@ -100,8 +100,10 @@ const GoogleCalendarPageContent = () => {
             {isConnected ? (
               <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
             ) : (
-              clientId ? (
-                <GoogleLoginButton onConnectSuccess={handleConnectSuccess} onConnectError={handleConnectError} />
+              clientId.trim() ? (
+                <GoogleOAuthProvider clientId={clientId} key={clientId}>
+                  <GoogleLoginButton onConnectSuccess={handleConnectSuccess} onConnectError={handleConnectError} />
+                </GoogleOAuthProvider>
               ) : (
                 <Button disabled>Connect with Google</Button>
               )
@@ -112,16 +114,5 @@ const GoogleCalendarPageContent = () => {
     </PortalLayout>
   );
 };
-
-const GoogleCalendarPage = () => {
-    // Gunakan Client ID dummy jika tidak ada yang tersimpan, untuk menghindari error pada provider
-    const initialClientId = localStorage.getItem("gcal_clientId") || "dummy-client-id";
-    
-    return (
-        <GoogleOAuthProvider clientId={initialClientId}>
-            <GoogleCalendarPageContent />
-        </GoogleOAuthProvider>
-    )
-}
 
 export default GoogleCalendarPage;
