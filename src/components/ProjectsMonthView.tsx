@@ -78,7 +78,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
           gapi.client.setToken({ access_token: accessToken });
 
           const response = await gapi.client.calendar.events.list({
-            'calendarId': 'primary',
+            'calendarId': '7inked.com_vus3ghi6tmojf0ivk5vfeir780@group.calendar.google.com',
             'timeMin': startOfMonth(currentDate).toISOString(),
             'timeMax': endOfMonth(currentDate).toISOString(),
             'showDeleted': false,
