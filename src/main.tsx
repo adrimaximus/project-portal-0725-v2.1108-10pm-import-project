@@ -5,6 +5,8 @@ import App from './App';
 import { FeaturesProvider } from './contexts/FeaturesContext';
 import { UserProvider } from './contexts/UserContext';
 import { GoalsProvider } from './context/GoalsContext';
+import { ProjectProvider } from './contexts/ProjectContext';
+import { Toaster } from "@/components/ui/sonner";
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -13,7 +15,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <UserProvider>
         <FeaturesProvider>
           <GoalsProvider>
-            <App />
+            <ProjectProvider>
+              <App />
+              <Toaster />
+            </ProjectProvider>
           </GoalsProvider>
         </FeaturesProvider>
       </UserProvider>
