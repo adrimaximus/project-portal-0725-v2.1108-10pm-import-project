@@ -1,166 +1,153 @@
-import { useState } from "react";
-import { Project, Task, User } from "@/data/projects";
+"use client";
+
+import { useState, useMemo, FormEvent } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { PlusCircle } from "lucide-react";
+
+import { Project, Task, User } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { MultiSelect } from "@/components/ui/multi-select";
+import { TaskCard } from "./TaskCard";
+import { MultiSelect } from "../ui/multi-select";
 
 interface ProjectTasksProps {
   project: Project;
-  onUpdateTasks: (tasks: Task[]) => void;
-  onTaskStatusChange: (taskId: string, completed: boolean) => void;
+  tasks: Task[];
+  onTaskCreate: (taskName: string) => void;
+  onTaskUpdate: (taskId: string, updatedTask: Partial<Task>) => void;
   onTaskDelete: (taskId: string) => void;
+  onTaskOrderChange: (taskIds: string[]) => void;
+  onAssignUserToTask: (taskId: string, users: User[]) => void;
 }
 
-const ProjectTasks = ({
+export function ProjectTasks({
   project,
-  onUpdateTasks,
-  onTaskStatusChange,
+  tasks,
+  onTaskCreate,
+  onTaskUpdate,
   onTaskDelete,
-}: ProjectTasksProps) => {
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [isAddingTask, setIsAddingTask] = useState(false);
+  onTaskOrderChange,
+  onAssignUserToTask,
+}: ProjectTasksProps) {
+  const [newTaskName, setNewTaskName] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTaskName, setEditingTaskName] = useState("");
 
-  const handleAddTask = () => {
-    if (newTaskTitle.trim() === "") return;
-    const newTask: Task = {
-      id: `task-${Date.now()}`,
-      title: newTaskTitle.trim(),
-      completed: false,
-      assignedTo: [],
-    };
-    onUpdateTasks([...(project.tasks || []), newTask]);
-    setNewTaskTitle("");
-    setIsAddingTask(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = tasks.findIndex((t) => t.id === active.id);
+      const newIndex = tasks.findIndex((t) => t.id === over.id);
+      const newTasks = Array.from(tasks);
+      const [removed] = newTasks.splice(oldIndex, 1);
+      newTasks.splice(newIndex, 0, removed);
+      onTaskOrderChange(newTasks.map((t) => t.id));
+    }
+  };
+
+  const handleCreateTask = () => {
+    if (newTaskName.trim()) {
+      onTaskCreate(newTaskName.trim());
+      setNewTaskName("");
+    }
+  };
+
+  const handleUpdateTask = (taskId: string) => {
+    if (editingTaskName.trim()) {
+      onTaskUpdate(taskId, { name: editingTaskName.trim() });
+      setEditingTaskId(null);
+      setEditingTaskName("");
+    }
   };
 
   const handleAssignUserToTask = (taskId: string, users: User[]) => {
-    const updatedTasks = (project.tasks || []).map((task) =>
-      task.id === taskId ? { ...task, assignedTo: users } : task
-    );
-    onUpdateTasks(updatedTasks);
+    onAssignUserToTask(taskId, users);
   };
 
-  const userOptions = project.assignedTo.map((user) => ({
-    value: user.id,
-    label: user.name,
-  }));
+  const userOptions = useMemo(
+    () =>
+      project.assignedTo.map((user) => ({
+        value: user.id,
+        label: user.name,
+      })),
+    [project.assignedTo]
+  );
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Tasks</h3>
-      <div className="space-y-2">
-        {(project.tasks || []).map((task) => (
-          <div
-            key={task.id}
-            className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted"
-          >
-            <Checkbox
-              id={`task-${task.id}`}
-              checked={task.completed}
-              onCheckedChange={(checked) =>
-                onTaskStatusChange(task.id, !!checked)
-              }
-            />
-            <label
-              htmlFor={`task-${task.id}`}
-              className={`flex-1 text-sm ${
-                task.completed ? "text-muted-foreground line-through" : ""
-              }`}
-            >
-              {task.title}
-            </label>
-            <div className="flex items-center -space-x-2">
-              {(task.assignedTo || []).map((user) => (
-                <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback>{user.initials || user.name.slice(0,2)}</AvatarFallback>
-                </Avatar>
-              ))}
-            </div>
-            <Dialog>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DialogTrigger asChild>
-                    <DropdownMenuItem>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Assign
-                    </DropdownMenuItem>
-                  </DialogTrigger>
-                  <DropdownMenuItem
-                    className="text-red-500"
-                    onClick={() => onTaskDelete(task.id)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Assign to: {task.title}</DialogTitle>
-                </DialogHeader>
-                <MultiSelect
-                  options={userOptions}
-                  selectedValues={(task.assignedTo || []).map(u => u.id)}
-                  onChange={(selectedIds) => {
-                    const selectedUsers = project.assignedTo.filter(u => selectedIds.includes(u.id));
-                    handleAssignUserToTask(task.id, selectedUsers);
-                  }}
-                  placeholder="Select team members..."
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
-        ))}
-      </div>
-      {isAddingTask ? (
-        <div className="flex items-center space-x-2">
-          <Checkbox disabled />
-          <Input
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="What needs to be done?"
-            onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
-            autoFocus
-          />
-          <Button onClick={handleAddTask}>Add</Button>
-          <Button variant="ghost" onClick={() => setIsAddingTask(false)}>
-            Cancel
-          </Button>
-        </div>
-      ) : (
-        <Button
-          variant="ghost"
-          className="w-full justify-start"
-          onClick={() => setIsAddingTask(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add task
+      <h3 className="text-xl font-semibold">Tasks</h3>
+      <div className="flex gap-2">
+        <Input
+          value={newTaskName}
+          onChange={(e) => setNewTaskName(e.target.value)}
+          placeholder="Add a new task"
+          onKeyPress={(e) => e.key === "Enter" && handleCreateTask()}
+        />
+        <Button onClick={handleCreateTask}>
+          <PlusCircle className="h-4 w-4 mr-2" />
+          Add Task
         </Button>
-      )}
+      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={tasks} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2">
+            {tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                isEditing={editingTaskId === task.id}
+                editingTaskName={editingTaskName}
+                onEditStart={(id, name) => {
+                  setEditingTaskId(id);
+                  setEditingTaskName(name);
+                }}
+                onEditCancel={() => setEditingTaskId(null)}
+                onEditNameChange={setEditingTaskName}
+                onUpdate={handleUpdateTask}
+                onDelete={onTaskDelete}
+                assigneeComponent={
+                  <MultiSelect
+                    options={userOptions}
+                    defaultValue={(task.assignedTo || []).map((u) => u.id)}
+                    onValueChange={(selectedIds) => {
+                      const selectedUsers = project.assignedTo.filter((u) =>
+                        selectedIds.includes(u.id)
+                      );
+                      handleAssignUserToTask(task.id, selectedUsers);
+                    }}
+                    placeholder="Assign user..."
+                  />
+                }
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
-};
-
-export default ProjectTasks;
+}
