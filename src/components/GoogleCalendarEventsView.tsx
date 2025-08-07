@@ -86,8 +86,18 @@ const GoogleCalendarEventsView = ({ refreshKey, onImport }: GoogleCalendarEvents
         } catch (e) { console.error("Failed to parse calendar IDs", e); }
       }
 
-      if (!gcalConnected || !accessToken || !clientId) {
-        setError("Google Calendar is not connected. Please connect it in the settings.");
+      if (!clientId) {
+        setError("Error: Google Client ID is not configured in the application environment.");
+        setIsLoading(false);
+        return;
+      }
+      if (!gcalConnected) {
+        setError("Error: Connection flag not found. Please try reconnecting in settings.");
+        setIsLoading(false);
+        return;
+      }
+      if (!accessToken) {
+        setError("Error: Access token not found. Please try reconnecting in settings.");
         setIsLoading(false);
         return;
       }
