@@ -1,18 +1,14 @@
 import { Project } from '@/data/projects';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { 
-  format, getDay, startOfMonth, endOfMonth, eachDayOfInterval, 
-  parseISO, addMonths, subMonths, isToday, differenceInDays, 
-  max, min, startOfWeek, endOfWeek, isSameDay, isBefore, isAfter 
-} from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format, getDay, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO, addMonths, subMonths, isToday } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { Badge } from './ui/badge';
 
 const getStatusColor = (status: Project['status']): string => {
   switch (status) {
@@ -24,31 +20,110 @@ const getStatusColor = (status: Project['status']): string => {
   }
 };
 
-const ProjectTooltipContent = ({ project }: { project: Project }) => (
-  <div className="p-2 max-w-xs">
-    <p className="font-bold text-base mb-2 truncate">{project.name}</p>
-    <div className="flex items-center gap-2 mb-2">
-      <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(project.status) }} />
-      <span className="text-sm">{project.status}</span>
-    </div>
-    {project.paymentStatus && (
-      <div className="mb-2">
-        <Badge variant="outline">{project.paymentStatus}</Badge>
+const DayCell = ({ day, projectsOnDay }: { day: Date, projectsOnDay?: Project[] }) => {
+  const hasProjects = projectsOnDay && projectsOnDay.length > 0;
+  const isSingleProject = hasProjects && projectsOnDay.length === 1;
+  const singleProject = isSingleProject ? projectsOnDay[0] : null;
+
+  if (!hasProjects) {
+    return (
+      <div className="border rounded-lg p-2 min-h-[7rem] flex flex-col bg-card">
+        <span className={cn("font-medium text-sm", isToday(day) ? "text-primary" : "text-muted-foreground")}>
+          {format(day, 'd')}
+        </span>
       </div>
-    )}
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground">Assigned:</span>
-      <div className="flex -space-x-2">
-        {project.assignedTo.map(user => (
-          <Avatar key={user.id} className="h-6 w-6 border-2 border-popover">
-            <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback className="text-[10px]">{user.initials}</AvatarFallback>
-          </Avatar>
-        ))}
+    );
+  }
+
+  return (
+    <div className="border rounded-lg p-2 min-h-[7rem] flex flex-col bg-card hover:border-primary/50 transition-colors group">
+      <span className={cn(
+        "font-medium text-sm mb-1",
+        isToday(day) ? "text-primary font-bold" : "text-muted-foreground group-hover:text-foreground"
+      )}>
+        {format(day, 'd')}
+      </span>
+
+      <div className="flex-grow flex flex-col justify-start gap-1.5 overflow-hidden mt-1">
+        {isSingleProject && singleProject ? (
+          <Link to={`/projects/${singleProject.id}`} className="block p-1 -m-1 rounded-md hover:bg-accent">
+            <div className="flex items-center gap-2">
+              <div 
+                className="h-2 w-2 rounded-full flex-shrink-0" 
+                style={{ backgroundColor: getStatusColor(singleProject.status) }}
+              />
+              <p className="text-xs font-medium truncate">{singleProject.name}</p>
+            </div>
+            <div className="flex -space-x-1 mt-1.5 pl-4">
+              {singleProject.assignedTo?.slice(0, 3).map((user: any) => (
+                <Avatar key={user.id} className="h-5 w-5 border-2 border-card">
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+          </Link>
+        ) : (
+          <>
+            {projectsOnDay.slice(0, 2).map((p: any) => (
+              <TooltipProvider key={p.id} delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to={`/projects/${p.id}`} className="block p-1 -m-1 rounded-md hover:bg-accent">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="h-2 w-2 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: getStatusColor(p.status) }}
+                        />
+                        <p className="text-xs font-medium truncate">{p.name}</p>
+                      </div>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="start">
+                    <p className="font-semibold">{p.name}</p>
+                    <p className="text-sm text-muted-foreground">{p.status}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+            {projectsOnDay.length > 2 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-auto p-1 text-xs justify-start text-muted-foreground hover:text-foreground">
+                    +{projectsOnDay.length - 2} lainnya
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-2 w-64 z-10">
+                  <p className="font-semibold text-sm mb-2 px-2">{format(day, 'PPP', { locale: id })}</p>
+                  <ul className="space-y-1 max-h-60 overflow-y-auto">
+                    {projectsOnDay.map((p: any) => (
+                      <li key={p.id}>
+                        <Link to={`/projects/${p.id}`} className="block p-2 rounded-md hover:bg-accent">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(p.status) }} />
+                            <span className="text-xs font-medium truncate">{p.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1 pl-4">
+                            {p.assignedTo?.slice(0, 5).map((user: any) => (
+                              <Avatar key={user.id} className="h-5 w-5 border">
+                                <AvatarImage src={user.avatar} alt={user.name} />
+                                <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
+                              </Avatar>
+                            ))}
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </PopoverContent>
+              </Popover>
+            )}
+          </>
+        )}
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface ProjectsMonthViewProps {
   projects: Project[];
@@ -57,99 +132,25 @@ interface ProjectsMonthViewProps {
 const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const { monthStart, monthEnd, calendarGrid } = useMemo(() => {
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
-    const firstDayOfMonth = getDay(monthStart);
-    
-    const calendarDays = [
-      ...Array(firstDayOfMonth).fill(null),
-      ...eachDayOfInterval({ start: monthStart, end: monthEnd })
-    ];
-    
-    const grid: (Date | null)[][] = [];
-    for (let i = 0; i < calendarDays.length; i += 7) {
-      grid.push(calendarDays.slice(i, i + 7));
-    }
-    // Ensure grid has 6 rows for consistent height
-    while (grid.length < 6) {
-      grid.push(Array(7).fill(null));
-    }
-
-    return { monthStart, monthEnd, calendarGrid: grid };
-  }, [currentDate]);
-
-  const eventLayout = useMemo(() => {
-    const projectsWithDates = projects.map(p => ({
-      project: p,
-      startDate: p.startDate ? parseISO(p.startDate) : new Date(),
-      dueDate: p.dueDate ? parseISO(p.dueDate) : new Date(),
-    }));
-
-    const multiDayEvents = projectsWithDates
-      .filter(p => p.project.startDate && p.project.dueDate && !isSameDay(p.startDate, p.dueDate))
-      .sort((a, b) => differenceInDays(b.dueDate, b.startDate) - differenceInDays(a.dueDate, a.startDate));
-
-    const singleDayEvents = projectsWithDates
-      .filter(p => p.project.startDate && p.project.dueDate && isSameDay(p.startDate, p.dueDate))
-      .reduce((acc, p) => {
-        const dayStr = format(p.startDate, 'yyyy-MM-dd');
-        if (!acc[dayStr]) acc[dayStr] = [];
-        acc[dayStr].push(p.project);
-        return acc;
-      }, {} as Record<string, Project[]>);
-
-    const layout: { project: Project; weekIndex: number; startDay: number; span: number; lane: number }[] = [];
-    const lanes: (Date | null)[][] = Array.from({ length: calendarGrid.length }, () => []);
-
-    for (const item of multiDayEvents) {
-      const { project, startDate, dueDate } = item;
-      const eventStartInView = max([startDate, monthStart]);
-      const eventEndInView = min([dueDate, monthEnd]);
-
-      if (isAfter(eventStartInView, eventEndInView)) continue;
-
-      let assignedLane = 0;
-      while (true) {
-        let isLaneFree = true;
-        for (let w = 0; w < calendarGrid.length; w++) {
-          const week = calendarGrid[w];
-          const weekStart = week[0] ? startOfWeek(week[0], { weekStartsOn: 0 }) : null;
-          if (!weekStart) continue;
-          
-          if (isAfter(eventStartInView, endOfWeek(weekStart, { weekStartsOn: 0 })) || isBefore(eventEndInView, weekStart)) {
-            continue;
-          }
-
-          if (lanes[w][assignedLane] && isBefore(eventStartInView, lanes[w][assignedLane]!)) {
-            isLaneFree = false;
-            break;
-          }
-        }
-        if (isLaneFree) break;
-        assignedLane++;
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  
+  const projectsByDay: Map<string, Project[]> = new Map();
+  daysInMonth.forEach(day => {
+      const dayStr = format(day, 'yyyy-MM-dd');
+      const projectsOnDay = projects.filter(p => {
+          if (!p.startDate || !p.dueDate) return false;
+          const projectStart = parseISO(p.startDate);
+          const projectEnd = parseISO(p.dueDate);
+          return isWithinInterval(day, { start: projectStart, end: projectEnd });
+      });
+      if (projectsOnDay.length > 0) {
+          projectsByDay.set(dayStr, projectsOnDay);
       }
+  });
 
-      for (let w = 0; w < calendarGrid.length; w++) {
-        const week = calendarGrid[w];
-        const weekStart = week[0] ? startOfWeek(week[0], { weekStartsOn: 0 }) : null;
-        if (!weekStart) continue;
-
-        const segmentStart = max([eventStartInView, weekStart]);
-        const segmentEnd = min([eventEndInView, endOfWeek(weekStart, { weekStartsOn: 0 })]);
-
-        if (isAfter(segmentStart, segmentEnd)) continue;
-
-        const startDay = getDay(segmentStart);
-        const span = differenceInDays(segmentEnd, segmentStart) + 1;
-
-        layout.push({ project, weekIndex: w, startDay, span, lane: assignedLane });
-        lanes[w][assignedLane] = eventEndInView;
-      }
-    }
-    return { layout, singleDayEvents };
-  }, [projects, monthStart, monthEnd, calendarGrid]);
-
+  const firstDayOfMonth = getDay(monthStart);
   const dayHeaders = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
   return (
@@ -172,75 +173,12 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         {dayHeaders.map(day => <div key={day}>{day}</div>)}
       </div>
 
-      <div className="grid grid-cols-7 grid-rows-[repeat(6,minmax(0,1fr))] gap-2 flex-grow relative">
-        {calendarGrid.flat().map((day, index) => (
-          <div key={day ? day.toString() : `empty-${index}`} className="border rounded-lg p-2 bg-card flex flex-col overflow-hidden">
-            {day && (
-              <>
-                <span className={cn("font-medium text-sm", isToday(day) ? "text-primary" : "text-muted-foreground")}>
-                  {format(day, 'd')}
-                </span>
-                <div className="mt-8 space-y-1">
-                  {(eventLayout.singleDayEvents[format(day, 'yyyy-MM-dd')] || []).map(p => (
-                     <TooltipProvider key={p.id} delayDuration={200}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Link to={`/projects/${p.id}`} className="block -m-1 p-1 rounded-md hover:bg-accent">
-                              <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(p.status) }} />
-                                <p className="text-xs font-medium truncate">{p.name}</p>
-                              </div>
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <ProjectTooltipContent project={p} />
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        ))}
-        
-        {eventLayout.layout.map(({ project, weekIndex, startDay, span, lane }) => {
-          const topOffset = 1.75;
-          const eventHeight = 1.5;
-          const eventGap = 0.125;
-          
-          return (
-            <div
-              key={`${project.id}-${weekIndex}`}
-              className="absolute z-10"
-              style={{
-                gridRowStart: weekIndex + 1,
-                gridColumnStart: startDay + 1,
-                gridColumnEnd: `span ${span}`,
-                top: `calc(${topOffset}rem + ${lane * (eventHeight + eventGap)}rem)`,
-                height: `${eventHeight}rem`,
-              }}
-            >
-              <TooltipProvider delayDuration={200}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link 
-                      to={`/projects/${project.id}`} 
-                      className="block w-full h-full rounded-md px-2 text-white text-xs font-medium truncate leading-tight py-0.5"
-                      style={{ backgroundColor: getStatusColor(project.status) }}
-                    >
-                      {getDay(max([parseISO(project.startDate!), monthStart])) === startDay && (
-                        <span>{project.name}</span>
-                      )}
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <ProjectTooltipContent project={project} />
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          );
+      <div className="grid grid-cols-7 gap-2 flex-grow overflow-y-auto">
+        {Array.from({ length: firstDayOfMonth }).map((_, i) => <div key={`empty-${i}`} />)}
+        {daysInMonth.map(day => {
+          const dayStr = format(day, 'yyyy-MM-dd');
+          const projectsOnDay = projectsByDay.get(dayStr);
+          return <DayCell key={dayStr} day={day} projectsOnDay={projectsOnDay} />;
         })}
       </div>
     </div>
