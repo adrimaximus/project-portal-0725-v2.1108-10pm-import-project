@@ -19,15 +19,13 @@ import { Terminal, Calendar as CalendarIcon } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Skeleton } from './ui/skeleton';
 
-type NewCalendarProject = Omit<Project, 'description' | 'paymentStatus' | 'createdBy' | 'tasks' | 'comments' | 'activities' | 'briefFiles' | 'services'>;
-
 interface ImportFromCalendarDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onImport: (projects: NewCalendarProject[]) => void;
+  onImport: (projects: Project[]) => void;
 }
 
-const transformEventToProject = (event: GoogleCalendarEvent): NewCalendarProject => {
+const transformEventToProject = (event: GoogleCalendarEvent): Omit<Project, 'description' | 'paymentStatus' | 'createdBy' | 'comments' | 'activities' | 'briefFiles' | 'services'> => {
   return {
     id: uuidv4(),
     name: event.summary,
@@ -103,7 +101,12 @@ const ImportFromCalendarDialog = ({ open, onOpenChange, onImport }: ImportFromCa
   const handleImport = () => {
     const projectsToImport = events
       .filter(event => selectedEvents[event.id])
-      .map(transformEventToProject);
+      .map(event => ({
+        ...transformEventToProject(event),
+        description: '',
+        paymentStatus: 'Proposed' as const,
+        createdBy: { id: 'system', name: 'System', avatar: '', initials: 'S', email: '' },
+      }));
     
     onImport(projectsToImport);
     onOpenChange(false);

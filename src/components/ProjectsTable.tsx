@@ -22,7 +22,6 @@ import ProjectsYearView from "./ProjectsYearView";
 import GoogleCalendarEventsView from "./GoogleCalendarEventsView";
 import { Button } from "./ui/button";
 import ImportFromCalendarDialog from "./ImportFromCalendarDialog";
-import { useProjects } from "@/contexts/ProjectContext";
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -65,7 +64,11 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [view, setView] = useState<ViewMode>('table');
   const [isGcalConnected, setIsGcalConnected] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const { addProjectsFromCalendar } = useProjects();
+  const [localProjects, setLocalProjects] = useState<Project[]>(projects);
+
+  useEffect(() => {
+    setLocalProjects(projects);
+  }, [projects]);
 
   useEffect(() => {
     const checkConnection = () => {
@@ -79,6 +82,10 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       window.removeEventListener('storage', checkConnection);
     }
   }, []);
+
+  const handleImport = (newProjects: Project[]) => {
+    setLocalProjects(prevProjects => [...newProjects, ...prevProjects].sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()));
+  };
 
   const renderContent = () => {
     switch (view) {
@@ -95,7 +102,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {projects.map((project) => (
+              {localProjects.map((project) => (
                 <TableRow key={project.id}>
                   <TableCell style={{ borderLeft: `4px solid ${getStatusColor(project.status)}` }}>
                     <Link to={`/projects/${project.id}`} className="font-medium text-primary hover:underline">
@@ -133,11 +140,11 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           </Table>
         );
       case 'list':
-        return <ProjectsList projects={projects} />;
+        return <ProjectsList projects={localProjects} />;
       case 'month':
-        return <ProjectsMonthView projects={projects} />;
+        return <ProjectsMonthView projects={localProjects} />;
       case 'year':
-        return <ProjectsYearView projects={projects} />;
+        return <ProjectsYearView projects={localProjects} />;
       case 'gcal':
         return <GoogleCalendarEventsView />;
       default:
@@ -150,7 +157,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       <ImportFromCalendarDialog 
         open={isImporting}
         onOpenChange={setIsImporting}
-        onImport={addProjectsFromCalendar}
+        onImport={handleImport}
       />
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4">

@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Project, Task, Comment, User, Activity, ActivityType, ProjectFile, ProjectStatus, PaymentStatus } from "@/data/projects";
+import { dummyProjects, Project, Task, Comment, User, Activity, ActivityType, ProjectFile, ProjectStatus, PaymentStatus } from "@/data/projects";
 import { useUser } from "@/contexts/UserContext";
-import { useProjects } from "@/contexts/ProjectContext";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
@@ -11,25 +10,21 @@ import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import { toast } from "sonner";
 
 const ProjectDetail = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { projectId } = useParams();
   const navigate = useNavigate();
   const { user: currentUser } = useUser();
-  const { getProjectById, updateProject } = useProjects();
-
-  const project = useMemo(() => {
-    if (!projectId) return null;
-    return getProjectById(projectId);
-  }, [projectId, getProjectById]);
-
+  const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    if (!project && projectId) {
-      // This might happen if the user navigates to a non-existent project ID
-      navigate("/");
+    const foundProject = dummyProjects.find((p) => p.id === projectId);
+    if (foundProject) {
+      setProject(foundProject);
+    } else {
+      navigate("/"); // Redirect if project not found
     }
-  }, [project, projectId, navigate]);
+  }, [projectId, navigate]);
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -41,9 +36,9 @@ const ProjectDetail = () => {
   };
 
   const handleSaveChanges = () => {
-    if (editedProject && projectId) {
-      updateProject(projectId, editedProject);
-      toast.success("Project updated successfully!");
+    if (editedProject) {
+      handleUpdateProjectDetails(editedProject);
+      setProject(editedProject);
     }
     setIsEditing(false);
     setEditedProject(null);
@@ -78,43 +73,48 @@ const ProjectDetail = () => {
     }
   };
 
-  const createActivity = useCallback((type: ActivityType, details: any): Activity => {
-    return {
+  const createActivity = (type: ActivityType, details: any): Activity => {
+    const newActivity: Activity = {
       id: `act-${Date.now()}`,
       user: currentUser,
       type,
       details,
       timestamp: new Date().toISOString(),
     };
-  }, [currentUser]);
+    return newActivity;
+  };
+
+  const addActivity = (activity: Activity) => {
+    setProject(prev => prev ? { ...prev, activities: [activity, ...(prev.activities || [])] } : null);
+  };
 
   const handleUpdateProjectDetails = (updatedDetails: Partial<Project>) => {
-    if (!project || !projectId) return;
+    if (!project) return;
     
-    let activity: Activity | undefined;
+    let activityDetails: { description: string, [key: string]: any } | null = null;
 
     if (updatedDetails.status && updatedDetails.status !== project.status) {
-        activity = createActivity('PROJECT_STATUS_UPDATED', { description: `updated project status to "${updatedDetails.status}".` });
+        activityDetails = { description: `updated project status to "${updatedDetails.status}".` };
+        addActivity(createActivity('PROJECT_STATUS_UPDATED', activityDetails));
     } else if (updatedDetails.paymentStatus && updatedDetails.paymentStatus !== project.paymentStatus) {
-        activity = createActivity('PAYMENT_STATUS_UPDATED', { description: `updated payment status to "${updatedDetails.paymentStatus}".` });
+        activityDetails = { description: `updated payment status to "${updatedDetails.paymentStatus}".` };
+        addActivity(createActivity('PAYMENT_STATUS_UPDATED', activityDetails));
     } else if (updatedDetails.dueDate && updatedDetails.dueDate !== project.dueDate) {
         const oldDate = new Date(project.dueDate).toLocaleDateString();
         const newDate = new Date(updatedDetails.dueDate).toLocaleDateString();
-        activity = createActivity('PROJECT_DETAILS_UPDATED', { description: `changed due date from ${oldDate} to ${newDate}.` });
+        activityDetails = { description: `changed due date from ${oldDate} to ${newDate}.` };
+        addActivity(createActivity('PROJECT_DETAILS_UPDATED', activityDetails));
     } else if (updatedDetails.budget && updatedDetails.budget !== project.budget) {
-        activity = createActivity('PROJECT_DETAILS_UPDATED', { description: `updated budget from $${project.budget} to $${updatedDetails.budget}.` });
+        activityDetails = { description: `updated budget from $${project.budget} to $${updatedDetails.budget}.` };
+        addActivity(createActivity('PROJECT_DETAILS_UPDATED', activityDetails));
     }
 
-    const finalUpdates = activity 
-      ? { ...updatedDetails, activities: [activity, ...(project.activities || [])] }
-      : updatedDetails;
-
-    updateProject(projectId, finalUpdates);
+    setProject((prev) => (prev ? { ...prev, ...updatedDetails } : null));
     toast.success("Project details updated.");
   };
 
   const handleUpdateTeam = (newMemberName: string) => {
-    if (!project || !projectId) return;
+    if (!project) return;
     const newUser: User = {
       id: `user-${Date.now()}`,
       name: newMemberName,
@@ -124,14 +124,15 @@ const ProjectDetail = () => {
       avatar: `https://i.pravatar.cc/150?u=${Date.now()}`
     };
     const updatedTeam = [...project.assignedTo, newUser];
+    setProject({ ...project, assignedTo: updatedTeam });
+
     const activity = createActivity('TEAM_MEMBER_ADDED', { description: `added ${newMemberName} to the team.` });
-    
-    updateProject(projectId, { assignedTo: updatedTeam, activities: [activity, ...(project.activities || [])] });
+    addActivity(activity);
     toast.success(`${newMemberName} has been added to the project.`);
   };
   
   const handleFileUpload = (files: File[]) => {
-    if (!project || !projectId) return;
+    if (!project) return;
     const newFiles: ProjectFile[] = files.map((file, index) => ({
       id: `file-${Date.now()}-${index}`,
       name: file.name,
@@ -142,19 +143,20 @@ const ProjectDetail = () => {
     }));
     
     const updatedFiles = [...(project.briefFiles || []), ...newFiles];
+    setProject({ ...project, briefFiles: updatedFiles });
+
     const activity = createActivity('FILE_UPLOADED', { description: `uploaded ${files.length} new file(s).` });
-    
-    updateProject(projectId, { briefFiles: updatedFiles, activities: [activity, ...(project.activities || [])] });
+    addActivity(activity);
     toast.success(`${files.length} file(s) uploaded successfully.`);
   };
 
   const handleUpdateTasks = (tasks: Task[]) => {
-    if (!project || !projectId) return;
-    updateProject(projectId, { tasks });
+    if (!project) return;
+    setProject({ ...project, tasks });
   };
 
   const handleTaskStatusChange = (taskId: string, completed: boolean) => {
-    if (!project || !project.tasks || !projectId) return;
+    if (!project || !project.tasks) return;
     let activity: Activity | null = null;
     const updatedTasks = project.tasks.map((task) => {
       if (task.id === taskId) {
@@ -167,40 +169,34 @@ const ProjectDetail = () => {
       }
       return task;
     });
-
-    const finalUpdates: Partial<Project> = { tasks: updatedTasks };
-    if (activity) {
-      finalUpdates.activities = [activity, ...(project.activities || [])];
-    }
-    updateProject(projectId, finalUpdates);
+    setProject({ ...project, tasks: updatedTasks });
+    if (activity) addActivity(activity);
   };
 
   const handleTaskDelete = (taskId: string) => {
-    if (!project || !project.tasks || !projectId) return;
+    if (!project || !project.tasks) return;
     const taskToDelete = project.tasks.find(t => t.id === taskId);
     const updatedTasks = project.tasks.filter((task) => task.id !== taskId);
-    
-    const finalUpdates: Partial<Project> = { tasks: updatedTasks };
+    setProject({ ...project, tasks: updatedTasks });
     if (taskToDelete) {
       const activity = createActivity('TASK_DELETED', { description: `deleted task "${taskToDelete.title}".` });
-      finalUpdates.activities = [activity, ...(project.activities || [])];
+      addActivity(activity);
     }
-    updateProject(projectId, finalUpdates);
   };
 
   const handleAddCommentOrTicket = (item: Comment) => {
-    if (!project || !projectId) return;
+    if (!project) return;
     const updatedComments = [...(project.comments || []), item];
-    
-    let activity: Activity;
+    setProject({ ...project, comments: updatedComments });
+
     if (item.isTicket) {
-      activity = createActivity('TICKET_CREATED', { description: `created a ticket: "${item.text}"` });
+      const activity = createActivity('TICKET_CREATED', { description: `created a ticket: "${item.text}"` });
+      addActivity(activity);
       toast.success("New ticket created.");
     } else {
-      activity = createActivity('COMMENT_ADDED', { description: `commented on the project.` });
+      const activity = createActivity('COMMENT_ADDED', { description: `commented on the project.` });
+      addActivity(activity);
     }
-    
-    updateProject(projectId, { comments: updatedComments, activities: [activity, ...(project.activities || [])] });
   };
 
   if (!project) {
