@@ -1,116 +1,183 @@
 import { useState, useEffect } from 'react';
-import { getGoogleCalendarEvents } from '@/lib/gcal';
+import { gapi } from 'gapi-script';
+import { toast } from 'sonner';
 import { GoogleCalendarEvent } from '@/types';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Calendar as CalendarIcon } from 'lucide-react';
-import { Button } from './ui/button';
-import { format } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Loader2, Calendar, Clock, Users, ExternalLink } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { id } from 'date-fns/locale';
 
-const GoogleCalendarEventsView = () => {
+interface GoogleCalendarEventsViewProps {
+  refreshKey: number;
+}
+
+const GoogleCalendarEventsView = ({ refreshKey }: GoogleCalendarEventsViewProps) => {
   const [events, setEvents] = useState<GoogleCalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
-      const token = localStorage.getItem('gcal_access_token');
-      if (!token) {
-        setError('Tidak terhubung ke Google Calendar. Silakan hubungkan di pengaturan.');
-        setLoading(false);
+      setIsLoading(true);
+      setError(null);
+
+      const gcalConnected = localStorage.getItem('gcal_connected') === 'true';
+      const accessToken = localStorage.getItem('gcal_access_token');
+      const clientId = localStorage.getItem('gcal_clientId');
+      const storedIds = localStorage.getItem('gcal_calendar_ids');
+      
+      let calendarIds: string[] = [];
+      if (storedIds) {
+        try {
+          const parsedIds = JSON.parse(storedIds);
+          if (Array.isArray(parsedIds) && parsedIds.length > 0) {
+            calendarIds = parsedIds;
+          }
+        } catch (e) { console.error("Failed to parse calendar IDs", e); }
+      }
+
+      if (!gcalConnected || !accessToken || !clientId) {
+        setError("Google Calendar is not connected. Please connect it in the settings.");
+        setIsLoading(false);
+        return;
+      }
+      
+      if (calendarIds.length === 0) {
+        setError("No calendars selected to sync. Please select calendars in the settings.");
+        setIsLoading(false);
         return;
       }
 
       try {
-        setLoading(true);
-        const fetchedEvents = await getGoogleCalendarEvents(token);
-        setEvents(fetchedEvents);
-        setError(null);
-      } catch (e) {
-        setError('Gagal mengambil acara. Koneksi Anda mungkin telah kedaluwarsa. Silakan coba hubungkan kembali di pengaturan.');
-        console.error(e);
+        await new Promise<void>((resolve) => gapi.load('client', resolve));
+        await gapi.client.init({
+          apiKey: undefined,
+          clientId: clientId,
+          discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
+        });
+        gapi.client.setToken({ access_token: accessToken });
+
+        const timeMin = new Date();
+        const timeMax = new Date();
+        timeMax.setDate(timeMax.getDate() + 30); // Fetch events for the next 30 days
+
+        const requests = calendarIds.map(calendarId => 
+          gapi.client.calendar.events.list({
+            'calendarId': calendarId,
+            'timeMin': timeMin.toISOString(),
+            'timeMax': timeMax.toISOString(),
+            'showDeleted': false,
+            'singleEvents': true,
+            'maxResults': 100,
+            'orderBy': 'startTime'
+          })
+        );
+
+        const responses = await Promise.all(requests);
+        const allEvents = responses.flatMap(response => response.result.items);
+
+        const formattedEvents: GoogleCalendarEvent[] = allEvents
+          .map((item: any) => ({
+            id: item.id,
+            summary: item.summary,
+            description: item.description,
+            start: { dateTime: item.start.dateTime || item.start.date, timeZone: item.start.timeZone || 'UTC' },
+            end: { dateTime: item.end.dateTime || item.end.date, timeZone: item.end.timeZone || 'UTC' },
+            creator: { email: item.creator?.email || 'Unknown' },
+            attendees: item.attendees,
+            isGoogleEvent: true as const,
+            htmlLink: item.htmlLink,
+          }))
+          .sort((a, b) => new Date(a.start.dateTime).getTime() - new Date(b.start.dateTime).getTime());
+        
+        setEvents(formattedEvents);
+      } catch (err: any) {
+        console.error("Error fetching Google Calendar events:", err);
+        if (err.result?.error?.code === 401 || err.result?.error?.code === 403) {
+          setError("Google session expired. Please reconnect in settings.");
+          toast.error("Google session expired. Please reconnect in settings.");
+          localStorage.removeItem('gcal_connected');
+          localStorage.removeItem('gcal_access_token');
+        } else {
+          setError("Failed to fetch calendar events.");
+          toast.error("Failed to fetch calendar events.");
+        }
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     fetchEvents();
-  }, []);
+  }, [refreshKey]);
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="p-4 border rounded-lg">
-            <div className="flex items-center space-x-4">
-              <div className="space-y-2 flex-grow">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-              <Skeleton className="h-8 w-[120px]" />
-            </div>
-          </div>
-        ))}
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-2">Loading calendar events...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <Alert variant="destructive">
-        <Terminal className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
+      <div className="text-center p-8 text-red-500">
+        <p>{error}</p>
+      </div>
     );
   }
 
-  const formatEventDate = (event: GoogleCalendarEvent) => {
-    const start = event.start.dateTime ? new Date(event.start.dateTime) : new Date(event.start.date!);
-    const end = event.end.dateTime ? new Date(event.end.dateTime) : new Date(event.end.date!);
-    
-    if (event.start.date) {
-        const adjustedEnd = new Date(end.getTime() - 1);
-        if (start.toDateString() === adjustedEnd.toDateString()) {
-            return format(start, 'MMM d, yyyy');
-        }
-        return `${format(start, 'MMM d')} - ${format(adjustedEnd, 'MMM d, yyyy')}`;
-    }
-
-    if (format(start, 'yyyy-MM-dd') === format(end, 'yyyy-MM-dd')) {
-        return `${format(start, 'MMM d, yyyy')} · ${format(start, 'p')} - ${format(end, 'p')}`;
-    }
-    
-    return `${format(start, 'MMM d, p')} - ${format(end, 'MMM d, p')}`;
+  if (events.length === 0) {
+    return (
+      <div className="text-center p-8 text-muted-foreground">
+        <p>No upcoming events found in your selected calendars for the next 30 days.</p>
+      </div>
+    );
   }
 
   return (
-    <div>
-      {events.length === 0 ? (
-        <div className="text-center py-10 border-2 border-dashed rounded-lg">
-            <CalendarIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-2 text-sm font-medium">Tidak ada acara mendatang</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Google Calendar Anda kosong untuk periode mendatang.</p>
-        </div>
-      ) : (
-        <ul className="space-y-3">
-          {events.map(event => (
-            <li key={event.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="flex justify-between items-start gap-4">
-                    <div className="flex-grow">
-                        <p className="font-semibold">{event.summary}</p>
-                        <p className="text-sm text-muted-foreground">{formatEventDate(event)}</p>
-                    </div>
-                    <Button variant="outline" size="sm" asChild>
-                        <a href={event.htmlLink} target="_blank" rel="noopener noreferrer">
-                            Lihat di Google
-                        </a>
-                    </Button>
+    <div className="space-y-4">
+      {events.map(event => (
+        <Card key={event.id}>
+          <CardHeader className="flex flex-row items-start justify-between pb-2">
+            <div>
+              <CardTitle className="text-lg">{event.summary}</CardTitle>
+              <div className="text-sm text-muted-foreground flex items-center gap-4 mt-1">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4" />
+                  <span>{format(parseISO(event.start.dateTime), 'eeee, d MMMM yyyy', { locale: id })}</span>
                 </div>
-            </li>
-          ))}
-        </ul>
-      )}
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    {format(parseISO(event.start.dateTime), 'HH:mm')} - {format(parseISO(event.end.dateTime), 'HH:mm')}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" asChild>
+              <a href={event.htmlLink} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {event.attendees && event.attendees.length > 0 && (
+              <div className="flex items-center gap-2 mt-2 text-sm">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <div className="flex flex-wrap gap-1">
+                  {event.attendees.map(attendee => (
+                    <span key={attendee.email} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                      {attendee.email}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 };

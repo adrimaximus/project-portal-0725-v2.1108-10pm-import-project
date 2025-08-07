@@ -53,11 +53,12 @@ const getProjectColorClasses = (item: CalendarItem): string => {
 
 interface ProjectsMonthViewProps {
   projects: Project[];
+  refreshKey: number;
 }
 
 const MAX_VISIBLE_LANES = 2;
 
-const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
+const ProjectsMonthView = ({ projects, refreshKey }: ProjectsMonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [gcalEvents, setGcalEvents] = useState<GoogleCalendarEvent[]>([]);
 
@@ -130,7 +131,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
     };
 
     initGapiAndFetchEvents();
-  }, [currentDate]);
+  }, [currentDate, refreshKey]);
 
   const { weeks, weeklyLayouts, moreByDay } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);

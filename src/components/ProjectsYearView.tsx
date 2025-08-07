@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 
 interface ProjectsYearViewProps {
   projects: Project[];
+  refreshKey: number;
 }
 
 type CalendarItem = Project | (GoogleCalendarEvent & { isGoogleEvent: true });
@@ -76,7 +77,7 @@ const MonthCalendarCard = ({ month, year, items }: { month: number, year: number
     const renderItemTooltipContent = (item: CalendarItem) => {
         const isGcal = isGCalEvent(item);
         const name = isGcal ? item.summary : item.name;
-        const assignedTo = !isGcal ? item.assignedTo : [];
+        const assignedTo = !isGcal ? (item as Project).assignedTo : [];
 
         const content = (
             <div className="block p-2 -m-2 rounded-md hover:bg-accent">
@@ -167,7 +168,7 @@ const MonthCalendarCard = ({ month, year, items }: { month: number, year: number
     );
 };
 
-const ProjectsYearView = ({ projects }: ProjectsYearViewProps) => {
+const ProjectsYearView = ({ projects, refreshKey }: ProjectsYearViewProps) => {
   const [year, setYear] = useState(new Date().getFullYear());
   const [gcalEvents, setGcalEvents] = useState<GoogleCalendarEvent[]>([]);
 
@@ -220,6 +221,7 @@ const ProjectsYearView = ({ projects }: ProjectsYearViewProps) => {
             start: { dateTime: item.start.dateTime || item.start.date, date: item.start.date },
             end: { dateTime: item.end.dateTime || item.end.date, date: item.end.date },
             htmlLink: item.htmlLink,
+            isGoogleEvent: true as const,
           }));
           setGcalEvents(events);
         } catch (error: any) {
@@ -236,7 +238,7 @@ const ProjectsYearView = ({ projects }: ProjectsYearViewProps) => {
       }
     };
     initGapiAndFetchEvents();
-  }, [year]);
+  }, [year, refreshKey]);
 
   const combinedItems: CalendarItem[] = useMemo(() => [
     ...projects, 

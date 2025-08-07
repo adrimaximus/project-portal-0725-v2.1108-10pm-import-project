@@ -1,30 +1,39 @@
-export type Role = 'Admin' | 'Member' | 'Client' | 'Comment Only' | 'View Only';
-
-export type Collaborator = {
+export interface Collaborator {
   id: string;
   name: string;
-  src: string;
-  fallback: string;
-  online: boolean;
-};
+  avatar: string;
+  initials: string;
+  email?: string;
+}
 
 export interface GoogleCalendarEvent {
   id: string;
   summary: string;
+  description?: string;
   start: {
-    dateTime?: string;
+    dateTime: string;
+    timeZone?: string;
     date?: string;
   };
   end: {
-    dateTime?: string;
+    dateTime: string;
+    timeZone?: string;
     date?: string;
   };
+  creator?: {
+    email: string;
+  };
+  attendees?: {
+    email: string;
+    responseStatus: string;
+    self?: boolean;
+  }[];
+  isGoogleEvent: true;
   htmlLink: string;
-  isGoogleEvent?: true;
 }
 
 export interface GoogleCalendarListEntry {
-    id: string;
-    summary: string;
-    primary?: boolean;
+  id: string;
+  summary: string;
+  primary?: boolean;
 }

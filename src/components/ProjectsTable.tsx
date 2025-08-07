@@ -15,13 +15,20 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Calendar as CalendarIcon, Table as TableIcon, CalendarCheck, PlusCircle } from "lucide-react";
+import { List, CalendarDays, Calendar as CalendarIcon, Table as TableIcon, CalendarCheck, PlusCircle, RefreshCw } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
 import ProjectsYearView from "./ProjectsYearView";
 import GoogleCalendarEventsView from "./GoogleCalendarEventsView";
 import { Button } from "./ui/button";
 import ImportFromCalendarDialog from "./ImportFromCalendarDialog";
+import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -65,6 +72,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [isGcalConnected, setIsGcalConnected] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [localProjects, setLocalProjects] = useState<Project[]>(projects);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     setLocalProjects(projects);
@@ -85,6 +93,11 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
 
   const handleImport = (newProjects: Project[]) => {
     setLocalProjects(prevProjects => [...newProjects, ...prevProjects].sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()));
+  };
+
+  const handleSync = () => {
+    toast.info("Refreshing calendar events...");
+    setRefreshKey(prev => prev + 1);
   };
 
   const renderContent = () => {
@@ -142,11 +155,11 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       case 'list':
         return <ProjectsList projects={localProjects} />;
       case 'month':
-        return <ProjectsMonthView projects={localProjects} />;
+        return <ProjectsMonthView projects={localProjects} refreshKey={refreshKey} />;
       case 'year':
-        return <ProjectsYearView projects={localProjects} />;
+        return <ProjectsYearView projects={localProjects} refreshKey={refreshKey} />;
       case 'gcal':
-        return <GoogleCalendarEventsView />;
+        return <GoogleCalendarEventsView refreshKey={refreshKey} />;
       default:
         return null;
     }
@@ -164,10 +177,24 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           <div className="flex items-center gap-2">
             <CardTitle>Projects</CardTitle>
             {isGcalConnected && (
-              <Button variant="outline" size="sm" onClick={() => setIsImporting(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Import
-              </Button>
+              <>
+                <Button variant="outline" size="sm" onClick={() => setIsImporting(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Import
+                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={handleSync} className="h-8 w-8">
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Sync Calendars</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
             )}
           </div>
           <ToggleGroup 
