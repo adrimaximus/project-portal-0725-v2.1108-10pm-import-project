@@ -1,3 +1,5 @@
+import { supabase } from "../supabaseClient";
+
 interface Calendar {
   id: string;
   summary: string;
@@ -36,27 +38,64 @@ export const getGoogleCalendarList = async (
 export const getSyncedCalendars = async (): Promise<
   { google_calendar_id: string }[]
 > => {
-  try {
-    const storedIds = localStorage.getItem('gcal_calendar_ids');
-    if (storedIds) {
-      const ids = JSON.parse(storedIds);
-      if (Array.isArray(ids)) {
-        return ids.map(id => ({ google_calendar_id: id }));
-      }
-    }
-  } catch (error) {
-    console.error("Failed to parse synced calendars from localStorage", error);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    console.error("No user session found");
+    return [];
   }
-  return [];
+  const { user } = session;
+
+  const { data, error } = await supabase
+    .from("synced_calendars")
+    .select("google_calendar_id")
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("Error fetching synced calendars:", error);
+    return [];
+  }
+
+  return data || [];
 };
 
 export const syncGoogleCalendars = async (
   calendarIds: string[]
 ): Promise<void> => {
-  try {
-    localStorage.setItem('gcal_calendar_ids', JSON.stringify(calendarIds));
-  } catch (error) {
-    console.error("Failed to save synced calendars to localStorage", error);
-    throw new Error("Could not save calendar selection.");
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error("User not authenticated");
+  }
+  const { user } = session;
+
+  // Delete all existing synced calendars for the user first
+  const { error: deleteError } = await supabase
+    .from("synced_calendars")
+    .delete()
+    .eq("user_id", user.id);
+
+  if (deleteError) {
+    console.error("Error clearing old calendar syncs:", deleteError);
+    throw new Error("Could not update calendar selection.");
+  }
+
+  // If there are new calendars to sync, insert them
+  if (calendarIds.length > 0) {
+    const rowsToInsert = calendarIds.map((id) => ({
+      user_id: user.id,
+      google_calendar_id: id,
+    }));
+
+    const { error: insertError } = await supabase
+      .from("synced_calendars")
+      .insert(rowsToInsert);
+
+    if (insertError) {
+      console.error("Error inserting new calendar syncs:", insertError);
+      throw new Error("Could not save calendar selection.");
+    }
   }
 };

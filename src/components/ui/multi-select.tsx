@@ -56,6 +56,14 @@ export function MultiSelect({
     onValueChange(newSelectedValues);
   };
 
+  const selectedLabels = options
+    .filter((option) => selectedValues.includes(option.value))
+    .map((option) => option.label);
+
+  const MAX_DISPLAY_LABELS = 2;
+  const displayLabels = selectedLabels.slice(0, MAX_DISPLAY_LABELS);
+  const remainingCount = selectedLabels.length - displayLabels.length;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -66,11 +74,16 @@ export function MultiSelect({
           className={cn("w-full justify-between", className)}
           onClick={() => setOpen(!open)}
         >
-          <div className="flex items-center gap-1">
-            {selectedValues.length > 0 ? (
-              <span className="text-foreground">
-                {selectedValues.length} selected
-              </span>
+          <div className="flex-1 text-left overflow-hidden">
+            {selectedLabels.length > 0 ? (
+              <div className="flex items-center gap-1">
+                <span className="truncate">{displayLabels.join(", ")}</span>
+                {remainingCount > 0 && (
+                  <span className="text-muted-foreground whitespace-nowrap text-sm ml-1">
+                    +{remainingCount} more
+                  </span>
+                )}
+              </div>
             ) : (
               <span className="text-muted-foreground">{placeholder}</span>
             )}
