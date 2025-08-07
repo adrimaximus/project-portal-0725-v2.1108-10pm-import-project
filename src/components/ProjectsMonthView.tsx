@@ -102,7 +102,10 @@ const ProjectsMonthView = ({ projects, refreshKey }: ProjectsMonthViewProps) => 
           );
 
           const responses = await Promise.all(requests);
-          const allEvents = responses.flatMap(response => response.result.items);
+          const allEvents = responses.flatMap((response, index) => {
+              const calendarId = calendarIds[index];
+              return response.result.items.map((item: any) => ({ ...item, calendarId }));
+          });
 
           const events: GoogleCalendarEvent[] = allEvents.map((item: any) => ({
             id: item.id,
@@ -114,6 +117,7 @@ const ProjectsMonthView = ({ projects, refreshKey }: ProjectsMonthViewProps) => 
             attendees: item.attendees,
             isGoogleEvent: true,
             htmlLink: item.htmlLink,
+            calendarId: item.calendarId,
           }));
           setGcalEvents(events);
         } catch (error: any) {

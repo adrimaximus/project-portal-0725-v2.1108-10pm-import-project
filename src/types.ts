@@ -1,8 +1,9 @@
 export interface Collaborator {
   id: string;
   name: string;
-  avatar: string;
-  initials: string;
+  src: string;
+  fallback: string;
+  online: boolean;
   email?: string;
 }
 
@@ -30,6 +31,7 @@ export interface GoogleCalendarEvent {
   }[];
   isGoogleEvent: true;
   htmlLink: string;
+  calendarId: string;
 }
 
 export interface GoogleCalendarListEntry {

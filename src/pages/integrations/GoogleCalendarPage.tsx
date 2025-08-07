@@ -18,7 +18,7 @@ const GoogleLoginButton = ({ onConnectSuccess, onConnectError }: { onConnectSucc
   const login = useGoogleLogin({
     onSuccess: onConnectSuccess,
     onError: onConnectError,
-    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+    scope: 'https://www.googleapis.com/auth/calendar',
   });
 
   return <Button onClick={() => login()}>Connect with Google</Button>;

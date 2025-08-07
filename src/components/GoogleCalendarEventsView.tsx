@@ -2,20 +2,48 @@ import { useState, useEffect } from 'react';
 import { gapi } from 'gapi-script';
 import { toast } from 'sonner';
 import { GoogleCalendarEvent } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Calendar, Clock, Users, ExternalLink } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { id } from 'date-fns/locale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface GoogleCalendarEventsViewProps {
   refreshKey: number;
 }
 
+const formatEventDate = (event: GoogleCalendarEvent) => {
+    const start = parseISO(event.start.dateTime);
+    const end = parseISO(event.end.dateTime);
+    
+    if (event.start.date) { // All-day event
+        const adjustedEnd = new Date(end.getTime() - 1); // Adjust for exclusive end date
+        if (format(start, 'yyyy-MM-dd') === format(adjustedEnd, 'yyyy-MM-dd')) {
+            return format(start, 'MMM d, yyyy');
+        }
+        return `${format(start, 'MMM d')} - ${format(adjustedEnd, 'MMM d, yyyy')}`;
+    }
+
+    if (format(start, 'yyyy-MM-dd') === format(end, 'yyyy-MM-dd')) {
+        return `${format(start, 'MMM d, yyyy')} ⋅ ${format(start, 'p')} - ${format(end, 'p')}`;
+    }
+    
+    return `${format(start, 'MMM d, yyyy, p')} - ${format(end, 'MMM d, yyyy, p')}`;
+};
+
 const GoogleCalendarEventsView = ({ refreshKey }: GoogleCalendarEventsViewProps) => {
   const [events, setEvents] = useState<GoogleCalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<GoogleCalendarEvent | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -60,7 +88,7 @@ const GoogleCalendarEventsView = ({ refreshKey }: GoogleCalendarEventsViewProps)
 
         const timeMin = new Date();
         const timeMax = new Date();
-        timeMax.setDate(timeMax.getDate() + 30); // Fetch events for the next 30 days
+        timeMax.setDate(timeMax.getDate() + 30);
 
         const requests = calendarIds.map(calendarId => 
           gapi.client.calendar.events.list({
@@ -75,19 +103,23 @@ const GoogleCalendarEventsView = ({ refreshKey }: GoogleCalendarEventsViewProps)
         );
 
         const responses = await Promise.all(requests);
-        const allEvents = responses.flatMap(response => response.result.items);
+        const allEvents = responses.flatMap((response, index) => {
+            const calendarId = calendarIds[index];
+            return response.result.items.map((item: any) => ({ ...item, calendarId }));
+        });
 
         const formattedEvents: GoogleCalendarEvent[] = allEvents
           .map((item: any) => ({
             id: item.id,
             summary: item.summary,
             description: item.description,
-            start: { dateTime: item.start.dateTime || item.start.date, timeZone: item.start.timeZone || 'UTC' },
-            end: { dateTime: item.end.dateTime || item.end.date, timeZone: item.end.timeZone || 'UTC' },
+            start: { dateTime: item.start.dateTime || item.start.date, timeZone: item.start.timeZone || 'UTC', date: item.start.date },
+            end: { dateTime: item.end.dateTime || item.end.date, timeZone: item.end.timeZone || 'UTC', date: item.end.date },
             creator: { email: item.creator?.email || 'Unknown' },
             attendees: item.attendees,
             isGoogleEvent: true as const,
             htmlLink: item.htmlLink,
+            calendarId: item.calendarId,
           }))
           .sort((a, b) => new Date(a.start.dateTime).getTime() - new Date(b.start.dateTime).getTime());
         
@@ -110,6 +142,25 @@ const GoogleCalendarEventsView = ({ refreshKey }: GoogleCalendarEventsViewProps)
 
     fetchEvents();
   }, [refreshKey]);
+
+  const handleDelete = async () => {
+    if (!eventToDelete) return;
+
+    try {
+        await gapi.client.calendar.events.delete({
+            calendarId: eventToDelete.calendarId,
+            eventId: eventToDelete.id,
+        });
+
+        setEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
+        toast.success(`Event "${eventToDelete.summary}" deleted.`);
+    } catch (error) {
+        console.error("Error deleting event:", error);
+        toast.error("Failed to delete event.");
+    } finally {
+        setEventToDelete(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -137,48 +188,42 @@ const GoogleCalendarEventsView = ({ refreshKey }: GoogleCalendarEventsViewProps)
   }
 
   return (
-    <div className="space-y-4">
-      {events.map(event => (
-        <Card key={event.id}>
-          <CardHeader className="flex flex-row items-start justify-between pb-2">
+    <>
+      <div className="space-y-2">
+        {events.map(event => (
+          <div key={event.id} className="flex items-center justify-between rounded-lg border p-4">
             <div>
-              <CardTitle className="text-lg">{event.summary}</CardTitle>
-              <div className="text-sm text-muted-foreground flex items-center gap-4 mt-1">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4" />
-                  <span>{format(parseISO(event.start.dateTime), 'eeee, d MMMM yyyy', { locale: id })}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" />
-                  <span>
-                    {format(parseISO(event.start.dateTime), 'HH:mm')} - {format(parseISO(event.end.dateTime), 'HH:mm')}
-                  </span>
-                </div>
-              </div>
+                <p className="font-semibold">{event.summary}</p>
+                <p className="text-sm text-muted-foreground">{formatEventDate(event)}</p>
             </div>
-            <Button variant="ghost" size="icon" asChild>
-              <a href={event.htmlLink} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {event.attendees && event.attendees.length > 0 && (
-              <div className="flex items-center gap-2 mt-2 text-sm">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <div className="flex flex-wrap gap-1">
-                  {event.attendees.map(attendee => (
-                    <span key={attendee.email} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                      {attendee.email}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" asChild>
+                    <a href={event.htmlLink} target="_blank" rel="noopener noreferrer">
+                        Lihat di Google
+                    </a>
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setEventToDelete(event)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will permanently delete the event "{eventToDelete?.summary}" from your Google Calendar. This action cannot be undone.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
 
