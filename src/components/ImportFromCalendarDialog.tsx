@@ -79,8 +79,27 @@ const ImportFromCalendarDialog = ({ open, onOpenChange, onImport }: ImportFromCa
           return;
         }
 
+        let calendarIds: string[] = [];
+        const storedIds = localStorage.getItem('gcal_calendar_ids');
+        if (storedIds) {
+            try {
+                const parsedIds = JSON.parse(storedIds);
+                if (Array.isArray(parsedIds) && parsedIds.length > 0) {
+                    calendarIds = parsedIds;
+                }
+            } catch (e) {
+                console.error("Failed to parse stored calendar IDs", e);
+            }
+        }
+
+        if (calendarIds.length === 0) {
+            setError("No calendars selected to sync. Please select calendars in the settings.");
+            setLoading(false);
+            return;
+        }
+
         try {
-          const fetchedEvents = await getGoogleCalendarEvents(token);
+          const fetchedEvents = await getGoogleCalendarEvents(token, calendarIds);
           setEvents(fetchedEvents);
         } catch (e) {
           setError('Failed to fetch events. Please try reconnecting in settings.');
