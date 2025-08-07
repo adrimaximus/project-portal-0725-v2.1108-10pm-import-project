@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -15,16 +15,17 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Calendar as CalendarIcon, Table as TableIcon } from "lucide-react";
+import { List, CalendarDays, Calendar as CalendarIcon, Table as TableIcon, CalendarCheck } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
 import ProjectsYearView from "./ProjectsYearView";
+import GoogleCalendarEventsView from "./GoogleCalendarEventsView";
 
 interface ProjectsTableProps {
   projects: Project[];
 }
 
-type ViewMode = 'table' | 'list' | 'month' | 'year';
+type ViewMode = 'table' | 'list' | 'month' | 'year' | 'gcal';
 
 const getStatusBadgeClass = (status: Project['status']) => {
   switch (status) {
@@ -59,6 +60,20 @@ const getStatusColor = (status: Project['status']): string => {
 
 const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [view, setView] = useState<ViewMode>('table');
+  const [isGcalConnected, setIsGcalConnected] = useState(false);
+
+  useEffect(() => {
+    const checkConnection = () => {
+      const storedStatus = localStorage.getItem("gcal_connected");
+      setIsGcalConnected(storedStatus === "true");
+    };
+    checkConnection();
+    
+    window.addEventListener('storage', checkConnection);
+    return () => {
+      window.removeEventListener('storage', checkConnection);
+    }
+  }, []);
 
   const renderContent = () => {
     switch (view) {
@@ -118,6 +133,8 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
         return <ProjectsMonthView projects={projects} />;
       case 'year':
         return <ProjectsYearView projects={projects} />;
+      case 'gcal':
+        return <GoogleCalendarEventsView />;
       default:
         return null;
     }
@@ -147,6 +164,11 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           <ToggleGroupItem value="year" aria-label="Year view">
             <CalendarIcon className="h-4 w-4" />
           </ToggleGroupItem>
+          {isGcalConnected && (
+            <ToggleGroupItem value="gcal" aria-label="Google Calendar view">
+              <CalendarCheck className="h-4 w-4" />
+            </ToggleGroupItem>
+          )}
         </ToggleGroup>
       </CardHeader>
       <CardContent>

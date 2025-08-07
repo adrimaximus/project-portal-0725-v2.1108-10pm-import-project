@@ -1,6 +1,13 @@
-export interface Collaborator {
+export interface GoogleCalendarEvent {
   id: string;
-  name: string;
-  avatar: string;
-  role: string;
+  summary: string;
+  start: {
+    dateTime?: string;
+    date?: string;
+  };
+  end: {
+    dateTime?: string;
+    date?: string;
+  };
+  htmlLink: string;
 }
