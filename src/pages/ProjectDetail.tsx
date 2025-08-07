@@ -119,6 +119,9 @@ const ProjectDetail = () => {
       id: `user-${Date.now()}`,
       name: newMemberName,
       initials: newMemberName.split(' ').map(n => n[0]).join('').toUpperCase(),
+      email: `${newMemberName.replace(/\s+/g, '.').toLowerCase()}@example.com`,
+      role: 'Member',
+      avatar: `https://i.pravatar.cc/150?u=${Date.now()}`
     };
     const updatedTeam = [...project.assignedTo, newUser];
     setProject({ ...project, assignedTo: updatedTeam });

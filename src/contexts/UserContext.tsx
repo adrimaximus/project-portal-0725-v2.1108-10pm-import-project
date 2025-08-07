@@ -1,12 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'Admin' | 'Member';
-  avatar?: string;
-}
+import { User } from '@/data/users';
 
 interface UserContextType {
   user: User;
@@ -23,7 +16,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     name: 'Alice Johnson',
     email: 'alice.j@example.com',
     role: 'Admin',
-    avatar: 'https://i.pravatar.cc/150?u=alice'
+    avatar: 'https://i.pravatar.cc/150?u=alice',
+    initials: 'AJ'
   });
 
   const login = (userData: User) => {

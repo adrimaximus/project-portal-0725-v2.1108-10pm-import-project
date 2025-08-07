@@ -25,7 +25,7 @@ interface ImportFromCalendarDialogProps {
   onImport: (projects: Project[]) => void;
 }
 
-const transformEventToProject = (event: GoogleCalendarEvent): Project => {
+const transformEventToProject = (event: GoogleCalendarEvent): Omit<Project, 'description' | 'paymentStatus' | 'createdBy' | 'comments' | 'activities' | 'briefFiles' | 'services'> => {
   return {
     id: uuidv4(),
     name: event.summary,
@@ -34,7 +34,7 @@ const transformEventToProject = (event: GoogleCalendarEvent): Project => {
     progress: 0,
     budget: 0,
     startDate: event.start.dateTime || event.start.date!,
-    endDate: event.end.dateTime || event.end.date!,
+    dueDate: event.end.dateTime || event.end.date!,
     assignedTo: [],
     lastUpdated: new Date().toISOString(),
   };
@@ -101,7 +101,12 @@ const ImportFromCalendarDialog = ({ open, onOpenChange, onImport }: ImportFromCa
   const handleImport = () => {
     const projectsToImport = events
       .filter(event => selectedEvents[event.id])
-      .map(transformEventToProject);
+      .map(event => ({
+        ...transformEventToProject(event),
+        description: '',
+        paymentStatus: 'Proposed' as const,
+        createdBy: { id: 'system', name: 'System', avatar: '', initials: 'S', email: '' },
+      }));
     
     onImport(projectsToImport);
     onOpenChange(false);
