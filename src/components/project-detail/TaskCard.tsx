@@ -4,15 +4,15 @@ import { GripVertical, Trash2, Edit, Check, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Task } from "@/types";
+import { Task } from "@/data/projects";
 
 interface TaskCardProps {
   task: Task;
   isEditing: boolean;
-  editingTaskName: string;
-  onEditStart: (id: string, name: string) => void;
+  editingTaskTitle: string;
+  onEditStart: (id: string, title: string) => void;
   onEditCancel: () => void;
-  onEditNameChange: (name: string) => void;
+  onEditTitleChange: (title: string) => void;
   onUpdate: (id: string) => void;
   onDelete: (id: string) => void;
   assigneeComponent: React.ReactNode;
@@ -21,10 +21,10 @@ interface TaskCardProps {
 export function TaskCard({
   task,
   isEditing,
-  editingTaskName,
+  editingTaskTitle,
   onEditStart,
   onEditCancel,
-  onEditNameChange,
+  onEditTitleChange,
   onUpdate,
   onDelete,
   assigneeComponent,
@@ -45,8 +45,8 @@ export function TaskCard({
       <div className="flex-grow">
         {isEditing ? (
           <Input
-            value={editingTaskName}
-            onChange={(e) => onEditNameChange(e.target.value)}
+            value={editingTaskTitle}
+            onChange={(e) => onEditTitleChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") onUpdate(task.id);
               if (e.key === "Escape") onEditCancel();
@@ -54,7 +54,7 @@ export function TaskCard({
             autoFocus
           />
         ) : (
-          <p className="font-medium">{task.name}</p>
+          <p className="font-medium">{task.title}</p>
         )}
       </div>
       <div className="w-48">{assigneeComponent}</div>
@@ -76,7 +76,7 @@ export function TaskCard({
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => onEditStart(task.id, task.name)}
+            onClick={() => onEditStart(task.id, task.title)}
           >
             <Edit className="h-4 w-4 text-muted-foreground" />
           </Button>

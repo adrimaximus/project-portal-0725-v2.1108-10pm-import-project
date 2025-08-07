@@ -1,61 +1,66 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Toaster } from "sonner";
-
-import { AuthProvider } from "./hooks/useAuth";
-import { AppLayout } from "./components/AppLayout";
-import { DashboardPage } from "./pages/DashboardPage";
-import { ProjectDetailPage } from "./pages/ProjectDetailPage";
-import { SettingsPage } from "./pages/SettingsPage";
-import { LoginPage } from "./pages/LoginPage";
-import { OnboardingPage } from "./pages/OnboardingPage";
-import { CreateProjectPage } from "./pages/CreateProjectPage";
-import { TeamPage } from "./pages/TeamPage";
-import { ReportsPage } from "./pages/ReportsPage";
-import { UserProfilePage } from "./pages/UserProfilePage";
-import { NotificationsPage } from "./pages/NotificationsPage";
-import { SearchPage } from "./pages/SearchPage";
-import { HelpPage } from "./pages/HelpPage";
-import { IntegrationsPage } from "./pages/IntegrationsPage";
+import { Routes, Route } from "react-router-dom";
+import { Toaster } from "@/components/ui/sonner";
+import AppLayout from "./components/AppLayout";
+import Index from "./pages/Index";
+import Projects from "./pages/Projects";
+import ProjectDetail from "./pages/ProjectDetail";
+import RequestPage from "./pages/Request";
+import ChatPage from "./pages/ChatPage";
+import MoodTracker from "./pages/MoodTracker";
+import GoalsPage from "./pages/GoalsPage";
+import GoalDetailPage from "./pages/GoalDetailPage";
+import GoalEditPage from "./pages/GoalEditPage";
+import Billing from "./pages/Billing";
+import NotificationsPage from "./pages/Notifications";
+import Profile from "./pages/Profile";
+import SearchPage from "./pages/SearchPage";
+import SettingsPage from "./pages/Settings";
+import TeamSettingsPage from "./pages/TeamSettingsPage";
+import NavigationSettingsPage from "./pages/NavigationSettingsPage";
+import IntegrationsPage from "./pages/IntegrationsPage";
 import OpenAiIntegrationPage from "./pages/integrations/OpenAiIntegrationPage";
 import { GoogleCalendarPage } from "./pages/integrations/GoogleCalendarPage";
-import NavigationSettingsPage from "./pages/NavigationSettingsPage";
+import EmbedPage from "./pages/EmbedPage";
+import LoginPage from "./pages/LoginPage";
+import NotFound from "./pages/NotFound";
+import UserManagementPage from "./pages/UserManagement";
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Toaster />
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/onboarding" element={<OnboardingPage />} />
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/project/:id" element={<ProjectDetailPage />} />
-            <Route path="/create-project" element={<CreateProjectPage />} />
-            <Route path="/team" element={<TeamPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/profile" element={<UserProfilePage />} />
-            <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/help" element={<HelpPage />} />
-            <Route path="/integrations" element={<IntegrationsPage />} />
-            <Route
-              path="/integrations/openai"
-              element={<OpenAiIntegrationPage />}
-            />
-            <Route
-              path="/integrations/google-calendar"
-              element={<GoogleCalendarPage />}
-            />
-            <Route
-              path="/settings/navigation"
-              element={<NavigationSettingsPage />}
-            />
-          </Route>
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <>
+      <Toaster />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Index />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/:projectId" element={<ProjectDetail />} />
+          <Route path="/request" element={<RequestPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/mood-tracker" element={<MoodTracker />} />
+          <Route path="/goals" element={<GoalsPage />} />
+          <Route path="/goals/:goalId" element={<GoalDetailPage />} />
+          <Route path="/goals/edit/:id" element={<GoalEditPage />} />
+          <Route path="/goals/new" element={<GoalEditPage />} />
+          <Route path="/billing" element={<Billing />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/team" element={<TeamSettingsPage />} />
+          <Route path="/settings/navigation" element={<NavigationSettingsPage />} />
+          <Route path="/settings/integrations" element={<IntegrationsPage />} />
+          <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
+          <Route
+            path="/settings/integrations/google-calendar"
+            element={<GoogleCalendarPage />}
+          />
+          <Route path="/users" element={<UserManagementPage />} />
+          <Route path="/custom" element={<EmbedPage />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, FormEvent } from "react";
+import { useState, useMemo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { PlusCircle } from "lucide-react";
 
-import { Project, Task, User } from "@/types";
+import { Project, Task, User } from "@/data/projects";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TaskCard } from "./TaskCard";
@@ -26,7 +26,7 @@ import { MultiSelect } from "../ui/multi-select";
 interface ProjectTasksProps {
   project: Project;
   tasks: Task[];
-  onTaskCreate: (taskName: string) => void;
+  onTaskCreate: (taskTitle: string) => void;
   onTaskUpdate: (taskId: string, updatedTask: Partial<Task>) => void;
   onTaskDelete: (taskId: string) => void;
   onTaskOrderChange: (taskIds: string[]) => void;
@@ -42,9 +42,9 @@ export function ProjectTasks({
   onTaskOrderChange,
   onAssignUserToTask,
 }: ProjectTasksProps) {
-  const [newTaskName, setNewTaskName] = useState("");
+  const [newTaskTitle, setNewTaskTitle] = useState("");
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editingTaskName, setEditingTaskName] = useState("");
+  const [editingTaskTitle, setEditingTaskTitle] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -67,17 +67,17 @@ export function ProjectTasks({
   };
 
   const handleCreateTask = () => {
-    if (newTaskName.trim()) {
-      onTaskCreate(newTaskName.trim());
-      setNewTaskName("");
+    if (newTaskTitle.trim()) {
+      onTaskCreate(newTaskTitle.trim());
+      setNewTaskTitle("");
     }
   };
 
   const handleUpdateTask = (taskId: string) => {
-    if (editingTaskName.trim()) {
-      onTaskUpdate(taskId, { name: editingTaskName.trim() });
+    if (editingTaskTitle.trim()) {
+      onTaskUpdate(taskId, { title: editingTaskTitle.trim() });
       setEditingTaskId(null);
-      setEditingTaskName("");
+      setEditingTaskTitle("");
     }
   };
 
@@ -99,8 +99,8 @@ export function ProjectTasks({
       <h3 className="text-xl font-semibold">Tasks</h3>
       <div className="flex gap-2">
         <Input
-          value={newTaskName}
-          onChange={(e) => setNewTaskName(e.target.value)}
+          value={newTaskTitle}
+          onChange={(e) => setNewTaskTitle(e.target.value)}
           placeholder="Add a new task"
           onKeyPress={(e) => e.key === "Enter" && handleCreateTask()}
         />
@@ -121,13 +121,13 @@ export function ProjectTasks({
                 key={task.id}
                 task={task}
                 isEditing={editingTaskId === task.id}
-                editingTaskName={editingTaskName}
-                onEditStart={(id, name) => {
+                editingTaskTitle={editingTaskTitle}
+                onEditStart={(id, title) => {
                   setEditingTaskId(id);
-                  setEditingTaskName(name);
+                  setEditingTaskTitle(title);
                 }}
                 onEditCancel={() => setEditingTaskId(null)}
-                onEditNameChange={setEditingTaskName}
+                onEditTitleChange={setEditingTaskTitle}
                 onUpdate={handleUpdateTask}
                 onDelete={onTaskDelete}
                 assigneeComponent={
