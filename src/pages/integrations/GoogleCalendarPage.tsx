@@ -10,6 +10,17 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { GoogleOAuthProvider, useGoogleLogin, TokenResponse } from '@react-oauth/google';
 
+// Komponen Tombol Login terpisah untuk memanggil hook secara kondisional
+const GoogleLoginButton = ({ onConnectSuccess, onConnectError }: { onConnectSuccess: (tokenResponse: Omit<TokenResponse, "error" | "error_description" | "error_uri">) => void, onConnectError: () => void }) => {
+  const login = useGoogleLogin({
+    onSuccess: onConnectSuccess,
+    onError: onConnectError,
+    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+  });
+
+  return <Button onClick={() => login()}>Connect with Google</Button>;
+};
+
 const GoogleCalendarPageContent = () => {
   const [clientId, setClientId] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -34,12 +45,6 @@ const GoogleCalendarPageContent = () => {
   const handleConnectError = () => {
     toast.error("Google Calendar connection failed. Please check your Client ID and try again.");
   };
-
-  const login = useGoogleLogin({
-    onSuccess: handleConnectSuccess,
-    onError: handleConnectError,
-    scope: 'https://www.googleapis.com/auth/calendar.readonly',
-  });
 
   const handleDisconnect = () => {
     localStorage.removeItem("gcal_connected");
@@ -95,7 +100,11 @@ const GoogleCalendarPageContent = () => {
             {isConnected ? (
               <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
             ) : (
-              <Button onClick={() => login()} disabled={!clientId}>Connect with Google</Button>
+              clientId ? (
+                <GoogleLoginButton onConnectSuccess={handleConnectSuccess} onConnectError={handleConnectError} />
+              ) : (
+                <Button disabled>Connect with Google</Button>
+              )
             )}
           </CardFooter>
         </Card>
@@ -105,11 +114,11 @@ const GoogleCalendarPageContent = () => {
 };
 
 const GoogleCalendarPage = () => {
-    const clientId = localStorage.getItem("gcal_clientId") || "";
-    // The provider needs a client ID on initial load, even if we change it later.
-    // We use a state for the input field, but the provider can take the stored one.
+    // Gunakan Client ID dummy jika tidak ada yang tersimpan, untuk menghindari error pada provider
+    const initialClientId = localStorage.getItem("gcal_clientId") || "dummy-client-id";
+    
     return (
-        <GoogleOAuthProvider clientId={clientId}>
+        <GoogleOAuthProvider clientId={initialClientId}>
             <GoogleCalendarPageContent />
         </GoogleOAuthProvider>
     )
