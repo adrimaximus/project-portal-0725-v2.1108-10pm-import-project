@@ -1,128 +1,38 @@
 import { Project } from '@/data/projects';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, getDay, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO, addMonths, subMonths, isToday } from 'date-fns';
+import { 
+  format, 
+  getDay, 
+  startOfMonth, 
+  endOfMonth, 
+  eachDayOfInterval, 
+  parseISO, 
+  addMonths, 
+  subMonths, 
+  isToday,
+  startOfWeek,
+  endOfWeek,
+  eachWeekOfInterval,
+  isSameDay,
+  differenceInDays,
+  max,
+  min,
+  isSameMonth
+} from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
-const getStatusColor = (status: Project['status']): string => {
+const getProjectColor = (status: Project['status']): string => {
   switch (status) {
-    case 'On Track': case 'Completed': case 'Done': case 'Billed': return '#22c55e';
-    case 'At Risk': case 'On Hold': return '#eab308';
-    case 'Off Track': case 'Cancelled': return '#ef4444';
-    case 'In Progress': case 'Requested': return '#3b82f6';
-    default: return '#9ca3af';
+    case 'On Track': case 'Completed': case 'Done': case 'Billed': return 'bg-green-200/80 text-green-900 border border-green-300/80';
+    case 'At Risk': case 'On Hold': return 'bg-yellow-200/80 text-yellow-900 border border-yellow-300/80';
+    case 'Off Track': case 'Cancelled': return 'bg-red-200/80 text-red-900 border border-red-300/80';
+    case 'In Progress': case 'Requested': return 'bg-blue-200/80 text-blue-900 border border-blue-300/80';
+    default: return 'bg-gray-200/80 text-gray-900 border border-gray-300/80';
   }
-};
-
-const DayCell = ({ day, projectsOnDay }: { day: Date, projectsOnDay?: Project[] }) => {
-  const hasProjects = projectsOnDay && projectsOnDay.length > 0;
-  const isSingleProject = hasProjects && projectsOnDay.length === 1;
-  const singleProject = isSingleProject ? projectsOnDay[0] : null;
-
-  if (!hasProjects) {
-    return (
-      <div className="border rounded-lg p-2 min-h-[7rem] flex flex-col bg-card">
-        <span className={cn("font-medium text-sm", isToday(day) ? "text-primary" : "text-muted-foreground")}>
-          {format(day, 'd')}
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="border rounded-lg p-2 min-h-[7rem] flex flex-col bg-card hover:border-primary/50 transition-colors group">
-      <span className={cn(
-        "font-medium text-sm mb-1",
-        isToday(day) ? "text-primary font-bold" : "text-muted-foreground group-hover:text-foreground"
-      )}>
-        {format(day, 'd')}
-      </span>
-
-      <div className="flex-grow flex flex-col justify-start gap-1.5 overflow-hidden mt-1">
-        {isSingleProject && singleProject ? (
-          <Link to={`/projects/${singleProject.id}`} className="block p-1 -m-1 rounded-md hover:bg-accent">
-            <div className="flex items-center gap-2">
-              <div 
-                className="h-2 w-2 rounded-full flex-shrink-0" 
-                style={{ backgroundColor: getStatusColor(singleProject.status) }}
-              />
-              <p className="text-xs font-medium truncate">{singleProject.name}</p>
-            </div>
-            <div className="flex -space-x-1 mt-1.5 pl-4">
-              {singleProject.assignedTo?.slice(0, 3).map((user: any) => (
-                <Avatar key={user.id} className="h-5 w-5 border-2 border-card">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
-                </Avatar>
-              ))}
-            </div>
-          </Link>
-        ) : (
-          <>
-            {projectsOnDay.slice(0, 2).map((p: any) => (
-              <TooltipProvider key={p.id} delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to={`/projects/${p.id}`} className="block p-1 -m-1 rounded-md hover:bg-accent">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="h-2 w-2 rounded-full flex-shrink-0" 
-                          style={{ backgroundColor: getStatusColor(p.status) }}
-                        />
-                        <p className="text-xs font-medium truncate">{p.name}</p>
-                      </div>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="start">
-                    <p className="font-semibold">{p.name}</p>
-                    <p className="text-sm text-muted-foreground">{p.status}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ))}
-            {projectsOnDay.length > 2 && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-auto p-1 text-xs justify-start text-muted-foreground hover:text-foreground">
-                    +{projectsOnDay.length - 2} lainnya
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-2 w-64 z-10">
-                  <p className="font-semibold text-sm mb-2 px-2">{format(day, 'PPP', { locale: id })}</p>
-                  <ul className="space-y-1 max-h-60 overflow-y-auto">
-                    {projectsOnDay.map((p: any) => (
-                      <li key={p.id}>
-                        <Link to={`/projects/${p.id}`} className="block p-2 rounded-md hover:bg-accent">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(p.status) }} />
-                            <span className="text-xs font-medium truncate">{p.name}</span>
-                          </div>
-                          <div className="flex items-center gap-1 pl-4">
-                            {p.assignedTo?.slice(0, 5).map((user: any) => (
-                              <Avatar key={user.id} className="h-5 w-5 border">
-                                <AvatarImage src={user.avatar} alt={user.name} />
-                                <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
-                              </Avatar>
-                            ))}
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </PopoverContent>
-              </Popover>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
 };
 
 interface ProjectsMonthViewProps {
@@ -132,25 +42,87 @@ interface ProjectsMonthViewProps {
 const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  
-  const projectsByDay: Map<string, Project[]> = new Map();
-  daysInMonth.forEach(day => {
-      const dayStr = format(day, 'yyyy-MM-dd');
-      const projectsOnDay = projects.filter(p => {
-          if (!p.startDate || !p.dueDate) return false;
-          const projectStart = parseISO(p.startDate);
-          const projectEnd = parseISO(p.dueDate);
-          return isWithinInterval(day, { start: projectStart, end: projectEnd });
-      });
-      if (projectsOnDay.length > 0) {
-          projectsByDay.set(dayStr, projectsOnDay);
-      }
-  });
+  const projectLayouts = useMemo(() => {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    const weeks = eachWeekOfInterval({ start: monthStart, end: monthEnd }, { locale: id });
+    
+    const layouts: any[] = [];
+    const weekLanes: boolean[][][] = Array(weeks.length).fill(0).map(() => []);
 
-  const firstDayOfMonth = getDay(monthStart);
+    const sortedProjects = [...projects]
+      .filter(p => p.startDate && p.dueDate)
+      .sort((a, b) => {
+        const durationA = differenceInDays(parseISO(a.dueDate!), parseISO(a.startDate!));
+        const durationB = differenceInDays(parseISO(b.dueDate!), parseISO(b.startDate!));
+        if (durationA !== durationB) {
+          return durationB - durationA; // Longer projects first
+        }
+        return new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime();
+      });
+
+    sortedProjects.forEach(project => {
+      const projectStart = parseISO(project.startDate!);
+      const projectEnd = parseISO(project.dueDate!);
+
+      weeks.forEach((weekStart, weekIndex) => {
+        const weekEnd = endOfWeek(weekStart, { locale: id });
+
+        const segmentStart = max([projectStart, weekStart]);
+        const segmentEnd = min([projectEnd, weekEnd]);
+
+        if (segmentStart > segmentEnd) return;
+
+        const startDayIndex = getDay(segmentStart); // Sunday is 0
+        const endDayIndex = getDay(segmentEnd);
+
+        let laneIndex = 0;
+        let placed = false;
+        while (!placed) {
+          if (!weekLanes[weekIndex]) {
+            weekLanes[weekIndex] = [];
+          }
+          if (!weekLanes[weekIndex][laneIndex]) {
+            weekLanes[weekIndex][laneIndex] = Array(7).fill(false);
+          }
+          
+          let laneIsFree = true;
+          for (let i = startDayIndex; i <= endDayIndex; i++) {
+            if (weekLanes[weekIndex][laneIndex][i]) {
+              laneIsFree = false;
+              break;
+            }
+          }
+
+          if (laneIsFree) {
+            for (let i = startDayIndex; i <= endDayIndex; i++) {
+              weekLanes[weekIndex][laneIndex][i] = true;
+            }
+            
+            layouts.push({
+              project,
+              weekIndex,
+              laneIndex,
+              startDay: startDayIndex,
+              duration: differenceInDays(segmentEnd, segmentStart) + 1,
+              isStart: isSameDay(projectStart, segmentStart),
+              isEnd: isSameDay(projectEnd, segmentEnd),
+            });
+            placed = true;
+          } else {
+            laneIndex++;
+          }
+        }
+      });
+    });
+    return layouts;
+  }, [projects, currentDate]);
+
+  const monthStart = startOfMonth(currentDate);
+  const calendarStart = startOfWeek(monthStart, { locale: id });
+  const calendarEnd = endOfWeek(endOfMonth(currentDate), { locale: id });
+  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  const weeks = eachWeekOfInterval({ start: monthStart, end: endOfMonth(currentDate) }, { locale: id });
   const dayHeaders = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
   return (
@@ -160,6 +132,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
           {format(currentDate, 'MMMM yyyy', { locale: id })}
         </h2>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setCurrentDate(new Date())}>Hari Ini</Button>
           <Button variant="outline" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -173,12 +146,53 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         {dayHeaders.map(day => <div key={day}>{day}</div>)}
       </div>
 
-      <div className="grid grid-cols-7 gap-2 flex-grow overflow-y-auto">
-        {Array.from({ length: firstDayOfMonth }).map((_, i) => <div key={`empty-${i}`} />)}
-        {daysInMonth.map(day => {
-          const dayStr = format(day, 'yyyy-MM-dd');
-          const projectsOnDay = projectsByDay.get(dayStr);
-          return <DayCell key={dayStr} day={day} projectsOnDay={projectsOnDay} />;
+      <div className="grid grid-cols-7 flex-grow border-t border-l border-gray-200 dark:border-gray-700 relative">
+        {/* Background cells */}
+        {days.map((day) => (
+          <div 
+            key={day.toString()} 
+            className="border-r border-b border-gray-200 dark:border-gray-700 p-1.5 relative"
+          >
+            <span className={cn(
+              "float-right flex items-center justify-center h-6 w-6 rounded-full text-sm",
+              !isSameMonth(day, currentDate) && "text-muted-foreground/50",
+              isToday(day) && "bg-primary text-primary-foreground"
+            )}>
+              {format(day, 'd')}
+            </span>
+          </div>
+        ))}
+
+        {/* Project bars */}
+        {projectLayouts.map(({ project, weekIndex, laneIndex, startDay, duration, isStart, isEnd }) => {
+          const barHeight = 28; // in pixels
+          const barGap = 4; // in pixels
+          const topOffset = 38; // offset for day number and padding
+          
+          return (
+            <div
+              key={`${project.id}-${weekIndex}`}
+              className={cn(
+                "absolute p-1 text-xs overflow-hidden flex items-center hover:opacity-80 transition-opacity",
+                getProjectColor(project.status),
+                isStart ? 'rounded-l-md' : '',
+                isEnd ? 'rounded-r-md' : '',
+                !isStart && !isEnd ? 'rounded-none' : '',
+                isStart && isEnd ? 'rounded-md' : ''
+              )}
+              style={{
+                top: `${(weekIndex * (100 / weeks.length))}%`,
+                left: `calc(${(startDay / 7) * 100}% + 2px)`,
+                width: `calc(${(duration / 7) * 100}% - 4px)`,
+                height: `${barHeight}px`,
+                transform: `translateY(${topOffset + (laneIndex * (barHeight + barGap))}px)`,
+              }}
+            >
+              <Link to={`/projects/${project.id}`} className="block w-full h-full font-semibold truncate" title={project.name}>
+                {project.name}
+              </Link>
+            </div>
+          );
         })}
       </div>
     </div>
