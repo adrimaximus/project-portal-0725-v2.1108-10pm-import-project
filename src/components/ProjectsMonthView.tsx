@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, getDay, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO, addMonths, subMonths, isToday } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
@@ -21,95 +22,106 @@ const getStatusColor = (status: Project['status']): string => {
 
 const DayCell = ({ day, projectsOnDay }: { day: Date, projectsOnDay?: Project[] }) => {
   const hasProjects = projectsOnDay && projectsOnDay.length > 0;
+  const isSingleProject = hasProjects && projectsOnDay.length === 1;
+  const singleProject = isSingleProject ? projectsOnDay[0] : null;
 
-  const cellContent = (
-    <div className="border rounded-lg p-2 h-28 flex flex-col bg-card hover:border-primary/50 transition-colors group">
+  if (!hasProjects) {
+    return (
+      <div className="border rounded-lg p-2 min-h-[7rem] flex flex-col bg-card">
+        <span className={cn("font-medium text-sm", isToday(day) ? "text-primary" : "text-muted-foreground")}>
+          {format(day, 'd')}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border rounded-lg p-2 min-h-[7rem] flex flex-col bg-card hover:border-primary/50 transition-colors group">
       <span className={cn(
         "font-medium text-sm mb-1",
         isToday(day) ? "text-primary font-bold" : "text-muted-foreground group-hover:text-foreground"
       )}>
         {format(day, 'd')}
       </span>
-      {hasProjects && (
-        <div className="flex-grow flex flex-col justify-start gap-1 overflow-hidden">
-          {projectsOnDay.slice(0, 4).map((p: any) => (
-            <TooltipProvider key={p.id} delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link to={`/projects/${p.id}`} className="block">
-                    <div 
-                      className="h-2 w-full rounded-full" 
-                      style={{ backgroundColor: getStatusColor(p.status) }}
-                    />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="top" align="start">
-                  <p className="font-semibold">{p.name}</p>
-                  <p className="text-sm text-muted-foreground">{p.status}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-          {projectsOnDay.length > 4 && (
-             <p className="text-xs text-center text-muted-foreground mt-1">
-                +{projectsOnDay.length - 4} lainnya
-             </p>
-          )}
-        </div>
-      )}
-    </div>
-  );
 
-  if (!hasProjects) {
-    return (
-        <div className="border rounded-lg p-2 h-28 flex flex-col bg-card">
-            <span className={cn("font-medium text-sm", isToday(day) ? "text-primary" : "text-muted-foreground")}>
-                {format(day, 'd')}
-            </span>
-        </div>
-    );
-  }
-
-  return (
-    <TooltipProvider delayDuration={300}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-            {cellContent}
-        </TooltipTrigger>
-        <TooltipContent className="p-0" onMouseDown={(e) => e.stopPropagation()}>
-          <div className="p-2">
-            <p className="font-semibold">{format(day, 'PPP', { locale: id })}</p>
-            <ul className="mt-1 space-y-1 max-w-xs">
-              {projectsOnDay.map((p: any) => (
-                <li key={p.id}>
-                  <Link to={`/projects/${p.id}`} className="block p-2 -m-2 rounded-md hover:bg-accent">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(p.status) }} />
-                      <span className="text-xs font-medium">{p.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1 pl-4">
-                      {p.assignedTo?.slice(0, 5).map((user: any) => (
-                        <TooltipProvider key={user.id}>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Avatar className="h-5 w-5 border">
+      <div className="flex-grow flex flex-col justify-start gap-1.5 overflow-hidden mt-1">
+        {isSingleProject && singleProject ? (
+          <Link to={`/projects/${singleProject.id}`} className="block p-1 -m-1 rounded-md hover:bg-accent">
+            <div className="flex items-center gap-2">
+              <div 
+                className="h-2 w-2 rounded-full flex-shrink-0" 
+                style={{ backgroundColor: getStatusColor(singleProject.status) }}
+              />
+              <p className="text-xs font-medium truncate">{singleProject.name}</p>
+            </div>
+            <div className="flex -space-x-1 mt-1.5 pl-4">
+              {singleProject.assignedTo?.slice(0, 3).map((user: any) => (
+                <Avatar key={user.id} className="h-5 w-5 border-2 border-card">
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+          </Link>
+        ) : (
+          <>
+            {projectsOnDay.slice(0, 2).map((p: any) => (
+              <TooltipProvider key={p.id} delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to={`/projects/${p.id}`} className="block p-1 -m-1 rounded-md hover:bg-accent">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="h-2 w-2 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: getStatusColor(p.status) }}
+                        />
+                        <p className="text-xs font-medium truncate">{p.name}</p>
+                      </div>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="start">
+                    <p className="font-semibold">{p.name}</p>
+                    <p className="text-sm text-muted-foreground">{p.status}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+            {projectsOnDay.length > 2 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-auto p-1 text-xs justify-start text-muted-foreground hover:text-foreground">
+                    +{projectsOnDay.length - 2} lainnya
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-2 w-64 z-10">
+                  <p className="font-semibold text-sm mb-2 px-2">{format(day, 'PPP', { locale: id })}</p>
+                  <ul className="space-y-1 max-h-60 overflow-y-auto">
+                    {projectsOnDay.map((p: any) => (
+                      <li key={p.id}>
+                        <Link to={`/projects/${p.id}`} className="block p-2 rounded-md hover:bg-accent">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(p.status) }} />
+                            <span className="text-xs font-medium truncate">{p.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1 pl-4">
+                            {p.assignedTo?.slice(0, 5).map((user: any) => (
+                              <Avatar key={user.id} className="h-5 w-5 border">
                                 <AvatarImage src={user.avatar} alt={user.name} />
                                 <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
                               </Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent><p>{user.name}</p></TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ))}
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+                            ))}
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </PopoverContent>
+              </Popover>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 };
 
