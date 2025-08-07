@@ -2,6 +2,7 @@ import { Project } from '@/data/projects';
 import { useState, useMemo } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   format, 
@@ -20,7 +21,8 @@ import {
   isBefore,
   isAfter,
   startOfDay,
-  endOfDay
+  endOfDay,
+  addDays
 } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
@@ -40,10 +42,12 @@ interface ProjectsMonthViewProps {
   projects: Project[];
 }
 
+const MAX_VISIBLE_LANES = 2;
+
 const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const { weeks, weeklyLayouts } = useMemo(() => {
+  const { weeks, weeklyLayouts, moreByDay } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const calendarStart = startOfWeek(monthStart, { locale: id });
     const calendarEnd = endOfWeek(endOfMonth(currentDate), { locale: id });
@@ -62,9 +66,12 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
             return projectStart <= calendarEnd && projectEnd >= calendarStart;
         })
         .sort((a, b) => {
-            const startDiff = new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime();
-            if (startDiff !== 0) return startDiff;
-            return new Date(b.dueDate!).getTime() - new Date(a.dueDate!).getTime();
+            const startA = startOfDay(parseISO(a.startDate!));
+            const startB = startOfDay(parseISO(b.startDate!));
+            const durationA = differenceInDays(parseISO(a.dueDate!), startA);
+            const durationB = differenceInDays(parseISO(b.dueDate!), startB);
+            if (durationA !== durationB) return durationB - durationA;
+            return startA.getTime() - startB.getTime();
         });
 
     const laneMatrix: (string | null)[][] = Array.from({ length: 10 }, () => Array(days.length).fill(null));
@@ -80,7 +87,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         for (let l = 0; l < laneMatrix.length; l++) {
             let isLaneFree = true;
             for (let d = startIndex; d <= endIndex; d++) {
-                if (laneMatrix[l][d]) {
+                if (d < laneMatrix[l].length && laneMatrix[l][d]) {
                     isLaneFree = false;
                     break;
                 }
@@ -93,52 +100,82 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
 
         if (assignedLane !== -1) {
             for (let d = startIndex; d <= endIndex; d++) {
-                laneMatrix[assignedLane][d] = project.id;
+                if (d < laneMatrix[assignedLane].length) {
+                    laneMatrix[assignedLane][d] = project.id;
+                }
             }
             (project as any).lane = assignedLane;
         }
     }
 
-    const weeklyLayouts = weeks.map((week, weekIndex) => {
-        const layout: { project: Project & { lane: number }; startCol: number; span: number; isStart: boolean; isEnd: boolean }[] = [];
-        const processedProjects = new Set<string>();
+    const weeklyLayouts = weeks.map(() => []);
+    const processedInLayout = new Set<string>();
 
-        for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-            const day = week[dayIndex];
-            const globalDayIndex = weekIndex * 7 + dayIndex;
-
-            for (let laneIndex = 0; laneIndex < laneMatrix.length; laneIndex++) {
-                const projectId = laneMatrix[laneIndex][globalDayIndex];
-                if (projectId && !processedProjects.has(projectId)) {
-                    const project = activeProjects.find(p => p.id === projectId)!;
-                    processedProjects.add(projectId);
-
-                    const projectStart = startOfDay(parseISO(project.startDate!));
-                    const projectEnd = endOfDay(parseISO(project.dueDate!));
-
-                    let span = 1;
-                    for (let i = dayIndex + 1; i < 7; i++) {
-                        if (laneMatrix[laneIndex][globalDayIndex + (i - dayIndex)] === projectId) {
-                            span++;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    layout.push({
-                        project: project as Project & { lane: number },
-                        startCol: dayIndex + 1,
-                        span,
-                        isStart: isSameDay(projectStart, day) || isBefore(projectStart, week[0]),
-                        isEnd: isSameDay(projectEnd, week[dayIndex + span - 1]) || isAfter(projectEnd, week[6])
-                    });
-                }
-            }
+    activeProjects.forEach(project => {
+        const lane = (project as any).lane;
+        if (lane === undefined || lane >= MAX_VISIBLE_LANES || processedInLayout.has(project.id)) {
+            return;
         }
-        return layout;
+        processedInLayout.add(project.id);
+
+        const projectStart = startOfDay(parseISO(project.startDate!));
+        const projectEnd = endOfDay(parseISO(project.dueDate!));
+
+        let currentDay = projectStart;
+        while (isBefore(currentDay, projectEnd) || isSameDay(currentDay, projectEnd)) {
+            if (isAfter(currentDay, calendarEnd)) break;
+            
+            let effectiveDay = isBefore(currentDay, calendarStart) ? calendarStart : currentDay;
+            
+            const weekIndex = Math.floor(differenceInDays(effectiveDay, calendarStart) / 7);
+            if (weekIndex < 0 || weekIndex >= weeks.length) {
+                currentDay = addDays(currentDay, 1);
+                continue;
+            };
+
+            const week = weeks[weekIndex];
+            const weekStart = week[0];
+            const weekEnd = week[6];
+
+            const segmentStart = effectiveDay;
+            const segmentEnd = isBefore(projectEnd, weekEnd) ? projectEnd : weekEnd;
+            
+            const startCol = differenceInDays(segmentStart, weekStart) + 1;
+            const span = differenceInDays(segmentEnd, segmentStart) + 1;
+
+            if (span > 0) {
+                weeklyLayouts[weekIndex].push({
+                    project: project as Project & { lane: number },
+                    startCol,
+                    span,
+                    isStart: isSameDay(projectStart, segmentStart),
+                    isEnd: isSameDay(projectEnd, segmentEnd)
+                });
+            }
+            
+            currentDay = startOfDay(addDays(segmentEnd, 1));
+        }
     });
 
-    return { weeks, weeklyLayouts };
+    const moreByDay = new Map<string, Project[]>();
+    days.forEach(day => {
+        const dayKey = format(day, 'yyyy-MM-dd');
+        const hiddenProjects = new Set<Project>();
+        const globalDayIndex = differenceInDays(day, calendarStart);
+
+        for (let laneIndex = MAX_VISIBLE_LANES; laneIndex < laneMatrix.length; laneIndex++) {
+            const projectId = laneMatrix[laneIndex][globalDayIndex];
+            if (projectId) {
+                const project = activeProjects.find(p => p.id === projectId);
+                if (project) hiddenProjects.add(project);
+            }
+        }
+        if (hiddenProjects.size > 0) {
+            moreByDay.set(dayKey, Array.from(hiddenProjects).sort((a,b) => (a as any).lane - (b as any).lane));
+        }
+    });
+
+    return { weeks, weeklyLayouts, moreByDay };
   }, [projects, currentDate]);
 
   const dayHeaders = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -167,17 +204,46 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
       <div className="flex-grow relative grid grid-cols-1 auto-rows-fr border-t border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
         {weeks.map((week, weekIndex) => (
           <div key={weekIndex} className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700 relative">
-            {week.map((day, dayIndex) => (
-              <div key={day.toString()} className={cn("p-1.5 flex flex-col border-r border-gray-200 dark:border-gray-700", dayIndex === 6 && "border-r-0")}>
-                <span className={cn(
-                  "self-end flex items-center justify-center h-6 w-6 rounded-full text-sm",
-                  !isSameMonth(day, currentDate) && "text-muted-foreground/50",
-                  isToday(day) && "bg-primary text-primary-foreground"
-                )}>
-                  {format(day, 'd')}
-                </span>
-              </div>
-            ))}
+            {week.map((day, dayIndex) => {
+              const dayKey = format(day, 'yyyy-MM-dd');
+              const hiddenProjects = moreByDay.get(dayKey);
+              return (
+                <div key={day.toString()} className={cn("p-1.5 flex flex-col border-r border-gray-200 dark:border-gray-700", dayIndex === 6 && "border-r-0")}>
+                  <span className={cn(
+                    "self-end flex items-center justify-center h-6 w-6 rounded-full text-sm",
+                    !isSameMonth(day, currentDate) && "text-muted-foreground/50",
+                    isToday(day) && "bg-primary text-primary-foreground"
+                  )}>
+                    {format(day, 'd')}
+                  </span>
+                  <div className="flex-grow mt-1 pt-[5.5rem]">
+                    {hiddenProjects && (
+                       <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" className="h-auto w-full justify-start p-1 text-xs text-primary hover:bg-primary/10">
+                            + {hiddenProjects.length} lainnya
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 z-50">
+                          <div className="font-semibold text-sm mb-2 px-1">
+                            Proyek pada {format(day, 'd MMM', { locale: id })}
+                          </div>
+                          <ul className="space-y-1">
+                            {hiddenProjects.map(p => (
+                              <li key={p.id}>
+                                <Link to={`/projects/${p.id}`} className={cn("block hover:bg-accent p-2 rounded-md border-l-4", getProjectColorClasses(p.status))}>
+                                  <span className="text-sm font-medium truncate">{p.name}</span>
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
             <div className="absolute inset-0 pointer-events-none">
               {weeklyLayouts[weekIndex].map(({ project, startCol, span, isStart, isEnd }) => (
                 <Link
@@ -196,21 +262,10 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
                     height: '2.5rem',
                   }}
                 >
-                  {isStart && (
+                  {(isStart || startCol === 1) && (
                     <div className="flex items-center gap-2 truncate">
                       <div className="flex-1 truncate">
                         <p className="font-semibold truncate">{project.name}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Seharian</span>
-                          <div className="flex -space-x-2">
-                            {project.assignedTo.slice(0, 2).map(user => (
-                              <Avatar key={user.id} className="h-4 w-4 border border-background">
-                                <AvatarImage src={user.avatar} />
-                                <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
-                              </Avatar>
-                            ))}
-                          </div>
-                        </div>
                       </div>
                     </div>
                   )}
