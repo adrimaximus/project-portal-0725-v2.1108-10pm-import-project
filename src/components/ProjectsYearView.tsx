@@ -176,6 +176,7 @@ const ProjectsYearView = ({ projects }: ProjectsYearViewProps) => {
       const gcalConnected = localStorage.getItem('gcal_connected') === 'true';
       const accessToken = localStorage.getItem('gcal_access_token');
       const clientId = localStorage.getItem('gcal_clientId');
+      const calendarId = localStorage.getItem('gcal_calendar_id') || 'primary';
 
       if (gcalConnected && accessToken && clientId) {
         try {
@@ -189,7 +190,7 @@ const ProjectsYearView = ({ projects }: ProjectsYearViewProps) => {
           gapi.client.setToken({ access_token: accessToken });
 
           const response = await gapi.client.calendar.events.list({
-            'calendarId': '7inked.com_vus3ghi6tmojf0ivk5vfeir780@group.calendar.google.com',
+            'calendarId': calendarId,
             'timeMin': new Date(year, 0, 1).toISOString(),
             'timeMax': new Date(year, 11, 31, 23, 59, 59).toISOString(),
             'showDeleted': false,

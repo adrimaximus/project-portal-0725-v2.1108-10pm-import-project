@@ -67,6 +67,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
       const gcalConnected = localStorage.getItem('gcal_connected') === 'true';
       const accessToken = localStorage.getItem('gcal_access_token');
       const clientId = localStorage.getItem('gcal_clientId');
+      const calendarId = localStorage.getItem('gcal_calendar_id') || 'primary';
 
       if (gcalConnected && accessToken && clientId) {
         setIsGcalConnected(true);
@@ -82,7 +83,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
           gapi.client.setToken({ access_token: accessToken });
 
           const response = await gapi.client.calendar.events.list({
-            'calendarId': '7inked.com_vus3ghi6tmojf0ivk5vfeir780@group.calendar.google.com',
+            'calendarId': calendarId,
             'timeMin': startOfMonth(currentDate).toISOString(),
             'timeMax': endOfMonth(currentDate).toISOString(),
             'showDeleted': false,

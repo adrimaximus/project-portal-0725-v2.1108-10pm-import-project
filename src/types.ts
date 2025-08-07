@@ -20,4 +20,11 @@ export interface GoogleCalendarEvent {
     date?: string;
   };
   htmlLink: string;
+  isGoogleEvent?: true;
+}
+
+export interface GoogleCalendarListEntry {
+    id: string;
+    summary: string;
+    primary?: boolean;
 }
