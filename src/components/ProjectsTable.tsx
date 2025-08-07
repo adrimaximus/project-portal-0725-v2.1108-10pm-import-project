@@ -10,12 +10,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { Project } from "@/data/projects";
+import { Project, dummyProjects } from "@/data/projects";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Calendar as CalendarIcon, Table as TableIcon, CalendarCheck, PlusCircle, RefreshCw } from "lucide-react";
+import { List, CalendarDays, Calendar as CalendarIcon, Table as TableIcon, CalendarCheck, PlusCircle, RefreshCw, MoreHorizontal, Trash2 } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
 import ProjectsYearView from "./ProjectsYearView";
@@ -29,6 +29,22 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -73,6 +89,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [isImporting, setIsImporting] = useState(false);
   const [localProjects, setLocalProjects] = useState<Project[]>(projects);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
   useEffect(() => {
     setLocalProjects(projects);
@@ -92,12 +109,38 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   }, []);
 
   const handleImport = (newProjects: Project[]) => {
-    setLocalProjects(prevProjects => [...newProjects, ...prevProjects].sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()));
+    const updatedProjects = [...localProjects, ...newProjects];
+    setLocalProjects(updatedProjects);
+    // Also update the source dummyProjects array for global consistency in this demo app
+    newProjects.forEach(p => dummyProjects.push(p));
   };
 
   const handleSync = () => {
     toast.info("Refreshing calendar events...");
     setRefreshKey(prev => prev + 1);
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    const project = localProjects.find(p => p.id === projectId);
+    if (project) {
+      setProjectToDelete(project);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (projectToDelete) {
+      // Remove from local state to update UI
+      setLocalProjects(prev => prev.filter(p => p.id !== projectToDelete.id));
+      
+      // Remove from global dummy data source
+      const index = dummyProjects.findIndex(p => p.id === projectToDelete.id);
+      if (index > -1) {
+        dummyProjects.splice(index, 1);
+      }
+
+      toast.success(`Project "${projectToDelete.name}" has been deleted.`);
+      setProjectToDelete(null);
+    }
   };
 
   const renderContent = () => {
@@ -112,6 +155,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
                 <TableHead>Progress</TableHead>
                 <TableHead>Assigned</TableHead>
                 <TableHead className="text-right">Budget</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -147,13 +191,29 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
                   <TableCell className="text-right font-medium">
                     ${project.budget.toLocaleString()}
                   </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => handleDeleteProject(project.id)} className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          <span>Hapus Proyek</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         );
       case 'list':
-        return <ProjectsList projects={localProjects} />;
+        return <ProjectsList projects={localProjects} onDeleteProject={handleDeleteProject} />;
       case 'month':
         return <ProjectsMonthView projects={localProjects} refreshKey={refreshKey} />;
       case 'year':
@@ -172,6 +232,20 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
         onOpenChange={setIsImporting}
         onImport={handleImport}
       />
+      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4">
           <div className="flex items-center gap-2">

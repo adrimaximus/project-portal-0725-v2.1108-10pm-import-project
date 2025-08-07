@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil } from 'lucide-react';
+import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 // Helper to get status color
@@ -39,9 +39,10 @@ const formatEndDate = (date: Date) => {
 
 interface ProjectsListProps {
   projects: Project[];
+  onDeleteProject: (projectId: string) => void;
 }
 
-const ProjectsList = ({ projects }: ProjectsListProps) => {
+const ProjectsList = ({ projects, onDeleteProject }: ProjectsListProps) => {
   const navigate = useNavigate();
 
   const sortedProjects = projects
@@ -147,6 +148,10 @@ const ProjectsList = ({ projects }: ProjectsListProps) => {
                             <DropdownMenuItem>
                               <UserPlus className="mr-2 h-4 w-4" />
                               <span>Undang orang</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Hapus proyek</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem className="text-destructive">
                               <CalendarOff className="mr-2 h-4 w-4" />
