@@ -59,7 +59,6 @@ const MAX_VISIBLE_LANES = 2;
 
 const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [isGcalConnected, setIsGcalConnected] = useState(false);
   const [gcalEvents, setGcalEvents] = useState<GoogleCalendarEvent[]>([]);
 
   useEffect(() => {
@@ -67,43 +66,49 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
       const gcalConnected = localStorage.getItem('gcal_connected') === 'true';
       const accessToken = localStorage.getItem('gcal_access_token');
       const clientId = localStorage.getItem('gcal_clientId');
-      const calendarId = localStorage.getItem('gcal_calendar_id') || 'primary';
+      const storedIds = localStorage.getItem('gcal_calendar_ids');
+      
+      let calendarIds: string[] = ['primary'];
+      if (storedIds) {
+        try {
+          const parsedIds = JSON.parse(storedIds);
+          if (Array.isArray(parsedIds) && parsedIds.length > 0) {
+            calendarIds = parsedIds;
+          }
+        } catch (e) { console.error("Failed to parse calendar IDs", e); }
+      }
 
       if (gcalConnected && accessToken && clientId) {
-        setIsGcalConnected(true);
-        
         try {
           await new Promise<void>((resolve) => gapi.load('client', resolve));
           await gapi.client.init({
-            apiKey: undefined, // We use OAuth token, not API key
+            apiKey: undefined,
             clientId: clientId,
             discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
           });
-          
           gapi.client.setToken({ access_token: accessToken });
 
-          const response = await gapi.client.calendar.events.list({
-            'calendarId': calendarId,
-            'timeMin': startOfMonth(currentDate).toISOString(),
-            'timeMax': endOfMonth(currentDate).toISOString(),
-            'showDeleted': false,
-            'singleEvents': true,
-            'maxResults': 50,
-            'orderBy': 'startTime'
-          });
+          const requests = calendarIds.map(calendarId => 
+            gapi.client.calendar.events.list({
+              'calendarId': calendarId,
+              'timeMin': startOfMonth(currentDate).toISOString(),
+              'timeMax': endOfMonth(currentDate).toISOString(),
+              'showDeleted': false,
+              'singleEvents': true,
+              'maxResults': 50,
+              'orderBy': 'startTime'
+            })
+          );
 
-          const events: GoogleCalendarEvent[] = response.result.items.map((item: any) => ({
+          const responses = await Promise.all(requests);
+          const allEvents = responses.flatMap(response => response.result.items);
+
+          const events: GoogleCalendarEvent[] = allEvents.map((item: any) => ({
             id: item.id,
             summary: item.summary,
             description: item.description,
-            start: {
-              dateTime: item.start.dateTime || item.start.date,
-              timeZone: item.start.timeZone || 'UTC',
-            },
-            end: {
-              dateTime: item.end.dateTime || item.end.date,
-              timeZone: item.end.timeZone || 'UTC',
-            },
+            start: { dateTime: item.start.dateTime || item.start.date, timeZone: item.start.timeZone || 'UTC' },
+            end: { dateTime: item.end.dateTime || item.end.date, timeZone: item.end.timeZone || 'UTC' },
             creator: { email: item.creator?.email || 'Unknown' },
             attendees: item.attendees,
             isGoogleEvent: true,
@@ -115,13 +120,11 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
           if (error.result?.error?.code === 401 || error.result?.error?.code === 403) {
             localStorage.removeItem('gcal_connected');
             localStorage.removeItem('gcal_access_token');
-            setIsGcalConnected(false);
             setGcalEvents([]);
             toast.error("Google session expired. Please reconnect in settings.");
           }
         }
       } else {
-        setIsGcalConnected(false);
         setGcalEvents([]);
       }
     };
