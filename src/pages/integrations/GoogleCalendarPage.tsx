@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { toast } from "sonner";
 import { Loader2, XCircle, RefreshCw, Link2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,8 @@ import {
   getSyncedCalendars,
 } from "@/lib/google-calendar";
 import PortalLayout from "@/components/PortalLayout";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+
 
 interface Calendar {
   id: string;
@@ -198,16 +201,38 @@ export function GoogleCalendarPage() {
 
   return (
     <PortalLayout>
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl">Google Calendar Sync</CardTitle>
-          <CardDescription>
-            Connect your Google Calendar to sync events and keep your schedules
-            aligned.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>{renderContent()}</CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/settings">Settings</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/settings/integrations">Integrations</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Google Calendar</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Google Calendar Sync</CardTitle>
+            <CardDescription>
+              Connect your Google Calendar to sync events and keep your schedules
+              aligned.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>{renderContent()}</CardContent>
+        </Card>
+      </div>
     </PortalLayout>
   );
 }

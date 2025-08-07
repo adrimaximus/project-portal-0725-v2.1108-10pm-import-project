@@ -46,12 +46,14 @@ function App() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/search" element={<SearchPage />} />
+          
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/team" element={<TeamSettingsPage />} />
           <Route path="/settings/navigation" element={<NavigationSettingsPage />} />
           <Route path="/settings/integrations" element={<IntegrationsPage />} />
           <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
           <Route path="/settings/integrations/google-calendar" element={<GoogleCalendarPage />} />
+
           <Route path="/users" element={<UserManagementPage />} />
           <Route path="/custom" element={<EmbedPage />} />
         </Route>
