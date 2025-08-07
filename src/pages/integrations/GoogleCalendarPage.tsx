@@ -73,10 +73,14 @@ export function GoogleCalendarPage() {
           throw new Error("Failed to fetch calendar list.");
         }
 
-        if (syncedList) {
-          setSelectedCalendarIds(
-            syncedList.map((c: any) => c.google_calendar_id)
-          );
+        if (syncedList && calendarList) {
+          // Ensure we only select calendars that still exist in the user's Google account.
+          const availableCalendarIds = new Set(calendarList.map(c => c.id));
+          const validSyncedIds = syncedList
+            .map((c: any) => c.google_calendar_id)
+            .filter((id: string) => availableCalendarIds.has(id));
+
+          setSelectedCalendarIds(validSyncedIds);
         }
       } catch (e: any) {
         if (e.message.includes("401")) {
