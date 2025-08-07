@@ -21,7 +21,6 @@ import ProjectsMonthView from "./ProjectsMonthView";
 import ProjectsYearView from "./ProjectsYearView";
 import GoogleCalendarEventsView from "./GoogleCalendarEventsView";
 import { Button } from "./ui/button";
-import ImportFromCalendarDialog from "./ImportFromCalendarDialog";
 import { toast } from "sonner";
 import {
   Tooltip,
@@ -86,7 +85,6 @@ const getStatusColor = (status: Project['status']): string => {
 const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [view, setView] = useState<ViewMode>('table');
   const [isGcalConnected, setIsGcalConnected] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
   const [localProjects, setLocalProjects] = useState<Project[]>(projects);
   const [refreshKey, setRefreshKey] = useState(0);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -219,7 +217,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       case 'year':
         return <ProjectsYearView projects={localProjects} refreshKey={refreshKey} />;
       case 'gcal':
-        return <GoogleCalendarEventsView refreshKey={refreshKey} />;
+        return <GoogleCalendarEventsView refreshKey={refreshKey} onImport={handleImport} />;
       default:
         return null;
     }
@@ -227,11 +225,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
 
   return (
     <>
-      <ImportFromCalendarDialog 
-        open={isImporting}
-        onOpenChange={setIsImporting}
-        onImport={handleImport}
-      />
       <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -252,10 +245,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
             <CardTitle>Projects</CardTitle>
             {isGcalConnected && (
               <>
-                <Button variant="outline" size="sm" onClick={() => setIsImporting(true)}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Import
-                </Button>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
