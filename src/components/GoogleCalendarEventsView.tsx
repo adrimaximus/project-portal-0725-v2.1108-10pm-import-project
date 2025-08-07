@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { gapi } from 'gapi-script';
 import { toast } from 'sonner';
 import { GoogleCalendarEvent } from '@/types';
@@ -65,9 +65,17 @@ const GoogleCalendarEventsView = ({ refreshKey, onImport }: GoogleCalendarEvents
   const [error, setError] = useState<string | null>(null);
   const [eventToDelete, setEventToDelete] = useState<GoogleCalendarEvent | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<Record<string, boolean>>({});
+  const isInitialRender = useRef(true);
 
   useEffect(() => {
     const fetchEvents = async () => {
+      const isRefresh = !isInitialRender.current;
+      let toastId: string | number | undefined;
+
+      if (isRefresh) {
+        toastId = toast.loading("Refreshing calendar events...");
+      }
+
       setIsLoading(true);
       setError(null);
 
@@ -89,22 +97,20 @@ const GoogleCalendarEventsView = ({ refreshKey, onImport }: GoogleCalendarEvents
       if (!clientId) {
         setError("Error: Google Client ID is not configured in the application environment.");
         setIsLoading(false);
+        if (isRefresh) toast.error("Google Client ID is not configured.", { id: toastId });
         return;
       }
-      if (!gcalConnected) {
-        setError("Error: Connection flag not found. Please try reconnecting in settings.");
+      if (!gcalConnected || !accessToken) {
+        setError("Google Calendar is not connected. Please connect it in the settings.");
         setIsLoading(false);
-        return;
-      }
-      if (!accessToken) {
-        setError("Error: Access token not found. Please try reconnecting in settings.");
-        setIsLoading(false);
+        if (isRefresh) toast.error("Google Calendar not connected.", { id: toastId });
         return;
       }
       
       if (calendarIds.length === 0) {
         setError("No calendars selected to sync. Please select calendars in the settings.");
         setIsLoading(false);
+        if (isRefresh) toast.warning("No calendars selected in settings.", { id: toastId });
         return;
       }
 
@@ -155,19 +161,30 @@ const GoogleCalendarEventsView = ({ refreshKey, onImport }: GoogleCalendarEvents
           .sort((a, b) => new Date(a.start.dateTime).getTime() - new Date(b.start.dateTime).getTime());
         
         setEvents(formattedEvents);
+        if (isRefresh) {
+          toast.success(`Sync complete. Found ${formattedEvents.length} events.`, { id: toastId });
+        }
       } catch (err: any) {
         console.error("Error fetching Google Calendar events:", err);
+        let message: string;
         if (err.result?.error?.code === 401 || err.result?.error?.code === 403) {
-          setError("Google session expired. Please reconnect in settings.");
-          toast.error("Google session expired. Please reconnect in settings.");
+          message = "Google session expired. Please reconnect in settings.";
           localStorage.removeItem('gcal_connected');
           localStorage.removeItem('gcal_access_token');
         } else {
-          setError("Failed to fetch calendar events.");
-          toast.error("Failed to fetch calendar events.");
+          message = "Failed to fetch calendar events.";
+        }
+        setError(message);
+        if (isRefresh) {
+          toast.error(message, { id: toastId });
+        } else {
+          toast.error(message);
         }
       } finally {
         setIsLoading(false);
+        if (isInitialRender.current) {
+          isInitialRender.current = false;
+        }
       }
     };
 
