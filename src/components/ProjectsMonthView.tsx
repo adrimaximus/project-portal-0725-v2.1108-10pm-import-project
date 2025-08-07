@@ -125,8 +125,8 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
 
   const { weeks, weeklyLayouts, moreByDay } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
-    const calendarStart = startOfWeek(monthStart, { locale: id });
-    const calendarEnd = endOfWeek(endOfMonth(currentDate), { locale: id });
+    const calendarStart = startOfWeek(monthStart);
+    const calendarEnd = endOfWeek(endOfMonth(currentDate));
     const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
     const weeks = [];
