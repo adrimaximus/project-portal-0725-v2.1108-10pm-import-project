@@ -20,6 +20,7 @@ import {
   syncGoogleCalendars,
   getSyncedCalendars,
 } from "@/lib/google-calendar";
+import PortalLayout from "@/components/PortalLayout";
 
 interface Calendar {
   id: string;
@@ -196,15 +197,17 @@ export function GoogleCalendarPage() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl">Google Calendar Sync</CardTitle>
-        <CardDescription>
-          Connect your Google Calendar to sync events and keep your schedules
-          aligned.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>{renderContent()}</CardContent>
-    </Card>
+    <PortalLayout>
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="text-2xl">Google Calendar Sync</CardTitle>
+          <CardDescription>
+            Connect your Google Calendar to sync events and keep your schedules
+            aligned.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>{renderContent()}</CardContent>
+      </Card>
+    </PortalLayout>
   );
 }
