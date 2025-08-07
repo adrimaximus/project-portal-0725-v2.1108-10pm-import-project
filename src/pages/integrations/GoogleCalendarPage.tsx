@@ -86,14 +86,17 @@ const GoogleCalendarPage = () => {
             {isConnected ? (
               <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
             ) : (
-              <GoogleOAuthProvider clientId={clientId}>
-                <GoogleLogin
-                  onSuccess={handleConnectSuccess}
-                  onError={handleConnectError}
-                  useOneTap
-                  disabled={!clientId}
-                />
-              </GoogleOAuthProvider>
+              clientId ? (
+                <GoogleOAuthProvider clientId={clientId}>
+                  <GoogleLogin
+                    onSuccess={handleConnectSuccess}
+                    onError={handleConnectError}
+                    useOneTap
+                  />
+                </GoogleOAuthProvider>
+              ) : (
+                <Button disabled>Connect</Button>
+              )
             )}
           </CardFooter>
         </Card>

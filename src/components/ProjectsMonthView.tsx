@@ -82,18 +82,18 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
 
     const activeItems = combinedItems
         .filter(p => {
-            const startDate = 'startDate' in p ? p.startDate : p.start.dateTime;
-            const dueDate = 'dueDate' in p ? p.dueDate : p.end.dateTime;
+            const startDate = 'isGoogleEvent' in p ? p.start.dateTime : p.startDate;
+            const dueDate = 'isGoogleEvent' in p ? p.end.dateTime : p.dueDate;
             if (!startDate || !dueDate) return false;
             const projectStart = startOfDay(parseISO(startDate));
             const projectEnd = endOfDay(parseISO(dueDate));
             return projectStart <= calendarEnd && projectEnd >= calendarStart;
         })
         .sort((a, b) => {
-            const startA = startOfDay(parseISO('startDate' in a ? a.startDate! : a.start.dateTime));
-            const startB = startOfDay(parseISO('startDate' in b ? b.startDate! : b.start.dateTime));
-            const durationA = differenceInDays(parseISO('dueDate' in a ? a.dueDate! : a.end.dateTime), startA);
-            const durationB = differenceInDays(parseISO('dueDate' in b ? b.dueDate! : b.end.dateTime), startB);
+            const startA = startOfDay(parseISO('isGoogleEvent' in a ? a.start.dateTime : a.startDate!));
+            const startB = startOfDay(parseISO('isGoogleEvent' in b ? b.start.dateTime : b.startDate!));
+            const durationA = differenceInDays(parseISO('isGoogleEvent' in a ? a.end.dateTime : a.dueDate!), startA);
+            const durationB = differenceInDays(parseISO('isGoogleEvent' in b ? b.end.dateTime : b.dueDate!), startB);
             if (durationA !== durationB) return durationB - durationA;
             return startA.getTime() - startB.getTime();
         });
@@ -101,8 +101,8 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
     const laneMatrix: (string | null)[][] = Array.from({ length: 10 }, () => Array(days.length).fill(null));
 
     for (const item of activeItems) {
-        const startDate = 'startDate' in item ? item.startDate! : item.start.dateTime;
-        const dueDate = 'dueDate' in item ? item.dueDate! : item.end.dateTime;
+        const startDate = 'isGoogleEvent' in item ? item.start.dateTime : item.startDate!;
+        const dueDate = 'isGoogleEvent' in item ? item.end.dateTime : item.dueDate!;
         const projectStart = startOfDay(parseISO(startDate));
         const projectEnd = endOfDay(parseISO(dueDate));
 
@@ -143,8 +143,8 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         }
         processedInLayout.add(item.id);
 
-        const startDate = 'startDate' in item ? item.startDate! : item.start.dateTime;
-        const dueDate = 'dueDate' in item ? item.dueDate! : item.end.dateTime;
+        const startDate = 'isGoogleEvent' in item ? item.start.dateTime : item.startDate!;
+        const dueDate = 'isGoogleEvent' in item ? item.end.dateTime : item.dueDate!;
         const projectStart = startOfDay(parseISO(startDate));
         const projectEnd = endOfDay(parseISO(dueDate));
 
