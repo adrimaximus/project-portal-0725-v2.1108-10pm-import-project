@@ -1,5 +1,5 @@
 import { Project } from '@/data/projects';
-import { GoogleCalendarEvent, dummyGcalEvents } from '@/data/google-calendar';
+import { GoogleCalendarEvent } from '@/data/google-calendar';
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
@@ -28,6 +28,8 @@ import {
 import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { gapi } from 'gapi-script';
+import { toast } from 'sonner';
 
 type CalendarItem = (Project | GoogleCalendarEvent) & { lane?: number };
 
@@ -54,15 +56,72 @@ const MAX_VISIBLE_LANES = 2;
 const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isGcalConnected, setIsGcalConnected] = useState(false);
+  const [gcalEvents, setGcalEvents] = useState<GoogleCalendarEvent[]>([]);
 
   useEffect(() => {
-    const checkConnection = () => {
-      setIsGcalConnected(localStorage.getItem('gcal_connected') === 'true');
+    const initGapiAndFetchEvents = async () => {
+      const gcalConnected = localStorage.getItem('gcal_connected') === 'true';
+      const accessToken = localStorage.getItem('gcal_access_token');
+      const clientId = localStorage.getItem('gcal_clientId');
+
+      if (gcalConnected && accessToken && clientId) {
+        setIsGcalConnected(true);
+        
+        try {
+          await new Promise<void>((resolve) => gapi.load('client', resolve));
+          await gapi.client.init({
+            apiKey: undefined, // We use OAuth token, not API key
+            clientId: clientId,
+            discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
+          });
+          
+          gapi.client.setToken({ access_token: accessToken });
+
+          const response = await gapi.client.calendar.events.list({
+            'calendarId': 'primary',
+            'timeMin': startOfMonth(currentDate).toISOString(),
+            'timeMax': endOfMonth(currentDate).toISOString(),
+            'showDeleted': false,
+            'singleEvents': true,
+            'maxResults': 50,
+            'orderBy': 'startTime'
+          });
+
+          const events: GoogleCalendarEvent[] = response.result.items.map((item: any) => ({
+            id: item.id,
+            summary: item.summary,
+            description: item.description,
+            start: {
+              dateTime: item.start.dateTime || item.start.date,
+              timeZone: item.start.timeZone || 'UTC',
+            },
+            end: {
+              dateTime: item.end.dateTime || item.end.date,
+              timeZone: item.end.timeZone || 'UTC',
+            },
+            creator: { email: item.creator?.email || 'Unknown' },
+            attendees: item.attendees,
+            isGoogleEvent: true,
+          }));
+          setGcalEvents(events);
+        } catch (error: any) {
+          console.error("Error fetching Google Calendar events:", error);
+          if (error.result?.error?.code === 401 || error.result?.error?.code === 403) {
+            localStorage.removeItem('gcal_connected');
+            localStorage.removeItem('gcal_access_token');
+            setIsGcalConnected(false);
+            setGcalEvents([]);
+            toast.error("Google session expired. Please reconnect in settings.");
+          }
+        }
+      } else {
+        setIsGcalConnected(false);
+        setGcalEvents([]);
+      }
     };
-    checkConnection();
-    window.addEventListener('storage', checkConnection);
-    return () => window.removeEventListener('storage', checkConnection);
-  }, []);
+
+    initGapiAndFetchEvents();
+  }, [currentDate]);
 
   const { weeks, weeklyLayouts, moreByDay } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -75,10 +134,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         weeks.push(days.slice(i, i + 7));
     }
 
-    const combinedItems: CalendarItem[] = [...projects];
-    if (isGcalConnected) {
-        combinedItems.push(...dummyGcalEvents);
-    }
+    const combinedItems: CalendarItem[] = [...projects, ...gcalEvents];
 
     const activeItems = combinedItems
         .filter(p => {
@@ -171,7 +227,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
             const span = differenceInDays(segmentEnd, segmentStart) + 1;
 
             if (span > 0) {
-                weeklyLayouts[weekIndex].push({
+                (weeklyLayouts[weekIndex] as any[]).push({
                     item: item,
                     startCol,
                     span,
@@ -203,7 +259,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
     });
 
     return { weeks, weeklyLayouts, moreByDay };
-  }, [projects, currentDate, isGcalConnected]);
+  }, [projects, currentDate, gcalEvents]);
 
   const dayHeaders = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
@@ -300,7 +356,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
               )
             })}
             <div className="absolute inset-0 pointer-events-none">
-              {weeklyLayouts[weekIndex].map(({ item, startCol, span, isStart, isEnd }) => (
+              {(weeklyLayouts[weekIndex] as any[]).map(({ item, startCol, span, isStart, isEnd }) => (
                 <div
                   key={item.id}
                   className={cn(
