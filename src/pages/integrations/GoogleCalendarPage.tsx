@@ -18,7 +18,7 @@ const GoogleLoginButton = ({ onConnectSuccess, onConnectError }: { onConnectSucc
   const login = useGoogleLogin({
     onSuccess: onConnectSuccess,
     onError: onConnectError,
-    scope: 'https://www.googleapis.com/auth/calendar',
+    scope: 'https://www.googleapis.com/auth/calendar.events',
   });
 
   return <Button onClick={() => login()}>Connect with Google</Button>;
@@ -149,7 +149,7 @@ const GoogleCalendarPage = () => {
           <CardHeader>
             <CardTitle>Connect to Google Calendar</CardTitle>
             <CardDescription>
-              Enter your Google Cloud Client ID to activate the integration. This will allow the application to read your calendar events.
+              Enter your Google Cloud Client ID to activate the integration. This will allow the application to read and manage your calendar events.
               Your credentials are stored locally in your browser and never sent to our servers.
             </CardDescription>
           </CardHeader>

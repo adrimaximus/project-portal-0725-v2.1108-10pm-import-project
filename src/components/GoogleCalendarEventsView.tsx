@@ -154,9 +154,10 @@ const GoogleCalendarEventsView = ({ refreshKey }: GoogleCalendarEventsViewProps)
 
         setEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
         toast.success(`Event "${eventToDelete.summary}" deleted.`);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting event:", error);
-        toast.error("Failed to delete event.");
+        const errorMessage = error.result?.error?.message || "Failed to delete event.";
+        toast.error(errorMessage);
     } finally {
         setEventToDelete(null);
     }
