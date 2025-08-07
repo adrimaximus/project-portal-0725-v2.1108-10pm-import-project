@@ -1,10 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown, X } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -40,7 +39,6 @@ export function MultiSelect({
   defaultValue = [],
   onValueChange,
   placeholder = "Select options...",
-  maxCount = 3,
   className,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
@@ -58,16 +56,6 @@ export function MultiSelect({
     onValueChange(newSelectedValues);
   };
 
-  const handleRemove = (
-    e: React.MouseEvent<HTMLButtonElement>,
-    value: string
-  ) => {
-    e.stopPropagation();
-    const newSelectedValues = selectedValues.filter((v) => v !== value);
-    setSelectedValues(newSelectedValues);
-    onValueChange(newSelectedValues);
-  };
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -78,33 +66,11 @@ export function MultiSelect({
           className={cn("w-full justify-between", className)}
           onClick={() => setOpen(!open)}
         >
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="flex items-center gap-1">
             {selectedValues.length > 0 ? (
-              <>
-                {selectedValues.slice(0, maxCount).map((value) => {
-                  const option = options.find((o) => o.value === value);
-                  return (
-                    <Badge
-                      key={value}
-                      variant="secondary"
-                      className="flex items-center gap-1"
-                    >
-                      {option?.label}
-                      <button
-                        onClick={(e) => handleRemove(e, value)}
-                        className="rounded-full p-0.5 hover:bg-background/50"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  );
-                })}
-                {selectedValues.length > maxCount && (
-                  <Badge variant="secondary">
-                    +{selectedValues.length - maxCount} more
-                  </Badge>
-                )}
-              </>
+              <span className="text-foreground">
+                {selectedValues.length} selected
+              </span>
             ) : (
               <span className="text-muted-foreground">{placeholder}</span>
             )}
