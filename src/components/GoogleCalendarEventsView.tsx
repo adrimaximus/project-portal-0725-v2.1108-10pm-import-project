@@ -73,7 +73,7 @@ const GoogleCalendarEventsView = ({ refreshKey, onImport }: GoogleCalendarEvents
 
       const gcalConnected = localStorage.getItem('gcal_connected') === 'true';
       const accessToken = localStorage.getItem('gcal_access_token');
-      const clientId = localStorage.getItem('gcal_clientId');
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       const storedIds = localStorage.getItem('gcal_calendar_ids');
       
       let calendarIds: string[] = [];
