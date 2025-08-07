@@ -1,6 +1,7 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { useFeatures } from "./contexts/FeaturesContext";
+import { useUser } from "./contexts/UserContext";
 import React from "react";
 
 import IndexPage from "./pages/Index";
@@ -24,38 +25,56 @@ import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 import NavigationSettingsPage from "./pages/NavigationSettingsPage";
 import EmbedPage from "./pages/EmbedPage";
 import NotFound from "./pages/NotFound";
+import LoginPage from "./pages/LoginPage";
 
-const ProtectedRoute = ({ featureId, element }: { featureId: string, element: React.ReactNode }) => {
+const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, featureId?: string }) => {
+  const { user, isLoading } = useUser();
   const { isFeatureEnabled } = useFeatures();
-  return isFeatureEnabled(featureId) ? <>{element}</> : <Navigate to="/" replace />;
+  const location = useLocation();
+
+  if (isLoading) {
+    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (featureId && !isFeatureEnabled(featureId)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
 };
 
 function App() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<IndexPage />} />
-        <Route path="/projects" element={<ProtectedRoute featureId="projects" element={<Projects />} />} />
-        <Route path="/projects/:projectId" element={<ProtectedRoute featureId="projects" element={<ProjectDetail />} />} />
-        <Route path="/request" element={<ProtectedRoute featureId="request" element={<RequestPage />} />} />
-        <Route path="/chat" element={<ProtectedRoute featureId="chat" element={<ChatPage />} />} />
-        <Route path="/mood-tracker" element={<ProtectedRoute featureId="mood-tracker" element={<MoodTracker />} />} />
-        <Route path="/goals" element={<ProtectedRoute featureId="goals" element={<GoalsPage />} />} />
-        <Route path="/goals/:goalId" element={<ProtectedRoute featureId="goals" element={<GoalDetailPage />} />} />
-        <Route path="/billing" element={<ProtectedRoute featureId="billing" element={<Billing />} />} />
-        <Route path="/notifications" element={<ProtectedRoute featureId="notifications" element={<NotificationsPage />} />} />
-        <Route path="/profile" element={<ProtectedRoute featureId="profile" element={<Profile />} />} />
-        <Route path="/search" element={<ProtectedRoute featureId="search" element={<SearchPage />} />} />
-        <Route path="/users" element={<ProtectedRoute featureId="user-management" element={<UserManagementPage />} />} />
+        <Route path="/login" element={<LoginPage />} />
         
-        <Route path="/settings" element={<ProtectedRoute featureId="settings" element={<SettingsPage />} />} />
-        <Route path="/settings/team" element={<ProtectedRoute featureId="settings" element={<TeamSettingsPage />} />} />
-        <Route path="/settings/integrations" element={<ProtectedRoute featureId="settings" element={<IntegrationsPage />} />} />
-        <Route path="/settings/integrations/openai" element={<ProtectedRoute featureId="settings" element={<OpenAiIntegrationPage />} />} />
-        <Route path="/settings/integrations/google-calendar" element={<ProtectedRoute featureId="settings" element={<GoogleCalendarPage />} />} />
-        <Route path="/settings/navigation" element={<ProtectedRoute featureId="settings" element={<NavigationSettingsPage />} />} />
+        <Route path="/" element={<ProtectedRoute><IndexPage /></ProtectedRoute>} />
+        <Route path="/projects" element={<ProtectedRoute featureId="projects"><Projects /></ProtectedRoute>} />
+        <Route path="/projects/:projectId" element={<ProtectedRoute featureId="projects"><ProjectDetail /></ProtectedRoute>} />
+        <Route path="/request" element={<ProtectedRoute featureId="request"><RequestPage /></ProtectedRoute>} />
+        <Route path="/chat" element={<ProtectedRoute featureId="chat"><ChatPage /></ProtectedRoute>} />
+        <Route path="/mood-tracker" element={<ProtectedRoute featureId="mood-tracker"><MoodTracker /></ProtectedRoute>} />
+        <Route path="/goals" element={<ProtectedRoute featureId="goals"><GoalsPage /></ProtectedRoute>} />
+        <Route path="/goals/:goalId" element={<ProtectedRoute featureId="goals"><GoalDetailPage /></ProtectedRoute>} />
+        <Route path="/billing" element={<ProtectedRoute featureId="billing"><Billing /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute featureId="notifications"><NotificationsPage /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute featureId="profile"><Profile /></ProtectedRoute>} />
+        <Route path="/search" element={<ProtectedRoute featureId="search"><SearchPage /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute featureId="user-management"><UserManagementPage /></ProtectedRoute>} />
+        
+        <Route path="/settings" element={<ProtectedRoute featureId="settings"><SettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/team" element={<ProtectedRoute featureId="settings"><TeamSettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations" element={<ProtectedRoute featureId="settings"><IntegrationsPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/openai" element={<ProtectedRoute featureId="settings"><OpenAiIntegrationPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/google-calendar" element={<ProtectedRoute featureId="settings"><GoogleCalendarPage /></ProtectedRoute>} />
+        <Route path="/settings/navigation" element={<ProtectedRoute featureId="settings"><NavigationSettingsPage /></ProtectedRoute>} />
 
-        <Route path="/custom" element={<EmbedPage />} />
+        <Route path="/custom" element={<ProtectedRoute><EmbedPage /></ProtectedRoute>} />
         
         <Route path="*" element={<NotFound />} />
       </Routes>

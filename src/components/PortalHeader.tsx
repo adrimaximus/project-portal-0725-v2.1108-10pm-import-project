@@ -25,9 +25,10 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { googleLogout } from "@react-oauth/google";
 
 const PortalHeader = () => {
-  const { user } = useUser();
+  const { user, logout } = useUser();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -50,6 +51,12 @@ const PortalHeader = () => {
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, []);
+
+  const handleLogout = () => {
+    googleLogout();
+    logout();
+    navigate('/login');
+  };
 
   const displayedContent = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
@@ -131,6 +138,10 @@ const PortalHeader = () => {
       )}
     </CommandList>
   );
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
@@ -224,7 +235,7 @@ const PortalHeader = () => {
           <DropdownMenuItem onSelect={() => navigate('/profile')}>Settings</DropdownMenuItem>
           <DropdownMenuItem>Support</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Logout</DropdownMenuItem>
+          <DropdownMenuItem onSelect={handleLogout}>Logout</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/contexts/UserContext";
 import { dummyNotifications } from "@/data/notifications";
 import { useFeatures } from "@/contexts/FeaturesContext";
+import { googleLogout } from "@react-oauth/google";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -40,11 +41,21 @@ type NavItem = {
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
-  const { user } = useUser();
+  const { user, logout } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const { isFeatureEnabled } = useFeatures();
+
+  const handleLogout = () => {
+    googleLogout();
+    logout();
+    navigate('/login');
+  };
+
+  if (!user) {
+    return null;
+  }
 
   const totalUnreadChatCount = dummyConversations.reduce(
     (sum, convo) => sum + convo.unreadCount,
@@ -235,7 +246,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                       <span>Support</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onSelect={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Logout</span>
                     </DropdownMenuItem>
@@ -280,6 +291,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                       </Link>
                       <Link
                         to="#"
+                        onClick={handleLogout}
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                       >
                         <LogOut className="h-4 w-4" />
