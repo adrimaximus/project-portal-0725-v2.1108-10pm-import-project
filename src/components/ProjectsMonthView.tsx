@@ -42,14 +42,13 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const VISIBLE_PROJECTS_LIMIT = 2;
 
-  const { days, projectsByDay } = useMemo(() => {
+  const { weeks, projectsByDay } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const calendarStart = startOfWeek(monthStart, { locale: id });
     const calendarEnd = endOfWeek(endOfMonth(currentDate), { locale: id });
     const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
     const projectsByDay = new Map<string, Project[]>();
-
     days.forEach(day => {
       const dayKey = format(day, 'yyyy-MM-dd');
       const activeProjects = projects.filter(p => {
@@ -61,7 +60,14 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
       projectsByDay.set(dayKey, activeProjects);
     });
 
-    return { days, projectsByDay };
+    const weeks = [];
+    if (days.length > 0) {
+        for (let i = 0; i < days.length; i += 7) {
+            weeks.push(days.slice(i, i + 7));
+        }
+    }
+
+    return { weeks, projectsByDay };
   }, [projects, currentDate]);
 
   const dayHeaders = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -87,72 +93,79 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         {dayHeaders.map(day => <div key={day}>{day}</div>)}
       </div>
 
-      <div className="grid grid-cols-7 grid-rows-5 flex-grow border-t border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
-        {days.map((day) => {
-          const dayKey = format(day, 'yyyy-MM-dd');
-          const projectsOnDay = projectsByDay.get(dayKey) || [];
-          const visibleProjects = projectsOnDay.slice(0, VISIBLE_PROJECTS_LIMIT);
-          const hiddenProjectsCount = projectsOnDay.length - VISIBLE_PROJECTS_LIMIT;
+      <div className="flex-grow flex flex-col border-t border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
+        {weeks.map((week, weekIndex) => (
+          <div key={weekIndex} className="grid grid-cols-7 auto-rows-fr border-b border-gray-200 dark:border-gray-700">
+            {week.map((day, dayIndex) => {
+              const dayKey = format(day, 'yyyy-MM-dd');
+              const projectsOnDay = projectsByDay.get(dayKey) || [];
+              const visibleProjects = projectsOnDay.slice(0, VISIBLE_PROJECTS_LIMIT);
+              const hiddenProjectsCount = projectsOnDay.length - VISIBLE_PROJECTS_LIMIT;
 
-          return (
-            <div 
-              key={day.toString()} 
-              className="border-r border-b border-gray-200 dark:border-gray-700 p-1.5 flex flex-col min-h-[120px]"
-            >
-              <span className={cn(
-                "self-end flex items-center justify-center h-6 w-6 rounded-full text-sm",
-                !isSameMonth(day, currentDate) && "text-muted-foreground/50",
-                isToday(day) && "bg-primary text-primary-foreground"
-              )}>
-                {format(day, 'd')}
-              </span>
-              <div className="flex-grow space-y-1 mt-1">
-                {visibleProjects.map(project => (
-                  <Link to={`/projects/${project.id}`} key={project.id} className={cn(
-                    "block p-1.5 rounded-md border-l-4 text-xs",
-                    getProjectColorClasses(project.status)
+              return (
+                <div 
+                  key={day.toString()} 
+                  className={cn(
+                    "p-1.5 flex flex-col",
+                    dayIndex < 6 && "border-r border-gray-200 dark:border-gray-700"
+                  )}
+                >
+                  <span className={cn(
+                    "flex items-center justify-center h-6 w-6 rounded-full text-sm mb-1",
+                    !isSameMonth(day, currentDate) && "text-muted-foreground/50",
+                    isToday(day) && "bg-primary text-primary-foreground"
                   )}>
-                    <p className="font-semibold truncate">{project.name}</p>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-muted-foreground">Seharian</span>
-                      <div className="flex -space-x-2">
-                        {project.assignedTo.slice(0, 2).map(user => (
-                          <Avatar key={user.id} className="h-4 w-4 border border-background">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-                {hiddenProjectsCount > 0 && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" className="h-auto w-full justify-start p-1.5 text-xs text-primary">
-                        + {hiddenProjectsCount} lainnya
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 z-50">
-                      <div className="font-semibold text-sm mb-2 px-1">
-                        Proyek pada {format(day, 'd MMM', { locale: id })}
-                      </div>
-                      <ul className="space-y-1">
-                        {projectsOnDay.map(p => (
-                          <li key={p.id}>
-                            <Link to={`/projects/${p.id}`} className={cn("block hover:bg-accent p-2 rounded-md border-l-4", getProjectColorClasses(p.status))}>
-                              <span className="text-sm font-medium truncate">{p.name}</span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </div>
-            </div>
-          );
-        })}
+                    {format(day, 'd')}
+                  </span>
+                  <div className="flex-grow space-y-1 mt-1 min-h-[90px]">
+                    {visibleProjects.map(project => (
+                      <Link to={`/projects/${project.id}`} key={project.id} className={cn(
+                        "block p-1.5 rounded-md border-l-4 text-xs",
+                        getProjectColorClasses(project.status)
+                      )}>
+                        <p className="font-semibold truncate">{project.name}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-muted-foreground">Seharian</span>
+                          <div className="flex -space-x-2">
+                            {project.assignedTo.slice(0, 2).map(user => (
+                              <Avatar key={user.id} className="h-4 w-4 border border-background">
+                                <AvatarImage src={user.avatar} />
+                                <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
+                              </Avatar>
+                            ))}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                    {hiddenProjectsCount > 0 && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" className="h-auto w-full justify-start p-1.5 text-xs text-primary">
+                            + {hiddenProjectsCount} lainnya
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 z-50">
+                          <div className="font-semibold text-sm mb-2 px-1">
+                            Proyek pada {format(day, 'd MMM', { locale: id })}
+                          </div>
+                          <ul className="space-y-1">
+                            {projectsOnDay.map(p => (
+                              <li key={p.id}>
+                                <Link to={`/projects/${p.id}`} className={cn("block hover:bg-accent p-2 rounded-md border-l-4", getProjectColorClasses(p.status))}>
+                                  <span className="text-sm font-medium truncate">{p.name}</span>
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );
