@@ -195,7 +195,12 @@ const GoogleCalendarPage = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    {selectedCalendarName && <p className="text-xs text-muted-foreground">Currently syncing: <strong>{selectedCalendarName}</strong></p>}
+                    {selectedCalendarName && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <p>Currently syncing: <strong>{selectedCalendarName}</strong></p>
+                      </div>
+                    )}
                   </>
                 ) : (
                     <p className="text-sm text-muted-foreground h-10 flex items-center">Could not find any calendars. Please ensure you have granted calendar permissions.</p>
