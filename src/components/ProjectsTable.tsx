@@ -114,6 +114,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   };
 
   const handleSync = () => {
+    toast.info("Refreshing calendar events...");
     setRefreshKey(prev => prev + 1);
   };
 

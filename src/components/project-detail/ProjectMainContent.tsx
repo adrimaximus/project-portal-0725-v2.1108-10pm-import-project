@@ -1,9 +1,12 @@
-import { Project, Task, Comment } from "@/data/projects";
+import { Project, AssignedUser, Comment, Task } from "@/data/projects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectActivityFeed from "./ProjectActivityFeed";
-import { ProjectTasks } from "./ProjectTasks";
 import ProjectComments from "@/components/ProjectComments";
-import { User } from "@/data/users";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import ProjectOverviewTab from "./ProjectOverviewTab";
+import ProjectActivityFeed from "./ProjectActivityFeed";
+import ProjectTasks from "./ProjectTasks";
+import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-react";
 
 interface ProjectMainContentProps {
   project: Project;
@@ -13,65 +16,71 @@ interface ProjectMainContentProps {
   onAddCommentOrTicket: (comment: Comment) => void;
 }
 
-export const ProjectMainContent = ({
+const ProjectMainContent = ({
   project,
   onUpdateTasks,
   onTaskStatusChange,
   onTaskDelete,
   onAddCommentOrTicket,
 }: ProjectMainContentProps) => {
-  const handleTaskCreate = (taskName: string) => {
-    const newTask: Task = {
-      id: `task-${Date.now()}`,
-      title: taskName,
-      completed: false,
-    };
-    onUpdateTasks([...(project.tasks || []), newTask]);
-  };
-
-  const handleTaskUpdate = (taskId: string, updatedTask: Partial<Task>) => {
-    const updatedTasks = (project.tasks || []).map(task => 
-      task.id === taskId ? { ...task, ...updatedTask } : task
-    );
-    onUpdateTasks(updatedTasks);
-  };
-
-  const handleTaskOrderChange = (taskIds: string[]) => {
-    const reorderedTasks = taskIds.map(id => (project.tasks || []).find(t => t.id === id)).filter(Boolean) as Task[];
-    onUpdateTasks(reorderedTasks);
-  };
-
-  const handleAssignUserToTask = (taskId: string, users: User[]) => {
-    const updatedTasks = (project.tasks || []).map(task => 
-      task.id === taskId ? { ...task, assignedTo: users } : task
-    );
-    onUpdateTasks(updatedTasks);
-  };
+  const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
+  const ticketCount = project.comments?.filter(c => c.isTicket).length || 0;
 
   return (
-    <Tabs defaultValue="tasks" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="tasks">Tasks</TabsTrigger>
-        <TabsTrigger value="comments">Comments & Tickets</TabsTrigger>
-        <TabsTrigger value="activity">Activity</TabsTrigger>
-      </TabsList>
-      <TabsContent value="tasks">
-        <ProjectTasks
-          project={project}
-          tasks={project.tasks || []}
-          onTaskCreate={handleTaskCreate}
-          onTaskUpdate={handleTaskUpdate}
-          onTaskDelete={onTaskDelete}
-          onTaskOrderChange={handleTaskOrderChange}
-          onAssignUserToTask={handleAssignUserToTask}
-        />
-      </TabsContent>
-      <TabsContent value="comments">
-        <ProjectComments project={project} onAddCommentOrTicket={onAddCommentOrTicket} />
-      </TabsContent>
-      <TabsContent value="activity">
-        <ProjectActivityFeed activities={project.activities || []} />
-      </TabsContent>
-    </Tabs>
+    <Card>
+      <CardContent className="p-4 md:p-6">
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
+            <TabsTrigger value="overview">
+              <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline ml-2">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="tasks">
+              <ListChecks className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline ml-2">Tasks</span>
+              {openTasksCount > 0 && <Badge className="ml-2">{openTasksCount}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="discussion">
+              <MessageSquare className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline ml-2">Discussion</span>
+              {ticketCount > 0 && <Badge className="ml-2 bg-orange-500">{ticketCount}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="activity">
+              <History className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline ml-2">Activity</span>
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="overview">
+            <ProjectOverviewTab
+              project={project}
+              isEditing={false} // Placeholder
+              onDescriptionChange={() => {}}
+              onTeamChange={() => {}}
+              onFilesChange={() => {}}
+              onServicesChange={() => {}}
+            />
+          </TabsContent>
+          <TabsContent value="tasks">
+            <ProjectTasks
+              project={project}
+              onUpdateTasks={onUpdateTasks}
+              onTaskStatusChange={onTaskStatusChange}
+              onTaskDelete={onTaskDelete}
+            />
+          </TabsContent>
+          <TabsContent value="discussion">
+            <ProjectComments
+              project={project}
+              onAddCommentOrTicket={onAddCommentOrTicket}
+            />
+          </TabsContent>
+          <TabsContent value="activity">
+            <ProjectActivityFeed activities={project.activities || []} />
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
+
+export default ProjectMainContent;

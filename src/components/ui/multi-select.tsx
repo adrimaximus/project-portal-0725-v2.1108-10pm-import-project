@@ -1,8 +1,5 @@
-"use client";
-
 import * as React from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
-
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,51 +15,33 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 
-export type MultiSelectOption = {
-  value: string;
+export interface OptionType {
   label: string;
-  icon?: React.ComponentType<{ className?: string }>;
-};
+  value: string;
+}
 
 interface MultiSelectProps {
-  options: MultiSelectOption[];
-  defaultValue?: string[];
-  onValueChange: (value: string[]) => void;
+  options: OptionType[];
+  selectedValues: string[];
+  onChange: (selectedValues: string[]) => void;
   placeholder?: string;
-  maxCount?: number;
   className?: string;
 }
 
 export function MultiSelect({
   options,
-  defaultValue = [],
-  onValueChange,
+  selectedValues,
+  onChange,
   placeholder = "Select options...",
   className,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
-  const [selectedValues, setSelectedValues] = React.useState<string[]>(defaultValue);
 
-  React.useEffect(() => {
-    setSelectedValues(defaultValue || []);
-  }, [defaultValue]);
-
-  const handleSelect = (value: string) => {
-    const newSelectedValues = selectedValues.includes(value)
-      ? selectedValues.filter((v) => v !== value)
-      : [...selectedValues, value];
-    setSelectedValues(newSelectedValues);
-    onValueChange(newSelectedValues);
+  const handleUnselect = (value: string) => {
+    onChange(selectedValues.filter((s) => s !== value));
   };
-
-  const selectedLabels = options
-    .filter((option) => selectedValues.includes(option.value))
-    .map((option) => option.label);
-
-  const MAX_DISPLAY_LABELS = 2;
-  const displayLabels = selectedLabels.slice(0, MAX_DISPLAY_LABELS);
-  const remainingCount = selectedLabels.length - displayLabels.length;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -74,18 +53,27 @@ export function MultiSelect({
           className={cn("w-full justify-between", className)}
           onClick={() => setOpen(!open)}
         >
-          <div className="flex-1 text-left overflow-hidden">
-            {selectedLabels.length > 0 ? (
-              <div className="flex items-center gap-1">
-                <span className="truncate">{displayLabels.join(", ")}</span>
-                {remainingCount > 0 && (
-                  <span className="text-muted-foreground whitespace-nowrap text-sm ml-1">
-                    +{remainingCount} more
-                  </span>
-                )}
-              </div>
+          <div className="flex gap-1 flex-wrap">
+            {selectedValues.length > 0 ? (
+              selectedValues.map((value) => {
+                const option = options.find((o) => o.value === value);
+                return (
+                  <Badge
+                    variant="secondary"
+                    key={value}
+                    className="mr-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleUnselect(value);
+                    }}
+                  >
+                    {option?.label}
+                    <X className="ml-1 h-3 w-3" />
+                  </Badge>
+                );
+              })
             ) : (
-              <span className="text-muted-foreground">{placeholder}</span>
+              <span>{placeholder}</span>
             )}
           </div>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
@@ -95,26 +83,27 @@ export function MultiSelect({
         <Command>
           <CommandInput placeholder="Search..." />
           <CommandList>
-            <CommandEmpty>No options found.</CommandEmpty>
+            <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  onSelect={() => handleSelect(option.value)}
-                  className="cursor-pointer"
+                  onSelect={() => {
+                    onChange(
+                      selectedValues.includes(option.value)
+                        ? selectedValues.filter((item) => item !== option.value)
+                        : [...selectedValues, option.value]
+                    );
+                    setOpen(true);
+                  }}
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      selectedValues.includes(option.value)
-                        ? "opacity-100"
-                        : "opacity-0"
+                      selectedValues.includes(option.value) ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {option.icon && (
-                    <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span>{option.label}</span>
+                  {option.label}
                 </CommandItem>
               ))}
             </CommandGroup>

@@ -4,7 +4,7 @@ import { dummyProjects, Project, Task, Comment, User, Activity, ActivityType, Pr
 import { useUser } from "@/contexts/UserContext";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
-import { ProjectMainContent } from "@/components/project-detail/ProjectMainContent";
+import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import { toast } from "sonner";

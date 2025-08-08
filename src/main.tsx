@@ -7,7 +7,6 @@ import { UserProvider } from './contexts/UserContext';
 import { GoalsProvider } from './context/GoalsContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { GOOGLE_CLIENT_ID } from './config';
-import { AuthProvider } from './hooks/useAuth';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -15,13 +14,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <BrowserRouter>
         <UserProvider>
-          <AuthProvider>
-            <FeaturesProvider>
-              <GoalsProvider>
-                <App />
-              </GoalsProvider>
-            </FeaturesProvider>
-          </AuthProvider>
+          <FeaturesProvider>
+            <GoalsProvider>
+              <App />
+            </GoalsProvider>
+          </FeaturesProvider>
         </UserProvider>
       </BrowserRouter>
     </GoogleOAuthProvider>
