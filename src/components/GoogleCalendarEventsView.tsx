@@ -81,7 +81,7 @@ const GoogleCalendarEventsView = ({ refreshKey, onImport }: GoogleCalendarEvents
 
       const gcalConnected = localStorage.getItem('gcal_connected') === 'true';
       const accessToken = localStorage.getItem('gcal_access_token');
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const clientId = localStorage.getItem('google_client_id');
       const storedIds = localStorage.getItem('gcal_calendar_ids');
       
       let calendarIds: string[] = [];
@@ -95,7 +95,7 @@ const GoogleCalendarEventsView = ({ refreshKey, onImport }: GoogleCalendarEvents
       }
 
       if (!clientId) {
-        setError("Error: Google Client ID is not configured in the application environment.");
+        setError("Error: Google Client ID is not configured. Please set it in the Settings > Integrations page.");
         setIsLoading(false);
         if (isRefresh) toast.error("Google Client ID is not configured.", { id: toastId });
         return;

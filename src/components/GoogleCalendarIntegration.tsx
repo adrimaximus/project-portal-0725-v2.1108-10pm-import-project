@@ -19,10 +19,14 @@ const GoogleCalendarIntegration = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const CLIENT_ID = localStorage.getItem('google_client_id');
   const SCOPES = "https://www.googleapis.com/auth/calendar";
 
   useEffect(() => {
+    if (!CLIENT_ID) {
+      setIsLoading(false);
+      return;
+    }
     const initClient = () => {
       gapi.client.init({
         clientId: CLIENT_ID,
@@ -99,10 +103,10 @@ const GoogleCalendarIntegration = () => {
       const response = await gapi.client.calendar.calendarList.list();
       if (response.result.items) {
         const validCalendars = response.result.items
-          .filter(cal => cal.id && cal.summary) // Ensure id and summary exist
+          .filter(cal => cal.id && cal.summary)
           .map(cal => ({
-            id: cal.id!, // We know id is not null here
-            summary: cal.summary!, // We know summary is not null here
+            id: cal.id!,
+            summary: cal.summary!,
           }));
         setCalendars(validCalendars);
       }
@@ -119,6 +123,21 @@ const GoogleCalendarIntegration = () => {
     localStorage.setItem('gcal_calendar_ids', JSON.stringify(selectedIds));
     toast.success("Calendar selection saved.");
   };
+
+  if (!CLIENT_ID) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Google Calendar Integration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Please set your Google Client ID in the section above to enable this feature.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (isLoading) {
     return (
