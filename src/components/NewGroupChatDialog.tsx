@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DialogContent,
   DialogHeader,
@@ -11,9 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { allCollaborators as collaborators } from "@/data/collaborators";
 import { Collaborator } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/providers/AuthProvider";
 
 interface NewGroupChatDialogProps {
   onStartNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
@@ -23,6 +23,37 @@ interface NewGroupChatDialogProps {
 const NewGroupChatDialog = ({ onStartNewGroupChat, setOpen }: NewGroupChatDialogProps) => {
   const [groupName, setGroupName] = useState("");
   const [selectedCollaborators, setSelectedCollaborators] = useState<Collaborator[]>([]);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const { supabase, session } = useAuth();
+
+  useEffect(() => {
+    const fetchCollaborators = async () => {
+      if (!session?.user) return;
+
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url')
+        .neq('id', session.user.id);
+
+      if (error) {
+        console.error('Error fetching collaborators:', error);
+        return;
+      }
+
+      if (profiles) {
+        const mappedCollaborators: Collaborator[] = profiles.map(p => ({
+          id: p.id,
+          name: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+          fallback: `${p.first_name?.[0] || ''}${p.last_name?.[0] || ''}`.toUpperCase(),
+          src: p.avatar_url,
+          online: true, // Placeholder for online status
+        }));
+        setCollaborators(mappedCollaborators);
+      }
+    };
+
+    fetchCollaborators();
+  }, [supabase, session]);
 
   const handleSelectCollaborator = (collaborator: Collaborator) => {
     setSelectedCollaborators((prev) =>

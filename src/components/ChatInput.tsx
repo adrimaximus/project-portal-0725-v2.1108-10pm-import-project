@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, X, Folder } from "lucide-react";
-import { currentUser } from "@/data/collaborators";
+import { useAuth } from "@/providers/AuthProvider";
 import { Collaborator } from "@/types";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from "@/components/ui/command";
@@ -20,6 +20,10 @@ const ChatInput = ({ onSendMessage, members = [], projects = [] }: ChatInputProp
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { profile } = useAuth();
+  const currentUser = {
+    src: profile?.avatar_url,
+  };
 
   const [showPopover, setShowPopover] = useState(false);
   const [query, setQuery] = useState("");
