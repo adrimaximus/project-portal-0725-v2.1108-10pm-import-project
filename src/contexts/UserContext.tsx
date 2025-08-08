@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Session, SupabaseClient } from '@supabase/supabase-js';
+import { Session, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/data/users';
 
@@ -22,9 +22,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const initializeSession = async () => {
-      // 1. Ambil sesi saat aplikasi pertama kali dimuat untuk menangani refresh.
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
+      setIsLoading(false); // Stop loading as soon as session is known
 
       if (session?.user) {
         const { data: userProfile } = await supabase
@@ -34,13 +34,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           .single();
         setProfile(userProfile);
       }
-      // 2. Setelah pemeriksaan awal selesai, hentikan status loading.
-      setIsLoading(false);
     };
 
     initializeSession();
 
-    // 3. Siapkan listener untuk memantau perubahan status auth secara real-time (login/logout).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session?.user) {
@@ -73,34 +70,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         initials: initials,
       };
       setUser(appUser);
-    } else {
+    } else if (!session?.user) {
       setUser(null);
     }
   }, [session, profile]);
-
-  useEffect(() => {
-    if (!session?.user) {
-      return;
-    }
-
-    const channel = supabase.channel('online-users', {
-      config: {
-        presence: {
-          key: session.user.id,
-        },
-      },
-    });
-
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await channel.track({ online_at: new Date().toISOString() });
-      }
-    });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session, supabase]);
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -147,7 +120,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <UserContext.Provider value={value}>
-      {children}
+      {isLoading ? <div className="flex h-screen w-full items-center justify-center">Loading...</div> : children}
     </UserContext.Provider>
   );
 };
