@@ -21,8 +21,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
+
       if (session?.user) {
         const { data: userProfile, error } = await supabase
           .from('profiles')
@@ -40,6 +42,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setProfile(null);
       }
       setIsLoading(false);
+    };
+
+    fetchSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
     });
 
     return () => {
@@ -60,10 +68,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         initials: initials,
       };
       setUser(appUser);
-    } else {
+    } else if (!isLoading) {
       setUser(null);
     }
-  }, [session, profile]);
+  }, [session, profile, isLoading]);
 
   useEffect(() => {
     if (!session?.user) {
