@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Users } from "lucide-react";
 import { Collaborator } from "../types";
-import { useAuth } from "@/providers/AuthProvider";
+import { allCollaborators } from "@/data/collaborators";
 
 type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
@@ -12,40 +12,9 @@ type OnlineCollaboratorsProps = {
 
 const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const navigate = useNavigate();
-  const { supabase, session } = useAuth();
-
-  useEffect(() => {
-    const fetchCollaborators = async () => {
-      if (!session?.user) return;
-
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, avatar_url')
-        .neq('id', session.user.id);
-
-      if (error) {
-        console.error('Error fetching collaborators:', error);
-        return;
-      }
-
-      if (profiles) {
-        const mappedCollaborators: Collaborator[] = profiles.map(p => ({
-          id: p.id,
-          name: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-          fallback: `${p.first_name?.[0] || ''}${p.last_name?.[0] || ''}`.toUpperCase(),
-          src: p.avatar_url,
-          online: true,
-        }));
-        setCollaborators(mappedCollaborators);
-      }
-    };
-
-    fetchCollaborators();
-  }, [supabase, session]);
   
-  const onlineCollaborators = collaborators;
+  const onlineCollaborators = allCollaborators.filter(c => c.online);
   
   const visibleCollaborators = onlineCollaborators.slice(0, 3);
   const remainingCount = onlineCollaborators.length - visibleCollaborators.length;
@@ -66,11 +35,9 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
             <TooltipTrigger asChild>
               <div className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative cursor-pointer">
                 <Users className="h-5 w-5" />
-                {onlineCollaborators.length > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary p-0 text-xs text-primary-foreground">
-                    {onlineCollaborators.length}
-                  </span>
-                )}
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary p-0 text-xs text-primary-foreground">
+                  {onlineCollaborators.length}
+                </span>
               </div>
             </TooltipTrigger>
             <TooltipContent side="right">
@@ -107,7 +74,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                     <AvatarImage src={c.src || `https://avatar.vercel.sh/${c.id}.png`} alt={c.name} />
                     <AvatarFallback className="bg-muted-foreground text-muted font-semibold">{c.fallback}</AvatarFallback>
                   </Avatar>
-                  {c.online && <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />}
+                  <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
                 </div>
                 <span className="text-sm text-foreground font-medium">{c.name}</span>
               </div>
@@ -127,7 +94,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                         <AvatarImage src={collaborator.src || `https://avatar.vercel.sh/${collaborator.id}.png`} alt={collaborator.name} />
                         <AvatarFallback className="bg-muted-foreground text-muted font-semibold">{collaborator.fallback}</AvatarFallback>
                       </Avatar>
-                      {collaborator.online && (
+                      {index === visibleCollaborators.length - 1 && remainingCount === 0 && (
                         <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
                       )}
                     </div>
@@ -145,7 +112,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                       style={{ zIndex: visibleCollaborators.length }}
                     >
                       +{remainingCount}
-                      {<span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />}
+                      <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="bg-primary text-primary-foreground">

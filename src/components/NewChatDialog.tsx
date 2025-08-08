@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { allCollaborators } from "@/data/collaborators";
 import { Collaborator } from '@/types';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/providers/AuthProvider';
 
 interface NewChatDialogProps {
   onSelectCollaborator: (collaborator: Collaborator) => void;
@@ -14,39 +14,8 @@ interface NewChatDialogProps {
 
 const NewChatDialog = ({ onSelectCollaborator, setOpen }: NewChatDialogProps) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const { supabase, session } = useAuth();
 
-  useEffect(() => {
-    const fetchCollaborators = async () => {
-      if (!session?.user) return;
-
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, avatar_url')
-        .neq('id', session.user.id);
-
-      if (error) {
-        console.error('Error fetching collaborators:', error);
-        return;
-      }
-
-      if (profiles) {
-        const mappedCollaborators: Collaborator[] = profiles.map(p => ({
-          id: p.id,
-          name: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-          fallback: `${p.first_name?.[0] || ''}${p.last_name?.[0] || ''}`.toUpperCase(),
-          src: p.avatar_url,
-          online: true, // Placeholder for online status
-        }));
-        setCollaborators(mappedCollaborators);
-      }
-    };
-
-    fetchCollaborators();
-  }, [supabase, session]);
-
-  const filteredCollaborators = collaborators
+  const filteredCollaborators = allCollaborators
     .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0));
 
