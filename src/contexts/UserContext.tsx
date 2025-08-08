@@ -1,52 +1,85 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { Session, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/data/users';
-import { useAuth } from '@/providers/AuthProvider';
 
 interface UserContextType {
   user: User | null;
-  login: (user: User) => void;
+  session: Session | null;
+  supabase: SupabaseClient;
+  isLoading: boolean;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
-  isLoading: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const { profile, session, supabase } = useAuth();
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (profile && session?.user) {
+    const fetchInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+
+      if (session?.user) {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        setProfile(userProfile);
+      }
+      setIsLoading(false);
+    };
+
+    fetchInitialSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        setProfile(userProfile);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (session?.user && profile) {
+      const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || session.user.email!;
+      const initials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || session.user.email![0].toUpperCase();
+      
       const appUser: User = {
-        id: profile.id,
-        name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || session.user.email!,
+        id: session.user.id,
+        name: name,
         email: session.user.email!,
         avatar: profile.avatar_url,
-        initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'U',
+        initials: initials,
       };
       setUser(appUser);
-      localStorage.setItem('portal_user', JSON.stringify(appUser));
-    } else if (!session) {
+    } else if (!session?.user) {
       setUser(null);
-      localStorage.removeItem('portal_user');
     }
-    
-    if (session === null || (session && profile)) {
-        setIsLoading(false);
-    }
-  }, [profile, session]);
-
-  const login = (userData: User) => {
-    setUser(userData);
-    localStorage.setItem('portal_user', JSON.stringify(userData));
-  };
+  }, [session, profile]);
 
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('portal_user');
+    setSession(null);
+    setProfile(null);
   };
 
   const updateUser = async (updates: Partial<User>) => {
@@ -62,23 +95,32 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       profileUpdates.avatar_url = updates.avatar;
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .update(profileUpdates)
-      .eq('id', session.user.id);
+      .eq('id', session.user.id)
+      .select()
+      .single();
 
     if (error) {
       console.error("Error updating profile:", error);
     } else {
-      const updatedUser = { ...user, ...updates };
-      setUser(updatedUser);
-      localStorage.setItem('portal_user', JSON.stringify(updatedUser));
+      setProfile(data);
     }
   };
 
+  const value = {
+    user,
+    session,
+    supabase,
+    isLoading,
+    logout,
+    updateUser,
+  };
+
   return (
-    <UserContext.Provider value={{ user, login, logout, updateUser, isLoading }}>
-      {children}
+    <UserContext.Provider value={value}>
+      {!isLoading ? children : <div className="flex h-screen w-full items-center justify-center">Loading...</div>}
     </UserContext.Provider>
   );
 };

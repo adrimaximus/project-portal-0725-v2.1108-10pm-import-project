@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from './providers/AuthProvider';
+import { useUser } from './contexts/UserContext';
 import LoginPage from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
@@ -23,7 +23,7 @@ import EmbedPage from './pages/EmbedPage';
 import NotFound from './pages/NotFound';
 
 const ProtectedRoute = () => {
-  const { session } = useAuth();
+  const { session } = useUser();
   return session ? <Outlet /> : <Navigate to="/login" replace />;
 };
 

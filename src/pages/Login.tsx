@@ -2,13 +2,13 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/providers/AuthProvider';
+import { useUser } from '@/contexts/UserContext';
 import { useEffect } from 'react';
 import { ArrowRight, Package } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const LoginPage = () => {
-  const { session } = useAuth();
+  const { session } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -63,6 +63,13 @@ const LoginPage = () => {
                 providers={['google']}
                 theme="light"
                 view="sign_in"
+                localization={{
+                  variables: {
+                    sign_up: {
+                      confirmation_text: 'Check your email for the confirmation link. If you don\'t receive it, the email provider may not be configured in your Supabase project.'
+                    }
+                  }
+                }}
               />
             </div>
           </div>
