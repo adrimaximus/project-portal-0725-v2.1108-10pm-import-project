@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Calendar as CalendarIcon, Table as TableIcon, CalendarCheck, RefreshCw, MoreHorizontal, Trash2 } from "lucide-react";
+import { List, CalendarDays, Calendar as CalendarIcon, Table as TableIcon, CalendarCheck, PlusCircle, RefreshCw, MoreHorizontal, Trash2 } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
 import ProjectsYearView from "./ProjectsYearView";
@@ -44,13 +44,43 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getStatusBadgeClass, getStatusColor } from "@/lib/statusUtils";
 
 interface ProjectsTableProps {
   projects: Project[];
 }
 
 type ViewMode = 'table' | 'list' | 'month' | 'year' | 'gcal';
+
+const getStatusBadgeClass = (status: Project['status']) => {
+  switch (status) {
+    case 'On Track':
+    case 'Completed':
+    case 'Done':
+    case 'Billed':
+      return 'bg-green-100 text-green-800';
+    case 'At Risk':
+    case 'On Hold':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'Off Track':
+    case 'Cancelled':
+      return 'bg-red-100 text-red-800';
+    case 'In Progress':
+    case 'Requested':
+      return 'bg-blue-100 text-blue-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getStatusColor = (status: Project['status']): string => {
+  switch (status) {
+    case 'On Track': case 'Completed': case 'Done': case 'Billed': return '#22c55e';
+    case 'At Risk': case 'On Hold': return '#eab308';
+    case 'Off Track': case 'Cancelled': return '#ef4444';
+    case 'In Progress': case 'Requested': return '#3b82f6';
+    default: return 'transparent';
+  }
+};
 
 const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [view, setView] = useState<ViewMode>('table');
