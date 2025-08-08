@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Users } from "lucide-react";
 import { Collaborator } from "../types";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/providers/AuthProvider";
 
 type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
@@ -12,31 +12,21 @@ type OnlineCollaboratorsProps = {
 
 const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const navigate = useNavigate();
-  const { supabase, session } = useUser();
+  const { supabase, session } = useAuth();
 
   useEffect(() => {
-    if (!session?.user) return;
-
-    const channel = supabase.channel('online-users');
-
-    const updateOnlineUsers = async () => {
-      const presenceState = channel.presenceState();
-      const userIds = Object.keys(presenceState).filter(id => id !== session.user.id);
-
-      if (userIds.length === 0) {
-        setOnlineCollaborators([]);
-        return;
-      }
+    const fetchCollaborators = async () => {
+      if (!session?.user) return;
 
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, avatar_url')
-        .in('id', userIds);
+        .neq('id', session.user.id);
 
       if (error) {
-        console.error('Error fetching collaborator profiles:', error);
+        console.error('Error fetching collaborators:', error);
         return;
       }
 
@@ -48,24 +38,14 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
           src: p.avatar_url,
           online: true,
         }));
-        setOnlineCollaborators(mappedCollaborators);
+        setCollaborators(mappedCollaborators);
       }
     };
 
-    channel
-      .on('presence', { event: 'sync' }, updateOnlineUsers)
-      .on('presence', { event: 'join' }, updateOnlineUsers)
-      .on('presence', { event: 'leave' }, updateOnlineUsers)
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          updateOnlineUsers();
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    fetchCollaborators();
   }, [supabase, session]);
+  
+  const onlineCollaborators = collaborators;
   
   const visibleCollaborators = onlineCollaborators.slice(0, 3);
   const remainingCount = onlineCollaborators.length - visibleCollaborators.length;

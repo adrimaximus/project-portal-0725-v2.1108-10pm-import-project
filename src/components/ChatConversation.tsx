@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Message } from "@/data/chat";
 import MessageAttachment from "./MessageAttachment";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/providers/AuthProvider";
 import { Collaborator } from "@/types";
 import { cn } from "@/lib/utils";
 import { Project } from "@/data/projects";
@@ -14,10 +14,10 @@ interface ChatConversationProps {
 }
 
 const ChatConversation = ({ messages, members = [], projects = [] }: ChatConversationProps) => {
-  const { user } = useUser();
+  const { profile } = useAuth();
   const currentUser = {
-      name: user?.name || 'You',
-      src: user?.avatar
+      name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
+      src: profile?.avatar_url
   };
 
   const memberNames = members.map(m => m.name);
