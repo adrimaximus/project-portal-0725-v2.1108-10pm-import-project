@@ -28,7 +28,7 @@ const PortalLayout = ({ children, summary, pageHeader, disableMainScroll, noPadd
         <PortalSidebar isCollapsed={isCollapsed} onToggle={toggleSidebar} />
       </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col">
         <header className="relative z-30 flex h-14 shrink-0 items-center gap-4 border-b bg-background px-4 sm:h-[60px] sm:px-6">
           {/* Mobile Sidebar: Uses a Sheet component */}
           <Sheet>
