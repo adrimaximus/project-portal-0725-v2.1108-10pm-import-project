@@ -21,7 +21,6 @@ import SettingsPage from "./pages/Settings";
 import TeamSettingsPage from "./pages/TeamSettingsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import OpenAiIntegrationPage from "./pages/integrations/OpenAiIntegrationPage";
-import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 import NavigationSettingsPage from "./pages/NavigationSettingsPage";
 import EmbedPage from "./pages/EmbedPage";
 import NotFound from "./pages/NotFound";
@@ -71,7 +70,6 @@ function App() {
         <Route path="/settings/team" element={<ProtectedRoute featureId="settings"><TeamSettingsPage /></ProtectedRoute>} />
         <Route path="/settings/integrations" element={<ProtectedRoute featureId="settings"><IntegrationsPage /></ProtectedRoute>} />
         <Route path="/settings/integrations/openai" element={<ProtectedRoute featureId="settings"><OpenAiIntegrationPage /></ProtectedRoute>} />
-        <Route path="/settings/integrations/google-calendar" element={<ProtectedRoute featureId="settings"><GoogleCalendarPage /></ProtectedRoute>} />
         <Route path="/settings/navigation" element={<ProtectedRoute featureId="settings"><NavigationSettingsPage /></ProtectedRoute>} />
 
         <Route path="/custom" element={<ProtectedRoute><EmbedPage /></ProtectedRoute>} />

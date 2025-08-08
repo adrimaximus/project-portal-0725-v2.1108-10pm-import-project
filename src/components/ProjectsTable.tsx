@@ -18,7 +18,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2 } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
-import GoogleCalendarEventsView from "./GoogleCalendarEventsView";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import {
@@ -115,11 +114,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
     const updatedProjects = [...localProjects, ...newProjects];
     setLocalProjects(updatedProjects);
     newProjects.forEach(p => dummyProjects.push(p));
-  };
-
-  const handleSync = () => {
-    toast.info("Refreshing calendar events...");
-    setRefreshKey(prev => prev + 1);
   };
 
   const handleDeleteProject = (projectId: string) => {
