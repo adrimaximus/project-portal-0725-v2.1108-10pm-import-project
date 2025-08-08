@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -45,24 +45,18 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const { isFeatureEnabled } = useFeatures();
+  const [customNavItems, setCustomNavItems] = useState<NavItem[]>([]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const localStorageKey = user ? `customNavItems_${user.id}` : null;
 
-  if (isLoading || !user) {
-    return null;
-  }
-
-  const totalUnreadChatCount = dummyConversations.reduce(
+  const totalUnreadChatCount = useMemo(() => dummyConversations.reduce(
     (sum, convo) => sum + convo.unreadCount,
     0
-  );
+  ), []);
 
-  const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
+  const unreadNotificationCount = useMemo(() => dummyNotifications.filter(n => !n.read).length, []);
 
-  const [defaultNavItems] = useState<NavItem[]>(() => [
+  const defaultNavItems = useMemo<NavItem[]>(() => [
     { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
     { id: "projects", href: "/projects", label: "Projects", icon: Package },
     { id: "request", href: "/request", label: "Request", icon: LayoutGrid },
@@ -78,12 +72,14 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
     { id: "settings", href: "/settings", label: "Settings", icon: Settings },
     { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, ...(unreadNotificationCount > 0 && { badge: unreadNotificationCount }) },
-  ]);
-  
-  const [customNavItems, setCustomNavItems] = useState<NavItem[]>([]);
-  const localStorageKey = `customNavItems_${user.id}`;
+  ], [totalUnreadChatCount, unreadNotificationCount]);
 
   useEffect(() => {
+    if (!localStorageKey) {
+      setCustomNavItems([]);
+      return;
+    }
+
     const loadCustomItems = () => {
         try {
           const storedItems = localStorage.getItem(localStorageKey);
@@ -120,6 +116,15 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         window.removeEventListener('storage', handleStorageChange);
     }
   }, [localStorageKey]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  if (isLoading || !user) {
+    return null;
+  }
 
   const NavLink = ({ item }: { item: NavItem }) => {
     if (isCollapsed) {

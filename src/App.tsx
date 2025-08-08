@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from './providers/AuthProvider';
+import { useUser } from './contexts/UserContext';
 import LoginPage from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
@@ -23,14 +23,31 @@ import EmbedPage from './pages/EmbedPage';
 import NotFound from './pages/NotFound';
 
 const ProtectedRoute = () => {
-  const { session } = useAuth();
+  const { session, isLoading } = useUser();
+
+  if (isLoading) {
+    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+  }
+
   return session ? <Outlet /> : <Navigate to="/login" replace />;
+};
+
+const PublicRoute = () => {
+  const { session, isLoading } = useUser();
+
+  if (isLoading) {
+    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+  }
+
+  return !session ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route element={<PublicRoute />}>
+        <Route path="/login" element={<LoginPage />} />
+      </Route>
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/projects" element={<Projects />} />
