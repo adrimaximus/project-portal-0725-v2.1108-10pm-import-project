@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
+  Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -8,105 +9,112 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { allCollaborators as collaborators } from "@/data/collaborators";
 import { Collaborator } from "@/types";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NewGroupChatDialogProps {
-  onStartNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
-  setOpen: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const NewGroupChatDialog = ({ onStartNewGroupChat, setOpen }: NewGroupChatDialogProps) => {
-  const [groupName, setGroupName] = useState("");
-  const [selectedCollaborators, setSelectedCollaborators] = useState<Collaborator[]>([]);
+const NewGroupChatDialog = ({ open, onOpenChange }: NewGroupChatDialogProps) => {
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { user: currentUser } = useAuth();
 
-  const handleSelectCollaborator = (collaborator: Collaborator) => {
-    setSelectedCollaborators((prev) =>
-      prev.some((c) => c.id === collaborator.id)
-        ? prev.filter((c) => c.id !== collaborator.id)
-        : [...prev, collaborator]
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const fetchCollaborators = async () => {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url');
+
+      if (error) {
+        console.error("Error fetching profiles:", error);
+        return;
+      }
+
+      if (profiles) {
+        const fetchedCollaborators = profiles
+          .filter(profile => profile.id !== currentUser.id)
+          .map((profile): Collaborator => ({
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+            online: true,
+            avatar: profile.avatar_url || undefined,
+          }));
+        setCollaborators(fetchedCollaborators);
+      }
+    };
+
+    fetchCollaborators();
+  }, [currentUser]);
+
+  const handleSelect = (id: string) => {
+    setSelected(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
+  const filteredCollaborators = collaborators.filter(c =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const handleCreateGroup = () => {
-    if (groupName.trim() && selectedCollaborators.length > 0) {
-      onStartNewGroupChat(selectedCollaborators, groupName);
-      setOpen(false);
-    }
+    console.log("Creating group with:", selected);
+    onOpenChange(false);
   };
 
   return (
-    <DialogContent className="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle>Create a new group chat</DialogTitle>
-        <DialogDescription>
-          Select members and give your group a name.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-4">
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="group-name" className="text-right">
-            Group Name
-          </Label>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create Group Chat</DialogTitle>
+          <DialogDescription>Select members for your new group.</DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
           <Input
-            id="group-name"
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
-            className="col-span-3"
-            placeholder="e.g., Project Alpha Team"
+            placeholder="Search collaborators..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="mb-4"
           />
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {filteredCollaborators.map(collaborator => (
+              <div
+                key={collaborator.id}
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer"
+                onClick={() => handleSelect(collaborator.id)}
+              >
+                <Checkbox
+                  id={`cb-${collaborator.id}`}
+                  checked={selected.includes(collaborator.id)}
+                  onCheckedChange={() => handleSelect(collaborator.id)}
+                />
+                <Avatar>
+                  <AvatarImage src={collaborator.avatar} />
+                  <AvatarFallback>{collaborator.initials}</AvatarFallback>
+                </Avatar>
+                <Label htmlFor={`cb-${collaborator.id}`} className="cursor-pointer flex-grow">{collaborator.name}</Label>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label>Select Members</Label>
-          <ScrollArea className="h-[200px] w-full rounded-md border p-2">
-            <div className="space-y-2">
-              {collaborators.map((collaborator) => (
-                <div
-                  key={collaborator.id}
-                  className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted"
-                  onClick={() => handleSelectCollaborator(collaborator)}
-                >
-                  <Checkbox
-                    id={`collaborator-${collaborator.id}`}
-                    checked={selectedCollaborators.some((c) => c.id === collaborator.id)}
-                    onCheckedChange={() => handleSelectCollaborator(collaborator)}
-                    className="cursor-pointer"
-                  />
-                  <label
-                    htmlFor={`collaborator-${collaborator.id}`}
-                    className="flex-1 flex items-center gap-3 cursor-pointer"
-                  >
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={collaborator.src} alt={collaborator.name} />
-                      <AvatarFallback>{collaborator.fallback}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium leading-none">{collaborator.name}</p>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`h-2 w-2 rounded-full ${collaborator.online ? 'bg-green-500' : 'bg-gray-400'}`} />
-                        <p className="text-sm text-muted-foreground">{collaborator.online ? 'Online' : 'Offline'}</p>
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button
-          onClick={handleCreateGroup}
-          disabled={!groupName.trim() || selectedCollaborators.length === 0}
-        >
-          Create Group
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="submit" onClick={handleCreateGroup} disabled={selected.length === 0}>
+            Create Group
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

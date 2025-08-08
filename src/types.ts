@@ -1,41 +1,57 @@
+import { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js';
+
+export interface User {
+  id: string;
+  email?: string;
+  name: string;
+  avatar?: string;
+  initials: string;
+  first_name?: string;
+  last_name?: string;
+}
+
 export interface Collaborator {
   id: string;
   name: string;
-  src: string;
-  fallback: string;
+  initials: string;
   online: boolean;
-  email?: string;
+  avatar?: string;
+}
+
+export interface Attachment {
+  name:string;
+  type: string;
+  url: string;
+}
+
+export interface Message {
+  id: string;
+  sender: User | Collaborator;
+  text: string;
+  timestamp: string;
+  attachment?: Attachment | null;
 }
 
 export interface GoogleCalendarEvent {
   id: string;
   summary: string;
-  description?: string;
+  status: string;
   start: {
     dateTime: string;
-    timeZone?: string;
     date?: string;
   };
   end: {
     dateTime: string;
-    timeZone?: string;
     date?: string;
   };
-  creator?: {
-    email: string;
-  };
-  attendees?: {
-    email: string;
-    responseStatus: string;
-    self?: boolean;
-  }[];
-  isGoogleEvent: true;
-  htmlLink: string;
-  calendarId: string;
 }
 
 export interface GoogleCalendarListEntry {
   id: string;
   summary: string;
-  primary?: boolean;
+  backgroundColor: string;
+  foregroundColor: string;
+  selected?: boolean;
 }
+
+export type { SupabaseSession, SupabaseUser };

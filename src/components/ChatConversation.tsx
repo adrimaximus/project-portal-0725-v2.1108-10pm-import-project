@@ -1,134 +1,60 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Message } from "@/data/chat";
+import { Message, Collaborator } from "@/types";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import MessageAttachment from "./MessageAttachment";
-import { currentUser } from "@/data/collaborators";
-import { Collaborator } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { Project } from "@/data/projects";
-import { Link } from "react-router-dom";
 
 interface ChatConversationProps {
   messages: Message[];
-  members?: Collaborator[];
-  projects?: Project[];
+  selectedCollaborator: Collaborator;
 }
 
-const ChatConversation = ({ messages, members = [], projects = [] }: ChatConversationProps) => {
-  const memberNames = members.map(m => m.name);
-  const projectNames = projects.map(p => p.name);
+const ChatConversation = ({ messages, selectedCollaborator }: ChatConversationProps) => {
+  const { user: currentUser } = useAuth();
 
-  const renderMessageWithMentions = (text: string) => {
-    const parts: (string | JSX.Element)[] = [];
-    let remainingText = text;
-    let key = 0;
-
-    while (remainingText.length > 0) {
-      const atIndex = remainingText.indexOf('@');
-      const slashIndex = remainingText.indexOf('/');
-
-      let firstIndex = -1;
-      let isUserMention = false;
-      
-      if (atIndex !== -1 && (slashIndex === -1 || atIndex < slashIndex)) {
-        firstIndex = atIndex;
-        isUserMention = true;
-      } else if (slashIndex !== -1) {
-        firstIndex = slashIndex;
-      } else {
-        parts.push(remainingText);
-        break;
-      }
-
-      if (firstIndex > 0) {
-        parts.push(remainingText.substring(0, firstIndex));
-      }
-
-      const mentionAndAfter = remainingText.substring(firstIndex);
-      const textAfterMentionChar = mentionAndAfter.substring(1);
-      const namesToSearch = isUserMention ? memberNames : projectNames;
-
-      let matchedName: string | null = null;
-      // Find the longest possible name match
-      for (const name of namesToSearch) {
-        if (textAfterMentionChar.startsWith(name)) {
-          if (!matchedName || name.length > matchedName.length) {
-            matchedName = name;
-          }
-        }
-      }
-
-      if (matchedName) {
-        if (isUserMention) {
-          parts.push(
-            <strong key={key++} className="text-blue-600 font-semibold">
-              {`@${matchedName}`}
-            </strong>
-          );
-        } else { // Project mention
-          const project = projects.find(p => p.name === matchedName);
-          if (project) {
-            parts.push(
-              <Link
-                to={`/projects/${project.id}`}
-                key={key++}
-                className="text-blue-600 font-semibold hover:underline"
-              >
-                {matchedName}
-              </Link>
-            );
-          } else {
-            // Fallback if project not found
-            parts.push(
-              <strong key={key++} className="text-blue-600 font-semibold">
-                {matchedName}
-              </strong>
-            );
-          }
-        }
-        remainingText = textAfterMentionChar.substring(matchedName.length);
-      } else {
-        parts.push(mentionAndAfter[0]);
-        remainingText = textAfterMentionChar;
-      }
-    }
-
-    return parts;
-  };
+  if (!currentUser) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-      {messages.map((message) => {
-        const isMentioningCurrentUser = message.text.includes(`@${currentUser.name}`);
+    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {messages.map((message, index) => {
+        const isCurrentUser = message.sender.id === currentUser.id;
+        const sender = isCurrentUser ? currentUser : selectedCollaborator;
         
         return (
-          <div 
-            key={message.id} 
+          <div
+            key={index}
             className={cn(
-              "flex items-start gap-4 transition-colors rounded-lg",
-              isMentioningCurrentUser && "bg-blue-50 dark:bg-blue-950/50 p-3 -m-3"
+              "flex items-end gap-2",
+              isCurrentUser ? "justify-end" : "justify-start"
             )}
           >
-            <Avatar className="h-9 w-9 border">
-              <AvatarImage
-                src={message.senderName === "You" ? currentUser.src : message.senderAvatar}
-                alt={message.senderName}
-              />
-              <AvatarFallback>
-                {message.senderName === "You" ? "ME" : message.senderName.split(" ").map(n => n[0]).join("")}
-              </AvatarFallback>
-            </Avatar>
-            <div className="grid gap-1.5 w-full">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-sm">{message.senderName}</p>
-                <p className="text-xs text-muted-foreground">{message.timestamp}</p>
-              </div>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {renderMessageWithMentions(message.text)}
-              </p>
+            {!isCurrentUser && (
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={sender.avatar} />
+                <AvatarFallback>{sender.initials}</AvatarFallback>
+              </Avatar>
+            )}
+            <div
+              className={cn(
+                "max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2",
+                isCurrentUser
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted"
+              )}
+            >
+              <p className="text-sm whitespace-pre-wrap">{message.text}</p>
               {message.attachment && (
                 <MessageAttachment attachment={message.attachment} />
               )}
             </div>
+            {isCurrentUser && (
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={sender.avatar} />
+                <AvatarFallback>{sender.initials}</AvatarFallback>
+              </Avatar>
+            )}
           </div>
         );
       })}

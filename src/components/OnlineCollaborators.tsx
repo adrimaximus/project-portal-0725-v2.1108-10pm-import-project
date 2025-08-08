@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Users } from "lucide-react";
-import { Collaborator } from "../types";
-import { allCollaborators } from "@/data/collaborators";
+import { Collaborator } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
@@ -12,9 +13,39 @@ type OnlineCollaboratorsProps = {
 
 const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
   const navigate = useNavigate();
-  
-  const onlineCollaborators = allCollaborators.filter(c => c.online);
+  const { user: currentUser } = useAuth();
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const fetchCollaborators = async () => {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url');
+
+      if (error) {
+        console.error("Error fetching profiles:", error);
+        return;
+      }
+
+      if (profiles) {
+        const collaborators = profiles
+          .filter(profile => profile.id !== currentUser.id) // Filter out the current user
+          .map((profile): Collaborator => ({
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+            online: true, // Simulate online status
+            avatar: profile.avatar_url || undefined,
+          }));
+        setOnlineCollaborators(collaborators);
+      }
+    };
+
+    fetchCollaborators();
+  }, [currentUser]);
   
   const visibleCollaborators = onlineCollaborators.slice(0, 3);
   const remainingCount = onlineCollaborators.length - visibleCollaborators.length;
@@ -71,8 +102,8 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
               >
                 <div className="relative">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={c.src || `https://avatar.vercel.sh/${c.id}.png`} alt={c.name} />
-                    <AvatarFallback className="bg-muted-foreground text-muted font-semibold">{c.fallback}</AvatarFallback>
+                    <AvatarImage src={c.avatar || `https://avatar.vercel.sh/${c.id}.png`} alt={c.name} />
+                    <AvatarFallback className="bg-muted-foreground text-muted font-semibold">{c.initials}</AvatarFallback>
                   </Avatar>
                   <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
                 </div>
@@ -91,8 +122,8 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                       style={{ zIndex: index }}
                     >
                       <Avatar className="h-9 w-9 border-2 border-background bg-background">
-                        <AvatarImage src={collaborator.src || `https://avatar.vercel.sh/${collaborator.id}.png`} alt={collaborator.name} />
-                        <AvatarFallback className="bg-muted-foreground text-muted font-semibold">{collaborator.fallback}</AvatarFallback>
+                        <AvatarImage src={collaborator.avatar || `https://avatar.vercel.sh/${collaborator.id}.png`} alt={collaborator.name} />
+                        <AvatarFallback className="bg-muted-foreground text-muted font-semibold">{collaborator.initials}</AvatarFallback>
                       </Avatar>
                       {index === visibleCollaborators.length - 1 && remainingCount === 0 && (
                         <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />

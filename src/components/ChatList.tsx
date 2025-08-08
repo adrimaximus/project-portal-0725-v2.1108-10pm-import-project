@@ -1,26 +1,18 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, UserPlus, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { Conversation } from "@/data/chat";
-import { Button } from "./ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Search, MessageSquarePlus, Users } from "lucide-react";
+import { Conversation } from "@/pages/ChatPage";
+import { Collaborator } from "@/types";
 import NewChatDialog from "./NewChatDialog";
 import NewGroupChatDialog from "./NewGroupChatDialog";
-import { Collaborator } from "@/types";
+import { cn } from "@/lib/utils";
 
 interface ChatListProps {
   conversations: Conversation[];
   selectedConversationId: string | null;
-  onConversationSelect: (id: string) => void;
+  onSelectConversation: (id: string) => void;
   onStartNewChat: (collaborator: Collaborator) => void;
   onStartNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
 }
@@ -28,129 +20,80 @@ interface ChatListProps {
 const ChatList = ({
   conversations,
   selectedConversationId,
-  onConversationSelect,
+  onSelectConversation,
   onStartNewChat,
   onStartNewGroupChat,
 }: ChatListProps) => {
+  const [searchTerm, setSearchTerm] = useState("");
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isNewGroupChatOpen, setIsNewGroupChatOpen] = useState(false);
 
+  const filteredConversations = conversations.filter((c) =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="flex flex-col border-r bg-muted/40 h-full">
+    <div className="flex flex-col h-full border-r">
       <div className="p-4 border-b">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold tracking-tight">Obrolan</h2>
-          <div className="flex items-center gap-1">
-            <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
-              <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <UserPlus className="h-5 w-5" />
-                        <span className="sr-only">New Chat</span>
-                      </Button>
-                    </DialogTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>New Chat</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <NewChatDialog
-                onSelectCollaborator={onStartNewChat}
-                setOpen={setIsNewChatOpen}
-              />
-            </Dialog>
-            <Dialog
-              open={isNewGroupChatOpen}
-              onOpenChange={setIsNewGroupChatOpen}
-            >
-              <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <Users className="h-5 w-5" />
-                        <span className="sr-only">New Group Chat</span>
-                      </Button>
-                    </DialogTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>New Group Chat</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <NewGroupChatDialog
-                onStartNewGroupChat={onStartNewGroupChat}
-                setOpen={setIsNewGroupChatOpen}
-              />
-            </Dialog>
-          </div>
+        <h2 className="text-xl font-bold">Chats</h2>
+        <div className="relative mt-4">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search chats..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
         </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Cari obrolan..." className="pl-9" />
+        <div className="mt-4 flex gap-2">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => setIsNewChatOpen(true)}
+          >
+            <MessageSquarePlus className="mr-2 h-4 w-4" /> New Chat
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => setIsNewGroupChatOpen(true)}
+          >
+            <Users className="mr-2 h-4 w-4" /> New Group
+          </Button>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
-        <nav className="p-2 space-y-1">
-          {conversations.map((convo) => (
-            <button
-              key={convo.id}
-              onClick={() => onConversationSelect(convo.id)}
-              className={cn(
-                "w-full flex items-center gap-3 text-left p-3 rounded-lg",
-                selectedConversationId === convo.id
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted"
-              )}
-            >
-              <Avatar className="h-10 w-10 border">
-                {convo.isGroup ? (
-                  <AvatarFallback>
-                    <Users className="h-5 w-5" />
-                  </AvatarFallback>
-                ) : (
-                  <>
-                    <AvatarImage src={convo.userAvatar} alt={convo.userName} />
-                    <AvatarFallback>{convo.userName.charAt(0)}</AvatarFallback>
-                  </>
-                )}
-              </Avatar>
-              <div className="flex-1 truncate">
-                <p className="font-semibold">{convo.userName}</p>
-                <p
-                  className={cn(
-                    "text-sm truncate",
-                    selectedConversationId === convo.id
-                      ? "text-primary-foreground/80"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {convo.lastMessage}
-                </p>
-              </div>
-              <div className="flex flex-col items-end text-xs">
-                <span
-                  className={cn(
-                    selectedConversationId === convo.id
-                      ? "text-primary-foreground/80"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {convo.lastMessageTimestamp}
-                </span>
-                {convo.unreadCount > 0 && (
-                  <Badge className="mt-1 h-5 w-5 justify-center p-0">
-                    {convo.unreadCount}
-                  </Badge>
-                )}
-              </div>
-            </button>
-          ))}
-        </nav>
+        {filteredConversations.map((c) => (
+          <div
+            key={c.id}
+            className={cn(
+              "flex items-center gap-3 p-3 cursor-pointer hover:bg-muted",
+              selectedConversationId === c.id && "bg-muted"
+            )}
+            onClick={() => onSelectConversation(c.id)}
+          >
+            <Avatar>
+              <AvatarImage src={c.avatar} />
+              <AvatarFallback>{c.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <p className="font-semibold">{c.name}</p>
+              <p className="text-sm text-muted-foreground truncate">
+                {c.lastMessage}
+              </p>
+            </div>
+            <span className="text-xs text-muted-foreground">{c.lastMessageTime}</span>
+          </div>
+        ))}
       </div>
+      <NewChatDialog
+        open={isNewChatOpen}
+        onOpenChange={setIsNewChatOpen}
+      />
+      <NewGroupChatDialog
+        open={isNewGroupChatOpen}
+        onOpenChange={setIsNewGroupChatOpen}
+      />
     </div>
   );
 };

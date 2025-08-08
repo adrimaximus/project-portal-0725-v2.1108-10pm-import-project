@@ -1,75 +1,94 @@
-import { useState } from 'react';
-import { DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { allCollaborators } from "@/data/collaborators";
 import { Collaborator } from '@/types';
-import { cn } from '@/lib/utils';
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NewChatDialogProps {
-  onSelectCollaborator: (collaborator: Collaborator) => void;
-  setOpen: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const NewChatDialog = ({ onSelectCollaborator, setOpen }: NewChatDialogProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
+const NewChatDialog = ({ open, onOpenChange }: NewChatDialogProps) => {
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
-  const filteredCollaborators = allCollaborators
-    .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0));
+  useEffect(() => {
+    if (!currentUser) return;
 
-  const handleSelect = (collaborator: Collaborator) => {
-    onSelectCollaborator(collaborator);
-    setOpen(false);
+    const fetchCollaborators = async () => {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url');
+
+      if (error) {
+        console.error("Error fetching profiles:", error);
+        return;
+      }
+
+      if (profiles) {
+        const fetchedCollaborators = profiles
+          .filter(profile => profile.id !== currentUser.id)
+          .map((profile): Collaborator => ({
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+            online: true, // Simulate online status
+            avatar: profile.avatar_url || undefined,
+          }));
+        setCollaborators(fetchedCollaborators);
+      }
+    };
+
+    fetchCollaborators();
+  }, [currentUser]);
+
+  const filteredCollaborators = collaborators.filter(c =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSelectCollaborator = (collaborator: Collaborator) => {
+    onOpenChange(false);
+    navigate('/chat', { state: { selectedCollaborator: collaborator } });
   };
 
   return (
-    <DialogContent className="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle>Obrolan Baru</DialogTitle>
-        <DialogDescription>
-          Pilih seorang kolaborator untuk memulai percakapan baru.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="relative my-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Cari kolaborator..."
-          className="pl-9"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-      <div className="flex flex-col gap-1 max-h-[300px] overflow-y-auto pr-2 -mr-2">
-        {filteredCollaborators.length > 0 ? (
-          filteredCollaborators.map(collaborator => (
-            <div
-              key={collaborator.id}
-              className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer"
-              onClick={() => handleSelect(collaborator)}
-            >
-              <div className="relative">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={collaborator.src} alt={collaborator.name} />
-                  <AvatarFallback>{collaborator.fallback}</AvatarFallback>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>New Message</DialogTitle>
+          <DialogDescription>Select a collaborator to start a conversation.</DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <Input
+            placeholder="Search collaborators..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="mb-4"
+          />
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {filteredCollaborators.map(collaborator => (
+              <div
+                key={collaborator.id}
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer"
+                onClick={() => handleSelectCollaborator(collaborator)}
+              >
+                <Avatar>
+                  <AvatarImage src={collaborator.avatar} />
+                  <AvatarFallback>{collaborator.initials}</AvatarFallback>
                 </Avatar>
-                <span className={cn(
-                  "absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background",
-                  collaborator.online ? "bg-green-500" : "bg-gray-400"
-                )} />
+                <span>{collaborator.name}</span>
               </div>
-              <div className="flex-1">
-                <p className="font-medium">{collaborator.name}</p>
-                <p className="text-sm text-muted-foreground">{collaborator.online ? 'Online' : 'Offline'}</p>
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-center text-sm text-muted-foreground py-4">Kolaborator tidak ditemukan.</p>
-        )}
-      </div>
-    </DialogContent>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

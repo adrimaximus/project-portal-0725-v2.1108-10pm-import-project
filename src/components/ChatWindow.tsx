@@ -1,43 +1,45 @@
-import { Conversation } from "@/data/chat";
 import ChatHeader from "./ChatHeader";
 import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
-import { Project } from "@/data/projects";
+import { Conversation } from "@/pages/ChatPage";
+import { Collaborator, Attachment } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ChatWindowProps {
-  selectedConversation: Conversation | undefined;
-  onSendMessage: (message: string, file?: File) => void;
-  projects: Project[];
-  onBack?: () => void;
+  selectedConversation: Conversation | null;
+  onSendMessage: (conversationId: string, text: string, attachment: Attachment | null) => void;
 }
 
-const ChatWindow = ({ selectedConversation, onSendMessage, projects, onBack }: ChatWindowProps) => {
-  if (!selectedConversation) {
+const ChatWindow = ({ selectedConversation, onSendMessage }: ChatWindowProps) => {
+  const { user: currentUser } = useAuth();
+
+  if (!selectedConversation || !currentUser) {
     return (
-      <div className="flex flex-col h-full items-center justify-center bg-muted/40">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold">Welcome to Chat</h2>
-          <p className="text-muted-foreground">
-            Select a conversation to start messaging.
-          </p>
-        </div>
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        Select a conversation to start chatting
       </div>
     );
   }
 
+  const handleSendMessage = (text: string, attachment: Attachment | null) => {
+    onSendMessage(selectedConversation.id, text, attachment);
+  };
+
+  const otherMembers = selectedConversation.members.filter(m => m.id !== currentUser.id);
+  const selectedCollaborator = otherMembers[0];
+
   return (
-    <div className="flex flex-col h-full">
-      <ChatHeader selectedConversation={selectedConversation} onBack={onBack} />
-      <ChatConversation 
-        messages={selectedConversation.messages} 
+    <div className="flex-1 flex flex-col h-full">
+      <ChatHeader
+        conversationName={selectedConversation.name}
         members={selectedConversation.members}
-        projects={projects}
+        isGroup={selectedConversation.isGroup}
       />
-      <ChatInput 
-        onSendMessage={onSendMessage} 
-        members={selectedConversation.isGroup ? selectedConversation.members : []}
-        projects={projects}
+      <ChatConversation
+        messages={selectedConversation.messages}
+        selectedCollaborator={selectedCollaborator}
       />
+      <ChatInput onSendMessage={handleSendMessage} />
     </div>
   );
 };
