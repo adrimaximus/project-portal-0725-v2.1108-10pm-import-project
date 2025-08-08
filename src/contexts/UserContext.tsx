@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Session, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
+import { Session, SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/data/users';
 
@@ -21,35 +21,25 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initializeSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setIsLoading(false); // Stop loading as soon as session is known
-
-      if (session?.user) {
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        setProfile(userProfile);
-      }
-    };
-
-    initializeSession();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session?.user) {
-        const { data: userProfile } = await supabase
+        const { data: userProfile, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
-        setProfile(userProfile);
+        
+        if (error) {
+          console.error("Error fetching profile:", error);
+          setProfile(null);
+        } else {
+          setProfile(userProfile);
+        }
       } else {
         setProfile(null);
       }
+      setIsLoading(false);
     });
 
     return () => {
@@ -70,10 +60,34 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         initials: initials,
       };
       setUser(appUser);
-    } else if (!session?.user) {
+    } else {
       setUser(null);
     }
   }, [session, profile]);
+
+  useEffect(() => {
+    if (!session?.user) {
+      return;
+    }
+
+    const channel = supabase.channel('online-users', {
+      config: {
+        presence: {
+          key: session.user.id,
+        },
+      },
+    });
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({ online_at: new Date().toISOString() });
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session, supabase]);
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -120,7 +134,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <UserContext.Provider value={value}>
-      {isLoading ? <div className="flex h-screen w-full items-center justify-center">Loading...</div> : children}
+      {children}
     </UserContext.Provider>
   );
 };

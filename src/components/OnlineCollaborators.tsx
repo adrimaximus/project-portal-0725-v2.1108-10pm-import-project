@@ -12,21 +12,31 @@ type OnlineCollaboratorsProps = {
 
 const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
   const navigate = useNavigate();
   const { supabase, session } = useUser();
 
   useEffect(() => {
-    const fetchCollaborators = async () => {
-      if (!session?.user) return;
+    if (!session?.user) return;
+
+    const channel = supabase.channel('online-users');
+
+    const updateOnlineUsers = async () => {
+      const presenceState = channel.presenceState();
+      const userIds = Object.keys(presenceState).filter(id => id !== session.user.id);
+
+      if (userIds.length === 0) {
+        setOnlineCollaborators([]);
+        return;
+      }
 
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, avatar_url')
-        .neq('id', session.user.id);
+        .in('id', userIds);
 
       if (error) {
-        console.error('Error fetching collaborators:', error);
+        console.error('Error fetching collaborator profiles:', error);
         return;
       }
 
@@ -38,14 +48,24 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
           src: p.avatar_url,
           online: true,
         }));
-        setCollaborators(mappedCollaborators);
+        setOnlineCollaborators(mappedCollaborators);
       }
     };
 
-    fetchCollaborators();
+    channel
+      .on('presence', { event: 'sync' }, updateOnlineUsers)
+      .on('presence', { event: 'join' }, updateOnlineUsers)
+      .on('presence', { event: 'leave' }, updateOnlineUsers)
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          updateOnlineUsers();
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [supabase, session]);
-  
-  const onlineCollaborators = collaborators;
   
   const visibleCollaborators = onlineCollaborators.slice(0, 3);
   const remainingCount = onlineCollaborators.length - visibleCollaborators.length;
