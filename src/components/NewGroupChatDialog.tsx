@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collaborator } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuth } from "@/providers/AuthProvider";
+import { useUser } from "@/contexts/UserContext";
 
 interface NewGroupChatDialogProps {
   onStartNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
@@ -24,7 +24,7 @@ const NewGroupChatDialog = ({ onStartNewGroupChat, setOpen }: NewGroupChatDialog
   const [groupName, setGroupName] = useState("");
   const [selectedCollaborators, setSelectedCollaborators] = useState<Collaborator[]>([]);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const { supabase, session } = useAuth();
+  const { supabase, session } = useUser();
 
   useEffect(() => {
     const fetchCollaborators = async () => {

@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Users } from "lucide-react";
 import { Collaborator } from "../types";
-import { useAuth } from "@/providers/AuthProvider";
+import { useUser } from "@/contexts/UserContext";
 
 type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
@@ -14,7 +14,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const navigate = useNavigate();
-  const { supabase, session } = useAuth();
+  const { supabase, session } = useUser();
 
   useEffect(() => {
     const fetchCollaborators = async () => {
