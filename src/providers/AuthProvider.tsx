@@ -1,26 +1,34 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, SupabaseClient, User } from '@supabase/supabase-js';
+import { SessionContextProvider, useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { supabase } from '@/integrations/supabase/client';
+
+type Profile = any; // You can define a more specific type for your profile
 
 type AuthContextType = {
   session: Session | null;
   supabase: SupabaseClient;
-  profile: any | null;
+  profile: Profile | null;
+  isLoading: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
+const AuthProviderContent = ({ children }: { children: ReactNode }) => {
+  const session = useSession();
+  const supabase = useSupabaseClient();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async (user: User | undefined) => {
       if (!user) {
         setProfile(null);
+        setLoading(false);
         return;
       }
+      
+      setLoading(true);
       const { data: userProfile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -33,35 +41,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setProfile(userProfile);
       }
-    };
-
-    const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      await fetchProfile(session?.user);
       setLoading(false);
     };
 
-    initializeAuth();
+    fetchProfile(session?.user);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      await fetchProfile(session?.user);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  if (loading) {
-    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
-  }
+  }, [session, supabase]);
 
   return (
-    <AuthContext.Provider value={{ session, supabase, profile }}>
+    <AuthContext.Provider value={{ session, supabase, profile, isLoading: loading }}>
       {children}
     </AuthContext.Provider>
+  );
+};
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  return (
+    <SessionContextProvider supabaseClient={supabase}>
+      <AuthProviderContent>
+        {children}
+      </AuthProviderContent>
+    </SessionContextProvider>
   );
 };
 

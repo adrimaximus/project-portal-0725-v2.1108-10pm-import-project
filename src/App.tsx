@@ -23,7 +23,12 @@ import EmbedPage from './pages/EmbedPage';
 import NotFound from './pages/NotFound';
 
 const ProtectedRoute = () => {
-  const { session } = useAuth();
+  const { session, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+  }
+
   return session ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
