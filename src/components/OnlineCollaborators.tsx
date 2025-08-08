@@ -52,11 +52,15 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
       }
     };
 
-    channel.on('presence', { event: 'sync' }, updateOnlineUsers);
-    channel.on('presence', { event: 'join' }, updateOnlineUsers);
-    channel.on('presence', { event: 'leave' }, updateOnlineUsers);
-
-    channel.subscribe();
+    channel
+      .on('presence', { event: 'sync' }, updateOnlineUsers)
+      .on('presence', { event: 'join' }, updateOnlineUsers)
+      .on('presence', { event: 'leave' }, updateOnlineUsers)
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          updateOnlineUsers();
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
