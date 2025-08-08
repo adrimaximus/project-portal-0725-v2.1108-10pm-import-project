@@ -25,6 +25,9 @@ import NavigationSettingsPage from "./pages/NavigationSettingsPage";
 import EmbedPage from "./pages/EmbedPage";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
+import GitHubPage from "./pages/integrations/GitHubPage";
+import SlackPage from "./pages/integrations/SlackPage";
+import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 
 const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, featureId?: string }) => {
   const { user, isLoading } = useUser();
@@ -70,6 +73,9 @@ function App() {
         <Route path="/settings/team" element={<ProtectedRoute featureId="settings"><TeamSettingsPage /></ProtectedRoute>} />
         <Route path="/settings/integrations" element={<ProtectedRoute featureId="settings"><IntegrationsPage /></ProtectedRoute>} />
         <Route path="/settings/integrations/openai" element={<ProtectedRoute featureId="settings"><OpenAiIntegrationPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/github" element={<ProtectedRoute featureId="settings"><GitHubPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/slack" element={<ProtectedRoute featureId="settings"><SlackPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/google-drive" element={<ProtectedRoute featureId="settings"><GoogleDrivePage /></ProtectedRoute>} />
         <Route path="/settings/navigation" element={<ProtectedRoute featureId="settings"><NavigationSettingsPage /></ProtectedRoute>} />
 
         <Route path="/custom" element={<ProtectedRoute><EmbedPage /></ProtectedRoute>} />
