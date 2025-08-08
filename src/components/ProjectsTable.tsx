@@ -120,13 +120,8 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
     toDate.setHours(23, 59, 59, 999);
 
     return localProjects.filter(project => {
-      // By appending 'T00:00:00', we ensure the date string is parsed in the local timezone,
-      // avoiding inconsistencies with UTC-based parsing of 'YYYY-MM-DD'.
       const projectStart = new Date(project.startDate + 'T00:00:00');
       const projectEnd = new Date(project.dueDate + 'T00:00:00');
-      
-      // A project is within the range if its period overlaps with the selected date range.
-      // (Project Start <= Filter End) AND (Project End >= Filter Start)
       return projectStart <= toDate && projectEnd >= fromDate;
     });
   }, [localProjects, dateRange]);
@@ -134,7 +129,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const handleImport = (newProjects: Project[]) => {
     const updatedProjects = [...localProjects, ...newProjects];
     setLocalProjects(updatedProjects);
-    // Also update the source dummyProjects array for global consistency in this demo app
     newProjects.forEach(p => dummyProjects.push(p));
   };
 
@@ -152,10 +146,8 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
 
   const confirmDelete = () => {
     if (projectToDelete) {
-      // Remove from local state to update UI
       setLocalProjects(prev => prev.filter(p => p.id !== projectToDelete.id));
       
-      // Remove from global dummy data source
       const index = dummyProjects.findIndex(p => p.id === projectToDelete.id);
       if (index > -1) {
         dummyProjects.splice(index, 1);
@@ -238,7 +230,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       case 'list':
         return <ProjectsList projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
       case 'month':
-        return <ProjectsMonthView projects={filteredProjects} refreshKey={refreshKey} />;
+        return <ProjectsMonthView projects={localProjects} refreshKey={refreshKey} />;
       case 'gcal':
         return <GoogleCalendarEventsView refreshKey={refreshKey} onImport={handleImport} />;
       default:
@@ -308,9 +300,11 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           </ToggleGroup>
         </CardHeader>
         <CardContent>
-          <div className="py-4">
-            <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
-          </div>
+          {(view === 'table' || view === 'list') && (
+            <div className="py-4">
+              <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+            </div>
+          )}
           {renderContent()}
         </CardContent>
       </Card>
