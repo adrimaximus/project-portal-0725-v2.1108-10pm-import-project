@@ -22,29 +22,25 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const initializeSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
+      // 1. Ambil sesi saat aplikasi pertama kali dimuat untuk menangani refresh.
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
 
-        if (session?.user) {
-          const { data: userProfile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          setProfile(userProfile);
-        }
-      } catch (error) {
-        console.error("Error initializing session:", error);
-        setSession(null);
-        setProfile(null);
-      } finally {
-        setIsLoading(false);
+      if (session?.user) {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        setProfile(userProfile);
       }
+      // 2. Setelah pemeriksaan awal selesai, hentikan status loading.
+      setIsLoading(false);
     };
 
     initializeSession();
 
+    // 3. Siapkan listener untuk memantau perubahan status auth secara real-time (login/logout).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session?.user) {
