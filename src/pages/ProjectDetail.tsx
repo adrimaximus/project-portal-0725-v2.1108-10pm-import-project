@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { dummyProjects, Project, Task, Comment, User, Activity, ActivityType, ProjectFile, ProjectStatus, PaymentStatus } from "@/data/projects";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
@@ -12,7 +12,7 @@ import { toast } from "sonner";
 const ProjectDetail = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { user: currentUser } = useUser();
+  const { user: currentUser } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
@@ -73,7 +73,8 @@ const ProjectDetail = () => {
     }
   };
 
-  const createActivity = (type: ActivityType, details: any): Activity => {
+  const createActivity = (type: ActivityType, details: any): Activity | null => {
+    if (!currentUser) return null;
     const newActivity: Activity = {
       id: `act-${Date.now()}`,
       user: currentUser,
@@ -84,8 +85,10 @@ const ProjectDetail = () => {
     return newActivity;
   };
 
-  const addActivity = (activity: Activity) => {
-    setProject(prev => prev ? { ...prev, activities: [activity, ...(prev.activities || [])] } : null);
+  const addActivity = (activity: Activity | null) => {
+    if (activity) {
+      setProject(prev => prev ? { ...prev, activities: [activity, ...(prev.activities || [])] } : null);
+    }
   };
 
   const handleUpdateProjectDetails = (updatedDetails: Partial<Project>) => {

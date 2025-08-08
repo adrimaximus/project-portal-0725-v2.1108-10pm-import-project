@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, GripVertical } from "lucide-react";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DndContext,
   closestCenter,
@@ -69,13 +69,14 @@ const SortableNavItemRow = ({ item, onDelete }: { item: NavItem, onDelete: (id: 
 }
 
 const NavigationSettingsPage = () => {
-  const { user } = useUser();
+  const { user } = useAuth();
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [newItemName, setNewItemName] = useState("");
   const [newItemUrl, setNewItemUrl] = useState("");
-  const localStorageKey = `customNavItems_${user.id}`;
+  const localStorageKey = user ? `customNavItems_${user.id}` : '';
 
   useEffect(() => {
+    if (!localStorageKey) return;
     try {
       const items = localStorage.getItem(localStorageKey);
       if (items) {
@@ -87,12 +88,13 @@ const NavigationSettingsPage = () => {
   }, [localStorageKey]);
 
   useEffect(() => {
+    if (!localStorageKey) return;
     try {
       localStorage.setItem(localStorageKey, JSON.stringify(navItems));
     } catch (error) {
       console.error("Failed to save nav items to localStorage", error);
     }
-  }, [navItems]);
+  }, [navItems, localStorageKey]);
 
   const handleAddItem = () => {
     if (newItemName.trim() && newItemUrl.trim()) {

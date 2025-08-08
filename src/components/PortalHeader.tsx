@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PortalSidebar from "./PortalSidebar";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { dummyProjects } from "@/data/projects";
@@ -28,7 +28,7 @@ import {
 import { googleLogout } from "@react-oauth/google";
 
 const PortalHeader = () => {
-  const { user, logout } = useUser();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
