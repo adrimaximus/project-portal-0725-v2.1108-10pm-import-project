@@ -21,7 +21,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSession = async () => {
+    const fetchInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
 
@@ -33,7 +33,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           .single();
         
         if (error) {
-          console.error("Error fetching profile:", error);
+          console.error("Error fetching profile on initial load:", error);
           setProfile(null);
         } else {
           setProfile(userProfile);
@@ -41,13 +41,31 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setProfile(null);
       }
+      
+      // Mark loading as false only after the initial check is complete
       setIsLoading(false);
     };
 
-    fetchSession();
+    fetchInitialSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
+      if (session?.user) {
+        const { data: userProfile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (error) {
+          console.error("Error fetching profile on auth state change:", error);
+          setProfile(null);
+        } else {
+          setProfile(userProfile);
+        }
+      } else {
+        setProfile(null);
+      }
     });
 
     return () => {
@@ -68,10 +86,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         initials: initials,
       };
       setUser(appUser);
-    } else if (!isLoading) {
+    } else {
       setUser(null);
     }
-  }, [session, profile, isLoading]);
+  }, [session, profile]);
 
   useEffect(() => {
     if (!session?.user) {
