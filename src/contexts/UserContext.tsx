@@ -18,24 +18,24 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (profile && session?.user) {
+    if (session?.user) {
+      const name = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || session.user.email!;
+      const initials = `${profile?.first_name?.[0] || ''}${profile?.last_name?.[0] || ''}`.toUpperCase() || session.user.email![0].toUpperCase();
+      
       const appUser: User = {
-        id: profile.id,
-        name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || session.user.email!,
+        id: session.user.id,
+        name: name,
         email: session.user.email!,
-        avatar: profile.avatar_url,
-        initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'U',
+        avatar: profile?.avatar_url,
+        initials: initials,
       };
       setUser(appUser);
       localStorage.setItem('portal_user', JSON.stringify(appUser));
-    } else if (!session) {
+    } else {
       setUser(null);
       localStorage.removeItem('portal_user');
     }
-    
-    if (session === null || (session && profile)) {
-        setIsLoading(false);
-    }
+    setIsLoading(false);
   }, [profile, session]);
 
   const login = (userData: User) => {
