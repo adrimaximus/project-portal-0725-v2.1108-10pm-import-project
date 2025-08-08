@@ -24,7 +24,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/contexts/UserContext";
 import { dummyNotifications } from "@/data/notifications";
 import { useFeatures } from "@/contexts/FeaturesContext";
-import { googleLogout } from "@react-oauth/google";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -41,19 +40,18 @@ type NavItem = {
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
-  const { user, logout } = useUser();
+  const { user, logout, isLoading } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const { isFeatureEnabled } = useFeatures();
 
   const handleLogout = () => {
-    googleLogout();
     logout();
     navigate('/login');
   };
 
-  if (!user) {
+  if (isLoading || !user) {
     return null;
   }
 

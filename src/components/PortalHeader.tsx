@@ -25,10 +25,9 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { googleLogout } from "@react-oauth/google";
 
 const PortalHeader = () => {
-  const { user, logout } = useUser();
+  const { user, logout, isLoading } = useUser();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -53,7 +52,6 @@ const PortalHeader = () => {
   }, []);
 
   const handleLogout = () => {
-    googleLogout();
     logout();
     navigate('/login');
   };
@@ -139,7 +137,7 @@ const PortalHeader = () => {
     </CommandList>
   );
 
-  if (!user) {
+  if (isLoading || !user) {
     return null;
   }
 
