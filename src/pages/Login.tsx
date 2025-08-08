@@ -6,6 +6,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useEffect } from 'react';
 import { ArrowRight, Package } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import CloudinaryVideoPlayer from '@/components/CloudinaryVideoPlayer';
 
 const LoginPage = () => {
   const { session } = useAuth();
@@ -94,14 +95,14 @@ const LoginPage = () => {
           </div>
         </div>
 
-        {/* Right side: Image Panel */}
-        <div className="hidden lg:flex flex-col items-center justify-center p-12 bg-cyan-50 dark:bg-cyan-900/50 relative">
-          <img src="/placeholder.svg" alt="Abstract illustration" className="w-full max-w-md mx-auto" />
-          <div className="absolute bottom-12 left-12 right-12 p-6 bg-white/30 dark:bg-black/30 backdrop-blur-lg rounded-xl border border-white/20">
-            <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
+        {/* Right side: Video Panel */}
+        <div className="hidden lg:flex flex-col items-center justify-center bg-black relative overflow-hidden">
+          <CloudinaryVideoPlayer />
+          <div className="absolute bottom-12 left-12 right-12 p-6 bg-white/30 dark:bg-black/30 backdrop-blur-lg rounded-xl border border-white/20 z-10">
+            <h3 className="text-2xl font-bold text-white">
               Revolutionizing the way we create, manage, and deliver projects.
             </h3>
-            <p className="mt-4 text-gray-600 dark:text-gray-300">
+            <p className="mt-4 text-gray-200">
               Create project briefs with AI voice commands to generate awesome project plans that suit your needs.
             </p>
           </div>
