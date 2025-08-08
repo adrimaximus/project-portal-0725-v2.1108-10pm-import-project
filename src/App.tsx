@@ -1,65 +1,25 @@
-import { Routes, Route } from "react-router-dom";
-import { Toaster } from "@/components/ui/sonner";
-import AppLayout from "./components/AppLayout";
-import Index from "./pages/Index";
-import Projects from "./pages/Projects";
-import ProjectDetail from "./pages/ProjectDetail";
-import RequestPage from "./pages/Request";
-import ChatPage from "./pages/ChatPage";
-import MoodTracker from "./pages/MoodTracker";
-import GoalsPage from "./pages/GoalsPage";
-import GoalDetailPage from "./pages/GoalDetailPage";
-import GoalEditPage from "./pages/GoalEditPage";
-import Billing from "./pages/Billing";
-import NotificationsPage from "./pages/Notifications";
-import Profile from "./pages/Profile";
-import SearchPage from "./pages/SearchPage";
-import SettingsPage from "./pages/Settings";
-import TeamSettingsPage from "./pages/TeamSettingsPage";
-import NavigationSettingsPage from "./pages/NavigationSettingsPage";
-import IntegrationsPage from "./pages/IntegrationsPage";
-import OpenAiIntegrationPage from "./pages/integrations/OpenAiIntegrationPage";
-import { GoogleCalendarPage } from "./pages/integrations/GoogleCalendarPage";
-import EmbedPage from "./pages/EmbedPage";
-import LoginPage from "./pages/LoginPage";
-import NotFound from "./pages/NotFound";
-import UserManagementPage from "./pages/UserManagement";
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import IndexPage from './pages/Index';
+import ProjectDetailsPage from './pages/ProjectDetailsPage';
+import SettingsPage from './pages/SettingsPage';
+import Header from './components/Header';
+import { Toaster } from "@/components/ui/sonner"
 
 function App() {
   return (
-    <>
-      <Toaster />
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<Index />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/:projectId" element={<ProjectDetail />} />
-          <Route path="/request" element={<RequestPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/mood-tracker" element={<MoodTracker />} />
-          <Route path="/goals" element={<GoalsPage />} />
-          <Route path="/goals/:goalId" element={<GoalDetailPage />} />
-          <Route path="/goals/edit/:id" element={<GoalEditPage />} />
-          <Route path="/goals/new" element={<GoalEditPage />} />
-          <Route path="/billing" element={<Billing />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/search" element={<SearchPage />} />
-          
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/team" element={<TeamSettingsPage />} />
-          <Route path="/settings/navigation" element={<NavigationSettingsPage />} />
-          <Route path="/settings/integrations" element={<IntegrationsPage />} />
-          <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
-          <Route path="/settings/integrations/google-calendar" element={<GoogleCalendarPage />} />
-
-          <Route path="/users" element={<UserManagementPage />} />
-          <Route path="/custom" element={<EmbedPage />} />
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </>
+    <Router>
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-grow">
+          <Routes>
+            <Route path="/" element={<IndexPage />} />
+            <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </main>
+        <Toaster />
+      </div>
+    </Router>
   );
 }
 
