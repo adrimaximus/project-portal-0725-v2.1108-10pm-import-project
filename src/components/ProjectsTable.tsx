@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -43,6 +43,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DateRange } from "react-day-picker";
+import { DatePickerWithRange } from "./ui/date-picker-with-range";
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -87,6 +89,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [localProjects, setLocalProjects] = useState<Project[]>(projects);
   const [refreshKey, setRefreshKey] = useState(0);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   useEffect(() => {
     setLocalProjects(projects);
@@ -104,6 +107,25 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       window.removeEventListener('storage', checkConnection);
     }
   }, []);
+
+  const filteredProjects = useMemo(() => {
+    if (!dateRange || !dateRange.from) {
+      return localProjects;
+    }
+
+    const fromDate = new Date(dateRange.from);
+    fromDate.setHours(0, 0, 0, 0);
+
+    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+    toDate.setHours(23, 59, 59, 999);
+
+    return localProjects.filter(project => {
+      const projectStart = new Date(project.startDate);
+      const projectEnd = new Date(project.endDate);
+      
+      return projectStart <= toDate && projectEnd >= fromDate;
+    });
+  }, [localProjects, dateRange]);
 
   const handleImport = (newProjects: Project[]) => {
     const updatedProjects = [...localProjects, ...newProjects];
@@ -156,7 +178,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {localProjects.map((project) => (
+              {filteredProjects.map((project) => (
                 <TableRow key={project.id}>
                   <TableCell style={{ borderLeft: `4px solid ${getStatusColor(project.status)}` }}>
                     <Link to={`/projects/${project.id}`} className="font-medium text-primary hover:underline">
@@ -210,9 +232,9 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           </Table>
         );
       case 'list':
-        return <ProjectsList projects={localProjects} onDeleteProject={handleDeleteProject} />;
+        return <ProjectsList projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
       case 'month':
-        return <ProjectsMonthView projects={localProjects} refreshKey={refreshKey} />;
+        return <ProjectsMonthView projects={filteredProjects} refreshKey={refreshKey} />;
       case 'gcal':
         return <GoogleCalendarEventsView refreshKey={refreshKey} onImport={handleImport} />;
       default:
@@ -282,6 +304,9 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           </ToggleGroup>
         </CardHeader>
         <CardContent>
+          <div className="py-4">
+            <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+          </div>
           {renderContent()}
         </CardContent>
       </Card>
