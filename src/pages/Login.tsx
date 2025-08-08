@@ -6,7 +6,6 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useEffect } from 'react';
 import { ArrowRight, Package } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import CloudinaryVideoPlayer from '@/components/CloudinaryVideoPlayer';
 
 const LoginPage = () => {
   const { session } = useAuth();
@@ -97,7 +96,13 @@ const LoginPage = () => {
 
         {/* Right side: Video Panel */}
         <div className="hidden lg:flex flex-col items-center justify-center bg-black relative overflow-hidden">
-          <CloudinaryVideoPlayer />
+          <iframe
+            src="https://player.cloudinary.com/embed/?cloud_name=dxqonns7y&public_id=Pin_on_Disen%CC%83adora_ui5u0u&profile=cld-default&player[autoplay]=true&player[loop]=true&player[muted]=true&player[controls]=false&player[show_logo]=false"
+            className="absolute top-0 left-0 w-full h-full object-cover z-0"
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+            allowFullScreen
+            frameBorder="0"
+          ></iframe>
           <div className="absolute bottom-12 left-12 right-12 p-6 bg-white/30 dark:bg-black/30 backdrop-blur-lg rounded-xl border border-white/20 z-10">
             <h3 className="text-2xl font-bold text-white">
               Revolutionizing the way we create, manage, and deliver projects.
