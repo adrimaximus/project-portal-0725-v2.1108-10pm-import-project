@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/providers/AuthProvider';
 import { useEffect } from 'react';
+import { Package } from 'lucide-react';
 
 const LoginPage = () => {
   const { session } = useAuth();
@@ -16,16 +17,34 @@ const LoginPage = () => {
   }, [session, navigate]);
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md dark:bg-gray-800">
-        <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">Masuk ke Akun Anda</h2>
-        <Auth
-          supabaseClient={supabase}
-          appearance={{ theme: ThemeSupa }}
-          providers={['google']}
-          onlyThirdPartyProviders
-          theme="light"
-        />
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
+      <div className="hidden bg-muted lg:flex lg:flex-col items-center justify-center p-10 text-center">
+        <Package className="h-16 w-16 mx-auto text-primary" />
+        <h1 className="mt-6 text-4xl font-bold">Client Portal</h1>
+        <p className="mt-2 text-lg text-muted-foreground">
+          Your all-in-one project management hub.
+        </p>
+      </div>
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-sm space-y-6">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight">
+              Sign in to your account
+            </h2>
+            <p className="mt-2 text-muted-foreground">
+              Continue with your Google account below.
+            </p>
+          </div>
+          <div className="pt-4">
+            <Auth
+              supabaseClient={supabase}
+              appearance={{ theme: ThemeSupa }}
+              providers={['google']}
+              onlyThirdPartyProviders
+              theme="light"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
