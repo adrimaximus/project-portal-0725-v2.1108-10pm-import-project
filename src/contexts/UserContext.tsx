@@ -21,10 +21,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initializeSession = async () => {
+    const fetchInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
-      setIsLoading(false); // Stop loading as soon as session is known
 
       if (session?.user) {
         const { data: userProfile } = await supabase
@@ -34,9 +33,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           .single();
         setProfile(userProfile);
       }
+      setIsLoading(false);
     };
 
-    initializeSession();
+    fetchInitialSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
@@ -120,7 +120,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <UserContext.Provider value={value}>
-      {isLoading ? <div className="flex h-screen w-full items-center justify-center">Loading...</div> : children}
+      {!isLoading ? children : <div className="flex h-screen w-full items-center justify-center">Loading...</div>}
     </UserContext.Provider>
   );
 };
