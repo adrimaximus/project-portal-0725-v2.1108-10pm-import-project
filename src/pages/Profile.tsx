@@ -1,22 +1,32 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useUser } from "@/contexts/UserContext";
-import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import PortalLayout from "@/components/PortalLayout";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 
 const Profile = () => {
-  const { user, updateUser } = useUser();
-  const { toast } = useToast();
+  const { user, updateUser } = useAuth();
 
-  const [name, setName] = useState(user.name);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatar);
+  const [name, setName] = useState(user?.name || "");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name);
+      setAvatarPreview(user.avatar);
+    }
+  }, [user]);
+
+  if (!user) {
+    return <PortalLayout><div>Loading profile...</div></PortalLayout>;
+  }
 
   const handlePhotoChangeClick = () => {
     fileInputRef.current?.click();
@@ -26,22 +36,24 @@ const Profile = () => {
     const file = event.target.files?.[0];
     if (file) {
       setAvatarPreview(URL.createObjectURL(file));
+      toast.info("Avatar preview updated. Save changes to apply. Note: Avatar upload is not fully implemented yet.");
     }
   };
 
-  const handleSaveChanges = () => {
-    const newAvatarUrl = avatarPreview || user.avatar;
-    updateUser({ name, avatar: newAvatarUrl });
+  const handleSaveChanges = async () => {
+    const nameParts = name.split(' ');
+    const first_name = nameParts[0] || '';
+    const last_name = nameParts.slice(1).join(' ');
+    
+    await updateUser({ first_name, last_name });
 
-    toast({
-      title: "Profile Updated",
-      description: "Your changes have been saved successfully.",
+    toast.success("Profile Updated", {
+      description: "Your name has been saved successfully.",
     });
   };
 
   const handlePasswordChange = () => {
-    toast({
-      title: "Password Updated",
+    toast.success("Password Updated", {
       description: "Your password has been changed successfully.",
     });
   };

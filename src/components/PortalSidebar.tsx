@@ -21,7 +21,7 @@ import { Button } from "./ui/button";
 import OnlineCollaborators from "./OnlineCollaborators";
 import { dummyConversations } from "@/data/chat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { dummyNotifications } from "@/data/notifications";
 import { useFeatures } from "@/contexts/FeaturesContext";
 import { googleLogout } from "@react-oauth/google";
@@ -41,7 +41,7 @@ type NavItem = {
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
-  const { user, logout } = useUser();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -224,8 +224,8 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                         <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" className="w-full h-auto p-1">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={user.avatar} alt={user.name} />
-                              <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                              <AvatarImage src={user.avatar || undefined} alt={user.name} />
+                              <AvatarFallback>{user.initials}</AvatarFallback>
                             </Avatar>
                             <span className="sr-only">{user.name}</span>
                           </Button>
@@ -261,8 +261,8 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                   >
                     <span className="flex items-center gap-3">
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                        <AvatarImage src={user.avatar || undefined} alt={user.name} />
+                        <AvatarFallback>{user.initials}</AvatarFallback>
                       </Avatar>
                       {user.name}
                     </span>

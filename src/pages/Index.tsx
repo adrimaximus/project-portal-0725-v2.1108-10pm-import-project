@@ -25,7 +25,7 @@ import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ListChecks, CreditCard, User, Users, TrendingUp, Hourglass, ChevronsUpDown } from "lucide-react";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import PortalLayout from "@/components/PortalLayout";
 import {
   Collapsible,
@@ -34,13 +34,17 @@ import {
 } from "@/components/ui/collapsible";
 
 const Index = () => {
-  const { user } = useUser();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [date, setDate] = useState<DateRange | undefined>({
     from: subYears(new Date(), 1),
     to: new Date(),
   });
   const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(false);
+
+  if (!user) {
+    return <PortalLayout><div>Loading...</div></PortalLayout>;
+  }
 
   const filteredProjects = dummyProjects.filter(project => {
     if (date?.from) {
