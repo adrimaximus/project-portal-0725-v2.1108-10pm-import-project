@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Session, SupabaseClient } from '@supabase/supabase-js';
+import { Session, SupabaseClient, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 type AuthContextType = {
@@ -16,25 +16,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    const fetchProfile = async (user: User | undefined) => {
+      if (!user) {
+        setProfile(null);
+        return;
+      }
+      const { data: userProfile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error("Error fetching profile:", error);
+        setProfile(null);
+      } else {
+        setProfile(userProfile);
+      }
+    };
+
+    const initializeAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      await fetchProfile(session?.user);
+      setLoading(false);
+    };
+
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
-      if (session?.user) {
-        const { data: userProfile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (error && error.code !== 'PGRST116') { // PGRST116 means 0 rows, which is not an error here
-            console.error("Error fetching profile:", error);
-        }
-        setProfile(userProfile);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
+      await fetchProfile(session?.user);
     });
 
     return () => {
