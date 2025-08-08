@@ -18,7 +18,7 @@ const LoginPage = () => {
 
   return (
     <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
-      <div className="hidden bg-muted lg:flex lg:flex-col items-center justify-center p-10 text-center">
+      <div className="bg-muted lg:flex lg:flex-col items-center justify-center p-10 text-center">
         <Package className="h-16 w-16 mx-auto text-primary" />
         <h1 className="mt-6 text-4xl font-bold">Client Portal</h1>
         <p className="mt-2 text-lg text-muted-foreground">
