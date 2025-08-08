@@ -3,8 +3,33 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useGoogleLogin } from "@react-oauth/google";
+import { toast } from "sonner";
 
 const GoogleCalendarPage = () => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const login = useGoogleLogin({
+    onSuccess: (tokenResponse) => {
+      console.log(tokenResponse);
+      toast.success("Successfully connected to Google Calendar!");
+      setIsLoading(false);
+      // In a real application, you would send the access token to your backend
+      // to be stored securely and used to sync calendar data.
+    },
+    onError: () => {
+      toast.error("Failed to connect to Google Calendar. Please try again.");
+      setIsLoading(false);
+    },
+    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+  });
+
+  const handleConnect = () => {
+    setIsLoading(true);
+    login();
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -45,7 +70,9 @@ const GoogleCalendarPage = () => {
             <CardDescription>Click the button below to connect your account.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button>Connect Google Calendar</Button>
+            <Button onClick={handleConnect} disabled={isLoading}>
+              {isLoading ? 'Connecting...' : 'Connect Google Calendar'}
+            </Button>
           </CardContent>
         </Card>
       </div>
