@@ -1,7 +1,12 @@
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
+import FullCalendar from '@fullcalendar/react';
+import multiMonthPlugin from '@fullcalendar/multimonth';
+import interactionPlugin from '@fullcalendar/interaction';
+import idLocale from '@fullcalendar/core/locales/id';
+import { EventContentArg } from '@fullcalendar/core';
 import { Project } from "@/data/projects";
 import { getStatusColor } from "@/lib/statusUtils";
-import { Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
 
 interface ProjectsYearViewProps {
   projects: Project[];
@@ -9,55 +14,58 @@ interface ProjectsYearViewProps {
 }
 
 const ProjectsYearView = ({ projects }: ProjectsYearViewProps) => {
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
+  const calendarEvents = useMemo(() => projects
+    .filter(p => p.dueDate) // Hanya tampilkan proyek yang memiliki tanggal jatuh tempo
+    .map(project => ({
+      id: project.id,
+      title: project.name,
+      start: project.startDate || project.dueDate, // Gunakan tanggal mulai jika ada, jika tidak, gunakan tanggal jatuh tempo
+      end: project.dueDate,
+      allDay: true,
+      extendedProps: {
+        status: project.status,
+        id: project.id
+      },
+      backgroundColor: getStatusColor(project.status),
+      borderColor: getStatusColor(project.status),
+    })), [projects]);
 
-  const yearProjects = projects.filter(project => {
-    if (!project.dueDate) return false;
-    const projectDate = new Date(project.dueDate);
-    return projectDate.getFullYear() === currentYear;
-  }).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-
-  const projectsByMonth: { [key: string]: Project[] } = yearProjects.reduce((acc, project) => {
-    const month = new Date(project.dueDate).toLocaleString('default', { month: 'long' });
-    if (!acc[month]) {
-      acc[month] = [];
-    }
-    acc[month].push(project);
-    return acc;
-  }, {} as { [key: string]: Project[] });
-
-  const monthOrder = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const sortedMonths = Object.keys(projectsByMonth).sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
+  const renderEventContent = (eventInfo: EventContentArg) => {
+    // Di tampilan tahun, kita hanya menampilkan titik untuk menjaga kebersihan
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'white' }}></div>
+      </div>
+    );
+  };
 
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-4">Projects for {currentYear}</h3>
-      {sortedMonths.length > 0 ? (
-        <div className="space-y-6">
-          {sortedMonths.map(month => (
-            <div key={month}>
-              <h4 className="text-md font-semibold mb-3">{month}</h4>
-              <div className="space-y-3">
-                {projectsByMonth[month].map(project => (
-                  <Link to={`/projects/${project.id}`} key={project.id} className="block">
-                    <Card className="hover:bg-muted/50 transition-colors">
-                      <CardContent className="p-4 flex items-center" style={{ borderLeft: `4px solid ${getStatusColor(project.status)}` }}>
-                        <div className="flex-grow">
-                          <p className="font-semibold">{project.name}</p>
-                          <p className="text-sm text-muted-foreground">{project.status} - Due: {new Date(project.dueDate).toLocaleDateString()}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-muted-foreground">No projects with due dates this year.</p>
-      )}
+    <div className="calendar-container">
+       <style>{`
+        .fc-event { cursor: pointer; border-width: 0px !important; }
+        .fc-multimonth-daygrid-day.fc-day-today { background-color: rgba(59, 130, 246, 0.1); }
+        .fc-toolbar-title { font-size: 1.25rem; font-weight: 600; }
+        .fc .fc-button { background-color: #f4f4f5; border-color: #e4e4e7; color: #18181b; }
+        .fc .fc-button:hover { background-color: #e4e4e7; }
+        .fc .fc-button-primary:not(:disabled).fc-button-active, .fc .fc-button-primary:not(:disabled):active { background-color: #3b82f6; border-color: #3b82f6; color: white; }
+        .fc-multimonth-title { text-align: center; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; }
+      `}</style>
+      <FullCalendar
+        plugins={[multiMonthPlugin, interactionPlugin]}
+        initialView="multiMonthYear"
+        headerToolbar={{
+          left: 'prev,next today',
+          center: 'title',
+          right: ''
+        }}
+        events={calendarEvents}
+        eventContent={renderEventContent}
+        locale={idLocale}
+        buttonText={{ today: 'Hari Ini' }}
+        height="auto"
+        multiMonthMaxColumns={3}
+        eventDisplay="background" // Menampilkan acara sebagai latar belakang berwarna
+      />
     </div>
   );
 };
