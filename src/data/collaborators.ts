@@ -33,7 +33,7 @@ export const allCollaborators: Collaborator[] = [
     id: "usr_5",
     name: "Eko Prasetyo",
     fallback: "EP",
-    online: false,
+    online: true,
     src: "https://i.pravatar.cc/150?u=usr_5",
   },
   {
@@ -47,7 +47,7 @@ export const allCollaborators: Collaborator[] = [
     id: "usr_7",
     name: "Gilang Ramadhan",
     fallback: "GR",
-    online: false,
+    online: true,
     src: "https://i.pravatar.cc/150?u=usr_7",
   },
 ];
