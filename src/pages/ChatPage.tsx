@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ChatList from "@/components/ChatList";
 import ChatWindow from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
-import { dummyConversations, Conversation, Message } from "@/data/chat";
-import { Collaborator, Attachment, User } from "@/types";
+import { dummyConversations, Conversation } from "@/data/chat";
+import { Collaborator, Attachment, User, Message } from "@/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 

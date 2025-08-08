@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, CalendarCheck, RefreshCw, MoreHorizontal, Trash2 } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2 } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
 import GoogleCalendarEventsView from "./GoogleCalendarEventsView";
@@ -85,28 +85,13 @@ const getStatusColor = (status: Project['status']): string => {
 
 const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [view, setView] = useState<ViewMode>('table');
-  const [isGcalConnected, setIsGcalConnected] = useState(false);
   const [localProjects, setLocalProjects] = useState<Project[]>(projects);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   useEffect(() => {
     setLocalProjects(projects);
   }, [projects]);
-
-  useEffect(() => {
-    const checkConnection = () => {
-      const storedStatus = localStorage.getItem("gcal_connected");
-      setIsGcalConnected(storedStatus === "true");
-    };
-    checkConnection();
-    
-    window.addEventListener('storage', checkConnection);
-    return () => {
-      window.removeEventListener('storage', checkConnection);
-    }
-  }, []);
 
   const filteredProjects = useMemo(() => {
     if (!dateRange || !dateRange.from) {
@@ -256,22 +241,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
         <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4">
           <div className="flex items-center gap-2">
             <CardTitle>Projects</CardTitle>
-            {isGcalConnected && (
-              <>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={handleSync} className="h-8 w-8">
-                        <RefreshCw className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Sync Calendars</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </>
-            )}
           </div>
           <ToggleGroup 
             type="single" 
