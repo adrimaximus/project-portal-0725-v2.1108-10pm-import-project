@@ -17,32 +17,40 @@ const LoginPage = () => {
   }, [session, navigate]);
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
-      <div className="bg-muted lg:flex lg:flex-col items-center justify-center p-10 text-center">
-        <Package className="h-16 w-16 mx-auto text-primary" />
-        <h1 className="mt-6 text-4xl font-bold">Client Portal</h1>
-        <p className="mt-2 text-lg text-muted-foreground">
-          Your all-in-one project management hub.
-        </p>
-      </div>
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-sm space-y-6">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight">
-              Sign in to your account
-            </h2>
-            <p className="mt-2 text-muted-foreground">
-              Continue with your Google account below.
+    <div className="w-full min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-5xl lg:grid lg:grid-cols-2 rounded-2xl shadow-lg overflow-hidden bg-white">
+        {/* Left side: Login Form */}
+        <div className="flex flex-col justify-center p-8 sm:p-12">
+          <div className="mb-8 flex items-center gap-2">
+            <Package className="h-7 w-7 text-primary" />
+            <h1 className="text-2xl font-semibold">Client Portal</h1>
+          </div>
+          <div className="mb-6">
+            <h2 className="text-3xl font-bold tracking-tight">Welcome Back</h2>
+            <p className="text-muted-foreground mt-2">
+              Sign in to manage your projects and collaborate with your team.
             </p>
           </div>
-          <div className="pt-4">
-            <Auth
-              supabaseClient={supabase}
-              appearance={{ theme: ThemeSupa }}
-              providers={['google']}
-              onlyThirdPartyProviders
-              theme="light"
-            />
+          
+          <Auth
+            supabaseClient={supabase}
+            appearance={{ theme: ThemeSupa }}
+            providers={['google']}
+            theme="light"
+            view="sign_in"
+          />
+        </div>
+
+        {/* Right side: Image Panel */}
+        <div className="hidden lg:flex items-center justify-center p-8 bg-muted">
+          <div className="text-center">
+            <img src="/placeholder.svg" alt="Abstract illustration" className="w-full max-w-sm mx-auto" />
+            <h3 className="mt-8 text-2xl font-bold text-foreground">
+              Streamline Your Workflow
+            </h3>
+            <p className="mt-2 text-muted-foreground">
+              Our platform helps you manage every detail of your projects from start to finish.
+            </p>
           </div>
         </div>
       </div>
