@@ -120,9 +120,13 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
     toDate.setHours(23, 59, 59, 999);
 
     return localProjects.filter(project => {
-      const projectStart = new Date(project.startDate);
-      const projectEnd = new Date(project.endDate);
+      // By appending 'T00:00:00', we ensure the date string is parsed in the local timezone,
+      // avoiding inconsistencies with UTC-based parsing of 'YYYY-MM-DD'.
+      const projectStart = new Date(project.startDate + 'T00:00:00');
+      const projectEnd = new Date(project.dueDate + 'T00:00:00');
       
+      // A project is within the range if its period overlaps with the selected date range.
+      // (Project Start <= Filter End) AND (Project End >= Filter Start)
       return projectStart <= toDate && projectEnd >= fromDate;
     });
   }, [localProjects, dateRange]);
