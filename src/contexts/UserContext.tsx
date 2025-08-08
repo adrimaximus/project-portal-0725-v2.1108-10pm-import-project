@@ -21,25 +21,38 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const initializeSession = async () => {
+      // 1. Ambil sesi saat aplikasi pertama kali dimuat untuk menangani refresh.
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
+
       if (session?.user) {
-        const { data: userProfile, error } = await supabase
+        const { data: userProfile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
-        
-        if (error) {
-          console.error("Error fetching profile on auth state change:", error);
-          setProfile(null);
-        } else {
-          setProfile(userProfile);
-        }
+        setProfile(userProfile);
+      }
+      // 2. Setelah pemeriksaan awal selesai, hentikan status loading.
+      setIsLoading(false);
+    };
+
+    initializeSession();
+
+    // 3. Siapkan listener untuk memantau perubahan status auth secara real-time (login/logout).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        setProfile(userProfile);
       } else {
         setProfile(null);
       }
-      setIsLoading(false);
     });
 
     return () => {
