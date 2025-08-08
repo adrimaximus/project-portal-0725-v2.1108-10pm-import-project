@@ -16,30 +16,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       if (session?.user) {
-        const { data: userProfile, error } = await supabase
+        const { data: userProfile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
-        
-        if (error && error.code !== 'PGRST116') { // PGRST116 means 0 rows, which is not an error here
-            console.error("Error fetching profile:", error);
-        }
+        setProfile(userProfile);
+      }
+      setLoading(false);
+    };
+
+    getSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+       if (session?.user) {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
         setProfile(userProfile);
       } else {
         setProfile(null);
       }
-      setLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   if (loading) {
@@ -55,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === null) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

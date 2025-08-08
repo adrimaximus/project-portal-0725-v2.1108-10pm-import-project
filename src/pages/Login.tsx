@@ -63,13 +63,6 @@ const LoginPage = () => {
                 providers={['google']}
                 theme="light"
                 view="sign_in"
-                localization={{
-                  variables: {
-                    sign_up: {
-                      confirmation_text: 'Check your email for the confirmation link. If you don\'t receive it, the email provider may not be configured in your Supabase project.'
-                    }
-                  }
-                }}
               />
             </div>
           </div>
