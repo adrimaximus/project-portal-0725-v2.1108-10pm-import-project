@@ -15,10 +15,9 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Calendar as CalendarIcon, Table as TableIcon, CalendarCheck, PlusCircle, RefreshCw, MoreHorizontal, Trash2 } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, CalendarCheck, RefreshCw, MoreHorizontal, Trash2 } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
-import ProjectsYearView from "./ProjectsYearView";
 import GoogleCalendarEventsView from "./GoogleCalendarEventsView";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
@@ -49,7 +48,7 @@ interface ProjectsTableProps {
   projects: Project[];
 }
 
-type ViewMode = 'table' | 'list' | 'month' | 'year' | 'gcal';
+type ViewMode = 'table' | 'list' | 'month' | 'gcal';
 
 const getStatusBadgeClass = (status: Project['status']) => {
   switch (status) {
@@ -214,8 +213,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
         return <ProjectsList projects={localProjects} onDeleteProject={handleDeleteProject} />;
       case 'month':
         return <ProjectsMonthView projects={localProjects} refreshKey={refreshKey} />;
-      case 'year':
-        return <ProjectsYearView projects={localProjects} refreshKey={refreshKey} />;
       case 'gcal':
         return <GoogleCalendarEventsView refreshKey={refreshKey} onImport={handleImport} />;
       default:
@@ -276,9 +273,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
             </ToggleGroupItem>
             <ToggleGroupItem value="month" aria-label="Month view">
               <CalendarDays className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="year" aria-label="Year view">
-              <CalendarIcon className="h-4 w-4" />
             </ToggleGroupItem>
             {isGcalConnected && (
               <ToggleGroupItem value="gcal" aria-label="Google Calendar view">
