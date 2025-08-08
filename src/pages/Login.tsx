@@ -2,13 +2,13 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '@/contexts/UserContext';
+import { useAuth } from '@/providers/AuthProvider';
 import { useEffect } from 'react';
 import { ArrowRight, Package } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const LoginPage = () => {
-  const { session } = useUser();
+  const { session } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
