@@ -1,20 +1,4 @@
-import { Collaborator } from "@/types";
-
-export interface Attachment {
-  name: string;
-  url: string;
-  type: 'image' | 'file';
-}
-
-export interface Message {
-  id: string;
-  text: string;
-  timestamp: string;
-  sender: "me" | "other";
-  senderName: string;
-  senderAvatar: string;
-  attachment?: Attachment;
-}
+import { Collaborator, Message, Attachment, User } from "@/types";
 
 export interface Conversation {
   id: string;
@@ -27,6 +11,12 @@ export interface Conversation {
   isGroup?: boolean;
   members?: Collaborator[];
 }
+
+const me: User = { id: 'me', name: 'You', avatar: 'https://i.pravatar.cc/150?u=me', initials: 'Y' };
+const john: User = { id: 'john', name: 'John Doe', avatar: 'https://i.pravatar.cc/150?u=john', initials: 'JD' };
+const jane: User = { id: 'jane', name: 'Jane Smith', avatar: 'https://i.pravatar.cc/150?u=jane', initials: 'JS' };
+const alex: User = { id: 'alex', name: 'Alex', avatar: 'https://i.pravatar.cc/150?u=alex', initials: 'A' };
+const system: User = { id: 'system', name: 'System', initials: 'S' };
 
 export const dummyConversations: Conversation[] = [
   {
@@ -42,17 +32,13 @@ export const dummyConversations: Conversation[] = [
         id: 'msg-1',
         text: "Hey, how's the project going?",
         timestamp: "10:30 AM",
-        sender: "other",
-        senderName: "John Doe",
-        senderAvatar: "https://i.pravatar.cc/150?u=john",
+        sender: john,
       },
       {
         id: 'msg-2',
         text: "Pretty good! I'm almost done with the new feature.",
         timestamp: "10:31 AM",
-        sender: "me",
-        senderName: "You",
-        senderAvatar: "https://i.pravatar.cc/150?u=me",
+        sender: me,
       },
     ],
   },
@@ -69,9 +55,7 @@ export const dummyConversations: Conversation[] = [
         id: 'msg-3',
         text: "Can you send me the report?",
         timestamp: "Yesterday",
-        sender: "other",
-        senderName: "Jane Smith",
-        senderAvatar: "https://i.pravatar.cc/150?u=jane",
+        sender: jane,
       },
     ],
   },
@@ -83,26 +67,22 @@ export const dummyConversations: Conversation[] = [
     unreadCount: 5,
     isGroup: true,
     members: [
-        { id: '1', name: 'Alex', src: 'https://i.pravatar.cc/150?u=alex', fallback: 'A', online: true },
-        { id: '2', name: 'Beth', src: 'https://i.pravatar.cc/150?u=beth', fallback: 'B', online: false },
-        { id: '3', name: 'Charlie', src: 'https://i.pravatar.cc/150?u=charlie', fallback: 'C', online: true },
+        { id: '1', name: 'Alex', avatar: 'https://i.pravatar.cc/150?u=alex', initials: 'A', online: true },
+        { id: '2', name: 'Beth', avatar: 'https://i.pravatar.cc/150?u=beth', initials: 'B', online: false },
+        { id: '3', name: 'Charlie', avatar: 'https://i.pravatar.cc/150?u=charlie', initials: 'C', online: true },
     ],
     messages: [
       {
         id: 'msg-4',
         text: "Don't forget the meeting at 3 PM.",
         timestamp: "Yesterday",
-        sender: "other",
-        senderName: "Alex",
-        senderAvatar: "https://i.pravatar.cc/150?u=alex",
+        sender: alex,
       },
       {
         id: 'msg-5',
         text: "I've attached the agenda.",
         timestamp: "Yesterday",
-        sender: "other",
-        senderName: "Alex",
-        senderAvatar: "https://i.pravatar.cc/150?u=alex",
+        sender: alex,
         attachment: {
           name: "meeting-agenda.pdf",
           url: "#",

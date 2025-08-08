@@ -50,7 +50,7 @@ interface ProjectsTableProps {
   projects: Project[];
 }
 
-type ViewMode = 'table' | 'list' | 'month' | 'gcal';
+type ViewMode = 'table' | 'list' | 'month';
 
 const getStatusBadgeClass = (status: Project['status']) => {
   switch (status) {
@@ -231,8 +231,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
         return <ProjectsList projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
       case 'month':
         return <ProjectsMonthView projects={localProjects} />;
-      case 'gcal':
-        return <GoogleCalendarEventsView refreshKey={refreshKey} onImport={handleImport} />;
       default:
         return null;
     }
@@ -292,11 +290,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
             <ToggleGroupItem value="month" aria-label="Month view">
               <CalendarDays className="h-4 w-4" />
             </ToggleGroupItem>
-            {isGcalConnected && (
-              <ToggleGroupItem value="gcal" aria-label="Google Calendar view">
-                <CalendarCheck className="h-4 w-4" />
-              </ToggleGroupItem>
-            )}
           </ToggleGroup>
         </CardHeader>
         <CardContent>

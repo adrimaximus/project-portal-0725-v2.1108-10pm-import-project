@@ -20,7 +20,7 @@ export interface Collaborator {
 
 export interface Attachment {
   name:string;
-  type: string;
+  type: 'image' | 'file';
   url: string;
 }
 

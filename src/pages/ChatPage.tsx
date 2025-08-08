@@ -4,9 +4,9 @@ import ChatList from "@/components/ChatList";
 import ChatWindow from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
 import { dummyConversations, Conversation, Message } from "@/data/chat";
-import { Collaborator } from "@/types";
-import { dummyProjects } from "@/data/projects";
+import { Collaborator, Attachment, User } from "@/types";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ChatPage = () => {
   const [conversations, setConversations] =
@@ -17,6 +17,7 @@ const ChatPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     if (!isMobile) {
@@ -40,7 +41,7 @@ const ChatPage = () => {
         const newConversation: Conversation = {
           id: `conv-${collaborator.id}`,
           userName: collaborator.name,
-          userAvatar: collaborator.src,
+          userAvatar: collaborator.avatar,
           lastMessage: "Say hello!",
           lastMessageTimestamp: "Just now",
           unreadCount: 0,
@@ -63,8 +64,8 @@ const ChatPage = () => {
     setSelectedConversationId(id);
   };
 
-  const handleSendMessage = (messageText: string, file?: File) => {
-    if (!selectedConversationId) return;
+  const handleSendMessage = (conversationId: string, messageText: string, attachment: Attachment | null) => {
+    if (!conversationId || !currentUser) return;
 
     const newMessage: Message = {
       id: `msg-${Date.now()}`,
@@ -73,24 +74,15 @@ const ChatPage = () => {
         hour: "2-digit",
         minute: "2-digit",
       }),
-      sender: "me",
-      senderName: "You",
-      senderAvatar: "https://i.pravatar.cc/150?u=me",
+      sender: currentUser,
+      attachment: attachment || undefined,
     };
 
-    if (file) {
-      newMessage.attachment = {
-        name: file.name,
-        url: URL.createObjectURL(file),
-        type: file.type.startsWith('image/') ? 'image' : 'file',
-      };
-    }
-
-    const lastMessage = messageText || `Sent an attachment: ${file?.name}`;
+    const lastMessage = messageText || `Sent an attachment: ${attachment?.name}`;
 
     setConversations((prev) =>
       prev.map((convo) =>
-        convo.id === selectedConversationId
+        convo.id === conversationId
           ? {
               ...convo,
               messages: [...convo.messages, newMessage],
@@ -121,9 +113,7 @@ const ChatPage = () => {
           id: `msg-${Date.now()}`,
           text: `Group "${groupName}" was created.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          sender: "me",
-          senderName: "System",
-          senderAvatar: "",
+          sender: { id: 'system', name: 'System', initials: 'S' },
         },
       ],
       isGroup: true,
@@ -146,15 +136,14 @@ const ChatPage = () => {
             <ChatList
               conversations={conversations}
               selectedConversationId={selectedConversationId}
-              onConversationSelect={handleConversationSelect}
+              onSelectConversation={handleConversationSelect}
               onStartNewChat={handleStartNewChat}
               onStartNewGroupChat={handleStartNewGroupChat}
             />
           ) : (
             <ChatWindow
               selectedConversation={selectedConversation}
-              onSendMessage={handleSendMessage}
-              projects={dummyProjects}
+              onSendMessage={(text, attachment) => handleSendMessage(selectedConversation.id, text, attachment)}
               onBack={() => setSelectedConversationId(null)}
             />
           )}
@@ -169,14 +158,13 @@ const ChatPage = () => {
         <ChatList
           conversations={conversations}
           selectedConversationId={selectedConversationId}
-          onConversationSelect={handleConversationSelect}
+          onSelectConversation={handleConversationSelect}
           onStartNewChat={handleStartNewChat}
           onStartNewGroupChat={handleStartNewGroupChat}
         />
         <ChatWindow
           selectedConversation={selectedConversation}
-          onSendMessage={handleSendMessage}
-          projects={dummyProjects}
+          onSendMessage={(text, attachment) => handleSendMessage(selectedConversationId!, text, attachment)}
         />
       </div>
     </PortalLayout>

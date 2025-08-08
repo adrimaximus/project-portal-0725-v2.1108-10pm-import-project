@@ -1,16 +1,17 @@
 import ChatHeader from "./ChatHeader";
 import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
-import { Conversation } from "@/pages/ChatPage";
+import { Conversation } from "@/data/chat";
 import { Collaborator, Attachment } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ChatWindowProps {
   selectedConversation: Conversation | null;
-  onSendMessage: (conversationId: string, text: string, attachment: Attachment | null) => void;
+  onSendMessage: (text: string, attachment: Attachment | null) => void;
+  onBack?: () => void;
 }
 
-const ChatWindow = ({ selectedConversation, onSendMessage }: ChatWindowProps) => {
+const ChatWindow = ({ selectedConversation, onSendMessage, onBack }: ChatWindowProps) => {
   const { user: currentUser } = useAuth();
 
   if (!selectedConversation || !currentUser) {
@@ -22,18 +23,17 @@ const ChatWindow = ({ selectedConversation, onSendMessage }: ChatWindowProps) =>
   }
 
   const handleSendMessage = (text: string, attachment: Attachment | null) => {
-    onSendMessage(selectedConversation.id, text, attachment);
+    onSendMessage(text, attachment);
   };
 
-  const otherMembers = selectedConversation.members.filter(m => m.id !== currentUser.id);
+  const otherMembers = selectedConversation.members?.filter(m => m.id !== currentUser.id) || [];
   const selectedCollaborator = otherMembers[0];
 
   return (
     <div className="flex-1 flex flex-col h-full">
       <ChatHeader
-        conversationName={selectedConversation.name}
-        members={selectedConversation.members}
-        isGroup={selectedConversation.isGroup}
+        selectedConversation={selectedConversation}
+        onBack={onBack}
       />
       <ChatConversation
         messages={selectedConversation.messages}

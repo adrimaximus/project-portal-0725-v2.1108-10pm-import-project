@@ -26,7 +26,7 @@ const ChatInput = ({ onSendMessage }: ChatInputProps) => {
     if (file) {
       setAttachment({
         name: file.name,
-        type: file.type,
+        type: file.type.startsWith("image/") ? "image" : "file",
         url: URL.createObjectURL(file),
       });
     }

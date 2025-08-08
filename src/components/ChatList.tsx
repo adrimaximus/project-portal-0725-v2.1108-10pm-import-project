@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, MessageSquarePlus, Users } from "lucide-react";
-import { Conversation } from "@/pages/ChatPage";
+import { Conversation } from "@/data/chat";
 import { Collaborator } from "@/types";
 import NewChatDialog from "./NewChatDialog";
 import NewGroupChatDialog from "./NewGroupChatDialog";
@@ -29,7 +29,7 @@ const ChatList = ({
   const [isNewGroupChatOpen, setIsNewGroupChatOpen] = useState(false);
 
   const filteredConversations = conversations.filter((c) =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+    c.userName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -73,16 +73,16 @@ const ChatList = ({
             onClick={() => onSelectConversation(c.id)}
           >
             <Avatar>
-              <AvatarImage src={c.avatar} />
-              <AvatarFallback>{c.name.charAt(0)}</AvatarFallback>
+              <AvatarImage src={c.userAvatar} />
+              <AvatarFallback>{c.userName.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className="font-semibold">{c.name}</p>
+              <p className="font-semibold">{c.userName}</p>
               <p className="text-sm text-muted-foreground truncate">
                 {c.lastMessage}
               </p>
             </div>
-            <span className="text-xs text-muted-foreground">{c.lastMessageTime}</span>
+            <span className="text-xs text-muted-foreground">{c.lastMessageTimestamp}</span>
           </div>
         ))}
       </div>
