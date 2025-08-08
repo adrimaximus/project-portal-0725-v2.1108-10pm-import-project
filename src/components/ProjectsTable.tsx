@@ -230,7 +230,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       case 'list':
         return <ProjectsList projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
       case 'month':
-        return <ProjectsMonthView projects={localProjects} refreshKey={refreshKey} />;
+        return <ProjectsMonthView projects={localProjects} />;
       case 'gcal':
         return <GoogleCalendarEventsView refreshKey={refreshKey} onImport={handleImport} />;
       default:

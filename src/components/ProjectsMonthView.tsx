@@ -1,8 +1,7 @@
 import { Project } from '@/data/projects';
-import { GoogleCalendarEvent } from '@/types';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -28,20 +27,11 @@ import {
 import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { gapi } from 'gapi-script';
-import { toast } from 'sonner';
 
-type CalendarItem = (Project | (GoogleCalendarEvent & { isGoogleEvent: true })) & { lane?: number };
+type CalendarItem = Project & { lane?: number };
 
-function isGCalEvent(item: CalendarItem): item is GoogleCalendarEvent & { isGoogleEvent: true; lane?: number } {
-    return 'isGoogleEvent' in item && item.isGoogleEvent === true;
-}
-
-const getProjectColorClasses = (item: CalendarItem): string => {
-  if (isGCalEvent(item)) {
-    return 'bg-purple-100 border-l-purple-500 text-purple-800 dark:bg-purple-900/30 dark:border-l-purple-500 dark:text-purple-200';
-  }
-  const status = (item as Project).status;
+const getProjectColorClasses = (item: Project): string => {
+  const status = item.status;
   switch (status) {
     case 'On Track': case 'Completed': case 'Done': case 'Billed': return 'bg-green-100 border-l-green-500 text-green-800 dark:bg-green-900/30 dark:border-l-green-500 dark:text-green-200';
     case 'At Risk': case 'On Hold': return 'bg-yellow-100 border-l-yellow-500 text-yellow-800 dark:bg-yellow-900/30 dark:border-l-yellow-500 dark:text-yellow-200';
@@ -53,89 +43,12 @@ const getProjectColorClasses = (item: CalendarItem): string => {
 
 interface ProjectsMonthViewProps {
   projects: Project[];
-  refreshKey: number;
 }
 
 const MAX_VISIBLE_LANES = 2;
 
-const ProjectsMonthView = ({ projects, refreshKey }: ProjectsMonthViewProps) => {
+const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [gcalEvents, setGcalEvents] = useState<GoogleCalendarEvent[]>([]);
-
-  useEffect(() => {
-    const initGapiAndFetchEvents = async () => {
-      const gcalConnected = localStorage.getItem('gcal_connected') === 'true';
-      const accessToken = localStorage.getItem('gcal_access_token');
-      const clientId = localStorage.getItem('gcal_clientId');
-      const storedIds = localStorage.getItem('gcal_calendar_ids');
-      
-      let calendarIds: string[] = ['primary'];
-      if (storedIds) {
-        try {
-          const parsedIds = JSON.parse(storedIds);
-          if (Array.isArray(parsedIds) && parsedIds.length > 0) {
-            calendarIds = parsedIds;
-          }
-        } catch (e) { console.error("Failed to parse calendar IDs", e); }
-      }
-
-      if (gcalConnected && accessToken && clientId) {
-        try {
-          await new Promise<void>((resolve) => gapi.load('client', resolve));
-          await gapi.client.init({
-            apiKey: undefined,
-            clientId: clientId,
-            discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
-          });
-          gapi.client.setToken({ access_token: accessToken });
-
-          const requests = calendarIds.map(calendarId => 
-            gapi.client.calendar.events.list({
-              'calendarId': calendarId,
-              'timeMin': startOfMonth(currentDate).toISOString(),
-              'timeMax': endOfMonth(currentDate).toISOString(),
-              'showDeleted': false,
-              'singleEvents': true,
-              'maxResults': 50,
-              'orderBy': 'startTime'
-            })
-          );
-
-          const responses = await Promise.all(requests);
-          const allEvents = responses.flatMap((response, index) => {
-              const calendarId = calendarIds[index];
-              return response.result.items.map((item: any) => ({ ...item, calendarId }));
-          });
-
-          const events: GoogleCalendarEvent[] = allEvents.map((item: any) => ({
-            id: item.id,
-            summary: item.summary,
-            description: item.description,
-            start: { dateTime: item.start.dateTime || item.start.date, timeZone: item.start.timeZone || 'UTC' },
-            end: { dateTime: item.end.dateTime || item.end.date, timeZone: item.end.timeZone || 'UTC' },
-            creator: { email: item.creator?.email || 'Unknown' },
-            attendees: item.attendees,
-            isGoogleEvent: true,
-            htmlLink: item.htmlLink,
-            calendarId: item.calendarId,
-          }));
-          setGcalEvents(events);
-        } catch (error: any) {
-          console.error("Error fetching Google Calendar events:", error);
-          if (error.result?.error?.code === 401 || error.result?.error?.code === 403) {
-            localStorage.removeItem('gcal_connected');
-            localStorage.removeItem('gcal_access_token');
-            setGcalEvents([]);
-            toast.error("Google session expired. Please reconnect in settings.");
-          }
-        }
-      } else {
-        setGcalEvents([]);
-      }
-    };
-
-    initGapiAndFetchEvents();
-  }, [currentDate, refreshKey]);
 
   const { weeks, weeklyLayouts, moreByDay } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -148,22 +61,20 @@ const ProjectsMonthView = ({ projects, refreshKey }: ProjectsMonthViewProps) => 
         weeks.push(days.slice(i, i + 7));
     }
 
-    const combinedItems: CalendarItem[] = [...projects, ...gcalEvents.map(e => ({...e, isGoogleEvent: true as const}))];
-
-    const activeItems = combinedItems
+    const activeItems = projects
         .filter(p => {
-            const startDate = isGCalEvent(p) ? p.start.dateTime : p.startDate;
-            const dueDate = isGCalEvent(p) ? p.end.dateTime : p.dueDate;
+            const startDate = p.startDate;
+            const dueDate = p.dueDate;
             if (!startDate || !dueDate) return false;
             const projectStart = startOfDay(parseISO(startDate));
             const projectEnd = endOfDay(parseISO(dueDate));
             return projectStart <= calendarEnd && projectEnd >= calendarStart;
         })
         .sort((a, b) => {
-            const startA = startOfDay(parseISO((isGCalEvent(a) ? a.start.dateTime : a.startDate)!));
-            const startB = startOfDay(parseISO((isGCalEvent(b) ? b.start.dateTime : b.startDate)!));
-            const durationA = differenceInDays(parseISO((isGCalEvent(a) ? a.end.dateTime : a.dueDate)!), startA);
-            const durationB = differenceInDays(parseISO((isGCalEvent(b) ? b.end.dateTime : b.dueDate)!), startB);
+            const startA = startOfDay(parseISO(a.startDate!));
+            const startB = startOfDay(parseISO(b.startDate!));
+            const durationA = differenceInDays(parseISO(a.dueDate!), startA);
+            const durationB = differenceInDays(parseISO(b.dueDate!), startB);
             if (durationA !== durationB) return durationB - durationA;
             return startA.getTime() - startB.getTime();
         });
@@ -171,8 +82,8 @@ const ProjectsMonthView = ({ projects, refreshKey }: ProjectsMonthViewProps) => 
     const laneMatrix: (string | null)[][] = Array.from({ length: 10 }, () => Array(days.length).fill(null));
 
     for (const item of activeItems as CalendarItem[]) {
-        const startDate = isGCalEvent(item) ? item.start.dateTime : item.startDate!;
-        const dueDate = isGCalEvent(item) ? item.end.dateTime : item.dueDate!;
+        const startDate = item.startDate!;
+        const dueDate = item.dueDate!;
         const projectStart = startOfDay(parseISO(startDate));
         const projectEnd = endOfDay(parseISO(dueDate));
 
@@ -213,8 +124,8 @@ const ProjectsMonthView = ({ projects, refreshKey }: ProjectsMonthViewProps) => 
         }
         processedInLayout.add(item.id);
 
-        const startDate = isGCalEvent(item) ? item.start.dateTime : item.startDate!;
-        const dueDate = isGCalEvent(item) ? item.end.dateTime : item.dueDate!;
+        const startDate = item.startDate!;
+        const dueDate = item.dueDate!;
         const projectStart = startOfDay(parseISO(startDate));
         const projectEnd = endOfDay(parseISO(dueDate));
 
@@ -273,17 +184,16 @@ const ProjectsMonthView = ({ projects, refreshKey }: ProjectsMonthViewProps) => 
     });
 
     return { weeks, weeklyLayouts, moreByDay };
-  }, [projects, currentDate, gcalEvents]);
+  }, [projects, currentDate]);
 
   const dayHeaders = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
-  const renderItem = (item: CalendarItem, isStart: boolean, startCol: number) => {
-    const name = isGCalEvent(item) ? item.summary : item.name;
-    const assignedTo = isGCalEvent(item) ? [] : item.assignedTo;
+  const renderItem = (item: Project, isStart: boolean, startCol: number) => {
+    const name = item.name;
+    const assignedTo = item.assignedTo;
 
     const content = (
       <div className="flex items-center gap-2 truncate">
-        {isGCalEvent(item) && <Calendar className="h-3 w-3 flex-shrink-0" />}
         <div className="flex-1 truncate">
           <p className="font-semibold truncate">{name}</p>
         </div>
@@ -297,10 +207,6 @@ const ProjectsMonthView = ({ projects, refreshKey }: ProjectsMonthViewProps) => 
         </div>
       </div>
     );
-
-    if (isGCalEvent(item)) {
-      return <a href={item.htmlLink} target="_blank" rel="noopener noreferrer">{content}</a>;
-    }
     
     return <Link to={`/projects/${item.id}`}>{content}</Link>;
   };
