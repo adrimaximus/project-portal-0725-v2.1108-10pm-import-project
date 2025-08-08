@@ -17,8 +17,7 @@ import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { useUser } from "@/contexts/UserContext";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -26,7 +25,7 @@ interface ProjectDetailsFormProps {
 }
 
 const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser } = useUser();
   const [projectName, setProjectName] = useState("");
   const [date, setDate] = useState<DateRange | undefined>();
   const [budget, setBudget] = useState("");
@@ -55,11 +54,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!currentUser) {
-      toast.error("You must be logged in to create a project.");
-      return;
-    }
     
     const newProjectFiles: ProjectFile[] = files.map(file => ({
       id: `file-${Date.now()}-${file.name}`,
@@ -86,7 +80,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       startDate: date?.from?.toISOString() ?? new Date().toISOString(),
       dueDate: dueDate.toISOString(),
       paymentStatus: "Proposed",
-      createdBy: currentUser as AssignedUser,
+      createdBy: currentUser,
       services: selectedServices.map(s => s.title),
       tasks: [],
       comments: [],

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Project, Comment, dummyProjects, User } from "@/data/projects";
-import { useAuth } from "@/contexts/AuthContext";
+import { useUser } from "@/contexts/UserContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,6 @@ import { id } from 'date-fns/locale';
 import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import { cn } from "@/lib/utils";
 import './mentions-style.css';
-import { toast } from "sonner";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -21,7 +20,7 @@ const ProjectComments = ({
   project,
   onAddCommentOrTicket,
 }: ProjectCommentsProps) => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser } = useUser();
   const [newCommentText, setNewCommentText] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [filter, setFilter] = useState<'all' | 'comments' | 'tickets'>('all');
@@ -53,10 +52,6 @@ const ProjectComments = ({
   };
 
   const handleSubmit = (isTicketSubmit: boolean) => {
-    if (!currentUser) {
-      toast.error("You must be logged in to comment.");
-      return;
-    }
     if (newCommentText.trim() === "" && !attachment) return;
 
     const newComment: Comment = {
