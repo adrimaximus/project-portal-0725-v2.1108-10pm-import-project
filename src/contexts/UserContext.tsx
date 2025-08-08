@@ -75,6 +75,30 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [session, profile]);
 
+  useEffect(() => {
+    if (!session?.user) {
+      return;
+    }
+
+    const channel = supabase.channel('online-users', {
+      config: {
+        presence: {
+          key: session.user.id,
+        },
+      },
+    });
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({ online_at: new Date().toISOString() });
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session, supabase]);
+
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
