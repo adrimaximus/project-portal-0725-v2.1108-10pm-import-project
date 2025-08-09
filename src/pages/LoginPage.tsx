@@ -37,6 +37,13 @@ const LoginPage = () => {
         <p className="px-8 text-center text-sm text-muted-foreground">
           By signing in, you agree to our{" "}
           <Link
+            to="/terms-of-service"
+            className="underline underline-offset-4 hover:text-primary"
+          >
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link
             to="/privacy-policy"
             className="underline underline-offset-4 hover:text-primary"
           >
