@@ -15,7 +15,7 @@ interface ProjectMainContentProps {
   onTaskAssignUsers: (taskId: string, userIds: string[]) => void;
   onTaskStatusChange: (taskId: string, completed: boolean) => void;
   onTaskDelete: (taskId: string) => void;
-  onAddCommentOrTicket: (comment: Comment) => void;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
   onDescriptionChange: (value: string) => void;
   onTeamChange: (users: AssignedUser[]) => void;
   onFilesChange: (files: File[]) => void;

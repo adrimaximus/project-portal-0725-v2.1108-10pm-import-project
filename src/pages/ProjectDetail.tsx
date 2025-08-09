@@ -234,6 +234,69 @@ const ProjectDetail = () => {
     await fetchProjectDetails(); // Refresh data
   };
 
+  const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachment: File | null) => {
+    if (!projectId || !currentUser) return;
+
+    let attachment_url: string | null = null;
+    let attachment_name: string | null = null;
+
+    if (attachment) {
+      const filePath = `${projectId}/${Date.now()}-${attachment.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('project-files')
+        .upload(filePath, attachment);
+
+      if (uploadError) {
+        console.error('Error uploading file:', uploadError);
+        toast.error('Failed to upload attachment.');
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('project-files')
+        .getPublicUrl(filePath);
+      
+      attachment_url = urlData.publicUrl;
+      attachment_name = attachment.name;
+    }
+
+    const { data: newComment, error: commentError } = await supabase
+      .from('comments')
+      .insert({
+        project_id: projectId,
+        author_id: currentUser.id,
+        text,
+        is_ticket: isTicket,
+        attachment_url,
+        attachment_name,
+      })
+      .select()
+      .single();
+
+    if (commentError) {
+      console.error('Error adding comment:', commentError);
+      toast.error('Failed to add comment.');
+      return;
+    }
+
+    if (isTicket && newComment) {
+      const { error: taskError } = await supabase.from('tasks').insert({
+        project_id: projectId,
+        title: text,
+        created_by: currentUser.id,
+        origin_ticket_id: newComment.id,
+      });
+
+      if (taskError) {
+        console.error('Error creating task from ticket:', taskError);
+        toast.error('Comment was added, but failed to create a corresponding ticket.');
+      }
+    }
+
+    toast.success(isTicket ? 'Ticket created successfully.' : 'Comment added successfully.');
+    await fetchProjectDetails();
+  };
+
   const showNotImplementedToast = () => {
     toast.info("This feature is not yet connected to the database.");
   };
@@ -279,7 +342,7 @@ const ProjectDetail = () => {
             onTaskAssignUsers={handleAssignUsersToTask}
             onTaskStatusChange={handleTaskStatusChange}
             onTaskDelete={handleTaskDelete}
-            onAddCommentOrTicket={showNotImplementedToast}
+            onAddCommentOrTicket={handleAddCommentOrTicket}
           />
         </div>
         <div className="lg:col-span-1 space-y-8">

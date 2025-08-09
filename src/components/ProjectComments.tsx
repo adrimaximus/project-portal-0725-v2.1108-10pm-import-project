@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ProjectCommentsProps {
   project: Project;
-  onAddCommentOrTicket: (comment: Comment) => void;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
 }
 
 const ProjectComments = ({
@@ -82,16 +82,8 @@ const ProjectComments = ({
   const handleSubmit = (isTicketSubmit: boolean) => {
     if ((newCommentText.trim() === "" && !attachment) || !currentUser) return;
 
-    const newComment: Comment = {
-      id: `item-${Date.now()}`,
-      author: currentUser,
-      text: newCommentText,
-      timestamp: new Date().toISOString(),
-      isTicket: isTicketSubmit,
-      attachment: attachment ? { name: attachment.name, url: URL.createObjectURL(attachment) } : undefined,
-    };
-
-    onAddCommentOrTicket(newComment);
+    onAddCommentOrTicket(newCommentText, isTicketSubmit, attachment);
+    
     setNewCommentText("");
     setAttachment(null);
     const fileInput = document.getElementById('comment-attachment') as HTMLInputElement;

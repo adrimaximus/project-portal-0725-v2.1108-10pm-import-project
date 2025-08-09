@@ -45,13 +45,6 @@ const ProjectTasks = ({
     setIsAddingTask(false);
   };
 
-  const handleAssignUserToTask = (taskId: string, users: User[]) => {
-    const updatedTasks = (project.tasks || []).map((task) =>
-      task.id === taskId ? { ...task, assignedTo: users } : task
-    );
-    onUpdateTasks(updatedTasks);
-  };
-
   const userOptions = project.assignedTo.map((user) => ({
     value: user.id,
     label: user.name,
