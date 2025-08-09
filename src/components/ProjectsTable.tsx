@@ -10,7 +10,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Project, dummyProjects } from "@/data/projects";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw } from "lucide-react";
@@ -71,10 +71,13 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const location = useLocation();
 
   useEffect(() => {
-    setLocalProjects(projects);
-  }, [projects]);
+    // This ensures the table reflects the latest data from dummyProjects
+    // when the user navigates back to this page.
+    setLocalProjects([...dummyProjects]);
+  }, [location]);
 
   const refreshCalendarEvents = () => {
     const storedEvents = localStorage.getItem('googleCalendarEvents');
