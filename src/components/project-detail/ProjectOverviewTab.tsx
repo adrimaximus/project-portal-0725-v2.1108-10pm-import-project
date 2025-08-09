@@ -26,7 +26,9 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
     onTeamChange(newTeam);
   };
 
-  const assignableUsers = allUsers.filter(u => u.id !== project.createdBy.id);
+  const assignableUsers = project.createdBy
+    ? allUsers.filter(u => u.id !== project.createdBy.id)
+    : allUsers;
 
   return (
     <div className="space-y-6">
@@ -52,16 +54,18 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
             />
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={project.createdBy.avatar} />
-                  <AvatarFallback>{project.createdBy.initials}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-medium">{project.createdBy.name}</p>
-                  <p className="text-xs text-muted-foreground">Project Owner</p>
+              {project.createdBy && (
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={project.createdBy.avatar} />
+                    <AvatarFallback>{project.createdBy.initials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{project.createdBy.name}</p>
+                    <p className="text-xs text-muted-foreground">Project Owner</p>
+                  </div>
                 </div>
-              </div>
+              )}
               {project.assignedTo.map(member => (
                 <div key={member.id} className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
