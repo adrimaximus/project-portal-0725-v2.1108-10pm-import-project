@@ -4,7 +4,8 @@ import { useFeatures } from "./contexts/FeaturesContext";
 import { useAuth } from "./contexts/AuthContext";
 import React from "react";
 
-import IndexPage from "./pages/Index";
+import LandingPage from "./pages/LandingPage";
+import DashboardPage from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import RequestPage from "./pages/Request";
@@ -47,7 +48,7 @@ const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, fe
   }
 
   if (featureId && !isFeatureEnabled(featureId)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -57,12 +58,13 @@ function App() {
   return (
     <>
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         
-        <Route path="/" element={<ProtectedRoute><IndexPage /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/projects" element={<ProtectedRoute featureId="projects"><Projects /></ProtectedRoute>} />
         <Route path="/projects/:projectId" element={<ProtectedRoute featureId="projects"><ProjectDetail /></ProtectedRoute>} />
         <Route path="/request" element={<ProtectedRoute featureId="request"><RequestPage /></ProtectedRoute>} />
