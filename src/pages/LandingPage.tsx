@@ -1,8 +1,28 @@
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from "@/components/ui/button";
 import { Package, BarChart, Users, ListChecks, ArrowRight } from 'lucide-react';
 
 const LandingPage = () => {
+  const { session, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Tunggu hingga status otentikasi selesai diperiksa.
+    // Jika pengguna memiliki sesi, arahkan ke dasbor.
+    if (!loading && session) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [session, loading, navigate]);
+
+  // Selama pemeriksaan, kita bisa menampilkan halaman utama atau status memuat.
+  // Menampilkan halaman utama lebih baik agar tidak ada kedipan layar.
+  if (loading) {
+    // Anda bisa menampilkan skeleton/loading di sini jika mau,
+    // tapi untuk alur ini, lebih baik biarkan halaman dirender.
+  }
+
   const features = [
     {
       icon: <ListChecks className="h-10 w-10 text-primary" />,
