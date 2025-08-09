@@ -23,9 +23,9 @@ const LoginPage = () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // Penting: URL ini harus ditambahkan ke daftar "Redirect URLs"
-        // di pengaturan otentikasi proyek Supabase Anda.
-        redirectTo: window.location.origin,
+        redirectTo: import.meta.env.PROD
+          ? 'https://7inked.ahensi.xyz/'
+          : 'http://localhost:32100',
       },
     });
 
