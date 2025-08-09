@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { dummyProjects, Project, Task, Comment, User, Activity, ActivityType, ProjectFile, ProjectStatus, PaymentStatus } from "@/data/projects";
+import { Project, Task, Comment, User, Activity, ActivityType, ProjectFile, ProjectStatus, PaymentStatus, AssignedUser } from "@/data/projects";
 import { useAuth } from "@/contexts/AuthContext";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
@@ -8,6 +8,7 @@ import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
 import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProjectDetail = () => {
   const { projectId } = useParams();
@@ -16,14 +17,106 @@ const ProjectDetail = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const foundProject = dummyProjects.find((p) => p.id === projectId);
-    if (foundProject) {
-      setProject(foundProject);
-    } else {
-      navigate("/"); // Redirect if project not found
-    }
+    const fetchProjectDetails = async () => {
+      if (!projectId) return;
+      setIsLoading(true);
+
+      // 1. Fetch project data
+      const { data: projectData, error: projectError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .single();
+
+      if (projectError || !projectData) {
+        toast.error('Project not found.');
+        navigate('/projects');
+        return;
+      }
+
+      // 2. Fetch all related data in parallel
+      const [membersRes, tasksRes, commentsRes] = await Promise.all([
+        supabase.from('project_members').select('user_id, role').eq('project_id', projectId),
+        supabase.from('tasks').select('*, task_assignees(user_id)').eq('project_id', projectId),
+        supabase.from('comments').select('*').eq('project_id', projectId).order('created_at', { ascending: false })
+      ]);
+
+      // 3. Collect all unique user IDs from all related data
+      const userIds = new Set<string>();
+      if (projectData.created_by) userIds.add(projectData.created_by);
+      membersRes.data?.forEach(m => userIds.add(m.user_id));
+      tasksRes.data?.forEach(t => {
+        if (t.created_by) userIds.add(t.created_by);
+        t.task_assignees.forEach((a: any) => userIds.add(a.user_id));
+      });
+      commentsRes.data?.forEach(c => {
+        if (c.author_id) userIds.add(c.author_id)
+      });
+
+      // 4. Fetch all user profiles in a single query
+      const { data: profilesData } = await supabase.from('profiles').select('*').in('id', Array.from(userIds));
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
+
+      const mapProfileToUser = (id: string): AssignedUser | null => {
+        const profile = profilesMap.get(id);
+        if (!profile) return null;
+        return {
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
+          email: profile.email,
+          avatar: profile.avatar_url,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        };
+      };
+
+      // 5. Map all data together
+      const assignedTo: AssignedUser[] = membersRes.data?.map(m => ({ ...mapProfileToUser(m.user_id), role: m.role })).filter(Boolean) as AssignedUser[];
+      const tasks: Task[] = tasksRes.data?.map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        completed: t.completed,
+        originTicketId: t.origin_ticket_id,
+        assignedTo: t.task_assignees.map((a: any) => mapProfileToUser(a.user_id)).filter(Boolean) as AssignedUser[],
+      })) || [];
+      const comments: Comment[] = commentsRes.data?.map((c: any) => ({
+        id: c.id,
+        text: c.text,
+        timestamp: c.created_at,
+        isTicket: c.is_ticket,
+        attachment: c.attachment_url ? { name: c.attachment_name, url: c.attachment_url } : undefined,
+        author: mapProfileToUser(c.author_id) as AssignedUser,
+      })).filter(c => c.author) || [];
+
+      const fullProject: Project = {
+        id: projectData.id,
+        name: projectData.name,
+        category: projectData.category,
+        description: projectData.description,
+        status: projectData.status as ProjectStatus,
+        progress: projectData.progress,
+        budget: projectData.budget,
+        startDate: projectData.start_date,
+        dueDate: projectData.due_date,
+        paymentStatus: projectData.payment_status as PaymentStatus,
+        createdBy: projectData.created_by ? mapProfileToUser(projectData.created_by) : null,
+        assignedTo,
+        tasks,
+        comments,
+        activities: [], // Placeholder - to be implemented
+        briefFiles: [], // Placeholder - to be implemented
+        services: projectData.services,
+      };
+
+      setProject(fullProject);
+      setIsLoading(false);
+    };
+
+    fetchProjectDetails();
   }, [projectId, navigate]);
 
   const handleEditToggle = () => {
@@ -36,9 +129,10 @@ const ProjectDetail = () => {
   };
 
   const handleSaveChanges = () => {
+    // TODO: Implement Supabase update logic
     if (editedProject) {
-      handleUpdateProjectDetails(editedProject);
       setProject(editedProject);
+      toast.info("Saving changes to the database is not yet implemented.");
     }
     setIsEditing(false);
     setEditedProject(null);
@@ -73,137 +167,12 @@ const ProjectDetail = () => {
     }
   };
 
-  const createActivity = (type: ActivityType, details: any): Activity | null => {
-    if (!currentUser) return null;
-    const newActivity: Activity = {
-      id: `act-${Date.now()}`,
-      user: currentUser,
-      type,
-      details,
-      timestamp: new Date().toISOString(),
-    };
-    return newActivity;
+  const showNotImplementedToast = () => {
+    toast.info("This feature is not yet connected to the database.");
   };
 
-  const addActivity = (activity: Activity | null) => {
-    if (activity) {
-      setProject(prev => prev ? { ...prev, activities: [activity, ...(prev.activities || [])] } : null);
-    }
-  };
-
-  const handleUpdateProjectDetails = (updatedDetails: Partial<Project>) => {
-    if (!project) return;
-    
-    let activityDetails: { description: string, [key: string]: any } | null = null;
-
-    if (updatedDetails.status && updatedDetails.status !== project.status) {
-        activityDetails = { description: `updated project status to "${updatedDetails.status}".` };
-        addActivity(createActivity('PROJECT_STATUS_UPDATED', activityDetails));
-    } else if (updatedDetails.paymentStatus && updatedDetails.paymentStatus !== project.paymentStatus) {
-        activityDetails = { description: `updated payment status to "${updatedDetails.paymentStatus}".` };
-        addActivity(createActivity('PAYMENT_STATUS_UPDATED', activityDetails));
-    } else if (updatedDetails.dueDate && updatedDetails.dueDate !== project.dueDate) {
-        const oldDate = new Date(project.dueDate).toLocaleDateString();
-        const newDate = new Date(updatedDetails.dueDate).toLocaleDateString();
-        activityDetails = { description: `changed due date from ${oldDate} to ${newDate}.` };
-        addActivity(createActivity('PROJECT_DETAILS_UPDATED', activityDetails));
-    } else if (updatedDetails.budget && updatedDetails.budget !== project.budget) {
-        activityDetails = { description: `updated budget from $${project.budget} to $${updatedDetails.budget}.` };
-        addActivity(createActivity('PROJECT_DETAILS_UPDATED', activityDetails));
-    }
-
-    setProject((prev) => (prev ? { ...prev, ...updatedDetails } : null));
-    toast.success("Project details updated.");
-  };
-
-  const handleUpdateTeam = (newMemberName: string) => {
-    if (!project) return;
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      name: newMemberName,
-      initials: newMemberName.split(' ').map(n => n[0]).join('').toUpperCase(),
-      email: `${newMemberName.replace(/\s+/g, '.').toLowerCase()}@example.com`,
-      role: 'Member',
-      avatar: `https://i.pravatar.cc/150?u=${Date.now()}`
-    };
-    const updatedTeam = [...project.assignedTo, newUser];
-    setProject({ ...project, assignedTo: updatedTeam });
-
-    const activity = createActivity('TEAM_MEMBER_ADDED', { description: `added ${newMemberName} to the team.` });
-    addActivity(activity);
-    toast.success(`${newMemberName} has been added to the project.`);
-  };
-  
-  const handleFileUpload = (files: File[]) => {
-    if (!project) return;
-    const newFiles: ProjectFile[] = files.map((file, index) => ({
-      id: `file-${Date.now()}-${index}`,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      url: URL.createObjectURL(file),
-      uploadedAt: new Date().toISOString(),
-    }));
-    
-    const updatedFiles = [...(project.briefFiles || []), ...newFiles];
-    setProject({ ...project, briefFiles: updatedFiles });
-
-    const activity = createActivity('FILE_UPLOADED', { description: `uploaded ${files.length} new file(s).` });
-    addActivity(activity);
-    toast.success(`${files.length} file(s) uploaded successfully.`);
-  };
-
-  const handleUpdateTasks = (tasks: Task[]) => {
-    if (!project) return;
-    setProject({ ...project, tasks });
-  };
-
-  const handleTaskStatusChange = (taskId: string, completed: boolean) => {
-    if (!project || !project.tasks) return;
-    let activity: Activity | null = null;
-    const updatedTasks = project.tasks.map((task) => {
-      if (task.id === taskId) {
-        if (completed && !task.completed) {
-          activity = createActivity('TASK_COMPLETED', { description: `completed task "${task.title}".` });
-        } else if (!completed && task.completed) {
-          activity = createActivity('TASK_REOPENED', { description: `re-opened task "${task.title}".` });
-        }
-        return { ...task, completed };
-      }
-      return task;
-    });
-    setProject({ ...project, tasks: updatedTasks });
-    if (activity) addActivity(activity);
-  };
-
-  const handleTaskDelete = (taskId: string) => {
-    if (!project || !project.tasks) return;
-    const taskToDelete = project.tasks.find(t => t.id === taskId);
-    const updatedTasks = project.tasks.filter((task) => task.id !== taskId);
-    setProject({ ...project, tasks: updatedTasks });
-    if (taskToDelete) {
-      const activity = createActivity('TASK_DELETED', { description: `deleted task "${taskToDelete.title}".` });
-      addActivity(activity);
-    }
-  };
-
-  const handleAddCommentOrTicket = (item: Comment) => {
-    if (!project || !currentUser) return;
-    const updatedComments = [...(project.comments || []), item];
-    setProject({ ...project, comments: updatedComments });
-
-    if (item.isTicket) {
-      const activity = createActivity('TICKET_CREATED', { description: `created a ticket: "${item.text}"` });
-      addActivity(activity);
-      toast.success("New ticket created.");
-    } else {
-      const activity = createActivity('COMMENT_ADDED', { description: `commented on the project.` });
-      addActivity(activity);
-    }
-  };
-
-  if (!project) {
-    return <PortalLayout><div>Loading...</div></PortalLayout>;
+  if (isLoading || !project) {
+    return <PortalLayout><div>Loading project details...</div></PortalLayout>;
   }
 
   return (
@@ -217,7 +186,7 @@ const ProjectDetail = () => {
           onEditToggle={handleEditToggle}
           onSaveChanges={handleSaveChanges}
           onCancelChanges={handleCancelChanges}
-          canEdit={true}
+          canEdit={true} // TODO: Add logic to check if user can edit
         />
       }
       noPadding
@@ -234,18 +203,18 @@ const ProjectDetail = () => {
           />
           <ProjectMainContent
             project={project}
-            onUpdateTasks={handleUpdateTasks}
-            onTaskStatusChange={handleTaskStatusChange}
-            onTaskDelete={handleTaskDelete}
-            onAddCommentOrTicket={handleAddCommentOrTicket}
+            onUpdateTasks={showNotImplementedToast}
+            onTaskStatusChange={showNotImplementedToast}
+            onTaskDelete={showNotImplementedToast}
+            onAddCommentOrTicket={showNotImplementedToast}
           />
         </div>
         <div className="lg:col-span-1 space-y-8">
           <ProjectSidebar
             project={project}
-            onUpdateProject={handleUpdateProjectDetails}
-            onUpdateTeam={handleUpdateTeam}
-            onFileUpload={handleFileUpload}
+            onUpdateProject={showNotImplementedToast}
+            onUpdateTeam={showNotImplementedToast}
+            onFileUpload={showNotImplementedToast}
           />
         </div>
       </div>
