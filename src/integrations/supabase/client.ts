@@ -10,7 +10,7 @@ if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   throw new Error("Supabase URL and Anon Key must be defined in the environment variables.");
 }
 
-// Import the supabase client like this:
+// Mengimpor klien Supabase seperti ini:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {

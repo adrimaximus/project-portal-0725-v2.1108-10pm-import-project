@@ -1,11 +1,10 @@
-import { Auth } from '@supabase/auth-ui-react';
-import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 const LoginPage = () => {
   const { session } = useAuth();
@@ -20,6 +19,15 @@ const LoginPage = () => {
     }
   }, [session, navigate, from]);
 
+  const handleGoogleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40">
       <div className="p-8 bg-background rounded-lg shadow-md max-w-sm w-full space-y-6">
@@ -28,13 +36,11 @@ const LoginPage = () => {
             <h1 className="text-2xl font-semibold">Client Portal</h1>
             <p className="text-muted-foreground">Please sign in to continue</p>
         </div>
-        <Auth
-          supabaseClient={supabase}
-          appearance={{ theme: ThemeSupa }}
-          providers={['google']}
-          theme="light"
-          redirectTo={window.location.origin}
-        />
+        
+        <Button className="w-full" onClick={handleGoogleLogin}>
+          Continue with Google
+        </Button>
+
         <p className="px-8 text-center text-sm text-muted-foreground">
           By signing in, you agree to our{" "}
           <Link

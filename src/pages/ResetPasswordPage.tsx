@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,18 +21,18 @@ const ResetPasswordPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Klien Supabase secara otomatis menangani sesi dari token di URL.
-  // Kita hanya perlu menyediakan formulir untuk memperbarui kata sandi.
+  // Klien Supabase secara otomatis menangani sesi dari token di URL
+  // berkat `detectSessionInUrl: true`. Kita hanya perlu menyediakan formulir.
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (password.length < 8) {
-      toast.error("Kata sandi harus memiliki minimal 8 karakter.");
+      toast.error("Password must be at least 8 characters long.");
       return;
     }
     if (password !== confirmPassword) {
-      toast.error("Kata sandi tidak cocok.");
+      toast.error("Passwords do not match.");
       return;
     }
 
@@ -41,9 +41,9 @@ const ResetPasswordPage = () => {
     setLoading(false);
 
     if (error) {
-      toast.error(`Gagal memperbarui kata sandi: ${error.message}`);
+      toast.error(`Failed to update password: ${error.message}`);
     } else {
-      toast.success("Kata sandi Anda telah berhasil diperbarui!");
+      toast.success("Your password has been updated successfully!");
       setTimeout(() => navigate("/login"), 2000);
     }
   };
@@ -54,16 +54,16 @@ const ResetPasswordPage = () => {
         <CardHeader className="text-center">
           <div className="flex flex-col justify-center items-center gap-2 mb-2">
               <Package className="h-8 w-8" />
-              <CardTitle className="text-2xl">Atur Kata Sandi Baru</CardTitle>
+              <CardTitle className="text-2xl">Set a New Password</CardTitle>
           </div>
           <CardDescription>
-            Silakan masukkan dan konfirmasi kata sandi baru Anda di bawah ini.
+            Please enter and confirm your new password below.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Kata Sandi Baru</Label>
+              <Label htmlFor="password">New Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -75,7 +75,7 @@ const ResetPasswordPage = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Konfirmasi Kata Sandi Baru</Label>
+              <Label htmlFor="confirm-password">Confirm New Password</Label>
               <Input
                 id="confirm-password"
                 type="password"
@@ -89,7 +89,7 @@ const ResetPasswordPage = () => {
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Memperbarui..." : "Perbarui Kata Sandi"}
+              {loading ? "Updating..." : "Update Password"}
             </Button>
           </CardFooter>
         </form>
