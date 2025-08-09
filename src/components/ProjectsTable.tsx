@@ -124,8 +124,8 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
     toDate.setHours(23, 59, 59, 999);
 
     return localProjects.filter(project => {
-      const projectStart = new Date(project.startDate + 'T00:00:00');
-      const projectEnd = new Date(project.dueDate + 'T00:00:00');
+      const projectStart = new Date(project.startDate);
+      const projectEnd = new Date(project.dueDate);
       return projectStart <= toDate && projectEnd >= fromDate;
     });
   }, [localProjects, dateRange]);
@@ -145,12 +145,12 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       const startStr = event.start.dateTime || event.start.date;
       if (!startStr) return false;
 
-      const eventStart = event.start.date ? new Date(startStr + 'T00:00:00') : new Date(startStr);
+      const eventStart = new Date(startStr);
 
       const endStr = event.end.dateTime || event.end.date;
       let eventEnd;
       if (event.end.date) {
-          eventEnd = new Date(new Date(event.end.date + 'T00:00:00').getTime() - 1);
+          eventEnd = new Date(new Date(event.end.date).getTime() - 1);
       } else if (event.end.dateTime) {
           eventEnd = new Date(event.end.dateTime);
       } else {
@@ -256,8 +256,8 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <div>Start: {format(new Date(project.startDate + 'T00:00:00'), 'MMM d, yyyy')}</div>
-                      <div className="text-muted-foreground">Due: {format(new Date(project.dueDate + 'T00:00:00'), 'MMM d, yyyy')}</div>
+                      <div>Start: {format(new Date(project.startDate), 'MMM d, yyyy')}</div>
+                      <div className="text-muted-foreground">Due: {format(new Date(project.dueDate), 'MMM d, yyyy')}</div>
                     </div>
                   </TableCell>
                   <TableCell>
