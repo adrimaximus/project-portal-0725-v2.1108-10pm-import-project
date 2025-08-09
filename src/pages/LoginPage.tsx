@@ -25,7 +25,7 @@ const LoginPage = () => {
       options: {
         redirectTo: import.meta.env.PROD
           ? 'https://7inked.ahensi.xyz/'
-          : 'http://localhost:32100',
+          : window.location.origin,
       },
     });
 
