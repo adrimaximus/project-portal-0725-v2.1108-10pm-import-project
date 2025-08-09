@@ -16,6 +16,16 @@ interface ProjectHeaderProps {
   canEdit: boolean;
 }
 
+const getStatusColor = (status: Project['status']): string => {
+  switch (status) {
+    case 'On Track': case 'Completed': case 'Done': case 'Billed': return '#22c55e';
+    case 'At Risk': case 'On Hold': return '#eab308';
+    case 'Off Track': case 'Cancelled': return '#ef4444';
+    case 'In Progress': case 'Requested': return '#3b82f6';
+    default: return 'transparent';
+  }
+};
+
 const ProjectHeader = ({
   project,
   isEditing,
@@ -38,15 +48,20 @@ const ProjectHeader = ({
       </div>
       <div className="flex items-center justify-between pb-4">
         <div className="flex items-center gap-4">
-          {isEditing ? (
-            <Input
-              value={projectName}
-              onChange={(e) => onProjectNameChange(e.target.value)}
-              className="text-2xl font-bold h-auto p-0 border-0 focus-visible:ring-0 bg-transparent"
-            />
-          ) : (
-            <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
-          )}
+          <div 
+            className="pl-4"
+            style={{ borderLeft: `4px solid ${getStatusColor(project.status)}` }}
+          >
+            {isEditing ? (
+              <Input
+                value={projectName}
+                onChange={(e) => onProjectNameChange(e.target.value)}
+                className="text-2xl font-bold h-auto p-0 border-0 focus-visible:ring-0 bg-transparent"
+              />
+            ) : (
+              <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+            )}
+          </div>
           <StatusBadge status={project.status} />
         </div>
         <div className="flex items-center gap-2">
