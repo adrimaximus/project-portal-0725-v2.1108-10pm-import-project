@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { useFeatures } from "./contexts/FeaturesContext";
-import { useUser } from "./contexts/UserContext";
+import { useAuth } from "./contexts/AuthContext";
 import React from "react";
 
 import IndexPage from "./pages/Index";
@@ -31,11 +31,11 @@ import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 
 const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, featureId?: string }) => {
-  const { user, isLoading } = useUser();
+  const { user, loading } = useAuth();
   const { isFeatureEnabled } = useFeatures();
   const location = useLocation();
 
-  if (isLoading) {
+  if (loading) {
     return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
   }
 
