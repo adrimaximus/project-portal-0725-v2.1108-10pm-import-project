@@ -23,7 +23,9 @@ const LoginPage = () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: import.meta.env.PROD
+          ? 'https://7inked.ahensi.xyz/'
+          : 'http://localhost:32100',
       },
     });
 

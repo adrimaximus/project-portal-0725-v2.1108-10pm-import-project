@@ -49,7 +49,7 @@ const LandingPage = () => {
           <span className="text-xl font-bold">Client Portal</span>
         </Link>
         <Button asChild>
-          <Link to="/dashboard">Access Portal</Link>
+          <Link to="/login">Access Portal</Link>
         </Button>
       </header>
 
@@ -64,7 +64,7 @@ const LandingPage = () => {
               Welcome to your dedicated client portal. Track progress, collaborate with your team, and get real-time insights on all your projects from a single, unified dashboard.
             </p>
             <Button size="lg" asChild>
-              <Link to="/dashboard">
+              <Link to="/login">
                 Get Started <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
