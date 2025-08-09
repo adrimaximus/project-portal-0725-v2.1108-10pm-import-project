@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
 import { Button } from "./ui/button";
@@ -95,6 +95,18 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   useEffect(() => {
     setLocalProjects(projects);
   }, [projects]);
+
+  const refreshCalendarEvents = () => {
+    const storedEvents = localStorage.getItem('googleCalendarEvents');
+    try {
+        const updatedEvents = storedEvents ? JSON.parse(storedEvents) : [];
+        setCalendarEvents(updatedEvents);
+        toast.success("Calendar events refreshed.");
+    } catch (e) {
+        console.error("Failed to parse calendar events from localStorage", e);
+        toast.error("Could not refresh calendar events.");
+    }
+  };
 
   useEffect(() => {
     const storedEvents = localStorage.getItem('googleCalendarEvents');
@@ -298,27 +310,35 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           <div className="flex items-center gap-2">
             <CardTitle>Projects</CardTitle>
           </div>
-          <ToggleGroup 
-            type="single" 
-            value={view} 
-            onValueChange={(value) => {
-              if (value) setView(value as ViewMode);
-            }}
-            aria-label="View mode"
-          >
-            <ToggleGroupItem value="table" aria-label="Table view">
-              <TableIcon className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="list" aria-label="List view">
-              <List className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="month" aria-label="Month view">
-              <CalendarDays className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
-              <CalendarPlus className="h-4 w-4" />
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <div className="flex items-center gap-2">
+            {view === 'calendar' && (
+              <Button variant="ghost" className="h-8 w-8 p-0" onClick={refreshCalendarEvents}>
+                <span className="sr-only">Refresh calendar events</span>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            )}
+            <ToggleGroup 
+              type="single" 
+              value={view} 
+              onValueChange={(value) => {
+                if (value) setView(value as ViewMode);
+              }}
+              aria-label="View mode"
+            >
+              <ToggleGroupItem value="table" aria-label="Table view">
+                <TableIcon className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label="List view">
+                <List className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="month" aria-label="Month view">
+                <CalendarDays className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
+                <CalendarPlus className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </CardHeader>
         <CardContent>
           {(view === 'table' || view === 'list') && (
