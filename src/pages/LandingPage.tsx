@@ -9,20 +9,24 @@ const LandingPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Tunggu hingga status otentikasi selesai diperiksa.
-    // Jika pengguna memiliki sesi, arahkan ke dasbor.
+    // Jika status otentikasi tidak lagi dimuat dan ada sesi,
+    // arahkan pengguna ke dasbor.
     if (!loading && session) {
       navigate('/dashboard', { replace: true });
     }
   }, [session, loading, navigate]);
 
-  // Selama pemeriksaan, kita bisa menampilkan halaman utama atau status memuat.
-  // Menampilkan halaman utama lebih baik agar tidak ada kedipan layar.
+  // Selama status otentikasi sedang diperiksa, tampilkan layar pemuatan.
+  // Ini mencegah halaman utama "berkedip" sebelum pengalihan.
   if (loading) {
-    // Anda bisa menampilkan skeleton/loading di sini jika mau,
-    // tapi untuk alur ini, lebih baik biarkan halaman dirender.
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <p className="text-muted-foreground">Authenticating...</p>
+      </div>
+    );
   }
 
+  // Jika tidak ada sesi setelah pemeriksaan, tampilkan halaman utama.
   const features = [
     {
       icon: <ListChecks className="h-10 w-10 text-primary" />,
