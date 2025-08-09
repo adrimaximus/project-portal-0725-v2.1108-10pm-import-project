@@ -19,13 +19,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const bootstrapAuth = async () => {
-      try {
-        // Jika URL berisi kode, tukarkan dengan sesi terlebih dahulu.
-        if (window.location.search.includes("code=")) {
+      // Jika URL berisi kode, itu adalah pengalihan dari OAuth.
+      // Kita harus menukarnya dengan sesi lalu membersihkan URL.
+      if (window.location.search.includes("code=")) {
+        try {
           await supabase.auth.exchangeCodeForSession(window.location.href);
+          // Alihkan ke path root untuk membersihkan kode dari URL.
+          // Ini memicu pemuatan ulang aplikasi yang bersih, di mana getSession() akan berfungsi dengan benar.
+          window.location.replace(window.location.origin);
+        } catch (error) {
+          console.error("Error exchanging code for session:", error);
+          // Juga alihkan jika terjadi kesalahan agar tidak macet.
+          window.location.replace(window.location.origin);
         }
+        // Kembali di sini untuk mencegah eksekusi lebih lanjut hingga halaman dimuat ulang.
+        return;
+      }
 
-        // Sekarang, dapatkan sesi yang seharusnya sudah ada.
+      // Untuk pemuatan halaman normal (atau setelah pengalihan di atas).
+      try {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
 
