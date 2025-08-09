@@ -136,14 +136,7 @@ const MoodTracker = () => {
     return null;
   }, [period, dateRange]);
 
-  let userName = 'there';
-  if (user) {
-    if (user.first_name) {
-      userName = `${user.first_name} ${user.last_name || ''}`.trim();
-    } else if (user.name) {
-      userName = user.name;
-    }
-  }
+  const userName = user?.name || 'there';
 
   if (authLoading) {
     return (
