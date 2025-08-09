@@ -42,46 +42,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Logika ini menangani callback setelah login OAuth.
-        // `detectSessionInUrl` seharusnya melakukan ini, tetapi melakukannya secara eksplisit
-        // di sini memastikan itu terjadi sebelum guard rute berjalan.
-        if (location.search.includes('code=')) {
-          await supabase.auth.exchangeCodeForSession(location.href);
-          // Bersihkan URL dari parameter 'code' setelah pertukaran berhasil.
-          const url = new URL(location.href);
-          url.search = '';
-          window.history.replaceState({}, document.title, url.pathname);
-        }
-
-        // Ambil sesi awal. Ini akan berisi sesi setelah pertukaran kode.
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        
-        if (initialSession) {
-          setSession(initialSession);
-          await fetchUserProfile(initialSession.user);
-        }
-      } catch (e) {
-        console.error("Error during auth initialization:", e);
-      } finally {
-        // Penting: Atur loading ke false hanya setelah semua pemeriksaan awal selesai.
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Dengarkan perubahan status otentikasi di masa mendatang (mis. logout).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      setSession(newSession);
-      if (newSession) {
-        await fetchUserProfile(newSession.user);
+    // onAuthStateChange adalah satu-satunya sumber kebenaran.
+    // Ia akan aktif saat pemuatan awal dengan sesi dari penyimpanan, dan kemudian pada setiap perubahan status otentikasi.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      if (session) {
+        await fetchUserProfile(session.user);
       } else {
         setUser(null);
       }
+      // Setelah status otentikasi pertama kali ditentukan, kita dapat berhenti memuat.
+      setLoading(false);
     });
 
+    // Membersihkan listener saat komponen dilepas.
     return () => {
       subscription.unsubscribe();
     };
