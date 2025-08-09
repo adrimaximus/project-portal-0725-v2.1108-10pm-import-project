@@ -2,10 +2,9 @@ import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGoogleLogin, TokenResponse } from "@react-oauth/google";
 import { toast } from "sonner";
 
@@ -20,6 +19,20 @@ const GoogleCalendarPage = () => {
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([]);
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
 
+  useEffect(() => {
+    const storedConnected = localStorage.getItem('googleCalendarConnected');
+    const storedCalendars = localStorage.getItem('googleCalendarCalendars');
+    const storedSelected = localStorage.getItem('googleCalendarSelected');
+
+    if (storedConnected === 'true' && storedCalendars) {
+      setIsConnected(true);
+      setCalendars(JSON.parse(storedCalendars));
+      if (storedSelected) {
+        setSelectedCalendars(JSON.parse(storedSelected));
+      }
+    }
+  }, []);
+
   const handleFetchCalendars = async (tokenResponse: Omit<TokenResponse, "error" | "error_description" | "error_uri">) => {
     setIsLoading(true);
     try {
@@ -32,8 +45,11 @@ const GoogleCalendarPage = () => {
         throw new Error('Failed to fetch calendar list');
       }
       const data = await response.json();
-      setCalendars(data.items || []);
+      const fetchedCalendars = data.items || [];
+      setCalendars(fetchedCalendars);
       setIsConnected(true);
+      localStorage.setItem('googleCalendarConnected', 'true');
+      localStorage.setItem('googleCalendarCalendars', JSON.stringify(fetchedCalendars));
       toast.success("Successfully fetched your calendars.");
     } catch (error) {
       console.error(error);
@@ -65,20 +81,15 @@ const GoogleCalendarPage = () => {
     setIsConnected(false);
     setCalendars([]);
     setSelectedCalendars([]);
+    localStorage.removeItem('googleCalendarConnected');
+    localStorage.removeItem('googleCalendarCalendars');
+    localStorage.removeItem('googleCalendarSelected');
     toast.info("Disconnected from Google Calendar.");
   };
 
-  const handleSelectCalendar = (calendarId: string) => {
-    setSelectedCalendars(prev =>
-      prev.includes(calendarId)
-        ? prev.filter(id => id !== calendarId)
-        : [...prev, calendarId]
-    );
-  };
-
   const handleSaveSelection = () => {
-    // In a real app, you would save the selected calendar IDs to your backend.
     console.log("Selected calendars to sync:", selectedCalendars);
+    localStorage.setItem('googleCalendarSelected', JSON.stringify(selectedCalendars));
     toast.success("Your calendar preferences have been saved!");
   };
 
@@ -138,19 +149,16 @@ const GoogleCalendarPage = () => {
               {isLoading ? (
                 <p>Loading calendars...</p>
               ) : (
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Your Calendars</h4>
-                  {calendars.map((calendar) => (
-                    <div key={calendar.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={calendar.id}
-                        checked={selectedCalendars.includes(calendar.id)}
-                        onCheckedChange={() => handleSelectCalendar(calendar.id)}
-                      />
-                      <Label htmlFor={calendar.id} className="font-normal">{calendar.summary}</Label>
-                    </div>
-                  ))}
-                </div>
+                <MultiSelect
+                  options={calendars.map(calendar => ({
+                    value: calendar.id,
+                    label: calendar.summary,
+                  }))}
+                  onChange={setSelectedCalendars}
+                  value={selectedCalendars}
+                  placeholder="Select calendars to sync..."
+                  className="w-full"
+                />
               )}
             </CardContent>
             <CardFooter className="flex justify-between">
