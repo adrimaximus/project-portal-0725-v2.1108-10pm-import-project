@@ -7,12 +7,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Project, dummyProjects } from "@/data/projects";
 import { Link } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw } from "lucide-react";
@@ -39,6 +37,7 @@ import {
 import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "./ui/date-picker-with-range";
 import CalendarEventsList from "./CalendarEventsList";
+import StatusBadge from "./StatusBadge";
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -53,27 +52,6 @@ interface CalendarEvent {
 }
 
 type ViewMode = 'table' | 'list' | 'month' | 'calendar';
-
-const getStatusBadgeClass = (status: Project['status']) => {
-  switch (status) {
-    case 'On Track':
-    case 'Completed':
-    case 'Done':
-    case 'Billed':
-      return 'bg-green-100 text-green-800';
-    case 'At Risk':
-    case 'On Hold':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'Off Track':
-    case 'Cancelled':
-      return 'bg-red-100 text-red-800';
-    case 'In Progress':
-    case 'Requested':
-      return 'bg-blue-100 text-blue-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
 
 const getStatusColor = (status: Project['status']): string => {
   switch (status) {
@@ -266,9 +244,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
                     <div className="text-sm text-muted-foreground">{project.category}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={cn("border-transparent", getStatusBadgeClass(project.status))}>
-                      {project.status}
-                    </Badge>
+                    <StatusBadge status={project.status} />
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
