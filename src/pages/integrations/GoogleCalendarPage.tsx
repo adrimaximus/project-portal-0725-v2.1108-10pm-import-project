@@ -45,7 +45,7 @@ const GoogleCalendarPage = () => {
         throw new Error('Failed to fetch calendar list');
       }
       const data = await response.json();
-      const fetchedCalendars = data.items || [];
+      const fetchedCalendars = (data.items || []).filter((cal: GoogleCalendar) => cal.id);
       setCalendars(fetchedCalendars);
       setIsConnected(true);
       localStorage.setItem('googleCalendarConnected', 'true');
@@ -114,6 +114,8 @@ const GoogleCalendarPage = () => {
       const allEvents: any[] = [];
 
       for (const calendarId of selectedCalendars) {
+        if (!calendarId) continue; // Skip invalid IDs
+
         const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
           headers: { 'Authorization': `Bearer ${token}` },
         });
@@ -123,7 +125,11 @@ const GoogleCalendarPage = () => {
             handleDisconnect();
             return;
         }
-        if (!response.ok) throw new Error(`Failed to fetch events for calendar ${calendarId}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error(`Failed to fetch events for calendar ${calendarId}:`, errorData);
+            throw new Error(`Failed to fetch events for calendar ${calendarId}`);
+        }
         
         const data = await response.json();
         if (data.items) allEvents.push(...data.items);
@@ -140,7 +146,7 @@ const GoogleCalendarPage = () => {
       toast.success(`Successfully imported ${allEvents.length} events!`);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to import events.");
+      toast.error("Failed to import events. Please check your calendar permissions and try again.");
     } finally {
       setIsLoading(false);
     }
