@@ -10,18 +10,28 @@ import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-reac
 
 interface ProjectMainContentProps {
   project: Project;
+  isEditing: boolean;
   onUpdateTasks: (tasks: Task[]) => void;
   onTaskStatusChange: (taskId: string, completed: boolean) => void;
   onTaskDelete: (taskId: string) => void;
   onAddCommentOrTicket: (comment: Comment) => void;
+  onDescriptionChange: (value: string) => void;
+  onTeamChange: (users: AssignedUser[]) => void;
+  onFilesChange: (files: File[]) => void;
+  onServicesChange: (services: string[]) => void;
 }
 
 const ProjectMainContent = ({
   project,
+  isEditing,
   onUpdateTasks,
   onTaskStatusChange,
   onTaskDelete,
   onAddCommentOrTicket,
+  onDescriptionChange,
+  onTeamChange,
+  onFilesChange,
+  onServicesChange,
 }: ProjectMainContentProps) => {
   const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
   const ticketCount = project.comments?.filter(c => c.isTicket).length || 0;
@@ -53,11 +63,11 @@ const ProjectMainContent = ({
           <TabsContent value="overview">
             <ProjectOverviewTab
               project={project}
-              isEditing={false} // Placeholder
-              onDescriptionChange={() => {}}
-              onTeamChange={() => {}}
-              onFilesChange={() => {}}
-              onServicesChange={() => {}}
+              isEditing={isEditing}
+              onDescriptionChange={onDescriptionChange}
+              onTeamChange={onTeamChange}
+              onFilesChange={onFilesChange}
+              onServicesChange={onServicesChange}
             />
           </TabsContent>
           <TabsContent value="tasks">

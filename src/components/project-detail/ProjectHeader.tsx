@@ -1,92 +1,71 @@
-import { Link } from "react-router-dom";
 import { Project } from "@/data/projects";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Save, X } from "lucide-react";
-import { Input } from "../ui/input";
-import StatusBadge from "../StatusBadge";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Pencil } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface ProjectHeaderProps {
   project: Project;
   isEditing: boolean;
-  projectName: string;
-  onProjectNameChange: (name: string) => void;
   onEditToggle: () => void;
   onSaveChanges: () => void;
   onCancelChanges: () => void;
   canEdit: boolean;
 }
 
-const getStatusColor = (status: Project['status']): string => {
-  switch (status) {
-    case 'On Track': case 'Completed': case 'Done': case 'Billed': return '#22c55e';
-    case 'At Risk': case 'On Hold': return '#eab308';
-    case 'Off Track': case 'Cancelled': return '#ef4444';
-    case 'In Progress': case 'Requested': return '#3b82f6';
-    default: return 'transparent';
-  }
-};
-
 const ProjectHeader = ({
   project,
   isEditing,
-  projectName,
-  onProjectNameChange,
   onEditToggle,
   onSaveChanges,
   onCancelChanges,
   canEdit,
 }: ProjectHeaderProps) => {
+  const navigate = useNavigate();
+
+  const getStatusBadgeVariant = (status: Project["status"]) => {
+    switch (status) {
+      case "Completed":
+      case "Done":
+      case "Billed":
+        return "default";
+      case "In Progress":
+        return "secondary";
+      case "On Hold":
+      case "Cancelled":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
   return (
-    <header className="flex flex-col gap-4 border-b bg-background px-4 sm:px-6">
-      <div className="pt-4 md:pt-8 pb-4">
-        <Button variant="ghost" asChild className="-ml-4">
-          <Link to="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Link>
-        </Button>
-      </div>
-      <div className="flex items-center justify-between pb-4">
+    <div className="space-y-4">
+      <Button variant="ghost" onClick={() => navigate("/projects")} className="text-muted-foreground px-0 hover:bg-transparent">
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Dashboard
+      </Button>
+      <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <div 
-            className="pl-4"
-            style={{ borderLeft: `4px solid ${getStatusColor(project.status)}` }}
-          >
+          <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+          {project.status && <Badge variant={getStatusBadgeVariant(project.status)}>{project.status}</Badge>}
+        </div>
+        {canEdit && (
+          <div className="flex-shrink-0">
             {isEditing ? (
-              <Input
-                value={projectName}
-                onChange={(e) => onProjectNameChange(e.target.value)}
-                className="text-2xl font-bold h-auto p-0 border-0 focus-visible:ring-0 bg-transparent"
-              />
+              <div className="flex gap-2">
+                <Button onClick={onSaveChanges}>Save Changes</Button>
+                <Button variant="outline" onClick={onCancelChanges}>Cancel</Button>
+              </div>
             ) : (
-              <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+              <Button onClick={onEditToggle}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit Project
+              </Button>
             )}
           </div>
-          <StatusBadge status={project.status} />
-        </div>
-        <div className="flex items-center gap-2">
-          {canEdit && (
-            isEditing ? (
-              <>
-                <Button onClick={onSaveChanges}>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save
-                </Button>
-                <Button variant="outline" onClick={onCancelChanges}>
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <Button variant="outline" onClick={onEditToggle}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Project
-              </Button>
-            )
-          )}
-        </div>
+        )}
       </div>
-    </header>
+    </div>
   );
 };
 

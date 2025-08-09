@@ -87,6 +87,7 @@ export interface Project {
   activities?: Activity[];
   briefFiles?: ProjectFile[];
   services?: string[];
+  paymentDueDate?: string;
 }
 
 export const dummyProjects: Project[] = [
@@ -101,6 +102,7 @@ export const dummyProjects: Project[] = [
     startDate: '2024-05-01T00:00:00.000Z',
     dueDate: '2024-09-30T00:00:00.000Z',
     paymentStatus: 'Pending',
+    paymentDueDate: '2024-10-14T00:00:00.000Z',
     createdBy: dummyUsers[0],
     assignedTo: [dummyUsers[0], dummyUsers[1], dummyUsers[2]],
     tasks: [
