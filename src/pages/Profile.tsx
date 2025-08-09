@@ -8,11 +8,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import PortalLayout from "@/components/PortalLayout";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 
 const Profile = () => {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
   
   const [firstName, setFirstName] = useState(user?.first_name || "");
   const [lastName, setLastName] = useState(user?.last_name || "");
@@ -75,15 +74,12 @@ const Profile = () => {
   };
 
   const handlePasswordChange = async () => {
-    // This is a placeholder for password change logic.
-    // In a real app, you'd get current and new passwords from state.
-    // const { error } = await supabase.auth.updateUser({ password: newPassword });
-    // if (error) {
-    //   toast.error(error.message);
-    // } else {
-    //   toast.success("Password updated successfully.");
-    // }
     toast.info("Password change functionality is not yet implemented.");
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    toast.success("You have been successfully logged out.");
   };
 
   return (
@@ -175,6 +171,20 @@ const Profile = () => {
               </div>
               <Switch id="push-notifications" defaultChecked />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Danger Zone</CardTitle>
+            <CardDescription>
+              These actions can have permanent consequences.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="destructive" onClick={handleLogout}>
+              Logout
+            </Button>
           </CardContent>
         </Card>
       </div>
