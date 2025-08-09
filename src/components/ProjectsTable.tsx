@@ -150,6 +150,38 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
     });
   }, [localProjects, dateRange]);
 
+  const filteredCalendarEvents = useMemo(() => {
+    if (!dateRange || !dateRange.from) {
+      return calendarEvents;
+    }
+
+    const fromDate = new Date(dateRange.from);
+    fromDate.setHours(0, 0, 0, 0);
+
+    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+    toDate.setHours(23, 59, 59, 999);
+
+    return calendarEvents.filter(event => {
+      const startStr = event.start.dateTime || event.start.date;
+      if (!startStr) return false;
+
+      const eventStart = event.start.date ? new Date(startStr + 'T00:00:00') : new Date(startStr);
+
+      const endStr = event.end.dateTime || event.end.date;
+      let eventEnd;
+      if (event.end.date) {
+          eventEnd = new Date(new Date(event.end.date + 'T00:00:00').getTime() - 1);
+      } else if (event.end.dateTime) {
+          eventEnd = new Date(event.end.dateTime);
+      } else {
+          eventEnd = new Date(eventStart);
+          eventEnd.setHours(23, 59, 59, 999);
+      }
+      
+      return eventStart <= toDate && eventEnd >= fromDate;
+    });
+  }, [calendarEvents, dateRange]);
+
   const handleDeleteProject = (projectId: string) => {
     const project = localProjects.find(p => p.id === projectId);
     if (project) {
@@ -283,7 +315,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       case 'month':
         return <ProjectsMonthView projects={localProjects} />;
       case 'calendar':
-        return <CalendarEventsList events={calendarEvents} onImportEvent={handleImportEvent} />;
+        return <CalendarEventsList events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
       default:
         return null;
     }
@@ -341,7 +373,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           </div>
         </CardHeader>
         <CardContent>
-          {(view === 'table' || view === 'list') && (
+          {(view === 'table' || view === 'list' || view === 'calendar') && (
             <div className="py-4">
               <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             </div>
