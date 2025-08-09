@@ -1,10 +1,18 @@
-import { User, dummyUsers } from './users';
+import { User } from '@/types';
 import { comments as dummyComments } from './comments';
 import { dummyActivities } from './activity';
 
 export type { User };
 export type ProjectStatus = 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'In Progress' | 'Requested' | 'Done' | 'Cancelled' | 'Billed';
 export type PaymentStatus = 'Proposed' | 'Approved' | 'PO Created' | 'On Process' | 'Pending' | 'Paid' | 'Cancelled' | 'Overdue';
+
+export const dummyUsers: User[] = [
+    { id: 'user-0', name: 'Adri Maximus', email: 'adri@example.com', avatar: 'https://i.pravatar.cc/150?u=adri', initials: 'AM', first_name: 'Adri', last_name: 'Maximus' },
+    { id: 'user-1', name: 'Alice Johnson', email: 'alice@example.com', avatar: 'https://i.pravatar.cc/150?u=alice', initials: 'AJ', first_name: 'Alice', last_name: 'Johnson' },
+    { id: 'user-2', name: 'Michael Chen', email: 'michael@example.com', avatar: 'https://i.pravatar.cc/150?u=michael', initials: 'MC', first_name: 'Michael', last_name: 'Chen' },
+    { id: 'user-3', name: 'Samantha Bee', email: 'samantha@example.com', avatar: 'https://i.pravatar.cc/150?u=samantha', initials: 'SB', first_name: 'Samantha', last_name: 'Bee' },
+    { id: 'user-4', name: 'David Kim', email: 'david@example.com', avatar: 'https://i.pravatar.cc/150?u=david', initials: 'DK', first_name: 'David', last_name: 'Kim' },
+];
 
 export type AssignedUser = User;
 

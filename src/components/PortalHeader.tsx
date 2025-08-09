@@ -4,19 +4,20 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PortalSidebar from "./PortalSidebar";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { dummyProjects } from "@/data/projects";
-import { allUsers } from "@/data/users";
+import { dummyProjects, Project } from "@/data/projects";
+import { User } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import HighlightMatch from "./HighlightMatch";
@@ -28,12 +29,13 @@ import {
 import { googleLogout } from "@react-oauth/google";
 
 const PortalHeader = () => {
-  const { user, logout } = useUser();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [suggestedUsers, setSuggestedUsers] = useState<User[]>([]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -52,6 +54,25 @@ const PortalHeader = () => {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data, error } = await supabase.from('profiles').select('*').limit(5);
+      if (data) {
+        const users = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }));
+        setSuggestedUsers(users);
+      }
+    };
+    fetchUsers();
+  }, []);
+
   const handleLogout = () => {
     googleLogout();
     logout();
@@ -65,7 +86,7 @@ const PortalHeader = () => {
       const projects = dummyProjects.filter(p =>
         p.name.toLowerCase().includes(query)
       );
-      const users = allUsers.filter(u =>
+      const users = suggestedUsers.filter(u =>
         u.name.toLowerCase().includes(query)
       );
       return { projects, users };
@@ -73,9 +94,9 @@ const PortalHeader = () => {
 
     return {
       projects: dummyProjects.slice(0, 2),
-      users: allUsers.slice(0, 2),
+      users: suggestedUsers.slice(0, 2),
     };
-  }, [searchQuery]);
+  }, [searchQuery, suggestedUsers]);
 
   const handleProjectSelect = (projectId: string) => {
     navigate(`/projects/${projectId}`);

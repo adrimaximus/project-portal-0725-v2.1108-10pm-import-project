@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
 import { dummyGoals, Goal, GoalCompletion } from '@/data/goals';
-import { User, dummyUsers } from '@/data/users';
+import { User } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
@@ -31,6 +32,7 @@ import GoalProgressChart from '@/components/goals/GoalProgressChart';
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [goal, setGoal] = useState<Goal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -47,6 +49,7 @@ const GoalDetailPage = () => {
   }, [goalId]);
 
   const generateInitialCompletions = (g: Goal): GoalCompletion[] => {
+    if (!currentUser) return [];
     const completions: GoalCompletion[] = [];
     const today = startOfDay(new Date());
     const yearStart = new Date(today.getFullYear(), 0, 1);
@@ -61,7 +64,7 @@ const GoalDetailPage = () => {
           id: `comp-${d.getTime()}`,
           date: format(d, 'yyyy-MM-dd'),
           value: Math.random() > 0.4 ? 1 : 0,
-          userId: dummyUsers[0].id,
+          userId: currentUser.id,
         });
       }
     }
@@ -77,8 +80,8 @@ const GoalDetailPage = () => {
     if (existingCompletionIndex > -1) {
       const existing = updatedGoal.completions[existingCompletionIndex];
       updatedGoal.completions[existingCompletionIndex] = { ...existing, value: existing.value === 1 ? 0 : 1 };
-    } else {
-      updatedGoal.completions.push({ id: `comp-${date.getTime()}`, date: dateString, value: 1, userId: dummyUsers[0].id });
+    } else if (currentUser) {
+      updatedGoal.completions.push({ id: `comp-${date.getTime()}`, date: dateString, value: 1, userId: currentUser.id });
     }
     updatedGoal.completions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setGoal(updatedGoal);
@@ -86,24 +89,24 @@ const GoalDetailPage = () => {
   };
 
   const handleLogQuantity = (date: Date, value: number) => {
-    if (!goal || goal.type !== 'quantity') return;
+    if (!goal || goal.type !== 'quantity' || !currentUser) return;
     const newLog: GoalCompletion = {
       id: `comp-${date.getTime()}`,
       date: new Date().toISOString(),
       value,
-      userId: dummyUsers[0].id, // Assume current user is Alex
+      userId: currentUser.id,
     };
     const updatedGoal = { ...goal, completions: [...goal.completions, newLog] };
     setGoal(updatedGoal);
   };
 
   const handleLogValue = (date: Date, value: number) => {
-    if (!goal || goal.type !== 'value') return;
+    if (!goal || goal.type !== 'value' || !currentUser) return;
     const newLog: GoalCompletion = {
       id: `comp-${date.getTime()}`,
       date: new Date().toISOString(),
       value,
-      userId: dummyUsers[0].id, // Assume current user is Alex
+      userId: currentUser.id,
     };
     const updatedGoal = { ...goal, completions: [...goal.completions, newLog] };
     setGoal(updatedGoal);

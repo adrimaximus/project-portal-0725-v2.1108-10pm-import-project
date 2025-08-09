@@ -1,5 +1,7 @@
 import { Project, AssignedUser } from '@/data/projects';
-import { allUsers } from '@/data/users';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProjectDescription from './ProjectDescription';
 import ProjectServices from './ProjectServices';
@@ -17,6 +19,26 @@ interface ProjectOverviewTabProps {
 }
 
 const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesChange, onServicesChange }: ProjectOverviewTabProps) => {
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (data) {
+        const users = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }));
+        setAllUsers(users);
+      }
+    };
+    fetchUsers();
+  }, []);
   
   const handleTeamSelectionToggle = (userToToggle: AssignedUser) => {
     const isSelected = project.assignedTo.some(u => u.id === userToToggle.id);

@@ -4,13 +4,35 @@ import PortalLayout from '@/components/PortalLayout';
 import { GoalForm, GoalFormValues } from '@/components/goals/GoalForm';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { allUsers, User } from '@/data/users';
+import { User } from '@/types';
 import { Goal } from '@/data/goals';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const GoalEditPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goals, updateGoal, addGoal } = useGoals();
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (data) {
+        const users = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }));
+        setAllUsers(users);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const isNew = id === 'new';
   const goal = isNew ? undefined : goals.find(g => g.id === id);

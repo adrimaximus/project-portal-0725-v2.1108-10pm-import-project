@@ -6,7 +6,7 @@ import { Goal, dummyGoals } from '@/data/goals';
 import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import GoalCard from '@/components/goals/GoalCard';
 import { v4 as uuidv4 } from 'uuid';
-import { User } from '@/data/users';
+import { User } from '@/types';
 
 const GoalsPage = () => {
   const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);

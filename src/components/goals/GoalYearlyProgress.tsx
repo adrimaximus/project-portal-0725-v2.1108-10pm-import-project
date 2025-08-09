@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Goal, GoalCompletion } from '@/data/goals';
-import { User } from '@/data/users';
+import { User } from '@/types';
 import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';

@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Project, Comment, dummyProjects, User } from "@/data/projects";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { id } from 'date-fns/locale';
 import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
 import { cn } from "@/lib/utils";
 import './mentions-style.css';
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -20,10 +21,37 @@ const ProjectComments = ({
   project,
   onAddCommentOrTicket,
 }: ProjectCommentsProps) => {
-  const { user: currentUser } = useUser();
+  const { user: currentUser } = useAuth();
   const [newCommentText, setNewCommentText] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [filter, setFilter] = useState<'all' | 'comments' | 'tickets'>('all');
+  const [mentionableUsers, setMentionableUsers] = useState<any[]>([]);
+  const [mentionableProjects, setMentionableProjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchMentionableData = async () => {
+      // Fetch users
+      const { data: usersData, error: usersError } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url, email');
+      if (usersData) {
+        setMentionableUsers(usersData.map(u => ({
+          id: u.id,
+          display: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+          avatar: u.avatar_url,
+          initials: `${u.first_name?.[0] || ''}${u.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+        })));
+      }
+
+      // Fetch projects
+      const { data: projectsData, error: projectsError } = await supabase.from('projects').select('id, name');
+      if (projectsData) {
+        setMentionableProjects(projectsData.map(p => ({
+          id: p.id,
+          display: p.name,
+        })));
+      }
+    };
+    fetchMentionableData();
+  }, []);
 
   const usersForMentions = project.assignedTo.map(user => ({
     id: user.id,
@@ -52,7 +80,7 @@ const ProjectComments = ({
   };
 
   const handleSubmit = (isTicketSubmit: boolean) => {
-    if (newCommentText.trim() === "" && !attachment) return;
+    if ((newCommentText.trim() === "" && !attachment) || !currentUser) return;
 
     const newComment: Comment = {
       id: `item-${Date.now()}`,
@@ -139,14 +167,14 @@ const ProjectComments = ({
             >
               <Mention
                 trigger="@"
-                data={usersForMentions}
+                data={mentionableUsers}
                 renderSuggestion={renderUserSuggestion}
                 markup="@[__display__](__id__)"
                 className="mentions__mention"
               />
               <Mention
                 trigger="/"
-                data={projectsForMentions}
+                data={mentionableProjects}
                 renderSuggestion={renderProjectSuggestion}
                 markup="/[__display__](__id__)"
                 className="mentions__mention"

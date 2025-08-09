@@ -10,7 +10,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { Check, ChevronsUpDown, Sparkles, ImageIcon } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-import { allUsers, User } from '@/data/users';
+import { User } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getIconComponent, allIcons } from '@/data/icons';
 import { colors } from '@/data/colors';
@@ -45,6 +47,7 @@ interface GoalFormProps {
 }
 
 export const GoalForm = ({ goal, onSubmit, onCancel }: GoalFormProps) => {
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const form = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
     defaultValues: goal ? {
@@ -62,6 +65,25 @@ export const GoalForm = ({ goal, onSubmit, onCancel }: GoalFormProps) => {
       specificDays: [],
     },
   });
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (data) {
+        const users = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }));
+        setAllUsers(users);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const { watch, setValue } = form;
   const selectedType = watch('type');

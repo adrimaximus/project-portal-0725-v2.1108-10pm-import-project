@@ -1,4 +1,4 @@
-import { User } from '@/data/users';
+import { User } from '@/types';
 
 export interface GoogleCalendarEvent {
   id: string;

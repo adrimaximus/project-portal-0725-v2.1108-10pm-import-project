@@ -4,19 +4,25 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useUser } from "@/contexts/UserContext";
-import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import PortalLayout from "@/components/PortalLayout";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/integrations/supabase/client";
 
 const Profile = () => {
-  const { user, updateUser } = useUser();
-  const { toast } = useToast();
-
-  const [name, setName] = useState(user.name);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatar);
+  const { user, refreshUser } = useAuth();
+  
+  const [firstName, setFirstName] = useState(user?.first_name || "");
+  const [lastName, setLastName] = useState(user?.last_name || "");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  if (!user) {
+    return <PortalLayout><div>Loading...</div></PortalLayout>;
+  }
 
   const handlePhotoChangeClick = () => {
     fileInputRef.current?.click();
@@ -25,25 +31,59 @@ const Profile = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
     }
   };
 
-  const handleSaveChanges = () => {
-    const newAvatarUrl = avatarPreview || user.avatar;
-    updateUser({ name, avatar: newAvatarUrl });
+  const handleSaveChanges = async () => {
+    let avatar_url = user.avatar;
 
-    toast({
-      title: "Profile Updated",
-      description: "Your changes have been saved successfully.",
-    });
+    if (avatarFile) {
+      const fileExt = avatarFile.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, avatarFile);
+
+      if (uploadError) {
+        toast.error("Failed to upload avatar.");
+        console.error(uploadError);
+        return;
+      }
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      avatar_url = data.publicUrl;
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ 
+        first_name: firstName, 
+        last_name: lastName,
+        avatar_url: avatar_url,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      toast.error("Failed to update profile.");
+      console.error(error);
+    } else {
+      toast.success("Profile updated successfully.");
+      refreshUser();
+    }
   };
 
-  const handlePasswordChange = () => {
-    toast({
-      title: "Password Updated",
-      description: "Your password has been changed successfully.",
-    });
+  const handlePasswordChange = async () => {
+    // This is a placeholder for password change logic.
+    // In a real app, you'd get current and new passwords from state.
+    // const { error } = await supabase.auth.updateUser({ password: newPassword });
+    // if (error) {
+    //   toast.error(error.message);
+    // } else {
+    //   toast.success("Password updated successfully.");
+    // }
+    toast.info("Password change functionality is not yet implemented.");
   };
 
   return (
@@ -63,8 +103,8 @@ const Profile = () => {
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarPreview || "https://github.com/shadcn.png"} alt={name} />
-                <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
+                <AvatarImage src={avatarPreview || "https://github.com/shadcn.png"} alt={user.name} />
+                <AvatarFallback>{user.initials || 'U'}</AvatarFallback>
               </Avatar>
               <input
                 type="file"
@@ -77,12 +117,16 @@ const Profile = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                <Label htmlFor="first-name">First Name</Label>
+                <Input id="first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="last-name">Last Name</Label>
+                <Input id="last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={user.email} disabled />
+                <Input id="email" type="email" value={user.email || ''} disabled />
               </div>
             </div>
             <Button onClick={handleSaveChanges}>Save Changes</Button>

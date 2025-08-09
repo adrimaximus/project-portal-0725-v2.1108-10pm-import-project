@@ -3,9 +3,10 @@ import PortalLayout from '@/components/PortalLayout';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { dummyProjects } from '@/data/projects';
-import { allUsers } from '@/data/users';
-import { Building, User } from 'lucide-react';
+import { dummyProjects, Project } from '@/data/projects';
+import { User } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { Building, User as UserIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import HighlightMatch from '@/components/HighlightMatch';
 
@@ -13,17 +14,45 @@ const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    setSearchTerm(searchParams.get('q') || '');
-  }, [searchParams]);
+    const term = searchParams.get('q') || '';
+    setSearchTerm(term);
 
-  const projects = searchTerm
-    ? dummyProjects.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    : [];
-  const users = searchTerm
-    ? allUsers.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    : [];
+    const performSearch = async () => {
+      if (!term) {
+        setProjects([]);
+        setUsers([]);
+        return;
+      }
+
+      // Search projects (using dummy data for now)
+      setProjects(dummyProjects.filter(p => p.name.toLowerCase().includes(term.toLowerCase())));
+
+      // Search users from Supabase
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%`);
+      
+      if (data) {
+        const foundUsers = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }));
+        setUsers(foundUsers);
+      }
+    };
+
+    performSearch();
+  }, [searchParams]);
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -76,7 +105,7 @@ const SearchPage = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <User className="h-5 w-5" />
+                      <UserIcon className="h-5 w-5" />
                       Users ({users.length})
                     </CardTitle>
                   </CardHeader>

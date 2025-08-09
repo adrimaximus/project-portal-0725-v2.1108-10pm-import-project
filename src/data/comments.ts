@@ -1,9 +1,9 @@
 import { Comment } from './projects';
-import { User } from './users';
+import { User } from '@/types';
 
-const user1: User = { id: 'user-1', name: 'Alice Johnson', email: 'alice@example.com', role: 'Admin', avatar: 'https://i.pravatar.cc/150?u=alice', initials: 'AJ' };
-const user2: User = { id: 'user-2', name: 'Michael Chen', email: 'michael@example.com', role: 'Member', avatar: 'https://i.pravatar.cc/150?u=michael', initials: 'MC' };
-const user3: User = { id: 'user-3', name: 'Samantha Bee', email: 'samantha@example.com', role: 'Member', avatar: 'https://i.pravatar.cc/150?u=samantha', initials: 'SB' };
+const user1: User = { id: 'user-1', name: 'Alice Johnson', email: 'alice@example.com', role: 'Admin', avatar: 'https://i.pravatar.cc/150?u=alice', initials: 'AJ', first_name: 'Alice', last_name: 'Johnson' };
+const user2: User = { id: 'user-2', name: 'Michael Chen', email: 'michael@example.com', role: 'Member', avatar: 'https://i.pravatar.cc/150?u=michael', initials: 'MC', first_name: 'Michael', last_name: 'Chen' };
+const user3: User = { id: 'user-3', name: 'Samantha Bee', email: 'samantha@example.com', role: 'Member', avatar: 'https://i.pravatar.cc/150?u=samantha', initials: 'SB', first_name: 'Samantha', last_name: 'Bee' };
 
 export const comments: Comment[] = [
   {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -6,18 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from "@/components/ui/label";
 import ModernTeamSelector from "./ModernTeamSelector";
 import FileUploader from "./FileUploader";
-import { Project, AssignedUser, ProjectFile, dummyProjects } from "@/data/projects";
-import { allUsers } from "@/data/users";
 import { useNavigate } from "react-router-dom";
 import { Service, services as allServicesData } from "@/data/services";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { User } from "@/types";
+import { toast } from "sonner";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -25,14 +26,45 @@ interface ProjectDetailsFormProps {
 }
 
 const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
-  const { user: currentUser } = useUser();
+  const { user: currentUser } = useAuth();
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [projectName, setProjectName] = useState("");
   const [date, setDate] = useState<DateRange | undefined>();
   const [budget, setBudget] = useState("");
   const [description, setDescription] = useState("");
-  const [team, setTeam] = useState<AssignedUser[]>([]);
+  const [team, setTeam] = useState<User[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data, error } = await supabase.from('profiles').select(`
+        id,
+        first_name,
+        last_name,
+        avatar_url,
+        email
+      `);
+
+      if (error) {
+        toast.error("Failed to fetch users.");
+        console.error('Error fetching users:', error);
+      } else {
+        const users = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }));
+        setAllUsers(users);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.replace(/[^0-9]/g, '');
@@ -44,7 +76,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     }
   };
 
-  const handleTeamChange = (userToToggle: AssignedUser) => {
+  const handleTeamChange = (userToToggle: User) => {
     setTeam((currentTeam) =>
       currentTeam.some((user) => user.id === userToToggle.id)
         ? currentTeam.filter((user) => user.id !== userToToggle.id)
@@ -52,43 +84,58 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const newProjectFiles: ProjectFile[] = files.map(file => ({
-      id: `file-${Date.now()}-${file.name}`,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      url: URL.createObjectURL(file),
-      uploadedAt: new Date().toISOString(),
-    }));
+    if (!currentUser) {
+      toast.error("You must be logged in to create a project.");
+      return;
+    }
 
     const numericBudget = parseInt(budget.replace(/[^0-9]/g, ''), 10) || 0;
-    const dueDate = date?.to ?? addDays(new Date(), 30);
 
-    const newProject: Project = {
-      id: `proj-${Date.now()}`,
-      name: projectName,
-      category: selectedServices.length > 0 ? selectedServices[0].title : "General",
-      description: description,
-      assignedTo: team,
-      briefFiles: newProjectFiles,
-      status: "Requested",
-      progress: 0,
-      budget: numericBudget,
-      startDate: date?.from?.toISOString() ?? new Date().toISOString(),
-      dueDate: dueDate.toISOString(),
-      paymentStatus: "Proposed",
-      createdBy: currentUser,
-      services: selectedServices.map(s => s.title),
-      tasks: [],
-      comments: [],
-      activities: [],
-    };
+    const { data: projectData, error: projectError } = await supabase
+      .from('projects')
+      .insert({
+        name: projectName,
+        category: selectedServices.length > 0 ? selectedServices[0].title : "General",
+        description: description,
+        status: "Requested",
+        budget: numericBudget,
+        start_date: date?.from?.toISOString(),
+        due_date: date?.to?.toISOString(),
+        created_by: currentUser.id,
+        services: selectedServices.map(s => s.title),
+      })
+      .select('id')
+      .single();
 
-    dummyProjects.push(newProject);
-    navigate(`/projects/${newProject.id}`);
+    if (projectError) {
+      toast.error("Failed to create project.");
+      console.error('Error creating project:', projectError);
+      return;
+    }
+
+    const newProjectId = projectData.id;
+
+    if (team.length > 0) {
+      const membersToInsert = team.map(member => ({
+        project_id: newProjectId,
+        user_id: member.id,
+        role: 'member' as const
+      }));
+
+      const { error: membersError } = await supabase
+        .from('project_members')
+        .insert(membersToInsert);
+
+      if (membersError) {
+        toast.error("Failed to add team members to the project.");
+        console.error('Error adding project members:', membersError);
+      }
+    }
+    
+    toast.success("Project created successfully!");
+    navigate(`/projects/${newProjectId}`);
   };
 
   const serviceDetails = selectedServices

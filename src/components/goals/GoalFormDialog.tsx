@@ -15,7 +15,7 @@ import { generateAiIcon } from '@/lib/openai';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { User } from '@/data/users';
+import { User } from '@/types';
 
 interface GoalFormDialogProps {
   open: boolean;

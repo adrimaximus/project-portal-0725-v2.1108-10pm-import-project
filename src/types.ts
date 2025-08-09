@@ -8,6 +8,7 @@ export interface User {
   initials: string;
   first_name?: string;
   last_name?: string;
+  role?: string;
 }
 
 export interface Collaborator {
