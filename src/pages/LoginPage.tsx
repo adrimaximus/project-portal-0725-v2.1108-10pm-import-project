@@ -33,7 +33,6 @@ const LoginPage = () => {
           appearance={{ theme: ThemeSupa }}
           providers={['google']}
           theme="light"
-          redirectTo={window.location.origin}
         />
       </div>
     </div>
