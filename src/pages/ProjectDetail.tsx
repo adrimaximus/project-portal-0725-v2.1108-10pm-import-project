@@ -113,8 +113,10 @@ const ProjectDetail = () => {
   };
 
   useEffect(() => {
-    fetchProjectDetails();
-  }, [projectId, navigate]);
+    if (currentUser && projectId) {
+      fetchProjectDetails();
+    }
+  }, [projectId, navigate, currentUser]);
 
   const handleEditToggle = () => {
     if (!isEditing) {
