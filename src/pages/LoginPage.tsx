@@ -20,7 +20,7 @@ const LoginPage = () => {
   }, [session, navigate, from]);
 
   const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         // Penting: URL ini harus ditambahkan ke daftar "Redirect URLs"
@@ -28,6 +28,10 @@ const LoginPage = () => {
         redirectTo: window.location.origin,
       },
     });
+
+    if (error) {
+      toast.error(`Could not authenticate with Google: ${error.message}`);
+    }
   };
 
   return (
