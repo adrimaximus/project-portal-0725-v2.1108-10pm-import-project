@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,59 +15,18 @@ import { moods, dummyHistory, Mood, MoodHistoryEntry } from '@/data/mood';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { User } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type MoodTrackerPeriod = 'week' | 'month' | 'year' | 'custom';
-
-type Profile = {
-  first_name: string | null;
-};
 
 const MoodTracker = () => {
   const [selectedMoodId, setSelectedMoodId] = useState<Mood['id']>(moods[0].id);
   const [history, setHistory] = useState<MoodHistoryEntry[]>(dummyHistory);
   const [period, setPeriod] = useState<MoodTrackerPeriod>('week');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-
-  useEffect(() => {
-    const fetchUserAndProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        setUser(user);
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('first_name')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching profile:', error.message);
-        } else if (profileData) {
-          setProfile(profileData);
-        }
-      }
-    };
-
-    fetchUserAndProfile();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (event === 'SIGNED_IN' && currentUser) {
-        fetchUserAndProfile();
-      } else if (event === 'SIGNED_OUT') {
-        setProfile(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+  
+  const { user, loading: authLoading } = useAuth();
 
   const handleSubmit = () => {
     const selectedMood = moods.find(mood => mood.id === selectedMoodId);
@@ -177,7 +136,47 @@ const MoodTracker = () => {
     return null;
   }, [period, dateRange]);
 
-  const userName = profile?.first_name || 'there';
+  const userName = user?.name || 'there';
+
+  if (authLoading) {
+    return (
+      <PortalLayout>
+        <div className="space-y-4">
+          <div>
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-5 w-80 mt-2" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle><Skeleton className="h-6 w-full" /></CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-10 w-full mt-4" />
+              </CardContent>
+            </Card>
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle><Skeleton className="h-6 w-48" /></CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-48 w-full" />
+              </CardContent>
+            </Card>
+            <Card className="lg:col-span-3">
+              <CardHeader>
+                <CardTitle><Skeleton className="h-6 w-32" /></CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-64 w-full" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </PortalLayout>
+    );
+  }
 
   return (
     <PortalLayout>
