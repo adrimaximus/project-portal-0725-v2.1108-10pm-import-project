@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN origin_event_id TEXT;

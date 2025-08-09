@@ -7,10 +7,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { Project, dummyProjects } from "@/data/projects";
-import { Link, useLocation } from "react-router-dom";
+import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw } from "lucide-react";
@@ -40,10 +39,8 @@ import CalendarEventsList from "./CalendarEventsList";
 import StatusBadge from "./StatusBadge";
 import { format } from "date-fns";
 import { Badge } from "./ui/badge";
-
-interface ProjectsTableProps {
-  projects: Project[];
-}
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CalendarEvent {
     id: string;
@@ -65,19 +62,86 @@ const getStatusColor = (status: Project['status']): string => {
   }
 };
 
-const ProjectsTable = ({ projects }: ProjectsTableProps) => {
+const ProjectsTable = () => {
   const [view, setView] = useState<ViewMode>('table');
-  const [localProjects, setLocalProjects] = useState<Project[]>(projects);
+  const [localProjects, setLocalProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
-  const location = useLocation();
+  const { user } = useAuth();
+
+  const fetchProjects = async () => {
+    setIsLoading(true);
+    const { data: projectsData, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+
+    if (error) {
+        toast.error("Failed to fetch projects.");
+        console.error(error);
+        setLocalProjects([]);
+        setIsLoading(false);
+        return;
+    }
+
+    const userIds = [...new Set(projectsData.map(p => p.created_by).filter(Boolean))];
+    let profilesMap = new Map();
+
+    if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('id', userIds);
+
+        if (profilesError) {
+            toast.error("Failed to fetch project creator details.");
+            console.error(profilesError);
+        } else {
+            profilesMap = new Map(profilesData.map(p => [p.id, p]));
+        }
+    }
+
+    const mappedProjects: Project[] = projectsData.map(p => {
+        const profile = profilesMap.get(p.created_by);
+        const createdBy = profile ? {
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
+            email: profile.email,
+            avatar: profile.avatar_url,
+            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+        } : null;
+
+        return {
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            description: p.description,
+            status: p.status as ProjectStatus,
+            progress: p.progress,
+            budget: p.budget,
+            startDate: p.start_date,
+            dueDate: p.due_date,
+            paymentStatus: p.payment_status as PaymentStatus,
+            createdBy: createdBy,
+            assignedTo: [],
+            tasks: [],
+            comments: [],
+            activities: [],
+            briefFiles: [],
+            services: p.services,
+        };
+    });
+
+    setLocalProjects(mappedProjects);
+    setIsLoading(false);
+  };
 
   useEffect(() => {
-    // This ensures the table reflects the latest data from dummyProjects
-    // when the user navigates back to this page.
-    setLocalProjects([...dummyProjects]);
-  }, [location]);
+    if (user) {
+      fetchProjects();
+    }
+  }, [user]);
 
   const refreshCalendarEvents = () => {
     const storedEvents = localStorage.getItem('googleCalendarEvents');
@@ -172,21 +236,30 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
     }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (projectToDelete) {
-      setLocalProjects(prev => prev.filter(p => p.id !== projectToDelete.id));
-      
-      const index = dummyProjects.findIndex(p => p.id === projectToDelete.id);
-      if (index > -1) {
-        dummyProjects.splice(index, 1);
-      }
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectToDelete.id);
 
-      toast.success(`Project "${projectToDelete.name}" has been deleted.`);
+      if (error) {
+        toast.error(`Failed to delete project "${projectToDelete.name}".`);
+        console.error(error);
+      } else {
+        toast.success(`Project "${projectToDelete.name}" has been deleted.`);
+        fetchProjects();
+      }
       setProjectToDelete(null);
     }
   };
 
-  const handleImportEvent = (event: CalendarEvent) => {
+  const handleImportEvent = async (event: CalendarEvent) => {
+    if (!user) {
+        toast.error("You must be logged in to import events.");
+        return;
+    }
+
     const startDate = event.start.date || event.start.dateTime?.split('T')[0];
     const dueDate = event.end.date || event.end.dateTime?.split('T')[0] || startDate;
 
@@ -195,33 +268,46 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
         return;
     }
 
-    const newProject: Project = {
-      id: `cal-${event.id}`,
-      name: event.summary || "Untitled Event",
-      category: 'Imported Event',
-      status: 'Requested',
-      progress: 0,
-      budget: 0,
-      startDate: startDate,
-      dueDate: dueDate,
-      assignedTo: [],
-      tasks: [],
-      comments: [],
-      description: '',
-      paymentStatus: 'Proposed',
-      createdBy: null,
-    };
+    const originEventId = `cal-${event.id}`;
+    const { data: existing, error: checkError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('origin_event_id', originEventId)
+        .maybeSingle();
 
-    if (localProjects.some(p => p.id === newProject.id)) {
-        toast.info(`"${newProject.name}" has already been imported.`);
+    if (checkError) {
+        toast.error(`Error checking for existing project: ${checkError.message}`);
         return;
     }
-    
-    dummyProjects.unshift(newProject);
 
-    setLocalProjects(prev => [newProject, ...prev]);
-    setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-    toast.success(`"${newProject.name}" imported as a new project.`);
+    if (existing) {
+        toast.info(`"${event.summary}" has already been imported.`);
+        setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
+        return;
+    }
+
+    const newProjectData = {
+      name: event.summary || "Untitled Event",
+      category: 'Imported Event',
+      status: 'Requested' as ProjectStatus,
+      progress: 0,
+      budget: 0,
+      start_date: startDate,
+      due_date: dueDate,
+      payment_status: 'Proposed' as PaymentStatus,
+      created_by: user.id,
+      origin_event_id: originEventId,
+    };
+
+    const { error } = await supabase.from('projects').insert([newProjectData]);
+
+    if (error) {
+        toast.error(`Failed to import "${event.summary}": ${error.message}`);
+    } else {
+        toast.success(`"${event.summary}" imported as a new project.`);
+        setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
+        fetchProjects();
+    }
   };
 
   const renderContent = () => {
@@ -240,50 +326,64 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProjects.map((project) => (
-                <TableRow key={project.id}>
-                  <TableCell style={{ borderLeft: `4px solid ${getStatusColor(project.status)}` }}>
-                    <Link to={`/projects/${project.id}`} className="font-medium text-primary hover:underline">
-                      {project.name}
-                    </Link>
-                    <div className="text-sm text-muted-foreground">{project.category}</div>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={project.status} />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Progress value={project.progress} className="h-2" />
-                      <span className="text-sm text-muted-foreground">{project.progress}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div>Start: {format(new Date(project.startDate), 'MMM d, yyyy')}</div>
-                      <div className="text-muted-foreground">Due: {format(new Date(project.dueDate), 'MMM d, yyyy')}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{project.paymentStatus}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => handleDeleteProject(project.id)} className="text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Hapus Proyek</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    Loading projects...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : filteredProjects.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    No projects found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredProjects.map((project) => (
+                  <TableRow key={project.id}>
+                    <TableCell style={{ borderLeft: `4px solid ${getStatusColor(project.status)}` }}>
+                      <Link to={`/projects/${project.id}`} className="font-medium text-primary hover:underline">
+                        {project.name}
+                      </Link>
+                      <div className="text-sm text-muted-foreground">{project.category}</div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={project.status} />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Progress value={project.progress} className="h-2" />
+                        <span className="text-sm text-muted-foreground">{project.progress}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div>Start: {format(new Date(project.startDate), 'MMM d, yyyy')}</div>
+                        <div className="text-muted-foreground">Due: {format(new Date(project.dueDate), 'MMM d, yyyy')}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{project.paymentStatus}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => handleDeleteProject(project.id)} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Hapus Proyek</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         );

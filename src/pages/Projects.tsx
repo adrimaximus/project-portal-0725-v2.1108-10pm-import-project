@@ -1,6 +1,5 @@
 import PortalLayout from "@/components/PortalLayout";
 import ProjectsTable from "@/components/ProjectsTable";
-import { dummyProjects } from "@/data/projects";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -17,7 +16,7 @@ const Projects = () => {
           New Project
         </Button>
       </div>
-      <ProjectsTable projects={dummyProjects} />
+      <ProjectsTable />
     </PortalLayout>
   );
 };

@@ -80,7 +80,7 @@ export interface Project {
   dueDate: string;
   paymentStatus: PaymentStatus;
   assignedTo: AssignedUser[];
-  createdBy: AssignedUser;
+  createdBy: AssignedUser | null;
   lastUpdated?: string;
   tasks?: Task[];
   comments?: Comment[];
