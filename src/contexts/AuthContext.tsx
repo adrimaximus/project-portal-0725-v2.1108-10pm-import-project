@@ -5,9 +5,7 @@ import { Session, User } from '@supabase/supabase-js';
 export type UserProfile = User & {
   first_name: string | null;
   last_name: string | null;
-  name: string;
-  avatar: string | null;
-  initials: string;
+  name: string | null;
 };
 
 type AuthContextType = {
@@ -25,14 +23,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getInitials = (fn?: string | null, ln?: string | null, fullName?: string | null, email?: string | null) => {
-      if (fn && ln) return `${fn[0]}${ln[0]}`.toUpperCase();
-      if (fullName) return fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-      if (fn) return fn.slice(0, 2).toUpperCase();
-      if (email) return email.slice(0, 2).toUpperCase();
-      return '??';
-    }
-
     const setData = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
@@ -45,22 +35,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('first_name, last_name, avatar_url')
+          .select('first_name, last_name')
           .eq('id', session.user.id)
           .single();
         
-        const firstName = profile?.first_name || session.user.user_metadata.first_name;
-        const lastName = profile?.last_name || session.user.user_metadata.last_name;
-        const fullName = session.user.user_metadata.full_name;
-        const email = session.user.email;
-
         const userData: UserProfile = {
           ...session.user,
-          first_name: firstName || null,
-          last_name: lastName || null,
-          name: fullName || `${firstName || ''} ${lastName || ''}`.trim() || email || 'User',
-          avatar: profile?.avatar_url || session.user.user_metadata.avatar_url || null,
-          initials: getInitials(firstName, lastName, fullName, email),
+          first_name: profile?.first_name || session.user.user_metadata.first_name || null,
+          last_name: profile?.last_name || session.user.user_metadata.last_name || null,
+          name: session.user.user_metadata.full_name || null,
         };
         setUser(userData);
       } else {
@@ -76,22 +59,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('first_name, last_name, avatar_url')
+          .select('first_name, last_name')
           .eq('id', session.user.id)
           .single();
 
-        const firstName = profile?.first_name || session.user.user_metadata.first_name;
-        const lastName = profile?.last_name || session.user.user_metadata.last_name;
-        const fullName = session.user.user_metadata.full_name;
-        const email = session.user.email;
-
         const userData: UserProfile = {
           ...session.user,
-          first_name: firstName || null,
-          last_name: lastName || null,
-          name: fullName || `${firstName || ''} ${lastName || ''}`.trim() || email || 'User',
-          avatar: profile?.avatar_url || session.user.user_metadata.avatar_url || null,
-          initials: getInitials(firstName, lastName, fullName, email),
+          first_name: profile?.first_name || session.user.user_metadata.first_name || null,
+          last_name: profile?.last_name || session.user.user_metadata.last_name || null,
+          name: session.user.user_metadata.full_name || null,
         };
         setUser(userData);
       } else {
