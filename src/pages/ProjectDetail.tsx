@@ -75,7 +75,7 @@ const ProjectDetail = () => {
       };
 
       // 5. Map all data together
-      const assignedTo: AssignedUser[] = membersRes.data?.map(m => ({ ...mapProfileToUser(m.user_id), role: m.role })).filter(Boolean) as AssignedUser[];
+      const assignedTo: AssignedUser[] = (membersRes.data?.map(m => ({ ...mapProfileToUser(m.user_id), role: m.role })).filter(Boolean) as AssignedUser[]) || [];
       const tasks: Task[] = tasksRes.data?.map((t: any) => ({
         id: t.id,
         title: t.title,
