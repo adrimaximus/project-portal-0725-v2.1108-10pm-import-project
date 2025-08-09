@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2 } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
 import { Button } from "./ui/button";
@@ -52,7 +52,7 @@ interface CalendarEvent {
     htmlLink: string;
 }
 
-type ViewMode = 'table' | 'list' | 'month';
+type ViewMode = 'table' | 'list' | 'month' | 'calendar';
 
 const getStatusBadgeClass = (status: Project['status']) => {
   switch (status) {
@@ -107,9 +107,11 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       }
     }
     
-    const handleStorageChange = () => {
-        const updatedEvents = localStorage.getItem('googleCalendarEvents');
-        setCalendarEvents(updatedEvents ? JSON.parse(updatedEvents) : []);
+    const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'googleCalendarEvents') {
+            const updatedEvents = localStorage.getItem('googleCalendarEvents');
+            setCalendarEvents(updatedEvents ? JSON.parse(updatedEvents) : []);
+        }
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -155,6 +157,42 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       toast.success(`Project "${projectToDelete.name}" has been deleted.`);
       setProjectToDelete(null);
     }
+  };
+
+  const handleImportEvent = (event: CalendarEvent) => {
+    const startDate = event.start.date || event.start.dateTime?.split('T')[0];
+    const dueDate = event.end.date || event.end.dateTime?.split('T')[0] || startDate;
+
+    if (!startDate) {
+        toast.error("Cannot import event without a start date.");
+        return;
+    }
+
+    const newProject: Project = {
+      id: `cal-${event.id}`,
+      name: event.summary || "Untitled Event",
+      category: 'Imported Event',
+      status: 'Requested',
+      progress: 0,
+      budget: 0,
+      startDate: startDate,
+      dueDate: dueDate,
+      assignedTo: [],
+      tasks: [],
+      comments: [],
+      description: '',
+      paymentStatus: '',
+      createdBy: null,
+    };
+
+    if (localProjects.some(p => p.id === newProject.id)) {
+        toast.info(`"${newProject.name}" has already been imported.`);
+        return;
+    }
+
+    setLocalProjects(prev => [...prev, newProject]);
+    setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
+    toast.success(`"${newProject.name}" imported as a new project.`);
   };
 
   const renderContent = () => {
@@ -230,6 +268,8 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
         return <ProjectsList projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
       case 'month':
         return <ProjectsMonthView projects={localProjects} />;
+      case 'calendar':
+        return <CalendarEventsList events={calendarEvents} onImportEvent={handleImportEvent} />;
       default:
         return null;
     }
@@ -273,6 +313,9 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
             <ToggleGroupItem value="month" aria-label="Month view">
               <CalendarDays className="h-4 w-4" />
             </ToggleGroupItem>
+            <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
+              <CalendarPlus className="h-4 w-4" />
+            </ToggleGroupItem>
           </ToggleGroup>
         </CardHeader>
         <CardContent>
@@ -284,7 +327,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           {renderContent()}
         </CardContent>
       </Card>
-      <CalendarEventsList events={calendarEvents} />
     </>
   );
 };
