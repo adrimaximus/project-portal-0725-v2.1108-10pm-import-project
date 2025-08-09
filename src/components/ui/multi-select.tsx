@@ -1,111 +1,111 @@
+"use client";
+
 import * as React from "react";
-import { Check, ChevronsUpDown, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Command as CommandPrimitive } from "cmdk";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-export interface OptionType {
-  label: string;
-  value: string;
-}
+type Option = Record<"value" | "label", string>;
 
 interface MultiSelectProps {
-  options: OptionType[];
-  selectedValues: string[];
-  onChange: (selectedValues: string[]) => void;
+  options: Option[];
+  value: string[];
+  onChange: (value: string[]) => void;
   placeholder?: string;
   className?: string;
 }
 
 export function MultiSelect({
   options,
-  selectedValues,
+  value,
   onChange,
-  placeholder = "Select options...",
+  placeholder = "Select...",
   className,
 }: MultiSelectProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
 
-  const handleUnselect = (value: string) => {
-    onChange(selectedValues.filter((s) => s !== value));
+  const handleUnselect = (selectedValue: string) => {
+    onChange(value.filter((v) => v !== selectedValue));
   };
+
+  const handleSelect = (selectedValue: string) => {
+    if (!value.includes(selectedValue)) {
+      onChange([...value, selectedValue]);
+    }
+    setOpen(false);
+  };
+
+  const selectedObjects = value
+    .map((v) => options.find((opt) => opt.value === v))
+    .filter((v): v is Option => v !== undefined);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("w-full justify-between", className)}
-          onClick={() => setOpen(!open)}
-        >
-          <div className="flex gap-1 flex-wrap">
-            {selectedValues.length > 0 ? (
-              selectedValues.map((value) => {
-                const option = options.find((o) => o.value === value);
-                return (
-                  <Badge
-                    variant="secondary"
-                    key={value}
-                    className="mr-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleUnselect(value);
-                    }}
-                  >
-                    {option?.label}
-                    <X className="ml-1 h-3 w-3" />
-                  </Badge>
-                );
-              })
-            ) : (
-              <span>{placeholder}</span>
+        <div className={cn("group flex min-h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2", className)}>
+          <div className="flex flex-wrap gap-1">
+            {selectedObjects.map((option) => (
+              <Badge
+                key={option.value}
+                variant="secondary"
+                className="rounded-sm px-1 font-normal"
+              >
+                {option.label}
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={() => handleUnselect(option.value)}
+                  className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                </button>
+              </Badge>
+            ))}
+             {selectedObjects.length === 0 && (
+              <span className="text-muted-foreground">{placeholder}</span>
             )}
           </div>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        </div>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
-          <CommandInput placeholder="Search..." />
+          <CommandPrimitive.Input
+            ref={inputRef}
+            placeholder="Search..."
+            className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 px-3"
+          />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  onSelect={() => {
-                    onChange(
-                      selectedValues.includes(option.value)
-                        ? selectedValues.filter((item) => item !== option.value)
-                        : [...selectedValues, option.value]
-                    );
-                    setOpen(true);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedValues.includes(option.value) ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option.label}
-                </CommandItem>
-              ))}
+              {options.map((option) => {
+                const isSelected = value.includes(option.value);
+                return (
+                  <CommandItem
+                    key={option.value}
+                    onSelect={() => handleSelect(option.value)}
+                    disabled={isSelected}
+                    className={cn("cursor-pointer", isSelected && "cursor-not-allowed opacity-50")}
+                  >
+                    {option.label}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

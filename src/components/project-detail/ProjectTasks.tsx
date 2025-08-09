@@ -122,7 +122,7 @@ const ProjectTasks = ({
                 </DialogHeader>
                 <MultiSelect
                   options={userOptions}
-                  selectedValues={(task.assignedTo || []).map(u => u.id)}
+                  value={(task.assignedTo || []).map(u => u.id)}
                   onChange={(selectedIds) => {
                     const selectedUsers = project.assignedTo.filter(u => selectedIds.includes(u.id));
                     handleAssignUserToTask(task.id, selectedUsers);
