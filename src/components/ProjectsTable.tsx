@@ -195,7 +195,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
     setLocalProjects(prev => [newProject, ...prev]);
     setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
     toast.success(`"${newProject.name}" imported as a new project.`);
-    setView('table');
   };
 
   const renderContent = () => {
