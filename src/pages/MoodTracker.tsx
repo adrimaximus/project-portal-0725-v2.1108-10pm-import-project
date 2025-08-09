@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,15 +15,59 @@ import { moods, dummyHistory, Mood, MoodHistoryEntry } from '@/data/mood';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { User } from '@supabase/supabase-js';
 
 type MoodTrackerPeriod = 'week' | 'month' | 'year' | 'custom';
+
+type Profile = {
+  first_name: string | null;
+};
 
 const MoodTracker = () => {
   const [selectedMoodId, setSelectedMoodId] = useState<Mood['id']>(moods[0].id);
   const [history, setHistory] = useState<MoodHistoryEntry[]>(dummyHistory);
   const [period, setPeriod] = useState<MoodTrackerPeriod>('week');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const user = { name: 'Alex' }; // Data pengguna tiruan
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    const fetchUserAndProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        setUser(user);
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('first_name')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching profile:', error.message);
+        } else if (profileData) {
+          setProfile(profileData);
+        }
+      }
+    };
+
+    fetchUserAndProfile();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (event === 'SIGNED_IN' && currentUser) {
+        fetchUserAndProfile();
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleSubmit = () => {
     const selectedMood = moods.find(mood => mood.id === selectedMoodId);
@@ -133,18 +177,20 @@ const MoodTracker = () => {
     return null;
   }, [period, dateRange]);
 
+  const userName = profile?.first_name || 'there';
+
   return (
     <PortalLayout>
       <div className="space-y-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user.name}!</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome back, {userName}!</h1>
           <p className="text-muted-foreground">Keep a diary of your daily feelings.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <Card className="lg:col-span-1">
             <CardHeader>
-              <CardTitle>How are you feeling today, {user.name}?</CardTitle>
+              <CardTitle>How are you feeling today, {userName}?</CardTitle>
             </CardHeader>
             <CardContent>
               <MoodSelector selectedMoodId={selectedMoodId} onSelectMood={setSelectedMoodId} />
@@ -208,7 +254,7 @@ const MoodTracker = () => {
                 <AiFriendSuggestion 
                   data={moodDataForPeriod} 
                   period={effectivePeriodForSuggestion} 
-                  userName={user.name} 
+                  userName={userName} 
                 />
               )}
             </CardContent>
