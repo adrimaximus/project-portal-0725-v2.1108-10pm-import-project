@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
+import AuthCallbackPage from "./pages/AuthCallbackPage";
 import GitHubPage from "./pages/integrations/GitHubPage";
 import SlackPage from "./pages/integrations/SlackPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
@@ -57,6 +58,7 @@ function App() {
     <>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         
