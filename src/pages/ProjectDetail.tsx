@@ -32,6 +32,7 @@ const ProjectDetail = () => {
         .single();
 
       if (projectError || !projectData) {
+        console.error("Error fetching project details:", projectError);
         toast.error('Project not found.');
         navigate('/projects');
         return;
