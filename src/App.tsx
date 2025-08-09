@@ -28,7 +28,6 @@ import LoginPage from "./pages/LoginPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import AuthCallbackPage from "./pages/AuthCallbackPage";
 import GitHubPage from "./pages/integrations/GitHubPage";
 import SlackPage from "./pages/integrations/SlackPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
