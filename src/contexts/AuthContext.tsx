@@ -42,32 +42,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const initializeSession = async () => {
-      try {
-        if (window.location.search.includes("code=")) {
-          await supabase.auth.exchangeCodeForSession(window.location.href);
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-        
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
-        if (currentSession) {
-          await fetchUserProfile(currentSession.user);
-        } else {
-          setUser(null);
-        }
-      } catch (e) {
-        console.error("Error initializing session", e);
-        setSession(null);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    initializeSession();
-  }, []);
-
-  useEffect(() => {
+    // onAuthStateChange menangani semuanya: pemuatan awal, masuk, keluar, dan penyegaran token.
+    // Dengan detectSessionInUrl: true, ini juga menangani sesi setelah pengalihan OAuth.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
       if (newSession) {
@@ -75,6 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setUser(null);
       }
+      setLoading(false); // Kita memiliki status otentikasi, jadi kita selesai memuat.
     });
 
     return () => {
