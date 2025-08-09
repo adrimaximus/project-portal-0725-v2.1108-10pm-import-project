@@ -22,14 +22,16 @@ import { MultiSelect } from "@/components/ui/multi-select";
 
 interface ProjectTasksProps {
   project: Project;
-  onUpdateTasks: (tasks: Task[]) => void;
+  onTaskAdd: (title: string) => void;
+  onTaskAssignUsers: (taskId: string, userIds: string[]) => void;
   onTaskStatusChange: (taskId: string, completed: boolean) => void;
   onTaskDelete: (taskId: string) => void;
 }
 
 const ProjectTasks = ({
   project,
-  onUpdateTasks,
+  onTaskAdd,
+  onTaskAssignUsers,
   onTaskStatusChange,
   onTaskDelete,
 }: ProjectTasksProps) => {
@@ -38,13 +40,7 @@ const ProjectTasks = ({
 
   const handleAddTask = () => {
     if (newTaskTitle.trim() === "") return;
-    const newTask: Task = {
-      id: `task-${Date.now()}`,
-      title: newTaskTitle.trim(),
-      completed: false,
-      assignedTo: [],
-    };
-    onUpdateTasks([...(project.tasks || []), newTask]);
+    onTaskAdd(newTaskTitle.trim());
     setNewTaskTitle("");
     setIsAddingTask(false);
   };
@@ -124,8 +120,7 @@ const ProjectTasks = ({
                   options={userOptions}
                   value={(task.assignedTo || []).map(u => u.id)}
                   onChange={(selectedIds) => {
-                    const selectedUsers = project.assignedTo.filter(u => selectedIds.includes(u.id));
-                    handleAssignUserToTask(task.id, selectedUsers);
+                    onTaskAssignUsers(task.id, selectedIds);
                   }}
                   placeholder="Select team members..."
                 />

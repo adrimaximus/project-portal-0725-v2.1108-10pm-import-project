@@ -164,6 +164,76 @@ const ProjectDetail = () => {
     }
   };
 
+  const handleAddTask = async (title: string) => {
+    if (!projectId || !currentUser) return;
+    const { error } = await supabase
+      .from('tasks')
+      .insert({ project_id: projectId, title: title, created_by: currentUser.id });
+
+    if (error) {
+      toast.error("Failed to add task.");
+      console.error("Error adding task:", error);
+    } else {
+      toast.success("Task added.");
+      await fetchProjectDetails(); // Refresh data
+    }
+  };
+
+  const handleTaskStatusChange = async (taskId: string, completed: boolean) => {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ completed })
+      .eq('id', taskId);
+
+    if (error) {
+      toast.error("Failed to update task status.");
+      console.error("Error updating task status:", error);
+    } else {
+      // Optimistic update
+      const updater = (p: Project | null) => {
+        if (!p) return null;
+        return {
+          ...p,
+          tasks: p.tasks?.map(t => t.id === taskId ? { ...t, completed } : t)
+        };
+      };
+      setProject(updater);
+      setEditedProject(updater);
+    }
+  };
+
+  const handleTaskDelete = async (taskId: string) => {
+    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+    if (error) {
+      toast.error("Failed to delete task.");
+      console.error("Error deleting task:", error);
+    } else {
+      toast.success("Task deleted.");
+      await fetchProjectDetails(); // Refresh data
+    }
+  };
+
+  const handleAssignUsersToTask = async (taskId: string, userIds: string[]) => {
+    const { error: deleteError } = await supabase.from('task_assignees').delete().eq('task_id', taskId);
+    if (deleteError) {
+      toast.error("Failed to update assignees.");
+      console.error("Error clearing assignees:", deleteError);
+      return;
+    }
+
+    if (userIds.length > 0) {
+      const newAssignees = userIds.map(user_id => ({ task_id: taskId, user_id }));
+      const { error: insertError } = await supabase.from('task_assignees').insert(newAssignees);
+      if (insertError) {
+        toast.error("Failed to add new assignees.");
+        console.error("Error inserting assignees:", insertError);
+        return;
+      }
+    }
+    toast.success("Task assignees updated.");
+    await fetchProjectDetails(); // Refresh data
+  };
+
   const showNotImplementedToast = () => {
     toast.info("This feature is not yet connected to the database.");
   };
@@ -205,9 +275,10 @@ const ProjectDetail = () => {
             onTeamChange={(users) => handleFieldChange('assignedTo', users)}
             onServicesChange={(services) => handleFieldChange('services', services)}
             onFilesChange={showNotImplementedToast} // Placeholder
-            onUpdateTasks={showNotImplementedToast}
-            onTaskStatusChange={showNotImplementedToast}
-            onTaskDelete={showNotImplementedToast}
+            onTaskAdd={handleAddTask}
+            onTaskAssignUsers={handleAssignUsersToTask}
+            onTaskStatusChange={handleTaskStatusChange}
+            onTaskDelete={handleTaskDelete}
             onAddCommentOrTicket={showNotImplementedToast}
           />
         </div>

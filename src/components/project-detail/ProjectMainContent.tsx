@@ -11,7 +11,8 @@ import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-reac
 interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
-  onUpdateTasks: (tasks: Task[]) => void;
+  onTaskAdd: (title: string) => void;
+  onTaskAssignUsers: (taskId: string, userIds: string[]) => void;
   onTaskStatusChange: (taskId: string, completed: boolean) => void;
   onTaskDelete: (taskId: string) => void;
   onAddCommentOrTicket: (comment: Comment) => void;
@@ -24,7 +25,8 @@ interface ProjectMainContentProps {
 const ProjectMainContent = ({
   project,
   isEditing,
-  onUpdateTasks,
+  onTaskAdd,
+  onTaskAssignUsers,
   onTaskStatusChange,
   onTaskDelete,
   onAddCommentOrTicket,
@@ -73,7 +75,8 @@ const ProjectMainContent = ({
           <TabsContent value="tasks">
             <ProjectTasks
               project={project}
-              onUpdateTasks={onUpdateTasks}
+              onTaskAdd={onTaskAdd}
+              onTaskAssignUsers={onTaskAssignUsers}
               onTaskStatusChange={onTaskStatusChange}
               onTaskDelete={onTaskDelete}
             />
