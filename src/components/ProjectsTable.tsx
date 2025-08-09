@@ -189,10 +189,13 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
         toast.info(`"${newProject.name}" has already been imported.`);
         return;
     }
+    
+    dummyProjects.unshift(newProject);
 
-    setLocalProjects(prev => [...prev, newProject]);
+    setLocalProjects(prev => [newProject, ...prev]);
     setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
     toast.success(`"${newProject.name}" imported as a new project.`);
+    setView('table');
   };
 
   const renderContent = () => {
