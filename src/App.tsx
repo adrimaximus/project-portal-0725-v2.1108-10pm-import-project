@@ -58,7 +58,6 @@ function App() {
     <>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         

@@ -33,7 +33,7 @@ const LoginPage = () => {
           appearance={{ theme: ThemeSupa }}
           providers={['google']}
           theme="light"
-          redirectTo={`${window.location.origin}/auth/callback`}
+          redirectTo={window.location.origin}
         />
         <p className="px-8 text-center text-sm text-muted-foreground">
           By signing in, you agree to our{" "}

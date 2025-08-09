@@ -18,16 +18,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      if (session) {
-        await fetchUserProfile(session.user);
+    const bootstrapAuth = async () => {
+      try {
+        // Jika URL berisi kode, tukarkan dengan sesi terlebih dahulu.
+        if (window.location.search.includes("code=")) {
+          await supabase.auth.exchangeCodeForSession(window.location.href);
+        }
+
+        // Sekarang, dapatkan sesi yang seharusnya sudah ada.
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+
+        if (session) {
+          await fetchUserProfile(session.user);
+        }
+      } catch (error) {
+        console.error("Error during auth bootstrap:", error);
+        setUser(null);
+        setSession(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    getSession();
+    bootstrapAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
