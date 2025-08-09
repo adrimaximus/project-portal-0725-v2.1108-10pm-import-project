@@ -181,7 +181,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       tasks: [],
       comments: [],
       description: '',
-      paymentStatus: '',
+      paymentStatus: 'Proposed',
       createdBy: null,
     };
 
