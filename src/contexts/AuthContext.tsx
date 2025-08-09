@@ -17,56 +17,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const bootstrapAuth = async () => {
-      // Jika URL berisi kode, itu adalah pengalihan dari OAuth.
-      // Kita harus menukarnya dengan sesi lalu membersihkan URL.
-      if (window.location.search.includes("code=")) {
-        try {
-          await supabase.auth.exchangeCodeForSession(window.location.href);
-          // Alihkan ke path root untuk membersihkan kode dari URL.
-          // Ini memicu pemuatan ulang aplikasi yang bersih, di mana getSession() akan berfungsi dengan benar.
-          window.location.replace(window.location.origin);
-        } catch (error) {
-          console.error("Error exchanging code for session:", error);
-          // Juga alihkan jika terjadi kesalahan agar tidak macet.
-          window.location.replace(window.location.origin);
-        }
-        // Kembali di sini untuk mencegah eksekusi lebih lanjut hingga halaman dimuat ulang.
-        return;
-      }
-
-      // Untuk pemuatan halaman normal (atau setelah pengalihan di atas).
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-
-        if (session) {
-          await fetchUserProfile(session.user);
-        }
-      } catch (error) {
-        console.error("Error during auth bootstrap:", error);
-        setUser(null);
-        setSession(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    bootstrapAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      if (session) {
-        await fetchUserProfile(session.user);
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
     const { data: profile, error } = await supabase
       .from('profiles')
@@ -90,6 +40,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     }
   };
+
+  useEffect(() => {
+    const initializeSession = async () => {
+      try {
+        if (window.location.search.includes("code=")) {
+          await supabase.auth.exchangeCodeForSession(window.location.href);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
+        if (currentSession) {
+          await fetchUserProfile(currentSession.user);
+        } else {
+          setUser(null);
+        }
+      } catch (e) {
+        console.error("Error initializing session", e);
+        setSession(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    initializeSession();
+  }, []);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      setSession(newSession);
+      if (newSession) {
+        await fetchUserProfile(newSession.user);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const refreshUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
