@@ -313,7 +313,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       case 'list':
         return <ProjectsList projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
       case 'month':
-        return <ProjectsMonthView projects={localProjects} />;
+        return <ProjectsMonthView projects={filteredProjects} />;
       case 'calendar':
         return <CalendarEventsList events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
       default:
@@ -373,7 +373,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           </div>
         </CardHeader>
         <CardContent>
-          {(view === 'table' || view === 'list' || view === 'calendar') && (
+          {(view === 'table' || view === 'list' || view === 'calendar' || view === 'month') && (
             <div className="py-4">
               <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             </div>
