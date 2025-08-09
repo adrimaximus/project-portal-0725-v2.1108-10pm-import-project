@@ -25,6 +25,7 @@ import NavigationSettingsPage from "./pages/NavigationSettingsPage";
 import EmbedPage from "./pages/EmbedPage";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import GitHubPage from "./pages/integrations/GitHubPage";
 import SlackPage from "./pages/integrations/SlackPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
@@ -55,6 +56,7 @@ function App() {
     <>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         
         <Route path="/" element={<ProtectedRoute><IndexPage /></ProtectedRoute>} />
         <Route path="/projects" element={<ProtectedRoute featureId="projects"><Projects /></ProtectedRoute>} />

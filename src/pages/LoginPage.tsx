@@ -2,7 +2,7 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,6 +34,16 @@ const LoginPage = () => {
           providers={['google']}
           theme="light"
         />
+        <p className="px-8 text-center text-sm text-muted-foreground">
+          By signing in, you agree to our{" "}
+          <Link
+            to="/privacy-policy"
+            className="underline underline-offset-4 hover:text-primary"
+          >
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </div>
     </div>
   );
