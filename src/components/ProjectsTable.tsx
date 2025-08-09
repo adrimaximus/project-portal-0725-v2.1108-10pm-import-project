@@ -21,12 +21,6 @@ import ProjectsMonthView from "./ProjectsMonthView";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -44,9 +38,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "./ui/date-picker-with-range";
+import CalendarEventsList from "./CalendarEventsList";
 
 interface ProjectsTableProps {
   projects: Project[];
+}
+
+interface CalendarEvent {
+    id: string;
+    summary: string;
+    start: { dateTime?: string; date?: string; };
+    end: { dateTime?: string; date?: string; };
+    htmlLink: string;
 }
 
 type ViewMode = 'table' | 'list' | 'month';
@@ -87,10 +90,33 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [localProjects, setLocalProjects] = useState<Project[]>(projects);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
     setLocalProjects(projects);
   }, [projects]);
+
+  useEffect(() => {
+    const storedEvents = localStorage.getItem('googleCalendarEvents');
+    if (storedEvents) {
+      try {
+        setCalendarEvents(JSON.parse(storedEvents));
+      } catch (e) {
+        console.error("Failed to parse calendar events from localStorage", e);
+        setCalendarEvents([]);
+      }
+    }
+    
+    const handleStorageChange = () => {
+        const updatedEvents = localStorage.getItem('googleCalendarEvents');
+        setCalendarEvents(updatedEvents ? JSON.parse(updatedEvents) : []);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const filteredProjects = useMemo(() => {
     if (!dateRange || !dateRange.from) {
@@ -109,12 +135,6 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
       return projectStart <= toDate && projectEnd >= fromDate;
     });
   }, [localProjects, dateRange]);
-
-  const handleImport = (newProjects: Project[]) => {
-    const updatedProjects = [...localProjects, ...newProjects];
-    setLocalProjects(updatedProjects);
-    newProjects.forEach(p => dummyProjects.push(p));
-  };
 
   const handleDeleteProject = (projectId: string) => {
     const project = localProjects.find(p => p.id === projectId);
@@ -264,6 +284,7 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           {renderContent()}
         </CardContent>
       </Card>
+      <CalendarEventsList events={calendarEvents} />
     </>
   );
 };
