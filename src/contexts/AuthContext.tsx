@@ -42,22 +42,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // onAuthStateChange adalah satu-satunya sumber kebenaran.
-    // Ia akan aktif saat pemuatan awal dengan sesi dari penyimpanan, dan kemudian pada setiap perubahan status otentikasi.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      if (session) {
-        await fetchUserProfile(session.user);
+    const initializeAndListen = async () => {
+      // 1. Menangani pengalihan OAuth jika ada
+      if (window.location.search.includes('code=')) {
+        try {
+          await supabase.auth.exchangeCodeForSession(window.location.href);
+          // Membersihkan URL setelah pertukaran
+          const url = new URL(window.location.href);
+          url.search = '';
+          window.history.replaceState({}, document.title, url.toString());
+        } catch (error) {
+          console.error('Error exchanging code for session:', error);
+        }
+      }
+
+      // 2. Mendapatkan sesi awal dan mengatur pengguna
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      if (initialSession) {
+        await fetchUserProfile(initialSession.user);
       } else {
         setUser(null);
       }
-      // Setelah status otentikasi pertama kali ditentukan, kita dapat berhenti memuat.
       setLoading(false);
-    });
 
-    // Membersihkan listener saat komponen dilepas.
+      // 3. Menyiapkan listener untuk perubahan selanjutnya
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        setSession(newSession);
+        if (newSession) {
+          await fetchUserProfile(newSession.user);
+        } else {
+          setUser(null);
+        }
+      });
+
+      return subscription;
+    };
+
+    const subscriptionPromise = initializeAndListen();
+
     return () => {
-      subscription.unsubscribe();
+      subscriptionPromise.then(subscription => subscription?.unsubscribe());
     };
   }, []);
 
