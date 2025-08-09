@@ -5,18 +5,6 @@ import GlobalSearch from "./GlobalSearch";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useSession } from "@/contexts/SessionContext";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type PortalLayoutProps = {
   children: ReactNode;
@@ -28,22 +16,10 @@ type PortalLayoutProps = {
 
 const PortalLayout = ({ children, summary, pageHeader, disableMainScroll, noPadding }: PortalLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { user } = useSession();
-  const navigate = useNavigate();
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
-  };
-
-  const getInitials = (email: string | undefined) => {
-    if (!email) return 'U';
-    return email.substring(0, 2).toUpperCase();
-  }
 
   return (
     <div className="flex h-screen w-full bg-muted/40">
@@ -69,26 +45,7 @@ const PortalLayout = ({ children, summary, pageHeader, disableMainScroll, noPadd
           </Sheet>
 
           {summary}
-          <div className="ml-auto flex items-center gap-4">
-            <GlobalSearch />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
-                  <Avatar>
-                    <AvatarImage src={user?.user_metadata?.avatar_url} alt="User avatar" />
-                    <AvatarFallback>{getInitials(user?.email)}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <GlobalSearch />
         </header>
         {pageHeader}
         <main
