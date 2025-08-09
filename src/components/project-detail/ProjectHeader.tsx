@@ -1,10 +1,9 @@
 import { Link } from "react-router-dom";
 import { Project } from "@/data/projects";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit, Save, X } from "lucide-react";
 import { Input } from "../ui/input";
-import { getStatusClass } from "@/lib/utils";
+import StatusBadge from "../StatusBadge";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -48,7 +47,7 @@ const ProjectHeader = ({
           ) : (
             <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
           )}
-          <Badge className={getStatusClass(project.status)}>{project.status}</Badge>
+          <StatusBadge status={project.status} />
         </div>
         <div className="flex items-center gap-2">
           {canEdit && (
