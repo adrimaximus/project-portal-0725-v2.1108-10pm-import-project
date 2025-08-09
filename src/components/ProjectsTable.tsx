@@ -38,6 +38,8 @@ import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "./ui/date-picker-with-range";
 import CalendarEventsList from "./CalendarEventsList";
 import StatusBadge from "./StatusBadge";
+import { format } from "date-fns";
+import { Badge } from "./ui/badge";
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -226,11 +228,11 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Project</TableHead>
+                <TableHead className="w-[300px]">Project</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Progress</TableHead>
-                <TableHead>Assigned</TableHead>
-                <TableHead className="text-right">Budget</TableHead>
+                <TableHead>Dates</TableHead>
+                <TableHead>Payment</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -253,17 +255,13 @@ const ProjectsTable = ({ projects }: ProjectsTableProps) => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex -space-x-2">
-                      {project.assignedTo.map((user) => (
-                        <Avatar key={user.id} className="border-2 border-background">
-                          <AvatarImage src={user.avatar} alt={user.name} />
-                          <AvatarFallback>{user.initials}</AvatarFallback>
-                        </Avatar>
-                      ))}
+                    <div className="text-sm">
+                      <div>Start: {format(new Date(project.startDate + 'T00:00:00'), 'MMM d, yyyy')}</div>
+                      <div className="text-muted-foreground">Due: {format(new Date(project.dueDate + 'T00:00:00'), 'MMM d, yyyy')}</div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-medium">
-                    ${project.budget.toLocaleString()}
+                  <TableCell>
+                    <Badge variant="secondary">{project.paymentStatus}</Badge>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
