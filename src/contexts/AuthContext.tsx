@@ -42,8 +42,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // onAuthStateChange menangani semuanya: pemuatan awal, masuk, keluar, dan penyegaran token.
-    // Dengan detectSessionInUrl: true, ini juga menangani sesi setelah pengalihan OAuth.
+    const initializeAuth = async () => {
+      try {
+        // Logika ini menangani callback setelah login OAuth.
+        // `detectSessionInUrl` seharusnya melakukan ini, tetapi melakukannya secara eksplisit
+        // di sini memastikan itu terjadi sebelum guard rute berjalan.
+        if (location.search.includes('code=')) {
+          await supabase.auth.exchangeCodeForSession(location.href);
+          // Bersihkan URL dari parameter 'code' setelah pertukaran berhasil.
+          const url = new URL(location.href);
+          url.search = '';
+          window.history.replaceState({}, document.title, url.pathname);
+        }
+
+        // Ambil sesi awal. Ini akan berisi sesi setelah pertukaran kode.
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
+        if (initialSession) {
+          setSession(initialSession);
+          await fetchUserProfile(initialSession.user);
+        }
+      } catch (e) {
+        console.error("Error during auth initialization:", e);
+      } finally {
+        // Penting: Atur loading ke false hanya setelah semua pemeriksaan awal selesai.
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Dengarkan perubahan status otentikasi di masa mendatang (mis. logout).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
       if (newSession) {
@@ -51,7 +80,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setUser(null);
       }
-      setLoading(false); // Kita memiliki status otentikasi, jadi kita selesai memuat.
     });
 
     return () => {

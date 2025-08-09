@@ -23,6 +23,8 @@ const LoginPage = () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
+        // Penting: URL ini harus ditambahkan ke daftar "Redirect URLs"
+        // di pengaturan otentikasi proyek Supabase Anda.
         redirectTo: window.location.origin,
       },
     });
