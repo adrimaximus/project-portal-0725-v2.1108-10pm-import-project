@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
 import GitHubPage from "./pages/integrations/GitHubPage";
 import SlackPage from "./pages/integrations/SlackPage";
@@ -58,6 +59,7 @@ function App() {
     <>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         
