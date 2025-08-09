@@ -43,11 +43,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const initializeAndListen = async () => {
+      setLoading(true);
+
       // 1. Menangani pengalihan OAuth jika ada
       if (window.location.search.includes('code=')) {
         try {
           await supabase.auth.exchangeCodeForSession(window.location.href);
-          // Membersihkan URL setelah pertukaran
           const url = new URL(window.location.href);
           url.search = '';
           window.history.replaceState({}, document.title, url.toString());
@@ -58,12 +59,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // 2. Mendapatkan sesi awal dan mengatur pengguna
       const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
+      
       if (initialSession) {
+        setSession(initialSession);
         await fetchUserProfile(initialSession.user);
+      } else if (import.meta.env.DEV) {
+        console.log("DEV MODE: No session found, attempting to log in as a development user.");
+        const { data: devProfile, error: devProfileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .limit(1)
+          .single();
+
+        if (devProfileError) {
+          console.error("DEV MODE: Could not fetch a dev user profile. Please ensure at least one user exists in the 'profiles' table.", devProfileError);
+          setUser(null);
+        } else if (devProfile) {
+          console.log(`DEV MODE: Successfully logged in as: ${devProfile.first_name} ${devProfile.last_name}`);
+          const fullName = `${devProfile.first_name || ''} ${devProfile.last_name || ''}`.trim();
+          setUser({
+            id: devProfile.id,
+            email: devProfile.email || 'dev-user@example.com',
+            name: fullName || 'Dev User',
+            avatar: devProfile.avatar_url,
+            initials: `${devProfile.first_name?.[0] || 'D'}${devProfile.last_name?.[0] || 'U'}`.toUpperCase(),
+            first_name: devProfile.first_name,
+            last_name: devProfile.last_name,
+          });
+        }
       } else {
         setUser(null);
       }
+
       setLoading(false);
 
       // 3. Menyiapkan listener untuk perubahan selanjutnya
@@ -72,6 +99,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (newSession) {
           await fetchUserProfile(newSession.user);
         } else {
+          // Jika logout dalam mode dev, jangan login kembali secara otomatis sebagai pengguna dev.
+          // Cukup bersihkan pengguna. Pengguna dev hanya untuk pemuatan awal.
           setUser(null);
         }
       });
