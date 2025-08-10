@@ -30,7 +30,7 @@ import GoalProgressChart from '@/components/goals/GoalProgressChart';
 import { supabase } from '@/integrations/supabase/client';
 
 const GoalDetailPage = () => {
-  const { goalId } = useParams<{ goalId: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [goal, setGoal] = useState<Goal | null>(null);
@@ -38,7 +38,7 @@ const GoalDetailPage = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const fetchGoal = async () => {
-    if (!goalId || !currentUser) return;
+    if (!slug || !currentUser) return;
     setIsLoading(true);
     const { data, error } = await supabase.rpc('get_user_goals');
     if (error) {
@@ -46,7 +46,7 @@ const GoalDetailPage = () => {
         navigate('/goals');
         return;
     }
-    const goalData = data.find((g: Goal) => g.id === goalId);
+    const goalData = data.find((g: Goal) => g.slug === slug);
     if (goalData) {
         setGoal(goalData);
     } else {
@@ -58,7 +58,7 @@ const GoalDetailPage = () => {
 
   useEffect(() => {
     fetchGoal();
-  }, [goalId, currentUser]);
+  }, [slug, currentUser]);
 
   const handleToggleCompletion = async (date: Date) => {
     if (!goal || goal.type !== 'frequency' || !currentUser) return;

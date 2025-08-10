@@ -21,7 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface GoalFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGoalCreate?: (newGoal: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => void;
+  onGoalCreate?: (newGoal: Omit<Goal, 'id' | 'slug' | 'completions' | 'collaborators'>) => void;
   onGoalUpdate?: (updatedGoal: Goal) => void;
   goal?: Goal | null;
 }

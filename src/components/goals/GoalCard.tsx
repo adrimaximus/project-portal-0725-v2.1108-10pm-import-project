@@ -11,7 +11,7 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
   const { percentage, current, target } = getProgress(goal);
 
   return (
-    <Link to={`/goals/${goal.id}`} className="block group">
+    <Link to={`/goals/${goal.slug}`} className="block group">
       <Card className="h-full flex flex-col transition-all duration-200 group-hover:shadow-lg group-hover:-translate-y-1 cursor-pointer">
         <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
           <GoalIcon goal={goal} className="w-16 h-16 flex-shrink-0" />

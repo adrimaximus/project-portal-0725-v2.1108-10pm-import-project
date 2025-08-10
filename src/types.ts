@@ -87,6 +87,7 @@ export interface GoalCompletion {
 
 export interface Goal {
   id: string;
+  slug: string;
   title: string;
   description: string;
   icon: string;

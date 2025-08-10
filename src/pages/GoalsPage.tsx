@@ -29,7 +29,7 @@ const GoalsPage = () => {
     fetchGoals();
   }, [user]);
 
-  const handleGoalCreate = async (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => {
+  const handleGoalCreate = async (newGoalData: Omit<Goal, 'id' | 'slug' | 'completions' | 'collaborators'>) => {
     if (!user) return;
     
     const { data, error } = await supabase
