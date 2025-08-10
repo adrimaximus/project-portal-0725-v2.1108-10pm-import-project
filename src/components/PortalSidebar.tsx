@@ -168,7 +168,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     );
   };
 
-  const visibleDefaultNavItems = defaultNavItems.filter(item => isFeatureEnabled(item.id));
+  const visibleDefaultNavItems = defaultNavItems.filter(item => item.id === 'chat' || isFeatureEnabled(item.id));
   const allVisibleNavItems = isFeatureEnabled('custom-links')
     ? [...visibleDefaultNavItems, ...customNavItems]
     : visibleDefaultNavItems;
