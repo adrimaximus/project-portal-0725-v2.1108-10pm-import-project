@@ -32,8 +32,8 @@ const ProjectHeader = ({
         Back to Projects
       </Button>
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: statusStyles.hex }} />
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-8" style={{ backgroundColor: statusStyles.hex }} />
           <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
           {project.status && <StatusBadge status={project.status} />}
         </div>
