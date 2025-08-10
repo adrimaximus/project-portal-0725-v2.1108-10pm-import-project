@@ -1,127 +1,179 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ChatList from "@/components/ChatList";
 import ChatWindow from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
-import { dummyConversations, Conversation } from "@/data/chat";
 import { Collaborator, Attachment, User, Message } from "@/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+export interface Conversation {
+  id: string;
+  userName: string;
+  userAvatar?: string;
+  lastMessage: string;
+  lastMessageTimestamp: string;
+  unreadCount: number;
+  messages: Message[];
+  isGroup?: boolean;
+  members?: Collaborator[];
+}
 
 const ChatPage = () => {
-  const [conversations, setConversations] =
-    useState<Conversation[]>(dummyConversations);
-  const [selectedConversationId, setSelectedConversationId] = useState<
-    string | null
-  >(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { user: currentUser } = useAuth();
 
-  useEffect(() => {
-    if (!isMobile) {
-      setSelectedConversationId(dummyConversations[0]?.id || null);
+  const fetchConversations = useCallback(async () => {
+    if (!currentUser) return;
+
+    const { data, error } = await supabase.rpc('get_user_conversations');
+
+    if (error) {
+      toast.error("Failed to fetch conversations.");
+      console.error(error);
+      return;
     }
-  }, [isMobile]);
+
+    const mappedConversations: Conversation[] = data.map((c: any) => ({
+      id: c.conversation_id,
+      userName: c.is_group ? c.group_name : c.other_user_name,
+      userAvatar: c.is_group ? undefined : c.other_user_avatar,
+      lastMessage: c.last_message_content || "No messages yet.",
+      lastMessageTimestamp: c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      unreadCount: 0,
+      messages: [],
+      isGroup: c.is_group,
+      members: c.participants.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        avatar: p.avatar_url,
+        initials: p.initials,
+        online: true, // Placeholder
+      })),
+    }));
+
+    setConversations(mappedConversations);
+    if (!isMobile && mappedConversations.length > 0) {
+      setSelectedConversationId(mappedConversations[0].id);
+    }
+  }, [currentUser, isMobile]);
 
   useEffect(() => {
-    if (location.state?.selectedCollaborator) {
-      const collaborator = location.state.selectedCollaborator as Collaborator;
-      
-      setConversations(prevConvos => {
-        const existingConversation = prevConvos.find(
-          (convo) => !convo.isGroup && convo.members?.some(m => m.id === collaborator.id)
-        );
+    fetchConversations();
+  }, [fetchConversations]);
 
-        if (existingConversation) {
-          return prevConvos;
-        }
+  useEffect(() => {
+    const subscription = supabase
+      .channel('public:messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const newMessage = payload.new as any;
+        setConversations(prev => prev.map(convo => {
+          if (convo.id === newMessage.conversation_id) {
+            // This is a simplified update. A full implementation would fetch the sender's profile.
+            const updatedConvo = { ...convo, lastMessage: newMessage.content, lastMessageTimestamp: new Date(newMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+            if (convo.id === selectedConversationId) {
+              // If the conversation is open, add the message to the view
+              const sender = convo.members?.find(m => m.id === newMessage.sender_id) || currentUser;
+              if (sender) {
+                updatedConvo.messages = [...convo.messages, {
+                  id: newMessage.id,
+                  text: newMessage.content,
+                  timestamp: new Date(newMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  sender: sender,
+                  attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
+                }];
+              }
+            }
+            return updatedConvo;
+          }
+          return convo;
+        }));
+      })
+      .subscribe();
 
-        const newConversation: Conversation = {
-          id: `conv-${collaborator.id}`,
-          userName: collaborator.name,
-          userAvatar: collaborator.avatar,
-          lastMessage: "Say hello!",
-          lastMessageTimestamp: "Just now",
-          unreadCount: 0,
-          messages: [],
-          isGroup: false,
-          members: [collaborator]
-        };
-        
-        return [newConversation, ...prevConvos];
-      });
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [selectedConversationId, currentUser]);
 
-      const conversationId = `conv-${collaborator.id}`;
-      setSelectedConversationId(conversationId);
-
-      window.history.replaceState({}, document.title)
-    }
-  }, [location.state]);
-
-  const handleConversationSelect = (id: string) => {
+  const handleConversationSelect = async (id: string) => {
     setSelectedConversationId(id);
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*, sender:profiles(id, first_name, last_name, avatar_url)')
+      .eq('conversation_id', id)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      toast.error("Failed to fetch messages.");
+      return;
+    }
+
+    const mappedMessages: Message[] = data.map((m: any) => ({
+      id: m.id,
+      text: m.content,
+      timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      sender: {
+        id: m.sender.id,
+        name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim(),
+        avatar: m.sender.avatar_url,
+        initials: `${m.sender.first_name?.[0] || ''}${m.sender.last_name?.[0] || ''}`.toUpperCase(),
+      },
+      attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
+    }));
+
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, messages: mappedMessages } : c));
   };
 
-  const handleSendMessage = (conversationId: string, messageText: string, attachment: Attachment | null) => {
+  const handleSendMessage = async (conversationId: string, messageText: string, attachment: Attachment | null) => {
     if (!conversationId || !currentUser) return;
 
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      text: messageText,
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      sender: currentUser,
-      attachment: attachment || undefined,
-    };
+    let attachmentData = {};
+    if (attachment) {
+      // In a real app, you'd upload the file to Supabase Storage first
+      // For now, we'll just save the URL if it's already hosted
+      attachmentData = {
+        attachment_url: attachment.url,
+        attachment_name: attachment.name,
+        attachment_type: attachment.type,
+      };
+    }
 
-    const lastMessage = messageText || `Sent an attachment: ${attachment?.name}`;
-
-    setConversations((prev) =>
-      prev.map((convo) =>
-        convo.id === conversationId
-          ? {
-              ...convo,
-              messages: [...convo.messages, newMessage],
-              lastMessage: lastMessage,
-              lastMessageTimestamp: newMessage.timestamp,
-            }
-          : convo
-      )
-    );
+    await supabase.from('messages').insert({
+      conversation_id: conversationId,
+      sender_id: currentUser.id,
+      content: messageText,
+      ...attachmentData,
+    });
   };
 
-  const handleStartNewChat = (collaborator: Collaborator) => {
-    navigate('/chat', { state: { selectedCollaborator: collaborator } });
+  const handleStartNewChat = async (collaborator: Collaborator) => {
+    if (!currentUser) return;
+    const { data, error } = await supabase.rpc('create_or_get_conversation', {
+      p_other_user_id: collaborator.id,
+      p_is_group: false
+    });
+
+    if (error) {
+      toast.error("Failed to start chat.");
+    } else {
+      await fetchConversations();
+      setSelectedConversationId(data);
+    }
   };
 
   const handleStartNewGroupChat = (
     members: Collaborator[],
     groupName: string
   ) => {
-    const newConversation: Conversation = {
-      id: `group-${Date.now()}`,
-      userName: groupName,
-      lastMessage: "Group created. Say hello!",
-      lastMessageTimestamp: "Just now",
-      unreadCount: 0,
-      messages: [
-        {
-          id: `msg-${Date.now()}`,
-          text: `Group "${groupName}" was created.`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          sender: { id: 'system', name: 'System', initials: 'S' },
-        },
-      ],
-      isGroup: true,
-      members: members,
-    };
-
-    setConversations((prev) => [newConversation, ...prev]);
-    setSelectedConversationId(newConversation.id);
+    // This would require a more complex RPC function in Supabase
+    toast.info("Group chat creation is not fully implemented yet.");
   };
 
   const selectedConversation = conversations.find(
@@ -169,6 +221,3 @@ const ChatPage = () => {
       </div>
     </PortalLayout>
   );
-};
-
-export default ChatPage;
