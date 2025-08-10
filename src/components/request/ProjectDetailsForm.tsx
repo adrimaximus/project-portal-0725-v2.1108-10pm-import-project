@@ -34,6 +34,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const [description, setDescription] = useState("");
   const [team, setTeam] = useState<User[]>([]);
   const [files, setFiles] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -90,6 +91,12 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       toast.error("You must be logged in to create a project.");
       return;
     }
+    if (!projectName.trim()) {
+      toast.error("Project name is required.");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     const numericBudget = parseInt(budget.replace(/[^0-9]/g, ''), 10) || 0;
 
@@ -112,6 +119,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     if (projectError) {
       toast.error("Failed to create project.");
       console.error('Error creating project:', projectError);
+      setIsSubmitting(false);
       return;
     }
 
@@ -133,8 +141,35 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         console.error('Error adding project members:', membersError);
       }
     }
+
+    if (files.length > 0) {
+      toast.info(`Uploading ${files.length} file(s)...`);
+      for (const file of files) {
+        const filePath = `${newProjectId}/${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+        
+        if (uploadError) {
+          toast.error(`Failed to upload ${file.name}.`);
+          console.error('Error uploading file:', uploadError);
+          continue;
+        }
+
+        const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+        
+        await supabase.from('project_files').insert({
+          project_id: newProjectId,
+          user_id: currentUser.id,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: urlData.publicUrl,
+          storage_path: filePath,
+        });
+      }
+    }
     
     toast.success("Project created successfully!");
+    setIsSubmitting(false);
     navigate(`/projects/${newProjectId}`);
   };
 
@@ -241,8 +276,10 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </div>
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onBack}>Back</Button>
-          <Button type="submit">Submit Project Request</Button>
+          <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>Back</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Submitting..." : "Submit Project Request"}
+          </Button>
         </CardFooter>
       </Card>
     </form>
