@@ -7,9 +7,10 @@ export interface Mood {
 }
 
 export interface MoodHistoryEntry {
-  id: number;
-  date: string;
+  id: string; // Changed from number to string for UUID
+  date: string; // YYYY-MM-DD format
   moodId: number;
+  userId: string;
 }
 
 export const moods: Mood[] = [
@@ -19,24 +20,3 @@ export const moods: Mood[] = [
   { id: 4, label: 'Sad', emoji: '😢', color: '#FED7AA', score: 2 },      // orange-200
   { id: 5, label: 'Depressed', emoji: '😔', color: '#FECACA', score: 1 },// red-200
 ];
-
-const generateDummyHistory = (): MoodHistoryEntry[] => {
-  const history: MoodHistoryEntry[] = [];
-  const today = new Date();
-  for (let i = 0; i < 45; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-    
-    if (Math.random() > 0.3) {
-      const moodId = moods[Math.floor(Math.random() * moods.length)].id;
-      history.push({
-        id: Date.now() + i,
-        date: date.toISOString().split('T')[0],
-        moodId: moodId,
-      });
-    }
-  }
-  return history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-};
-
-export const dummyHistory: MoodHistoryEntry[] = generateDummyHistory();

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -11,50 +11,95 @@ import MoodOverview from '@/components/mood-tracker/MoodOverview';
 import MoodHistory from '@/components/mood-tracker/MoodHistory';
 import MoodStats from '@/components/mood-tracker/MoodStats';
 import AiFriendSuggestion from '@/components/mood-tracker/AiFriendSuggestion';
-import { moods, dummyHistory, Mood, MoodHistoryEntry } from '@/data/mood';
+import { moods, Mood, MoodHistoryEntry } from '@/data/mood';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 type MoodTrackerPeriod = 'week' | 'month' | 'year' | 'custom';
 
 const MoodTracker = () => {
   const [selectedMoodId, setSelectedMoodId] = useState<Mood['id']>(moods[0].id);
-  const [history, setHistory] = useState<MoodHistoryEntry[]>(dummyHistory);
+  const [history, setHistory] = useState<MoodHistoryEntry[]>([]);
   const [period, setPeriod] = useState<MoodTrackerPeriod>('week');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   
   const { user, loading: authLoading } = useAuth();
 
-  const handleSubmit = () => {
-    const selectedMood = moods.find(mood => mood.id === selectedMoodId);
-    if (!selectedMood) return;
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!user) return;
 
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      const { data, error } = await supabase
+        .from('mood_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
 
-    const existingEntryIndex = history.findIndex(entry => entry.date === todayString);
-
-    const newEntry: MoodHistoryEntry = {
-      id: existingEntryIndex !== -1 ? history[existingEntryIndex].id : Date.now(),
-      date: todayString,
-      moodId: selectedMoodId,
+      if (error) {
+        toast.error("Failed to load your mood history.");
+        console.error(error);
+      } else {
+        const formattedHistory: MoodHistoryEntry[] = data.map(entry => ({
+          id: entry.id,
+          date: entry.date,
+          moodId: entry.mood_id,
+          userId: entry.user_id,
+        }));
+        setHistory(formattedHistory);
+      }
     };
 
-    let updatedHistory;
-    if (existingEntryIndex !== -1) {
-      updatedHistory = history.map((entry, index) =>
-        index === existingEntryIndex ? newEntry : entry
-      );
-    } else {
-      updatedHistory = [...history, newEntry];
+    fetchHistory();
+  }, [user]);
+
+  const handleSubmit = async () => {
+    const selectedMood = moods.find(mood => mood.id === selectedMoodId);
+    if (!selectedMood || !user) {
+      toast.error("You must be logged in to record your mood.");
+      return;
     }
 
-    updatedHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setHistory(updatedHistory);
-    toast.success(`Your mood has been recorded: ${selectedMood.label} ${selectedMood.emoji}`);
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+
+    const { error } = await supabase
+      .from('mood_history')
+      .upsert(
+        { user_id: user.id, date: todayString, mood_id: selectedMoodId },
+        { onConflict: 'user_id, date' }
+      );
+
+    if (error) {
+      toast.error("Could not save your mood. Please try again.");
+      console.error(error);
+    } else {
+      // Optimistic UI update
+      const existingEntryIndex = history.findIndex(entry => entry.date === todayString);
+      const newEntry: MoodHistoryEntry = {
+        id: existingEntryIndex !== -1 ? history[existingEntryIndex].id : uuidv4(),
+        date: todayString,
+        moodId: selectedMoodId,
+        userId: user.id,
+      };
+
+      let updatedHistory;
+      if (existingEntryIndex !== -1) {
+        updatedHistory = history.map((entry, index) =>
+          index === existingEntryIndex ? newEntry : entry
+        );
+      } else {
+        updatedHistory = [...history, newEntry];
+      }
+
+      updatedHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setHistory(updatedHistory);
+      toast.success(`Your mood has been recorded: ${selectedMood.label} ${selectedMood.emoji}`);
+    }
   };
 
   const handlePeriodChange = (newPeriod: MoodTrackerPeriod) => {
