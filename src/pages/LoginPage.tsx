@@ -20,10 +20,18 @@ const LoginPage = () => {
   }, [session, navigate, from]);
 
   const handleGoogleLogin = async () => {
+    const redirectTo = import.meta.env.VITE_SITE_URL;
+    console.log('Attempting to redirect to:', redirectTo); // Baris debugging
+
+    if (!redirectTo) {
+      toast.error('VITE_SITE_URL is not configured. Please check your .env file.');
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: import.meta.env.VITE_SITE_URL,
+        redirectTo: redirectTo,
       },
     });
 
