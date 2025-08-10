@@ -111,7 +111,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         start_date: date?.from?.toISOString(),
         due_date: date?.to?.toISOString(),
         created_by: currentUser.id,
-        services: selectedServices.map(s => s.title),
       })
       .select('id')
       .single();
@@ -124,6 +123,19 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     }
 
     const newProjectId = projectData.id;
+
+    // Link services to the project
+    if (selectedServices.length > 0) {
+      const servicesToInsert = selectedServices.map(service => ({
+        project_id: newProjectId,
+        service_title: service.title,
+      }));
+      const { error: servicesError } = await supabase.from('project_services').insert(servicesToInsert);
+      if (servicesError) {
+        console.error('Failed to link services:', servicesError);
+        toast.warning('Project created, but could not link services.');
+      }
+    }
 
     if (team.length > 0) {
       const membersToInsert = team.map(member => ({

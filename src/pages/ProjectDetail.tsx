@@ -36,11 +36,12 @@ const ProjectDetail = () => {
       return;
     }
 
-    const [membersRes, tasksRes, commentsRes, filesRes] = await Promise.all([
+    const [membersRes, tasksRes, commentsRes, filesRes, servicesRes] = await Promise.all([
       supabase.from('project_members').select('user_id, role').eq('project_id', projectId),
       supabase.from('tasks').select('*, task_assignees(user_id)').eq('project_id', projectId),
       supabase.from('comments').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-      supabase.from('project_files').select('*').eq('project_id', projectId).order('created_at', { ascending: false })
+      supabase.from('project_files').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      supabase.from('project_services').select('service_title').eq('project_id', projectId)
     ]);
 
     const userIds = new Set<string>();
@@ -101,6 +102,8 @@ const ProjectDetail = () => {
       uploadedAt: f.created_at,
     })) || [];
 
+    const services: string[] = servicesRes.data?.map(s => s.service_title) || [];
+
     const fullProject: Project = {
       id: projectData.id,
       name: projectData.name,
@@ -119,7 +122,7 @@ const ProjectDetail = () => {
       comments,
       activities: [],
       briefFiles,
-      services: projectData.services,
+      services,
     };
 
     setProject(fullProject);
@@ -153,7 +156,6 @@ const ProjectDetail = () => {
         due_date: dueDate,
         payment_status: paymentStatus,
         payment_due_date: paymentDueDate,
-        services,
       })
       .eq('id', projectId);
 
@@ -175,6 +177,18 @@ const ProjectDetail = () => {
     if (membersToAdd.length > 0) {
       const { error } = await supabase.from('project_members').insert(membersToAdd.map(m => ({ project_id: projectId, user_id: m.id, role: 'member' })));
       if (error) console.error("Error adding members:", error);
+    }
+
+    const originalServiceTitles = new Set(project.services || []);
+    const newServiceTitles = new Set(editedProject.services || []);
+    const servicesToAdd = (editedProject.services || []).filter(s => !originalServiceTitles.has(s));
+    const servicesToRemove = (project.services || []).filter(s => !newServiceTitles.has(s));
+
+    if (servicesToRemove.length > 0) {
+      await supabase.from('project_services').delete().eq('project_id', projectId).in('service_title', servicesToRemove);
+    }
+    if (servicesToAdd.length > 0) {
+      await supabase.from('project_services').insert(servicesToAdd.map(title => ({ project_id: projectId, service_title: title })));
     }
     
     await fetchProjectDetails();
