@@ -123,18 +123,31 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
       setIsSaving(false);
     } else if (!isEditMode) {
       try {
-        const toastId = toast.loading("Generating AI icon...");
         let icon = 'Target';
         let iconUrl: string | undefined = undefined;
-        try {
-          const prompt = `Goal: ${title}. Description: ${description || 'No description'}`;
-          const generatedIcon = await generateAiIcon(prompt);
-          icon = 'ImageIcon';
-          iconUrl = generatedIcon;
-          toast.success("AI icon generated successfully!", { id: toastId });
-        } catch (error) {
-          console.error("Icon generation failed:", error);
-          toast.error("Could not generate AI icon, using default.", { id: toastId });
+
+        const isAiConnected = !!localStorage.getItem("openai_connected");
+
+        if (isAiConnected) {
+            const toastId = toast.loading("Generating AI icon...");
+            try {
+              const prompt = `Goal: ${title}. Description: ${description || 'No description'}`;
+              const tempIconUrl = await generateAiIcon(prompt);
+              toast.loading("Uploading icon to Cloudinary...", { id: toastId });
+
+              const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-image-from-url', {
+                body: { imageUrl: tempIconUrl },
+              });
+
+              if (uploadError) throw new Error(uploadError.message);
+
+              icon = 'ImageIcon';
+              iconUrl = uploadData.secure_url;
+              toast.success("AI icon created and saved!", { id: toastId });
+            } catch (error) {
+              console.error("Icon generation or upload failed:", error);
+              toast.error("Could not generate AI icon, using default.", { id: toastId });
+            }
         }
 
         const goalInsertData = {
