@@ -45,8 +45,9 @@ const ProjectHeader = ({
                 <Button variant="outline" onClick={onCancelChanges}>Cancel</Button>
               </div>
             ) : (
-              <Button onClick={onEditToggle}>
-                <Pencil className="mr-2 h-4 w-4" /> Edit Project
+              <Button variant="outline" size="icon" onClick={onEditToggle}>
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Edit Project</span>
               </Button>
             )}
           </div>
