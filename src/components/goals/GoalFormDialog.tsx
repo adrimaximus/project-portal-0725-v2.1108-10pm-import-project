@@ -21,7 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface GoalFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGoalCreate?: (newGoal: Omit<Goal, 'id' | 'slug' | 'completions' | 'collaborators'>) => void;
+  onGoalCreate?: (newGoal: Omit<Goal, 'id' | 'slug' | 'completions' | 'collaborators'>) => Promise<void>;
   onGoalUpdate?: (updatedGoal: Goal) => void;
   goal?: Goal | null;
 }
@@ -124,47 +124,45 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
         tags,
       };
       onGoalUpdate(updatedGoalData);
-      toast.success(`Goal "${title}" updated!`);
       setIsSaving(false);
-      onOpenChange(false);
     } else if (!isEditMode && onGoalCreate) {
-      const toastId = toast.loading("Creating goal and generating icon...");
-      let icon = '🎯';
-      let iconUrl: string | undefined = undefined;
       try {
-        const prompt = `Goal: ${title}. Description: ${description || 'No description'}`;
-        const generatedIcon = await generateAiIcon(prompt);
-        if (generatedIcon.startsWith('http')) {
+        const toastId = toast.loading("Generating AI icon...");
+        let icon = 'Target'; // Default valid icon name
+        let iconUrl: string | undefined = undefined;
+        try {
+          const prompt = `Goal: ${title}. Description: ${description || 'No description'}`;
+          const generatedIcon = await generateAiIcon(prompt);
           icon = 'ImageIcon';
           iconUrl = generatedIcon;
           toast.success("AI icon generated successfully!", { id: toastId });
-        } else {
-          toast.warning("Could not generate AI icon, using default. " + generatedIcon, { id: toastId });
+        } catch (error) {
+          console.error("Icon generation failed:", error);
+          toast.error("Could not generate AI icon, using default.", { id: toastId });
         }
-      } catch (error) {
-        console.error("Icon generation failed:", error);
-        toast.error("An error occurred during icon generation, using default.", { id: toastId });
-      }
 
-      onGoalCreate({
-        title,
-        description,
-        icon,
-        iconUrl,
-        color,
-        tags,
-        type,
-        frequency,
-        specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
-        targetQuantity,
-        targetPeriod,
-        targetValue,
-        unit,
-      });
-      
-      toast.success(`Goal "${title}" created!`);
-      setIsSaving(false);
-      onOpenChange(false);
+        await onGoalCreate({
+          title,
+          description,
+          icon,
+          iconUrl,
+          color,
+          tags,
+          type,
+          frequency,
+          specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
+          targetQuantity,
+          targetPeriod,
+          targetValue,
+          unit,
+        });
+        
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Goal creation failed:", error);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 

@@ -30,7 +30,11 @@ const GoalsPage = () => {
   }, [user]);
 
   const handleGoalCreate = async (newGoalData: Omit<Goal, 'id' | 'slug' | 'completions' | 'collaborators'>) => {
-    if (!user) return;
+    if (!user) {
+      const err = new Error("User not authenticated.");
+      toast.error(err.message);
+      throw err;
+    }
 
     const { tags, ...goalInsertData } = newGoalData;
 
@@ -44,27 +48,23 @@ const GoalsPage = () => {
     if (goalError) {
       toast.error('Failed to create goal.');
       console.error(goalError);
-      return;
+      throw goalError;
     }
 
     // 2. Handle tags
     if (tags && tags.length > 0) {
-      // Separate new tags from existing ones
       const { data: existingTagsData } = await supabase.from('tags').select('name').eq('user_id', user.id);
       const existingTagNames = new Set(existingTagsData?.map(t => t.name));
       
       const newTagsToCreate = tags.filter(t => !existingTagNames.has(t.name));
       
-      // Insert new tags
       if (newTagsToCreate.length > 0) {
         const newTagsForDb = newTagsToCreate.map(t => ({ name: t.name, color: t.color, user_id: user.id }));
         await supabase.from('tags').insert(newTagsForDb);
       }
 
-      // Get all relevant tag IDs
       const { data: allRelevantTags } = await supabase.from('tags').select('id, name').in('name', tags.map(t => t.name));
 
-      // 3. Link tags to the goal
       if (allRelevantTags) {
         const goalTagsToInsert = allRelevantTags.map(t => ({
           goal_id: newGoal.id,
