@@ -42,21 +42,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const initializeAndListen = async () => {
-      // 1. Menangani pengalihan OAuth jika ada
-      if (window.location.search.includes('code=')) {
-        try {
-          await supabase.auth.exchangeCodeForSession(window.location.href);
-          // Membersihkan URL setelah pertukaran
-          const url = new URL(window.location.href);
-          url.search = '';
-          window.history.replaceState({}, document.title, url.toString());
-        } catch (error) {
-          console.error('Error exchanging code for session:', error);
-        }
-      }
-
-      // 2. Mendapatkan sesi awal dan mengatur pengguna
+    const getSessionAndListen = async () => {
+      // Get initial session
       const { data: { session: initialSession } } = await supabase.auth.getSession();
       setSession(initialSession);
       if (initialSession) {
@@ -66,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setLoading(false);
 
-      // 3. Menyiapkan listener untuk perubahan selanjutnya
+      // Listen for auth state changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
         setSession(newSession);
         if (newSession) {
@@ -79,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return subscription;
     };
 
-    const subscriptionPromise = initializeAndListen();
+    const subscriptionPromise = getSessionAndListen();
 
     return () => {
       subscriptionPromise.then(subscription => subscription?.unsubscribe());
