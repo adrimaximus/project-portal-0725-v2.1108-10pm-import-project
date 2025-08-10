@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import PortalLayout from '@/components/PortalLayout';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { Goal } from '@/types';
+import { Goal, Tag } from '@/types';
 import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import GoalCard from '@/components/goals/GoalCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,20 +31,51 @@ const GoalsPage = () => {
 
   const handleGoalCreate = async (newGoalData: Omit<Goal, 'id' | 'slug' | 'completions' | 'collaborators'>) => {
     if (!user) return;
-    
-    const { data, error } = await supabase
+
+    const { tags, ...goalInsertData } = newGoalData;
+
+    // 1. Insert the main goal
+    const { data: newGoal, error: goalError } = await supabase
       .from('goals')
-      .insert({ ...newGoalData, user_id: user.id })
+      .insert({ ...goalInsertData, user_id: user.id })
       .select()
       .single();
 
-    if (error) {
+    if (goalError) {
       toast.error('Failed to create goal.');
-      console.error(error);
-    } else {
-      toast.success(`Goal "${data.title}" created!`);
-      fetchGoals();
+      console.error(goalError);
+      return;
     }
+
+    // 2. Handle tags
+    if (tags && tags.length > 0) {
+      // Separate new tags from existing ones
+      const { data: existingTagsData } = await supabase.from('tags').select('name').eq('user_id', user.id);
+      const existingTagNames = new Set(existingTagsData?.map(t => t.name));
+      
+      const newTagsToCreate = tags.filter(t => !existingTagNames.has(t.name));
+      
+      // Insert new tags
+      if (newTagsToCreate.length > 0) {
+        const newTagsForDb = newTagsToCreate.map(t => ({ name: t.name, color: t.color, user_id: user.id }));
+        await supabase.from('tags').insert(newTagsForDb);
+      }
+
+      // Get all relevant tag IDs
+      const { data: allRelevantTags } = await supabase.from('tags').select('id, name').in('name', tags.map(t => t.name));
+
+      // 3. Link tags to the goal
+      if (allRelevantTags) {
+        const goalTagsToInsert = allRelevantTags.map(t => ({
+          goal_id: newGoal.id,
+          tag_id: t.id,
+        }));
+        await supabase.from('goal_tags').insert(goalTagsToInsert);
+      }
+    }
+
+    toast.success(`Goal "${newGoal.title}" created!`);
+    fetchGoals();
   };
 
   return (
