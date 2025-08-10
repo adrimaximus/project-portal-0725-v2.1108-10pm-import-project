@@ -40,9 +40,10 @@ serve(async (req) => {
       throw new Error('imageUrl diperlukan dalam body permintaan');
     }
 
-    // Mengunggah gambar ke Cloudinary ke folder yang ditentukan
+    // Mengunggah gambar ke Cloudinary menggunakan upload preset dan folder yang benar
     const result = await cloudinary.uploader.upload(imageUrl, {
-      folder: 'portal client',
+      folder: 'portalclient',
+      upload_preset: 'Portalclient',
     });
 
     return new Response(JSON.stringify({ secure_url: result.secure_url }), {
