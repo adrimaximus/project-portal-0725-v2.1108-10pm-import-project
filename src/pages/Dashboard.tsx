@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { dummyProjects } from "@/data/projects";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Table,
@@ -13,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { format, subYears } from "date-fns";
-import { getStatusClass, getPaymentStatusClass } from "@/lib/utils";
+import { getStatusClass, getPaymentStatusClass, getStatusColorForBorder } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -32,6 +31,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { supabase } from "@/integrations/supabase/client";
+import { Project, ProjectStatus, PaymentStatus, AssignedUser, Task, Comment } from "@/data/projects";
+import { toast } from "sonner";
 
 const Index = () => {
   const { user } = useAuth();
@@ -41,8 +43,125 @@ const Index = () => {
     to: new Date(),
   });
   const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredProjects = dummyProjects.filter(project => {
+  useEffect(() => {
+    const fetchProjects = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (projectsError) {
+        toast.error("Failed to fetch projects.");
+        console.error(projectsError);
+        setIsLoading(false);
+        return;
+      }
+
+      const projectIds = projectsData.map(p => p.id);
+      if (projectIds.length === 0) {
+        setProjects([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const [membersRes, tasksRes, commentsRes] = await Promise.all([
+        supabase.from('project_members').select('project_id, user_id, role').in('project_id', projectIds),
+        supabase.from('tasks').select('id, project_id, title, completed, task_assignees(user_id)').in('project_id', projectIds),
+        supabase.from('comments').select('id, project_id, is_ticket').in('project_id', projectIds),
+      ]);
+
+      const userIds = new Set<string>();
+      projectsData.forEach(p => p.created_by && userIds.add(p.created_by));
+      membersRes.data?.forEach(m => userIds.add(m.user_id));
+      tasksRes.data?.forEach(t => (t.task_assignees as any[]).forEach(a => userIds.add(a.user_id)));
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', Array.from(userIds));
+
+      if (profilesError) {
+        toast.error("Failed to fetch user profiles.");
+      }
+
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
+      const mapProfileToUser = (id: string): AssignedUser | null => {
+        const profile = profilesMap.get(id);
+        if (!profile) return null;
+        return {
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
+          email: profile.email,
+          avatar: profile.avatar_url,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        };
+      };
+
+      const mappedProjects: Project[] = projectsData.map(p => {
+        const projectMembers = membersRes.data?.filter(m => m.project_id === p.id) || [];
+        projectMembers.sort((a, b) => {
+            if (a.role === 'owner') return -1;
+            if (b.role === 'owner') return 1;
+            return 0;
+        });
+        const assignedTo = projectMembers.map(m => mapProfileToUser(m.user_id)).filter(Boolean) as AssignedUser[];
+        
+        const projectTasks = tasksRes.data?.filter(t => t.project_id === p.id) || [];
+        const mappedTasks: Task[] = projectTasks.map((t: any) => ({
+            id: t.id,
+            title: t.title,
+            completed: t.completed,
+            assignedTo: (t.task_assignees || []).map((a: any) => mapProfileToUser(a.user_id)).filter(Boolean) as AssignedUser[],
+        }));
+
+        const projectComments = commentsRes.data?.filter(c => c.project_id === p.id) || [];
+        const mappedComments: Comment[] = projectComments.map(c => ({
+            id: c.id,
+            isTicket: c.is_ticket,
+            author: {} as AssignedUser,
+            text: '',
+            timestamp: '',
+        }));
+
+        return {
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          description: p.description,
+          status: p.status as ProjectStatus,
+          progress: p.progress,
+          budget: p.budget,
+          startDate: p.start_date,
+          dueDate: p.due_date,
+          paymentStatus: p.payment_status as PaymentStatus,
+          createdBy: p.created_by ? mapProfileToUser(p.created_by) : null,
+          assignedTo,
+          tasks: mappedTasks,
+          comments: mappedComments,
+          activities: [],
+          briefFiles: [],
+        };
+      });
+
+      setProjects(mappedProjects);
+      setIsLoading(false);
+    };
+
+    fetchProjects();
+  }, [user]);
+
+  const filteredProjects = projects.filter(project => {
     if (date?.from) {
       const pickerFrom = date.from;
       const pickerTo = date.to || date.from;
@@ -136,7 +255,7 @@ const Index = () => {
 
   const topUserByPendingValue = Object.values(pendingPaymentCounts).sort((a, b) => b.pendingValue - a.pendingValue)[0] || null;
 
-  if (!user) {
+  if (!user || isLoading) {
     return <PortalLayout><div>Loading...</div></PortalLayout>;
   }
 
@@ -390,7 +509,7 @@ const Index = () => {
                     {filteredProjects.map((project) => {
                       const totalTasks = project.tasks?.length || 0;
                       const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
-                      const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : project.progress;
+                      const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : (project.progress || 0);
                       const ticketCount = project.comments?.filter(comment => (comment as any).isTicket).length || 0;
 
                       return (
@@ -399,7 +518,7 @@ const Index = () => {
                           onClick={() => navigate(`/projects/${project.id}`)}
                           className="cursor-pointer"
                         >
-                          <TableCell>
+                          <TableCell style={{ borderLeft: `4px solid ${getStatusColorForBorder(project.status)}` }}>
                             <div className="font-medium whitespace-nowrap">{project.name}</div>
                           </TableCell>
                           <TableCell>

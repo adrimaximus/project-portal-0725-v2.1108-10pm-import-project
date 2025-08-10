@@ -33,6 +33,34 @@ export const getPaymentStatusClass = (status: string) => {
   }
 };
 
+export const getStatusColorForBorder = (status: string) => {
+  if (!status) return 'transparent';
+  switch (status.toLowerCase()) {
+    case 'on track':
+    case 'completed':
+    case 'done':
+    case 'billed':
+    case 'paid':
+      return '#22c55e'; // green-500
+    case 'at risk':
+    case 'on hold':
+    case 'pending':
+      return '#eab308'; // yellow-500
+    case 'off track':
+    case 'cancelled':
+    case 'overdue':
+      return '#ef4444'; // red-500
+    case 'in progress':
+    case 'requested':
+    case 'approved':
+    case 'po created':
+    case 'on process':
+      return '#3b82f6'; // blue-500
+    default:
+      return '#d1d5db'; // gray-300
+  }
+};
+
 const tagColors = [
   { bg: 'bg-blue-100 dark:bg-blue-900/50', text: 'text-blue-800 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
   { bg: 'bg-green-100 dark:bg-green-900/50', text: 'text-green-800 dark:text-green-300', border: 'border-green-200 dark:border-green-800' },
