@@ -10,10 +10,8 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { format, subYears } from "date-fns";
-import { getStatusClass, getPaymentStatusClass, getStatusColorForBorder } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { getStatusStyles } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -34,6 +32,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Project, ProjectStatus, PaymentStatus, AssignedUser, Task, Comment } from "@/data/projects";
 import { toast } from "sonner";
+import StatusBadge from "@/components/StatusBadge";
 
 const Index = () => {
   const { user } = useAuth();
@@ -518,18 +517,14 @@ const Index = () => {
                           onClick={() => navigate(`/projects/${project.id}`)}
                           className="cursor-pointer"
                         >
-                          <TableCell style={{ borderLeft: `4px solid ${getStatusColorForBorder(project.status)}` }}>
+                          <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
                             <div className="font-medium whitespace-nowrap">{project.name}</div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={cn("border-transparent", getStatusClass(project.status))}>
-                              {project.status}
-                            </Badge>
+                            <StatusBadge status={project.status} />
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={cn("border-transparent", getPaymentStatusClass(project.paymentStatus))}>
-                              {project.paymentStatus}
-                            </Badge>
+                            <StatusBadge status={project.paymentStatus} />
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-3">

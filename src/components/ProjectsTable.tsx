@@ -38,9 +38,9 @@ import { DatePickerWithRange } from "./ui/date-picker-with-range";
 import CalendarEventsList from "./CalendarEventsList";
 import StatusBadge from "./StatusBadge";
 import { format } from "date-fns";
-import { Badge } from "./ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { getStatusStyles } from "@/lib/utils";
 
 interface CalendarEvent {
     id: string;
@@ -51,16 +51,6 @@ interface CalendarEvent {
 }
 
 type ViewMode = 'table' | 'list' | 'month' | 'calendar';
-
-const getStatusColor = (status: Project['status']): string => {
-  switch (status) {
-    case 'On Track': case 'Completed': case 'Done': case 'Billed': return '#22c55e';
-    case 'At Risk': case 'On Hold': return '#eab308';
-    case 'Off Track': case 'Cancelled': return '#ef4444';
-    case 'In Progress': case 'Requested': return '#3b82f6';
-    default: return 'transparent';
-  }
-};
 
 const ProjectsTable = () => {
   const [view, setView] = useState<ViewMode>('table');
@@ -341,7 +331,7 @@ const ProjectsTable = () => {
               ) : (
                 filteredProjects.map((project) => (
                   <TableRow key={project.id}>
-                    <TableCell style={{ borderLeft: `4px solid ${getStatusColor(project.status)}` }}>
+                    <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
                       <Link to={`/projects/${project.id}`} className="font-medium text-primary hover:underline">
                         {project.name}
                       </Link>
@@ -363,7 +353,7 @@ const ProjectsTable = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{project.paymentStatus}</Badge>
+                      <StatusBadge status={project.paymentStatus} />
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

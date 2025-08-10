@@ -1,14 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project } from "@/data/projects";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { format, isPast, differenceInDays, startOfDay } from "date-fns";
+import { format, differenceInDays, startOfDay } from "date-fns";
 import { Activity, CreditCard, Wallet, CalendarDays, CalendarClock } from "lucide-react";
+import StatusBadge from "../StatusBadge";
 
 interface ProjectInfoCardsProps {
   project: Project;
@@ -27,50 +27,6 @@ const ProjectInfoCards = ({
   onDateChange,
   onBudgetChange,
 }: ProjectInfoCardsProps) => {
-  const getStatusBadgeVariant = (status: Project["status"]) => {
-    switch (status) {
-      case "Completed":
-      case "Done":
-      case "Billed":
-        return "default";
-      case "In Progress":
-        return "secondary";
-      case "On Hold":
-      case "Cancelled":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
-
-  const getPaymentStatusBadgeVariant = (status: Project["paymentStatus"]) => {
-    switch (status) {
-      case "Paid": return "default";
-      case "Approved":
-      case "PO Created":
-      case "On Process":
-      case "Pending": 
-        return "secondary";
-      case "Cancelled": 
-        return "destructive";
-      case "Proposed": 
-        return "outline";
-      default: 
-        return "outline";
-    }
-  };
-
-  const formatPaymentStatus = (status: Project["paymentStatus"]) => {
-    switch (status) {
-      case "PO Created":
-        return "PO Created";
-      case "On Process":
-        return "On Process";
-      default:
-        return status.charAt(0).toUpperCase() + status.slice(1);
-    }
-  };
-
   const budgetFormatted = new Intl.NumberFormat("id-ID", {
     style: "currency", currency: "IDR", minimumFractionDigits: 0,
   }).format(project.budget || 0);
@@ -119,9 +75,7 @@ const ProjectInfoCards = ({
               </SelectContent>
             </Select>
           ) : (
-            <Badge variant={getStatusBadgeVariant(project.status)}>
-              {project.status}
-            </Badge>
+            <StatusBadge status={project.status} />
           )}
         </CardContent>
       </Card>
@@ -145,9 +99,7 @@ const ProjectInfoCards = ({
               </SelectContent>
             </Select>
           ) : (
-            <Badge variant={getPaymentStatusBadgeVariant(project.paymentStatus)}>
-              {formatPaymentStatus(project.paymentStatus)}
-            </Badge>
+            <StatusBadge status={project.paymentStatus} />
           )}
         </CardContent>
       </Card>

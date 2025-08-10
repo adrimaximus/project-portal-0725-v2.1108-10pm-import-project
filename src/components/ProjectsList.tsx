@@ -10,17 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-
-// Helper to get status color
-const getStatusColor = (status: Project['status']): string => {
-  switch (status) {
-    case 'On Track': case 'Completed': case 'Done': case 'Billed': return '#22c55e';
-    case 'At Risk': case 'On Hold': return '#eab308';
-    case 'Off Track': case 'Cancelled': return '#ef4444';
-    case 'In Progress': case 'Requested': return '#3b82f6';
-    default: return '#9ca3af';
-  }
-};
+import { getStatusStyles } from '@/lib/utils';
 
 // Helper to format dates
 const formatDate = (date: Date) => {
@@ -97,7 +87,7 @@ const ProjectsList = ({ projects, onDeleteProject }: ProjectsListProps) => {
                     <div 
                       key={project.id} 
                       className="bg-card border border-l-4 rounded-lg p-3 flex items-center justify-between hover:shadow-md transition-shadow group"
-                      style={{ borderLeftColor: getStatusColor(project.status) }}
+                      style={{ borderLeftColor: getStatusStyles(project.status).hex }}
                     >
                       <div 
                         className="flex-1 flex items-center space-x-4 cursor-pointer"

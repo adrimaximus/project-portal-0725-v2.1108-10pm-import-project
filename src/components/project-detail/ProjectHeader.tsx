@@ -1,8 +1,8 @@
 import { Project } from "@/data/projects";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import StatusBadge from "../StatusBadge";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -23,22 +23,6 @@ const ProjectHeader = ({
 }: ProjectHeaderProps) => {
   const navigate = useNavigate();
 
-  const getStatusBadgeVariant = (status: Project["status"]) => {
-    switch (status) {
-      case "Completed":
-      case "Done":
-      case "Billed":
-        return "default";
-      case "In Progress":
-        return "secondary";
-      case "On Hold":
-      case "Cancelled":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
-
   return (
     <div className="space-y-4">
       <Button variant="ghost" onClick={() => navigate("/projects")} className="text-muted-foreground px-0 hover:bg-transparent">
@@ -48,7 +32,7 @@ const ProjectHeader = ({
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-          {project.status && <Badge variant={getStatusBadgeVariant(project.status)}>{project.status}</Badge>}
+          {project.status && <StatusBadge status={project.status} />}
         </div>
         {canEdit && (
           <div className="flex-shrink-0">

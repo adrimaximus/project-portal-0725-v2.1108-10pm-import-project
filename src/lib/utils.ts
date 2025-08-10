@@ -5,59 +5,74 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const getStatusClass = (status: string) => {
-  switch (status.toLowerCase()) {
-    case 'completed':
-      return 'bg-green-100 text-green-800';
-    case 'in progress':
-      return 'bg-blue-100 text-blue-800';
-    case 'on hold':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'cancelled':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
+export const getStatusStyles = (status: string | undefined | null) => {
+  if (!status) {
+    return {
+      bg: 'bg-gray-100 dark:bg-gray-800',
+      text: 'text-gray-800 dark:text-gray-300',
+      border: 'border-l-gray-500',
+      hex: '#6b7280', // gray-500
+    };
   }
-};
 
-export const getPaymentStatusClass = (status: string) => {
   switch (status.toLowerCase()) {
-    case 'paid':
-      return 'bg-green-100 text-green-800';
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'overdue':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
-export const getStatusColorForBorder = (status: string) => {
-  if (!status) return 'transparent';
-  switch (status.toLowerCase()) {
+    // Positive statuses (Green)
     case 'on track':
     case 'completed':
     case 'done':
     case 'billed':
     case 'paid':
-      return '#22c55e'; // green-500
+      return {
+        bg: 'bg-green-100 dark:bg-green-900/30',
+        text: 'text-green-800 dark:text-green-300',
+        border: 'border-l-green-500',
+        hex: '#22c55e', // green-500
+      };
+    
+    // Warning statuses (Yellow/Amber)
     case 'at risk':
     case 'on hold':
     case 'pending':
-      return '#eab308'; // yellow-500
+      return {
+        bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+        text: 'text-yellow-800 dark:text-yellow-300',
+        border: 'border-l-yellow-500',
+        hex: '#eab308', // yellow-500
+      };
+
+    // Negative statuses (Red)
     case 'off track':
     case 'cancelled':
     case 'overdue':
-      return '#ef4444'; // red-500
+      return {
+        bg: 'bg-red-100 dark:bg-red-900/30',
+        text: 'text-red-800 dark:text-red-300',
+        border: 'border-l-red-500',
+        hex: '#ef4444', // red-500
+      };
+
+    // Informational statuses (Blue)
     case 'in progress':
     case 'requested':
+    case 'proposed':
     case 'approved':
     case 'po created':
     case 'on process':
-      return '#3b82f6'; // blue-500
+      return {
+        bg: 'bg-blue-100 dark:bg-blue-900/30',
+        text: 'text-blue-800 dark:text-blue-300',
+        border: 'border-l-blue-500',
+        hex: '#3b82f6', // blue-500
+      };
+
+    // Default (Gray)
     default:
-      return '#d1d5db'; // gray-300
+      return {
+        bg: 'bg-gray-100 dark:bg-gray-800',
+        text: 'text-gray-800 dark:text-gray-300',
+        border: 'border-l-gray-500',
+        hex: '#6b7280', // gray-500
+      };
   }
 };
 
