@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "../StatusBadge";
+import { getStatusStyles } from "@/lib/utils";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -22,15 +23,17 @@ const ProjectHeader = ({
   canEdit,
 }: ProjectHeaderProps) => {
   const navigate = useNavigate();
+  const statusStyles = getStatusStyles(project.status);
 
   return (
     <div className="space-y-4">
       <Button variant="ghost" onClick={() => navigate("/projects")} className="text-muted-foreground px-0 hover:bg-transparent">
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Dashboard
+        Back to Projects
       </Button>
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
+          <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: statusStyles.hex }} />
           <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
           {project.status && <StatusBadge status={project.status} />}
         </div>
