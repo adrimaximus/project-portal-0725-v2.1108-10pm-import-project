@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Goal, GoalType, GoalPeriod } from '@/data/goals';
+import { Goal, GoalType, GoalPeriod, Tag } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -9,13 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import ColorPicker from './ColorPicker';
 import { Textarea } from '@/components/ui/textarea';
 import { TagInput } from './TagInput';
-import { Tag, dummyTags } from '@/data/tags';
 import { v4 as uuidv4 } from 'uuid';
 import { generateAiIcon } from '@/lib/openai';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { User } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface GoalFormDialogProps {
   open: boolean;
@@ -37,6 +38,7 @@ const weekDays = [
 
 const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }: GoalFormDialogProps) => {
   const isEditMode = !!goal;
+  const { user } = useAuth();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -49,11 +51,18 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
   const [unit, setUnit] = useState<string>('');
   const [color, setColor] = useState('#BFDBFE');
   const [tags, setTags] = useState<Tag[]>([]);
-  const [allTags, setAllTags] = useState<Tag[]>(dummyTags);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    const fetchTags = async () => {
+        if (!user) return;
+        const { data } = await supabase.from('tags').select('*').eq('user_id', user.id);
+        if (data) setAllTags(data);
+    };
+
     if (open) {
+      fetchTags();
       if (isEditMode && goal) {
         setTitle(goal.title);
         setDescription(goal.description || '');
@@ -79,7 +88,7 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
         setTags([]);
       }
     }
-  }, [goal, open, isEditMode]);
+  }, [goal, open, isEditMode, user]);
 
   const handleTagCreate = (tagName: string): Tag => {
     const newTag: Tag = {

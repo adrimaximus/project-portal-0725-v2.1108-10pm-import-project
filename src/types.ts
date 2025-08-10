@@ -67,4 +67,42 @@ export interface GoogleCalendarListEntry {
   selected?: boolean;
 }
 
+// Types for Goals Feature
+export type GoalType = 'quantity' | 'value' | 'frequency';
+export type GoalPeriod = 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
+
+export interface Tag {
+    id: string;
+    name: string;
+    color: string;
+}
+
+export interface GoalCompletion {
+  id: string;
+  date: string; // ISO 8601 date string
+  value: number;
+  notes?: string;
+  userId: string;
+}
+
+export interface Goal {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  iconUrl?: string;
+  color: string;
+  type: GoalType;
+  targetQuantity?: number;
+  targetValue?: number;
+  frequency: 'Daily' | 'Weekly';
+  targetPeriod?: GoalPeriod;
+  unit?: string;
+  collaborators: User[];
+  completions: GoalCompletion[];
+  tags: Tag[];
+  specificDays: string[];
+}
+
+
 export type { SupabaseSession, SupabaseUser };

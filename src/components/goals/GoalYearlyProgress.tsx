@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Goal, GoalCompletion } from '@/data/goals';
+import { Goal, GoalCompletion } from '@/types';
 import { User } from '@/types';
 import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
@@ -57,7 +57,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
     const monthStart = startOfMonth(monthDate);
     const monthEnd = endOfMonth(monthDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-    const completionMap = new Map(relevantCompletions.map(c => [format(parseISO(c.date), 'yyyy-MM-dd'), c.completed]));
+    const completionMap = new Map<string, boolean>(relevantCompletions.map(c => [format(parseISO(c.date), 'yyyy-MM-dd'), c.completed]));
 
     const daysWithStatus = daysInMonth.map(day => {
         const dayStr = format(day, 'yyyy-MM-dd');

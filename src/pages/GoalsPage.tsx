@@ -2,30 +2,49 @@ import { useState, useEffect } from 'react';
 import PortalLayout from '@/components/PortalLayout';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { Goal, dummyGoals } from '@/data/goals';
+import { Goal } from '@/types';
 import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import GoalCard from '@/components/goals/GoalCard';
-import { v4 as uuidv4 } from 'uuid';
-import { User } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const GoalsPage = () => {
   const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const { user } = useAuth();
+
+  const fetchGoals = async () => {
+    if (!user) return;
+    const { data, error } = await supabase.rpc('get_user_goals');
+    if (error) {
+      toast.error('Failed to fetch goals.');
+      console.error(error);
+    } else {
+      setGoals(data || []);
+    }
+  };
 
   useEffect(() => {
-    setGoals([...dummyGoals]);
-  }, []);
+    fetchGoals();
+  }, [user]);
 
-  const handleGoalCreate = (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => {
-    const newGoal: Goal = {
-      ...newGoalData,
-      id: uuidv4(),
-      completions: [],
-      collaborators: [],
-    };
+  const handleGoalCreate = async (newGoalData: Omit<Goal, 'id' | 'completions' | 'collaborators'>) => {
+    if (!user) return;
     
-    dummyGoals.unshift(newGoal);
-    setGoals(prevGoals => [newGoal, ...prevGoals]);
+    const { data, error } = await supabase
+      .from('goals')
+      .insert({ ...newGoalData, user_id: user.id })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error('Failed to create goal.');
+      console.error(error);
+    } else {
+      toast.success(`Goal "${data.title}" created!`);
+      fetchGoals();
+    }
   };
 
   return (

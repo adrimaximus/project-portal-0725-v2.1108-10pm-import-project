@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Goal } from '@/data/goals';
+import { Goal } from '@/types';
 import { generateAiIcon } from '@/lib/openai';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2 } from 'lucide-react';

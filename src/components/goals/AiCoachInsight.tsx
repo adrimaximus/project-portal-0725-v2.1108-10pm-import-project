@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Goal } from '@/data/goals';
+import { Goal } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lightbulb, Loader2 } from 'lucide-react';

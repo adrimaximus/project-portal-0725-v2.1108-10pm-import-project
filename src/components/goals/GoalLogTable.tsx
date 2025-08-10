@@ -1,4 +1,4 @@
-import { Goal, GoalCompletion } from '@/data/goals';
+import { Goal, GoalCompletion } from '@/types';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';

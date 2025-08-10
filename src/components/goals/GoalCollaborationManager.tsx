@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Goal } from '@/data/goals';
+import { Goal } from '@/types';
 import { User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

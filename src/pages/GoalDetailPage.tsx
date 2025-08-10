@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
-import { dummyGoals, Goal, GoalCompletion } from '@/data/goals';
-import { User } from '@/types';
+import { Goal, GoalCompletion, User } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,6 +27,7 @@ import GoalQuantityTracker from '@/components/goals/GoalQuantityTracker';
 import GoalValueTracker from '@/components/goals/GoalValueTracker';
 import { formatNumber, formatValue } from '@/lib/formatting';
 import GoalProgressChart from '@/components/goals/GoalProgressChart';
+import { supabase } from '@/integrations/supabase/client';
 
 const GoalDetailPage = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -37,128 +37,124 @@ const GoalDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  useEffect(() => {
-    const goalData = dummyGoals.find(g => g.id === goalId);
+  const fetchGoal = async () => {
+    if (!goalId || !currentUser) return;
+    setIsLoading(true);
+    const { data, error } = await supabase.rpc('get_user_goals');
+    if (error) {
+        toast.error('Failed to fetch goal details.');
+        navigate('/goals');
+        return;
+    }
+    const goalData = data.find((g: Goal) => g.id === goalId);
     if (goalData) {
-      if (goalData.type === 'frequency' && (!goalData.completions || goalData.completions.length === 0)) {
-        goalData.completions = generateInitialCompletions(goalData);
-      }
-      setGoal(goalData);
+        setGoal(goalData);
+    } else {
+        toast.error('Goal not found or you do not have access.');
+        navigate('/goals');
     }
     setIsLoading(false);
-  }, [goalId]);
-
-  const generateInitialCompletions = (g: Goal): GoalCompletion[] => {
-    if (!currentUser) return [];
-    const completions: GoalCompletion[] = [];
-    const today = startOfDay(new Date());
-    const yearStart = new Date(today.getFullYear(), 0, 1);
-    const dayKeys = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-
-    for (let d = yearStart; isBefore(d, today); d.setDate(d.getDate() + 1)) {
-      const dayOfWeek = dayKeys[d.getDay()];
-      const isScheduled = g.frequency === 'Daily' || (g.frequency === 'Weekly' && g.specificDays.includes(dayOfWeek));
-      
-      if (isScheduled) {
-        completions.push({
-          id: `comp-${d.getTime()}`,
-          date: format(d, 'yyyy-MM-dd'),
-          value: Math.random() > 0.4 ? 1 : 0,
-          userId: currentUser.id,
-        });
-      }
-    }
-    return completions;
   };
 
-  const handleToggleCompletion = (date: Date) => {
-    if (!goal || goal.type !== 'frequency') return;
-    const dateString = format(date, 'yyyy-MM-dd');
-    const updatedGoal = { ...goal };
-    const existingCompletionIndex = updatedGoal.completions.findIndex(c => c.date === dateString);
+  useEffect(() => {
+    fetchGoal();
+  }, [goalId, currentUser]);
 
-    if (existingCompletionIndex > -1) {
-      const existing = updatedGoal.completions[existingCompletionIndex];
-      updatedGoal.completions[existingCompletionIndex] = { ...existing, value: existing.value === 1 ? 0 : 1 };
-    } else if (currentUser) {
-      updatedGoal.completions.push({ id: `comp-${date.getTime()}`, date: dateString, value: 1, userId: currentUser.id });
+  const handleToggleCompletion = async (date: Date) => {
+    if (!goal || goal.type !== 'frequency' || !currentUser) return;
+    const dateString = format(startOfDay(date), 'yyyy-MM-dd');
+    const existing = goal.completions.find(c => format(startOfDay(new Date(c.date)), 'yyyy-MM-dd') === dateString);
+
+    const { error } = await supabase.from('goal_completions').upsert({
+        id: existing?.id,
+        goal_id: goal.id,
+        user_id: currentUser.id,
+        date: date.toISOString(),
+        value: existing?.value === 1 ? 0 : 1,
+    }, { onConflict: 'id' });
+
+    if (error) {
+        toast.error("Failed to update progress.");
+    } else {
+        toast.success(`Progress for ${format(date, 'PPP')} has been updated.`);
+        fetchGoal();
     }
-    updatedGoal.completions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setGoal(updatedGoal);
-    toast.success(`Progress for ${format(date, 'PPP')} has been updated.`);
   };
 
-  const handleLogQuantity = (date: Date, value: number) => {
+  const handleLogQuantity = async (date: Date, value: number) => {
     if (!goal || goal.type !== 'quantity' || !currentUser) return;
-    const newLog: GoalCompletion = {
-      id: `comp-${date.getTime()}`,
-      date: new Date().toISOString(),
-      value,
-      userId: currentUser.id,
-    };
-    const updatedGoal = { ...goal, completions: [...goal.completions, newLog] };
-    setGoal(updatedGoal);
+    const { error } = await supabase.from('goal_completions').insert({
+        goal_id: goal.id,
+        user_id: currentUser.id,
+        date: date.toISOString(),
+        value: value,
+    });
+    if (error) { toast.error("Failed to log progress."); } else { fetchGoal(); }
   };
 
-  const handleLogValue = (date: Date, value: number) => {
+  const handleLogValue = async (date: Date, value: number) => {
     if (!goal || goal.type !== 'value' || !currentUser) return;
-    const newLog: GoalCompletion = {
-      id: `comp-${date.getTime()}`,
-      date: new Date().toISOString(),
-      value,
-      userId: currentUser.id,
-    };
-    const updatedGoal = { ...goal, completions: [...goal.completions, newLog] };
-    setGoal(updatedGoal);
+    const { error } = await supabase.from('goal_completions').insert({
+        goal_id: goal.id,
+        user_id: currentUser.id,
+        date: date.toISOString(),
+        value: value,
+    });
+    if (error) { toast.error("Failed to log value."); } else { fetchGoal(); }
   };
 
-  const handleDeleteGoal = () => {
+  const handleDeleteGoal = async () => {
     if (!goal) return;
-    toast.success(`Goal "${goal.title}" has been deleted.`);
-    navigate('/goals');
-  };
-
-  const handleCollaboratorsUpdate = (updatedCollaborators: User[]) => {
-    if (goal) {
-      const updatedGoal = { ...goal, collaborators: updatedCollaborators };
-      setGoal(updatedGoal);
+    const { error } = await supabase.from('goals').delete().eq('id', goal.id);
+    if (error) {
+        toast.error("Failed to delete goal.");
+    } else {
+        toast.success(`Goal "${goal.title}" has been deleted.`);
+        navigate('/goals');
     }
   };
 
-  const handleIconUpdate = (newIconUrl: string) => {
-    if (goal) {
-      const updatedGoal = { ...goal, iconUrl: newIconUrl, icon: 'ImageIcon' };
-      setGoal(updatedGoal);
-      const goalIndex = dummyGoals.findIndex(g => g.id === goal.id);
-      if (goalIndex > -1) {
-        dummyGoals[goalIndex].iconUrl = newIconUrl;
-        dummyGoals[goalIndex].icon = 'ImageIcon';
-      }
+  const handleCollaboratorsUpdate = async (updatedCollaborators: User[]) => {
+    if (!goal || !currentUser) return;
+    const currentCollaboratorIds = new Set(goal.collaborators.map(c => c.id));
+    const updatedCollaboratorIds = new Set(updatedCollaborators.map(c => c.id));
+
+    const toAdd = updatedCollaborators.filter(c => !currentCollaboratorIds.has(c.id));
+    const toRemove = goal.collaborators.filter(c => !updatedCollaboratorIds.has(c.id) && c.id !== currentUser.id);
+
+    if (toRemove.length > 0) {
+      await supabase.from('goal_collaborators').delete().eq('goal_id', goal.id).in('user_id', toRemove.map(c => c.id));
+    }
+    if (toAdd.length > 0) {
+      await supabase.from('goal_collaborators').insert(toAdd.map(c => ({ goal_id: goal.id, user_id: c.id })));
+    }
+    
+    fetchGoal();
+  };
+
+  const handleIconUpdate = async (newIconUrl: string) => {
+    if (!goal) return;
+    const { error } = await supabase.from('goals').update({ icon_url: newIconUrl, icon: 'ImageIcon' }).eq('id', goal.id);
+    if (error) { toast.error("Failed to update icon."); } else { fetchGoal(); }
+  };
+
+  const handleGoalUpdate = async (updatedGoal: Goal) => {
+    const { title, description, type, frequency, specificDays, targetQuantity, targetPeriod, targetValue, unit, color, tags } = updatedGoal;
+    const { error } = await supabase.from('goals').update({
+        title, description, type, frequency, specific_days: specificDays, target_quantity: targetQuantity, target_period: targetPeriod, target_value: targetValue, unit, color
+    }).eq('id', updatedGoal.id);
+
+    if (error) {
+        toast.error("Failed to update goal.");
+    } else {
+        toast.success("Goal updated.");
+        fetchGoal();
+        setIsEditDialogOpen(false);
     }
   };
 
-  const handleGoalUpdate = (updatedGoal: Goal) => {
-    const goalIndex = dummyGoals.findIndex(g => g.id === updatedGoal.id);
-    if (goalIndex > -1) {
-      dummyGoals[goalIndex] = updatedGoal;
-    }
-    setGoal(updatedGoal);
-    setIsEditDialogOpen(false);
-  };
-
-  if (isLoading) {
+  if (isLoading || !goal) {
     return <PortalLayout><div className="text-center">Loading goal details...</div></PortalLayout>;
-  }
-
-  if (!goal) {
-    return (
-      <PortalLayout>
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Goal Not Found</h2>
-          <Button asChild><Link to="/goals"><ArrowLeft className="mr-2 h-4 w-4" />Back to Goals</Link></Button>
-        </div>
-      </PortalLayout>
-    );
   }
 
   const getFrequencyText = () => {

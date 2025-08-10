@@ -1,4 +1,4 @@
-import { Goal } from '@/data/goals';
+import { Goal } from '@/types';
 
 export const getProgress = (goal: Goal) => {
   const current = goal.completions.reduce((sum, c) => sum + c.value, 0);

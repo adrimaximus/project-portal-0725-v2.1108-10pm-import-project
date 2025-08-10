@@ -1,4 +1,4 @@
-import { Goal } from '@/data/goals';
+import { Goal } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import GoalIcon from './GoalIcon';
 import { Progress } from '@/components/ui/progress';

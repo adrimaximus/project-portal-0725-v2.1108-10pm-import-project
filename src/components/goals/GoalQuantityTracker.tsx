@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Goal } from '@/data/goals';
+import { Goal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';

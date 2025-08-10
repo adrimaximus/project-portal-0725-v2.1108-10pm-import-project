@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Goal } from '@/data/goals';
+import { Goal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, ReferenceLine, Label } from 'recharts';
 import { getYear, parseISO, format } from 'date-fns';

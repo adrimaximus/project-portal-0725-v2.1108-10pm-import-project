@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { Goal } from '@/data/goals';
+import { Goal } from '@/types';
 import { Project } from '@/data/projects';
 import { getYear, parseISO, endOfYear, differenceInDays } from 'date-fns';
 

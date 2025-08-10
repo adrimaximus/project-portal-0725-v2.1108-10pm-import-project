@@ -1,4 +1,4 @@
-import { Goal } from '@/data/goals';
+import { Goal } from '@/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format, startOfWeek, addDays } from 'date-fns';
 

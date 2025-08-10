@@ -15,7 +15,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Tag } from "@/data/tags";
+import { Tag } from "@/types";
 
 interface TagInputProps {
   allTags: Tag[];
