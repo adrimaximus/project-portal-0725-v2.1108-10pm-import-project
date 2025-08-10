@@ -31,7 +31,7 @@ const ProjectHeader = ({
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Projects
       </Button>
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8" style={{ backgroundColor: statusStyles.hex }} />
           <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
@@ -45,9 +45,9 @@ const ProjectHeader = ({
                 <Button variant="outline" onClick={onCancelChanges}>Cancel</Button>
               </div>
             ) : (
-              <Button variant="outline" size="icon" onClick={onEditToggle}>
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edit Project</span>
+              <Button variant="outline" onClick={onEditToggle}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit Project
               </Button>
             )}
           </div>
