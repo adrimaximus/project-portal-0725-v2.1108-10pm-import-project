@@ -1,4 +1,4 @@
-import { Project, AssignedUser, Comment, Task } from "@/data/projects";
+import { Project, AssignedUser, Comment, Task, ProjectFile } from "@/data/projects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectComments from "@/components/ProjectComments";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,8 @@ interface ProjectMainContentProps {
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
   onDescriptionChange: (value: string) => void;
   onTeamChange: (users: AssignedUser[]) => void;
-  onFilesChange: (files: File[]) => void;
+  onFilesAdd: (files: File[]) => void;
+  onFileDelete: (fileId: string) => void;
   onServicesChange: (services: string[]) => void;
 }
 
@@ -32,7 +33,8 @@ const ProjectMainContent = ({
   onAddCommentOrTicket,
   onDescriptionChange,
   onTeamChange,
-  onFilesChange,
+  onFilesAdd,
+  onFileDelete,
   onServicesChange,
 }: ProjectMainContentProps) => {
   const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
@@ -68,7 +70,8 @@ const ProjectMainContent = ({
               isEditing={isEditing}
               onDescriptionChange={onDescriptionChange}
               onTeamChange={onTeamChange}
-              onFilesChange={onFilesChange}
+              onFilesAdd={onFilesAdd}
+              onFileDelete={onFileDelete}
               onServicesChange={onServicesChange}
             />
           </TabsContent>

@@ -11,8 +11,12 @@ interface ProjectDetailsTabsProps {
 
 const ProjectDetailsTabs = ({ project, isEditing }: ProjectDetailsTabsProps) => {
   // Dummy handler, as file management logic is not fully specified here.
-  const handleFilesChange = (files: File[]) => {
-    console.log("Files updated:", files);
+  const handleFilesAdd = (files: File[]) => {
+    console.log("Files added:", files);
+  };
+
+  const handleFileDelete = (fileId: string) => {
+    console.log("File deleted:", fileId);
   };
 
   return (
@@ -25,7 +29,8 @@ const ProjectDetailsTabs = ({ project, isEditing }: ProjectDetailsTabsProps) => 
         <ProjectBrief
           files={project.briefFiles || []}
           isEditing={isEditing}
-          onFilesChange={handleFilesChange}
+          onFilesAdd={handleFilesAdd}
+          onFileDelete={handleFileDelete}
         />
       </TabsContent>
       <TabsContent value="comments">

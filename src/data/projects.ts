@@ -28,8 +28,9 @@ export interface ProjectFile {
   id: string;
   name: string;
   size: number;
-  type: string;
+  type: string | null;
   url: string;
+  storagePath: string;
   uploadedAt: string;
 }
 
@@ -113,7 +114,7 @@ export const dummyProjects: Project[] = [
     comments: dummyComments.map(c => ({...c, author: c.author as AssignedUser})),
     activities: dummyActivities.filter(a => a.projectId === 'PROJ-001').map(a => ({...a, user: a.user as AssignedUser, type: a.type as ActivityType, details: { description: a.title }})),
     briefFiles: [
-        { id: 'file-1', name: 'Project Brief.pdf', size: 1200, type: 'application/pdf', url: '#', uploadedAt: '2024-05-01T00:00:00.000Z' }
+        { id: 'file-1', name: 'Project Brief.pdf', size: 1200, type: 'application/pdf', url: '#', uploadedAt: '2024-05-01T00:00:00.000Z', storagePath: '' }
     ],
     services: ['Web Development', 'UI/UX Design']
   },

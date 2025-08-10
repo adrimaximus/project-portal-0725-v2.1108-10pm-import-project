@@ -7,17 +7,17 @@ import { ProjectFile } from "@/data/projects";
 interface ProjectBriefProps {
   files: ProjectFile[];
   isEditing: boolean;
-  onFilesChange: (files: File[]) => void;
+  onFilesAdd: (files: File[]) => void;
+  onFileDelete: (fileId: string) => void;
 }
 
-const ProjectBrief = ({ files, isEditing, onFilesChange }: ProjectBriefProps) => {
+const ProjectBrief = ({ files, isEditing, onFilesAdd, onFileDelete }: ProjectBriefProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const newFiles = Array.from(event.target.files);
-      // This component only adds new files, it doesn't manage the full list
-      onFilesChange(newFiles);
+      onFilesAdd(newFiles);
     }
   };
 
@@ -29,16 +29,18 @@ const ProjectBrief = ({ files, isEditing, onFilesChange }: ProjectBriefProps) =>
     <div className="space-y-4">
       {files.length > 0 ? (
         <ul className="space-y-2">
-          {files.map((file, index) => (
-            <li key={index} className="flex items-center justify-between p-2 rounded-md border bg-background">
+          {files.map((file) => (
+            <li key={file.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
               <div className="flex items-center gap-3 truncate">
-                <FileIcon fileType={file.type} className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                <FileIcon fileType={file.type || ''} className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                 <span className="truncate text-sm font-medium">{file.name}</span>
               </div>
               <div className="flex items-center flex-shrink-0">
                 <a
                   href={file.url}
                   download={file.name}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   title={`Download ${file.name}`}
                 >
                   <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -47,7 +49,7 @@ const ProjectBrief = ({ files, isEditing, onFilesChange }: ProjectBriefProps) =>
                   </Button>
                 </a>
                 {isEditing && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onFileDelete(file.id)}>
                     <Trash2 className="h-4 w-4" />
                     <span className="sr-only">Remove file</span>
                   </Button>

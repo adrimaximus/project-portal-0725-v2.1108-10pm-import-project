@@ -14,11 +14,12 @@ interface ProjectOverviewTabProps {
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
   onTeamChange: (users: AssignedUser[]) => void;
-  onFilesChange: (files: File[]) => void;
+  onFilesAdd: (files: File[]) => void;
+  onFileDelete: (fileId: string) => void;
   onServicesChange: (services: string[]) => void;
 }
 
-const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesChange, onServicesChange }: ProjectOverviewTabProps) => {
+const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesAdd, onFileDelete, onServicesChange }: ProjectOverviewTabProps) => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   useEffect(() => {
@@ -122,7 +123,8 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
           <ProjectBrief
             files={project.briefFiles || []}
             isEditing={isEditing}
-            onFilesChange={onFilesChange}
+            onFilesAdd={onFilesAdd}
+            onFileDelete={onFileDelete}
           />
         </CardContent>
       </Card>

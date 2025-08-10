@@ -71,19 +71,6 @@ const ProjectInfoCards = ({
     }
   };
 
-  const addWorkingDays = (date: Date, days: number): Date => {
-    let currentDate = new Date(date);
-    let addedDays = 0;
-    while (addedDays < days) {
-      currentDate.setDate(currentDate.getDate() + 1);
-      const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        addedDays++;
-      }
-    }
-    return currentDate;
-  };
-
   const budgetFormatted = new Intl.NumberFormat("id-ID", {
     style: "currency", currency: "IDR", minimumFractionDigits: 0,
   }).format(project.budget || 0);
@@ -102,11 +89,13 @@ const ProjectInfoCards = ({
   });
   const projectDaysDifference = differenceInDays(projectDueDateObj, today);
 
-  const paymentDueDate = startOfDay(addWorkingDays(projectDueDateObj, 14));
-  const paymentDueDateFormatted = paymentDueDate.toLocaleDateString("en-US", {
-    year: 'numeric', month: 'long', day: 'numeric'
-  });
-  const paymentDaysDifference = differenceInDays(paymentDueDate, today);
+  const paymentDueDateObj = project.paymentDueDate ? startOfDay(new Date(project.paymentDueDate)) : null;
+  const paymentDueDateFormatted = paymentDueDateObj
+    ? paymentDueDateObj.toLocaleDateString("en-US", {
+        year: 'numeric', month: 'long', day: 'numeric'
+      })
+    : "Not Set";
+  const paymentDaysDifference = paymentDueDateObj ? differenceInDays(paymentDueDateObj, today) : 0;
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -250,22 +239,36 @@ const ProjectInfoCards = ({
           <CalendarClock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div>
-            <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
-            {!['Paid', 'Cancelled'].includes(project.paymentStatus) && (
-              <>
-                {paymentDaysDifference >= 0 ? (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {paymentDaysDifference === 0 ? 'Due today' : `Due in ${paymentDaysDifference} day${paymentDaysDifference !== 1 ? 's' : ''}`}
-                  </p>
-                ) : (
-                  <p className="text-xs text-red-500 mt-1">
-                    Overdue by {Math.abs(paymentDaysDifference)} day{Math.abs(paymentDaysDifference) !== 1 ? 's' : ''}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
+          {isEditing && editedProject ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !editedProject.paymentDueDate && "text-muted-foreground")}>
+                  <CalendarClock className="mr-2 h-4 w-4" />
+                  {editedProject.paymentDueDate ? format(new Date(editedProject.paymentDueDate), "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={editedProject.paymentDueDate ? new Date(editedProject.paymentDueDate) : undefined} onSelect={(date) => onDateChange('paymentDueDate', date)} initialFocus />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <div>
+              <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
+              {paymentDueDateObj && !['Paid', 'Cancelled'].includes(project.paymentStatus) && (
+                <>
+                  {paymentDaysDifference >= 0 ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {paymentDaysDifference === 0 ? 'Due today' : `Due in ${paymentDaysDifference} day${paymentDaysDifference !== 1 ? 's' : ''}`}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-red-500 mt-1">
+                      Overdue by {Math.abs(paymentDaysDifference)} day{Math.abs(paymentDaysDifference) !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

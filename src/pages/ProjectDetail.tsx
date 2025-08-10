@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Project, Task, Comment, AssignedUser, ProjectStatus, PaymentStatus } from "@/data/projects";
+import { Project, Task, Comment, AssignedUser, ProjectStatus, PaymentStatus, ProjectFile } from "@/data/projects";
 import { useAuth } from "@/contexts/AuthContext";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
@@ -36,10 +36,11 @@ const ProjectDetail = () => {
       return;
     }
 
-    const [membersRes, tasksRes, commentsRes] = await Promise.all([
+    const [membersRes, tasksRes, commentsRes, filesRes] = await Promise.all([
       supabase.from('project_members').select('user_id, role').eq('project_id', projectId),
       supabase.from('tasks').select('*, task_assignees(user_id)').eq('project_id', projectId),
-      supabase.from('comments').select('*').eq('project_id', projectId).order('created_at', { ascending: false })
+      supabase.from('comments').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      supabase.from('project_files').select('*').eq('project_id', projectId).order('created_at', { ascending: false })
     ]);
 
     const userIds = new Set<string>();
@@ -51,6 +52,9 @@ const ProjectDetail = () => {
     });
     commentsRes.data?.forEach(c => {
       if (c.author_id) userIds.add(c.author_id)
+    });
+    filesRes.data?.forEach(f => {
+      if (f.user_id) userIds.add(f.user_id)
     });
 
     const { data: profilesData } = await supabase.from('profiles').select('*').in('id', Array.from(userIds));
@@ -86,6 +90,16 @@ const ProjectDetail = () => {
       attachment: c.attachment_url ? { name: c.attachment_name, url: c.attachment_url } : undefined,
       author: mapProfileToUser(c.author_id) as AssignedUser,
     })).filter(c => c.author) || [];
+    
+    const briefFiles: ProjectFile[] = filesRes.data?.map((f: any) => ({
+      id: f.id,
+      name: f.name,
+      size: f.size,
+      type: f.type,
+      url: f.url,
+      storagePath: f.storage_path,
+      uploadedAt: f.created_at,
+    })) || [];
 
     const fullProject: Project = {
       id: projectData.id,
@@ -98,17 +112,18 @@ const ProjectDetail = () => {
       startDate: projectData.start_date,
       dueDate: projectData.due_date,
       paymentStatus: projectData.payment_status as PaymentStatus,
+      paymentDueDate: projectData.payment_due_date,
       createdBy: projectData.created_by ? mapProfileToUser(projectData.created_by) : null,
       assignedTo,
       tasks,
       comments,
       activities: [],
-      briefFiles: [],
+      briefFiles,
       services: projectData.services,
     };
 
     setProject(fullProject);
-    setEditedProject(fullProject); // Also initialize editedProject
+    setEditedProject(JSON.parse(JSON.stringify(fullProject)));
     setIsLoading(false);
   };
 
@@ -120,15 +135,15 @@ const ProjectDetail = () => {
 
   const handleEditToggle = () => {
     if (!isEditing) {
-      setEditedProject(project); // Reset changes when entering edit mode
+      setEditedProject(JSON.parse(JSON.stringify(project)));
     }
     setIsEditing(!isEditing);
   };
 
   const handleSaveChanges = async () => {
-    if (!editedProject || !projectId) return;
+    if (!editedProject || !project || !projectId) return;
 
-    const { name, description, status, budget, startDate, dueDate, paymentStatus, services, assignedTo } = editedProject;
+    const { name, description, status, budget, startDate, dueDate, paymentStatus, paymentDueDate, services, assignedTo } = editedProject;
 
     const { error: projectUpdateError } = await supabase
       .from('projects')
@@ -137,6 +152,7 @@ const ProjectDetail = () => {
         start_date: startDate,
         due_date: dueDate,
         payment_status: paymentStatus,
+        payment_due_date: paymentDueDate,
         services,
       })
       .eq('id', projectId);
@@ -146,15 +162,28 @@ const ProjectDetail = () => {
       console.error("Error updating project:", projectUpdateError);
       return;
     }
+
+    const originalMemberIds = new Set(project.assignedTo.map(m => m.id));
+    const newMemberIds = new Set(assignedTo.map(m => m.id));
+    const membersToAdd = assignedTo.filter(m => !originalMemberIds.has(m.id));
+    const membersToRemove = project.assignedTo.filter(m => !newMemberIds.has(m.id));
+
+    if (membersToRemove.length > 0) {
+      const { error } = await supabase.from('project_members').delete().eq('project_id', projectId).in('user_id', membersToRemove.map(m => m.id));
+      if (error) console.error("Error removing members:", error);
+    }
+    if (membersToAdd.length > 0) {
+      const { error } = await supabase.from('project_members').insert(membersToAdd.map(m => ({ project_id: projectId, user_id: m.id, role: 'member' })));
+      if (error) console.error("Error adding members:", error);
+    }
     
-    // Simple refresh after saving
     await fetchProjectDetails();
     toast.success("Project updated successfully!");
     setIsEditing(false);
   };
 
   const handleCancelChanges = () => {
-    setEditedProject(project); // Discard changes
+    setEditedProject(JSON.parse(JSON.stringify(project)));
     setIsEditing(false);
   };
 
@@ -172,33 +201,18 @@ const ProjectDetail = () => {
 
     if (error) {
       toast.error("Failed to add task.");
-      console.error("Error adding task:", error);
     } else {
       toast.success("Task added.");
-      await fetchProjectDetails(); // Refresh data
+      await fetchProjectDetails();
     }
   };
 
   const handleTaskStatusChange = async (taskId: string, completed: boolean) => {
-    const { error } = await supabase
-      .from('tasks')
-      .update({ completed })
-      .eq('id', taskId);
-
+    const { error } = await supabase.from('tasks').update({ completed }).eq('id', taskId);
     if (error) {
       toast.error("Failed to update task status.");
-      console.error("Error updating task status:", error);
     } else {
-      // Optimistic update
-      const updater = (p: Project | null) => {
-        if (!p) return null;
-        return {
-          ...p,
-          tasks: p.tasks?.map(t => t.id === taskId ? { ...t, completed } : t)
-        };
-      };
-      setProject(updater);
-      setEditedProject(updater);
+      await fetchProjectDetails();
     }
   };
 
@@ -206,99 +220,65 @@ const ProjectDetail = () => {
     const { error } = await supabase.from('tasks').delete().eq('id', taskId);
     if (error) {
       toast.error("Failed to delete task.");
-      console.error("Error deleting task:", error);
     } else {
       toast.success("Task deleted.");
-      await fetchProjectDetails(); // Refresh data
+      await fetchProjectDetails();
     }
   };
 
   const handleAssignUsersToTask = async (taskId: string, userIds: string[]) => {
-    const { error: deleteError } = await supabase.from('task_assignees').delete().eq('task_id', taskId);
-    if (deleteError) {
-      toast.error("Failed to update assignees.");
-      console.error("Error clearing assignees:", deleteError);
-      return;
-    }
-
+    await supabase.from('task_assignees').delete().eq('task_id', taskId);
     if (userIds.length > 0) {
       const newAssignees = userIds.map(user_id => ({ task_id: taskId, user_id }));
-      const { error: insertError } = await supabase.from('task_assignees').insert(newAssignees);
-      if (insertError) {
-        toast.error("Failed to add new assignees.");
-        console.error("Error inserting assignees:", insertError);
-        return;
-      }
+      await supabase.from('task_assignees').insert(newAssignees);
     }
     toast.success("Task assignees updated.");
-    await fetchProjectDetails(); // Refresh data
+    await fetchProjectDetails();
   };
 
   const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachment: File | null) => {
     if (!projectId || !currentUser) return;
-
-    let attachment_url: string | null = null;
-    let attachment_name: string | null = null;
-
+    let attachment_url: string | null = null, attachment_name: string | null = null;
     if (attachment) {
       const filePath = `${projectId}/${Date.now()}-${attachment.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from('project-files')
-        .upload(filePath, attachment);
-
-      if (uploadError) {
-        console.error('Error uploading file:', uploadError);
-        toast.error('Failed to upload attachment.');
-        return;
-      }
-
-      const { data: urlData } = supabase.storage
-        .from('project-files')
-        .getPublicUrl(filePath);
-      
-      attachment_url = urlData.publicUrl;
+      const { error } = await supabase.storage.from('project-files').upload(filePath, attachment);
+      if (error) { toast.error('Failed to upload attachment.'); return; }
+      attachment_url = supabase.storage.from('project-files').getPublicUrl(filePath).data.publicUrl;
       attachment_name = attachment.name;
     }
-
-    const { data: newComment, error: commentError } = await supabase
-      .from('comments')
-      .insert({
-        project_id: projectId,
-        author_id: currentUser.id,
-        text,
-        is_ticket: isTicket,
-        attachment_url,
-        attachment_name,
-      })
-      .select()
-      .single();
-
-    if (commentError) {
-      console.error('Error adding comment:', commentError);
-      toast.error('Failed to add comment.');
-      return;
-    }
-
+    const { data: newComment, error } = await supabase.from('comments').insert({ project_id: projectId, author_id: currentUser.id, text, is_ticket: isTicket, attachment_url, attachment_name }).select().single();
+    if (error) { toast.error('Failed to add comment.'); return; }
     if (isTicket && newComment) {
-      const { error: taskError } = await supabase.from('tasks').insert({
-        project_id: projectId,
-        title: text,
-        created_by: currentUser.id,
-        origin_ticket_id: newComment.id,
-      });
-
-      if (taskError) {
-        console.error('Error creating task from ticket:', taskError);
-        toast.error('Comment was added, but failed to create a corresponding ticket.');
-      }
+      await supabase.from('tasks').insert({ project_id: projectId, title: text, created_by: currentUser.id, origin_ticket_id: newComment.id });
     }
-
-    toast.success(isTicket ? 'Ticket created successfully.' : 'Comment added successfully.');
+    toast.success(isTicket ? 'Ticket created.' : 'Comment added.');
     await fetchProjectDetails();
   };
 
-  const showNotImplementedToast = () => {
-    toast.info("This feature is not yet connected to the database.");
+  const handleFilesAdd = async (files: File[]) => {
+    if (!projectId || !currentUser) return;
+    toast.info(`Uploading ${files.length} file(s)...`);
+    for (const file of files) {
+      const filePath = `${projectId}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+      if (uploadError) { toast.error(`Failed to upload ${file.name}.`); continue; }
+      const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+      await supabase.from('project_files').insert({ project_id: projectId, user_id: currentUser.id, name: file.name, size: file.size, type: file.type, url: urlData.publicUrl, storage_path: filePath });
+    }
+    toast.success("File upload process finished.");
+    await fetchProjectDetails();
+  };
+
+  const handleFileDelete = async (fileId: string) => {
+    if (!project) return;
+    const fileToDelete = project.briefFiles?.find(f => f.id === fileId);
+    if (!fileToDelete) return;
+    const { error: storageError } = await supabase.storage.from('project-files').remove([fileToDelete.storagePath]);
+    if (storageError) { toast.error("Failed to delete file from storage."); return; }
+    const { error: dbError } = await supabase.from('project_files').delete().eq('id', fileId);
+    if (dbError) { toast.error("File deleted from storage, but failed to delete record."); return; }
+    toast.success("File deleted successfully.");
+    await fetchProjectDetails();
   };
 
   if (isLoading || !project) {
@@ -316,7 +296,7 @@ const ProjectDetail = () => {
           onEditToggle={handleEditToggle}
           onSaveChanges={handleSaveChanges}
           onCancelChanges={handleCancelChanges}
-          canEdit={true} // TODO: Add role-based logic
+          canEdit={true}
         />
       }
       noPadding
@@ -337,7 +317,8 @@ const ProjectDetail = () => {
             onDescriptionChange={(value) => handleFieldChange('description', value)}
             onTeamChange={(users) => handleFieldChange('assignedTo', users)}
             onServicesChange={(services) => handleFieldChange('services', services)}
-            onFilesChange={showNotImplementedToast} // Placeholder
+            onFilesAdd={handleFilesAdd}
+            onFileDelete={handleFileDelete}
             onTaskAdd={handleAddTask}
             onTaskAssignUsers={handleAssignUsersToTask}
             onTaskStatusChange={handleTaskStatusChange}
@@ -346,12 +327,7 @@ const ProjectDetail = () => {
           />
         </div>
         <div className="lg:col-span-1 space-y-8">
-          <ProjectSidebar
-            project={projectToDisplay}
-            onUpdateProject={showNotImplementedToast}
-            onUpdateTeam={showNotImplementedToast}
-            onFileUpload={showNotImplementedToast}
-          />
+          <ProjectSidebar project={projectToDisplay} />
         </div>
       </div>
     </PortalLayout>
