@@ -1,43 +1,51 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const LoginPage = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/dashboard';
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (session) {
       navigate(from, { replace: true });
-      toast.success(`Welcome back!`);
     }
   }, [session, navigate, from]);
 
-  const handleGoogleLogin = async () => {
-    const redirectTo = import.meta.env.VITE_SITE_URL;
-    console.log('Attempting to redirect to:', redirectTo); // Baris debugging
-
-    if (!redirectTo) {
-      toast.error('VITE_SITE_URL is not configured. Please check your .env file.');
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    const emailRedirectTo = import.meta.env.VITE_SITE_URL;
+    if (!emailRedirectTo) {
+      toast.error('Site URL is not configured. Please contact support.');
+      setLoading(false);
       return;
     }
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
       options: {
-        redirectTo: redirectTo,
+        emailRedirectTo: emailRedirectTo,
       },
     });
 
     if (error) {
-      toast.error(`Could not authenticate with Google: ${error.message}`);
+      toast.error(error.message);
+    } else {
+      toast.success('Check your email for the login link!');
     }
+    setLoading(false);
   };
 
   return (
@@ -46,12 +54,26 @@ const LoginPage = () => {
         <div className="flex flex-col justify-center items-center gap-2 text-center">
             <Package className="h-8 w-8" />
             <h1 className="text-2xl font-semibold">Client Portal</h1>
-            <p className="text-muted-foreground">Please sign in to continue</p>
+            <p className="text-muted-foreground">Sign in via magic link with your email below</p>
         </div>
         
-        <Button className="w-full" onClick={handleGoogleLogin}>
-          Continue with Google
-        </Button>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Sending...' : 'Send Magic Link'}
+          </Button>
+        </form>
 
         <p className="px-8 text-center text-sm text-muted-foreground">
           By signing in, you agree to our{" "}
