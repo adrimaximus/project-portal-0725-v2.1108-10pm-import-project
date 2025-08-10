@@ -21,7 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface GoalFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGoalCreate?: (newGoal: Omit<Goal, 'id' | 'slug' | 'completions' | 'collaborators'>) => Promise<void>;
+  onSuccess: () => void;
   onGoalUpdate?: (updatedGoal: Goal) => void;
   goal?: Goal | null;
 }
@@ -36,7 +36,7 @@ const weekDays = [
   { label: 'S', value: 'Sa' },
 ];
 
-const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }: GoalFormDialogProps) => {
+const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: GoalFormDialogProps) => {
   const isEditMode = !!goal;
   const { user } = useAuth();
 
@@ -105,30 +105,26 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
       toast.error("Please enter a title for your goal.");
       return;
     }
+    if (!user) {
+      toast.error("You must be logged in to create a goal.");
+      return;
+    }
     
     setIsSaving(true);
 
     if (isEditMode && onGoalUpdate && goal) {
       const updatedGoalData: Goal = {
         ...goal,
-        title,
-        description,
-        type,
-        frequency,
+        title, description, type, frequency,
         specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
-        targetQuantity,
-        targetPeriod,
-        targetValue,
-        unit,
-        color,
-        tags,
+        targetQuantity, targetPeriod, targetValue, unit, color, tags,
       };
       onGoalUpdate(updatedGoalData);
       setIsSaving(false);
-    } else if (!isEditMode && onGoalCreate) {
+    } else if (!isEditMode) {
       try {
         const toastId = toast.loading("Generating AI icon...");
-        let icon = 'Target'; // Default valid icon name
+        let icon = 'Target';
         let iconUrl: string | undefined = undefined;
         try {
           const prompt = `Goal: ${title}. Description: ${description || 'No description'}`;
@@ -141,24 +137,52 @@ const GoalFormDialog = ({ open, onOpenChange, onGoalCreate, onGoalUpdate, goal }
           toast.error("Could not generate AI icon, using default.", { id: toastId });
         }
 
-        await onGoalCreate({
+        const goalInsertData = {
           title,
           description,
           icon,
-          iconUrl,
+          icon_url: iconUrl,
           color,
-          tags,
           type,
           frequency,
-          specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
-          targetQuantity,
-          targetPeriod,
-          targetValue,
+          specific_days: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
+          target_quantity: targetQuantity,
+          target_period: targetPeriod,
+          target_value: targetValue,
           unit,
-        });
-        
+        };
+
+        const { data: newGoal, error: goalError } = await supabase
+          .from('goals')
+          .insert({ ...goalInsertData, user_id: user.id })
+          .select()
+          .single();
+
+        if (goalError) throw goalError;
+
+        if (tags && tags.length > 0) {
+          const { data: existingTagsData } = await supabase.from('tags').select('name').eq('user_id', user.id);
+          const existingTagNames = new Set(existingTagsData?.map(t => t.name));
+          const newTagsToCreate = tags.filter(t => !existingTagNames.has(t.name));
+          
+          if (newTagsToCreate.length > 0) {
+            const newTagsForDb = newTagsToCreate.map(t => ({ name: t.name, color: t.color, user_id: user.id }));
+            await supabase.from('tags').insert(newTagsForDb);
+          }
+
+          const { data: allRelevantTags } = await supabase.from('tags').select('id, name').in('name', tags.map(t => t.name));
+
+          if (allRelevantTags) {
+            const goalTagsToInsert = allRelevantTags.map(t => ({ goal_id: newGoal.id, tag_id: t.id }));
+            await supabase.from('goal_tags').insert(goalTagsToInsert);
+          }
+        }
+
+        toast.success(`Goal "${newGoal.title}" created!`);
+        onSuccess();
         onOpenChange(false);
-      } catch (error) {
+      } catch (error: any) {
+        toast.error(`Failed to create goal: ${error.message}`);
         console.error("Goal creation failed:", error);
       } finally {
         setIsSaving(false);

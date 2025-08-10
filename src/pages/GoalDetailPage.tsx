@@ -244,6 +244,7 @@ const GoalDetailPage = () => {
       <GoalFormDialog
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
+        onSuccess={fetchGoal}
         onGoalUpdate={handleGoalUpdate}
         goal={goal}
       />
