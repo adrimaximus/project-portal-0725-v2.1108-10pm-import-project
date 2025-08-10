@@ -177,6 +177,8 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     .map((service) => allServicesData.find((s) => s.title === service.title))
     .filter((s): s is Service => s !== undefined);
 
+  const assignableUsers = allUsers.filter(user => user.id !== currentUser?.id);
+
   return (
     <form onSubmit={handleSubmit}>
       <Card>
@@ -268,7 +270,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </div>
           <div className="space-y-2">
             <Label>Assign Team</Label>
-            <ModernTeamSelector users={allUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
+            <ModernTeamSelector users={assignableUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
           </div>
           <div className="space-y-2">
             <Label>Attach Files</Label>
