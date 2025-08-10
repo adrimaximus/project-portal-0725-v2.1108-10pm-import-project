@@ -31,14 +31,14 @@ const ProjectHeader = ({
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Projects
       </Button>
-      <div className="flex justify-between items-center gap-4">
-        <div className="flex items-center gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8 items-center">
+        <div className="lg:col-span-2 flex items-center gap-3">
           <div className="w-1 h-8" style={{ backgroundColor: statusStyles.hex }} />
           <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
           {project.status && <StatusBadge status={project.status} />}
         </div>
         {canEdit && (
-          <div className="flex-shrink-0">
+          <div className="lg:col-span-1 flex justify-start lg:justify-end">
             {isEditing ? (
               <div className="flex gap-2">
                 <Button onClick={onSaveChanges}>Save Changes</Button>
