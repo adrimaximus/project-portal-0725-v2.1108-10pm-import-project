@@ -3,23 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ChatList from "@/components/ChatList";
 import ChatWindow from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
-import { Collaborator, Attachment, User, Message } from "@/types";
+import { Collaborator, Attachment, User, Message, Conversation } from "@/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-export interface Conversation {
-  id: string;
-  userName: string;
-  userAvatar?: string;
-  lastMessage: string;
-  lastMessageTimestamp: string;
-  unreadCount: number;
-  messages: Message[];
-  isGroup?: boolean;
-  members?: Collaborator[];
-}
 
 const ChatPage = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -221,3 +209,6 @@ const ChatPage = () => {
       </div>
     </PortalLayout>
   );
+};
+
+export default ChatPage;

@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
 import OnlineCollaborators from "./OnlineCollaborators";
-import { dummyConversations } from "@/data/chat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { dummyNotifications } from "@/data/notifications";
@@ -57,10 +56,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     return null;
   }
 
-  const totalUnreadChatCount = dummyConversations.reduce(
-    (sum, convo) => sum + convo.unreadCount,
-    0
-  );
+  const totalUnreadChatCount = 0; // Placeholder, will be implemented with real data later
 
   const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 

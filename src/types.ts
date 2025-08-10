@@ -33,6 +33,18 @@ export interface Message {
   attachment?: Attachment | null;
 }
 
+export interface Conversation {
+  id: string;
+  userName: string;
+  userAvatar?: string;
+  lastMessage: string;
+  lastMessageTimestamp: string;
+  unreadCount: number;
+  messages: Message[];
+  isGroup?: boolean;
+  members?: Collaborator[];
+}
+
 export interface GoogleCalendarEvent {
   id: string;
   summary: string;

@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Conversation } from "@/data/chat";
+import { Conversation } from "@/types";
 import { ArrowLeft, MoreVertical, Trash2, UserX, Users } from "lucide-react";
 import StackedAvatar from "./StackedAvatar";
 

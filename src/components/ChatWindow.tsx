@@ -1,7 +1,7 @@
 import ChatHeader from "./ChatHeader";
 import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
-import { Conversation } from "@/data/chat";
+import { Conversation } from "@/types";
 import { Collaborator, Attachment } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 

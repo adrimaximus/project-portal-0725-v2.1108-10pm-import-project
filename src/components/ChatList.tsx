@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, MessageSquarePlus, Users } from "lucide-react";
-import { Conversation } from "@/data/chat";
+import { Conversation } from "@/types";
 import { Collaborator } from "@/types";
 import NewChatDialog from "./NewChatDialog";
 import NewGroupChatDialog from "./NewGroupChatDialog";
