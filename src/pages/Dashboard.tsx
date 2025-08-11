@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Table,
@@ -45,6 +45,7 @@ const Index = () => {
   const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const errorToastShown = useRef(false);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -57,13 +58,16 @@ const Index = () => {
       const { data, error } = await supabase.rpc('get_dashboard_projects');
 
       if (error) {
-        toast.error("Failed to fetch projects.");
+        if (!errorToastShown.current) {
+          toast.error("Gagal mengambil data proyek.");
+          errorToastShown.current = true;
+        }
         console.error(error);
+        setProjects([]);
         setIsLoading(false);
         return;
       }
       
-      // Data dari RPC sudah dalam format yang benar, hanya perlu memastikan tipe data
       const mappedProjects: Project[] = data.map((p: any) => ({
         ...p,
         status: p.status as ProjectStatus,
@@ -81,7 +85,8 @@ const Index = () => {
     };
 
     fetchProjects();
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const filteredProjects = projects.filter(project => {
     if (date?.from) {
