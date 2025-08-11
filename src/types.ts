@@ -14,6 +14,11 @@ export interface User {
   initials: string;
 }
 
+// A more generic user profile, often used in project data
+export type UserProfile = User & {
+  role?: 'owner' | 'member' | string;
+};
+
 export interface Collaborator {
   id: string;
   name: string;
@@ -117,15 +122,11 @@ export interface GoogleCalendarEvent {
 export type ProjectStatus = 'Requested' | 'In Progress' | 'Completed' | 'Billed' | 'On Hold' | 'Cancelled' | 'Done' | 'Not Started' | 'On Track' | 'At Risk' | 'Off Track';
 export type PaymentStatus = 'Proposed' | 'Approved' | 'PO Created' | 'On Process' | 'Pending' | 'Paid' | 'Cancelled' | 'Overdue' | 'Unpaid';
 
-export interface AssignedUser extends User {
-  role: 'owner' | 'member';
-}
-
 export interface Task {
   id: string;
   title: string;
   completed: boolean;
-  assignedTo: User[];
+  assignedTo: UserProfile[];
   originTicketId?: string;
 }
 
@@ -168,8 +169,8 @@ export interface Project {
   dueDate: string;
   paymentStatus: PaymentStatus;
   paymentDueDate?: string | null;
-  createdBy: User | null;
-  assignedTo: AssignedUser[];
+  createdBy: UserProfile | null;
+  assignedTo: UserProfile[];
   tasks: Task[];
   comments: Comment[];
   activities: Activity[];

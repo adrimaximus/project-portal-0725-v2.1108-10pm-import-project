@@ -1,4 +1,4 @@
-import { Project, AssignedUser, Comment, Task, ProjectFile } from "@/types";
+import { Project, UserProfile, Comment, Task, ProjectFile } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectComments from "@/components/ProjectComments";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ interface ProjectMainContentProps {
   onTaskDelete: (taskId: string) => void;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
   onDescriptionChange: (value: string) => void;
-  onTeamChange: (users: AssignedUser[]) => void;
+  onTeamChange: (users: UserProfile[]) => void;
   onFilesAdd: (files: File[]) => void;
   onFileDelete: (fileId: string) => void;
   onServicesChange: (services: string[]) => void;

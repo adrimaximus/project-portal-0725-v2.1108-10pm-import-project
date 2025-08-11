@@ -1,5 +1,5 @@
-import { Project, ProjectStatus, PaymentStatus, AssignedUser, Task, Comment, User } from '@/types';
+import { Project, ProjectStatus, PaymentStatus, UserProfile, Task, Comment, User } from '@/types';
 
-export type { Project, ProjectStatus, PaymentStatus, AssignedUser, Task, Comment, User };
+export type { Project, ProjectStatus, PaymentStatus, UserProfile, Task, Comment, User };
 
 export const dummyProjects: Project[] = [];

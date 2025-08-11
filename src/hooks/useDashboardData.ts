@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Project, User } from '@/types';
+import { Project, UserProfile } from '@/types';
 import { toast } from 'sonner';
 
 export const useDashboardData = () => {
@@ -26,7 +26,12 @@ export const useDashboardData = () => {
         toast.error('Failed to fetch projects. Please try again later.');
         setProjects([]);
       } else {
-        setProjects(data || []);
+        const mappedData = (data || []).map((p: any) => ({
+            ...p,
+            createdBy: p.createdBy ? { ...p.createdBy, avatar_url: p.createdBy.avatar, avatar: undefined } : null,
+            assignedTo: (p.assignedTo || []).map((a: any) => ({ ...a, avatar_url: a.avatar, avatar: undefined }))
+        }));
+        setProjects(mappedData);
       }
       setIsLoading(false);
     };
@@ -37,11 +42,9 @@ export const useDashboardData = () => {
   }, [session, authLoading]);
 
   const stats = useMemo(() => {
-    const totalProjects = projects.length;
     const totalValue = projects.reduce((acc, p) => acc + (p.budget || 0), 0);
-    const completedProjects = projects.filter(p => p.status === 'Completed').length;
 
-    const allUsers = projects.reduce((acc: User[], project) => {
+    const allUsers = projects.reduce((acc: UserProfile[], project) => {
       const members = [project.createdBy, ...project.assignedTo];
       members.forEach(member => {
         if (member && !acc.some(u => u.id === member.id)) {
@@ -51,14 +54,15 @@ export const useDashboardData = () => {
       return acc;
     }, []);
 
-    const collaborators = projects.reduce((acc: User[], project) => {
-      project.assignedTo?.forEach(member => {
-        if (!acc.some(c => c.id === member.id)) {
-          acc.push(member);
-        }
-      });
-      return acc;
-    }, []);
+    const collaborators = allUsers.map(user => {
+        const userProjects = projects.filter(p => p.assignedTo.some(m => m.id === user.id) || p.createdBy?.id === user.id);
+        const userTasks = userProjects.flatMap(p => p.tasks || []).filter(t => t.assignedTo.some(a => a.id === user.id));
+        return {
+            ...user,
+            projectCount: userProjects.length,
+            taskCount: userTasks.length
+        };
+    });
 
     const projectStatusCounts = projects.reduce((acc, p) => {
       const status = p.status || 'Unknown';
@@ -80,11 +84,7 @@ export const useDashboardData = () => {
     }, {} as Record<string, number>);
 
     const topOwnerId = Object.keys(ownerCounts).sort((a, b) => ownerCounts[b] - ownerCounts[a])[0];
-    const topOwner = allUsers.find(u => u.id === topOwnerId) || null;
-
-    const totalTasks = projects.reduce((acc, p) => acc + (p.tasks?.length || 0), 0);
-    const completedTasks = projects.reduce((acc, p) => acc + (p.tasks?.filter(t => t.completed).length || 0), 0);
-    const totalTickets = projects.reduce((acc, p) => acc + (p.comments?.filter(c => (c as any).is_ticket).length || 0), 0);
+    const topOwner = allUsers.find(u => u.id === topOwnerId) ? { ...allUsers.find(u => u.id === topOwnerId)!, projectCount: ownerCounts[topOwnerId] } : null;
 
     const collaboratorCounts = projects.reduce((acc, p) => {
         p.assignedTo?.forEach(member => {
@@ -96,7 +96,7 @@ export const useDashboardData = () => {
     }, {} as Record<string, number>);
 
     const topCollaboratorId = Object.keys(collaboratorCounts).sort((a, b) => collaboratorCounts[b] - collaboratorCounts[a])[0];
-    const topCollaborator = allUsers.find(u => u.id === topCollaboratorId) || null;
+    const topCollaborator = allUsers.find(u => u.id === topCollaboratorId) ? { ...allUsers.find(u => u.id === topCollaboratorId)!, projectCount: collaboratorCounts[topCollaboratorId] } : null;
 
     const userValue = projects.reduce((acc, p) => {
         const projectValue = p.budget || 0;
@@ -110,7 +110,7 @@ export const useDashboardData = () => {
     }, {} as Record<string, number>);
 
     const topUserByValueId = Object.keys(userValue).sort((a, b) => userValue[b] - userValue[a])[0];
-    const topUserByValue = allUsers.find(u => u.id === topUserByValueId) || null;
+    const topUserByValue = allUsers.find(u => u.id === topUserByValueId) ? { ...allUsers.find(u => u.id === topUserByValueId)!, totalValue: userValue[topUserByValueId] } : null;
 
     const userPendingValue = projects.reduce((acc, p) => {
         if (p.paymentStatus !== 'Paid') {
@@ -126,22 +126,17 @@ export const useDashboardData = () => {
     }, {} as Record<string, number>);
 
     const topUserByPendingValueId = Object.keys(userPendingValue).sort((a, b) => userPendingValue[b] - userPendingValue[a])[0];
-    const topUserByPendingValue = allUsers.find(u => u.id === topUserByPendingValueId) || null;
+    const topUserByPendingValue = allUsers.find(u => u.id === topUserByPendingValueId) ? { ...allUsers.find(u => u.id === topUserByPendingValueId)!, pendingValue: userPendingValue[topUserByPendingValueId] } : null;
 
     return {
-      totalProjects,
       totalValue,
-      completedProjects,
-      collaborators,
       projectStatusCounts,
       paymentStatusCounts,
       topOwner,
-      totalTasks,
-      completedTasks,
-      totalTickets,
       topCollaborator,
       topUserByValue,
       topUserByPendingValue,
+      collaborators,
     };
   }, [projects]);
 

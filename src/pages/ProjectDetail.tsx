@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Project, Task, Comment, AssignedUser, ProjectStatus, PaymentStatus, ProjectFile, User } from "@/types";
+import { Project, Task, Comment, UserProfile, ProjectStatus, PaymentStatus, ProjectFile, User } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
@@ -75,7 +75,7 @@ const ProjectDetail = () => {
       };
     };
 
-    const assignedTo: AssignedUser[] = (membersRes.data?.map(m => ({ ...mapProfileToUser(m.user_id), role: m.role })).filter(u => u && u.id) as AssignedUser[]) || [];
+    const assignedTo: UserProfile[] = (membersRes.data?.map(m => ({ ...mapProfileToUser(m.user_id), role: m.role })).filter(u => u && u.id) as UserProfile[]) || [];
     const tasks: Task[] = tasksRes.data?.map((t: any) => ({
       id: t.id,
       title: t.title,
