@@ -10,13 +10,12 @@ import ColorPicker from './ColorPicker';
 import { Textarea } from '@/components/ui/textarea';
 import { TagInput } from './TagInput';
 import { v4 as uuidv4 } from 'uuid';
-import { generateAiIcon } from '@/lib/openai';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { User } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import IconPicker from './IconPicker';
 
 interface GoalFormDialogProps {
   open: boolean;
@@ -50,6 +49,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
   const [targetValue, setTargetValue] = useState<number | undefined>(undefined);
   const [unit, setUnit] = useState<string>('');
   const [color, setColor] = useState('#BFDBFE');
+  const [icon, setIcon] = useState('Target');
   const [tags, setTags] = useState<Tag[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -74,6 +74,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
         setTargetValue(goal.targetValue);
         setUnit(goal.unit || '');
         setColor(goal.color);
+        setIcon(goal.icon);
         setTags(goal.tags);
       } else {
         setTitle('');
@@ -85,6 +86,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
         setTargetPeriod('Monthly');
         setUnit('');
         setColor('#BFDBFE');
+        setIcon('Target');
         setTags([]);
       }
     }
@@ -118,43 +120,18 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
         title, description, type, frequency,
         specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
         targetQuantity, targetPeriod, targetValue, unit, color, tags,
+        icon,
+        iconUrl: undefined,
       };
       onGoalUpdate(updatedGoalData);
       setIsSaving(false);
     } else if (!isEditMode) {
       try {
-        let icon = 'Target';
-        let iconUrl: string | undefined = undefined;
-
-        const isAiConnected = !!localStorage.getItem("openai_connected");
-
-        if (isAiConnected) {
-            const toastId = toast.loading("Generating AI icon...");
-            try {
-              const prompt = `Goal: ${title}. Description: ${description || 'No description'}`;
-              const tempIconUrl = await generateAiIcon(prompt);
-              toast.loading("Uploading icon to Cloudinary...", { id: toastId });
-
-              const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-image-from-url', {
-                body: { imageUrl: tempIconUrl },
-              });
-
-              if (uploadError) throw new Error(uploadError.message);
-
-              icon = 'ImageIcon';
-              iconUrl = uploadData.secure_url;
-              toast.success("AI icon created and saved!", { id: toastId });
-            } catch (error) {
-              console.error("Icon generation or upload failed:", error);
-              toast.error("Could not generate AI icon, using default.", { id: toastId });
-            }
-        }
-
         const goalInsertData = {
           title,
           description,
           icon,
-          icon_url: iconUrl,
+          icon_url: null,
           color,
           type,
           frequency,
@@ -227,7 +204,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Goal' : 'Create a New Goal'}</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-4 py-4 max-h-[80vh] overflow-y-auto pr-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="title" className="text-right">Title</Label>
             <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} className="col-span-3" placeholder="e.g., Drink more water" />
@@ -322,9 +299,12 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
               </div>
             </>
           )}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Color</Label>
-            <div className="col-span-3"><ColorPicker color={color} setColor={setColor} /></div>
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label className="text-right pt-2">Icon & Color</Label>
+            <div className="col-span-3 space-y-2">
+              <IconPicker value={icon} onChange={setIcon} color={color} />
+              <ColorPicker color={color} setColor={setColor} />
+            </div>
           </div>
            <div className="grid grid-cols-4 items-start gap-4">
             <Label className="text-right pt-2">Tags</Label>

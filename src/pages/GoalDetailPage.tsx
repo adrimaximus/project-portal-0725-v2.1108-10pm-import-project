@@ -132,16 +132,10 @@ const GoalDetailPage = () => {
     fetchGoal();
   };
 
-  const handleIconUpdate = async (newIconUrl: string) => {
-    if (!goal) return;
-    const { error } = await supabase.from('goals').update({ icon_url: newIconUrl, icon: 'ImageIcon' }).eq('id', goal.id);
-    if (error) { toast.error("Failed to update icon."); } else { fetchGoal(); }
-  };
-
   const handleGoalUpdate = async (updatedGoal: Goal) => {
-    const { title, description, type, frequency, specificDays, targetQuantity, targetPeriod, targetValue, unit, color, tags } = updatedGoal;
+    const { title, description, type, frequency, specificDays, targetQuantity, targetPeriod, targetValue, unit, color, tags, icon, iconUrl } = updatedGoal;
     const { error } = await supabase.from('goals').update({
-        title, description, type, frequency, specific_days: specificDays, target_quantity: targetQuantity, target_period: targetPeriod, target_value: targetValue, unit, color
+        title, description, type, frequency, specific_days: specificDays, target_quantity: targetQuantity, target_period: targetPeriod, target_value: targetValue, unit, color, icon, icon_url: iconUrl
     }).eq('id', updatedGoal.id);
 
     if (error) {
@@ -183,7 +177,7 @@ const GoalDetailPage = () => {
           </Button>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div className="flex items-center gap-4">
-              <GoalIcon goal={goal} onIconUpdate={handleIconUpdate} className="h-16 w-16" />
+              <GoalIcon goal={goal} className="h-16 w-16" />
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">{goal.title}</h1>
                 <p className="text-muted-foreground">{goal.description}</p>
