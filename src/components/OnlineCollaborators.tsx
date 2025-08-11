@@ -6,11 +6,13 @@ import { Users } from "lucide-react";
 import { Collaborator } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { RealtimeChannel } from "@supabase/supabase-js";
+import { RealtimeChannel, RealtimePresenceState } from "@supabase/supabase-js";
 
 type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
 };
+
+type PresencePayload = Omit<Collaborator, 'online'>;
 
 const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -24,7 +26,6 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
     let channel: RealtimeChannel;
 
     const setupPresence = async () => {
-      // Ambil profil pengguna saat ini untuk dibagikan
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, avatar_url, email')
@@ -36,11 +37,9 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
         return;
       }
 
-      // Siapkan nama dan inisial dengan fallback ke email
       const name = (`${profile.first_name || ''} ${profile.last_name || ''}`).trim() || profile.email || 'Anonymous';
       const initials = (`${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}` || 'NN').toUpperCase();
 
-      // Buat channel realtime untuk melacak pengguna online
       channel = supabase.channel('online-users', {
         config: {
           presence: {
@@ -49,9 +48,8 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
         },
       });
 
-      // Event 'sync' dipanggil saat pertama kali terhubung, memberikan daftar lengkap pengguna online
       channel.on('presence', { event: 'sync' }, () => {
-        const presenceState = channel.presenceState<Omit<Collaborator, 'online'>>();
+        const presenceState: RealtimePresenceState<PresencePayload> = channel.presenceState();
         const collaborators = Object.keys(presenceState)
           .filter(presenceId => presenceId !== currentUser.id)
           .map(presenceId => {
@@ -61,10 +59,10 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
         setOnlineCollaborators(collaborators);
       });
 
-      // Event 'join' dipanggil saat pengguna baru masuk
       channel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
         if (key === currentUser.id) return;
-        const newCollaborator = { ...(newPresences[0] as unknown as Omit<Collaborator, 'online'>), online: true };
+        const newPresence = newPresences[0] as unknown as PresencePayload;
+        const newCollaborator: Collaborator = { ...newPresence, online: true };
         setOnlineCollaborators(prev => {
           if (prev.some(c => c.id === newCollaborator.id)) {
             return prev;
@@ -73,14 +71,12 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
         });
       });
 
-      // Event 'leave' dipanggil saat pengguna keluar
       channel.on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
         if (key === currentUser.id) return;
-        const leftId = (leftPresences[0] as unknown as Collaborator).id;
-        setOnlineCollaborators(prev => prev.filter(c => c.id !== leftId));
+        const leftPresence = leftPresences[0] as unknown as PresencePayload;
+        setOnlineCollaborators(prev => prev.filter(c => c.id !== leftPresence.id));
       });
 
-      // Berlangganan ke channel dan lacak status pengguna saat ini
       channel.subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({
@@ -95,7 +91,6 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
 
     setupPresence();
 
-    // Membersihkan channel saat komponen dilepas
     return () => {
       if (channel) {
         supabase.removeChannel(channel);
