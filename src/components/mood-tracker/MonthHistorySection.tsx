@@ -85,17 +85,21 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
         <div className="grid grid-cols-7 gap-2 flex-1">
           {calendarDays}
         </div>
-        {mostFrequentMood && (
-          <Card className="flex flex-col items-center justify-center p-2 rounded-xl w-16 h-16 sm:w-20 sm:h-20 shrink-0">
-            <div 
-              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xl sm:text-2xl"
-              style={{ backgroundColor: mostFrequentMood.color }}
-            >
-              {mostFrequentMood.emoji}
-            </div>
-            <span className="font-bold text-xs sm:text-sm text-card-foreground">{averagePercentage}%</span>
-          </Card>
-        )}
+        <Card className="flex flex-col items-center justify-center p-2 rounded-xl w-16 h-16 sm:w-20 sm:h-20 shrink-0">
+          {mostFrequentMood ? (
+            <>
+              <div 
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xl sm:text-2xl"
+                style={{ backgroundColor: mostFrequentMood.color }}
+              >
+                {mostFrequentMood.emoji}
+              </div>
+              <span className="font-bold text-xs sm:text-sm text-card-foreground">{averagePercentage}%</span>
+            </>
+          ) : (
+            <span className="text-xs text-muted-foreground">No Data</span>
+          )}
+        </Card>
       </div>
     </div>
   );
