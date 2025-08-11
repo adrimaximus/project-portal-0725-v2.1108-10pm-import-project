@@ -55,6 +55,18 @@ const fetchDashboardProjects = async () => {
   })) as Project[];
 };
 
+const StatCard = ({ title, icon, isLoading, children }: { title: string, icon: React.ReactNode, isLoading: boolean, children: React.ReactNode }) => (
+    <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            {isLoading ? <Skeleton className="h-4 w-2/3" /> : <CardTitle className="text-sm font-medium">{title}</CardTitle>}
+            {isLoading ? <Skeleton className="h-4 w-4 rounded-full" /> : icon}
+        </CardHeader>
+        <CardContent>
+            {isLoading ? <Skeleton className="h-8 w-1/2" /> : children}
+        </CardContent>
+    </Card>
+);
+
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -147,23 +159,29 @@ const Index = () => {
                 <h2 className="text-2xl font-bold">Insights</h2>
                 <DateRangePicker date={date} onDateChange={setDate} />
             </div>
-            {isLoading ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <Card key={i}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-4" /></CardHeader><CardContent><Skeleton className="h-8 w-1/2" /></CardContent></Card>
-                ))}
-              </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Project Value</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{'Rp ' + stats.totalValue.toLocaleString('id-ID')}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Project Status</CardTitle><ListChecks className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="space-y-1 text-sm">{Object.entries(stats.projectStatusCounts).map(([status, count]) => (<div key={status} className="flex justify-between"><span>{status}</span><span className="font-semibold">{count}</span></div>))}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Payment Status</CardTitle><CreditCard className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="space-y-1 text-sm">{Object.entries(stats.paymentStatusCounts).map(([status, count]) => (<div key={status} className="flex justify-between"><span>{status}</span><span className="font-semibold">{count}</span></div>))}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Top Project Owner</CardTitle><User className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent>{stats.topOwner ? (<div className="flex items-center gap-4"><Avatar><AvatarImage src={stats.topOwner.avatar_url || undefined} alt={stats.topOwner.name} /><AvatarFallback>{stats.topOwner.initials}</AvatarFallback></Avatar><div><div className="text-lg font-bold">{stats.topOwner.name}</div><p className="text-xs text-muted-foreground">{stats.topOwner.projectCount} projects</p></div></div>) : (<div><div className="text-2xl font-bold">N/A</div><p className="text-xs text-muted-foreground">0 projects</p></div>)}</CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Most Collabs</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent>{stats.topCollaborator ? (<div className="flex items-center gap-4"><Avatar><AvatarImage src={stats.topCollaborator.avatar_url || undefined} alt={stats.topCollaborator.name} /><AvatarFallback>{stats.topCollaborator.initials}</AvatarFallback></Avatar><div><div className="text-lg font-bold">{stats.topCollaborator.name}</div><p className="text-xs text-muted-foreground">{stats.topCollaborator.projectCount} projects</p></div></div>) : (<div><div className="text-2xl font-bold">N/A</div><p className="text-xs text-muted-foreground">0 projects</p></div>)}</CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Top Contributor</CardTitle><TrendingUp className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent>{stats.topUserByValue ? (<div className="flex items-center gap-4"><Avatar><AvatarImage src={stats.topUserByValue.avatar_url || undefined} alt={stats.topUserByValue.name} /><AvatarFallback>{stats.topUserByValue.initials}</AvatarFallback></Avatar><div><div className="text-lg font-bold">{stats.topUserByValue.name}</div><p className="text-xs text-muted-foreground">{'Rp ' + stats.topUserByValue.totalValue.toLocaleString('id-ID')}</p></div></div>) : (<div><div className="text-2xl font-bold">N/A</div><p className="text-xs text-muted-foreground">No value</p></div>)}</CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Most Pending Payment</CardTitle><Hourglass className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent>{stats.topUserByPendingValue ? (<div className="flex items-center gap-4"><Avatar><AvatarImage src={stats.topUserByPendingValue.avatar_url || undefined} alt={stats.topUserByPendingValue.name} /><AvatarFallback>{stats.topUserByPendingValue.initials}</AvatarFallback></Avatar><div><div className="text-lg font-bold">{stats.topUserByPendingValue.name}</div><p className="text-xs text-muted-foreground">{'Rp ' + stats.topUserByPendingValue.pendingValue.toLocaleString('id-ID')}</p></div></div>) : (<div><div className="text-2xl font-bold">N/A</div><p className="text-xs text-muted-foreground">No pending payments</p></div>)}</CardContent></Card>
-              </div>
-            )}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <StatCard title="Total Project Value" icon={<DollarSign className="h-4 w-4 text-muted-foreground" />} isLoading={isLoading}>
+                    <div className="text-2xl font-bold">{'Rp ' + stats.totalValue.toLocaleString('id-ID')}</div>
+                </StatCard>
+                <StatCard title="Project Status" icon={<ListChecks className="h-4 w-4 text-muted-foreground" />} isLoading={isLoading}>
+                    <div className="space-y-1 text-sm">{Object.entries(stats.projectStatusCounts).map(([status, count]) => (<div key={status} className="flex justify-between"><span>{status}</span><span className="font-semibold">{count}</span></div>))}</div>
+                </StatCard>
+                <StatCard title="Payment Status" icon={<CreditCard className="h-4 w-4 text-muted-foreground" />} isLoading={isLoading}>
+                    <div className="space-y-1 text-sm">{Object.entries(stats.paymentStatusCounts).map(([status, count]) => (<div key={status} className="flex justify-between"><span>{status}</span><span className="font-semibold">{count}</span></div>))}</div>
+                </StatCard>
+                <StatCard title="Top Project Owner" icon={<User className="h-4 w-4 text-muted-foreground" />} isLoading={isLoading}>
+                    {stats.topOwner ? (<div className="flex items-center gap-4"><Avatar><AvatarImage src={stats.topOwner.avatar_url || undefined} alt={stats.topOwner.name} /><AvatarFallback>{stats.topOwner.initials}</AvatarFallback></Avatar><div><div className="text-lg font-bold">{stats.topOwner.name}</div><p className="text-xs text-muted-foreground">{stats.topOwner.projectCount} projects</p></div></div>) : (<div><div className="text-2xl font-bold">N/A</div><p className="text-xs text-muted-foreground">0 projects</p></div>)}
+                </StatCard>
+                <StatCard title="Most Collabs" icon={<Users className="h-4 w-4 text-muted-foreground" />} isLoading={isLoading}>
+                    {stats.topCollaborator ? (<div className="flex items-center gap-4"><Avatar><AvatarImage src={stats.topCollaborator.avatar_url || undefined} alt={stats.topCollaborator.name} /><AvatarFallback>{stats.topCollaborator.initials}</AvatarFallback></Avatar><div><div className="text-lg font-bold">{stats.topCollaborator.name}</div><p className="text-xs text-muted-foreground">{stats.topCollaborator.projectCount} projects</p></div></div>) : (<div><div className="text-2xl font-bold">N/A</div><p className="text-xs text-muted-foreground">0 projects</p></div>)}
+                </StatCard>
+                <StatCard title="Top Contributor" icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />} isLoading={isLoading}>
+                    {stats.topUserByValue ? (<div className="flex items-center gap-4"><Avatar><AvatarImage src={stats.topUserByValue.avatar_url || undefined} alt={stats.topUserByValue.name} /><AvatarFallback>{stats.topUserByValue.initials}</AvatarFallback></Avatar><div><div className="text-lg font-bold">{stats.topUserByValue.name}</div><p className="text-xs text-muted-foreground">{'Rp ' + stats.topUserByValue.totalValue.toLocaleString('id-ID')}</p></div></div>) : (<div><div className="text-2xl font-bold">N/A</div><p className="text-xs text-muted-foreground">No value</p></div>)}
+                </StatCard>
+                <StatCard title="Most Pending Payment" icon={<Hourglass className="h-4 w-4 text-muted-foreground" />} isLoading={isLoading}>
+                    {stats.topUserByPendingValue ? (<div className="flex items-center gap-4"><Avatar><AvatarImage src={stats.topUserByPendingValue.avatar_url || undefined} alt={stats.topUserByPendingValue.name} /><AvatarFallback>{stats.topUserByPendingValue.initials}</AvatarFallback></Avatar><div><div className="text-lg font-bold">{stats.topUserByPendingValue.name}</div><p className="text-xs text-muted-foreground">{'Rp ' + stats.topUserByPendingValue.pendingValue.toLocaleString('id-ID')}</p></div></div>) : (<div><div className="text-2xl font-bold">N/A</div><p className="text-xs text-muted-foreground">No pending payments</p></div>)}
+                </StatCard>
+            </div>
             <Card>
               <TooltipProvider>
                 <Collapsible open={isCollaboratorsOpen} onOpenChange={setIsCollaboratorsOpen}>
