@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import TagInput from './TagInput';
-import { getIconComponent, iconList } from '@/data/icons';
+import { getIconComponent, allIcons } from '@/data/icons';
 import { colors } from '@/data/colors';
 
 interface GoalFormDialogProps {
@@ -141,7 +141,7 @@ export default function GoalFormDialog({ open, onOpenChange, onGoalSaved, goalTo
     if (fetchError) {
         toast.error("Could not refetch the saved goal.");
     } else {
-        onGoalSaved(fullGoal);
+        onGoalSaved(fullGoal as Goal);
     }
 
     setIsSaving(false);
@@ -173,7 +173,7 @@ export default function GoalFormDialog({ open, onOpenChange, onGoalSaved, goalTo
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {iconList.map(iconName => {
+                  {allIcons.map(iconName => {
                     const ListItemIcon = getIconComponent(iconName);
                     return (
                       <SelectItem key={iconName} value={iconName}>

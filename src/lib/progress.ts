@@ -21,7 +21,7 @@ export const calculateProgress = (goal: Goal) => {
 
 export const getCompletionsForPeriod = (goal: Goal, period: 'today' | 'week' | 'month' | 'year') => {
   const now = new Date();
-  let interval: Interval;
+  let interval: { start: Date; end: Date; };
 
   switch (period) {
     case 'today':

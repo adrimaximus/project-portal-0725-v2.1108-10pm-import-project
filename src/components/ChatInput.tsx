@@ -6,12 +6,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Attachment } from "@/types";
 
 interface ChatInputProps {
-  onSendMessage: (text: string, attachment: Attachment | null) => void;
+  onSendMessage: (text: string, attachment: File | null) => void;
 }
 
 const ChatInput = ({ onSendMessage }: ChatInputProps) => {
   const [text, setText] = useState("");
-  const [attachment, setAttachment] = useState<Attachment | null>(null);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const { user: currentUser } = useAuth();
 
   const handleSend = () => {
@@ -24,11 +24,7 @@ const ChatInput = ({ onSendMessage }: ChatInputProps) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setAttachment({
-        name: file.name,
-        type: file.type.startsWith("image/") ? "image" : "file",
-        url: URL.createObjectURL(file),
-      });
+      setAttachment(file);
     }
   };
 

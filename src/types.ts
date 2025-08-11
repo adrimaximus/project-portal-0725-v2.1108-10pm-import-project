@@ -1,8 +1,9 @@
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 export type SupabaseSession = Session;
-export { SupabaseUser };
+export type { SupabaseUser };
 
+// This will be the main User type used across the app
 export interface User {
   id: string;
   name: string;
@@ -30,8 +31,9 @@ export interface MessageSender {
 }
 
 export interface Attachment {
-  file: File;
-  previewUrl: string;
+  name: string;
+  url: string;
+  type: 'image' | 'file';
 }
 
 export interface Message {
@@ -109,4 +111,68 @@ export interface GoogleCalendarEvent {
       projectId?: string;
     };
   };
+}
+
+// Project related types
+export type ProjectStatus = 'Requested' | 'In Progress' | 'Completed' | 'Billed' | 'On Hold' | 'Cancelled' | 'Done' | 'Not Started' | 'On Track' | 'At Risk' | 'Off Track';
+export type PaymentStatus = 'Proposed' | 'Approved' | 'PO Created' | 'On Process' | 'Pending' | 'Paid' | 'Cancelled' | 'Overdue' | 'Unpaid';
+
+export interface AssignedUser extends User {
+  role: 'owner' | 'member';
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  completed: boolean;
+  assignedTo: User[];
+  originTicketId?: string;
+}
+
+export interface Comment {
+  id: string;
+  text: string;
+  timestamp: string; // This is created_at
+  is_ticket: boolean;
+  author: User;
+  attachment?: Attachment;
+}
+
+export interface ProjectFile {
+    id: string;
+    name: string;
+    size: number;
+    type: string | null;
+    url: string;
+    storagePath: string;
+    uploadedAt: string;
+}
+
+export interface Activity {
+    id: string;
+    type: string;
+    user: { name: string };
+    details: { description: string };
+    timestamp: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  status: ProjectStatus;
+  progress: number;
+  budget: number | null;
+  startDate: string;
+  dueDate: string;
+  paymentStatus: PaymentStatus;
+  paymentDueDate?: string | null;
+  createdBy: User | null;
+  assignedTo: AssignedUser[];
+  tasks: Task[];
+  comments: Comment[];
+  activities: Activity[];
+  briefFiles: ProjectFile[];
+  services: string[];
 }

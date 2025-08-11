@@ -1,4 +1,4 @@
-import { AssignedUser } from '@/data/projects';
+import { AssignedUser } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 interface ProjectTeamProps {
@@ -13,7 +13,7 @@ const ProjectTeam = ({ team }: ProjectTeamProps) => {
         {team.map(member => (
           <div key={member.id} className="flex items-center">
             <Avatar>
-              <AvatarImage src={member.avatar} />
+              <AvatarImage src={member.avatar_url || undefined} />
               <AvatarFallback>{member.initials}</AvatarFallback>
             </Avatar>
             <div className="ml-2">

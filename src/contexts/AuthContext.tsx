@@ -6,18 +6,51 @@ interface AuthContextType {
   user: User | null;
   session: SupabaseSession | null;
   loading: boolean;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
+  logout: async () => {},
+  refreshUser: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', supabaseUser.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+      const fallbackUser: User = {
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        name: supabaseUser.user_metadata.full_name || supabaseUser.email || 'Anonymous',
+        avatar_url: supabaseUser.user_metadata.avatar_url || null,
+        first_name: supabaseUser.user_metadata.first_name || null,
+        last_name: supabaseUser.user_metadata.last_name || null,
+        initials: ((supabaseUser.user_metadata.first_name?.[0] || '') + (supabaseUser.user_metadata.last_name?.[0] || '')).toUpperCase() || 'NN',
+      };
+      setUser(fallbackUser);
+      return;
+    }
+
+    if (profile) {
+      const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Anonymous';
+      const initials = ((profile.first_name?.[0] || '') + (profile.last_name?.[0] || '')).toUpperCase() || 'NN';
+      setUser({ ...profile, name, initials });
+    }
+  };
 
   useEffect(() => {
     const getSession = async () => {
@@ -46,37 +79,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', supabaseUser.id)
-      .single();
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+  };
 
-    if (error) {
-      console.error('Error fetching profile:', error);
-      // Create a user object from Supabase auth data as a fallback
-      setUser({
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        name: supabaseUser.user_metadata.full_name || supabaseUser.email || 'Anonymous',
-        avatar_url: supabaseUser.user_metadata.avatar_url || null,
-        first_name: supabaseUser.user_metadata.first_name || null,
-        last_name: supabaseUser.user_metadata.last_name || null,
-        initials: ((supabaseUser.user_metadata.first_name?.[0] || '') + (supabaseUser.user_metadata.last_name?.[0] || '')).toUpperCase() || 'NN',
-      });
-      return;
-    }
-
-    if (profile) {
-      const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Anonymous';
-      const initials = ((profile.first_name?.[0] || '') + (profile.last_name?.[0] || '')).toUpperCase() || 'NN';
-      setUser({ ...profile, name, initials });
+  const refreshUser = async () => {
+    if (session?.user) {
+      await fetchUserProfile(session.user);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading }}>
+    <AuthContext.Provider value={{ user, session, loading, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

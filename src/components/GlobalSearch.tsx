@@ -1,7 +1,8 @@
 import { Search, Folder, User as UserIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { dummyProjects, Project, User } from "@/data/projects";
+import { dummyProjects, Project } from "@/data/projects";
+import { User } from "@/types";
 import {
   Command,
   CommandEmpty,
@@ -88,7 +89,7 @@ const GlobalSearch = () => {
                 {filteredProjects.map((project) => (
                   <CommandItem
                     key={project.id}
-                    onSelect={() => handleSelectProject(project.id)}
+                    onSelect={() => handleSelectProject(project.id.toString())}
                     value={`project-${project.name}`}
                     className="cursor-pointer"
                   >

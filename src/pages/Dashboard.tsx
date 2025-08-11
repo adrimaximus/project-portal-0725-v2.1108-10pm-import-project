@@ -30,7 +30,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-import { Project, ProjectStatus, PaymentStatus, AssignedUser, Task, Comment } from "@/data/projects";
+import { Project, ProjectStatus, PaymentStatus, AssignedUser, Task, Comment } from "@/types";
 import { toast } from "sonner";
 import StatusBadge from "@/components/StatusBadge";
 import AppSkeleton from "@/components/AppSkeleton";
@@ -254,7 +254,7 @@ const Index = () => {
                         {topOwner ? (
                             <div className="flex items-center gap-4">
                                 <Avatar>
-                                    <AvatarImage src={topOwner.avatar} alt={topOwner.name} />
+                                    <AvatarImage src={topOwner.avatar_url || undefined} alt={topOwner.name} />
                                     <AvatarFallback>{topOwner.initials}</AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -279,7 +279,7 @@ const Index = () => {
                         {topCollaborator ? (
                             <div className="flex items-center gap-4">
                                 <Avatar>
-                                    <AvatarImage src={topCollaborator.avatar} alt={topCollaborator.name} />
+                                    <AvatarImage src={topCollaborator.avatar_url || undefined} alt={topCollaborator.name} />
                                     <AvatarFallback>{topCollaborator.initials}</AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -304,7 +304,7 @@ const Index = () => {
                         {topUserByValue ? (
                             <div className="flex items-center gap-4">
                                 <Avatar>
-                                    <AvatarImage src={topUserByValue.avatar} alt={topUserByValue.name} />
+                                    <AvatarImage src={topUserByValue.avatar_url || undefined} alt={topUserByValue.name} />
                                     <AvatarFallback>{topUserByValue.initials}</AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -331,7 +331,7 @@ const Index = () => {
                         {topUserByPendingValue ? (
                             <div className="flex items-center gap-4">
                                 <Avatar>
-                                    <AvatarImage src={topUserByPendingValue.avatar} alt={topUserByPendingValue.name} />
+                                    <AvatarImage src={topUserByPendingValue.avatar_url || undefined} alt={topUserByPendingValue.name} />
                                     <AvatarFallback>{topUserByPendingValue.initials}</AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -363,7 +363,7 @@ const Index = () => {
                               <Tooltip key={c.id}>
                                 <TooltipTrigger asChild>
                                   <Avatar className="h-8 w-8 border-2 border-card">
-                                    <AvatarImage src={c.avatar} alt={c.name} />
+                                    <AvatarImage src={c.avatar_url || undefined} alt={c.name} />
                                     <AvatarFallback>{c.initials}</AvatarFallback>
                                   </Avatar>
                                 </TooltipTrigger>
@@ -395,7 +395,7 @@ const Index = () => {
                                           <TableCell>
                                               <div className="flex items-center gap-3">
                                                   <Avatar className="h-8 w-8">
-                                                      <AvatarImage src={c.avatar} alt={c.name} />
+                                                      <AvatarImage src={c.avatar_url || undefined} alt={c.name} />
                                                       <AvatarFallback>{c.initials}</AvatarFallback>
                                                   </Avatar>
                                                   <span className="font-medium whitespace-nowrap">{c.name}</span>
@@ -441,7 +441,7 @@ const Index = () => {
                       const totalTasks = project.tasks?.length || 0;
                       const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
                       const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : (project.progress || 0);
-                      const ticketCount = project.comments?.filter(comment => (comment as any).isTicket).length || 0;
+                      const ticketCount = project.comments?.filter(comment => (comment as any).is_ticket).length || 0;
 
                       return (
                         <TableRow
@@ -484,7 +484,7 @@ const Index = () => {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Avatar className="h-8 w-8 border-2 border-background">
-                                    <AvatarImage src={project.assignedTo[0].avatar} alt={project.assignedTo[0].name} />
+                                    <AvatarImage src={project.assignedTo[0].avatar_url || undefined} alt={project.assignedTo[0].name} />
                                     <AvatarFallback>{project.assignedTo[0].initials}</AvatarFallback>
                                   </Avatar>
                                 </TooltipTrigger>
@@ -500,7 +500,7 @@ const Index = () => {
                                 <Tooltip key={user.id}>
                                   <TooltipTrigger asChild>
                                     <Avatar className="h-8 w-8 border-2 border-background">
-                                      <AvatarImage src={user.avatar} alt={user.name} />
+                                      <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
                                       <AvatarFallback>{user.initials}</AvatarFallback>
                                     </Avatar>
                                   </TooltipTrigger>

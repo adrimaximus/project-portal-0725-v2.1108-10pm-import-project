@@ -1,4 +1,4 @@
-import { Project, AssignedUser, Comment, Task, ProjectFile } from "@/data/projects";
+import { Project, AssignedUser, Comment, Task, ProjectFile } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectComments from "@/components/ProjectComments";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +38,7 @@ const ProjectMainContent = ({
   onServicesChange,
 }: ProjectMainContentProps) => {
   const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
-  const ticketCount = project.comments?.filter(c => c.isTicket).length || 0;
+  const ticketCount = project.comments?.filter(c => c.is_ticket).length || 0;
 
   return (
     <Card>
@@ -67,12 +67,6 @@ const ProjectMainContent = ({
           <TabsContent value="overview">
             <ProjectOverviewTab
               project={project}
-              isEditing={isEditing}
-              onDescriptionChange={onDescriptionChange}
-              onTeamChange={onTeamChange}
-              onFilesAdd={onFilesAdd}
-              onFileDelete={onFileDelete}
-              onServicesChange={onServicesChange}
             />
           </TabsContent>
           <TabsContent value="tasks">

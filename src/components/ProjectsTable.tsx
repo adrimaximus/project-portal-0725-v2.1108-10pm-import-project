@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
+import { Project, ProjectStatus, PaymentStatus } from "@/types";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -63,7 +63,7 @@ const ProjectsTable = () => {
 
   const fetchProjects = async () => {
     setIsLoading(true);
-    const { data: projectsData, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.rpc('get_dashboard_projects');
 
     if (error) {
         toast.error("Failed to fetch projects.");
@@ -73,55 +73,17 @@ const ProjectsTable = () => {
         return;
     }
 
-    const userIds = [...new Set(projectsData.map(p => p.created_by).filter(Boolean))];
-    let profilesMap = new Map();
-
-    if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('*')
-            .in('id', userIds);
-
-        if (profilesError) {
-            toast.error("Failed to fetch project creator details.");
-            console.error(profilesError);
-        } else {
-            profilesMap = new Map(profilesData.map(p => [p.id, p]));
-        }
-    }
-
-    const mappedProjects: Project[] = projectsData.map(p => {
-        const profile = profilesMap.get(p.created_by);
-        const createdBy = profile ? {
-            id: profile.id,
-            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
-            email: profile.email,
-            avatar: profile.avatar_url,
-            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-        } : null;
-
-        return {
-            id: p.id,
-            name: p.name,
-            category: p.category,
-            description: p.description,
-            status: p.status as ProjectStatus,
-            progress: p.progress,
-            budget: p.budget,
-            startDate: p.start_date,
-            dueDate: p.due_date,
-            paymentStatus: p.payment_status as PaymentStatus,
-            createdBy: createdBy,
-            assignedTo: [],
-            tasks: [],
-            comments: [],
-            activities: [],
-            briefFiles: [],
-            services: p.services,
-        };
-    });
+    const mappedProjects: Project[] = data.map((p: any) => ({
+        ...p,
+        status: p.status as ProjectStatus,
+        paymentStatus: p.payment_status as PaymentStatus,
+        assignedTo: p.assignedTo || [],
+        tasks: p.tasks || [],
+        comments: p.comments || [],
+        createdBy: p.created_by,
+        startDate: p.start_date,
+        dueDate: p.due_date,
+    }));
 
     setLocalProjects(mappedProjects);
     setIsLoading(false);
