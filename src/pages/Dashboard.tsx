@@ -33,7 +33,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Project, ProjectStatus, PaymentStatus } from "@/types";
 import { toast } from "sonner";
 import StatusBadge from "@/components/StatusBadge";
-import DashboardSkeleton from "@/components/DashboardSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
@@ -50,7 +49,7 @@ const Index = () => {
 
   useEffect(() => {
     if (!user) {
-      setIsLoading(false);
+      if (!authLoading) setIsLoading(false);
       return;
     }
 
@@ -83,7 +82,7 @@ const Index = () => {
     };
 
     fetchProjects();
-  }, [user?.id]);
+  }, [user, authLoading]);
 
   const filteredProjects = useMemo(() => projects.filter(project => {
     if (date?.from) {
@@ -130,16 +129,21 @@ const Index = () => {
     return { totalValue, projectStatusCounts, paymentStatusCounts, topOwner, topCollaborator, topUserByValue, topUserByPendingValue, collaborators };
   }, [filteredProjects]);
 
-  if (authLoading) {
-    return <DashboardSkeleton />;
-  }
-
   return (
     <PortalLayout>
       <div className="space-y-8">
         <div className="text-left">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user?.name || 'there'}, have a good day! 👋</h1>
-          <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
+          {authLoading ? (
+            <>
+              <Skeleton className="h-10 w-3/4" />
+              <Skeleton className="h-6 w-1/2 mt-2" />
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user?.name || 'there'}, have a good day! 👋</h1>
+              <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
+            </>
+          )}
         </div>
 
         <div className="space-y-6">
