@@ -26,7 +26,6 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { googleLogout } from "@react-oauth/google";
 
 const PortalHeader = () => {
   const { user, logout } = useAuth();
@@ -74,7 +73,6 @@ const PortalHeader = () => {
   }, []);
 
   const handleLogout = () => {
-    googleLogout();
     logout();
     navigate('/login');
   };

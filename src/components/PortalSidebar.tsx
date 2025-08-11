@@ -23,7 +23,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { dummyNotifications } from "@/data/notifications";
 import { useFeatures } from "@/contexts/FeaturesContext";
-import { googleLogout } from "@react-oauth/google";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -47,7 +46,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { isFeatureEnabled } = useFeatures();
 
   const handleLogout = () => {
-    googleLogout();
     logout();
     navigate('/login');
   };
