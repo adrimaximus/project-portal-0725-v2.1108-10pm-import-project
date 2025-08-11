@@ -44,6 +44,7 @@ const ProjectDetailsForm = () => {
 
   return (
     <div className="space-y-4">
+      <h3 className="text-lg font-medium">Project Details</h3>
       <FormField
         control={control}
         name="name"
