@@ -24,7 +24,7 @@ const LoginPage = () => {
         <div className="flex flex-col justify-center items-center gap-2 text-center">
             <Package className="h-8 w-8" />
             <h1 className="text-2xl font-semibold">Client Portal</h1>
-            <p className="text-muted-foreground">Enter your email to receive a magic link</p>
+            <p className="text-muted-foreground">Sign in to your account to continue</p>
         </div>
         
         <Auth
@@ -33,8 +33,6 @@ const LoginPage = () => {
           providers={[]}
           theme="light"
           redirectTo={import.meta.env.VITE_SITE_URL}
-          view="magic_link"
-          showLinks={false}
         />
 
         <p className="px-8 text-center text-sm text-muted-foreground">
