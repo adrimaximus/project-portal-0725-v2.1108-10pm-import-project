@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Table,
@@ -73,10 +73,12 @@ const Index = () => {
     refetchOnWindowFocus: true,
   });
 
-  if (isError && !errorToastShown.current) {
-    toast.error("Gagal mengambil data proyek.");
-    errorToastShown.current = true;
-  }
+  useEffect(() => {
+    if (isError && !errorToastShown.current) {
+      toast.error("Gagal mengambil data proyek.");
+      errorToastShown.current = true;
+    }
+  }, [isError]);
 
   const filteredProjects = useMemo(() => projects.filter(project => {
     if (date?.from) {
