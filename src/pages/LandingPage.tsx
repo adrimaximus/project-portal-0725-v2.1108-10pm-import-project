@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Package, BarChart, Users, ListChecks, ArrowRight, CalendarCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import AppSkeleton from '@/components/AppSkeleton';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const LandingPage = () => {
   const { session, loading } = useAuth();
@@ -17,7 +17,7 @@ const LandingPage = () => {
   }, [session, loading, navigate]);
 
   if (loading) {
-    return <AppSkeleton />;
+    return <LoadingSpinner />;
   }
 
   const features = [

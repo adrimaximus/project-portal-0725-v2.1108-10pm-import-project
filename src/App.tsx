@@ -33,7 +33,7 @@ import GitHubPage from "./pages/integrations/GitHubPage";
 import SlackPage from "./pages/integrations/SlackPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
-import AppSkeleton from "./components/AppSkeleton";
+import LoadingSpinner from "./components/LoadingSpinner";
 
 const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, featureId?: string }) => {
   const { user, loading } = useAuth();
@@ -41,7 +41,7 @@ const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, fe
   const location = useLocation();
 
   if (loading) {
-    return <AppSkeleton />;
+    return <LoadingSpinner />;
   }
 
   if (!user) {
