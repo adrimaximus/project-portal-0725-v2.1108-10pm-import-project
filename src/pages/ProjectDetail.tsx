@@ -31,13 +31,8 @@ const ProjectDetail = () => {
 
     if (projectError || !projectData) {
       console.error("Error fetching project details:", projectError);
-      if (!project) { // Hanya navigasi jika data proyek belum ada sama sekali
-        toast.error('Project not found.');
-        navigate('/projects');
-      } else {
-        toast.error('Gagal menyegarkan detail proyek. Data yang ditampilkan mungkin sudah usang.');
-      }
-      setIsLoading(false);
+      toast.error('Project not found.');
+      navigate('/projects');
       return;
     }
 
@@ -300,12 +295,8 @@ const ProjectDetail = () => {
     await fetchProjectDetails();
   };
 
-  if (isLoading && !project) {
+  if (isLoading || !project) {
     return <PortalLayout><div>Loading project details...</div></PortalLayout>;
-  }
-  
-  if (!project) {
-    return <PortalLayout><div>Project not found.</div></PortalLayout>;
   }
 
   const projectToDisplay = isEditing && editedProject ? editedProject : project;
