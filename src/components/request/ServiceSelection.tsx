@@ -1,28 +1,39 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { services, Service } from "@/data/services";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface ServiceSelectionProps {
-  searchTerm: string;
-  onSearchTermChange: (term: string) => void;
-  selectedServices: Service[];
-  onServiceSelect: (service: Service) => void;
+  onContinue: (selectedServices: Service[]) => void;
 }
 
-const ServiceSelection = ({
-  searchTerm,
-  onSearchTermChange,
-  selectedServices,
-  onServiceSelect,
-}: ServiceSelectionProps) => {
+const ServiceSelection = ({ onContinue }: ServiceSelectionProps) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+
   const featuredService = services.find(
     (s) => s.title === "End to End Services"
   );
   const otherServices = services.filter(
     (s) => s.title !== "End to End Services"
   );
+
+  const handleServiceSelect = (service: Service) => {
+    setSelectedServices((prev) => {
+      if (service.title === "End to End Services") {
+        return [service];
+      }
+      const isSelected = prev.some((s) => s.title === service.title);
+      if (isSelected) {
+        return prev.filter((s) => s.title !== service.title);
+      } else {
+        return [...prev.filter(s => s.title !== "End to End Services"), service];
+      }
+    });
+  };
 
   const filteredServices = otherServices.filter(
     (service) =>
@@ -35,7 +46,7 @@ const ServiceSelection = ({
   };
 
   return (
-    <div className="space-y-4 pb-40">
+    <div className="space-y-4 pb-24">
       <h1 className="text-2xl font-bold tracking-tight">
         Project Support Request
       </h1>
@@ -49,7 +60,7 @@ const ServiceSelection = ({
           placeholder="Search support options..."
           className="pl-9"
           value={searchTerm}
-          onChange={(e) => onSearchTermChange(e.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
@@ -59,7 +70,7 @@ const ServiceSelection = ({
             "w-full hover:bg-muted/50 transition-colors cursor-pointer",
             isSelected(featuredService) && "ring-2 ring-primary"
           )}
-          onClick={() => onServiceSelect(featuredService)}
+          onClick={() => handleServiceSelect(featuredService)}
         >
           <CardContent className="p-6 flex items-center gap-6">
             <div
@@ -90,7 +101,7 @@ const ServiceSelection = ({
               "hover:bg-muted/50 transition-colors cursor-pointer h-full",
               isSelected(service) && "ring-2 ring-primary"
             )}
-            onClick={() => onServiceSelect(service)}
+            onClick={() => handleServiceSelect(service)}
           >
             <CardContent className="p-4 flex items-start gap-4">
               <div
@@ -107,6 +118,18 @@ const ServiceSelection = ({
             </CardContent>
           </Card>
         ))}
+      </div>
+      
+      <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm p-4 border-t lg:pl-[276px]">
+        <div className="max-w-6xl mx-auto flex justify-end">
+          <Button
+            size="lg"
+            onClick={() => onContinue(selectedServices)}
+            disabled={selectedServices.length === 0}
+          >
+            Continue
+          </Button>
+        </div>
       </div>
     </div>
   );
