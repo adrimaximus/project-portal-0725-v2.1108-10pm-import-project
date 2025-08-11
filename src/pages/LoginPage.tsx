@@ -32,7 +32,6 @@ const LoginPage = () => {
           appearance={{ theme: ThemeSupa }}
           providers={[]}
           theme="light"
-          redirectTo={import.meta.env.VITE_SITE_URL}
         />
 
         <p className="px-8 text-center text-sm text-muted-foreground">
