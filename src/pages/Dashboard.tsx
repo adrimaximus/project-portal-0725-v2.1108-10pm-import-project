@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Table,
@@ -35,6 +35,25 @@ import { toast } from "sonner";
 import StatusBadge from "@/components/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+
+const fetchDashboardProjects = async () => {
+  const { data, error } = await supabase.rpc('get_dashboard_projects');
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data.map((p: any) => ({
+    ...p,
+    status: p.status as ProjectStatus,
+    paymentStatus: p.payment_status as PaymentStatus,
+    assignedTo: p.assignedTo || [],
+    tasks: p.tasks || [],
+    comments: p.comments || [],
+    createdBy: p.created_by,
+    startDate: p.start_date,
+    dueDate: p.due_date,
+  })) as Project[];
+};
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
@@ -44,46 +63,20 @@ const Index = () => {
     to: new Date(),
   });
   const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(false);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const errorToastShown = useRef(false);
 
-  useEffect(() => {
-    if (!user) {
-      if (!authLoading) setIsLoading(false);
-      return;
-    }
+  const { data: projects = [], isLoading, isError } = useQuery({
+    queryKey: ['dashboardProjects'],
+    queryFn: fetchDashboardProjects,
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: true,
+  });
 
-    const fetchProjects = async () => {
-      setIsLoading(true);
-      const { data, error } = await supabase.rpc('get_dashboard_projects');
-
-      if (error) {
-        if (!errorToastShown.current) {
-          toast.error("Gagal mengambil data proyek.");
-          errorToastShown.current = true;
-        }
-        console.error(error);
-        setProjects([]);
-      } else {
-        const mappedProjects: Project[] = data.map((p: any) => ({
-          ...p,
-          status: p.status as ProjectStatus,
-          paymentStatus: p.payment_status as PaymentStatus,
-          assignedTo: p.assignedTo || [],
-          tasks: p.tasks || [],
-          comments: p.comments || [],
-          createdBy: p.created_by,
-          startDate: p.start_date,
-          dueDate: p.due_date,
-        }));
-        setProjects(mappedProjects);
-      }
-      setIsLoading(false);
-    };
-
-    fetchProjects();
-  }, [user, authLoading]);
+  if (isError && !errorToastShown.current) {
+    toast.error("Gagal mengambil data proyek.");
+    errorToastShown.current = true;
+  }
 
   const filteredProjects = useMemo(() => projects.filter(project => {
     if (date?.from) {
@@ -182,7 +175,7 @@ const Index = () => {
         <Card>
           <CardHeader><CardTitle>Projects</CardTitle></CardHeader>
           <CardContent className="p-0"><div className="overflow-x-auto"><TooltipProvider><Table><TableHeader><TableRow><TableHead className="w-[30%]">Project Name</TableHead><TableHead>Project Status</TableHead><TableHead>Payment Status</TableHead><TableHead>Project Progress</TableHead><TableHead>Tickets</TableHead><TableHead>Project Value</TableHead><TableHead>Project Due Date</TableHead><TableHead>Owner</TableHead><TableHead className="text-right">Team</TableHead></TableRow></TableHeader><TableBody>
-            {isLoading ? (
+            {isLoading && projects.length === 0 ? (
               <TableRow><TableCell colSpan={9} className="h-24 text-center">Memuat proyek...</TableCell></TableRow>
             ) : filteredProjects.length === 0 ? (
               <TableRow>
