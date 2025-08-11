@@ -2,12 +2,23 @@ import OpenAI from 'openai';
 import { Goal } from '@/types';
 import { Project } from '@/data/projects';
 
-const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+const getOpenAIClient = () => {
+  const apiKey = localStorage.getItem("openai_api_key");
+  if (!apiKey) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true,
+  });
+};
 
 export async function getAiInsightForGoal(goal: Goal): Promise<string> {
+  const openai = getOpenAIClient();
+  if (!openai) {
+    return "Kunci API OpenAI tidak ditemukan. Silakan hubungkan di halaman pengaturan.";
+  }
+
   const prompt = `
     As an expert productivity and wellness coach, provide a concise, actionable, and encouraging insight for the following goal.
     Keep the tone positive and motivational. The response should be a single paragraph, no more than 3-4 sentences.
@@ -33,6 +44,11 @@ export async function getAiInsightForGoal(goal: Goal): Promise<string> {
 }
 
 export async function getAiInsightForProject(project: Project): Promise<string> {
+    const openai = getOpenAIClient();
+    if (!openai) {
+      return "Kunci API OpenAI tidak ditemukan. Silakan hubungkan di halaman pengaturan.";
+    }
+
     const prompt = `
       As an expert project manager, provide a concise, actionable, and strategic insight for the following project.
       Focus on potential risks, opportunities, or next steps.

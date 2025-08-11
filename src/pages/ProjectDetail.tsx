@@ -88,7 +88,7 @@ const ProjectDetail = () => {
       text: c.text,
       timestamp: c.created_at,
       is_ticket: c.is_ticket,
-      attachment: c.attachment_url ? { name: c.attachment_name, url: c.attachment_url, type: 'file' } : undefined,
+      attachment: c.attachment_url ? { name: c.attachment_name, url: c.attachment_url, type: 'file' as const } : undefined,
       author: mapProfileToUser(c.author_id) as User,
     })).filter(c => c.author) || [];
     
