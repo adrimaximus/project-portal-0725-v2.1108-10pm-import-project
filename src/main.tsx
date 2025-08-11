@@ -9,8 +9,12 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-if (!GOOGLE_CLIENT_ID) {
-  console.error("Peringatan: Google Client ID tidak terdefinisi. Integrasi Google Calendar tidak akan berfungsi. Silakan atur VITE_GOOGLE_CLIENT_ID di file .env Anda.");
+if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === "YOUR_CLIENT_ID_HERE") {
+  console.error("======================================================================");
+  console.error("ERROR: Google Client ID is not configured correctly.");
+  console.error("Please ensure VITE_GOOGLE_CLIENT_ID is set in your .env file and you have rebuilt the application.");
+  console.error("Current value:", GOOGLE_CLIENT_ID);
+  console.error("======================================================================");
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
