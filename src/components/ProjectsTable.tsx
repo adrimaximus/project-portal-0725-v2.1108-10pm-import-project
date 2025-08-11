@@ -250,12 +250,24 @@ const ProjectsTable = () => {
       origin_event_id: originEventId,
     };
 
-    const { error } = await supabase.from('projects').insert([newProjectData]);
+    const { data: newProject, error } = await supabase.from('projects').insert([newProjectData]).select().single();
 
-    if (error) {
-        toast.error(`Failed to import "${event.summary}": ${error.message}`);
+    if (error || !newProject) {
+        toast.error(`Failed to import "${event.summary}": ${error?.message}`);
     } else {
-        toast.success(`"${event.summary}" imported as a new project.`);
+        // Explicitly add the creator to project_members
+        const { error: memberError } = await supabase.from('project_members').insert({
+            project_id: newProject.id,
+            user_id: user.id,
+            role: 'owner'
+        });
+
+        if (memberError) {
+            toast.error(`Project created, but failed to set you as owner: ${memberError.message}`);
+        } else {
+            toast.success(`"${event.summary}" imported as a new project.`);
+        }
+        
         setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
         fetchProjects();
     }
