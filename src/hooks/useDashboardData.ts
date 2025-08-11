@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Project, UserProfile } from '@/types';
+import { Project, User } from '@/types';
 import { toast } from 'sonner';
 
 export const useDashboardData = () => {
@@ -41,7 +41,7 @@ export const useDashboardData = () => {
     const totalValue = projects.reduce((acc, p) => acc + (p.budget || 0), 0);
     const completedProjects = projects.filter(p => p.status === 'Completed').length;
 
-    const allUsers = projects.reduce((acc: UserProfile[], project) => {
+    const allUsers = projects.reduce((acc: User[], project) => {
       const members = [project.createdBy, ...project.assignedTo];
       members.forEach(member => {
         if (member && !acc.some(u => u.id === member.id)) {
@@ -51,7 +51,7 @@ export const useDashboardData = () => {
       return acc;
     }, []);
 
-    const collaborators = projects.reduce((acc: UserProfile[], project) => {
+    const collaborators = projects.reduce((acc: User[], project) => {
       project.assignedTo?.forEach(member => {
         if (!acc.some(c => c.id === member.id)) {
           acc.push(member);
@@ -84,7 +84,7 @@ export const useDashboardData = () => {
 
     const totalTasks = projects.reduce((acc, p) => acc + (p.tasks?.length || 0), 0);
     const completedTasks = projects.reduce((acc, p) => acc + (p.tasks?.filter(t => t.completed).length || 0), 0);
-    const totalTickets = projects.reduce((acc, p) => acc + (p.comments?.filter(c => c.is_ticket).length || 0), 0);
+    const totalTickets = projects.reduce((acc, p) => acc + (p.comments?.filter(c => (c as any).is_ticket).length || 0), 0);
 
     const collaboratorCounts = projects.reduce((acc, p) => {
         p.assignedTo?.forEach(member => {
@@ -100,7 +100,7 @@ export const useDashboardData = () => {
 
     const userValue = projects.reduce((acc, p) => {
         const projectValue = p.budget || 0;
-        const members = [project.createdBy, ...p.assignedTo];
+        const members = [p.createdBy, ...p.assignedTo];
         members.forEach(member => {
             if (member?.id) {
                 acc[member.id] = (acc[member.id] || 0) + projectValue;
@@ -115,7 +115,7 @@ export const useDashboardData = () => {
     const userPendingValue = projects.reduce((acc, p) => {
         if (p.paymentStatus !== 'Paid') {
             const projectValue = p.budget || 0;
-            const members = [project.createdBy, ...p.assignedTo];
+            const members = [p.createdBy, ...p.assignedTo];
             members.forEach(member => {
                 if (member?.id) {
                     acc[member.id] = (acc[member.id] || 0) + projectValue;
