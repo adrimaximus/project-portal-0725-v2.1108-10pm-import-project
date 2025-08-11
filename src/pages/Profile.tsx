@@ -18,6 +18,8 @@ const Profile = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   if (!user) {
     return <PortalLayout><div>Loading...</div></PortalLayout>;
@@ -74,7 +76,24 @@ const Profile = () => {
   };
 
   const handlePasswordChange = async () => {
-    toast.info("Password change functionality is not yet implemented.");
+    if (newPassword.length < 8) {
+      toast.error("Password baru harus terdiri dari minimal 8 karakter.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Password baru tidak cocok.");
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      toast.error(`Gagal memperbarui password: ${error.message}`);
+    } else {
+      toast.success("Password berhasil diperbarui. Anda sekarang dapat login dengan password baru Anda.");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
   };
 
   const handleLogout = async () => {
@@ -136,16 +155,12 @@ const Profile = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
-              <Input id="current-password" type="password" />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="new-password">New Password</Label>
-              <Input id="new-password" type="password" />
+              <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
             </div>
              <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input id="confirm-password" type="password" />
+              <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
             </div>
             <Button onClick={handlePasswordChange}>Change Password</Button>
           </CardContent>
