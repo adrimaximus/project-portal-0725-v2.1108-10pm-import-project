@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -42,13 +41,12 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStatusStyles } from "@/lib/utils";
-import { fetchDashboardProjects } from "../queries/projects";
 
 interface CalendarEvent {
     id: string;
     summary: string;
     start: { dateTime?: string; date?: string; };
-    end: { dateTime?: string; date?:string; };
+    end: { dateTime?: string; date?: string; };
     htmlLink: string;
 }
 
@@ -56,24 +54,45 @@ type ViewMode = 'table' | 'list' | 'month' | 'calendar';
 
 const ProjectsTable = () => {
   const [view, setView] = useState<ViewMode>('table');
+  const [localProjects, setLocalProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
-  const { data: projects = [], isLoading, isError } = useQuery<Project[]>({
-    queryKey: ['dashboardProjects'],
-    queryFn: fetchDashboardProjects,
-    enabled: !!user,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  const fetchProjects = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase.rpc('get_dashboard_projects');
+
+    if (error) {
+        toast.error("Failed to refresh projects. Please try again.");
+        console.error("Error fetching dashboard projects:", error);
+        setIsLoading(false);
+        return;
+    }
+
+    const mappedProjects: Project[] = data.map((p: any) => ({
+        ...p,
+        status: p.status as ProjectStatus,
+        paymentStatus: p.payment_status as PaymentStatus,
+        assignedTo: p.assignedTo || [],
+        tasks: p.tasks || [],
+        comments: p.comments || [],
+        createdBy: p.created_by,
+        startDate: p.start_date,
+        dueDate: p.due_date,
+    }));
+
+    setLocalProjects(mappedProjects);
+    setIsLoading(false);
+  };
 
   useEffect(() => {
-    if (isError) {
-      toast.error("Failed to load projects. Please try again.");
+    if (user) {
+      fetchProjects();
     }
-  }, [isError]);
+  }, [user]);
 
   const refreshCalendarEvents = () => {
     const storedEvents = localStorage.getItem('googleCalendarEvents');
@@ -113,7 +132,7 @@ const ProjectsTable = () => {
 
   const filteredProjects = useMemo(() => {
     if (!dateRange || !dateRange.from) {
-      return projects;
+      return localProjects;
     }
 
     const fromDate = new Date(dateRange.from);
@@ -122,13 +141,12 @@ const ProjectsTable = () => {
     const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
     toDate.setHours(23, 59, 59, 999);
 
-    return projects.filter(project => {
-      if (!project.startDate || !project.dueDate) return false;
+    return localProjects.filter(project => {
       const projectStart = new Date(project.startDate);
       const projectEnd = new Date(project.dueDate);
       return projectStart <= toDate && projectEnd >= fromDate;
     });
-  }, [projects, dateRange]);
+  }, [localProjects, dateRange]);
 
   const filteredCalendarEvents = useMemo(() => {
     if (!dateRange || !dateRange.from) {
@@ -163,7 +181,7 @@ const ProjectsTable = () => {
   }, [calendarEvents, dateRange]);
 
   const handleDeleteProject = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
+    const project = localProjects.find(p => p.id === projectId);
     if (project) {
       setProjectToDelete(project);
     }
@@ -171,18 +189,17 @@ const ProjectsTable = () => {
 
   const confirmDelete = async () => {
     if (projectToDelete) {
-      const toastId = toast.loading(`Deleting project "${projectToDelete.name}"...`);
       const { error } = await supabase
         .from('projects')
         .delete()
         .eq('id', projectToDelete.id);
 
       if (error) {
-        toast.error(`Failed to delete project "${projectToDelete.name}".`, { id: toastId });
+        toast.error(`Failed to delete project "${projectToDelete.name}".`);
         console.error(error);
       } else {
-        toast.success(`Project "${projectToDelete.name}" has been deleted.`, { id: toastId });
-        queryClient.invalidateQueries({ queryKey: ['dashboardProjects'] });
+        toast.success(`Project "${projectToDelete.name}" has been deleted.`);
+        fetchProjects();
       }
       setProjectToDelete(null);
     }
@@ -194,13 +211,11 @@ const ProjectsTable = () => {
         return;
     }
 
-    const toastId = toast.loading(`Importing "${event.summary}"...`);
-
     const startDate = event.start.date || event.start.dateTime?.split('T')[0];
     const dueDate = event.end.date || event.end.dateTime?.split('T')[0] || startDate;
 
     if (!startDate) {
-        toast.error("Cannot import event without a start date.", { id: toastId });
+        toast.error("Cannot import event without a start date.");
         return;
     }
 
@@ -212,12 +227,12 @@ const ProjectsTable = () => {
         .maybeSingle();
 
     if (checkError) {
-        toast.error(`Error checking for existing project: ${checkError.message}`, { id: toastId });
+        toast.error(`Error checking for existing project: ${checkError.message}`);
         return;
     }
 
     if (existing) {
-        toast.info(`"${event.summary}" has already been imported.`, { id: toastId });
+        toast.info(`"${event.summary}" has already been imported.`);
         setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
         return;
     }
@@ -238,11 +253,23 @@ const ProjectsTable = () => {
     const { data: newProject, error } = await supabase.from('projects').insert([newProjectData]).select().single();
 
     if (error || !newProject) {
-        toast.error(`Failed to import "${event.summary}": ${error?.message}`, { id: toastId });
+        toast.error(`Failed to import "${event.summary}": ${error?.message}`);
     } else {
-        toast.success(`"${event.summary}" imported successfully.`, { id: toastId });
+        // Explicitly add the creator to project_members
+        const { error: memberError } = await supabase.from('project_members').insert({
+            project_id: newProject.id,
+            user_id: user.id,
+            role: 'owner'
+        });
+
+        if (memberError) {
+            toast.error(`Project created, but failed to set you as owner: ${memberError.message}`);
+        } else {
+            toast.success(`"${event.summary}" imported as a new project.`);
+        }
+        
         setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-        queryClient.invalidateQueries({ queryKey: ['dashboardProjects'] });
+        fetchProjects();
     }
   };
 
@@ -294,8 +321,8 @@ const ProjectsTable = () => {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div>Start: {project.startDate ? format(new Date(project.startDate), 'MMM d, yyyy') : 'N/A'}</div>
-                        <div className="text-muted-foreground">Due: {project.dueDate ? format(new Date(project.dueDate), 'MMM d, yyyy') : 'N/A'}</div>
+                        <div>Start: {format(new Date(project.startDate), 'MMM d, yyyy')}</div>
+                        <div className="text-muted-foreground">Due: {format(new Date(project.dueDate), 'MMM d, yyyy')}</div>
                       </div>
                     </TableCell>
                     <TableCell>

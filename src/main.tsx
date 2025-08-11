@@ -6,7 +6,6 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { FeaturesProvider } from './contexts/FeaturesContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -18,20 +17,16 @@ if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === "YOUR_CLIENT_ID_HERE") {
   console.error("======================================================================");
 }
 
-const queryClient = new QueryClient();
-
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID || ""}>
-          <AuthProvider>
-            <FeaturesProvider>
-              <App />
-            </FeaturesProvider>
-          </AuthProvider>
-        </GoogleOAuthProvider>
-      </QueryClientProvider>
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID || ""}>
+        <AuthProvider>
+          <FeaturesProvider>
+            <App />
+          </FeaturesProvider>
+        </AuthProvider>
+      </GoogleOAuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );
