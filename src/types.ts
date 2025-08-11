@@ -1,85 +1,73 @@
-import { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+
+export type SupabaseSession = Session;
+export { SupabaseUser };
 
 export interface User {
   id: string;
-  email?: string;
   name: string;
-  avatar?: string;
+  email: string;
+  avatar_url: string | null;
+  first_name: string | null;
+  last_name: string | null;
   initials: string;
-  first_name?: string;
-  last_name?: string;
-  role?: string;
 }
 
 export interface Collaborator {
   id: string;
   name: string;
+  email: string;
+  avatar: string | null;
   initials: string;
-  online: boolean;
-  avatar?: string;
+  online?: boolean;
+}
+
+export interface MessageSender {
+    id: string;
+    name: string;
+    avatar: string | null;
+    initials: string;
 }
 
 export interface Attachment {
-  name:string;
-  type: 'image' | 'file';
-  url: string;
+  file: File;
+  previewUrl: string;
 }
 
 export interface Message {
   id: string;
-  sender: User | Collaborator;
-  text: string;
-  timestamp: string;
-  attachment?: Attachment | null;
+  content: string;
+  createdAt: string;
+  sender: MessageSender;
+  attachment_url?: string;
+  attachment_name?: string;
+  attachment_type?: string;
 }
 
 export interface Conversation {
   id: string;
-  userName: string;
-  userAvatar?: string;
-  lastMessage: string;
-  lastMessageTimestamp: string;
-  unreadCount: number;
-  messages: Message[];
-  isGroup?: boolean;
-  members?: Collaborator[];
+  isGroup: boolean;
+  groupName?: string | null;
+  userName?: string | null;
+  userAvatar?: string | null;
+  lastMessage?: string | null;
+  lastMessageTimestamp?: string;
+  participants: Collaborator[];
 }
-
-export interface GoogleCalendarEvent {
-  id: string;
-  summary: string;
-  status: string;
-  start: {
-    dateTime: string;
-    date?: string;
-  };
-  end: {
-    dateTime: string;
-    date?: string;
-  };
-}
-
-export interface GoogleCalendarListEntry {
-  id: string;
-  summary: string;
-  backgroundColor: string;
-  foregroundColor: string;
-  selected?: boolean;
-}
-
-// Types for Goals Feature
-export type GoalType = 'quantity' | 'value' | 'frequency';
-export type GoalPeriod = 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
 
 export interface Tag {
-    id: string;
-    name: string;
-    color: string;
+  id: string;
+  name: string;
+  color: string;
 }
+
+export type GoalType = 'quantity' | 'value';
+export type GoalPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
+export type DayOfWeek = 'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat';
 
 export interface GoalCompletion {
   id: string;
-  date: string; // ISO 8601 date string
+  date: string; // ISO string
   value: number;
   notes?: string;
   userId: string;
@@ -89,21 +77,36 @@ export interface Goal {
   id: string;
   slug: string;
   title: string;
-  description: string;
+  description?: string;
   icon: string;
-  iconUrl?: string;
+  icon_url?: string;
   color: string;
   type: GoalType;
-  targetQuantity?: number;
-  targetValue?: number;
-  frequency: 'Daily' | 'Weekly';
-  targetPeriod?: GoalPeriod;
+  target_quantity?: number;
+  target_value?: number;
+  frequency?: 'daily' | 'specific_days';
+  target_period?: GoalPeriod;
   unit?: string;
+  specific_days?: DayOfWeek[];
   collaborators: User[];
   completions: GoalCompletion[];
   tags: Tag[];
-  specificDays: string[];
 }
 
-
-export type { SupabaseSession, SupabaseUser };
+export interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  start: {
+    dateTime: string;
+    timeZone: string;
+  };
+  end: {
+    dateTime: string;
+    timeZone: string;
+  };
+  extendedProperties?: {
+    private?: {
+      projectId?: string;
+    };
+  };
+}

@@ -1,64 +1,51 @@
 import { Goal } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import GoalIcon from './GoalIcon';
 import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getProgress } from '@/lib/progress';
+import { Badge } from '@/components/ui/badge';
+import GoalIcon from './GoalIcon';
+import { calculateProgress } from '@/lib/progress';
 import { Link } from 'react-router-dom';
 
-const GoalCard = ({ goal }: { goal: Goal }) => {
-  const { percentage, current, target } = getProgress(goal);
+interface GoalCardProps {
+  goal: Goal;
+}
+
+export default function GoalCard({ goal }: GoalCardProps) {
+  const { percentage, currentValue } = calculateProgress(goal);
 
   return (
-    <Link to={`/goals/${goal.slug}`} className="block group">
-      <Card className="h-full flex flex-col transition-all duration-200 group-hover:shadow-lg group-hover:-translate-y-1 cursor-pointer">
-        <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
-          <GoalIcon goal={goal} className="w-16 h-16 flex-shrink-0" />
-          <div className="flex-grow overflow-hidden">
-            <h3 className="text-lg font-bold leading-tight truncate">{goal.title}</h3>
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{goal.description}</p>
+    <Link to={`/goals/${goal.slug}`}>
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <GoalIcon goal={goal} className="w-8 h-8" />
+            <h3 className="text-lg font-semibold truncate">{goal.title}</h3>
           </div>
         </CardHeader>
-        <CardContent className="flex-grow" />
-        <CardFooter className="flex flex-col items-stretch gap-4 pt-0">
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs font-semibold text-muted-foreground tracking-wider">PROGRESS</span>
-              <span className="text-sm font-bold" style={{ color: goal.color }}>{percentage.toFixed(0)}%</span>
+        <CardContent>
+          <p className="text-sm text-muted-foreground h-10 overflow-hidden">{goal.description}</p>
+          <div className="mt-4">
+            <div className="flex justify-between text-sm mb-1">
+              <span>Progress</span>
+              <span>
+                {goal.type === 'quantity'
+                  ? `${currentValue} / ${goal.target_quantity}`
+                  : `$${currentValue.toFixed(2)} / $${goal.target_value?.toFixed(2)}`}
+              </span>
             </div>
-            <Progress value={percentage} className="h-2" indicatorStyle={{ backgroundColor: goal.color }} />
-            {target > 0 && (
-              <p className="text-xs text-right text-muted-foreground mt-1">{current.toLocaleString()} / {target.toLocaleString()} {goal.unit || ''}</p>
-            )}
+            <Progress value={percentage} />
           </div>
-          
-          {goal.collaborators && goal.collaborators.length > 0 && (
-            <div className="flex items-center justify-between pt-3 border-t">
-              <span className="text-xs font-semibold text-muted-foreground tracking-wider">TEAM</span>
-              <div className="flex -space-x-2">
-                <TooltipProvider delayDuration={100}>
-                  {goal.collaborators.map(user => (
-                    <Tooltip key={user.id}>
-                      <TooltipTrigger asChild>
-                        <Avatar className="h-7 w-7 border-2 border-background">
-                          <AvatarImage src={user.avatar} alt={user.name} />
-                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{user.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                </TooltipProvider>
-              </div>
-            </div>
-          )}
+        </CardContent>
+        <CardFooter>
+          <div className="flex flex-wrap gap-2">
+            {goal.tags.map(tag => (
+              <Badge key={tag.id} style={{ backgroundColor: tag.color, color: 'white' }}>
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
         </CardFooter>
       </Card>
     </Link>
   );
-};
-
-export default GoalCard;
+}

@@ -1,116 +1,54 @@
 import { useState, useMemo } from 'react';
 import { Goal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, differenceInDays } from 'date-fns';
+import { Check, Plus, Minus } from 'lucide-react';
+import { getCompletionsForPeriod } from '@/lib/progress';
 import { toast } from 'sonner';
-import { formatNumber } from '@/lib/formatting';
-import GoalLogTable from './GoalLogTable';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface GoalQuantityTrackerProps {
   goal: Goal;
-  onLogProgress: (date: Date, value: number) => void;
+  onCompletionLogged: (completion: any) => void;
 }
 
-const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) => {
-  const [logValue, setLogValue] = useState<number | ''>('');
+export default function GoalQuantityTracker({ goal, onCompletionLogged }: GoalQuantityTrackerProps) {
+  const { user } = useAuth();
+  const todaysCompletions = useMemo(() => getCompletionsForPeriod(goal, 'today'), [goal]);
+  const [todaysCount, setTodaysCount] = useState(todaysCompletions.length);
 
-  const { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, quantityToGo } = useMemo(() => {
-    const today = new Date();
-    let periodStart, periodEnd, periodName;
+  const handleLog = async () => {
+    if (!user) return;
+    const { data, error } = await supabase.from('goal_completions').insert({
+      goal_id: goal.id,
+      user_id: user.id,
+      date: new Date().toISOString(),
+      value: 1,
+    }).select().single();
 
-    if (goal.targetPeriod === 'Weekly') {
-      periodStart = startOfWeek(today, { weekStartsOn: 1 });
-      periodEnd = endOfWeek(today, { weekStartsOn: 1 });
-      periodName = "this week";
-    } else { // Monthly
-      periodStart = startOfMonth(today);
-      periodEnd = endOfMonth(today);
-      periodName = "this month";
-    }
-
-    const daysRemaining = differenceInDays(periodEnd, today);
-
-    const logsInPeriod = goal.completions.filter(c => {
-      const completionDate = parseISO(c.date);
-      return isWithinInterval(completionDate, { start: periodStart, end: periodEnd });
-    });
-
-    const currentPeriodTotal = logsInPeriod.reduce((sum, c) => sum + c.value, 0);
-    const periodProgress = goal.targetQuantity ? Math.round((currentPeriodTotal / goal.targetQuantity) * 100) : 0;
-    const quantityToGo = Math.max(0, (goal.targetQuantity || 0) - currentPeriodTotal);
-    
-    return { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, quantityToGo };
-  }, [goal]);
-
-  const handleLog = () => {
-    const value = Number(logValue);
-    if (value > 0) {
-      onLogProgress(new Date(), value);
-      toast.success(`Logged ${formatNumber(value)} for "${goal.title}"`);
-      setLogValue('');
+    if (error) {
+      toast.error(`Failed to log completion: ${error.message}`);
     } else {
-      toast.error("Please enter a valid number.");
-    }
-  };
-
-  const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
-    const sanitizedValue = rawValue.replace(/,/g, '');
-
-    if (sanitizedValue === '') {
-      setLogValue('');
-      return;
-    }
-
-    const numValue = parseInt(sanitizedValue, 10);
-    if (!isNaN(numValue)) {
-      setLogValue(numValue);
+      toast.success("Completion logged!");
+      setTodaysCount(prev => prev + 1);
+      onCompletionLogged(data);
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <CardTitle>Progress {periodName}</CardTitle>
-          {daysRemaining >= 0 && (
-            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-              {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left
-            </span>
-          )}
-        </div>
+        <CardTitle>Today's Progress</CardTitle>
         <CardDescription>
-          You've completed {formatNumber(currentPeriodTotal)} of {formatNumber(goal.targetQuantity || 0)}.
-          {quantityToGo > 0 ? (
-            <span className="font-medium"> {formatNumber(quantityToGo)} to go.</span>
-          ) : (
-            <span className="font-medium text-green-600"> Target met!</span>
-          )}
+          You've completed this {todaysCount} time(s) today.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-4">
-          <Progress value={periodProgress} style={{ '--primary-color': goal.color } as React.CSSProperties} className="h-3 [&>*]:bg-[var(--primary-color)]" />
-          <span className="font-bold text-lg">{periodProgress}%</span>
-        </div>
-        <div className="flex gap-2 mt-4">
-          <Input
-            type="text"
-            inputMode="numeric"
-            placeholder="Log progress..."
-            value={logValue !== '' ? formatNumber(logValue) : ''}
-            onChange={handleNumericInputChange}
-            onKeyPress={(e) => e.key === 'Enter' && handleLog()}
-          />
-          <Button onClick={handleLog}>Log</Button>
-        </div>
-        <GoalLogTable logs={logsInPeriod} goalType={goal.type} />
+      <CardContent className="flex items-center justify-center">
+        <Button size="lg" onClick={handleLog}>
+          <Check className="mr-2 h-5 w-5" /> Log Completion
+        </Button>
       </CardContent>
     </Card>
   );
-};
-
-export default GoalQuantityTracker;
+}

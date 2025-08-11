@@ -1,328 +1,267 @@
 import { useState, useEffect } from 'react';
-import { Goal, GoalType, GoalPeriod, Tag } from '@/types';
+import { Goal, GoalType, GoalPeriod, Tag, DayOfWeek } from '@/types';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import ColorPicker from './ColorPicker';
-import { Textarea } from '@/components/ui/textarea';
-import { TagInput } from './TagInput';
-import { v4 as uuidv4 } from 'uuid';
-import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import IconPicker from './IconPicker';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import TagInput from './TagInput';
+import { getIconComponent, iconList } from '@/data/icons';
+import { colors } from '@/data/colors';
 
 interface GoalFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-  onGoalUpdate?: (updatedGoal: Goal) => void;
-  goal?: Goal | null;
+  onGoalSaved: (goal: Goal) => void;
+  goalToEdit?: Goal | null;
 }
 
-const weekDays = [
-  { label: 'S', value: 'Su' },
-  { label: 'M', value: 'Mo' },
-  { label: 'T', value: 'Tu' },
-  { label: 'W', value: 'We' },
-  { label: 'T', value: 'Th' },
-  { label: 'F', value: 'Fr' },
-  { label: 'S', value: 'Sa' },
-];
+const weekDays: DayOfWeek[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: GoalFormDialogProps) => {
-  const isEditMode = !!goal;
+export default function GoalFormDialog({ open, onOpenChange, onGoalSaved, goalToEdit }: GoalFormDialogProps) {
   const { user } = useAuth();
-
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [type, setType] = useState<GoalType>('frequency');
-  const [frequency, setFrequency] = useState<Goal['frequency']>('Daily');
-  const [specificDays, setSpecificDays] = useState<string[]>([]);
-  const [targetQuantity, setTargetQuantity] = useState<number | undefined>(undefined);
-  const [targetPeriod, setTargetPeriod] = useState<GoalPeriod>('Monthly');
-  const [targetValue, setTargetValue] = useState<number | undefined>(undefined);
-  const [unit, setUnit] = useState<string>('');
-  const [color, setColor] = useState('#BFDBFE');
   const [icon, setIcon] = useState('Target');
+  const [color, setColor] = useState('#3b82f6');
+  const [type, setType] = useState<GoalType>('quantity');
+  const [targetQuantity, setTargetQuantity] = useState<number | ''>('');
+  const [targetValue, setTargetValue] = useState<number | ''>('');
+  const [unit, setUnit] = useState('');
+  const [frequency, setFrequency] = useState<'daily' | 'specific_days'>('daily');
+  const [specificDays, setSpecificDays] = useState<DayOfWeek[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const fetchTags = async () => {
-        if (!user) return;
-        const { data } = await supabase.from('tags').select('*').eq('user_id', user.id);
-        if (data) setAllTags(data);
-    };
-
-    if (open) {
-      fetchTags();
-      if (isEditMode && goal) {
-        setTitle(goal.title);
-        setDescription(goal.description || '');
-        setType(goal.type);
-        setFrequency(goal.frequency);
-        setSpecificDays(goal.specificDays);
-        setTargetQuantity(goal.targetQuantity);
-        setTargetPeriod(goal.targetPeriod || 'Monthly');
-        setTargetValue(goal.targetValue);
-        setUnit(goal.unit || '');
-        setColor(goal.color);
-        setIcon(goal.icon);
-        setTags(goal.tags);
-      } else {
-        setTitle('');
-        setDescription('');
-        setType('frequency');
-        setFrequency('Daily');
-        setSpecificDays([]);
-        setTargetQuantity(undefined);
-        setTargetPeriod('Monthly');
-        setUnit('');
-        setColor('#BFDBFE');
-        setIcon('Target');
-        setTags([]);
-      }
+    if (goalToEdit) {
+      setTitle(goalToEdit.title);
+      setDescription(goalToEdit.description || '');
+      setIcon(goalToEdit.icon);
+      setColor(goalToEdit.color);
+      setType(goalToEdit.type);
+      setTargetQuantity(goalToEdit.target_quantity || '');
+      setTargetValue(goalToEdit.target_value || '');
+      setUnit(goalToEdit.unit || '');
+      setFrequency(goalToEdit.frequency || 'daily');
+      setSpecificDays(goalToEdit.specific_days || []);
+      setTags(goalToEdit.tags || []);
+    } else {
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setIcon('Target');
+      setColor('#3b82f6');
+      setType('quantity');
+      setTargetQuantity('');
+      setTargetValue('');
+      setUnit('');
+      setFrequency('daily');
+      setSpecificDays([]);
+      setTags([]);
     }
-  }, [goal, open, isEditMode, user]);
+  }, [goalToEdit, open]);
 
-  const handleTagCreate = (tagName: string): Tag => {
-    const newTag: Tag = {
-      id: uuidv4(),
-      name: tagName,
-      color: color,
+  useEffect(() => {
+    const fetchTags = async () => {
+      if (!user) return;
+      const { data, error } = await supabase.from('tags').select('*').eq('user_id', user.id);
+      if (error) {
+        toast.error("Failed to load tags.");
+      } else {
+        setAllTags(data);
+      }
     };
-    setAllTags(prev => [...prev, newTag]);
-    return newTag;
-  };
+    fetchTags();
+  }, [user]);
 
   const handleSave = async () => {
-    if (!title) {
-      toast.error("Please enter a title for your goal.");
-      return;
-    }
     if (!user) {
-      toast.error("You must be logged in to create a goal.");
+      toast.error("You must be logged in to save a goal.");
       return;
     }
-    
+    if (!title) {
+      toast.error("Title is required.");
+      return;
+    }
     setIsSaving(true);
 
-    if (isEditMode && onGoalUpdate && goal) {
-      const updatedGoalData: Goal = {
-        ...goal,
-        title, description, type, frequency,
-        specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
-        targetQuantity, targetPeriod, targetValue, unit, color, tags,
-        icon,
-        iconUrl: undefined,
-      };
-      onGoalUpdate(updatedGoalData);
-      setIsSaving(false);
-    } else if (!isEditMode) {
-      try {
-        const goalInsertData = {
-          title,
-          description,
-          icon,
-          icon_url: null,
-          color,
-          type,
-          frequency,
-          specific_days: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
-          target_quantity: targetQuantity,
-          target_period: targetPeriod,
-          target_value: targetValue,
-          unit,
-        };
+    const goalData = {
+      user_id: user.id,
+      title,
+      description,
+      icon,
+      color,
+      type,
+      target_quantity: type === 'quantity' ? Number(targetQuantity) || null : null,
+      target_value: type === 'value' ? Number(targetValue) || null : null,
+      unit: type === 'value' ? unit : null,
+      frequency,
+      specific_days: frequency === 'specific_days' ? specificDays : null,
+    };
 
-        const { data: newGoal, error: goalError } = await supabase
-          .from('goals')
-          .insert({ ...goalInsertData, user_id: user.id })
-          .select()
-          .single();
-
-        if (goalError) throw goalError;
-
-        if (tags && tags.length > 0) {
-          const { data: existingTagsData } = await supabase.from('tags').select('name').eq('user_id', user.id);
-          const existingTagNames = new Set(existingTagsData?.map(t => t.name));
-          const newTagsToCreate = tags.filter(t => !existingTagNames.has(t.name));
-          
-          if (newTagsToCreate.length > 0) {
-            const newTagsForDb = newTagsToCreate.map(t => ({ name: t.name, color: t.color, user_id: user.id }));
-            await supabase.from('tags').insert(newTagsForDb);
-          }
-
-          const { data: allRelevantTags } = await supabase.from('tags').select('id, name').in('name', tags.map(t => t.name));
-
-          if (allRelevantTags) {
-            const goalTagsToInsert = allRelevantTags.map(t => ({ goal_id: newGoal.id, tag_id: t.id }));
-            await supabase.from('goal_tags').insert(goalTagsToInsert);
-          }
-        }
-
-        toast.success(`Goal "${newGoal.title}" created!`);
-        onSuccess();
-        onOpenChange(false);
-      } catch (error: any) {
-        toast.error(`Failed to create goal: ${error.message}`);
-        console.error("Goal creation failed:", error);
-      } finally {
+    let savedGoal;
+    if (goalToEdit) {
+      const { data, error } = await supabase.from('goals').update(goalData).eq('id', goalToEdit.id).select().single();
+      if (error) {
+        toast.error(`Failed to update goal: ${error.message}`);
         setIsSaving(false);
+        return;
+      }
+      savedGoal = data;
+    } else {
+      const { data, error } = await supabase.from('goals').insert(goalData).select().single();
+      if (error) {
+        toast.error(`Failed to create goal: ${error.message}`);
+        setIsSaving(false);
+        return;
+      }
+      savedGoal = data;
+    }
+
+    // Handle tags
+    const { error: deleteError } = await supabase.from('goal_tags').delete().eq('goal_id', savedGoal.id);
+    if (deleteError) {
+      toast.error(`Failed to update tags: ${deleteError.message}`);
+    } else {
+      const newGoalTags = tags.map(t => ({ goal_id: savedGoal.id, tag_id: t.id }));
+      const { error: insertError } = await supabase.from('goal_tags').insert(newGoalTags);
+      if (insertError) {
+        toast.error(`Failed to save tags: ${insertError.message}`);
       }
     }
-  };
 
-  const handleNumericInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>, 
-    setter: (value: number | undefined) => void
-  ) => {
-    const rawValue = e.target.value;
-    const sanitizedValue = rawValue.replace(/,/g, '');
-
-    if (sanitizedValue === '') {
-      setter(undefined);
-      return;
+    // Refetch the full goal to return
+    const { data: fullGoal, error: fetchError } = await supabase.rpc('get_user_goals').eq('id', savedGoal.id).single();
+    if (fetchError) {
+        toast.error("Could not refetch the saved goal.");
+    } else {
+        onGoalSaved(fullGoal);
     }
 
-    const numValue = parseInt(sanitizedValue, 10);
-    if (!isNaN(numValue)) {
-      setter(numValue);
-    }
+    setIsSaving(false);
+    onOpenChange(false);
   };
+
+  const IconComponent = getIconComponent(icon);
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isSaving && onOpenChange(isOpen)}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Goal' : 'Create a New Goal'}</DialogTitle>
+          <DialogTitle>{goalToEdit ? 'Edit Goal' : 'Create New Goal'}</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4 max-h-[80vh] overflow-y-auto pr-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="title" className="text-right">Title</Label>
-            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} className="col-span-3" placeholder="e.g., Drink more water" />
+        <div className="space-y-4 py-4">
+          <Input placeholder="Goal Title (e.g., Read 52 books)" value={title} onChange={e => setTitle(e.target.value)} />
+          <Textarea placeholder="Description (optional)" value={description} onChange={e => setDescription(e.target.value)} />
+          
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="text-sm font-medium">Icon</label>
+              <Select value={icon} onValueChange={setIcon}>
+                <SelectTrigger>
+                  <SelectValue>
+                    <div className="flex items-center gap-2">
+                      <IconComponent style={{ color }} />
+                      {icon}
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {iconList.map(iconName => {
+                    const ListItemIcon = getIconComponent(iconName);
+                    return (
+                      <SelectItem key={iconName} value={iconName}>
+                        <div className="flex items-center gap-2">
+                          <ListItemIcon />
+                          {iconName}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium">Color</label>
+              <div className="grid grid-cols-6 gap-2 mt-2">
+                {colors.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setColor(c)}
+                    className={`w-8 h-8 rounded-full ${color === c ? 'ring-2 ring-offset-2 ring-primary' : ''}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="description" className="text-right">Description</Label>
-            <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="col-span-3" placeholder="Why is this goal important?" />
+
+          <div>
+            <label className="text-sm font-medium">Type</label>
+            <Select value={type} onValueChange={(v) => setType(v as GoalType)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="quantity">Quantity (e.g., complete 10 times)</SelectItem>
+                <SelectItem value="value">Value (e.g., save $1000)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Type</Label>
-            <RadioGroup value={type} onValueChange={(v) => setType(v as GoalType)} className="col-span-3 flex gap-4">
-              <div className="flex items-center space-x-2"><RadioGroupItem value="frequency" id="r1" /><Label htmlFor="r1">Frequency</Label></div>
-              <div className="flex items-center space-x-2"><RadioGroupItem value="quantity" id="r2" /><Label htmlFor="r2">Quantity</Label></div>
-              <div className="flex items-center space-x-2"><RadioGroupItem value="value" id="r3" /><Label htmlFor="r3">Value</Label></div>
-            </RadioGroup>
-          </div>
-          {type === 'frequency' ? (
-            <>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="frequency" className="text-right">Frequency</Label>
-                <Select value={frequency} onValueChange={(value) => setFrequency(value as Goal['frequency'])}>
-                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select frequency" /></SelectTrigger>
+
+          {type === 'quantity' && (
+            <div className="space-y-4">
+              <Input type="number" placeholder="Target Quantity" value={targetQuantity} onChange={e => setTargetQuantity(Number(e.target.value))} />
+              <div>
+                <label className="text-sm font-medium">Frequency</label>
+                <Select value={frequency} onValueChange={(v) => setFrequency(v as 'daily' | 'specific_days')}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Daily">Daily</SelectItem>
-                    <SelectItem value="Weekly">Weekly</SelectItem>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="specific_days">Specific Days of the Week</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {frequency === 'Weekly' && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right">Days</Label>
-                  <ToggleGroup type="multiple" variant="outline" value={specificDays} onValueChange={setSpecificDays} className="col-span-3 justify-start">
+              {frequency === 'specific_days' && (
+                <div>
+                  <label className="text-sm font-medium">On these days</label>
+                  <ToggleGroup type="multiple" value={specificDays} onValueChange={(v: DayOfWeek[]) => setSpecificDays(v)} className="mt-2 justify-start">
                     {weekDays.map(day => (
-                      <ToggleGroupItem key={day.value} value={day.value} aria-label={day.label}>{day.label}</ToggleGroupItem>
+                      <ToggleGroupItem key={day} value={day}>{day}</ToggleGroupItem>
                     ))}
                   </ToggleGroup>
                 </div>
               )}
-            </>
-          ) : type === 'quantity' ? (
-            <>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="target-quantity" className="text-right">Target</Label>
-                <Input
-                  id="target-quantity"
-                  type="text"
-                  inputMode="numeric"
-                  value={targetQuantity !== undefined ? new Intl.NumberFormat('en-US').format(targetQuantity) : ''}
-                  onChange={(e) => handleNumericInputChange(e, setTargetQuantity)}
-                  className="col-span-3"
-                  placeholder="e.g., 300"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Period</Label>
-                <Select value={targetPeriod} onValueChange={(value) => setTargetPeriod(value as GoalPeriod)}>
-                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select period" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Weekly">Per Week</SelectItem>
-                    <SelectItem value="Monthly">Per Month</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="target-value" className="text-right">Target Value</Label>
-                <Input
-                  id="target-value"
-                  type="text"
-                  inputMode="numeric"
-                  value={targetValue !== undefined ? new Intl.NumberFormat('en-US').format(targetValue) : ''}
-                  onChange={(e) => handleNumericInputChange(e, setTargetValue)}
-                  className="col-span-3"
-                  placeholder="e.g., 500"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="unit" className="text-right">Unit</Label>
-                <Input id="unit" value={unit} onChange={(e) => setUnit(e.target.value)} className="col-span-3" placeholder="e.g., USD, km, pages" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Period</Label>
-                <Select value={targetPeriod} onValueChange={(value) => setTargetPeriod(value as GoalPeriod)}>
-                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select period" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Weekly">Per Week</SelectItem>
-                    <SelectItem value="Monthly">Per Month</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
+            </div>
           )}
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">Icon & Color</Label>
-            <div className="col-span-3 space-y-2">
-              <IconPicker value={icon} onChange={setIcon} color={color} />
-              <ColorPicker color={color} setColor={setColor} />
+
+          {type === 'value' && (
+            <div className="grid grid-cols-2 gap-4">
+              <Input type="number" placeholder="Target Value" value={targetValue} onChange={e => setTargetValue(Number(e.target.value))} />
+              <Input placeholder="Unit (e.g., USD, EUR)" value={unit} onChange={e => setUnit(e.target.value)} />
             </div>
-          </div>
-           <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">Tags</Label>
-            <div className="col-span-3">
-              <TagInput allTags={allTags} selectedTags={tags} onTagsChange={setTags} onTagCreate={handleTagCreate} />
-            </div>
+          )}
+
+          <div>
+            <label className="text-sm font-medium">Tags</label>
+            <TagInput value={tags} onChange={setTags} allTags={allTags} />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditMode ? 'Save Changes' : 'Create Goal'}
-          </Button>
+          <DialogClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button onClick={handleSave} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Goal'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default GoalFormDialog;
+}

@@ -2,128 +2,46 @@ import { useState, useEffect, useCallback } from 'react';
 import { Goal } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lightbulb, Loader2 } from 'lucide-react';
-import { generateAiInsight } from '@/lib/openai';
-import { toast } from 'sonner';
-import ReactMarkdown from 'react-markdown';
-import { Link } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
+import { getAiInsightForGoal } from '@/lib/openai';
 
 interface AiCoachInsightProps {
   goal: Goal;
-  yearlyProgress?: { percentage: number } | null;
-  monthlyProgress?: { name: string; percentage: number; completedCount: number; possibleCount: number; } | null;
 }
 
-const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsightProps) => {
-  const [insight, setInsight] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-
-  useEffect(() => {
-    const checkConnection = () => {
-      const storedStatus = localStorage.getItem("openai_connected");
-      setIsConnected(storedStatus === "true");
-    };
-    checkConnection();
-    window.addEventListener('storage', checkConnection);
-    return () => window.removeEventListener('storage', checkConnection);
-  }, []);
+export default function AiCoachInsight({ goal }: AiCoachInsightProps) {
+  const [insight, setInsight] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const fetchInsight = useCallback(async () => {
-    setIsLoading(true);
-    setInsight(null);
-    try {
-      const context: { 
-        yearly?: { percentage: number }; 
-        month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
-      } = {};
-
-      if (monthlyProgress) {
-        context.month = monthlyProgress;
-      } else if (yearlyProgress) {
-        context.yearly = yearlyProgress;
-      } else {
-        setIsLoading(false);
-        return;
-      }
-      
-      const newInsight = await generateAiInsight(goal, context);
-      setInsight(newInsight);
-    } catch (error) {
-      console.error("Failed to generate AI insight:", error);
-      toast.error("Couldn't get an insight from the AI coach right now.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [goal, yearlyProgress, monthlyProgress]);
+    setLoading(true);
+    const newInsight = await getAiInsightForGoal(goal);
+    setInsight(newInsight);
+    setLoading(false);
+  }, [goal]);
 
   useEffect(() => {
-    if (isConnected && (yearlyProgress || monthlyProgress)) {
-      fetchInsight();
-    }
-  }, [fetchInsight, isConnected, yearlyProgress, monthlyProgress]);
-
-  if (!isConnected) {
-    return (
-      <Card className="mt-4 bg-muted/50 border-dashed">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-yellow-500" />
-            AI Coach
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-2">Connect your OpenAI account to get personalized insights and coaching.</p>
-          <Button asChild size="sm" variant="link" className="px-0 h-auto text-yellow-600">
-            <Link to="/settings/integrations/openai">Connect OpenAI</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+    fetchInsight();
+  }, [fetchInsight]);
 
   return (
-    <Card className="mt-4 bg-muted/50 border-dashed">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base font-medium flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-yellow-500" />
-          AI Coach
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="text-yellow-500" />
+          AI Coach Insight
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {isLoading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Thinking...</span>
-          </div>
+        {loading ? (
+          <p className="text-muted-foreground">Generating insight...</p>
+        ) : (
+          <p className="text-muted-foreground">{insight}</p>
         )}
-        {!isLoading && insight && (
-          <div className="text-sm text-muted-foreground prose prose-sm max-w-none">
-            <ReactMarkdown
-              components={{
-                p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-                strong: ({node, ...props}) => <strong className="font-semibold text-foreground/90" {...props} />,
-              }}
-            >
-              {insight}
-            </ReactMarkdown>
-          </div>
-        )}
-        {!isLoading && !insight && (
-           <p className="text-sm text-muted-foreground">Click "Get New Insight" to see what the AI coach thinks.</p>
-        )}
-        <Button
-          variant="link"
-          size="sm"
-          className="mt-2 px-0 h-auto text-yellow-600"
-          onClick={fetchInsight}
-          disabled={isLoading}
-        >
-          {isLoading ? 'Getting new insight...' : 'Get New Insight'}
+        <Button variant="link" onClick={fetchInsight} disabled={loading} className="p-0 h-auto mt-2">
+          Get new insight
         </Button>
       </CardContent>
     </Card>
   );
-};
-
-export default AiCoachInsight;
+}
