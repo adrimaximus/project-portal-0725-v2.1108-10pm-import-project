@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import PortalLayout from "@/components/PortalLayout";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 const Profile = () => {
   const { user, refreshUser, logout } = useAuth();
@@ -20,6 +21,9 @@ const Profile = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
 
   if (!user) {
     return <PortalLayout><div>Loading...</div></PortalLayout>;
@@ -85,14 +89,21 @@ const Profile = () => {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setIsPasswordUpdating(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
 
-    if (error) {
-      toast.error(`Gagal memperbarui password: ${error.message}`);
-    } else {
-      toast.success("Password berhasil diperbarui. Anda sekarang dapat login dengan password baru Anda.");
-      setNewPassword("");
-      setConfirmPassword("");
+      if (error) {
+        toast.error(`Gagal memperbarui password: ${error.message}`);
+      } else {
+        toast.success("Password berhasil diperbarui. Anda sekarang dapat login dengan password baru Anda.");
+        setNewPassword("");
+        setConfirmPassword("");
+      }
+    } catch (error) {
+      toast.error("Terjadi kesalahan tak terduga.");
+    } finally {
+      setIsPasswordUpdating(false);
     }
   };
 
@@ -156,13 +167,26 @@ const Profile = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="new-password">New Password</Label>
-              <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <div className="relative">
+                <Input id="new-password" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowNewPassword(!showNewPassword)}>
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
              <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+              <div className="relative">
+                <Input id="confirm-password" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
-            <Button onClick={handlePasswordChange}>Change Password</Button>
+            <Button onClick={handlePasswordChange} disabled={isPasswordUpdating}>
+              {isPasswordUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Change Password
+            </Button>
           </CardContent>
         </Card>
 
