@@ -5,10 +5,10 @@ import { DateRange } from "react-day-picker";
 import { useAuth } from "@/contexts/AuthContext";
 import PortalLayout from "@/components/PortalLayout";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import DashboardSkeleton from "@/components/DashboardSkeleton";
+import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
 import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
-import CollaboratorsCard from "@/components/CollaboratorsCard";
-import ProjectsDashboardTable from "@/components/ProjectsDashboardTable";
+import CollaboratorsCard from "@/components/dashboard/CollaboratorsCard";
+import ProjectsDashboardTable from "@/components/dashboard/ProjectsDashboardTable";
 
 const Index = () => {
   const { user } = useAuth();

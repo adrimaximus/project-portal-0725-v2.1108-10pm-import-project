@@ -1,4 +1,4 @@
-import StatCard from "@/components/StatCard";
+import StatCard from "./StatCard";
 import { DollarSign, ListChecks, CreditCard, User, Users, TrendingUp, Hourglass } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
