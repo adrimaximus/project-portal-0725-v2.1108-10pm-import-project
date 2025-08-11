@@ -59,11 +59,11 @@ const Index = () => {
 
       if (error) {
         if (!errorToastShown.current) {
-          toast.error("Gagal mengambil data proyek.");
+          toast.error("Gagal menyegarkan data proyek. Data yang ditampilkan mungkin sudah usang.");
           errorToastShown.current = true;
         }
         console.error(error);
-        setProjects([]);
+        // Jangan hapus data yang ada jika penyegaran gagal
         setIsLoading(false);
         return;
       }
@@ -186,7 +186,7 @@ const Index = () => {
     return <PortalLayout><div>Please log in to view the dashboard.</div></PortalLayout>;
   }
 
-  if (isLoading) {
+  if (isLoading && projects.length === 0) {
     return <AppSkeleton />;
   }
 
