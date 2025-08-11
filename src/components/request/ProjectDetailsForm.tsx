@@ -18,17 +18,28 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown, X, Briefcase } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@/types";
+import { User, Service } from "@/types";
 import { toast } from "sonner";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
 
 const ProjectDetailsForm = () => {
   const { control } = useFormContext();
   const [users, setUsers] = useState<User[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [servicesPopoverOpen, setServicesPopoverOpen] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -39,7 +50,16 @@ const ProjectDetailsForm = () => {
         setUsers(data as User[]);
       }
     };
+    const fetchServices = async () => {
+      const { data, error } = await supabase.from("services").select("*");
+      if (error) {
+        toast.error("Failed to fetch services");
+      } else {
+        setServices(data || []);
+      }
+    };
     fetchUsers();
+    fetchServices();
   }, []);
 
   return (
@@ -70,6 +90,90 @@ const ProjectDetailsForm = () => {
                 {...field}
               />
             </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={control}
+        name="services"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="flex items-center">
+              <Briefcase className="mr-2 h-4 w-4" />
+              Services
+            </FormLabel>
+            <Popover open={servicesPopoverOpen} onOpenChange={setServicesPopoverOpen}>
+              <PopoverTrigger asChild>
+                <FormControl>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className={cn(
+                      "w-full justify-between h-auto min-h-[40px]",
+                      !field.value?.length && "text-muted-foreground"
+                    )}
+                  >
+                    <div className="flex gap-1 flex-wrap">
+                      {field.value?.length > 0 ? (
+                        services
+                          .filter(service => field.value.includes(service.title))
+                          .map(service => (
+                            <Badge
+                              variant="secondary"
+                              key={service.title}
+                              className="mr-1"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                field.onChange(field.value.filter((v: string) => v !== service.title));
+                              }}
+                            >
+                              {service.title}
+                              <X className="ml-1 h-3 w-3" />
+                            </Badge>
+                          ))
+                      ) : (
+                        <span className="font-normal">Select services</span>
+                      )}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </FormControl>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput placeholder="Search services..." />
+                  <CommandList>
+                    <CommandEmpty>No service found.</CommandEmpty>
+                    <CommandGroup>
+                      {services.map((service) => (
+                        <CommandItem
+                          value={service.title}
+                          key={service.title}
+                          onSelect={() => {
+                            const currentValue = field.value || [];
+                            const newValue = currentValue.includes(service.title)
+                              ? currentValue.filter((item: string) => item !== service.title)
+                              : [...currentValue, service.title];
+                            field.onChange(newValue);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              field.value?.includes(service.title)
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          {service.title}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             <FormMessage />
           </FormItem>
         )}
