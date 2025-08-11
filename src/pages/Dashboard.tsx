@@ -49,12 +49,6 @@ const Index = () => {
 
   useEffect(() => {
     const fetchProjects = async () => {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-
       const { data, error } = await supabase.rpc('get_dashboard_projects');
 
       if (error) {
@@ -64,29 +58,27 @@ const Index = () => {
         }
         console.error(error);
         setProjects([]);
-        setIsLoading(false);
-        return;
+      } else {
+        const mappedProjects: Project[] = data.map((p: any) => ({
+          ...p,
+          status: p.status as ProjectStatus,
+          paymentStatus: p.payment_status as PaymentStatus,
+          assignedTo: p.assignedTo || [],
+          tasks: p.tasks || [],
+          comments: p.comments || [],
+          createdBy: p.created_by,
+          startDate: p.start_date,
+          dueDate: p.due_date,
+        }));
+        setProjects(mappedProjects);
       }
-      
-      const mappedProjects: Project[] = data.map((p: any) => ({
-        ...p,
-        status: p.status as ProjectStatus,
-        paymentStatus: p.payment_status as PaymentStatus,
-        assignedTo: p.assignedTo || [],
-        tasks: p.tasks || [],
-        comments: p.comments || [],
-        createdBy: p.created_by,
-        startDate: p.start_date,
-        dueDate: p.due_date,
-      }));
-
-      setProjects(mappedProjects);
       setIsLoading(false);
     };
 
-    fetchProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+    if (user) {
+      fetchProjects();
+    }
+  }, [user]);
 
   const filteredProjects = projects.filter(project => {
     if (date?.from) {
@@ -182,10 +174,6 @@ const Index = () => {
 
   const topUserByPendingValue = Object.values(pendingPaymentCounts).sort((a, b) => b.pendingValue - a.pendingValue)[0] || null;
 
-  if (!user) {
-    return <PortalLayout><div>Please log in to view the dashboard.</div></PortalLayout>;
-  }
-
   if (isLoading) {
     return <DashboardSkeleton />;
   }
@@ -194,7 +182,7 @@ const Index = () => {
     <PortalLayout>
       <div className="space-y-8">
         <div className="text-left">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user!.name}, have a good day! 👋</h1>
           <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
         </div>
 
