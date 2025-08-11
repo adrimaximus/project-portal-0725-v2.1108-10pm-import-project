@@ -54,105 +54,27 @@ const Index = () => {
       }
       setIsLoading(true);
 
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_dashboard_projects');
 
-      if (projectsError) {
+      if (error) {
         toast.error("Failed to fetch projects.");
-        console.error(projectsError);
+        console.error(error);
         setIsLoading(false);
         return;
       }
-
-      const projectIds = projectsData.map(p => p.id);
-      if (projectIds.length === 0) {
-        setProjects([]);
-        setIsLoading(false);
-        return;
-      }
-
-      const [membersRes, tasksRes, commentsRes] = await Promise.all([
-        supabase.from('project_members').select('project_id, user_id, role').in('project_id', projectIds),
-        supabase.from('tasks').select('id, project_id, title, completed, task_assignees(user_id)').in('project_id', projectIds),
-        supabase.from('comments').select('id, project_id, is_ticket').in('project_id', projectIds),
-      ]);
-
-      const userIds = new Set<string>();
-      projectsData.forEach(p => p.created_by && userIds.add(p.created_by));
-      membersRes.data?.forEach(m => userIds.add(m.user_id));
-      tasksRes.data?.forEach(t => (t.task_assignees as any[]).forEach(a => userIds.add(a.user_id)));
-
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', Array.from(userIds));
-
-      if (profilesError) {
-        toast.error("Failed to fetch user profiles.");
-      }
-
-      const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
-      const mapProfileToUser = (id: string): AssignedUser | null => {
-        const profile = profilesMap.get(id);
-        if (!profile) return null;
-        return {
-          id: profile.id,
-          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
-          email: profile.email,
-          avatar: profile.avatar_url,
-          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-        };
-      };
-
-      const mappedProjects: Project[] = projectsData.map(p => {
-        const projectMembers = membersRes.data?.filter(m => m.project_id === p.id) || [];
-        projectMembers.sort((a, b) => {
-            if (a.role === 'owner') return -1;
-            if (b.role === 'owner') return 1;
-            return 0;
-        });
-        const assignedTo = projectMembers.map(m => mapProfileToUser(m.user_id)).filter(Boolean) as AssignedUser[];
-        
-        const projectTasks = tasksRes.data?.filter(t => t.project_id === p.id) || [];
-        const mappedTasks: Task[] = projectTasks.map((t: any) => ({
-            id: t.id,
-            title: t.title,
-            completed: t.completed,
-            assignedTo: (t.task_assignees || []).map((a: any) => mapProfileToUser(a.user_id)).filter(Boolean) as AssignedUser[],
-        }));
-
-        const projectComments = commentsRes.data?.filter(c => c.project_id === p.id) || [];
-        const mappedComments: Comment[] = projectComments.map(c => ({
-            id: c.id,
-            isTicket: c.is_ticket,
-            author: {} as AssignedUser,
-            text: '',
-            timestamp: '',
-        }));
-
-        return {
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          description: p.description,
-          status: p.status as ProjectStatus,
-          progress: p.progress,
-          budget: p.budget,
-          startDate: p.start_date,
-          dueDate: p.due_date,
-          paymentStatus: p.payment_status as PaymentStatus,
-          createdBy: p.created_by ? mapProfileToUser(p.created_by) : null,
-          assignedTo,
-          tasks: mappedTasks,
-          comments: mappedComments,
-          activities: [],
-          briefFiles: [],
-        };
-      });
+      
+      // Data dari RPC sudah dalam format yang benar, hanya perlu memastikan tipe data
+      const mappedProjects: Project[] = data.map((p: any) => ({
+        ...p,
+        status: p.status as ProjectStatus,
+        paymentStatus: p.payment_status as PaymentStatus,
+        assignedTo: p.assignedTo || [],
+        tasks: p.tasks || [],
+        comments: p.comments || [],
+        createdBy: p.created_by,
+        startDate: p.start_date,
+        dueDate: p.due_date,
+      }));
 
       setProjects(mappedProjects);
       setIsLoading(false);
