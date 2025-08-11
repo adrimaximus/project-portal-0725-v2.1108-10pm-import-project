@@ -33,7 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Project, ProjectStatus, PaymentStatus, AssignedUser, Task, Comment } from "@/types";
 import { toast } from "sonner";
 import StatusBadge from "@/components/StatusBadge";
-import AppSkeleton from "@/components/AppSkeleton";
+import DashboardSkeleton from "@/components/DashboardSkeleton";
 
 const Index = () => {
   const { user } = useAuth();
@@ -187,7 +187,7 @@ const Index = () => {
   }
 
   if (isLoading) {
-    return <AppSkeleton />;
+    return <DashboardSkeleton />;
   }
 
   return (
