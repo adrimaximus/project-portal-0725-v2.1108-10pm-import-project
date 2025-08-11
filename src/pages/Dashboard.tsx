@@ -114,7 +114,10 @@ const Index = () => {
         const { data, error } = await supabase.rpc('get_dashboard_projects');
 
         if (error) {
-          toast.error("Failed to fetch projects.");
+          toast.error("Failed to fetch projects.", {
+            id: 'fetch-projects-error',
+            description: "There was a problem loading your project data. Please try refreshing the page.",
+          });
           console.error(error);
           return;
         }
@@ -133,7 +136,9 @@ const Index = () => {
 
         setProjects(mappedProjects);
       } catch (e) {
-        toast.error("An unexpected error occurred while fetching projects.");
+        toast.error("An unexpected error occurred while fetching projects.", {
+          id: 'fetch-projects-error',
+        });
         console.error(e);
       } finally {
         setIsLoading(false);
@@ -141,7 +146,7 @@ const Index = () => {
     };
 
     fetchProjects();
-  }, [user]);
+  }, [user?.id]);
 
   const filteredProjects = projects.filter(project => {
     if (date?.from) {
