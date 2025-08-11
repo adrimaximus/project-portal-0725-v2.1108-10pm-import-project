@@ -1,9 +1,8 @@
-import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { useFeatures } from "./contexts/FeaturesContext";
 import { useAuth } from "./contexts/AuthContext";
-import React, { useEffect } from "react";
-import { supabase } from "./integrations/supabase/client";
+import React from "react";
 
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/Dashboard";
@@ -57,20 +56,6 @@ const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, fe
 };
 
 function App() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        navigate('/reset-password');
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
-
   return (
     <>
       <Routes>

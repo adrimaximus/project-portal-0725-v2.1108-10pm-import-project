@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User, SupabaseSession, SupabaseUser } from '@/types';
 
@@ -16,6 +17,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
     const { data: profile, error } = await supabase
@@ -54,7 +56,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
 
       // Listen for auth state changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          navigate('/reset-password');
+        }
         setSession(newSession);
         if (newSession) {
           await fetchUserProfile(newSession.user);
@@ -71,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       subscriptionPromise.then(subscription => subscription?.unsubscribe());
     };
-  }, []);
+  }, [navigate]);
 
   const refreshUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
