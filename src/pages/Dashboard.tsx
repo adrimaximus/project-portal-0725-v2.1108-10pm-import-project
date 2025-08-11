@@ -29,31 +29,20 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { supabase } from "@/integrations/supabase/client";
-import { Project, ProjectStatus, PaymentStatus } from "@/types";
+import { Project, UserProfile } from "@/types";
 import { toast } from "sonner";
 import StatusBadge from "@/components/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
+import { fetchDashboardProjects } from "../queries/projects";
 
-const fetchDashboardProjects = async () => {
-  const { data, error } = await supabase.rpc('get_dashboard_projects');
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data.map((p: any) => ({
-    ...p,
-    status: p.status as ProjectStatus,
-    paymentStatus: p.payment_status as PaymentStatus,
-    assignedTo: p.assignedTo || [],
-    tasks: p.tasks || [],
-    comments: p.comments || [],
-    createdBy: p.created_by,
-    startDate: p.start_date,
-    dueDate: p.due_date,
-  })) as Project[];
-};
+interface CollaboratorStat extends UserProfile {
+  projectCount: number;
+  taskCount: number;
+  totalValue: number;
+  pendingValue: number;
+}
 
 const StatCard = ({ title, icon, isLoading, children }: { title: string, icon: React.ReactNode, isLoading: boolean, children: React.ReactNode }) => (
     <Card>
@@ -77,7 +66,7 @@ const Index = () => {
   const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(false);
   const errorToastShown = useRef(false);
 
-  const { data: projects = [], isLoading, isError } = useQuery({
+  const { data: projects = [], isLoading, isError } = useQuery<Project[]>({
     queryKey: ['dashboardProjects'],
     queryFn: fetchDashboardProjects,
     enabled: !!user,
@@ -117,18 +106,31 @@ const Index = () => {
     
     const collaboratorStats = filteredProjects.reduce((acc, p) => {
         p.assignedTo.forEach(user => {
-            if (!acc[user.id]) acc[user.id] = { ...user, projectCount: 0, taskCount: 0, totalValue: 0, pendingValue: 0 };
+            if (!acc[user.id]) {
+                acc[user.id] = { 
+                    ...user, 
+                    projectCount: 0, 
+                    taskCount: 0, 
+                    totalValue: 0, 
+                    pendingValue: 0 
+                };
+            }
             acc[user.id].projectCount++;
             acc[user.id].totalValue += p.budget || 0;
             if (p.paymentStatus === 'Pending') acc[user.id].pendingValue += p.budget || 0;
         });
         p.tasks?.forEach(task => (task.assignedTo || []).forEach(user => {
-            if (acc[user.id]) acc[user.id].taskCount++;
+            if (acc[user.id]) {
+                if (typeof acc[user.id].taskCount === 'undefined') {
+                    acc[user.id].taskCount = 0;
+                }
+                acc[user.id].taskCount++;
+            }
         }));
         return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, CollaboratorStat>);
 
-    const collaborators = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount);
+    const collaborators: CollaboratorStat[] = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount);
     const topOwner = collaborators[0] || null;
     const topCollaborator = collaborators[0] || null;
     const topUserByValue = [...collaborators].sort((a, b) => b.totalValue - a.totalValue)[0] || null;
