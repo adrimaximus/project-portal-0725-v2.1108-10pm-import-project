@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Package, BarChart, Users, ListChecks, ArrowRight, CalendarCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import AppSkeleton from '@/components/AppSkeleton';
 
 const LandingPage = () => {
   const { session, loading } = useAuth();
@@ -16,11 +17,7 @@ const LandingPage = () => {
   }, [session, loading, navigate]);
 
   if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <p className="text-muted-foreground">Authenticating...</p>
-      </div>
-    );
+    return <AppSkeleton />;
   }
 
   const features = [

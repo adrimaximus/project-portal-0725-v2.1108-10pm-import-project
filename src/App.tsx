@@ -33,6 +33,7 @@ import GitHubPage from "./pages/integrations/GitHubPage";
 import SlackPage from "./pages/integrations/SlackPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
+import AppSkeleton from "./components/AppSkeleton";
 
 const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, featureId?: string }) => {
   const { user, loading } = useAuth();
@@ -40,7 +41,7 @@ const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, fe
   const location = useLocation();
 
   if (loading) {
-    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+    return <AppSkeleton />;
   }
 
   if (!user) {
