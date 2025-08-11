@@ -5,17 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { useGoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin, TokenResponse } from "@react-oauth/google";
 import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
 
 interface GoogleCalendar {
   id: string;
   summary: string;
 }
-
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const GoogleCalendarPage = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -36,58 +32,6 @@ const GoogleCalendarPage = () => {
       }
     }
   }, []);
-
-  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === "YOUR_CLIENT_ID_HERE") {
-    return (
-      <PortalLayout>
-        <div className="space-y-6">
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link to="/settings">Settings</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link to="/settings/integrations">Integrations</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Google Calendar</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">
-                  Google Calendar Integration
-                </h1>
-                <p className="text-muted-foreground">
-                  Connect your Google Calendar to sync your events and meetings.
-                </p>
-              </div>
-            </div>
-            
-            <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Configuration Error</AlertTitle>
-                <AlertDescription>
-                    The Google Client ID is missing or incorrect. Please ensure you have:
-                    <ol className="list-decimal list-inside mt-2 space-y-1">
-                        <li>Correctly copied your Google Client ID into the <code>.env</code> file.</li>
-                        <li>Replaced the placeholder <code>"YOUR_CLIENT_ID_HERE"</code>.</li>
-                        <li>Rebuilt the application using the "Rebuild" button.</li>
-                    </ol>
-                </AlertDescription>
-            </Alert>
-        </div>
-      </PortalLayout>
-    );
-  }
 
   const handleFetchCalendars = async (accessToken: string) => {
     setIsLoading(true);

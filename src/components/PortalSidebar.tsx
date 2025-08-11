@@ -218,7 +218,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                         <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" className="w-full h-auto p-1">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
+                              <AvatarImage src={user.avatar} alt={user.name} />
                               <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <span className="sr-only">{user.name}</span>
@@ -255,7 +255,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                   >
                     <span className="flex items-center gap-3">
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
+                        <AvatarImage src={user.avatar} alt={user.name} />
                         <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       {user.name}

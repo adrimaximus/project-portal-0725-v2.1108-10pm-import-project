@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Project, Task, Comment, UserProfile, ProjectStatus, PaymentStatus, ProjectFile, User } from "@/types";
+import { Project, Task, Comment, AssignedUser, ProjectStatus, PaymentStatus, ProjectFile } from "@/data/projects";
 import { useAuth } from "@/contexts/AuthContext";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
@@ -61,35 +61,35 @@ const ProjectDetail = () => {
     const { data: profilesData } = await supabase.from('profiles').select('*').in('id', Array.from(userIds));
     const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
 
-    const mapProfileToUser = (id: string): User | null => {
+    const mapProfileToUser = (id: string): AssignedUser | null => {
       const profile = profilesMap.get(id);
       if (!profile) return null;
       return {
         id: profile.id,
         name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
         email: profile.email,
-        avatar_url: profile.avatar_url,
+        avatar: profile.avatar_url,
         initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
         first_name: profile.first_name,
         last_name: profile.last_name,
       };
     };
 
-    const assignedTo: UserProfile[] = (membersRes.data?.map(m => ({ ...mapProfileToUser(m.user_id), role: m.role })).filter(u => u && u.id) as UserProfile[]) || [];
+    const assignedTo: AssignedUser[] = (membersRes.data?.map(m => ({ ...mapProfileToUser(m.user_id), role: m.role })).filter(Boolean) as AssignedUser[]) || [];
     const tasks: Task[] = tasksRes.data?.map((t: any) => ({
       id: t.id,
       title: t.title,
       completed: t.completed,
       originTicketId: t.origin_ticket_id,
-      assignedTo: t.task_assignees.map((a: any) => mapProfileToUser(a.user_id)).filter(Boolean) as User[],
+      assignedTo: t.task_assignees.map((a: any) => mapProfileToUser(a.user_id)).filter(Boolean) as AssignedUser[],
     })) || [];
     const comments: Comment[] = commentsRes.data?.map((c: any) => ({
       id: c.id,
       text: c.text,
       timestamp: c.created_at,
-      is_ticket: c.is_ticket,
-      attachment: c.attachment_url ? { name: c.attachment_name, url: c.attachment_url, type: 'file' as const } : undefined,
-      author: mapProfileToUser(c.author_id) as User,
+      isTicket: c.is_ticket,
+      attachment: c.attachment_url ? { name: c.attachment_name, url: c.attachment_url } : undefined,
+      author: mapProfileToUser(c.author_id) as AssignedUser,
     })).filter(c => c.author) || [];
     
     const briefFiles: ProjectFile[] = filesRes.data?.map((f: any) => ({

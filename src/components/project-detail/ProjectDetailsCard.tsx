@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project } from "@/types";
+import { Project } from "@/data/projects";
 import { Calendar, Wallet, Briefcase } from "lucide-react";
 import { format } from "date-fns";
 

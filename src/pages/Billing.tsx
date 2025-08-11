@@ -61,7 +61,7 @@ const Billing = () => {
 
       return {
         id: `INV-${project.id}`,
-        projectId: project.id.toString(),
+        projectId: project.id,
         projectName: project.name,
         amount: project.budget,
         dueDate: dueDate,

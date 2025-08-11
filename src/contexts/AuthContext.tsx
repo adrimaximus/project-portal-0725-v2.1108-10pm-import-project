@@ -1,27 +1,21 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User, SupabaseSession, SupabaseUser } from '@/types';
 
 interface AuthContextType {
-  user: User | null;
   session: SupabaseSession | null;
+  user: User | null;
   loading: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  loading: true,
-  logout: async () => {},
-  refreshUser: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<SupabaseSession | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -34,59 +28,62 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (error) {
       console.error('Error fetching profile:', error);
-      const fallbackUser: User = {
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        name: supabaseUser.user_metadata.full_name || supabaseUser.email || 'Anonymous',
-        avatar_url: supabaseUser.user_metadata.avatar_url || null,
-        first_name: supabaseUser.user_metadata.first_name || null,
-        last_name: supabaseUser.user_metadata.last_name || null,
-        initials: ((supabaseUser.user_metadata.first_name?.[0] || '') + (supabaseUser.user_metadata.last_name?.[0] || '')).toUpperCase() || 'NN',
-      };
-      setUser(fallbackUser);
-      return;
-    }
-
-    if (profile) {
-      const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Anonymous';
-      const initials = ((profile.first_name?.[0] || '') + (profile.last_name?.[0] || '')).toUpperCase() || 'NN';
-      setUser({ ...profile, name, initials });
+      setUser(null);
+    } else if (profile) {
+      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+      setUser({
+        id: profile.id,
+        email: supabaseUser.email,
+        name: fullName || supabaseUser.email || 'No name',
+        avatar: profile.avatar_url,
+        initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+      });
     }
   };
 
   useEffect(() => {
-    setLoading(true);
-
-    // Handle initial session check on app load
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        await fetchUserProfile(session.user);
+    const getSessionAndListen = async () => {
+      // Get initial session
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      if (initialSession) {
+        await fetchUserProfile(initialSession.user);
+      } else {
+        setUser(null);
       }
       setLoading(false);
-    });
 
-    // Listen for auth state changes (login, logout, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        setLoading(true); // Set loading to true during the transition
-        setSession(session);
-        if (session) {
-          await fetchUserProfile(session.user);
+      // Listen for auth state changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          navigate('/reset-password');
         }
-        setLoading(false); // Set loading to false only after the profile is fetched
-      } else if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setUser(null);
-      } else if (event === 'PASSWORD_RECOVERY') {
-        navigate('/reset-password');
-      }
-    });
+        setSession(newSession);
+        if (newSession) {
+          await fetchUserProfile(newSession.user);
+        } else {
+          setUser(null);
+        }
+      });
+
+      return subscription;
+    };
+
+    const subscriptionPromise = getSessionAndListen();
 
     return () => {
-      subscription.unsubscribe();
+      subscriptionPromise.then(subscription => subscription?.unsubscribe());
     };
   }, [navigate]);
+
+  const refreshUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await fetchUserProfile(session.user);
+    }
+  };
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -94,17 +91,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setSession(null);
   };
 
-  const refreshUser = async () => {
-    if (session?.user) {
-      await fetchUserProfile(session.user);
-    }
+  const value = {
+    session,
+    user,
+    loading,
+    logout,
+    refreshUser,
   };
 
-  return (
-    <AuthContext.Provider value={{ user, session, loading, logout, refreshUser }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

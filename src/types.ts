@@ -1,80 +1,85 @@
-import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js';
 
-export type SupabaseSession = Session;
-export type { SupabaseUser };
-
-// This will be the main User type used across the app
 export interface User {
   id: string;
+  email?: string;
   name: string;
-  email: string;
-  avatar_url: string | null;
-  first_name: string | null;
-  last_name: string | null;
+  avatar?: string;
   initials: string;
+  first_name?: string;
+  last_name?: string;
+  role?: string;
 }
-
-// A more generic user profile, often used in project data
-export type UserProfile = User & {
-  role?: 'owner' | 'member' | string;
-};
 
 export interface Collaborator {
   id: string;
   name: string;
-  email: string;
-  avatar: string | null;
   initials: string;
-  online?: boolean;
-}
-
-export interface MessageSender {
-    id: string;
-    name: string;
-    avatar: string | null;
-    initials: string;
+  online: boolean;
+  avatar?: string;
 }
 
 export interface Attachment {
-  name: string;
-  url: string;
+  name:string;
   type: 'image' | 'file';
+  url: string;
 }
 
 export interface Message {
   id: string;
-  content: string;
-  createdAt: string;
-  sender: MessageSender;
-  attachment_url?: string;
-  attachment_name?: string;
-  attachment_type?: string;
+  sender: User | Collaborator;
+  text: string;
+  timestamp: string;
+  attachment?: Attachment | null;
 }
 
 export interface Conversation {
   id: string;
-  isGroup: boolean;
-  groupName?: string | null;
-  userName?: string | null;
-  userAvatar?: string | null;
-  lastMessage?: string | null;
-  lastMessageTimestamp?: string;
-  participants: Collaborator[];
+  userName: string;
+  userAvatar?: string;
+  lastMessage: string;
+  lastMessageTimestamp: string;
+  unreadCount: number;
+  messages: Message[];
+  isGroup?: boolean;
+  members?: Collaborator[];
 }
+
+export interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  status: string;
+  start: {
+    dateTime: string;
+    date?: string;
+  };
+  end: {
+    dateTime: string;
+    date?: string;
+  };
+}
+
+export interface GoogleCalendarListEntry {
+  id: string;
+  summary: string;
+  backgroundColor: string;
+  foregroundColor: string;
+  selected?: boolean;
+}
+
+// Types for Goals Feature
+export type GoalType = 'quantity' | 'value' | 'frequency';
+export type GoalPeriod = 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
 
 export interface Tag {
-  id: string;
-  name: string;
-  color: string;
+    id: string;
+    name: string;
+    color: string;
 }
-
-export type GoalType = 'quantity' | 'value';
-export type GoalPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
-export type DayOfWeek = 'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat';
 
 export interface GoalCompletion {
   id: string;
-  date: string; // ISO string
+  date: string; // ISO 8601 date string
   value: number;
   notes?: string;
   userId: string;
@@ -84,103 +89,21 @@ export interface Goal {
   id: string;
   slug: string;
   title: string;
-  description?: string;
+  description: string;
   icon: string;
-  icon_url?: string;
+  iconUrl?: string;
   color: string;
   type: GoalType;
-  target_quantity?: number;
-  target_value?: number;
-  frequency?: 'daily' | 'specific_days';
-  target_period?: GoalPeriod;
+  targetQuantity?: number;
+  targetValue?: number;
+  frequency: 'Daily' | 'Weekly';
+  targetPeriod?: GoalPeriod;
   unit?: string;
-  specific_days?: DayOfWeek[];
   collaborators: User[];
   completions: GoalCompletion[];
   tags: Tag[];
+  specificDays: string[];
 }
 
-export interface GoogleCalendarEvent {
-  id: string;
-  summary: string;
-  start: {
-    dateTime: string;
-    timeZone: string;
-  };
-  end: {
-    dateTime: string;
-    timeZone: string;
-  };
-  extendedProperties?: {
-    private?: {
-      projectId?: string;
-    };
-  };
-}
 
-// Project related types
-export type ProjectStatus = 'Requested' | 'In Progress' | 'Completed' | 'Billed' | 'On Hold' | 'Cancelled' | 'Done' | 'Not Started' | 'On Track' | 'At Risk' | 'Off Track';
-export type PaymentStatus = 'Proposed' | 'Approved' | 'PO Created' | 'On Process' | 'Pending' | 'Paid' | 'Cancelled' | 'Overdue' | 'Unpaid';
-
-export interface Task {
-  id: string;
-  title: string;
-  completed: boolean;
-  assignedTo: UserProfile[];
-  originTicketId?: string;
-}
-
-export interface Comment {
-  id: string;
-  text: string;
-  timestamp: string; // This is created_at
-  is_ticket: boolean;
-  author: User;
-  attachment?: Attachment;
-}
-
-export interface ProjectFile {
-    id: string;
-    name: string;
-    size: number;
-    type: string | null;
-    url: string;
-    storagePath: string;
-    uploadedAt: string;
-}
-
-export interface Activity {
-    id: string;
-    type: string;
-    user: { name: string };
-    details: { description: string };
-    timestamp: string;
-}
-
-export interface Service {
-  title: string;
-  description: string | null;
-  icon: string | null;
-  color: string | null;
-}
-
-export interface Project {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  status: ProjectStatus;
-  progress: number;
-  budget: number | null;
-  startDate: string;
-  dueDate: string;
-  paymentStatus: PaymentStatus;
-  paymentDueDate?: string | null;
-  createdBy: UserProfile | null;
-  assignedTo: UserProfile[];
-  tasks: Task[];
-  comments: Comment[];
-  activities: Activity[];
-  briefFiles: ProjectFile[];
-  services: string[];
-}
+export type { SupabaseSession, SupabaseUser };

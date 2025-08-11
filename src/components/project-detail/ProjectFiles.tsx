@@ -1,4 +1,4 @@
-import { Project } from '@/types';
+import { Project } from '@/data/projects';
 import { FileIcon } from 'lucide-react';
 
 const ProjectFiles = ({ project }: { project: Project }) => {

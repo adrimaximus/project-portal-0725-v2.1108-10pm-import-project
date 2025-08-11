@@ -1,4 +1,4 @@
-import { Project } from '@/types';
+import { Project } from '@/data/projects';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -108,7 +108,7 @@ const ProjectsList = ({ projects, onDeleteProject }: ProjectsListProps) => {
                         <div className="flex -space-x-2 ml-auto pr-4">
                           {project.assignedTo.slice(0, 3).map((user) => (
                             <Avatar key={user.id} className="h-8 w-8 border-2 border-card">
-                              <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
+                              <AvatarImage src={user.avatar} alt={user.name} />
                               <AvatarFallback>{user.initials}</AvatarFallback>
                             </Avatar>
                           ))}

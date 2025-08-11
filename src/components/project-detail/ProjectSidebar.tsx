@@ -1,4 +1,4 @@
-import { Project } from "@/types";
+import { Project } from "@/data/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,7 +21,7 @@ const ProjectSidebar = ({ project }: ProjectSidebarProps) => {
                   <TooltipTrigger asChild>
                     <div className="relative">
                       <Avatar className="h-10 w-10 border-2 border-card">
-                        <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
+                        <AvatarImage src={user.avatar} alt={user.name} />
                         <AvatarFallback>{user.initials || user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                       </Avatar>
                     </div>

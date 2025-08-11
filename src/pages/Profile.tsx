@@ -16,7 +16,7 @@ const Profile = () => {
   
   const [firstName, setFirstName] = useState(user?.first_name || "");
   const [lastName, setLastName] = useState(user?.last_name || "");
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar_url || null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -42,7 +42,7 @@ const Profile = () => {
   };
 
   const handleSaveChanges = async () => {
-    let avatar_url = user.avatar_url;
+    let avatar_url = user.avatar;
 
     if (avatarFile) {
       const fileExt = avatarFile.name.split('.').pop();
@@ -75,7 +75,7 @@ const Profile = () => {
       console.error(error);
     } else {
       toast.success("Profile updated successfully.");
-      await refreshUser();
+      refreshUser();
     }
   };
 

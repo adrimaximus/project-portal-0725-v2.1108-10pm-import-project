@@ -1,4 +1,4 @@
-import { Project, ProjectStatus } from '@/types';
+import { Project } from '@/data/projects';
 import { useState, useMemo } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 type CalendarItem = Project & { lane?: number };
 
 const getProjectColorClasses = (item: Project): string => {
-  const status: ProjectStatus = item.status;
+  const status = item.status;
   switch (status) {
     case 'On Track': case 'Completed': case 'Done': case 'Billed': return 'bg-green-100 border-l-green-500 text-green-800 dark:bg-green-900/30 dark:border-l-green-500 dark:text-green-200';
     case 'At Risk': case 'On Hold': return 'bg-yellow-100 border-l-yellow-500 text-yellow-800 dark:bg-yellow-900/30 dark:border-l-yellow-500 dark:text-yellow-200';
@@ -200,7 +200,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         <div className="flex -space-x-2">
           {assignedTo.slice(0, 2).map(user => (
             <Avatar key={user.id} className="h-4 w-4 border border-background">
-              <AvatarImage src={user.avatar_url || undefined} />
+              <AvatarImage src={user.avatar} />
               <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
             </Avatar>
           ))}

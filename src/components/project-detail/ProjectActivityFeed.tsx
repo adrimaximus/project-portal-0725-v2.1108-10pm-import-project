@@ -1,4 +1,4 @@
-import { Activity } from "@/types";
+import { Activity } from "@/data/projects";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";

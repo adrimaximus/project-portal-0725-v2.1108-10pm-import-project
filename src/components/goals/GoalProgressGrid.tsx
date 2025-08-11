@@ -1,69 +1,66 @@
 import { Goal } from '@/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import { format, eachDayOfInterval, startOfYear, endOfYear, isBefore, startOfToday } from 'date-fns';
+import { format, startOfWeek, addDays } from 'date-fns';
 
 interface GoalProgressGridProps {
-  goal: Goal;
+  completions: Goal['completions'];
+  color: string;
 }
 
-const GoalProgressGrid = ({ goal }: GoalProgressGridProps) => {
-  const today = startOfToday();
-  const days = eachDayOfInterval({
-    start: startOfYear(today),
-    end: endOfYear(today),
-  });
+const GoalProgressGrid = ({ completions, color }: GoalProgressGridProps) => {
+  const weekDaysLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const today = new Date();
+  const columns = 18;
+  const totalDays = columns * 7;
+  const startDate = startOfWeek(addDays(today, -totalDays + 1), { weekStartsOn: 1 });
 
-  const completionsByDate = new Map(
-    goal.completions.map(c => [format(new Date(c.date), 'yyyy-MM-dd'), c])
+  const completionMap = new Map(completions.map(c => [c.date, c.value > 0]));
+
+  const daysByWeek: Date[][] = Array.from({ length: columns }, (_, weekIndex) => 
+    Array.from({ length: 7 }, (_, dayIndex) => 
+      addDays(startDate, weekIndex * 7 + dayIndex)
+    )
   );
 
-  const getIntensity = (date: Date) => {
-    const dateString = format(date, 'yyyy-MM-dd');
-    const completion = completionsByDate.get(dateString);
-    if (!completion) return 0;
-    
-    if (goal.type === 'value' && goal.target_value) {
-      // Intensity based on percentage of daily target (assuming yearly goal)
-      const dailyTarget = goal.target_value / 365;
-      return Math.min(4, Math.ceil((completion.value / dailyTarget) * 4));
-    }
-    
-    // For quantity goals, any completion is level 4 for simplicity here
-    return 4;
-  };
-
   return (
-    <TooltipProvider>
-      <div className="grid grid-cols-52 grid-flow-col gap-1">
-        {days.map(day => {
-          const isFuture = isBefore(today, day);
-          const intensity = isFuture ? 0 : getIntensity(day);
-          return (
-            <Tooltip key={day.toString()}>
-              <TooltipTrigger asChild>
-                <div
-                  className={cn(
-                    'h-3 w-3 rounded-sm',
-                    isFuture ? 'bg-muted/20' : 'bg-muted',
-                    intensity === 1 && 'bg-green-200',
-                    intensity === 2 && 'bg-green-400',
-                    intensity === 3 && 'bg-green-600',
-                    intensity === 4 && 'bg-green-800',
-                  )}
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                {format(day, 'PPP')}
-                {completionsByDate.has(format(day, 'yyyy-MM-dd')) && (
-                  <p>Completed!</p>
-                )}
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
+    <div className="flex gap-3 mt-2">
+      <div className="flex flex-col text-xs text-muted-foreground font-mono pt-1 space-y-1">
+        {weekDaysLabels.map((day, i) => <div key={i} className="h-3 flex items-center">{day}</div>)}
       </div>
-    </TooltipProvider>
+      <div className="flex gap-1">
+        {daysByWeek.map((week, weekIndex) => (
+          <div key={weekIndex} className="flex flex-col gap-1">
+            {week.map((day, dayIndex) => {
+              const dateString = format(day, 'yyyy-MM-dd');
+              const completed = completionMap.get(dateString);
+              const isFuture = day > today;
+
+              return (
+                <TooltipProvider key={dayIndex} delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div 
+                        className="h-3 w-3 rounded-full" 
+                        style={{ 
+                          backgroundColor: completed ? color : (isFuture ? 'transparent' : '#E5E7EB'),
+                          opacity: isFuture ? 0 : 1
+                        }}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{format(day, 'PPP')}</p>
+                      {completionMap.has(dateString) && !isFuture && (
+                        <p>{completed ? 'Completed' : 'Not completed'}</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };
 

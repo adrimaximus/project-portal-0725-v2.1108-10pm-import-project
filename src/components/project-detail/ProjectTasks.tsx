@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Project, Task, User } from "@/types";
+import { Project, Task, User } from "@/data/projects";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -77,7 +77,7 @@ const ProjectTasks = ({
             <div className="flex items-center -space-x-2">
               {(task.assignedTo || []).map((user) => (
                 <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
-                  <AvatarImage src={user.avatar_url || undefined} />
+                  <AvatarImage src={user.avatar} />
                   <AvatarFallback>{user.initials || user.name.slice(0,2)}</AvatarFallback>
                 </Avatar>
               ))}

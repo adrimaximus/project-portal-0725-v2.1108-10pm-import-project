@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Project, Comment, User } from "@/types";
+import { Project, Comment, dummyProjects, User } from "@/data/projects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,18 @@ const ProjectComments = ({
     };
     fetchMentionableData();
   }, []);
+
+  const usersForMentions = project.assignedTo.map(user => ({
+    id: user.id,
+    display: user.name,
+    avatar: user.avatar,
+    initials: user.initials || user.name.slice(0, 2).toUpperCase(),
+  }));
+
+  const projectsForMentions = dummyProjects.map(p => ({
+    id: p.id,
+    display: p.name,
+  }));
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -123,8 +135,8 @@ const ProjectComments = ({
   );
 
   const filteredItems = useMemo(() => {
-    if (filter === 'comments') return sortedItems.filter(item => !item.is_ticket);
-    if (filter === 'tickets') return sortedItems.filter(item => item.is_ticket);
+    if (filter === 'comments') return sortedItems.filter(item => !item.isTicket);
+    if (filter === 'tickets') return sortedItems.filter(item => item.isTicket);
     return sortedItems;
   }, [filter, sortedItems]);
 
@@ -211,19 +223,19 @@ const ProjectComments = ({
         </div>
         <div className="space-y-4">
           {filteredItems.map(item => {
-            const isTicketCompleted = item.is_ticket && project.tasks?.find(t => t.originTicketId === item.id)?.completed;
+            const isTicketCompleted = item.isTicket && project.tasks?.find(t => t.originTicketId === item.id)?.completed;
 
             return (
               <div key={item.id} className="flex items-start space-x-3 p-3 rounded-lg">
                 <Avatar>
-                  <AvatarImage src={item.author.avatar_url || undefined} />
+                  <AvatarImage src={item.author.avatar} />
                   <AvatarFallback>{item.author.initials || item.author.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-card-foreground flex items-center gap-2">
                       {item.author.name}
-                      {item.is_ticket && (
+                      {item.isTicket && (
                         <>
                           {isTicketCompleted ? (
                             <span className="flex items-center gap-1 text-xs font-semibold bg-green-600 text-white px-2.5 py-1 rounded-full">

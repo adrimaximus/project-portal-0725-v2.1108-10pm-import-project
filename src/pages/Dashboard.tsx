@@ -1,10 +1,5 @@
-import { useEffect, useState } from "react";
-import PortalLayout from "@/components/PortalLayout";
-import { supabase } from "@/integrations/supabase/client";
-import { Project, UserProfile } from "@/types";
-import { toast } from "sonner";
-import AppSkeleton from "@/components/AppSkeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -13,102 +8,180 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format } from "date-fns";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import { Link } from "react-router-dom";
+import { format, subYears } from "date-fns";
+import { getStatusStyles } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { DateRangePicker } from "@/components/DateRangePicker";
+import { DateRange } from "react-day-picker";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DollarSign, ListChecks, CreditCard, User, Users, TrendingUp, Hourglass, ChevronsUpDown } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import PortalLayout from "@/components/PortalLayout";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { supabase } from "@/integrations/supabase/client";
+import { Project, ProjectStatus, PaymentStatus, AssignedUser, Task, Comment } from "@/data/projects";
+import { toast } from "sonner";
+import StatusBadge from "@/components/StatusBadge";
+import AppSkeleton from "@/components/AppSkeleton";
 
-const DashboardPage = () => {
+const Index = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: subYears(new Date(), 1),
+    to: new Date(),
+  });
+  const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const getProjects = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase.rpc("get_dashboard_projects");
-
-        if (error) {
-          console.error("Error fetching dashboard projects:", error);
-          toast.error("Failed to load dashboard projects.", {
-            description: error.message,
-          });
-          setProjects([]);
-        } else {
-          // Manually convert snake_case to camelCase and map avatar to avatar_url
-          const formattedData = data.map((p: any) => {
-            const createdBy: UserProfile | undefined = p.created_by ? {
-              ...p.created_by,
-              avatar_url: p.created_by.avatar,
-            } : undefined;
-
-            const assignedTo: UserProfile[] = p.assignedTo ? p.assignedTo.map((user: any) => ({
-              ...user,
-              avatar_url: user.avatar,
-            })) : [];
-
-            return {
-              ...p,
-              dueDate: p.due_date,
-              paymentStatus: p.payment_status,
-              createdBy: createdBy,
-              assignedTo: assignedTo,
-            };
-          });
-          setProjects(formattedData || []);
-        }
-      } catch (e: any)
-{
-        console.error("An unexpected error occurred:", e);
-        toast.error("An unexpected error occurred.", {
-          description: e.message,
-        });
-        setProjects([]);
-      } finally {
-        setLoading(false);
+    const fetchProjects = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
       }
+      setIsLoading(true);
+
+      const { data, error } = await supabase.rpc('get_dashboard_projects');
+
+      if (error) {
+        toast.error("Failed to fetch projects.");
+        console.error(error);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Data dari RPC sudah dalam format yang benar, hanya perlu memastikan tipe data
+      const mappedProjects: Project[] = data.map((p: any) => ({
+        ...p,
+        status: p.status as ProjectStatus,
+        paymentStatus: p.payment_status as PaymentStatus,
+        assignedTo: p.assignedTo || [],
+        tasks: p.tasks || [],
+        comments: p.comments || [],
+        createdBy: p.created_by,
+        startDate: p.start_date,
+        dueDate: p.due_date,
+      }));
+
+      setProjects(mappedProjects);
+      setIsLoading(false);
     };
-    getProjects();
-  }, []);
 
-  const filteredProjects = projects.filter((project) =>
-    project.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    fetchProjects();
+  }, [user]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case "in progress":
-        return <Badge variant="secondary">In Progress</Badge>;
-      case "completed":
-        return <Badge variant="success">Completed</Badge>;
-      case "on hold":
-        return <Badge variant="secondary">On Hold</Badge>;
-      case "cancelled":
-        return <Badge variant="destructive">Cancelled</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
+  const filteredProjects = projects.filter(project => {
+    if (date?.from) {
+      const pickerFrom = date.from;
+      const pickerTo = date.to || date.from;
+
+      if (!project.startDate || !project.dueDate) {
+        return false;
+      }
+
+      const projectStart = new Date(project.startDate);
+      const projectEnd = new Date(project.dueDate);
+
+      if (projectStart > pickerTo || projectEnd < pickerFrom) {
+        return false;
+      }
     }
-  };
 
-  const getPaymentStatusBadge = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case "paid":
-        return <Badge variant="success">Paid</Badge>;
-      case "pending":
-        return <Badge variant="secondary">Pending</Badge>;
-      case "overdue":
-        return <Badge variant="destructive">Overdue</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
+    return true;
+  });
 
-  if (loading) {
+  const totalValue = filteredProjects.reduce((sum, p) => sum + (p.budget || 0), 0);
+
+  const projectStatusCounts = filteredProjects.reduce((acc, p) => {
+      acc[p.status] = (acc[p.status] || 0) + 1;
+      return acc;
+  }, {} as Record<string, number>);
+
+  const paymentStatusCounts = filteredProjects.reduce((acc, p) => {
+      acc[p.paymentStatus] = (acc[p.paymentStatus] || 0) + 1;
+      return acc;
+  }, {} as Record<string, number>);
+
+  const ownerCounts = filteredProjects.reduce((acc, p) => {
+      if (p.assignedTo.length > 0) {
+          const owner = p.assignedTo[0];
+          if (!acc[owner.id]) {
+              acc[owner.id] = { ...owner, projectCount: 0 };
+          }
+          acc[owner.id].projectCount++;
+      }
+      return acc;
+  }, {} as Record<string, any>);
+
+  const topOwner = Object.values(ownerCounts).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
+
+  const collaboratorStats = filteredProjects.reduce((acc, p) => {
+      p.assignedTo.forEach(user => {
+          if (!acc[user.id]) {
+              acc[user.id] = { ...user, projectCount: 0, taskCount: 0 };
+          }
+          acc[user.id].projectCount++;
+      });
+      return acc;
+  }, {} as Record<string, any>);
+
+  filteredProjects.forEach(p => {
+      p.tasks?.forEach(task => {
+          (task.assignedTo || []).forEach(user => {
+              if (collaboratorStats[user.id]) {
+                  collaboratorStats[user.id].taskCount++;
+              }
+          });
+      });
+  });
+
+  const collaborators = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount);
+  const topCollaborator = collaborators[0] || null;
+
+  const userValueCounts = filteredProjects.reduce((acc, p) => {
+      p.assignedTo.forEach(user => {
+          if (!acc[user.id]) {
+              acc[user.id] = { ...user, totalValue: 0 };
+          }
+          acc[user.id].totalValue += p.budget || 0;
+      });
+      return acc;
+  }, {} as Record<string, any>);
+
+  const topUserByValue = Object.values(userValueCounts).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
+
+  const pendingPaymentCounts = filteredProjects
+    .filter(p => p.paymentStatus === 'Pending')
+    .reduce((acc, p) => {
+        p.assignedTo.forEach(user => {
+            if (!acc[user.id]) {
+                acc[user.id] = { ...user, pendingValue: 0 };
+            }
+            acc[user.id].pendingValue += p.budget || 0;
+        });
+        return acc;
+    }, {} as Record<string, any>);
+
+  const topUserByPendingValue = Object.values(pendingPaymentCounts).sort((a, b) => b.pendingValue - a.pendingValue)[0] || null;
+
+  if (!user) {
+    return <PortalLayout><div>Please log in to view the dashboard.</div></PortalLayout>;
+  }
+
+  if (isLoading) {
     return <AppSkeleton />;
   }
 
@@ -116,181 +189,335 @@ const DashboardPage = () => {
     <PortalLayout>
       <div className="space-y-8">
         <div className="text-left">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back! Here's a summary of your projects.
-          </p>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
+          <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
         </div>
 
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-            <h2 className="text-2xl font-semibold">Your Projects</h2>
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Search projects..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full sm:w-auto lg:w-[300px]"
-              />
-              <Link to="/request">
-                <Button>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  New Project
-                </Button>
-              </Link>
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <h2 className="text-2xl font-bold">Insights</h2>
+                <DateRangePicker date={date} onDateChange={setDate} />
             </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Projects
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{projects.length}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {projects.filter((p) => p.status === "In Progress").length}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {projects.filter((p) => p.status === "Completed").length}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Budget
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  $
-                  {projects
-                    .reduce((acc, p) => acc + (p.budget || 0), 0)
-                    .toLocaleString()}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Projects Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Project Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Progress</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Budget</TableHead>
-                    <TableHead>Payment</TableHead>
-                    <TableHead>Tasks</TableHead>
-                    <TableHead>Created By</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProjects.length > 0 ? (
-                    filteredProjects.map((project) => (
-                      <TableRow key={project.id}>
-                        <TableCell className="font-medium">
-                          {project.name}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(project.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress
-                              value={project.progress}
-                              className="w-24"
-                            />
-                            <span>{project.progress}%</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex -space-x-2">
-                            {project.assignedTo?.slice(0, 3).map((user) => (
-                              <Avatar
-                                key={user.id}
-                                className="h-8 w-8 border-2 border-background"
-                              >
-                                <AvatarImage
-                                  src={user.avatar_url}
-                                  alt={user.name}
-                                />
-                                <AvatarFallback>{user.initials}</AvatarFallback>
-                              </Avatar>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Project Value</CardTitle>
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{'Rp ' + totalValue.toLocaleString('id-ID')}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Project Status</CardTitle>
+                        <ListChecks className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-1 text-sm">
+                            {Object.entries(projectStatusCounts).map(([status, count]) => (
+                                <div key={status} className="flex justify-between">
+                                    <span>{status}</span>
+                                    <span className="font-semibold">{count}</span>
+                                </div>
                             ))}
-                            {project.assignedTo?.length > 3 && (
-                              <Avatar className="h-8 w-8 border-2 border-background">
-                                <AvatarFallback>
-                                  +{project.assignedTo.length - 3}
-                                </AvatarFallback>
-                              </Avatar>
-                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Payment Status</CardTitle>
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-1 text-sm">
+                            {Object.entries(paymentStatusCounts).map(([status, count]) => (
+                                <div key={status} className="flex justify-between">
+                                    <span>{status}</span>
+                                    <span className="font-semibold">{count}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Top Project Owner</CardTitle>
+                        <User className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {topOwner ? (
+                            <div className="flex items-center gap-4">
+                                <Avatar>
+                                    <AvatarImage src={topOwner.avatar} alt={topOwner.name} />
+                                    <AvatarFallback>{topOwner.initials}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="text-lg font-bold">{topOwner.name}</div>
+                                    <p className="text-xs text-muted-foreground">{topOwner.projectCount} projects</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="text-2xl font-bold">N/A</div>
+                                <p className="text-xs text-muted-foreground">0 projects</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Most Collabs</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {topCollaborator ? (
+                            <div className="flex items-center gap-4">
+                                <Avatar>
+                                    <AvatarImage src={topCollaborator.avatar} alt={topCollaborator.name} />
+                                    <AvatarFallback>{topCollaborator.initials}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="text-lg font-bold">{topCollaborator.name}</div>
+                                    <p className="text-xs text-muted-foreground">{topCollaborator.projectCount} projects</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="text-2xl font-bold">N/A</div>
+                                <p className="text-xs text-muted-foreground">0 projects</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Top Contributor</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {topUserByValue ? (
+                            <div className="flex items-center gap-4">
+                                <Avatar>
+                                    <AvatarImage src={topUserByValue.avatar} alt={topUserByValue.name} />
+                                    <AvatarFallback>{topUserByValue.initials}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="text-lg font-bold">{topUserByValue.name}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {'Rp ' + topUserByValue.totalValue.toLocaleString('id-ID')}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="text-2xl font-bold">N/A</div>
+                                <p className="text-xs text-muted-foreground">No value</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Most Pending Payment</CardTitle>
+                        <Hourglass className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {topUserByPendingValue ? (
+                            <div className="flex items-center gap-4">
+                                <Avatar>
+                                    <AvatarImage src={topUserByPendingValue.avatar} alt={topUserByPendingValue.name} />
+                                    <AvatarFallback>{topUserByPendingValue.initials}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="text-lg font-bold">{topUserByPendingValue.name}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {'Rp ' + topUserByPendingValue.pendingValue.toLocaleString('id-ID')}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="text-2xl font-bold">N/A</div>
+                                <p className="text-xs text-muted-foreground">No pending payments</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+            <Card>
+              <TooltipProvider>
+                <Collapsible open={isCollaboratorsOpen} onOpenChange={setIsCollaboratorsOpen}>
+                  <CollapsibleTrigger className="w-full p-6">
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Collaborators</CardTitle>
+                      <div className="flex items-center gap-4">
+                        {!isCollaboratorsOpen && (
+                          <div className="flex items-center -space-x-2">
+                            {collaborators.slice(0, 5).map(c => (
+                              <Tooltip key={c.id}>
+                                <TooltipTrigger asChild>
+                                  <Avatar className="h-8 w-8 border-2 border-card">
+                                    <AvatarImage src={c.avatar} alt={c.name} />
+                                    <AvatarFallback>{c.initials}</AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{c.name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ))}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {project.dueDate
-                            ? format(new Date(project.dueDate), "MMM d, yyyy")
-                            : "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          ${project.budget?.toLocaleString() || "0"}
-                        </TableCell>
-                        <TableCell>
-                          {getPaymentStatusBadge(project.paymentStatus)}
-                        </TableCell>
-                        <TableCell>{project.tasks?.length || 0}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage
-                                src={project.createdBy?.avatar_url}
-                                alt={project.createdBy?.name}
-                              />
-                              <AvatarFallback>
-                                {project.createdBy?.initials}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span>{project.createdBy?.name}</span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center">
-                        No projects found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                        )}
+                        <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="px-6 pb-6 pt-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                              <TableHeader>
+                                  <TableRow>
+                                      <TableHead>Collaborator</TableHead>
+                                      <TableHead className="text-right">Projects</TableHead>
+                                      <TableHead className="text-right">Tasks</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {collaborators.map(c => (
+                                      <TableRow key={c.id}>
+                                          <TableCell>
+                                              <div className="flex items-center gap-3">
+                                                  <Avatar className="h-8 w-8">
+                                                      <AvatarImage src={c.avatar} alt={c.name} />
+                                                      <AvatarFallback>{c.initials}</AvatarFallback>
+                                                  </Avatar>
+                                                  <span className="font-medium whitespace-nowrap">{c.name}</span>
+                                              </div>
+                                          </TableCell>
+                                          <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
+                                          <TableCell className="text-right font-medium">{c.taskCount}</TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                        </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
+              </TooltipProvider>
+            </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Projects</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <TooltipProvider>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[30%]">Project Name</TableHead>
+                      <TableHead>Project Status</TableHead>
+                      <TableHead>Payment Status</TableHead>
+                      <TableHead>Project Progress</TableHead>
+                      <TableHead>Tickets</TableHead>
+                      <TableHead>Project Value</TableHead>
+                      <TableHead>Project Due Date</TableHead>
+                      <TableHead>Owner</TableHead>
+                      <TableHead className="text-right">Team</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProjects.map((project) => {
+                      const totalTasks = project.tasks?.length || 0;
+                      const completedTasks = project.tasks?.filter(t => t.completed).length || 0;
+                      const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : (project.progress || 0);
+                      const ticketCount = project.comments?.filter(comment => (comment as any).isTicket).length || 0;
+
+                      return (
+                        <TableRow
+                          key={project.id}
+                          onClick={() => navigate(`/projects/${project.id}`)}
+                          className="cursor-pointer"
+                        >
+                          <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
+                            <div className="font-medium whitespace-nowrap">{project.name}</div>
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={project.status} />
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={project.paymentStatus} />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Progress value={progressPercentage} className="w-24" />
+                              <span className="text-sm font-medium text-muted-foreground">
+                                {progressPercentage}%
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium text-center">{ticketCount}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium whitespace-nowrap">
+                              {'Rp ' + (project.budget || 0).toLocaleString('id-ID')}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium whitespace-nowrap">
+                              {project.dueDate ? format(new Date(project.dueDate), "MMM dd, yyyy") : 'N/A'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {project.assignedTo && project.assignedTo.length > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Avatar className="h-8 w-8 border-2 border-background">
+                                    <AvatarImage src={project.assignedTo[0].avatar} alt={project.assignedTo[0].name} />
+                                    <AvatarFallback>{project.assignedTo[0].initials}</AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{project.assignedTo[0].name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end -space-x-2">
+                              {project.assignedTo.map((user) => (
+                                <Tooltip key={user.id}>
+                                  <TooltipTrigger asChild>
+                                    <Avatar className="h-8 w-8 border-2 border-background">
+                                      <AvatarImage src={user.avatar} alt={user.name} />
+                                      <AvatarFallback>{user.initials}</AvatarFallback>
+                                    </Avatar>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{user.name}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ))}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TooltipProvider>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </PortalLayout>
   );
 };
 
-export default DashboardPage;
+export default Index;

@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Project, ProjectStatus, PaymentStatus } from "@/types";
+import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -63,26 +63,65 @@ const ProjectsTable = () => {
 
   const fetchProjects = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase.rpc('get_dashboard_projects');
+    const { data: projectsData, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
 
     if (error) {
-        toast.error("Failed to refresh projects. Please try again.");
-        console.error("Error fetching dashboard projects:", error);
+        toast.error("Failed to fetch projects.");
+        console.error(error);
+        setLocalProjects([]);
         setIsLoading(false);
         return;
     }
 
-    const mappedProjects: Project[] = data.map((p: any) => ({
-        ...p,
-        status: p.status as ProjectStatus,
-        paymentStatus: p.payment_status as PaymentStatus,
-        assignedTo: p.assignedTo || [],
-        tasks: p.tasks || [],
-        comments: p.comments || [],
-        createdBy: p.created_by,
-        startDate: p.start_date,
-        dueDate: p.due_date,
-    }));
+    const userIds = [...new Set(projectsData.map(p => p.created_by).filter(Boolean))];
+    let profilesMap = new Map();
+
+    if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('id', userIds);
+
+        if (profilesError) {
+            toast.error("Failed to fetch project creator details.");
+            console.error(profilesError);
+        } else {
+            profilesMap = new Map(profilesData.map(p => [p.id, p]));
+        }
+    }
+
+    const mappedProjects: Project[] = projectsData.map(p => {
+        const profile = profilesMap.get(p.created_by);
+        const createdBy = profile ? {
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
+            email: profile.email,
+            avatar: profile.avatar_url,
+            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+        } : null;
+
+        return {
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            description: p.description,
+            status: p.status as ProjectStatus,
+            progress: p.progress,
+            budget: p.budget,
+            startDate: p.start_date,
+            dueDate: p.due_date,
+            paymentStatus: p.payment_status as PaymentStatus,
+            createdBy: createdBy,
+            assignedTo: [],
+            tasks: [],
+            comments: [],
+            activities: [],
+            briefFiles: [],
+            services: p.services,
+        };
+    });
 
     setLocalProjects(mappedProjects);
     setIsLoading(false);
@@ -250,28 +289,12 @@ const ProjectsTable = () => {
       origin_event_id: originEventId,
     };
 
-    const { data: newProject, error } = await supabase.from('projects').insert([newProjectData]).select().single();
+    const { error } = await supabase.from('projects').insert([newProjectData]);
 
-    if (error || !newProject) {
+    if (error) {
         toast.error(`Failed to import "${event.summary}": ${error.message}`);
     } else {
-        const { data: allUsers, error: usersError } = await supabase.from('profiles').select('id');
-        if (usersError) {
-            toast.error("Project created, but failed to add team members.");
-        } else {
-            const membersToAdd = allUsers.map(u => ({
-                project_id: newProject.id,
-                user_id: u.id,
-                role: u.id === user.id ? 'owner' : 'member'
-            }));
-            const { error: memberError } = await supabase.from('project_members').insert(membersToAdd);
-            if (memberError) {
-                toast.error(`Project created, but failed to add team members: ${memberError.message}`);
-            } else {
-                toast.success(`"${event.summary}" imported and shared with the team.`);
-            }
-        }
-        
+        toast.success(`"${event.summary}" imported as a new project.`);
         setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
         fetchProjects();
     }

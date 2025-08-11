@@ -6,13 +6,10 @@ import { Users } from "lucide-react";
 import { Collaborator } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { RealtimeChannel, RealtimePresenceState } from "@supabase/supabase-js";
 
 type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
 };
-
-type PresencePayload = Omit<Collaborator, 'online'>;
 
 const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -23,79 +20,31 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   useEffect(() => {
     if (!currentUser) return;
 
-    let channel: RealtimeChannel;
-
-    const setupPresence = async () => {
-      const { data: profile, error } = await supabase
+    const fetchCollaborators = async () => {
+      const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, avatar_url, email')
-        .eq('id', currentUser.id)
-        .single();
+        .select('id, first_name, last_name, avatar_url');
 
-      if (error || !profile) {
-        console.error("Error fetching profile for presence tracking:", error);
+      if (error) {
+        console.error("Error fetching profiles:", error);
         return;
       }
 
-      const name = (`${profile.first_name || ''} ${profile.last_name || ''}`).trim() || profile.email || 'Anonymous';
-      const initials = (`${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}` || 'NN').toUpperCase();
-
-      channel = supabase.channel('online-users', {
-        config: {
-          presence: {
-            key: currentUser.id,
-          },
-        },
-      });
-
-      channel.on('presence', { event: 'sync' }, () => {
-        const presenceState: RealtimePresenceState<PresencePayload> = channel.presenceState();
-        const collaborators = Object.keys(presenceState)
-          .filter(presenceId => presenceId !== currentUser.id)
-          .map(presenceId => {
-            const pres = presenceState[presenceId][0];
-            return { ...pres, online: true };
-          });
-        setOnlineCollaborators(collaborators);
-      });
-
-      channel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        if (key === currentUser.id) return;
-        const newPresence = newPresences[0] as unknown as PresencePayload;
-        const newCollaborator: Collaborator = { ...newPresence, online: true };
-        setOnlineCollaborators(prev => {
-          if (prev.some(c => c.id === newCollaborator.id)) {
-            return prev;
-          }
-          return [...prev, newCollaborator];
-        });
-      });
-
-      channel.on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        if (key === currentUser.id) return;
-        const leftPresence = leftPresences[0] as unknown as PresencePayload;
-        setOnlineCollaborators(prev => prev.filter(c => c.id !== leftPresence.id));
-      });
-
-      channel.subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({
+      if (profiles) {
+        const collaborators = profiles
+          .filter(profile => profile.id !== currentUser.id) // Filter out the current user
+          .map((profile): Collaborator => ({
             id: profile.id,
-            name,
-            initials,
-            avatar: profile.avatar_url,
-          });
-        }
-      });
-    };
-
-    setupPresence();
-
-    return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+            online: true, // Simulate online status
+            avatar: profile.avatar_url || undefined,
+          }));
+        setOnlineCollaborators(collaborators);
       }
     };
+
+    fetchCollaborators();
   }, [currentUser]);
   
   const visibleCollaborators = onlineCollaborators.slice(0, 3);
@@ -117,11 +66,9 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
             <TooltipTrigger asChild>
               <div className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative cursor-pointer">
                 <Users className="h-5 w-5" />
-                {onlineCollaborators.length > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary p-0 text-xs text-primary-foreground">
-                    {onlineCollaborators.length}
-                  </span>
-                )}
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary p-0 text-xs text-primary-foreground">
+                  {onlineCollaborators.length}
+                </span>
               </div>
             </TooltipTrigger>
             <TooltipContent side="right">

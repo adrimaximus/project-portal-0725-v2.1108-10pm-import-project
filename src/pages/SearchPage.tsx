@@ -1,95 +1,137 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { dummyProjects, Project } from '@/data/projects';
 import { User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { Building, User as UserIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import HighlightMatch from '@/components/HighlightMatch';
 
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const query = searchParams.get('q') || '';
-  const [results, setResults] = useState<{ projects: Project[], users: User[] }>({ projects: [], users: [] });
-  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
+    const term = searchParams.get('q') || '';
+    setSearchTerm(term);
+
     const performSearch = async () => {
-      if (!query) {
-        setResults({ projects: [], users: [] });
+      if (!term) {
+        setProjects([]);
+        setUsers([]);
         return;
       }
-      setLoading(true);
-      
-      // This is a simplified search. A real implementation would use full-text search.
-      const { data: users, error: userError } = await supabase
+
+      // Search projects (using dummy data for now)
+      setProjects(dummyProjects.filter(p => p.name.toLowerCase().includes(term.toLowerCase())));
+
+      // Search users from Supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`);
-
-      // Project search is using dummy data for now.
-      const projectResults = dummyProjects.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
-
-      if (userError) {
-        toast.error("Failed to search for users.");
+        .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%`);
+      
+      if (data) {
+        const foundUsers = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }));
+        setUsers(foundUsers);
       }
-
-      setResults({ projects: projectResults, users: (users as User[]) || [] });
-      setLoading(false);
     };
 
     performSearch();
-  }, [query]);
+  }, [searchParams]);
+
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSearchParams({ q: query });
+  };
 
   return (
     <PortalLayout>
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold">Search Results</h1>
-          <p className="text-muted-foreground">Showing results for "{query}"</p>
-        </div>
+      <div className="space-y-6">
+        <form onSubmit={handleSearch}>
+          <Input
+            type="search"
+            placeholder="Search anything..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full text-lg p-6"
+            autoFocus
+          />
+        </form>
 
-        <Input 
-          type="search" 
-          placeholder="Search for projects, users, files..." 
-          className="w-full"
-          value={query}
-          onChange={(e) => setSearchParams({ q: e.target.value })}
-        />
+        {searchTerm && (
+          <div>
+            <h2 className="text-2xl font-semibold mb-4">
+              Results for "<span className="text-primary">{searchTerm}</span>"
+            </h2>
 
-        {loading ? (
-          <p>Searching...</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Projects</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {results.projects.length > 0 ? (
-                  <ul className="space-y-2">
-                    {results.projects.map(p => <li key={p.id}>{p.name}</li>)}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground">No projects found.</p>
-                )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Users</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {results.users.length > 0 ? (
-                  <ul className="space-y-2">
-                    {results.users.map(u => <li key={u.id}>{u.name || u.email}</li>)}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground">No users found.</p>
-                )}
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              {projects.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building className="h-5 w-5" />
+                      Projects ({projects.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-1 divide-y">
+                    {projects.map(project => (
+                      <Link to={`/projects/${project.id}`} key={project.id} className="block p-3 rounded-md hover:bg-muted -mx-3">
+                        <p className="font-medium">
+                          <HighlightMatch text={project.name} query={searchTerm} />
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate">{project.description}</p>
+                      </Link>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {users.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <UserIcon className="h-5 w-5" />
+                      Users ({users.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-1 divide-y">
+                    {users.map(user => (
+                      <div key={user.id} className="flex items-center gap-3 p-3 -mx-3">
+                        <Avatar>
+                          <AvatarImage src={user.avatar} />
+                          <AvatarFallback>{user.initials}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">
+                            <HighlightMatch text={user.name} query={searchTerm} />
+                          </p>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {projects.length === 0 && users.length === 0 && (
+                <p className="text-muted-foreground text-center py-10">No results found.</p>
+              )}
+            </div>
           </div>
         )}
       </div>

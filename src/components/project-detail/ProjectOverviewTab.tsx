@@ -1,54 +1,131 @@
-import { Project, Task } from '@/data/projects';
-import { Progress } from '@/components/ui/progress';
+import { Project, AssignedUser } from '@/data/projects';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Circle, Clock } from 'lucide-react';
+import ProjectDescription from './ProjectDescription';
+import ProjectServices from './ProjectServices';
+import ProjectBrief from './ProjectBrief';
+import ModernTeamSelector from '../request/ModernTeamSelector';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 interface ProjectOverviewTabProps {
   project: Project;
+  isEditing: boolean;
+  onDescriptionChange: (value: string) => void;
+  onTeamChange: (users: AssignedUser[]) => void;
+  onFilesAdd: (files: File[]) => void;
+  onFileDelete: (fileId: string) => void;
+  onServicesChange: (services: string[]) => void;
 }
 
-const ProjectOverviewTab = ({ project }: ProjectOverviewTabProps) => {
-  const totalTasks = project.tasks.length;
-  const completedTasks = project.tasks.filter(task => task.completed).length;
-  const completionPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesAdd, onFileDelete, onServicesChange }: ProjectOverviewTabProps) => {
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (data) {
+        const users = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }));
+        setAllUsers(users);
+      }
+    };
+    fetchUsers();
+  }, []);
+  
+  const handleTeamSelectionToggle = (userToToggle: AssignedUser) => {
+    const isSelected = project.assignedTo.some(u => u.id === userToToggle.id);
+    const newTeam = isSelected
+      ? project.assignedTo.filter(u => u.id !== userToToggle.id)
+      : [...project.assignedTo, userToToggle];
+    onTeamChange(newTeam);
+  };
+
+  const assignableUsers = project.createdBy
+    ? allUsers.filter(u => u.id !== project.createdBy.id)
+    : allUsers;
 
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Project Progress</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Description</CardTitle></CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-muted-foreground">Tasks Completed</span>
-            <span>{completedTasks} / {totalTasks}</span>
-          </div>
-          <Progress value={completionPercentage} />
-          <p className="text-right text-sm text-muted-foreground mt-2">{completionPercentage.toFixed(0)}% Complete</p>
+          <ProjectDescription
+            description={project.description}
+            isEditing={isEditing}
+            onDescriptionChange={onDescriptionChange}
+          />
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Tasks</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Team</CardTitle></CardHeader>
         <CardContent>
-          <ul className="space-y-3">
-            {project.tasks.map(task => (
-              <li key={task.id} className="flex items-center">
-                {task.completed ? (
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
-                ) : (
-                  <Circle className="h-5 w-5 text-muted-foreground mr-3" />
-                )}
-                <span className={task.completed ? 'line-through text-muted-foreground' : ''}>
-                  {task.title}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {isEditing ? (
+            <ModernTeamSelector
+              users={assignableUsers}
+              selectedUsers={project.assignedTo}
+              onSelectionChange={handleTeamSelectionToggle}
+            />
+          ) : (
+            <div className="space-y-3">
+              {project.createdBy && (
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={project.createdBy.avatar} />
+                    <AvatarFallback>{project.createdBy.initials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{project.createdBy.name}</p>
+                    <p className="text-xs text-muted-foreground">Project Owner</p>
+                  </div>
+                </div>
+              )}
+              {project.assignedTo.map(member => (
+                <div key={member.id} className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={member.avatar} />
+                    <AvatarFallback>{member.initials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{member.name}</p>
+                    <p className="text-xs text-muted-foreground">Team Member</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Services</CardTitle></CardHeader>
+        <CardContent>
+          <ProjectServices
+            selectedServices={project.services}
+            isEditing={isEditing}
+            onServicesChange={onServicesChange}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Brief & Files</CardTitle></CardHeader>
+        <CardContent>
+          <ProjectBrief
+            files={project.briefFiles || []}
+            isEditing={isEditing}
+            onFilesAdd={onFilesAdd}
+            onFileDelete={onFileDelete}
+          />
         </CardContent>
       </Card>
     </div>
