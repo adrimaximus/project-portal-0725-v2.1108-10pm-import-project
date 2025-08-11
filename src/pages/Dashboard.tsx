@@ -10,6 +10,9 @@ import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
 import CollaboratorsCard from "@/components/dashboard/CollaboratorsCard";
 import ProjectsDashboardTable from "@/components/dashboard/ProjectsDashboardTable";
 import EmptyDashboard from "@/components/dashboard/EmptyDashboard";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const { user } = useAuth();
@@ -49,9 +52,17 @@ const Index = () => {
         <DashboardSkeleton />
       ) : (
         <div className="space-y-8 animate-in fade-in-0 duration-500">
-          <div className="text-left">
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
-            <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
+          <div className="flex justify-between items-start">
+            <div className="text-left">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
+              <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
+            </div>
+            <Link to="/projects/new">
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New Project
+              </Button>
+            </Link>
           </div>
           
           {projects.length > 0 ? (

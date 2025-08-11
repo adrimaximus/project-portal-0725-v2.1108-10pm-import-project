@@ -157,6 +157,13 @@ export interface Activity {
     timestamp: string;
 }
 
+export interface Service {
+  title: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+}
+
 export interface Project {
   id: string;
   name: string;
