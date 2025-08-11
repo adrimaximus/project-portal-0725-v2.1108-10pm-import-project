@@ -55,34 +55,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    setLoading(true);
+
+    // Handle initial session check on app load
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session) {
         await fetchUserProfile(session.user);
       }
       setLoading(false);
-    };
+    });
 
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (_event === 'PASSWORD_RECOVERY' && session) {
-        navigate('/reset-password');
-      }
-      
-      setSession(session);
-      if (session) {
-        await fetchUserProfile(session.user);
-      } else {
+    // Listen for auth state changes (login, logout, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        setLoading(true); // Set loading to true during the transition
+        setSession(session);
+        if (session) {
+          await fetchUserProfile(session.user);
+        }
+        setLoading(false); // Set loading to false only after the profile is fetched
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
         setUser(null);
-      }
-      if (_event !== 'INITIAL_SESSION') {
-        setLoading(false);
+      } else if (event === 'PASSWORD_RECOVERY') {
+        navigate('/reset-password');
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const logout = async () => {
