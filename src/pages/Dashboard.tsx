@@ -30,7 +30,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-import { Project, ProjectStatus, PaymentStatus, AssignedUser, Task, Comment } from "@/data/projects";
+import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
 import { toast } from "sonner";
 import StatusBadge from "@/components/StatusBadge";
 import AppSkeleton from "@/components/AppSkeleton";
@@ -48,36 +48,39 @@ const Index = () => {
 
   useEffect(() => {
     const fetchProjects = async () => {
+      // Wait until the user object is available from AuthContext
       if (!user) {
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-
-      const { data, error } = await supabase.rpc('get_dashboard_projects');
-
-      if (error) {
-        toast.error("Failed to fetch projects.");
-        console.error(error);
-        setIsLoading(false);
         return;
       }
       
-      // Data dari RPC sudah dalam format yang benar, hanya perlu memastikan tipe data
-      const mappedProjects: Project[] = data.map((p: any) => ({
-        ...p,
-        status: p.status as ProjectStatus,
-        paymentStatus: p.payment_status as PaymentStatus,
-        assignedTo: p.assignedTo || [],
-        tasks: p.tasks || [],
-        comments: p.comments || [],
-        createdBy: p.created_by,
-        startDate: p.start_date,
-        dueDate: p.due_date,
-      }));
+      try {
+        const { data, error } = await supabase.rpc('get_dashboard_projects');
 
-      setProjects(mappedProjects);
-      setIsLoading(false);
+        if (error) {
+          toast.error("Failed to fetch projects.");
+          console.error(error);
+          return;
+        }
+        
+        const mappedProjects: Project[] = data.map((p: any) => ({
+          ...p,
+          status: p.status as ProjectStatus,
+          paymentStatus: p.payment_status as PaymentStatus,
+          assignedTo: p.assignedTo || [],
+          tasks: p.tasks || [],
+          comments: p.comments || [],
+          createdBy: p.created_by,
+          startDate: p.start_date,
+          dueDate: p.due_date,
+        }));
+
+        setProjects(mappedProjects);
+      } catch (e) {
+        toast.error("An unexpected error occurred while fetching projects.");
+        console.error(e);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchProjects();
@@ -177,12 +180,14 @@ const Index = () => {
 
   const topUserByPendingValue = Object.values(pendingPaymentCounts).sort((a, b) => b.pendingValue - a.pendingValue)[0] || null;
 
-  if (!user) {
-    return <PortalLayout><div>Please log in to view the dashboard.</div></PortalLayout>;
-  }
-
+  // Show skeleton while loading user or project data
   if (isLoading) {
     return <AppSkeleton />;
+  }
+
+  // Show this only after loading is complete and there is still no user
+  if (!user) {
+    return <PortalLayout><div>Please log in to view the dashboard.</div></PortalLayout>;
   }
 
   return (
