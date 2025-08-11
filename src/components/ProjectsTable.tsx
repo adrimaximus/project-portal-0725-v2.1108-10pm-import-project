@@ -66,9 +66,8 @@ const ProjectsTable = () => {
     const { data, error } = await supabase.rpc('get_dashboard_projects');
 
     if (error) {
-        toast.error("Failed to fetch projects.");
-        console.error(error);
-        setLocalProjects([]);
+        toast.error("Failed to refresh projects. Please try again.");
+        console.error("Error fetching dashboard projects:", error);
         setIsLoading(false);
         return;
     }
