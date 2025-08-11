@@ -45,28 +45,30 @@ const Index = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-8">
-        <div className="text-left">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
-          <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
-        </div>
-
-        {isLoading ? (
-          <DashboardSkeleton />
-        ) : projects.length > 0 ? (
-          <div className="space-y-6 animate-in fade-in-0 duration-500">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <h2 className="text-2xl font-bold">Insights</h2>
-                <DateRangePicker date={date} onDateChange={setDate} />
-            </div>
-            <DashboardStatsGrid {...stats} />
-            <CollaboratorsCard collaborators={stats.collaborators} />
-            <ProjectsDashboardTable projects={filteredProjects} />
+      {isLoading ? (
+        <DashboardSkeleton />
+      ) : (
+        <div className="space-y-8 animate-in fade-in-0 duration-500">
+          <div className="text-left">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
+            <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
           </div>
-        ) : (
-          <EmptyDashboard />
-        )}
-      </div>
+          
+          {projects.length > 0 ? (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                  <h2 className="text-2xl font-bold">Insights</h2>
+                  <DateRangePicker date={date} onDateChange={setDate} />
+              </div>
+              <DashboardStatsGrid {...stats} />
+              <CollaboratorsCard collaborators={stats.collaborators} />
+              <ProjectsDashboardTable projects={filteredProjects} />
+            </div>
+          ) : (
+            <EmptyDashboard />
+          )}
+        </div>
+      )}
     </PortalLayout>
   );
 };
