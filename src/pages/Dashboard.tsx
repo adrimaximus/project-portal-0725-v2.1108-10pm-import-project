@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { subYears } from "date-fns";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
@@ -9,6 +9,7 @@ import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
 import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
 import CollaboratorsCard from "@/components/dashboard/CollaboratorsCard";
 import ProjectsDashboardTable from "@/components/dashboard/ProjectsDashboardTable";
+import EmptyDashboard from "@/components/dashboard/EmptyDashboard";
 
 const Index = () => {
   const { user } = useAuth();
@@ -18,14 +19,6 @@ const Index = () => {
   });
   
   const { projects, isLoading, stats } = useDashboardData();
-  const [isContentVisible, setIsContentVisible] = useState(false);
-
-  useEffect(() => {
-    // Saat loading selesai dan ada proyek, buat konten terlihat.
-    if (!isLoading && projects.length > 0) {
-      setIsContentVisible(true);
-    }
-  }, [isLoading, projects.length]);
 
   const filteredProjects = useMemo(() => projects.filter(project => {
     if (date?.from) {
@@ -58,16 +51,20 @@ const Index = () => {
           <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
         </div>
 
-        {isLoading && projects.length === 0 ? <DashboardSkeleton /> : (
-          <div className={`space-y-6 transition-opacity duration-500 ease-in-out ${isContentVisible ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                  <h2 className="text-2xl font-bold">Insights</h2>
-                  <DateRangePicker date={date} onDateChange={setDate} />
-              </div>
-              <DashboardStatsGrid {...stats} />
-              <CollaboratorsCard collaborators={stats.collaborators} />
-              <ProjectsDashboardTable projects={filteredProjects} />
+        {isLoading ? (
+          <DashboardSkeleton />
+        ) : projects.length > 0 ? (
+          <div className="space-y-6 animate-in fade-in-0 duration-500">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <h2 className="text-2xl font-bold">Insights</h2>
+                <DateRangePicker date={date} onDateChange={setDate} />
+            </div>
+            <DashboardStatsGrid {...stats} />
+            <CollaboratorsCard collaborators={stats.collaborators} />
+            <ProjectsDashboardTable projects={filteredProjects} />
           </div>
+        ) : (
+          <EmptyDashboard />
         )}
       </div>
     </PortalLayout>
