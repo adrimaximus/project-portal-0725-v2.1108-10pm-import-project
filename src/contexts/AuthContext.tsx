@@ -1,13 +1,13 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { UserProfile, AuthContextType } from '@/types';
+import { User, AuthContextType } from '@/types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null) => {
@@ -26,7 +26,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Error fetching user profile:', error);
         setUser(null);
       } else {
-        setUser(data as UserProfile);
+        const userProfile: User = {
+          id: data.id,
+          email: data.email || supabaseUser.email || '',
+          first_name: data.first_name,
+          last_name: data.last_name,
+          avatar: data.avatar_url,
+          name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || data.email || 'No name',
+          initials: `${data.first_name?.[0] || ''}${data.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+        };
+        setUser(userProfile);
       }
     } catch (e) {
       console.error('Exception fetching user profile:', e);

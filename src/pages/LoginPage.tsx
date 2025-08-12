@@ -36,7 +36,7 @@ const LoginPage = () => {
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <Auth
             supabaseClient={supabase}
-            appearance={{ theme: ThemeSopa }}
+            appearance={{ theme: ThemeSupa }}
             providers={['google']}
             theme="light"
           />

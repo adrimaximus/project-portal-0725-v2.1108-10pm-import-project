@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import PortalLayout from '@/components/PortalLayout';
 import { Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProjectServices from '@/components/project-detail/ProjectServices';
 
@@ -43,7 +42,18 @@ const ProjectDetailPage = () => {
             <p className="text-muted-foreground mt-1">{project.description}</p>
         </div>
         
-        <ProjectServices services={project.services} />
+        <Card>
+            <CardHeader>
+                <CardTitle>Services</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ProjectServices 
+                    selectedServices={project.services} 
+                    isEditing={false} 
+                    onServicesChange={() => {}} 
+                />
+            </CardContent>
+        </Card>
         
         {/* Other project details can be added here */}
       </div>
