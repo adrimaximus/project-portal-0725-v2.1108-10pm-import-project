@@ -117,7 +117,6 @@ const Profile = () => {
 
   const handleLogout = async () => {
     await logout();
-    toast.success("You have been successfully logged out.");
   };
 
   return (

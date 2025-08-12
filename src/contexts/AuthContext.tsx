@@ -82,6 +82,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (event === 'PASSWORD_RECOVERY') {
           navigate('/reset-password');
         }
+        if (event === 'SIGNED_OUT') {
+          toast.success("You have been successfully logged out.");
+        }
         setSession(newSession);
         if (newSession) {
           fetchUserProfile(newSession.user);
@@ -108,7 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
     if (error) {
       console.error("Error logging out:", error);
       toast.error("Logout failed. Please try again.");
