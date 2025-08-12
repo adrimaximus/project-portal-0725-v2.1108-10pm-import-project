@@ -29,7 +29,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
+import { Project, ProjectStatus, PaymentStatus, AssignedUser, Task, Comment } from "@/data/projects";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import DashboardProjectList from "@/components/DashboardProjectList";
@@ -108,33 +108,97 @@ const Index = () => {
     if (isInitialLoad) setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.rpc('get_dashboard_projects');
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('*');
+      if (projectsError) throw projectsError;
 
-      if (error) {
-        toast.error("Failed to fetch projects.", {
-          id: 'fetch-projects-error',
-          description: "There was a problem loading your project data. Please try refreshing the page.",
-        });
-        console.error(error);
+      if (!projectsData || projectsData.length === 0) {
+        setProjects([]);
+        if (isInitialLoad) setIsLoading(false);
         return;
       }
-      
-      const mappedProjects: Project[] = data.map((p: any) => ({
-        ...p,
-        status: p.status as ProjectStatus,
-        paymentStatus: p.payment_status as PaymentStatus,
-        assignedTo: p.assignedTo || [],
-        tasks: p.tasks || [],
-        comments: p.comments || [],
-        createdBy: p.created_by,
-        startDate: p.start_date,
-        dueDate: p.due_date,
-      }));
+
+      const projectIds = projectsData.map(p => p.id);
+
+      const [membersRes, tasksRes, commentsRes] = await Promise.all([
+        supabase.from('project_members').select('*, profile:profiles(*)').in('project_id', projectIds),
+        supabase.from('tasks').select('*, assignedTo:task_assignees(profile:profiles(*))').in('project_id', projectIds),
+        supabase.from('comments').select('project_id, is_ticket, id').in('project_id', projectIds),
+      ]);
+
+      if (membersRes.error || tasksRes.error || commentsRes.error) {
+        console.error("Error fetching project details:", membersRes.error, tasksRes.error, commentsRes.error);
+        throw new Error("Failed to fetch project details.");
+      }
+
+      const creatorIds = [...new Set(projectsData.map(p => p.created_by).filter(Boolean))];
+      const { data: creatorProfilesData, error: creatorError } = await supabase.from('profiles').select('*').in('id', creatorIds);
+      if (creatorError) throw creatorError;
+      const creatorsMap = new Map(creatorProfilesData.map(p => [p.id, p]));
+
+      const mappedProjects: Project[] = projectsData.map(p => {
+        const members = membersRes.data?.filter(m => m.project_id === p.id) || [];
+        const tasks = tasksRes.data?.filter(t => t.project_id === p.id) || [];
+        const comments = commentsRes.data?.filter(c => c.project_id === p.id) || [];
+        const creatorProfile = creatorsMap.get(p.created_by);
+
+        return {
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          description: p.description,
+          status: p.status as ProjectStatus,
+          progress: p.progress,
+          budget: p.budget,
+          startDate: p.start_date,
+          dueDate: p.due_date,
+          paymentStatus: p.payment_status as PaymentStatus,
+          createdBy: creatorProfile ? {
+              id: creatorProfile.id,
+              name: `${creatorProfile.first_name || ''} ${creatorProfile.last_name || ''}`.trim() || creatorProfile.email,
+              email: creatorProfile.email,
+              avatar: creatorProfile.avatar_url,
+              initials: `${creatorProfile.first_name?.[0] || ''}${creatorProfile.last_name?.[0] || ''}`.toUpperCase(),
+          } : null,
+          assignedTo: members.map((m: any) => {
+              const profile = m.profile;
+              return {
+                  id: profile.id,
+                  name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
+                  email: profile.email,
+                  avatar: profile.avatar_url,
+                  initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+                  role: m.role,
+              };
+          }),
+          tasks: tasks.map((t: any) => ({
+              id: t.id,
+              title: t.title,
+              completed: t.completed,
+              assignedTo: (t.assignedTo || []).map((a: any) => {
+                  const profile = a.profile;
+                  return {
+                      id: profile.id,
+                      name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
+                      email: profile.email,
+                      avatar: profile.avatar_url,
+                      initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+                  };
+              }),
+          })),
+          comments: comments.map((c: any) => ({
+              id: c.id,
+              isTicket: c.is_ticket,
+          })),
+        } as Project;
+      });
 
       setProjects(mappedProjects);
-    } catch (e) {
-      toast.error("An unexpected error occurred while fetching projects.", {
+    } catch (e: any) {
+      toast.error("Failed to fetch projects.", {
         id: 'fetch-projects-error',
+        description: e.message || "There was a problem loading your project data. Please try refreshing the page.",
       });
       console.error(e);
     } finally {
@@ -169,7 +233,6 @@ const Index = () => {
       const pickerFrom = date.from;
       const pickerTo = date.to || date.from;
 
-      // If project has no dates, don't filter it out by date.
       if (!project.startDate || !project.dueDate) {
         return true;
       }
@@ -177,7 +240,6 @@ const Index = () => {
       const projectStart = new Date(project.startDate);
       const projectEnd = new Date(project.dueDate);
 
-      // If project has dates, check if it's within the selected range.
       if (projectStart > pickerTo || projectEnd < pickerFrom) {
         return false;
       }
