@@ -5,74 +5,17 @@ import PortalLayout from "@/components/PortalLayout";
 import { Project } from "@/data/projects";
 import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
 import CollaboratorsList from "@/components/dashboard/CollaboratorsList";
-
-const mockProjects: Project[] = [
-  {
-    id: '1',
-    name: 'Website Redesign',
-    category: 'Web Development',
-    description: 'Complete redesign of the company website.',
-    status: 'In Progress',
-    progress: 75,
-    budget: 120000000,
-    startDate: new Date(new Date().getFullYear(), 0, 15).toISOString(),
-    dueDate: new Date(new Date().getFullYear(), 5, 30).toISOString(),
-    paymentStatus: 'Paid',
-    createdBy: { id: 'user-1', name: 'Andi', email: 'andi@example.com', avatar: 'https://i.pravatar.cc/150?u=andi', initials: 'A' },
-    assignedTo: [
-      { id: 'user-2', name: 'Budi', email: 'budi@example.com', avatar: 'https://i.pravatar.cc/150?u=budi', initials: 'B', role: 'Developer' },
-      { id: 'user-3', name: 'Citra', email: 'citra@example.com', avatar: 'https://i.pravatar.cc/150?u=citra', initials: 'C', role: 'Designer' },
-    ],
-    tasks: [],
-    comments: [],
-  },
-  {
-    id: '2',
-    name: 'Mobile App Launch',
-    category: 'Mobile Development',
-    description: 'Launch of the new mobile application.',
-    status: 'Completed',
-    progress: 100,
-    budget: 250000000,
-    startDate: new Date(new Date().getFullYear(), 2, 1).toISOString(),
-    dueDate: new Date(new Date().getFullYear(), 8, 15).toISOString(),
-    paymentStatus: 'Paid',
-    createdBy: { id: 'user-3', name: 'Citra', email: 'citra@example.com', avatar: 'https://i.pravatar.cc/150?u=citra', initials: 'C' },
-    assignedTo: [
-      { id: 'user-1', name: 'Andi', email: 'andi@example.com', avatar: 'https://i.pravatar.cc/150?u=andi', initials: 'A', role: 'Manager' },
-    ],
-    tasks: [],
-    comments: [],
-  },
-  {
-    id: '3',
-    name: 'Marketing Campaign',
-    category: 'Marketing',
-    description: 'Q3 Marketing Campaign.',
-    status: 'On Hold',
-    progress: 20,
-    budget: 50000000,
-    startDate: new Date(new Date().getFullYear(), 6, 1).toISOString(),
-    dueDate: new Date(new Date().getFullYear(), 8, 31).toISOString(),
-    paymentStatus: 'Pending',
-    createdBy: { id: 'user-1', name: 'Andi', email: 'andi@example.com', avatar: 'https://i.pravatar.cc/150?u=andi', initials: 'A' },
-    assignedTo: [
-      { id: 'user-4', name: 'Dewi', email: 'dewi@example.com', avatar: 'https://i.pravatar.cc/150?u=dewi', initials: 'D', role: 'Specialist' },
-    ],
-    tasks: [],
-    comments: [],
-  },
-];
+import { useProjects } from "@/hooks/useProjects";
+import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(new Date().getFullYear(), 11, 31),
   });
-  const [projects] = useState<Project[]>(mockProjects);
-  
-  // Mock user object
-  const user = { name: "Andi" };
+  const { data: projects = [], isLoading } = useProjects();
+  const { user } = useAuth();
 
   const filteredProjects = projects.filter(project => {
     if (date?.from && project.startDate) {
@@ -89,11 +32,37 @@ const Index = () => {
     return true;
   });
 
+  if (isLoading) {
+    return (
+      <PortalLayout>
+        <div className="space-y-8">
+          <div className="text-left">
+            <Skeleton className="h-10 w-1/2" />
+            <Skeleton className="h-6 w-3/4 mt-2" />
+          </div>
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-10 w-full md:w-auto lg:w-[300px]" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Skeleton className="h-28" />
+              <Skeleton className="h-28" />
+              <Skeleton className="h-28" />
+              <Skeleton className="h-28" />
+            </div>
+            <Skeleton className="h-48 w-full" />
+          </div>
+        </div>
+      </PortalLayout>
+    );
+  }
+
   return (
     <PortalLayout>
       <div className="space-y-8">
         <div className="text-left">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user?.name || 'there'}, have a good day! 👋</h1>
           <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
         </div>
 

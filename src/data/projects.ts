@@ -37,11 +37,6 @@ export interface ProjectFile {
   created_at: string;
 }
 
-export interface Attachment {
-  name: string;
-  url: string;
-}
-
 // Core data structures
 export interface Task {
   id: string;
@@ -57,7 +52,6 @@ export interface Comment {
   text: string;
   timestamp: string; // ISO string
   isTicket: boolean;
-  attachment?: Attachment;
   attachment_name?: string;
   attachment_url?: string;
 }
