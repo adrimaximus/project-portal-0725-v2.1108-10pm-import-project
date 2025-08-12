@@ -1,124 +1,70 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User, SupabaseSession, SupabaseUser } from '@/types';
-import { toast } from 'sonner';
-
-interface AuthContextType {
-  session: SupabaseSession | null;
-  user: User | null;
-  loading: boolean;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
-}
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { UserProfile, AuthContextType } from '@/types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<SupabaseSession | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
-  const fetchUserProfile = async (supabaseUser: SupabaseUser, retries = 3, delay = 500) => {
-    for (let i = 0; i < retries; i++) {
-      const { data: profile, error } = await supabase
+  const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null) => {
+    if (!supabaseUser) {
+      setUser(null);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
         .single();
 
-      if (profile) {
-        const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-        setUser({
-          id: profile.id,
-          email: supabaseUser.email,
-          name: fullName || supabaseUser.email || 'No name',
-          avatar: profile.avatar_url,
-          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-        });
-        return; // Success, exit the function
-      }
-
-      // If there's an error but it's not "row not found", log it and stop.
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching profile:', error);
+      if (error) {
+        console.error('Error fetching user profile:', error);
         setUser(null);
-        return;
+      } else {
+        setUser(data as UserProfile);
       }
-
-      // If no profile was found (PGRST116 or no error but null data), wait and retry.
-      // This handles the small delay for new user profile creation via trigger.
-      if (i < retries - 1) {
-        await new Promise(res => setTimeout(res, delay));
-      }
+    } catch (e) {
+      console.error('Exception fetching user profile:', e);
+      setUser(null);
     }
-
-    // If still no profile after all retries, create a fallback user object.
-    console.warn(`Could not fetch user profile for ${supabaseUser.id} after ${retries} attempts. Using fallback data.`);
-    setUser({
-      id: supabaseUser.id,
-      email: supabaseUser.email,
-      name: supabaseUser.email || 'New User',
-      avatar: undefined,
-      initials: supabaseUser.email?.substring(0, 2).toUpperCase() || 'NN',
-    });
-  };
+  }, []);
 
   useEffect(() => {
-    const getSessionAndListen = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      if (initialSession) {
-        await fetchUserProfile(initialSession.user);
-      } else {
-        setUser(null);
-      }
+    const getInitialSession = async () => {
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      await fetchUserProfile(session?.user ?? null);
       setLoading(false);
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-        if (event === 'PASSWORD_RECOVERY') {
-          navigate('/reset-password');
-        }
-        if (event === 'SIGNED_OUT') {
-          toast.success("You have been successfully logged out.");
-        }
-        setSession(newSession);
-        if (newSession) {
-          fetchUserProfile(newSession.user);
-        } else {
-          setUser(null);
-        }
-      });
-
-      return subscription;
     };
 
-    const subscriptionPromise = getSessionAndListen();
+    getInitialSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      await fetchUserProfile(session?.user ?? null);
+      setLoading(false);
+    });
 
     return () => {
-      subscriptionPromise.then(subscription => subscription?.unsubscribe());
+      authListener?.subscription.unsubscribe();
     };
-  }, [navigate]);
-
-  const refreshUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      await fetchUserProfile(session.user);
-    }
-  };
+  }, [fetchUserProfile]);
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut({ scope: 'global' });
-    if (error) {
-      console.error("Error logging out:", error);
-      toast.error("Logout failed. Please try again.");
-    }
-    // The onAuthStateChange listener will automatically handle setting user/session to null
-    // and trigger the necessary redirects via ProtectedRoute.
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
   };
+
+  const refreshUser = useCallback(async () => {
+    await fetchUserProfile(session?.user ?? null);
+  }, [session, fetchUserProfile]);
 
   const value = {
     session,
@@ -128,7 +74,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refreshUser,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
