@@ -46,6 +46,16 @@ export interface BriefFile {
     created_at: string;
 }
 
+export interface Activity {
+  id: string;
+  user: UserProfile;
+  type: string;
+  timestamp: string; // ISO string
+  details?: {
+    description: string;
+  };
+}
+
 export interface Project {
   id: string;
   slug: string;
@@ -63,8 +73,9 @@ export interface Project {
   assignedTo: UserProfile[];
   tasks: ProjectTask[];
   comments: ProjectComment[];
-  services: string[];
-  briefFiles: BriefFile[];
+  services?: string[];
+  briefFiles?: BriefFile[];
+  activities?: Activity[];
 }
 
 
