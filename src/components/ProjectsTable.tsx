@@ -12,7 +12,7 @@ import { Project, ProjectStatus, PaymentStatus } from "@/types";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, PlusCircle } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
 import { Button } from "./ui/button";
@@ -42,19 +42,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStatusStyles } from "@/lib/utils";
 import { useProjects } from "@/hooks/useProjects";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "./ui/date-picker";
 
 interface CalendarEvent {
     id: string;
@@ -73,63 +60,6 @@ const ProjectsTable = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const { user } = useAuth();
-
-  // State for create project dialog
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newDescription, setNewDescription] = useState('');
-  const [newCategory, setNewCategory] = useState('');
-  const [newBudget, setNewBudget] = useState<number | ''>('');
-  const [newStartDate, setNewStartDate] = useState<Date | undefined>();
-  const [newDueDate, setNewDueDate] = useState<Date | undefined>();
-
-  const resetCreateForm = () => {
-    setNewName('');
-    setNewDescription('');
-    setNewCategory('');
-    setNewBudget('');
-    setNewStartDate(undefined);
-    setNewDueDate(undefined);
-  };
-
-  const handleCreateProject = async () => {
-    if (!user) {
-      toast.error('You must be logged in to create a project.');
-      return;
-    }
-    if (!newName) {
-      toast.error('Project name is required.');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    const newProjectData = {
-      name: newName,
-      description: newDescription,
-      category: newCategory,
-      budget: newBudget || null,
-      start_date: newStartDate ? newStartDate.toISOString() : null,
-      due_date: newDueDate ? newDueDate.toISOString() : null,
-      status: 'Requested' as ProjectStatus,
-      payment_status: 'Proposed' as PaymentStatus,
-      created_by: user.id,
-      progress: 0,
-    };
-
-    const { error } = await supabase.from('projects').insert([newProjectData]);
-
-    if (error) {
-      toast.error(`Failed to create project: ${error.message}`);
-    } else {
-      toast.success(`Project "${newName}" created successfully.`);
-      refetch();
-      setIsCreateDialogOpen(false);
-      resetCreateForm();
-    }
-    setIsSubmitting(false);
-  };
 
   const refreshCalendarEvents = async () => {
     const token = localStorage.getItem('googleCalendarToken');
@@ -467,60 +397,8 @@ const ProjectsTable = () => {
       </AlertDialog>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <CardTitle>Projects</CardTitle>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Tambah Proyek
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[625px]">
-                <DialogHeader>
-                  <DialogTitle>Create New Project</DialogTitle>
-                  <DialogDescription>
-                    Fill in the details below to create a new project.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-6 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Project Name</Label>
-                    <Input id="name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g., New Website Design" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea id="description" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="Describe the project..." />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Category</Label>
-                      <Input id="category" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="e.g., Web Development" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="budget">Budget ($)</Label>
-                      <Input id="budget" type="number" value={newBudget} onChange={(e) => setNewBudget(e.target.value === '' ? '' : Number(e.target.value))} placeholder="e.g., 5000" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Start Date</Label>
-                      <DatePicker date={newStartDate} onDateChange={setNewStartDate} placeholder="Select start date" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Due Date</Label>
-                      <DatePicker date={newDueDate} onDateChange={setNewDueDate} placeholder="Select due date" />
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
-                  <Button type="submit" onClick={handleCreateProject} disabled={isSubmitting}>
-                    {isSubmitting ? 'Creating...' : 'Create Project'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </div>
           <div className="flex items-center gap-2">
             {view === 'table' && (
