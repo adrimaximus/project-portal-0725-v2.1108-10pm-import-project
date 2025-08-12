@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setLoading(false);
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
         if (event === 'PASSWORD_RECOVERY') {
           navigate('/reset-password');
         }
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         setSession(newSession);
         if (newSession) {
-          await fetchUserProfile(newSession.user);
+          fetchUserProfile(newSession.user);
         } else {
           setUser(null);
         }
