@@ -7,14 +7,20 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 
 const LoginPage = () => {
-  const { session } = useAuth();
+  const { session, isFreshLogin, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (loading) return;
+
     if (session) {
-      navigate('/welcome', { replace: true });
+      if (isFreshLogin) {
+        navigate('/welcome', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     }
-  }, [session, navigate]);
+  }, [session, isFreshLogin, loading, navigate]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40">

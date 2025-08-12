@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User, SupabaseSession, SupabaseUser } from '@/types';
@@ -7,8 +7,10 @@ interface AuthContextType {
   session: SupabaseSession | null;
   user: User | null;
   loading: boolean;
+  isFreshLogin: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  clearFreshLoginFlag: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,6 +19,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFreshLogin, setIsFreshLogin] = useState(false);
   const navigate = useNavigate();
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
@@ -45,7 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const getSessionAndListen = async () => {
-      // Get initial session
       const { data: { session: initialSession } } = await supabase.auth.getSession();
       setSession(initialSession);
       if (initialSession) {
@@ -55,10 +57,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setLoading(false);
 
-      // Listen for auth state changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
         if (event === 'PASSWORD_RECOVERY') {
           navigate('/reset-password');
+        }
+        if (event === 'SIGNED_IN') {
+          setIsFreshLogin(true);
         }
         setSession(newSession);
         if (newSession) {
@@ -89,14 +93,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    setIsFreshLogin(false);
   };
+
+  const clearFreshLoginFlag = useCallback(() => {
+    setIsFreshLogin(false);
+  }, []);
 
   const value = {
     session,
     user,
     loading,
+    isFreshLogin,
     logout,
     refreshUser,
+    clearFreshLoginFlag,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

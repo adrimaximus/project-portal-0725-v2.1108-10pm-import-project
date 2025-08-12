@@ -4,10 +4,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 const LoginTransitionPage = () => {
-  const { user } = useAuth();
+  const { user, clearFreshLoginFlag } = useAuth();
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    // Clear the flag as soon as this page is loaded
+    clearFreshLoginFlag();
+  }, [clearFreshLoginFlag]);
 
   const slides = user ? [
     `Hey ${user.name}, have a good day!`,
