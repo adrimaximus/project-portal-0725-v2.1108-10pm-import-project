@@ -203,6 +203,9 @@ importers:
       react-colorful:
         specifier: ^5.6.1
         version: 5.6.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-currency-mask:
+        specifier: ^1.3.3
+        version: 1.3.3
       react-day-picker:
         specifier: ^8.10.1
         version: 8.10.1(date-fns@3.6.0)(react@18.3.1)
@@ -3286,6 +3289,9 @@ packages:
     peerDependencies:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
+
+  react-currency-mask@1.3.3:
+    resolution: {integrity: sha512-akDy2p60Xhr1KDWz0QGsVhd1hnORm77HzTGNrsVromjsldeF1gqgfiSVi/Y2g9q304KTlPYB0xVHwkaHUIw9Iw==}
 
   react-day-picker@8.10.1:
     resolution: {integrity: sha512-TMx7fNbhLk15eqcMt+7Z7S2KF7mfTId/XJDjKE8f+IUcFn0l08/kI4FiYTL/0yuOLmEcbR4Fwe3GJf/NiiMnPA==}
@@ -7136,6 +7142,10 @@ snapshots:
     dependencies:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
+
+  react-currency-mask@1.3.3:
+    dependencies:
+      react: 18.3.1
 
   react-day-picker@8.10.1(date-fns@3.6.0)(react@18.3.1):
     dependencies:
