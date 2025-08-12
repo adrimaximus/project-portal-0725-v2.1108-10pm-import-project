@@ -17,7 +17,6 @@ interface ProjectFromRpc {
   payment_status: Project['paymentStatus'];
   payment_due_date?: string;
   created_by: Project['createdBy'];
-  // Kunci ini peka huruf besar/kecil karena dikutip dalam fungsi SQL
   "assignedTo": Project['assignedTo']; 
   tasks: Project['tasks'];
   comments: Project['comments'];
@@ -26,7 +25,7 @@ interface ProjectFromRpc {
 }
 
 const fetchProjects = async (): Promise<Project[]> => {
-  const batchSize = 50;
+  const batchSize = 25;
   let offset = 0;
   let allData: ProjectFromRpc[] = [];
   
@@ -59,7 +58,6 @@ const fetchProjects = async (): Promise<Project[]> => {
     paymentStatus: p.payment_status,
     paymentDueDate: p.payment_due_date,
     createdBy: p.created_by,
-    // Gunakan notasi kurung siku untuk kunci yang peka huruf besar/kecil
     assignedTo: p.assignedTo || [],
     tasks: p.tasks || [],
     comments: p.comments || [],
