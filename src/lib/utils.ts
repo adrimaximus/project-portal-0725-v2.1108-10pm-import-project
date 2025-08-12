@@ -1,9 +1,21 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { UserProfile } from "@/data/projects";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+export const mapProfileToUser = (profile: any): UserProfile | null => {
+  if (!profile) return null;
+  return {
+    id: profile.id,
+    name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
+    email: profile.email,
+    avatar: profile.avatar_url,
+    initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+  };
+};
 
 export const getStatusStyles = (status: string | undefined | null) => {
   if (!status) {

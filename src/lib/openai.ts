@@ -1,4 +1,5 @@
 import { Project } from "@/data/projects";
+import { Goal } from "@/types";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -121,4 +122,19 @@ export const generateTaskSuggestions = async (project: Project, existingTasks: {
         console.error("Error generating task suggestions:", error);
         return [];
     }
+};
+
+export const generateAiInsight = async (goal: Goal, context: any): Promise<string> => {
+  console.log("AI Insight generation requested for:", goal.title, context);
+  // This is a mock implementation
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  return `Here is an AI-generated insight for your goal "${goal.title}". Based on your progress, you are doing great! Keep it up.`;
+};
+
+export const generateAiIcon = async (prompt: string): Promise<string> => {
+  console.log("AI Icon generation requested with prompt:", prompt);
+  // This is a mock implementation
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  // Returning a placeholder image URL
+  return `https://via.placeholder.com/128/4ECDC4/FFFFFF?text=AI`;
 };

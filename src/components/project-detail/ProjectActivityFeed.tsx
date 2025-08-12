@@ -102,7 +102,7 @@ const ProjectActivityFeed = ({ activities }: { activities: Activity[] }) => {
                 <div className="min-w-0 flex-1 pt-2">
                   <p className="text-sm text-muted-foreground">
                     <span className="font-semibold text-primary">{activity.user.name}</span>{' '}
-                    {renderActivityDescription(activity.details.description)}
+                    {renderActivityDescription(activity.details?.description || '')}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {formatDistanceToNow(new Date(activity.timestamp), {

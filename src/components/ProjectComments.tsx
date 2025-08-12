@@ -15,9 +15,10 @@ import { Badge } from "./ui/badge";
 
 interface ProjectCommentsProps {
   project: Project;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
 }
 
-const ProjectComments = ({ project }: ProjectCommentsProps) => {
+const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState("");
@@ -44,44 +45,11 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
     if (!newComment.trim() || !user) return;
 
     setIsSubmitting(true);
-    let attachment_url: string | undefined = undefined;
-    let attachment_name: string | undefined = undefined;
-
     try {
-      if (attachment) {
-        const fileExt = attachment.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${project.id}/${fileName}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('project-files')
-          .upload(filePath, attachment);
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
-        attachment_url = urlData.publicUrl;
-        attachment_name = attachment.name;
-      }
-
-      const { error } = await supabase.from("comments").insert({
-        project_id: project.id,
-        author_id: user.id,
-        text: newComment,
-        is_ticket: isTicket,
-        attachment_url,
-        attachment_name,
-      });
-
-      if (error) throw error;
-
+      await onAddCommentOrTicket(newComment, isTicket, attachment);
       setNewComment("");
       setIsTicket(false);
       setAttachment(null);
-      toast.success(isTicket ? "Ticket created successfully" : "Comment posted successfully");
-      queryClient.invalidateQueries({ queryKey: ["project", project.id] });
-    } catch (error: any) {
-      toast.error("Failed to post comment", { description: error.message });
     } finally {
       setIsSubmitting(false);
     }

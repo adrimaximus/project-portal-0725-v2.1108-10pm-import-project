@@ -2,7 +2,7 @@ import { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supa
 
 export interface User {
   id: string;
-  email?: string;
+  email: string;
   name: string;
   avatar?: string;
   initials: string;

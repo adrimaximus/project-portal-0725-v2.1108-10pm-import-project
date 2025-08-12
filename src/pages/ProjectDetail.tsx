@@ -236,6 +236,12 @@ const ProjectDetail = () => {
     queryClient.invalidateQueries({ queryKey: ["project", projectId] });
   };
 
+  const handleTaskAdd = (title: string) => console.log("Add task:", title);
+  const handleTaskAssignUsers = (taskId: string, userIds: string[]) => console.log("Assign users to task:", taskId, userIds);
+  const handleTaskStatusChange = (taskId: string, completed: boolean) => console.log("Change task status:", taskId, completed);
+  const handleTaskDelete = (taskId: string) => console.log("Delete task:", taskId);
+  const handleAddCommentOrTicket = (text: string, isTicket: boolean, attachment: File | null) => console.log("Add comment/ticket:", text, isTicket, attachment);
+
   if (isLoading) return <ProjectDetailSkeleton />;
   if (error) {
     toast.error("Failed to load project", { description: "Please check the URL or try again later." });
@@ -250,11 +256,10 @@ const ProjectDetail = () => {
         <ProjectHeader
           project={project}
           isEditing={isEditing}
-          onEdit={() => setIsEditing(true)}
-          onSave={handleSave}
-          onCancel={handleCancel}
-          onFieldChange={(value) => handleFieldChange('name', value)}
-          editedName={editedProject.name}
+          onEditToggle={() => setIsEditing(true)}
+          onSaveChanges={handleSave}
+          onCancelChanges={handleCancel}
+          canEdit={true}
         />
         <ProjectInfoCards
           project={project}
@@ -272,6 +277,11 @@ const ProjectDetail = () => {
           onServicesChange={(services) => handleFieldChange('services', services)}
           onFilesAdd={handleFilesAdd}
           onFileDelete={handleFileDelete}
+          onTaskAdd={handleTaskAdd}
+          onTaskAssignUsers={handleTaskAssignUsers}
+          onTaskStatusChange={handleTaskStatusChange}
+          onTaskDelete={handleTaskDelete}
+          onAddCommentOrTicket={handleAddCommentOrTicket}
         />
       </div>
     </PortalLayout>

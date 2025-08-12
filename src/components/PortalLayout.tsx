@@ -1,7 +1,7 @@
 import { useState, ReactNode } from "react";
 import PortalSidebar from "./PortalSidebar";
 import { cn } from "@/lib/utils";
-import GlobalSearch from "./GlobalSearch";
+import { GlobalSearch } from "./GlobalSearch";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";

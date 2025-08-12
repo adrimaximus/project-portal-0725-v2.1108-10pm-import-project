@@ -18,7 +18,7 @@ type Invoice = {
   status: 'Paid' | 'Due' | 'Overdue';
 };
 
-const getInvoiceStatus = (status: PaymentStatus): Invoice['status'] | null => {
+const getInvoiceStatus = (status: PaymentStatus | string): Invoice['status'] | null => {
   switch (status) {
     case 'Paid':
       return 'Paid';

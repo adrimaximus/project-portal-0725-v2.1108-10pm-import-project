@@ -23,7 +23,7 @@ export interface UserProfile {
 }
 
 export interface AssignedUser extends UserProfile {
-  role: string;
+  role?: string;
 }
 
 // File and Attachment types
@@ -65,9 +65,11 @@ export interface Comment {
 export interface Activity {
   id: string;
   user: UserProfile;
-  action: string;
+  type: string;
   timestamp: string; // ISO string
-  details?: string;
+  details?: {
+    description: string;
+  };
 }
 
 // The main Project interface
