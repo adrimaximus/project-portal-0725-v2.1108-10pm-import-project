@@ -8,18 +8,20 @@ import ProjectServices from './ProjectServices';
 import ProjectBrief from './ProjectBrief';
 import ModernTeamSelector from '../request/ModernTeamSelector';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Input } from '../ui/input';
 
 interface ProjectOverviewTabProps {
   project: Project;
   isEditing: boolean;
   onDescriptionChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
   onTeamChange: (users: AssignedUser[]) => void;
   onFilesAdd: (files: File[]) => void;
   onFileDelete: (fileId: string) => void;
   onServicesChange: (services: string[]) => void;
 }
 
-const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamChange, onFilesAdd, onFileDelete, onServicesChange }: ProjectOverviewTabProps) => {
+const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategoryChange, onTeamChange, onFilesAdd, onFileDelete, onServicesChange }: ProjectOverviewTabProps) => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   useEffect(() => {
@@ -63,6 +65,21 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onTeamCha
             isEditing={isEditing}
             onDescriptionChange={onDescriptionChange}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Category</CardTitle></CardHeader>
+        <CardContent>
+          {isEditing ? (
+            <Input
+              value={project.category}
+              onChange={(e) => onCategoryChange(e.target.value)}
+              placeholder="Enter project category"
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">{project.category || "No category set."}</p>
+          )}
         </CardContent>
       </Card>
 

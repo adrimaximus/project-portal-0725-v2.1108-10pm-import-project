@@ -95,11 +95,25 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
               {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(project.budget)}
             </div>
           )}
-          <p className="text-xs text-muted-foreground">
-            <Badge variant="outline" className={cn("font-normal", paymentBadgeColor)}>
-              {project.paymentStatus}
-            </Badge>
-          </p>
+          {isEditing ? (
+            <Select
+              value={editedProject.paymentStatus}
+              onValueChange={(value) => onFieldChange('paymentStatus', value)}
+            >
+              <SelectTrigger className="mt-1 h-8 text-xs">
+                <SelectValue placeholder="Select payment status" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(PaymentStatus).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              <Badge variant="outline" className={cn("font-normal", paymentBadgeColor)}>
+                {project.paymentStatus}
+              </Badge>
+            </p>
+          )}
         </CardContent>
       </Card>
       <Card>

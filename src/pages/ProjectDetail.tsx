@@ -117,13 +117,14 @@ const ProjectDetail = () => {
   const handleSave = async () => {
     if (!editedProject || !project) return;
 
-    const { name, description, status, budget, startDate, dueDate, paymentStatus, paymentDueDate, services, assignedTo } = editedProject;
+    const { name, description, category, status, budget, startDate, dueDate, paymentStatus, paymentDueDate, services, assignedTo } = editedProject;
     
     const { error } = await supabase
       .from('projects')
       .update({
         name,
         description,
+        category,
         status,
         budget,
         start_date: startDate,
@@ -274,6 +275,7 @@ const ProjectDetail = () => {
           project={editedProject}
           isEditing={isEditing}
           onDescriptionChange={(value) => handleFieldChange('description', value)}
+          onCategoryChange={(value) => handleFieldChange('category', value)}
           onTeamChange={(users) => handleFieldChange('assignedTo', users)}
           onServicesChange={(services) => handleFieldChange('services', services)}
           onFilesAdd={handleFilesAdd}

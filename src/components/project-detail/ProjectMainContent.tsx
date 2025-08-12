@@ -17,6 +17,7 @@ interface ProjectMainContentProps {
   onTaskDelete: (taskId: string) => void;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
   onDescriptionChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
   onTeamChange: (users: AssignedUser[]) => void;
   onFilesAdd: (files: File[]) => void;
   onFileDelete: (fileId: string) => void;
@@ -32,6 +33,7 @@ const ProjectMainContent = ({
   onTaskDelete,
   onAddCommentOrTicket,
   onDescriptionChange,
+  onCategoryChange,
   onTeamChange,
   onFilesAdd,
   onFileDelete,
@@ -69,6 +71,7 @@ const ProjectMainContent = ({
               project={project}
               isEditing={isEditing}
               onDescriptionChange={onDescriptionChange}
+              onCategoryChange={onCategoryChange}
               onTeamChange={onTeamChange}
               onFilesAdd={onFilesAdd}
               onFileDelete={onFileDelete}
