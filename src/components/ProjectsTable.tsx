@@ -338,12 +338,6 @@ const ProjectsTable = () => {
             <CardTitle>Projects</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/request">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Project
-              </Button>
-            </Link>
             {view === 'calendar' && (
               <Button variant="ghost" className="h-8 w-8 p-0" onClick={refreshCalendarEvents}>
                 <span className="sr-only">Refresh calendar events</span>
