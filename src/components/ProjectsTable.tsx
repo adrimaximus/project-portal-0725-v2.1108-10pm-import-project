@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStatusStyles } from "@/lib/utils";
+import { useProjects } from "@/contexts/ProjectsContext";
 
 interface CalendarEvent {
     id: string;
@@ -54,84 +55,11 @@ type ViewMode = 'table' | 'list' | 'month' | 'calendar';
 
 const ProjectsTable = () => {
   const [view, setView] = useState<ViewMode>('table');
-  const [localProjects, setLocalProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { projects, loading: isLoading, refetchProjects } = useProjects();
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const { user } = useAuth();
-
-  const fetchProjects = async () => {
-    setIsLoading(true);
-    const { data: projectsData, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
-
-    if (error) {
-        toast.error("Failed to fetch projects.");
-        console.error(error);
-        setLocalProjects([]);
-        setIsLoading(false);
-        return;
-    }
-
-    const userIds = [...new Set(projectsData.map(p => p.created_by).filter(Boolean))];
-    let profilesMap = new Map();
-
-    if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('*')
-            .in('id', userIds);
-
-        if (profilesError) {
-            toast.error("Failed to fetch project creator details.");
-            console.error(profilesError);
-        } else {
-            profilesMap = new Map(profilesData.map(p => [p.id, p]));
-        }
-    }
-
-    const mappedProjects: Project[] = projectsData.map(p => {
-        const profile = profilesMap.get(p.created_by);
-        const createdBy = profile ? {
-            id: profile.id,
-            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
-            email: profile.email,
-            avatar: profile.avatar_url,
-            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-        } : null;
-
-        return {
-            id: p.id,
-            name: p.name,
-            category: p.category,
-            description: p.description,
-            status: p.status as ProjectStatus,
-            progress: p.progress,
-            budget: p.budget,
-            startDate: p.start_date,
-            dueDate: p.due_date,
-            paymentStatus: p.payment_status as PaymentStatus,
-            createdBy: createdBy,
-            assignedTo: [],
-            tasks: [],
-            comments: [],
-            activities: [],
-            briefFiles: [],
-            services: p.services,
-        };
-    });
-
-    setLocalProjects(mappedProjects);
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchProjects();
-    }
-  }, [user]);
 
   const refreshCalendarEvents = () => {
     const storedEvents = localStorage.getItem('googleCalendarEvents');
@@ -171,7 +99,7 @@ const ProjectsTable = () => {
 
   const filteredProjects = useMemo(() => {
     if (!dateRange || !dateRange.from) {
-      return localProjects;
+      return projects;
     }
 
     const fromDate = new Date(dateRange.from);
@@ -180,12 +108,12 @@ const ProjectsTable = () => {
     const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
     toDate.setHours(23, 59, 59, 999);
 
-    return localProjects.filter(project => {
+    return projects.filter(project => {
       const projectStart = new Date(project.startDate);
       const projectEnd = new Date(project.dueDate);
       return projectStart <= toDate && projectEnd >= fromDate;
     });
-  }, [localProjects, dateRange]);
+  }, [projects, dateRange]);
 
   const filteredCalendarEvents = useMemo(() => {
     if (!dateRange || !dateRange.from) {
@@ -220,7 +148,7 @@ const ProjectsTable = () => {
   }, [calendarEvents, dateRange]);
 
   const handleDeleteProject = (projectId: string) => {
-    const project = localProjects.find(p => p.id === projectId);
+    const project = projects.find(p => p.id === projectId);
     if (project) {
       setProjectToDelete(project);
     }
@@ -238,7 +166,7 @@ const ProjectsTable = () => {
         console.error(error);
       } else {
         toast.success(`Project "${projectToDelete.name}" has been deleted.`);
-        fetchProjects();
+        refetchProjects();
       }
       setProjectToDelete(null);
     }
@@ -296,7 +224,7 @@ const ProjectsTable = () => {
     } else {
         toast.success(`"${event.summary}" imported as a new project.`);
         setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-        fetchProjects();
+        refetchProjects();
     }
   };
 
