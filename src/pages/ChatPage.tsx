@@ -40,7 +40,6 @@ const ChatPage = () => {
       members: c.participants.map((p: any) => ({
         id: p.id,
         name: p.name,
-        email: p.email,
         avatar: p.avatar_url,
         initials: p.initials,
         online: true, // Placeholder
@@ -48,10 +47,10 @@ const ChatPage = () => {
     }));
 
     setConversations(mappedConversations);
-    if (!isMobile && mappedConversations.length > 0 && !selectedConversationId) {
+    if (!isMobile && mappedConversations.length > 0) {
       setSelectedConversationId(mappedConversations[0].id);
     }
-  }, [currentUser, isMobile, selectedConversationId]);
+  }, [currentUser, isMobile]);
 
   useEffect(() => {
     fetchConversations();
@@ -64,8 +63,10 @@ const ChatPage = () => {
         const newMessage = payload.new as any;
         setConversations(prev => prev.map(convo => {
           if (convo.id === newMessage.conversation_id) {
+            // This is a simplified update. A full implementation would fetch the sender's profile.
             const updatedConvo = { ...convo, lastMessage: newMessage.content, lastMessageTimestamp: new Date(newMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
             if (convo.id === selectedConversationId) {
+              // If the conversation is open, add the message to the view
               const sender = convo.members?.find(m => m.id === newMessage.sender_id) || currentUser;
               if (sender) {
                 updatedConvo.messages = [...convo.messages, {
@@ -93,7 +94,7 @@ const ChatPage = () => {
     setSelectedConversationId(id);
     const { data, error } = await supabase
       .from('messages')
-      .select('*, sender:profiles(id, first_name, last_name, avatar_url, email)')
+      .select('*, sender:profiles(id, first_name, last_name, avatar_url)')
       .eq('conversation_id', id)
       .order('created_at', { ascending: true });
 
@@ -109,7 +110,6 @@ const ChatPage = () => {
       sender: {
         id: m.sender.id,
         name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim(),
-        email: m.sender.email || '',
         avatar: m.sender.avatar_url,
         initials: `${m.sender.first_name?.[0] || ''}${m.sender.last_name?.[0] || ''}`.toUpperCase(),
       },

@@ -104,9 +104,6 @@ importers:
       '@react-oauth/google':
         specifier: ^0.12.2
         version: 0.12.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@supabase/auth-helpers-react':
-        specifier: ^0.5.0
-        version: 0.5.0(@supabase/supabase-js@2.54.0)
       '@supabase/auth-ui-react':
         specifier: ^0.4.7
         version: 0.4.7(@supabase/supabase-js@2.54.0)
@@ -256,7 +253,7 @@ importers:
         version: 3.24.3
     devDependencies:
       '@dyad-sh/react-vite-component-tagger':
-        specifier: latest
+        specifier: ^0.8.0
         version: 0.8.0(vite@6.3.4(@types/node@22.14.1)(jiti@1.21.7)(yaml@2.7.1))
       '@eslint/js':
         specifier: ^9.9.0
@@ -1465,12 +1462,6 @@ packages:
 
   '@stitches/core@1.2.8':
     resolution: {integrity: sha512-Gfkvwk9o9kE9r9XNBmJRfV8zONvXThnm1tcuojL04Uy5uRyqg93DC83lDebl0rocZCfKSjUv+fWYtMQmEDJldg==}
-
-  '@supabase/auth-helpers-react@0.5.0':
-    resolution: {integrity: sha512-5QSaV2CGuhDhd7RlQCoviVEAYsP7XnrFMReOcBazDvVmqSIyjKcDwhLhWvnrxMOq5qjOaA44MHo7wXqDiF0puQ==}
-    deprecated: This package is now deprecated - please use the @supabase/ssr package instead.
-    peerDependencies:
-      '@supabase/supabase-js': ^2.39.8
 
   '@supabase/auth-js@2.71.1':
     resolution: {integrity: sha512-mMIQHBRc+SKpZFRB2qtupuzulaUhFYupNyxqDj5Jp/LyPvcWvjaJzZzObv6URtL/O6lPxkanASnotGtNpS3H2Q==}
@@ -4951,10 +4942,6 @@ snapshots:
     optional: true
 
   '@stitches/core@1.2.8': {}
-
-  '@supabase/auth-helpers-react@0.5.0(@supabase/supabase-js@2.54.0)':
-    dependencies:
-      '@supabase/supabase-js': 2.54.0
 
   '@supabase/auth-js@2.71.1':
     dependencies:

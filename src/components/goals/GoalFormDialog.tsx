@@ -68,10 +68,10 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
         setDescription(goal.description || '');
         setType(goal.type);
         setFrequency(goal.frequency);
-        setSpecificDays(goal.specific_days);
-        setTargetQuantity(goal.target_quantity);
-        setTargetPeriod(goal.target_period || 'Monthly');
-        setTargetValue(goal.target_value);
+        setSpecificDays(goal.specificDays);
+        setTargetQuantity(goal.targetQuantity);
+        setTargetPeriod(goal.targetPeriod || 'Monthly');
+        setTargetValue(goal.targetValue);
         setUnit(goal.unit || '');
         setColor(goal.color);
         setIcon(goal.icon);
@@ -118,13 +118,10 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
       const updatedGoalData: Goal = {
         ...goal,
         title, description, type, frequency,
-        specific_days: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
-        target_quantity: targetQuantity, 
-        target_period: targetPeriod, 
-        target_value: targetValue, 
-        unit, color, tags,
+        specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
+        targetQuantity, targetPeriod, targetValue, unit, color, tags,
         icon,
-        icon_url: undefined,
+        iconUrl: undefined,
       };
       onGoalUpdate(updatedGoalData);
       setIsSaving(false);

@@ -9,16 +9,16 @@ interface GoalIconProps {
 }
 
 const GoalIcon = ({ goal, className }: GoalIconProps) => {
-  // Jika icon_url ada dari ikon yang dibuat sebelumnya, tampilkan itu.
+  // Jika iconUrl ada dari ikon yang dibuat sebelumnya, tampilkan itu.
   // Jika tidak, kembali ke ikon dari pustaka.
-  if (goal.icon_url) {
+  if (goal.iconUrl) {
     return (
       <div className={cn("relative", className)}>
         <div 
           className="w-full h-full rounded-lg flex items-center justify-center text-2xl overflow-hidden" 
           style={{ backgroundColor: `${goal.color}30` }}
         >
-          <img src={goal.icon_url} alt={goal.title} className="w-[85%] h-[85%] object-cover rounded-md" />
+          <img src={goal.iconUrl} alt={goal.title} className="w-[85%] h-[85%] object-cover rounded-md" />
         </div>
       </div>
     );

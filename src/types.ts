@@ -1,125 +1,36 @@
 import { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js';
 
-// Re-export Supabase types
-export type { SupabaseSession, SupabaseUser };
-
-// User and Project Types
 export interface User {
   id: string;
+  email?: string;
   name: string;
-  email: string;
   avatar?: string;
   initials: string;
   first_name?: string;
   last_name?: string;
-  role?: string; // Added for dummy data compatibility
+  role?: string;
 }
 
-export type ProjectStatus = 
-  | "Requested"
-  | "In Progress"
-  | "On Hold"
-  | "Completed"
-  | "Cancelled"
-  | "On Track"
-  | "At Risk"
-  | "Off Track"
-  | "Done"
-  | "Billed"
-  | "Proposed"
-  | "Approved"
-  | "PO Created"
-  | "On Process"
-  | "Pending"
-  | "Paid"
-  | "Overdue";
-
-export type PaymentStatus = 'Proposed' | 'Approved' | 'PO Created' | 'On Process' | 'Pending' | 'Paid' | 'Cancelled' | 'Overdue';
-
-export interface ProjectTask {
-  id: string;
-  title: string;
-  completed: boolean;
-  assignedTo: User[];
-  originTicketId?: string;
-}
-
-export interface ProjectComment {
-  id: string;
-  isTicket: boolean;
-  text?: string;
-  author_id?: string;
-  created_at?: string;
-  author?: User;
-  timestamp: string;
-  attachment?: { name: string; url: string };
-}
-
-export interface ProjectMember extends User {
-  role: 'owner' | 'member';
-}
-
-export interface ProjectFile {
+export interface Collaborator {
   id: string;
   name: string;
-  size: number;
-  type: string | null;
-  url: string;
-  storagePath: string;
-  uploadedAt: string;
-}
-
-export interface Activity {
-  id: string;
-  user: User;
-  type: string;
-  details: {
-    description: string;
-    [key: string]: any;
-  };
-  timestamp: string;
-}
-
-export interface Project {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  status: ProjectStatus;
-  progress: number;
-  budget: number;
-  startDate: string;
-  dueDate: string;
-  paymentStatus: PaymentStatus;
-  paymentDueDate?: string;
-  createdBy: User;
-  assignedTo: ProjectMember[];
-  tasks: ProjectTask[];
-  comments: ProjectComment[];
-  activities?: Activity[];
-  briefFiles?: ProjectFile[];
-  services?: string[];
-}
-
-// Chat Types
-export interface Collaborator extends User {
-  online?: boolean;
+  initials: string;
+  online: boolean;
+  avatar?: string;
 }
 
 export interface Attachment {
-  id?: string; // Optional for new attachments
-  name: string;
+  name:string;
+  type: 'image' | 'file';
   url: string;
-  type: 'image' | 'file' | string;
-  size?: number; // Optional for new attachments
 }
 
 export interface Message {
   id: string;
+  sender: User | Collaborator;
   text: string;
   timestamp: string;
-  sender: Collaborator;
-  attachment?: Attachment;
+  attachment?: Attachment | null;
 }
 
 export interface Conversation {
@@ -130,23 +41,45 @@ export interface Conversation {
   lastMessageTimestamp: string;
   unreadCount: number;
   messages: Message[];
-  isGroup: boolean;
+  isGroup?: boolean;
   members?: Collaborator[];
 }
 
-// Goal Types
-export type GoalType = 'frequency' | 'quantity' | 'value';
-export type GoalPeriod = 'Weekly' | 'Monthly';
+export interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  status: string;
+  start: {
+    dateTime: string;
+    date?: string;
+  };
+  end: {
+    dateTime: string;
+    date?: string;
+  };
+}
+
+export interface GoogleCalendarListEntry {
+  id: string;
+  summary: string;
+  backgroundColor: string;
+  foregroundColor: string;
+  selected?: boolean;
+}
+
+// Types for Goals Feature
+export type GoalType = 'quantity' | 'value' | 'frequency';
+export type GoalPeriod = 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
 
 export interface Tag {
-  id: string;
-  name: string;
-  color: string;
+    id: string;
+    name: string;
+    color: string;
 }
 
 export interface GoalCompletion {
   id: string;
-  date: string;
+  date: string; // ISO 8601 date string
   value: number;
   notes?: string;
   userId: string;
@@ -156,32 +89,21 @@ export interface Goal {
   id: string;
   slug: string;
   title: string;
-  description?: string;
+  description: string;
   icon: string;
-  icon_url?: string;
+  iconUrl?: string;
   color: string;
   type: GoalType;
-  target_quantity?: number;
-  target_value?: number;
-  frequency?: 'Daily' | 'Weekly';
-  target_period?: GoalPeriod;
+  targetQuantity?: number;
+  targetValue?: number;
+  frequency: 'Daily' | 'Weekly';
+  targetPeriod?: GoalPeriod;
   unit?: string;
-  specific_days: string[];
   collaborators: User[];
   completions: GoalCompletion[];
   tags: Tag[];
-  user_id?: string;
+  specificDays: string[];
 }
 
-// Other types
-export interface GoogleCalendarEvent {
-  summary: string;
-  start: {
-    dateTime?: string;
-    date?: string;
-  };
-  end: {
-    dateTime?: string;
-    date?: string;
-  };
-}
+
+export type { SupabaseSession, SupabaseUser };

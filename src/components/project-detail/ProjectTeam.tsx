@@ -1,8 +1,8 @@
-import { User } from '@/types';
+import { AssignedUser } from '@/data/projects';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 interface ProjectTeamProps {
-  team: User[];
+  team: AssignedUser[];
 }
 
 const ProjectTeam = ({ team }: ProjectTeamProps) => {

@@ -133,9 +133,9 @@ const GoalDetailPage = () => {
   };
 
   const handleGoalUpdate = async (updatedGoal: Goal) => {
-    const { title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, color, icon, icon_url } = updatedGoal;
+    const { title, description, type, frequency, specificDays, targetQuantity, targetPeriod, targetValue, unit, color, tags, icon, iconUrl } = updatedGoal;
     const { error } = await supabase.from('goals').update({
-        title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, color, icon, icon_url
+        title, description, type, frequency, specific_days: specificDays, target_quantity: targetQuantity, target_period: targetPeriod, target_value: targetValue, unit, color, icon, icon_url: iconUrl
     }).eq('id', updatedGoal.id);
 
     if (error) {
@@ -153,17 +153,17 @@ const GoalDetailPage = () => {
 
   const getFrequencyText = () => {
     if (goal.type === 'quantity') {
-      return `${formatNumber(goal.target_quantity!)} per ${goal.target_period}`;
+      return `${formatNumber(goal.targetQuantity!)} per ${goal.targetPeriod}`;
     }
     if (goal.type === 'value') {
-      return `Target: ${formatValue(goal.target_value!, goal.unit)}`;
+      return `Target: ${formatValue(goal.targetValue!, goal.unit)}`;
     }
     if (goal.frequency === 'Daily') return 'Daily';
-    if (goal.frequency === 'Weekly' && goal.specific_days.length > 0) {
-      if (goal.specific_days.length === 7) return 'Daily';
-      if (goal.specific_days.length === 2 && goal.specific_days.includes('Sa') && goal.specific_days.includes('Su')) return 'Weekends';
-      if (goal.specific_days.length === 5 && !goal.specific_days.includes('Sa') && !goal.specific_days.includes('Su')) return 'Weekdays';
-      return `Weekly on ${goal.specific_days.join(', ')}`;
+    if (goal.frequency === 'Weekly' && goal.specificDays.length > 0) {
+      if (goal.specificDays.length === 7) return 'Daily';
+      if (goal.specificDays.length === 2 && goal.specificDays.includes('Sa') && goal.specificDays.includes('Su')) return 'Weekends';
+      if (goal.specificDays.length === 5 && !goal.specificDays.includes('Sa') && !goal.specificDays.includes('Su')) return 'Weekdays';
+      return `Weekly on ${goal.specificDays.join(', ')}`;
     }
     return 'Weekly';
   };

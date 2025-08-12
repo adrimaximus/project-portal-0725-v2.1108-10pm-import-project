@@ -1,154 +1,103 @@
-import { Home, GanttChartSquare, Settings, MessageSquare, Users, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
-import { Route, Routes, Link, useLocation, Navigate } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Toaster } from "@/components/ui/sonner";
+import { useFeatures } from "./contexts/FeaturesContext";
+import { useAuth } from "./contexts/AuthContext";
+import React from "react";
+
+import LandingPage from "./pages/LandingPage";
+import DashboardPage from "./pages/Dashboard";
+import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
-import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
-import Login from "./pages/Login";
-import { useState } from "react";
-import { cn } from "./lib/utils";
-import { Button } from "./components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
+import RequestPage from "./pages/Request";
+import ChatPage from "./pages/ChatPage";
+import MoodTracker from "./pages/MoodTracker";
+import GoalsPage from "./pages/GoalsPage";
+import GoalDetailPage from "./pages/GoalDetailPage";
+import Billing from "./pages/Billing";
+import NotificationsPage from "./pages/Notifications";
+import Profile from "./pages/Profile";
+import SearchPage from "./pages/SearchPage";
+import UserManagementPage from "./pages/UserManagement";
+import SettingsPage from "./pages/Settings";
+import TeamSettingsPage from "./pages/TeamSettingsPage";
+import IntegrationsPage from "./pages/IntegrationsPage";
+import OpenAiIntegrationPage from "./pages/integrations/OpenAiIntegrationPage";
+import NavigationSettingsPage from "./pages/NavigationSettingsPage";
+import EmbedPage from "./pages/EmbedPage";
+import NotFound from "./pages/NotFound";
+import LoginPage from "./pages/LoginPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfServicePage from "./pages/TermsOfServicePage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import GitHubPage from "./pages/integrations/GitHubPage";
+import SlackPage from "./pages/integrations/SlackPage";
+import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
+import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
+import LoadingSpinner from "./components/LoadingSpinner";
+import LoginTransitionPage from "./pages/LoginTransitionPage";
 
-const App = () => {
-  const user = useUser();
+const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, featureId?: string }) => {
+  const { user, loading } = useAuth();
+  const { isFeatureEnabled } = useFeatures();
+  const location = useLocation();
 
-  if (!user) {
-    return (
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
+  if (loading) {
+    return <LoadingSpinner />;
   }
 
-  return (
-    <div className="flex min-h-screen w-full bg-muted/40">
-      <Sidebar />
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14 flex-grow">
-        <main className="flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/project/:id" element={<ProjectDetail />} />
-            <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </main>
-      </div>
-    </div>
-  );
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (featureId && !isFeatureEnabled(featureId)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
 };
 
-const Sidebar = () => {
-  const [isCollapsed, setIsCollapsed] = useState(true);
-  const location = useLocation();
-  const supabaseClient = useSupabaseClient();
-  const user = useUser();
-
-  const navItems = [
-    { href: "/dashboard", icon: Home, label: "Dashboard" },
-    { href: "/projects", icon: GanttChartSquare, label: "Projects" },
-    { href: "/messages", icon: MessageSquare, label: "Messages" },
-    { href: "/clients", icon: Users, label: "Clients" },
-  ];
-
-  const handleLogout = async () => {
-    await supabaseClient.auth.signOut();
-  };
-
-  const getInitials = (name: string | undefined) => {
-    if (!name) return 'U';
-    const names = name.split(' ');
-    if (names.length > 1) {
-      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
-    }
-    return name[0].toUpperCase();
-  };
-
+function App() {
   return (
-    <aside className={cn("fixed inset-y-0 left-0 z-10 flex-col border-r bg-background transition-all duration-300 ease-in-out", isCollapsed ? "w-14" : "w-56")}>
-      <nav className="flex flex-col items-center gap-4 px-2 sm:py-5 h-full">
-        <Link to="#" className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base">
-          <Package2Icon className="h-4 w-4 transition-all group-hover:scale-110" />
-          <span className="sr-only">ProjectHub</span>
-        </Link>
-        <div className="flex-grow w-full">
-        {navItems.map((item) => (
-          <Link
-            key={item.label}
-            to={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              location.pathname.startsWith(item.href) && "bg-muted text-primary",
-              isCollapsed && "justify-center"
-            )}
-          >
-            <item.icon className="h-5 w-5" />
-            {!isCollapsed && <span>{item.label}</span>}
-          </Link>
-        ))}
-        </div>
+    <>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+        
+        <Route path="/welcome" element={<ProtectedRoute><LoginTransitionPage /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/projects" element={<ProtectedRoute featureId="projects"><Projects /></ProtectedRoute>} />
+        <Route path="/projects/:projectId" element={<ProtectedRoute featureId="projects"><ProjectDetail /></ProtectedRoute>} />
+        <Route path="/request" element={<ProtectedRoute featureId="request"><RequestPage /></ProtectedRoute>} />
+        <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+        <Route path="/mood-tracker" element={<ProtectedRoute featureId="mood-tracker"><MoodTracker /></ProtectedRoute>} />
+        <Route path="/goals" element={<ProtectedRoute featureId="goals"><GoalsPage /></ProtectedRoute>} />
+        <Route path="/goals/:slug" element={<ProtectedRoute featureId="goals"><GoalDetailPage /></ProtectedRoute>} />
+        <Route path="/billing" element={<ProtectedRoute featureId="billing"><Billing /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute featureId="notifications"><NotificationsPage /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute featureId="profile"><Profile /></ProtectedRoute>} />
+        <Route path="/search" element={<ProtectedRoute featureId="search"><SearchPage /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute featureId="user-management"><UserManagementPage /></ProtectedRoute>} />
+        
+        <Route path="/settings" element={<ProtectedRoute featureId="settings"><SettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/team" element={<ProtectedRoute featureId="settings"><TeamSettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations" element={<ProtectedRoute featureId="settings"><IntegrationsPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/openai" element={<ProtectedRoute featureId="settings"><OpenAiIntegrationPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/github" element={<ProtectedRoute featureId="settings"><GitHubPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/slack" element={<ProtectedRoute featureId="settings"><SlackPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/google-drive" element={<ProtectedRoute featureId="settings"><GoogleDrivePage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/google-calendar" element={<ProtectedRoute featureId="settings"><GoogleCalendarPage /></ProtectedRoute>} />
+        <Route path="/settings/navigation" element={<ProtectedRoute featureId="settings"><NavigationSettingsPage /></ProtectedRoute>} />
 
-        <div className="mt-auto flex flex-col items-center gap-4 px-2 py-5 w-full">
-          <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)} className="absolute -right-4 top-1/2 -translate-y-1/2 bg-background border rounded-full">
-            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
-          <div className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all", isCollapsed && "justify-center")}>
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user?.user_metadata?.avatar_url} />
-              <AvatarFallback>{getInitials(user?.user_metadata?.full_name)}</AvatarFallback>
-            </Avatar>
-            {!isCollapsed && (
-              <div className="flex flex-col">
-                <span className="font-semibold text-sm text-foreground">{user?.user_metadata?.full_name}</span>
-                <span className="text-xs">{user?.email}</span>
-              </div>
-            )}
-          </div>
-          <Link
-            to="/settings"
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              location.pathname === "/settings" && "bg-muted text-primary",
-              isCollapsed && "justify-center"
-            )}
-          >
-            <Settings className="h-5 w-5" />
-            {!isCollapsed && <span>Settings</span>}
-          </Link>
-          <button
-            onClick={handleLogout}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary w-full",
-              isCollapsed && "justify-center"
-            )}
-          >
-            <LogOut className="h-5 w-5" />
-            {!isCollapsed && <span>Logout</span>}
-          </button>
-        </div>
-      </nav>
-    </aside>
+        <Route path="/custom" element={<ProtectedRoute><EmbedPage /></ProtectedRoute>} />
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster />
+    </>
   );
-};
-
-const Package2Icon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
-    <path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9" />
-    <path d="M12 3v6" />
-  </svg>
-);
+}
 
 export default App;

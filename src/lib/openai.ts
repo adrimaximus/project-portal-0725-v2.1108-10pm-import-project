@@ -32,7 +32,7 @@ export async function generateAiInsight(
     **Data Sasaran Utama:**
     - Judul: ${goal.title}
     - Deskripsi: ${goal.description}
-    - Periode Target: ${goal.target_period || 'Tidak ditentukan'}
+    - Periode Target: ${goal.targetPeriod || 'Tidak ditentukan'}
     - Tag Kustom: ${tagsText}
   `;
 
@@ -67,7 +67,7 @@ export async function generateAiInsight(
       ? `Tim Anda (${collaborators.join(', ')}) juga terlibat dalam sasaran ini.` 
       : "Anda mengerjakan sasaran ini sendirian.";
 
-    const target = goal.type === 'quantity' ? goal.target_quantity : goal.target_value;
+    const target = goal.type === 'quantity' ? goal.targetQuantity : goal.targetValue;
     const totalProgress = goal.completions
         .filter(c => getYear(parseISO(c.date)) === currentYear)
         .reduce((sum, c) => sum + c.value, 0);
