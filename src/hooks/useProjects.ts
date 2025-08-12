@@ -1,33 +1,65 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Project } from '@/data/projects';
-import { useAuth } from '@/contexts/AuthContext';
+import { Project } from '@/types';
+import { toast } from 'sonner';
 
-const fetchProjects = async () => {
+// Ini adalah tipe data yang dikembalikan oleh fungsi RPC, dengan properti snake_case
+interface ProjectFromRpc {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  description: string;
+  status: Project['status'];
+  progress: number;
+  budget: number;
+  start_date: string;
+  due_date: string;
+  payment_status: Project['paymentStatus'];
+  payment_due_date?: string;
+  created_by: Project['createdBy'];
+  assignedTo: Project['assignedTo'];
+  tasks: Project['tasks'];
+  comments: Project['comments'];
+  services: Project['services'];
+  briefFiles: Project['briefFiles'];
+}
+
+const fetchProjects = async (): Promise<Project[]> => {
   const { data, error } = await supabase.rpc('get_dashboard_projects');
 
   if (error) {
+    console.error('Error fetching projects:', error);
+    toast.error('Failed to fetch projects.');
     throw new Error(error.message);
   }
 
-  // Map snake_case from DB to camelCase in the app
-  return data.map((p: any) => ({
+  if (!data) {
+    return [];
+  }
+
+  // RPC mengembalikan snake_case, tetapi aplikasi menggunakan camelCase. Mari kita petakan datanya.
+  const projects: Project[] = (data as ProjectFromRpc[]).map(p => ({
     ...p,
     startDate: p.start_date,
     dueDate: p.due_date,
     paymentStatus: p.payment_status,
     paymentDueDate: p.payment_due_date,
     createdBy: p.created_by,
-    assignedTo: p.assignedTo,
-    briefFiles: p.briefFiles,
-  })) as Project[];
+    // Pastikan array tidak null
+    assignedTo: p.assignedTo || [],
+    tasks: p.tasks || [],
+    comments: p.comments || [],
+    services: p.services || [],
+    briefFiles: p.briefFiles || [],
+  }));
+
+  return projects;
 };
 
 export const useProjects = () => {
-  const { user } = useAuth();
   return useQuery<Project[], Error>({
-    queryKey: ['projects', user?.id],
+    queryKey: ['projects'],
     queryFn: fetchProjects,
-    enabled: !!user,
   });
 };

@@ -1,17 +1,18 @@
+import { cn, getStatusStyles } from "@/lib/utils";
+import { ProjectStatus, PaymentStatus } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { Project } from "@/data/projects";
-import { getStatusStyles } from "@/lib/utils";
 
 interface StatusBadgeProps {
-  status: Project['status'] | Project['paymentStatus'];
-  className?: string;
+  status: ProjectStatus | PaymentStatus;
 }
 
-const StatusBadge = ({ status, className }: StatusBadgeProps) => {
+const StatusBadge = ({ status }: StatusBadgeProps) => {
+  if (!status) {
+    return null;
+  }
   const styles = getStatusStyles(status);
   return (
-    <Badge variant="outline" className={cn("border-transparent", styles.bg, styles.text, className)}>
+    <Badge variant="outline" className={cn("border-transparent", styles.tw)}>
       {status}
     </Badge>
   );

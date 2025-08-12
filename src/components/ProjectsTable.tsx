@@ -8,11 +8,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
+import { Project, ProjectStatus, PaymentStatus } from "@/types";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Plus } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
 import { Button } from "./ui/button";
@@ -109,6 +109,7 @@ const ProjectsTable = () => {
     toDate.setHours(23, 59, 59, 999);
 
     return localProjects.filter(project => {
+      if (!project.startDate || !project.dueDate) return false;
       const projectStart = new Date(project.startDate);
       const projectEnd = new Date(project.dueDate);
       return projectStart <= toDate && projectEnd >= fromDate;
@@ -206,7 +207,7 @@ const ProjectsTable = () => {
 
     const newProjectData = {
       name: event.summary || "Untitled Event",
-      category: 'Imported Event',
+      category: 'Imported Event' as const,
       status: 'Requested' as ProjectStatus,
       progress: 0,
       budget: 0,
@@ -276,8 +277,8 @@ const ProjectsTable = () => {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div>Start: {format(new Date(project.startDate), 'MMM d, yyyy')}</div>
-                        <div className="text-muted-foreground">Due: {format(new Date(project.dueDate), 'MMM d, yyyy')}</div>
+                        <div>Start: {project.startDate ? format(new Date(project.startDate), 'MMM d, yyyy') : 'N/A'}</div>
+                        <div className="text-muted-foreground">Due: {project.dueDate ? format(new Date(project.dueDate), 'MMM d, yyyy') : 'N/A'}</div>
                       </div>
                     </TableCell>
                     <TableCell>
