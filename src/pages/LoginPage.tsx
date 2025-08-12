@@ -26,6 +26,7 @@ const LoginPage = () => {
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
 
   useEffect(() => {
+    // Redirect if a session already exists on initial load
     if (!authContextLoading && session) {
       navigate('/dashboard', { replace: true });
     }
@@ -52,8 +53,13 @@ const LoginPage = () => {
       toast.error(error.message);
       setIsLoading(false);
       setShowWelcomeMessage(false);
+    } else {
+      // On success, wait a moment to show the welcome message before navigating.
+      // The AuthContext will update in the background.
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 1500);
     }
-    // On success, the onAuthStateChange listener in AuthContext will trigger the useEffect to navigate.
   };
 
   const handleForgotPassword = async () => {
