@@ -39,29 +39,20 @@ type NavItem = {
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const { isFeatureEnabled } = useFeatures();
+  const [customNavItems, setCustomNavItems] = useState<NavItem[]>([]);
 
-  const handleLogout = async () => {
-    await logout();
-    // Navigation is handled by the AuthContext state change.
-  };
-
-  if (!user) {
-    return null;
-  }
-
-  const totalUnreadChatCount = 0; // Placeholder, will be implemented with real data later
-
+  const totalUnreadChatCount = 0; // Placeholder
   const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 
   const [defaultNavItems] = useState<NavItem[]>(() => [
     { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
     { id: "projects", href: "/projects", label: "Projects", icon: Package },
-    { id: "request", href: "/request", label: "Request", icon: LayoutGrid },
+    { id: "request", href: "/request/new", label: "Request", icon: LayoutGrid },
     { 
       id: "chat",
       href: "/chat", 
@@ -76,10 +67,14 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, ...(unreadNotificationCount > 0 && { badge: unreadNotificationCount }) },
   ]);
   
-  const [customNavItems, setCustomNavItems] = useState<NavItem[]>([]);
-  const localStorageKey = `customNavItems_${user.id}`;
+  const localStorageKey = user ? `customNavItems_${user.id}` : null;
 
   useEffect(() => {
+    if (!localStorageKey) {
+      setCustomNavItems([]);
+      return;
+    }
+    
     const loadCustomItems = () => {
         try {
           const storedItems = localStorage.getItem(localStorageKey);
@@ -116,6 +111,25 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         window.removeEventListener('storage', handleStorageChange);
     }
   }, [localStorageKey]);
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
+  if (loading) {
+    return (
+      <div
+        className="h-screen border-r bg-muted/40 transition-all duration-300 ease-in-out"
+        style={{ width: isCollapsed ? '4.5rem' : '16rem' }}
+      >
+        {/* Skeleton or empty while loading */}
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   const NavLink = ({ item }: { item: NavItem }) => {
     if (isCollapsed) {
@@ -162,10 +176,8 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     );
   };
 
-  const visibleDefaultNavItems = defaultNavItems.filter(item => item.id === 'chat' || isFeatureEnabled(item.id));
-  const allVisibleNavItems = isFeatureEnabled('custom-links')
-    ? [...visibleDefaultNavItems, ...customNavItems]
-    : visibleDefaultNavItems;
+  const visibleDefaultNavItems = defaultNavItems.filter(item => isFeatureEnabled(item.id));
+  const allVisibleNavItems = [...visibleDefaultNavItems, ...customNavItems];
 
   return (
     <div
