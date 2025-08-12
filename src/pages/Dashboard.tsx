@@ -169,13 +169,15 @@ const Index = () => {
       const pickerFrom = date.from;
       const pickerTo = date.to || date.from;
 
+      // If project has no dates, don't filter it out by date.
       if (!project.startDate || !project.dueDate) {
-        return false;
+        return true;
       }
 
       const projectStart = new Date(project.startDate);
       const projectEnd = new Date(project.dueDate);
 
+      // If project has dates, check if it's within the selected range.
       if (projectStart > pickerTo || projectEnd < pickerFrom) {
         return false;
       }
