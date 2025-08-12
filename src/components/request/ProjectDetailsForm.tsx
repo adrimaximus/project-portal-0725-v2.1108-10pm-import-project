@@ -112,7 +112,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         due_date: date?.to?.toISOString(),
         created_by: currentUser.id,
       })
-      .select('id')
+      .select('id, slug')
       .single();
 
     if (projectError) {
@@ -123,6 +123,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     }
 
     const newProjectId = projectData.id;
+    const newProjectSlug = projectData.slug;
 
     // Link services to the project
     if (selectedServices.length > 0) {
@@ -182,7 +183,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
     
     toast.success("Project created successfully!");
     setIsSubmitting(false);
-    navigate(`/projects/${newProjectId}`);
+    navigate(`/projects/${newProjectSlug}`);
   };
 
   const serviceDetails = selectedServices

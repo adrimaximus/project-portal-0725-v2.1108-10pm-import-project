@@ -260,7 +260,7 @@ const ProjectsTable = () => {
                 filteredProjects.map((project) => (
                   <TableRow key={project.id}>
                     <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
-                      <Link to={`/projects/${project.id}`} className="font-medium text-primary hover:underline">
+                      <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
                         {project.name}
                       </Link>
                       <div className="text-sm text-muted-foreground">{project.category}</div>
@@ -338,7 +338,7 @@ const ProjectsTable = () => {
             <CardTitle>Projects</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/projects/new">
+            <Link to="/request">
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
                 New Project

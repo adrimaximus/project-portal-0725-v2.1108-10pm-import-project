@@ -90,7 +90,7 @@ const SearchPage = () => {
                   </CardHeader>
                   <CardContent className="space-y-1 divide-y">
                     {projects.map(project => (
-                      <Link to={`/projects/${project.id}`} key={project.id} className="block p-3 rounded-md hover:bg-muted -mx-3">
+                      <Link to={`/projects/${project.slug}`} key={project.id} className="block p-3 rounded-md hover:bg-muted -mx-3">
                         <p className="font-medium">
                           <HighlightMatch text={project.name} query={searchTerm} />
                         </p>

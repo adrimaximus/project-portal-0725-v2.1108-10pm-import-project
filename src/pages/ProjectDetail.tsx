@@ -13,7 +13,7 @@ import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import { Skeleton } from "@/components/ui/skeleton";
 import { mapProfileToUser } from "@/lib/utils";
 
-const fetchProject = async (projectId: string, user: any) => {
+const fetchProject = async (slug: string, user: any) => {
   const { data, error } = await supabase
     .from("projects")
     .select(`
@@ -24,7 +24,7 @@ const fetchProject = async (projectId: string, user: any) => {
       comments(*, author:profiles(*)),
       briefFiles:project_files(*)
     `)
-    .eq("id", projectId)
+    .eq("slug", slug)
     .single();
 
   if (error) {
@@ -57,7 +57,7 @@ const ProjectDetailSkeleton = () => (
 );
 
 const ProjectDetail = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -66,13 +66,14 @@ const ProjectDetail = () => {
   const [editedProject, setEditedProject] = useState<Project | null>(null);
 
   const { data: projectData, isLoading, error } = useQuery({
-    queryKey: ["project", projectId],
-    queryFn: () => fetchProject(projectId!, user),
-    enabled: !!projectId && !!user,
+    queryKey: ["project", slug],
+    queryFn: () => fetchProject(slug!, user),
+    enabled: !!slug && !!user,
   });
 
   const project: Project | null = projectData ? {
     id: projectData.id,
+    slug: projectData.slug,
     name: projectData.name,
     category: projectData.category,
     description: projectData.description,
@@ -169,7 +170,7 @@ const ProjectDetail = () => {
 
     toast.success("Project saved successfully!");
     setIsEditing(false);
-    queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["project", slug] });
   };
 
   const handleCancel = () => {
@@ -212,7 +213,7 @@ const ProjectDetail = () => {
       }
     }
     toast.success("File upload complete!");
-    queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["project", slug] });
   };
 
   const handleFileDelete = async (fileId: string) => {
@@ -233,7 +234,7 @@ const ProjectDetail = () => {
     }
 
     toast.success("File deleted successfully");
-    queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["project", slug] });
   };
 
   const handleTaskAdd = (title: string) => console.log("Add task:", title);

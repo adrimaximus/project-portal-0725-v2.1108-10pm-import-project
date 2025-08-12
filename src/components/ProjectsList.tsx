@@ -91,7 +91,7 @@ const ProjectsList = ({ projects, onDeleteProject }: ProjectsListProps) => {
                     >
                       <div 
                         className="flex-1 flex items-center space-x-4 cursor-pointer"
-                        onClick={() => navigate(`/projects/${project.id}`)}
+                        onClick={() => navigate(`/projects/${project.slug}`)}
                       >
                         <div className="w-32 text-sm text-muted-foreground hidden md:block">
                           <div className="flex items-center gap-2">
@@ -131,7 +131,7 @@ const ProjectsList = ({ projects, onDeleteProject }: ProjectsListProps) => {
                               <Send className="mr-2 h-4 w-4" />
                               <span>Minta penjadwalan ulang</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
+                            <DropdownMenuItem onClick={() => navigate(`/projects/${project.slug}`)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               <span>Edit detail</span>
                             </DropdownMenuItem>

@@ -208,7 +208,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
       </div>
     );
     
-    return <Link to={`/projects/${item.id}`}>{content}</Link>;
+    return <Link to={`/projects/${item.slug}`}>{content}</Link>;
   };
 
   return (
