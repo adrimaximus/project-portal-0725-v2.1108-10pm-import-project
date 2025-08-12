@@ -12,7 +12,7 @@ const LandingPage = () => {
 
   useEffect(() => {
     if (!loading && session) {
-      navigate('/dashboard', { replace: true });
+      navigate('/welcome', { replace: true });
     }
   }, [session, loading, navigate]);
 

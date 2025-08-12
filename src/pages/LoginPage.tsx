@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { Auth } from '@supabase/auth-ui-react';
@@ -9,14 +9,12 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 const LoginPage = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || '/dashboard';
 
   useEffect(() => {
     if (session) {
-      navigate(from, { replace: true });
+      navigate('/welcome', { replace: true });
     }
-  }, [session, navigate, from]);
+  }, [session, navigate]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40">
