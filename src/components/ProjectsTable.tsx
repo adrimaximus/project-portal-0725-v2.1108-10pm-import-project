@@ -1,4 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Project, UserProfile } from '@/types';
 import {
   Table,
   TableBody,
@@ -6,23 +11,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
-import { Project, ProjectStatus, PaymentStatus } from "@/types";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw } from "lucide-react";
-import ProjectsList from "./ProjectsList";
-import ProjectsMonthView from "./ProjectsMonthView";
-import { Button } from "./ui/button";
-import { toast } from "sonner";
+} from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,358 +27,151 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { DateRange } from "react-day-picker";
-import { DatePickerWithRange } from "./ui/date-picker-with-range";
-import CalendarEventsList from "./CalendarEventsList";
-import StatusBadge from "./StatusBadge";
-import { format } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { getStatusStyles } from "@/lib/utils";
-import { useProjects } from "@/hooks/useProjects";
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
+import StatusBadge from '@/components/StatusBadge';
+import { MoreHorizontal, Eye, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
 
-interface CalendarEvent {
-    id: string;
-    summary: string;
-    start: { dateTime?: string; date?: string; };
-    end: { dateTime?: string; date?: string; };
-    htmlLink: string;
+interface ProjectsTableProps {
+  projects: Project[];
 }
 
-type ViewMode = 'table' | 'list' | 'month' | 'calendar';
+const TeamAvatars = ({ members }: { members: UserProfile[] }) => {
+  if (!members || members.length === 0) {
+    return <div className="text-sm text-muted-foreground">No members</div>;
+  }
 
-const ProjectsTable = () => {
-  const [view, setView] = useState<ViewMode>('table');
-  const { data: localProjects = [], isLoading, refetch } = useProjects();
+  return (
+    <div className="flex items-center -space-x-2">
+      {members.slice(0, 3).map((member) => (
+        <Avatar key={member.id} className="h-8 w-8 border-2 border-background">
+          <AvatarImage src={member.avatar} alt={member.name} />
+          <AvatarFallback>{member.initials}</AvatarFallback>
+        </Avatar>
+      ))}
+      {members.length > 3 && (
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium border-2 border-background">
+          +{members.length - 3}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ProjectsTable = ({ projects }: ProjectsTableProps) => {
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
-  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const refreshCalendarEvents = () => {
-    const storedEvents = localStorage.getItem('googleCalendarEvents');
-    try {
-        const updatedEvents = storedEvents ? JSON.parse(storedEvents) : [];
-        setCalendarEvents(updatedEvents);
-        toast.success("Calendar events refreshed.");
-    } catch (e) {
-        console.error("Failed to parse calendar events from localStorage", e);
-        toast.error("Could not refresh calendar events.");
-    }
-  };
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return;
 
-  useEffect(() => {
-    const storedEvents = localStorage.getItem('googleCalendarEvents');
-    if (storedEvents) {
-      try {
-        setCalendarEvents(JSON.parse(storedEvents));
-      } catch (e) {
-        console.error("Failed to parse calendar events from localStorage", e);
-        setCalendarEvents([]);
-      }
-    }
-    
-    const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === 'googleCalendarEvents') {
-            const updatedEvents = localStorage.getItem('googleCalendarEvents');
-            setCalendarEvents(updatedEvents ? JSON.parse(updatedEvents) : []);
-        }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-        window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
-  const filteredProjects = useMemo(() => {
-    if (!dateRange || !dateRange.from) {
-      return localProjects;
-    }
-
-    const fromDate = new Date(dateRange.from);
-    fromDate.setHours(0, 0, 0, 0);
-
-    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-    toDate.setHours(23, 59, 59, 999);
-
-    return localProjects.filter(project => {
-      if (!project.startDate || !project.dueDate) return false;
-      const projectStart = new Date(project.startDate);
-      const projectEnd = new Date(project.dueDate);
-      return projectStart <= toDate && projectEnd >= fromDate;
-    });
-  }, [localProjects, dateRange]);
-
-  const filteredCalendarEvents = useMemo(() => {
-    if (!dateRange || !dateRange.from) {
-      return calendarEvents;
-    }
-
-    const fromDate = new Date(dateRange.from);
-    fromDate.setHours(0, 0, 0, 0);
-
-    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-    toDate.setHours(23, 59, 59, 999);
-
-    return calendarEvents.filter(event => {
-      const startStr = event.start.dateTime || event.start.date;
-      if (!startStr) return false;
-
-      const eventStart = new Date(startStr);
-
-      const endStr = event.end.dateTime || event.end.date;
-      let eventEnd;
-      if (event.end.date) {
-          eventEnd = new Date(new Date(event.end.date).getTime() - 1);
-      } else if (event.end.dateTime) {
-          eventEnd = new Date(event.end.dateTime);
-      } else {
-          eventEnd = new Date(eventStart);
-          eventEnd.setHours(23, 59, 59, 999);
-      }
-      
-      return eventStart <= toDate && eventEnd >= fromDate;
-    });
-  }, [calendarEvents, dateRange]);
-
-  const handleDeleteProject = (projectId: string) => {
-    const project = localProjects.find(p => p.id === projectId);
-    if (project) {
-      setProjectToDelete(project);
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (projectToDelete) {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', projectToDelete.id);
-
-      if (error) {
-        toast.error(`Failed to delete project "${projectToDelete.name}".`);
-        console.error(error);
-      } else {
-        toast.success(`Project "${projectToDelete.name}" has been deleted.`);
-        refetch();
-      }
-      setProjectToDelete(null);
-    }
-  };
-
-  const handleImportEvent = async (event: CalendarEvent) => {
-    if (!user) {
-        toast.error("You must be logged in to import events.");
-        return;
-    }
-
-    const startDate = event.start.date || event.start.dateTime?.split('T')[0];
-    const dueDate = event.end.date || event.end.dateTime?.split('T')[0] || startDate;
-
-    if (!startDate) {
-        toast.error("Cannot import event without a start date.");
-        return;
-    }
-
-    const originEventId = `cal-${event.id}`;
-    const { data: existing, error: checkError } = await supabase
-        .from('projects')
-        .select('id')
-        .eq('origin_event_id', originEventId)
-        .maybeSingle();
-
-    if (checkError) {
-        toast.error(`Error checking for existing project: ${checkError.message}`);
-        return;
-    }
-
-    if (existing) {
-        toast.info(`"${event.summary}" has already been imported.`);
-        setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-        return;
-    }
-
-    const newProjectData = {
-      name: event.summary || "Untitled Event",
-      category: 'Imported Event' as const,
-      status: 'Requested' as ProjectStatus,
-      progress: 0,
-      budget: 0,
-      start_date: startDate,
-      due_date: dueDate,
-      payment_status: 'Proposed' as PaymentStatus,
-      created_by: user.id,
-      origin_event_id: originEventId,
-    };
-
-    const { error } = await supabase.from('projects').insert([newProjectData]);
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', projectToDelete.id);
 
     if (error) {
-        toast.error(`Failed to import "${event.summary}": ${error.message}`);
+      toast.error('Gagal menghapus proyek', { description: error.message });
     } else {
-        toast.success(`"${event.summary}" imported as a new project.`);
-        setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-        refetch();
+      toast.success(`Proyek "${projectToDelete.name}" berhasil dihapus.`);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     }
-  };
-
-  const renderContent = () => {
-    switch (view) {
-      case 'table':
-        return (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[300px]">Project</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Progress</TableHead>
-                <TableHead>Dates</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    Loading projects...
-                  </TableCell>
-                </TableRow>
-              ) : filteredProjects.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    No projects found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredProjects.map((project) => (
-                  <TableRow key={project.id}>
-                    <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
-                      <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
-                        {project.name}
-                      </Link>
-                      <div className="text-sm text-muted-foreground">{project.category}</div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={project.status} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress value={project.progress} className="h-2" />
-                        <span className="text-sm text-muted-foreground">{project.progress}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>Start: {project.startDate ? format(new Date(project.startDate), 'MMM d, yyyy') : 'N/A'}</div>
-                        <div className="text-muted-foreground">Due: {project.dueDate ? format(new Date(project.dueDate), 'MMM d, yyyy') : 'N/A'}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={project.paymentStatus} />
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => handleDeleteProject(project.id)} className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Hapus Proyek</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        );
-      case 'list':
-        return <ProjectsList projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
-      case 'month':
-        return <ProjectsMonthView projects={filteredProjects} />;
-      case 'calendar':
-        return <CalendarEventsList events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
-      default:
-        return null;
-    }
+    setProjectToDelete(null);
   };
 
   return (
     <>
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[40%]">Nama Proyek</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Tim</TableHead>
+              <TableHead>Progres</TableHead>
+              <TableHead>Tenggat Waktu</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {projects && projects.length > 0 ? (
+              projects.map((project) => (
+                <TableRow key={project.id}>
+                  <TableCell>
+                    <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
+                      {project.name}
+                    </Link>
+                    <p className="text-sm text-muted-foreground truncate">{project.category}</p>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={project.status} />
+                  </TableCell>
+                  <TableCell>
+                    <TeamAvatars members={project.assignedTo} />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Progress value={project.progress} className="w-24" />
+                      <span className="text-sm text-muted-foreground">{project.progress}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {project.dueDate ? format(new Date(project.dueDate), 'MMM d, yyyy') : 'N/A'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem asChild>
+                          <Link to={`/projects/${project.slug}`} className="flex items-center cursor-pointer">
+                            <Eye className="mr-2 h-4 w-4" /> Lihat
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-500 focus:text-red-500 cursor-pointer"
+                          onClick={() => setProjectToDelete(project)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  Tidak ada proyek yang ditemukan.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
       <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
         <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-            </AlertDialogFooter>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tindakan ini tidak dapat dibatalkan. Ini akan menghapus proyek "{projectToDelete?.name}" secara permanen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteProject} className="bg-destructive hover:bg-destructive/90">
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4">
-          <div className="flex items-center gap-2">
-            <CardTitle>Projects</CardTitle>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => {
-                refetch();
-                toast.success("Data proyek berhasil diperbarui.");
-            }}>
-                <span className="sr-only">Refresh projects data</span>
-                <RefreshCw className="h-4 w-4" />
-            </Button>
-            {view === 'calendar' && (
-              <Button variant="ghost" className="h-8 w-8 p-0" onClick={refreshCalendarEvents}>
-                <span className="sr-only">Refresh calendar events</span>
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            )}
-            <ToggleGroup 
-              type="single" 
-              value={view} 
-              onValueChange={(value) => {
-                if (value) setView(value as ViewMode);
-              }}
-              aria-label="View mode"
-            >
-              <ToggleGroupItem value="table" aria-label="Table view">
-                <TableIcon className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="list" aria-label="List view">
-                <List className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="month" aria-label="Month view">
-                <CalendarDays className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
-                <CalendarPlus className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {(view === 'table' || view === 'list' || view === 'calendar' || view === 'month') && (
-            <div className="py-4">
-              <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
-            </div>
-          )}
-          {renderContent()}
-        </CardContent>
-      </Card>
     </>
   );
 };
