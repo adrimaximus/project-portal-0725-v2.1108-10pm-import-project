@@ -1,25 +1,36 @@
-import { Search, Folder, User as UserIcon } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { dummyProjects, Project, User } from "@/data/projects";
 import {
-  Command,
+  CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { FileText, User as UserIcon } from "lucide-react";
 
-// Get all unique users from all projects
-const allUsers = dummyProjects.flatMap(p => p.assignedTo);
-const uniqueUsers = Array.from(new Map(allUsers.map(user => [user.id, user])).values());
-
-const GlobalSearch = () => {
+export function GlobalSearch() {
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-  const searchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
+
+  const uniqueUsers: User[] = useMemo(() => {
+    const allUsers = dummyProjects.flatMap(p => [p.createdBy, ...p.assignedTo]);
+    return [...new Map(allUsers.map(item => [item.id, item])).values()];
+  }, []);
 
   const filteredProjects = query.length > 1
     ? dummyProjects.filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
@@ -29,95 +40,67 @@ const GlobalSearch = () => {
     ? uniqueUsers.filter(u => u.name.toLowerCase().includes(query.toLowerCase()))
     : [];
 
-  const hasResults = filteredProjects.length > 0 || filteredUsers.length > 0;
-
-  useEffect(() => {
-    if (query.length > 1 && hasResults) {
-      setIsOpen(true);
-    } else {
-      setIsOpen(false);
-    }
-  }, [query, hasResults]);
-
-  // Handle clicks outside the search component to close the suggestions
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [searchRef]);
-
-  const handleSelectProject = (id: string) => {
-    navigate(`/projects/${id}`);
-    setIsOpen(false);
-    setQuery("");
+  const handleSelectProject = (project: Project) => {
+    setOpen(false);
+    navigate(`/projects/${project.id}`);
   };
-  
+
   const handleSelectUser = (user: User) => {
-    // In a real app, this could navigate to a user profile or filter projects by user.
-    console.log("Selected user:", user.name);
-    setIsOpen(false);
-    setQuery("");
+    setOpen(false);
+    // You might want to navigate to a user profile page
+    console.log("Selected user:", user);
   };
 
   return (
-    <div className="relative ml-auto flex-1 md:grow-0" ref={searchRef}>
-      <Command className="overflow-visible bg-transparent">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <CommandInput
-            value={query}
-            onValueChange={setQuery}
-            onFocus={() => {
-              if (query.length > 1 && hasResults) setIsOpen(true);
-            }}
-            placeholder="Search projects or users..."
-            className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
-          />
-        </div>
-        {isOpen && (
-          <CommandList className="absolute top-full z-50 mt-2 w-full md:w-[200px] lg:w-[336px] rounded-md border bg-popover text-popover-foreground shadow-md">
-            <CommandEmpty>No results found.</CommandEmpty>
-            {filteredProjects.length > 0 && (
-              <CommandGroup heading="Projects">
-                {filteredProjects.map((project) => (
-                  <CommandItem
-                    key={project.id}
-                    onSelect={() => handleSelectProject(project.id)}
-                    value={`project-${project.name}`}
-                    className="cursor-pointer"
-                  >
-                    <Folder className="mr-2 h-4 w-4" />
-                    <span>{project.name}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-            {filteredUsers.length > 0 && (
-              <CommandGroup heading="Users">
-                {filteredUsers.map((user) => (
-                  <CommandItem
-                    key={user.id}
-                    onSelect={() => handleSelectUser(user)}
-                    value={`user-${user.name}`}
-                    className="cursor-pointer"
-                  >
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    <span>{user.name}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        )}
-      </Command>
-    </div>
-  );
-};
+    <>
+      <p className="text-sm text-muted-foreground cursor-pointer" onClick={() => setOpen(true)}>
+        Search...
+        <kbd className="pointer-events-none ml-4 inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+          <span className="text-xs">⌘</span>K
+        </kbd>
+      </p>
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput 
+          placeholder="Search for projects or users..." 
+          value={query}
+          onValueChange={setQuery}
+        />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          
+          {filteredProjects.length > 0 && (
+            <CommandGroup heading="Projects">
+              {filteredProjects.map(project => (
+                <CommandItem
+                  key={project.id}
+                  onSelect={() => handleSelectProject(project)}
+                  value={`project-${project.name}`}
+                  className="cursor-pointer"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>{project.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
 
-export default GlobalSearch;
+          {filteredUsers.length > 0 && (
+            <CommandGroup heading="Users">
+              {filteredUsers.map(user => (
+                <CommandItem
+                  key={user.id}
+                  onSelect={() => handleSelectUser(user)}
+                  value={`user-${user.name}`}
+                  className="cursor-pointer"
+                >
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <span>{user.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+        </CommandList>
+      </CommandDialog>
+    </>
+  );
+}

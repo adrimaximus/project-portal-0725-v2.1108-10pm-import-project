@@ -3,131 +3,89 @@ import { Project, Comment, dummyProjects, User } from "@/data/projects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Paperclip, Send, Ticket, Folder, MessageSquare, X, CheckCircle } from "lucide-react";
-import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
-import { MentionsInput, Mention, SuggestionDataItem } from 'react-mentions';
-import { cn } from "@/lib/utils";
-import './mentions-style.css';
+import { Textarea } from "@/components/ui/textarea";
+import { Paperclip, Send, Ticket, MessageSquare, CheckCircle2, X } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { id } from "date-fns/locale";
+import { Mention, MentionsInput } from "react-mentions";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Badge } from "./ui/badge";
 
 interface ProjectCommentsProps {
   project: Project;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
 }
 
-const ProjectComments = ({
-  project,
-  onAddCommentOrTicket,
-}: ProjectCommentsProps) => {
-  const { user: currentUser } = useAuth();
-  const [newCommentText, setNewCommentText] = useState("");
+const ProjectComments = ({ project }: ProjectCommentsProps) => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [newComment, setNewComment] = useState("");
+  const [isTicket, setIsTicket] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
-  const [filter, setFilter] = useState<'all' | 'comments' | 'tickets'>('all');
-  const [mentionableUsers, setMentionableUsers] = useState<any[]>([]);
-  const [mentionableProjects, setMentionableProjects] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTickets, setShowTickets] = useState(false);
 
-  useEffect(() => {
-    const fetchMentionableData = async () => {
-      // Fetch users
-      const { data: usersData, error: usersError } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url, email');
-      if (usersData) {
-        setMentionableUsers(usersData.map(u => ({
-          id: u.id,
-          display: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
-          avatar: u.avatar_url,
-          initials: `${u.first_name?.[0] || ''}${u.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-        })));
-      }
-
-      // Fetch projects
-      const { data: projectsData, error: projectsError } = await supabase.from('projects').select('id, name');
-      if (projectsData) {
-        setMentionableProjects(projectsData.map(p => ({
-          id: p.id,
-          display: p.name,
-        })));
-      }
-    };
-    fetchMentionableData();
-  }, []);
-
-  const usersForMentions = project.assignedTo.map(user => ({
-    id: user.id,
-    display: user.name,
-    avatar: user.avatar,
-    initials: user.initials || user.name.slice(0, 2).toUpperCase(),
-  }));
-
-  const projectsForMentions = dummyProjects.map(p => ({
-    id: p.id,
-    display: p.name,
-  }));
+  const mentionableUsers = useMemo(() => {
+    if (!project) return [];
+    const users = [project.createdBy, ...project.assignedTo];
+    const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
+    return uniqueUsers.map(u => ({ id: u.id, display: u.name }));
+  }, [project]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+    if (e.target.files) {
       setAttachment(e.target.files[0]);
     }
   };
 
-  const handleRemoveAttachment = () => {
-    setAttachment(null);
-    const fileInput = document.getElementById('comment-attachment') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = "";
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !user) return;
+
+    setIsSubmitting(true);
+    let attachment_url: string | undefined = undefined;
+    let attachment_name: string | undefined = undefined;
+
+    try {
+      if (attachment) {
+        const fileExt = attachment.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${project.id}/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('project-files')
+          .upload(filePath, attachment);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+        attachment_url = urlData.publicUrl;
+        attachment_name = attachment.name;
+      }
+
+      const { error } = await supabase.from("comments").insert({
+        project_id: project.id,
+        author_id: user.id,
+        text: newComment,
+        is_ticket: isTicket,
+        attachment_url,
+        attachment_name,
+      });
+
+      if (error) throw error;
+
+      setNewComment("");
+      setIsTicket(false);
+      setAttachment(null);
+      toast.success(isTicket ? "Ticket created successfully" : "Comment posted successfully");
+      queryClient.invalidateQueries({ queryKey: ["project", project.id] });
+    } catch (error: any) {
+      toast.error("Failed to post comment", { description: error.message });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  const handleSubmit = (isTicketSubmit: boolean) => {
-    if ((newCommentText.trim() === "" && !attachment) || !currentUser) return;
-
-    onAddCommentOrTicket(newCommentText, isTicketSubmit, attachment);
-    
-    setNewCommentText("");
-    setAttachment(null);
-    const fileInput = document.getElementById('comment-attachment') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = "";
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const suggestionsOpen = document.querySelector('.mentions__suggestions__list');
-    if (e.key === 'Enter' && !e.shiftKey && !suggestionsOpen) {
-      e.preventDefault();
-      handleSubmit(false);
-    }
-  };
-
-  const renderUserSuggestion = (
-    suggestion: SuggestionDataItem & { avatar?: string; initials?: string },
-    search: string,
-    highlightedDisplay: React.ReactNode,
-    index: number,
-    focused: boolean
-  ) => (
-    <div className={`mentions__suggestions__item ${focused ? 'mentions__suggestions__item--focused' : ''}`}>
-      <Avatar className="h-8 w-8">
-        <AvatarImage src={suggestion.avatar} />
-        <AvatarFallback>{suggestion.initials}</AvatarFallback>
-      </Avatar>
-      <span>{highlightedDisplay}</span>
-    </div>
-  );
-
-  const renderProjectSuggestion = (
-    suggestion: SuggestionDataItem,
-    search: string,
-    highlightedDisplay: React.ReactNode,
-    index: number,
-    focused: boolean
-  ) => (
-    <div className={`mentions__suggestions__item ${focused ? 'mentions__suggestions__item--focused' : ''}`}>
-      <Folder className="h-5 w-5 text-muted-foreground" />
-      <span>{highlightedDisplay}</span>
-    </div>
-  );
 
   const sortedItems = useMemo(() => 
     [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
@@ -135,98 +93,83 @@ const ProjectComments = ({
   );
 
   const filteredItems = useMemo(() => {
-    if (filter === 'comments') return sortedItems.filter(item => !item.isTicket);
-    if (filter === 'tickets') return sortedItems.filter(item => item.isTicket);
+    if (showTickets) {
+      return sortedItems.filter(item => item.isTicket);
+    }
     return sortedItems;
-  }, [filter, sortedItems]);
-
-  const placeholderText = "Add a comment or create a ticket...";
+  }, [sortedItems, showTickets]);
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Discussion</h3>
-        
-        <div className="rounded-lg border bg-background transition-all">
-          <div className="relative">
-            <MentionsInput
-              value={newCommentText}
-              onChange={(e) => setNewCommentText(e.target.value)}
-              placeholder={placeholderText}
-              className="mentions"
-              a11ySuggestionsListLabel="Suggested mentions"
-              onKeyDown={handleKeyDown}
-            >
-              <Mention
-                trigger="@"
-                data={mentionableUsers}
-                renderSuggestion={renderUserSuggestion}
-                markup="@[__display__](__id__)"
-                className="mentions__mention"
-              />
-              <Mention
-                trigger="/"
-                data={mentionableProjects}
-                renderSuggestion={renderProjectSuggestion}
-                markup="/[__display__](__id__)"
-                className="mentions__mention"
-              />
-            </MentionsInput>
-            <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1">
-              <Button variant="ghost" size="icon" asChild>
-                <Label htmlFor="comment-attachment" className="cursor-pointer h-9 w-9 flex items-center justify-center" title="Attach file">
-                  <Paperclip className="h-4 w-4" />
-                  <input id="comment-attachment" type="file" className="sr-only" onChange={handleFileChange} />
-                </Label>
-              </Button>
-              <Button 
-                variant="ghost"
-                size="icon" 
-                onClick={() => handleSubmit(true)}
-                disabled={!newCommentText.trim() && !attachment}
-                className="h-9 w-9 text-orange-600"
-                title="Create Ticket"
-              >
-                <Ticket className="h-4 w-4" />
-              </Button>
-              <Button 
-                size="icon" 
-                onClick={() => handleSubmit(false)} 
-                disabled={!newCommentText.trim() && !attachment} 
-                className="h-9 w-9"
-                title="Add Comment"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="relative">
+          <MentionsInput
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
+            className="mentions-textarea"
+            classNames={{
+              control: "w-full",
+              input: "w-full p-2 border rounded-md min-h-[100px] bg-background text-sm",
+              suggestions: {
+                list: "bg-background border rounded-md shadow-lg",
+                item: "p-2 hover:bg-muted",
+                "&focused": "bg-muted",
+              },
+            }}
+          >
+            <Mention
+              trigger="@"
+              data={mentionableUsers}
+              className="bg-blue-100"
+            />
+          </MentionsInput>
+        </div>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Button type="button" variant={isTicket ? "default" : "outline"} size="sm" onClick={() => setIsTicket(!isTicket)}>
+              <Ticket className="mr-2 h-4 w-4" />
+              {isTicket ? "This is a Ticket" : "Make a Ticket"}
+            </Button>
+            <Button type="button" variant="outline" size="sm" asChild>
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <Paperclip className="mr-2 h-4 w-4" />
+                Attach File
+                <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} />
+              </label>
+            </Button>
           </div>
-          {attachment && (
-            <div className="text-sm text-muted-foreground flex items-center gap-2 px-3 py-2 border-t">
-              <Paperclip className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate flex-1">{attachment.name}</span>
-              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleRemoveAttachment}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <Button type="submit" disabled={isSubmitting || !newComment.trim()}>
+            <Send className="mr-2 h-4 w-4" />
+            {isSubmitting ? "Posting..." : "Post"}
+          </Button>
         </div>
-      </div>
+        {attachment && (
+          <div className="text-sm text-muted-foreground flex items-center gap-2">
+            <Paperclip className="h-4 w-4" />
+            <span>{attachment.name}</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAttachment(null)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </form>
 
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-            <h4 className="text-md font-semibold">History</h4>
-            <div className="flex items-center gap-1 rounded-md bg-muted p-1">
-                <Button variant={filter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilter('all')}>All</Button>
-                <Button variant={filter === 'comments' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilter('comments')}>Comments</Button>
-                <Button variant={filter === 'tickets' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilter('tickets')}>Tickets</Button>
-            </div>
+      <div>
+        <div className="flex items-center gap-4 mb-4">
+          <Button variant={!showTickets ? "secondary" : "ghost"} onClick={() => setShowTickets(false)}>
+            <MessageSquare className="mr-2 h-4 w-4" /> All Comments ({sortedItems.length})
+          </Button>
+          <Button variant={showTickets ? "secondary" : "ghost"} onClick={() => setShowTickets(true)}>
+            <Ticket className="mr-2 h-4 w-4" /> Tickets ({sortedItems.filter(i => i.isTicket).length})
+          </Button>
         </div>
-        <div className="space-y-4">
+
+        <div className="space-y-6">
           {filteredItems.map(item => {
             const isTicketCompleted = item.isTicket && project.tasks?.find(t => t.originTicketId === item.id)?.completed;
-
             return (
-              <div key={item.id} className="flex items-start space-x-3 p-3 rounded-lg">
+              <div key={item.id} className="flex items-start space-x-4">
                 <Avatar>
                   <AvatarImage src={item.author.avatar} />
                   <AvatarFallback>{item.author.initials || item.author.name.slice(0, 2).toUpperCase()}</AvatarFallback>
@@ -236,19 +179,11 @@ const ProjectComments = ({
                     <p className="text-sm font-medium text-card-foreground flex items-center gap-2">
                       {item.author.name}
                       {item.isTicket && (
-                        <>
-                          {isTicketCompleted ? (
-                            <span className="flex items-center gap-1 text-xs font-semibold bg-green-600 text-white px-2.5 py-1 rounded-full">
-                              <CheckCircle className="h-3 w-3" />
-                              Done
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1 text-xs font-semibold bg-red-500 text-white px-2.5 py-1 rounded-full">
-                              <Ticket className="h-3 w-3" />
-                              Ticket
-                            </span>
-                          )}
-                        </>
+                        <Badge variant={isTicketCompleted ? "default" : "secondary"} className={isTicketCompleted ? "bg-green-500 hover:bg-green-600" : ""}>
+                          <Ticket className="mr-1.5 h-3 w-3" />
+                          Ticket
+                          {isTicketCompleted && <CheckCircle2 className="ml-1.5 h-3 w-3" />}
+                        </Badge>
                       )}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -258,31 +193,19 @@ const ProjectComments = ({
                   <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{
                     __html: (item.text || '')
                       .replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<span class="bg-blue-100 text-blue-600 font-semibold rounded-sm px-1">@$1</span>')
-                      .replace(/\/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="/projects/$2" class="text-blue-600 hover:underline font-medium">$1</a>')
                   }} />
-                  {item.attachment && (
+                  {item.attachment_url && (
                     <div className="mt-2">
-                      <a href={item.attachment.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md">
+                      <a href={item.attachment_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md">
                         <Paperclip className="h-4 w-4" />
-                        {item.attachment.name}
+                        {item.attachment_name || 'View Attachment'}
                       </a>
                     </div>
                   )}
                 </div>
               </div>
-            );
+            )
           })}
-          {filteredItems.length === 0 && (
-            <div className="text-center py-10 text-muted-foreground">
-                <MessageSquare className="mx-auto h-12 w-12" />
-                <h3 className="mt-2 text-sm font-semibold">No items to display</h3>
-                <p className="mt-1 text-sm">
-                    {filter === 'comments' && "There are no comments yet."}
-                    {filter === 'tickets' && "There are no tickets yet."}
-                    {filter === 'all' && "There are no comments or tickets yet."}
-                </p>
-            </div>
-          )}
         </div>
       </div>
     </div>

@@ -1,197 +1,153 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project } from "@/data/projects";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
+import { format, formatDistanceToNow, startOfDay } from "date-fns";
+import { id } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Calendar as CalendarIcon, DollarSign, BarChart, Users, CalendarClock, CheckCircle, AlertCircle, Clock, CircleDashed } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { CurrencyInput } from "@/components/ui/currency-input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { format, differenceInDays, startOfDay } from "date-fns";
-import { Activity, CreditCard, Wallet, CalendarDays, CalendarClock } from "lucide-react";
-import StatusBadge from "../StatusBadge";
+import { Input } from "../ui/input";
+import { CurrencyInput } from "react-currency-mask";
 
 interface ProjectInfoCardsProps {
   project: Project;
   isEditing: boolean;
-  editedProject: Project | null;
-  onSelectChange: (name: 'status' | 'paymentStatus', value: string) => void;
-  onDateChange: (name: 'dueDate' | 'paymentDueDate' | 'startDate', date: Date | undefined) => void;
-  onBudgetChange: (value: number | undefined) => void;
+  editedProject: Project;
+  onFieldChange: (field: keyof Project, value: any) => void;
+  onDateChange: (field: 'startDate' | 'dueDate' | 'paymentDueDate', date: Date | undefined) => void;
+  onBudgetChange: (value: number | string) => void;
 }
 
-const ProjectInfoCards = ({
-  project,
-  isEditing,
-  editedProject,
-  onSelectChange,
-  onDateChange,
-  onBudgetChange,
-}: ProjectInfoCardsProps) => {
-  const budgetFormatted = new Intl.NumberFormat("id-ID", {
-    style: "currency", currency: "IDR", minimumFractionDigits: 0,
-  }).format(project.budget || 0);
+const statusConfig = {
+  [ProjectStatus.InProgress]: { icon: Clock, color: "text-blue-500", label: "In Progress" },
+  [ProjectStatus.Completed]: { icon: CheckCircle, color: "text-green-500", label: "Completed" },
+  [ProjectStatus.OnHold]: { icon: AlertCircle, color: "text-yellow-500", label: "On Hold" },
+  [ProjectStatus.Canceled]: { icon: AlertCircle, color: "text-red-500", label: "Canceled" },
+};
 
-  const startDateFormatted = project.startDate
-    ? new Date(project.startDate).toLocaleDateString("en-US", {
-        year: 'numeric', month: 'long', day: 'numeric'
-      })
-    : "Not Set";
+const paymentStatusConfig = {
+  [PaymentStatus.Paid]: { color: "bg-green-100 text-green-800", label: "Paid" },
+  [PaymentStatus.Pending]: { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
+  [PaymentStatus.Overdue]: { color: "bg-red-100 text-red-800", label: "Overdue" },
+  [PaymentStatus.Draft]: { color: "bg-gray-100 text-gray-800", label: "Draft" },
+};
 
-  const today = startOfDay(new Date());
-  
-  const projectDueDateObj = startOfDay(new Date(project.dueDate));
-  const dueDateFormatted = projectDueDateObj.toLocaleDateString("en-US", {
-    year: 'numeric', month: 'long', day: 'numeric'
-  });
-  const projectDaysDifference = differenceInDays(projectDueDateObj, today);
-
+const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, onDateChange, onBudgetChange }: ProjectInfoCardsProps) => {
+  const startDateObj = startOfDay(new Date(project.startDate));
+  const dueDateObj = startOfDay(new Date(project.dueDate));
   const paymentDueDateObj = project.paymentDueDate ? startOfDay(new Date(project.paymentDueDate)) : null;
+
+  const timeRemaining = formatDistanceToNow(dueDateObj, { addSuffix: true, locale: id });
   const paymentDueDateFormatted = paymentDueDateObj
-    ? paymentDueDateObj.toLocaleDateString("en-US", {
-        year: 'numeric', month: 'long', day: 'numeric'
-      })
-    : "Not Set";
-  const paymentDaysDifference = paymentDueDateObj ? differenceInDays(paymentDueDateObj, today) : 0;
+    ? formatDistanceToNow(paymentDueDateObj, { addSuffix: true, locale: id })
+    : "Not set";
+
+  const StatusIcon = statusConfig[project.status as ProjectStatus]?.icon || CircleDashed;
+  const statusColor = statusConfig[project.status as ProjectStatus]?.color || "text-muted-foreground";
+
+  const paymentBadgeColor = paymentStatusConfig[project.paymentStatus as PaymentStatus]?.color || "bg-gray-100 text-gray-800";
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Project Status</CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Status</CardTitle>
+          <StatusIcon className={cn("h-4 w-4", statusColor)} />
         </CardHeader>
         <CardContent>
-          {isEditing && editedProject ? (
-            <Select value={editedProject.status} onValueChange={(value) => onSelectChange('status', value)}>
-              <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+          {isEditing ? (
+            <Select
+              value={editedProject.status}
+              onValueChange={(value) => onFieldChange('status', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Requested">Requested</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Billed">Billed</SelectItem>
-                <SelectItem value="On Hold">On Hold</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-                <SelectItem value="Done">Done</SelectItem>
+                {Object.values(ProjectStatus).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
           ) : (
-            <StatusBadge status={project.status} />
+            <div className="text-2xl font-bold">{project.status}</div>
           )}
+          <p className="text-xs text-muted-foreground">
+            Last updated {formatDistanceToNow(new Date(), { addSuffix: true, locale: id })}
+          </p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Payment Status</CardTitle>
-          <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Budget</CardTitle>
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {isEditing && editedProject ? (
-            <Select value={editedProject.paymentStatus} onValueChange={(value) => onSelectChange('paymentStatus', value as Project["paymentStatus"])}>
-              <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Proposed">Proposed</SelectItem>
-                <SelectItem value="Approved">Approved</SelectItem>
-                <SelectItem value="PO Created">PO Created</SelectItem>
-                <SelectItem value="On Process">On Process</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Paid">Paid</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
+          {isEditing ? (
+             <CurrencyInput
+                value={editedProject.budget}
+                onChangeValue={(_, value) => onBudgetChange(value)}
+                InputElement={<Input className="text-2xl font-bold h-auto p-0 border-none focus-visible:ring-0" />}
+              />
           ) : (
-            <StatusBadge status={project.paymentStatus} />
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Project Value</CardTitle>
-          <Wallet className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          {isEditing && editedProject ? (
-            <div className="relative">
-              <span className="absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">IDR</span>
-              <CurrencyInput value={editedProject.budget} onChange={onBudgetChange} className="pl-12" />
-            </div>
-          ) : (
-            <div className="text-xl font-bold">{budgetFormatted}</div>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Project Start Date</CardTitle>
-          <CalendarDays className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          {isEditing && editedProject ? (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !editedProject.startDate && "text-muted-foreground")}>
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  {editedProject.startDate ? format(new Date(editedProject.startDate), "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={editedProject.startDate ? new Date(editedProject.startDate) : undefined} onSelect={(date) => onDateChange('startDate', date)} initialFocus />
-              </PopoverContent>
-            </Popover>
-          ) : (
-            <div className="text-xl font-bold">{startDateFormatted}</div>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Project Due Date</CardTitle>
-          <CalendarDays className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          {isEditing && editedProject ? (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !editedProject.dueDate && "text-muted-foreground")}>
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  {editedProject.dueDate ? format(new Date(editedProject.dueDate), "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={new Date(editedProject.dueDate)} onSelect={(date) => onDateChange('dueDate', date)} initialFocus />
-              </PopoverContent>
-            </Popover>
-          ) : (
-            <div>
-              <div className="text-xl font-bold">{dueDateFormatted}</div>
-              {!['Completed', 'Done', 'Cancelled'].includes(project.status) && (
-                <>
-                  {projectDaysDifference >= 0 ? (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {projectDaysDifference === 0 ? 'Due today' : `Due in ${projectDaysDifference} day${projectDaysDifference !== 1 ? 's' : ''}`}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-red-500 mt-1">
-                      Overdue by {Math.abs(projectDaysDifference)} day{Math.abs(projectDaysDifference) !== 1 ? 's' : ''}
-                    </p>
-                  )}
-                </>
-              )}
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(project.budget)}
             </div>
           )}
+          <p className="text-xs text-muted-foreground">
+            <Badge variant="outline" className={cn("font-normal", paymentBadgeColor)}>
+              {project.paymentStatus}
+            </Badge>
+          </p>
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-          <div>
-            <CardTitle className="text-sm font-medium">Payment Due</CardTitle>
-            <CardDescription className="text-xs text-muted-foreground pt-1">
-              14 working days from project due date
-            </CardDescription>
-          </div>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Timeline</CardTitle>
+          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {isEditing ? (
+            <div className="space-y-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !editedProject.startDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {editedProject.startDate ? format(new Date(editedProject.startDate), "PPP") : <span>Start date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={new Date(editedProject.startDate)} onSelect={(date) => onDateChange('startDate', date)} initialFocus />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !editedProject.dueDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {editedProject.dueDate ? format(new Date(editedProject.dueDate), "PPP") : <span>Due date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={new Date(editedProject.dueDate)} onSelect={(date) => onDateChange('dueDate', date)} initialFocus />
+                </PopoverContent>
+              </Popover>
+            </div>
+          ) : (
+            <div className="text-2xl font-bold">{timeRemaining}</div>
+          )}
+          {!isEditing && <p className="text-xs text-muted-foreground">
+            {format(startDateObj, "d MMM yyyy", { locale: id })} - {format(dueDateObj, "d MMM yyyy", { locale: id })}
+          </p>}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Payment Due</CardTitle>
           <CalendarClock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {isEditing && editedProject ? (
+          {isEditing ? (
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !editedProject.paymentDueDate && "text-muted-foreground")}>
@@ -204,23 +160,11 @@ const ProjectInfoCards = ({
               </PopoverContent>
             </Popover>
           ) : (
-            <div>
-              <div className="text-xl font-bold">{paymentDueDateFormatted}</div>
-              {paymentDueDateObj && !['Paid', 'Cancelled'].includes(project.paymentStatus) && (
-                <>
-                  {paymentDaysDifference >= 0 ? (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {paymentDaysDifference === 0 ? 'Due today' : `Due in ${paymentDaysDifference} day${paymentDaysDifference !== 1 ? 's' : ''}`}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-red-500 mt-1">
-                      Overdue by {Math.abs(paymentDaysDifference)} day{Math.abs(paymentDaysDifference) !== 1 ? 's' : ''}
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
+            <div className="text-2xl font-bold">{paymentDueDateFormatted}</div>
           )}
+          <p className="text-xs text-muted-foreground">
+            {paymentDueDateObj ? format(paymentDueDateObj, "EEEE, d MMMM yyyy", { locale: id }) : "No due date set"}
+          </p>
         </CardContent>
       </Card>
     </div>

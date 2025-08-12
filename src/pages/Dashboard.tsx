@@ -1,131 +1,78 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
-import { useAuth } from "@/contexts/AuthContext";
 import PortalLayout from "@/components/PortalLayout";
-import { supabase } from "@/integrations/supabase/client";
 import { Project } from "@/data/projects";
-import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
 import CollaboratorsList from "@/components/dashboard/CollaboratorsList";
 
-const DashboardSkeleton = () => (
-  <div className="space-y-8 animate-pulse">
-    <div className="text-left">
-      <Skeleton className="h-10 w-3/4" />
-      <Skeleton className="h-6 w-1/2 mt-2" />
-    </div>
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <Skeleton className="h-9 w-32" />
-        <Skeleton className="h-10 w-full sm:w-auto lg:w-[300px]" />
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 7 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-1/2" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-40" />
-        </CardHeader>
-      </Card>
-    </div>
-  </div>
-);
+const mockProjects: Project[] = [
+  {
+    id: '1',
+    name: 'Website Redesign',
+    category: 'Web Development',
+    description: 'Complete redesign of the company website.',
+    status: 'In Progress',
+    progress: 75,
+    budget: 120000000,
+    startDate: new Date(new Date().getFullYear(), 0, 15).toISOString(),
+    dueDate: new Date(new Date().getFullYear(), 5, 30).toISOString(),
+    paymentStatus: 'Paid',
+    createdBy: { id: 'user-1', name: 'Andi', email: 'andi@example.com', avatar: 'https://i.pravatar.cc/150?u=andi', initials: 'A' },
+    assignedTo: [
+      { id: 'user-2', name: 'Budi', email: 'budi@example.com', avatar: 'https://i.pravatar.cc/150?u=budi', initials: 'B', role: 'Developer' },
+      { id: 'user-3', name: 'Citra', email: 'citra@example.com', avatar: 'https://i.pravatar.cc/150?u=citra', initials: 'C', role: 'Designer' },
+    ],
+    tasks: [],
+    comments: [],
+  },
+  {
+    id: '2',
+    name: 'Mobile App Launch',
+    category: 'Mobile Development',
+    description: 'Launch of the new mobile application.',
+    status: 'Completed',
+    progress: 100,
+    budget: 250000000,
+    startDate: new Date(new Date().getFullYear(), 2, 1).toISOString(),
+    dueDate: new Date(new Date().getFullYear(), 8, 15).toISOString(),
+    paymentStatus: 'Paid',
+    createdBy: { id: 'user-3', name: 'Citra', email: 'citra@example.com', avatar: 'https://i.pravatar.cc/150?u=citra', initials: 'C' },
+    assignedTo: [
+      { id: 'user-1', name: 'Andi', email: 'andi@example.com', avatar: 'https://i.pravatar.cc/150?u=andi', initials: 'A', role: 'Manager' },
+    ],
+    tasks: [],
+    comments: [],
+  },
+  {
+    id: '3',
+    name: 'Marketing Campaign',
+    category: 'Marketing',
+    description: 'Q3 Marketing Campaign.',
+    status: 'On Hold',
+    progress: 20,
+    budget: 50000000,
+    startDate: new Date(new Date().getFullYear(), 6, 1).toISOString(),
+    dueDate: new Date(new Date().getFullYear(), 8, 31).toISOString(),
+    paymentStatus: 'Pending',
+    createdBy: { id: 'user-1', name: 'Andi', email: 'andi@example.com', avatar: 'https://i.pravatar.cc/150?u=andi', initials: 'A' },
+    assignedTo: [
+      { id: 'user-4', name: 'Dewi', email: 'dewi@example.com', avatar: 'https://i.pravatar.cc/150?u=dewi', initials: 'D', role: 'Specialist' },
+    ],
+    tasks: [],
+    comments: [],
+  },
+];
 
 const Index = () => {
-  const { user } = useAuth();
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(new Date().getFullYear(), 11, 31),
   });
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchProjects = useCallback(async (isInitialLoad = false) => {
-    if (!user) return;
-    if (isInitialLoad) setIsLoading(true);
-
-    try {
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_dashboard_projects');
-
-      if (rpcError) {
-        console.error("Error calling get_dashboard_projects RPC:", rpcError);
-        throw new Error("There was a problem loading project data from the server.");
-      }
-
-      if (!rpcData) {
-        setProjects([]);
-      } else {
-        const mappedProjects: Project[] = rpcData.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          description: p.description,
-          status: p.status,
-          progress: p.progress,
-          budget: p.budget,
-          startDate: p.start_date,
-          dueDate: p.due_date,
-          paymentStatus: p.payment_status,
-          createdBy: p.created_by,
-          assignedTo: p.assignedTo || [],
-          tasks: p.tasks || [],
-          comments: p.comments || [],
-        }));
-        setProjects(mappedProjects);
-      }
-    } catch (e: any) {
-      toast.error("Failed to sync project data.", {
-        id: 'fetch-projects-error',
-        description: e.message || "Please try refreshing the page.",
-      });
-      console.error(e);
-    } finally {
-      if (isInitialLoad) setIsLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    fetchProjects(true);
-
-    const handleDbChange = (payload: any) => {
-      console.log('Realtime change detected:', payload);
-      toast.info("Project data has been updated.", { duration: 2000 });
-      fetchProjects(false);
-    };
-
-    const channel = supabase.channel('dashboard-projects-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, handleDbChange)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_members' }, handleDbChange)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, handleDbChange)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, handleDbChange)
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Realtime channel subscribed for dashboard.');
-        }
-        if (status === 'CHANNEL_ERROR') {
-          console.error('Realtime channel error.');
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, fetchProjects]);
+  const [projects] = useState<Project[]>(mockProjects);
+  
+  // Mock user object
+  const user = { name: "Andi" };
 
   const filteredProjects = projects.filter(project => {
     if (date?.from && project.startDate) {
@@ -142,31 +89,23 @@ const Index = () => {
     return true;
   });
 
-  if (!user) {
-    return null;
-  }
-
   return (
     <PortalLayout>
-      {isLoading ? (
-        <DashboardSkeleton />
-      ) : (
-        <div className="space-y-8">
-          <div className="text-left">
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
-            <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
-          </div>
-
-          <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                  <h2 className="text-2xl font-bold">Insights</h2>
-                  <DateRangePicker date={date} onDateChange={setDate} />
-              </div>
-              <DashboardStatsGrid projects={filteredProjects} />
-              <CollaboratorsList projects={filteredProjects} />
-          </div>
+      <div className="space-y-8">
+        <div className="text-left">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
+          <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
         </div>
-      )}
+
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <h2 className="text-2xl font-bold">Insights</h2>
+                <DateRangePicker date={date} onDateChange={setDate} />
+            </div>
+            <DashboardStatsGrid projects={filteredProjects} />
+            <CollaboratorsList projects={filteredProjects} />
+        </div>
+      </div>
     </PortalLayout>
   );
 };
