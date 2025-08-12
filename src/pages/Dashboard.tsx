@@ -16,7 +16,7 @@ const fetchDashboardProjects = async (): Promise<Project[]> => {
   // We need to parse it. This is a workaround. A better solution would be to have the RPC return proper JSON objects.
   return (data || []).map(p => ({
     ...p,
-    created_by: typeof p.created_by === 'string' ? JSON.parse(p.created_by) : p.created_by,
+    createdBy: typeof p.created_by === 'string' ? JSON.parse(p.created_by) : p.created_by,
     assignedTo: typeof p.assignedTo === 'string' ? JSON.parse(p.assignedTo) : p.assignedTo,
     tasks: typeof p.tasks === 'string' ? JSON.parse(p.tasks) : p.tasks,
     comments: typeof p.comments === 'string' ? JSON.parse(p.comments) : p.comments,
@@ -41,7 +41,7 @@ const Dashboard = () => {
 
   const totalBudgetValue = isLoading ? 0 : projects?.reduce((sum, project) => sum + (project.budget || 0), 0) || 0;
 
-  const uniqueClients = isLoading ? 0 : (projects ? [...new Set(projects.map(p => p.created_by.email))].length : 0);
+  const uniqueClients = isLoading ? 0 : (projects ? [...new Set(projects.map(p => p.createdBy.email))].length : 0);
 
   const StatCards = () => (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

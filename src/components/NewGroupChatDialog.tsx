@@ -33,7 +33,7 @@ const NewGroupChatDialog = ({ open, onOpenChange }: NewGroupChatDialogProps) => 
     const fetchCollaborators = async () => {
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, avatar_url');
+        .select('id, first_name, last_name, avatar_url, email');
 
       if (error) {
         console.error("Error fetching profiles:", error);
@@ -46,6 +46,7 @@ const NewGroupChatDialog = ({ open, onOpenChange }: NewGroupChatDialogProps) => 
           .map((profile): Collaborator => ({
             id: profile.id,
             name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+            email: profile.email || '',
             initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
             online: true,
             avatar: profile.avatar_url || undefined,

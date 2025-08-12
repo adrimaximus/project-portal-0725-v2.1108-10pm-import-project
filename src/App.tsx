@@ -1,36 +1,15 @@
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Home, GanttChartSquare, Settings, MessageSquare, Users, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
-import { Route, BrowserRouter as Router, Routes, Link, useLocation, Navigate } from "react-router-dom";
+import { Route, Routes, Link, useLocation, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import ProjectDetail from "./pages/ProjectDetail";
-import { SessionContextProvider, useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
-import { supabase } from "./integrations/supabase/client";
+import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
 import Login from "./pages/Login";
 import { useState } from "react";
 import { cn } from "./lib/utils";
 import { Button } from "./components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
 
-const queryClient = new QueryClient();
-
 const App = () => {
-  return (
-    <SessionContextProvider supabaseClient={supabase}>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Router>
-            <MainLayout />
-          </Router>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </SessionContextProvider>
-  );
-};
-
-const MainLayout = () => {
   const user = useUser();
 
   if (!user) {
@@ -159,7 +138,7 @@ const Package2Icon = (props: React.SVGProps<SVGSVGElement>) => (
     xmlns="http://www.w3.org/2000/svg"
     width="24"
     height="24"
-    viewBox="0 0 24 24"
+    viewBox="0 0 24"
     fill="none"
     stroke="currentColor"
     strokeWidth="2"

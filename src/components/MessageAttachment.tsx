@@ -1,15 +1,12 @@
+import { Attachment } from '@/types';
 import { File as FileIcon } from 'lucide-react';
 
 interface MessageAttachmentProps {
-  attachment: {
-    name: string;
-    url: string;
-    type: 'image' | 'file';
-  };
+  attachment: Attachment;
 }
 
 const MessageAttachment = ({ attachment }: MessageAttachmentProps) => {
-  const isImage = attachment.type === 'image';
+  const isImage = attachment.type.startsWith('image/');
 
   return (
     <a

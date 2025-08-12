@@ -8,11 +8,11 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  avatar: string;
+  avatar?: string;
   initials: string;
   first_name?: string;
   last_name?: string;
-  avatar_url?: string;
+  role?: string; // Added for dummy data compatibility
 }
 
 export type ProjectStatus = 
@@ -34,11 +34,14 @@ export type ProjectStatus =
   | "Paid"
   | "Overdue";
 
+export type PaymentStatus = 'Proposed' | 'Approved' | 'PO Created' | 'On Process' | 'Pending' | 'Paid' | 'Cancelled' | 'Overdue';
+
 export interface ProjectTask {
   id: string;
   title: string;
   completed: boolean;
   assignedTo: User[];
+  originTicketId?: string;
 }
 
 export interface ProjectComment {
@@ -48,10 +51,33 @@ export interface ProjectComment {
   author_id?: string;
   created_at?: string;
   author?: User;
+  timestamp: string;
+  attachment?: { name: string; url: string };
 }
 
 export interface ProjectMember extends User {
   role: 'owner' | 'member';
+}
+
+export interface ProjectFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string | null;
+  url: string;
+  storagePath: string;
+  uploadedAt: string;
+}
+
+export interface Activity {
+  id: string;
+  user: User;
+  type: string;
+  details: {
+    description: string;
+    [key: string]: any;
+  };
+  timestamp: string;
 }
 
 export interface Project {
@@ -62,55 +88,55 @@ export interface Project {
   status: ProjectStatus;
   progress: number;
   budget: number;
-  start_date: string;
-  due_date: string;
-  payment_status: string;
-  created_by: User;
+  startDate: string;
+  dueDate: string;
+  paymentStatus: PaymentStatus;
+  paymentDueDate?: string;
+  createdBy: User;
   assignedTo: ProjectMember[];
   tasks: ProjectTask[];
   comments: ProjectComment[];
+  activities?: Activity[];
+  briefFiles?: ProjectFile[];
+  services?: string[];
 }
 
 // Chat Types
 export interface Collaborator extends User {
-  // any additional collaborator-specific fields
+  online?: boolean;
 }
 
 export interface Attachment {
-  id: string;
+  id?: string; // Optional for new attachments
   name: string;
   url: string;
-  type: string;
-  size: number;
+  type: 'image' | 'file' | string;
+  size?: number; // Optional for new attachments
 }
 
 export interface Message {
   id: string;
-  conversation_id: string;
-  sender_id: string;
-  content: string;
-  created_at: string;
-  attachment_url?: string;
-  attachment_name?: string;
-  attachment_type?: string;
-  sender?: Collaborator;
+  text: string;
+  timestamp: string;
+  sender: Collaborator;
+  attachment?: Attachment;
 }
 
 export interface Conversation {
-  conversation_id: string;
-  is_group: boolean;
-  group_name?: string;
-  last_message_content?: string;
-  last_message_at?: string;
-  other_user_id?: string;
-  other_user_name?: string;
-  other_user_avatar?: string;
-  participants: Collaborator[];
+  id: string;
+  userName: string;
+  userAvatar?: string;
+  lastMessage: string;
+  lastMessageTimestamp: string;
+  unreadCount: number;
+  messages: Message[];
+  isGroup: boolean;
+  members?: Collaborator[];
 }
 
 // Goal Types
-export type GoalType = 'quantity' | 'value' | 'binary';
-export type GoalPeriod = 'day' | 'week' | 'month' | 'year';
+export type GoalType = 'frequency' | 'quantity' | 'value';
+export type GoalPeriod = 'Weekly' | 'Monthly';
 
 export interface Tag {
   id: string;
@@ -137,10 +163,10 @@ export interface Goal {
   type: GoalType;
   target_quantity?: number;
   target_value?: number;
-  frequency?: string;
+  frequency?: 'Daily' | 'Weekly';
   target_period?: GoalPeriod;
   unit?: string;
-  specific_days?: string[];
+  specific_days: string[];
   collaborators: User[];
   completions: GoalCompletion[];
   tags: Tag[];
@@ -151,9 +177,11 @@ export interface Goal {
 export interface GoogleCalendarEvent {
   summary: string;
   start: {
-    dateTime: string;
+    dateTime?: string;
+    date?: string;
   };
   end: {
-    dateTime: string;
+    dateTime?: string;
+    date?: string;
   };
 }

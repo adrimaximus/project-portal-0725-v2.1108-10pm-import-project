@@ -28,6 +28,7 @@ const ChatInput = ({ onSendMessage }: ChatInputProps) => {
         name: file.name,
         type: file.type.startsWith("image/") ? "image" : "file",
         url: URL.createObjectURL(file),
+        size: file.size,
       });
     }
   };

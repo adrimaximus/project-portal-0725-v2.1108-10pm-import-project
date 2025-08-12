@@ -17,7 +17,7 @@ interface GoalYearlyProgressProps {
 }
 
 const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProps) => {
-  const { completions: rawCompletions, color, frequency, specificDays } = goal;
+  const { completions: rawCompletions, color, frequency, specific_days } = goal;
   const completions = rawCompletions.map(c => ({ date: c.date, completed: c.value === 1 }));
 
   const today = new Date();
@@ -45,12 +45,12 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
   const months = Array.from({ length: 12 }).map((_, i) => startOfMonth(new Date(displayYear, i, 1)));
 
   const dayKeys = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-  const isDaily = !specificDays || specificDays.length === 0 || specificDays.length === 7;
+  const isDaily = !specific_days || specific_days.length === 0 || specific_days.length === 7;
 
   const isDayValidForGoal = (date: Date): boolean => {
     if (isDaily) return true;
     const dayKey = dayKeys[getDay(date)];
-    return specificDays!.includes(dayKey);
+    return specific_days!.includes(dayKey);
   };
 
   const monthlyData = months.map(monthDate => {

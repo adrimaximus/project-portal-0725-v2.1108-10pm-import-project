@@ -21,7 +21,7 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
     const today = new Date();
     let periodStart, periodEnd, periodName;
 
-    if (goal.targetPeriod === 'Weekly') {
+    if (goal.target_period === 'Weekly') {
       periodStart = startOfWeek(today, { weekStartsOn: 1 });
       periodEnd = endOfWeek(today, { weekStartsOn: 1 });
       periodName = "this week";
@@ -39,8 +39,8 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
     });
 
     const currentPeriodTotal = logsInPeriod.reduce((sum, c) => sum + c.value, 0);
-    const periodProgress = goal.targetQuantity ? Math.round((currentPeriodTotal / goal.targetQuantity) * 100) : 0;
-    const quantityToGo = Math.max(0, (goal.targetQuantity || 0) - currentPeriodTotal);
+    const periodProgress = goal.target_quantity ? Math.round((currentPeriodTotal / goal.target_quantity) * 100) : 0;
+    const quantityToGo = Math.max(0, (goal.target_quantity || 0) - currentPeriodTotal);
     
     return { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, quantityToGo };
   }, [goal]);
@@ -83,7 +83,7 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
           )}
         </div>
         <CardDescription>
-          You've completed {formatNumber(currentPeriodTotal)} of {formatNumber(goal.targetQuantity || 0)}.
+          You've completed {formatNumber(currentPeriodTotal)} of {formatNumber(goal.target_quantity || 0)}.
           {quantityToGo > 0 ? (
             <span className="font-medium"> {formatNumber(quantityToGo)} to go.</span>
           ) : (

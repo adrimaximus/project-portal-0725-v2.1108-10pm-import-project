@@ -32,7 +32,7 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
     const chartData = Object.entries(monthlyData).map(([name, value]) => ({ name, value }));
     
     const total = chartData.reduce((sum, item) => sum + item.value, 0);
-    const target = goal.type === 'quantity' ? goal.targetQuantity : goal.targetValue;
+    const target = goal.type === 'quantity' ? goal.target_quantity : goal.target_value;
     const percentage = target ? Math.min(Math.round((total / target) * 100), 100) : 0;
 
     return { chartData, total, target, percentage, unit: goal.unit };
