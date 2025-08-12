@@ -13,18 +13,9 @@ import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import { Skeleton } from "@/components/ui/skeleton";
 import { mapProfileToUser } from "@/lib/utils";
 
-const fetchProject = async (slug: string, user: any) => {
+const fetchProject = async (slug: string) => {
   const { data, error } = await supabase
-    .from("projects")
-    .select(`
-      *,
-      created_by:profiles!projects_created_by_fkey(*),
-      assignedTo:project_members(*, user:profiles(*)),
-      tasks(*, assignedTo:task_assignees(*, user:profiles(*))),
-      comments(*, author:profiles(*)),
-      briefFiles:project_files(*)
-    `)
-    .eq("slug", slug)
+    .rpc('get_project_by_slug', { p_slug: slug })
     .single();
 
   if (error) {
@@ -65,43 +56,21 @@ const ProjectDetail = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
 
-  const { data: projectData, isLoading, error } = useQuery({
+  const { data: projectData, isLoading, error } = useQuery<any>({
     queryKey: ["project", slug],
-    queryFn: () => fetchProject(slug!, user),
+    queryFn: () => fetchProject(slug!),
     enabled: !!slug && !!user,
   });
 
   const project: Project | null = projectData ? {
-    id: projectData.id,
-    slug: projectData.slug,
-    name: projectData.name,
-    category: projectData.category,
-    description: projectData.description,
-    status: projectData.status as ProjectStatus,
-    progress: projectData.progress,
-    budget: projectData.budget,
+    ...projectData,
     startDate: projectData.start_date,
     dueDate: projectData.due_date,
-    paymentStatus: projectData.payment_status as PaymentStatus,
+    paymentStatus: projectData.payment_status,
     paymentDueDate: projectData.payment_due_date,
-    createdBy: projectData.created_by ? mapProfileToUser(projectData.created_by) : null,
-    assignedTo: projectData.assignedTo?.map((m: any) => ({ ...mapProfileToUser(m.user), role: m.role })) || [],
-    tasks: projectData.tasks?.map((t: any) => ({
-      ...t,
-      assignedTo: t.assignedTo?.map((a: any) => mapProfileToUser(a.user)) || []
-    })) || [],
-    comments: projectData.comments?.map((c: any) => ({
-      ...c,
-      id: c.id,
-      author: c.author ? mapProfileToUser(c.author) : { id: 'unknown', name: 'Unknown', email: '', avatar: '', initials: 'U' },
-      text: c.text,
-      timestamp: c.created_at,
-      isTicket: c.is_ticket,
-      attachment_url: c.attachment_url,
-      attachment_name: c.attachment_name,
-    })) || [],
-    briefFiles: projectData.briefFiles || [],
-    services: projectData.services || [],
+    createdBy: projectData.created_by,
+    assignedTo: projectData.assignedTo,
+    briefFiles: projectData.briefFiles,
   } : null;
 
   useEffect(() => {
