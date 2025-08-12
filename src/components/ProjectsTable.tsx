@@ -339,6 +339,13 @@ const ProjectsTable = () => {
             <CardTitle>Projects</CardTitle>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => {
+                refetch();
+                toast.success("Data proyek berhasil diperbarui.");
+            }}>
+                <span className="sr-only">Refresh projects data</span>
+                <RefreshCw className="h-4 w-4" />
+            </Button>
             {view === 'calendar' && (
               <Button variant="ghost" className="h-8 w-8 p-0" onClick={refreshCalendarEvents}>
                 <span className="sr-only">Refresh calendar events</span>
