@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     for (let i = 0; i < retries; i++) {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, first_name, last_name, avatar_url')
         .eq('id', supabaseUser.id)
         .single();
 

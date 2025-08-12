@@ -46,10 +46,14 @@ const LoginPage = () => {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
+    const loadingToast = toast.loading("Signing in, please wait...");
+
     const { error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     });
+
+    toast.dismiss(loadingToast);
 
     if (error) {
       toast.error(error.message);
