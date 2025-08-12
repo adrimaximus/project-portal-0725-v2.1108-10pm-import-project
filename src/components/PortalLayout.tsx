@@ -47,16 +47,14 @@ const PortalLayout = ({ children, summary, pageHeader, disableMainScroll, noPadd
           {summary}
           <GlobalSearch />
         </header>
-        {pageHeader}
-        <main
-          className={cn(
-            "flex-1",
-            !disableMainScroll && "overflow-y-auto",
-            !noPadding && "p-4 md:p-8"
-          )}
-        >
-          {children}
-        </main>
+
+        {/* Refactored scrollable content area */}
+        <div className={cn("flex-1", !disableMainScroll && "overflow-y-auto")}>
+          {pageHeader}
+          <main className={cn(!noPadding && "p-4 md:p-8")}>
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );
