@@ -1,93 +1,179 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import PortalLayout from '@/components/PortalLayout';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useGoogleLogin } from '@react-oauth/google';
-import { toast } from 'sonner';
-import { CheckCircle } from 'lucide-react';
+import PortalLayout from "@/components/PortalLayout";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { Link } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useGoogleLogin } from "@react-oauth/google";
+import { toast } from "sonner";
+
+interface GoogleCalendar {
+  id: string;
+  summary: string;
+}
 
 const GoogleCalendarPage = () => {
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [calendars, setCalendars] = useState<GoogleCalendar[]>([]);
+  const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
 
-  useEffect(() => {
-    const token = localStorage.getItem('google_access_token');
-    if (token) {
-      setIsConnected(true);
-    }
+  const handleDisconnect = useCallback(() => {
+    setIsConnected(false);
+    setCalendars([]);
+    setSelectedCalendars([]);
+    localStorage.removeItem('googleCalendarConnected');
+    localStorage.removeItem('googleCalendarCalendars');
+    localStorage.removeItem('googleCalendarSelected');
+    localStorage.removeItem('googleCalendarToken');
+    localStorage.removeItem('googleCalendarEvents');
+    toast.info("Disconnected from Google Calendar.");
   }, []);
 
-  const fetchAndStoreCalendarEvents = async (accessToken: string) => {
+  useEffect(() => {
     try {
-      // First, get the list of calendars
-      const calendarListResponse = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-      const calendarListData = await calendarListResponse.json();
+      const storedConnected = localStorage.getItem('googleCalendarConnected');
+      const storedCalendars = localStorage.getItem('googleCalendarCalendars');
+      const storedSelected = localStorage.getItem('googleCalendarSelected');
 
-      if (!calendarListData.items) {
-        toast.warning('Connected to Google, but could not fetch calendar list.');
-        return;
-      }
+      if (storedConnected === 'true' && storedCalendars) {
+        const parsedCalendars = JSON.parse(storedCalendars);
+        const parsedSelected = storedSelected ? JSON.parse(storedSelected) : [];
 
-      const allEvents: any[] = [];
-      const timeMin = new Date().toISOString(); // Fetch events from now onwards
-
-      // Fetch events from each calendar
-      for (const calendar of calendarListData.items) {
-        const eventResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendar.id)}/events?timeMin=${timeMin}`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        const eventData = await eventResponse.json();
-        if (eventData.items) {
-          allEvents.push(...eventData.items);
+        // More robust validation to ensure data integrity
+        if (
+          Array.isArray(parsedCalendars) &&
+          parsedCalendars.every(cal => 
+            typeof cal === 'object' && 
+            cal !== null && 
+            typeof cal.id === 'string' && 
+            typeof cal.summary === 'string'
+          ) &&
+          Array.isArray(parsedSelected) &&
+          parsedSelected.every(item => typeof item === 'string')
+        ) {
+          setIsConnected(true);
+          setCalendars(parsedCalendars);
+          setSelectedCalendars(parsedSelected);
+        } else {
+          // If data is malformed, throw an error to be caught
+          throw new Error("Malformed calendar data in localStorage");
         }
       }
-      
-      localStorage.setItem('googleCalendarEvents', JSON.stringify(allEvents));
-      toast.success(`Successfully fetched ${allEvents.length} upcoming events.`);
-      window.dispatchEvent(new Event('storage')); // Notify other components of the update
-
     } catch (error) {
-      console.error('Error fetching calendar data:', error);
-      toast.error('Failed to fetch calendar data after connecting.');
+      console.error("Failed to load Google Calendar data from localStorage:", error);
+      // Clear corrupted data and reset state
+      handleDisconnect();
     }
-  };
+  }, [handleDisconnect]);
 
-  const handleSuccess = async (tokenResponse: any) => {
-    setIsConnecting(false);
-    setIsConnected(true);
-    localStorage.setItem('google_access_token', tokenResponse.access_token);
-    toast.success('Successfully connected to Google Calendar.');
-    await fetchAndStoreCalendarEvents(tokenResponse.access_token);
-  };
-
-  const handleError = (error: any) => {
-    console.error('Google login error:', error);
-    toast.error('Failed to connect to Google Calendar.');
-    setIsConnecting(false);
-  };
+  const handleFetchCalendars = useCallback(async (accessToken: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch calendar list');
+      }
+      const data = await response.json();
+      const fetchedCalendars = (data.items || []).filter((cal: GoogleCalendar) => cal.id);
+      setCalendars(fetchedCalendars);
+      setIsConnected(true);
+      localStorage.setItem('googleCalendarConnected', 'true');
+      localStorage.setItem('googleCalendarCalendars', JSON.stringify(fetchedCalendars));
+      toast.success("Successfully fetched your calendars.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to fetch your calendars. Please try reconnecting.");
+      handleDisconnect();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [handleDisconnect]);
 
   const login = useGoogleLogin({
-    onSuccess: handleSuccess,
-    onError: handleError,
-    scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events.readonly',
+    onSuccess: (tokenResponse) => {
+      toast.success("Successfully connected to Google Calendar!");
+      localStorage.setItem('googleCalendarToken', tokenResponse.access_token);
+      handleFetchCalendars(tokenResponse.access_token);
+    },
+    onError: () => {
+      toast.error("Failed to connect to Google Calendar. Please try again.");
+      setIsLoading(false);
+    },
+    scope: 'https://www.googleapis.com/auth/calendar.readonly',
   });
 
   const handleConnect = () => {
-    setIsConnecting(true);
+    setIsLoading(true);
     login();
   };
 
-  const handleDisconnect = () => {
-    localStorage.removeItem('google_access_token');
-    localStorage.removeItem('googleCalendarEvents');
-    setIsConnected(false);
-    toast.info('Disconnected from Google Calendar.');
-    window.dispatchEvent(new Event('storage')); // Notify other components of the update
-  };
+  const handleSaveSelection = useCallback(async () => {
+    const token = localStorage.getItem('googleCalendarToken');
+    if (!token) {
+      toast.error("Your session has expired. Please reconnect.");
+      handleDisconnect();
+      return;
+    }
+
+    if (selectedCalendars.length === 0) {
+        localStorage.setItem('googleCalendarSelected', JSON.stringify([]));
+        localStorage.removeItem('googleCalendarEvents');
+        toast.info("No calendars selected. Imported events have been cleared.");
+        return;
+    }
+
+    setIsLoading(true);
+    toast.info("Importing events from selected calendars...");
+
+    try {
+      const timeMin = new Date().toISOString();
+      const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Next 30 days
+      const allEvents: any[] = [];
+
+      for (const calendarId of selectedCalendars) {
+        if (!calendarId) continue; // Skip invalid IDs
+
+        const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (response.status === 401) {
+            toast.error("Authentication expired. Please reconnect.");
+            handleDisconnect();
+            return;
+        }
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error(`Failed to fetch events for calendar ${calendarId}:`, errorData);
+            throw new Error(`Failed to fetch events for calendar ${calendarId}`);
+        }
+        
+        const data = await response.json();
+        if (data.items) allEvents.push(...data.items);
+      }
+      
+      allEvents.sort((a, b) => {
+        const dateA = new Date(a.start.dateTime || a.start.date);
+        const dateB = new Date(b.start.dateTime || b.start.date);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+      localStorage.setItem('googleCalendarEvents', JSON.stringify(allEvents));
+      localStorage.setItem('googleCalendarSelected', JSON.stringify(selectedCalendars));
+      toast.success(`Successfully imported ${allEvents.length} events!`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to import events. Please check your calendar permissions and try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedCalendars, handleDisconnect]);
 
   return (
     <PortalLayout>
@@ -112,32 +198,57 @@ const GoogleCalendarPage = () => {
           </BreadcrumbList>
         </Breadcrumb>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Google Calendar Integration</CardTitle>
-            <CardDescription>Connect your Google Calendar to sync events and meetings directly into your projects.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isConnected ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle className="h-5 w-5" />
-                  <p className="font-medium">Connected to Google Calendar</p>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Your calendar events are now being synced. You can manage them from the projects dashboard.
-                </p>
-                <Button onClick={handleDisconnect} variant="destructive">
-                  Disconnect
-                </Button>
-              </div>
-            ) : (
-              <Button onClick={handleConnect} disabled={isConnecting}>
-                {isConnecting ? 'Connecting...' : 'Connect Google Calendar'}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Google Calendar Integration
+            </h1>
+            <p className="text-muted-foreground">
+              Connect your Google Calendar to sync your events and meetings.
+            </p>
+          </div>
+        </div>
+        
+        {!isConnected ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Connect to Google Calendar</CardTitle>
+              <CardDescription>Click the button below to connect your account.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleConnect} disabled={isLoading}>
+                {isLoading ? 'Connecting...' : 'Connect Google Calendar'}
               </Button>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Manage Calendars</CardTitle>
+              <CardDescription>Select which calendars you want to sync.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoading && calendars.length === 0 ? (
+                <p>Loading calendars...</p>
+              ) : (
+                <MultiSelect
+                  options={calendars.map(calendar => ({
+                    value: calendar.id,
+                    label: calendar.summary,
+                  }))}
+                  onChange={setSelectedCalendars}
+                  value={selectedCalendars}
+                  placeholder="Select calendars to sync..."
+                  className="w-full"
+                />
+              )}
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
+              <Button onClick={handleSaveSelection} disabled={isLoading}>Save Preferences</Button>
+            </CardFooter>
+          </Card>
+        )}
       </div>
     </PortalLayout>
   );
