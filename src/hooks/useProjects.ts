@@ -30,9 +30,9 @@ const fetchProjects = async (): Promise<Project[]> => {
   let allData: ProjectFromRpc[] = [];
   
   while (true) {
+    // Panggil RPC dengan parameter paginasi
     const { data, error } = await supabase
-      .rpc('get_dashboard_projects')
-      .range(offset, offset + batchSize - 1);
+      .rpc('get_dashboard_projects', { p_limit: batchSize, p_offset: offset });
       
     if (error) {
       console.error('Error fetching projects:', error);
@@ -43,11 +43,11 @@ const fetchProjects = async (): Promise<Project[]> => {
     if (data) {
       allData = allData.concat(data as ProjectFromRpc[]);
       if ((data as any[]).length < batchSize) {
-        break;
+        break; // Halaman terakhir
       }
       offset += batchSize;
     } else {
-      break;
+      break; // Tidak ada data yang dikembalikan
     }
   }
 
