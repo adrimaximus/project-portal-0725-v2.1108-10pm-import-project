@@ -1,111 +1,81 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { User, SupabaseSession, SupabaseUser } from '@/types';
+import { Session, User } from '@supabase/supabase-js';
 
-interface AuthContextType {
-  session: SupabaseSession | null;
-  user: User | null;
-  loading: boolean;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+export type EnhancedUser = User & { name: string };
+
+export interface AuthContextType {
+  user: EnhancedUser | null;
+  session: Session | null;
+  isLoading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
+  isLoading: true,
+});
+
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<SupabaseSession | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', supabaseUser.id)
-      .single();
-
-    if (error) {
-      console.error('Error fetching profile:', error);
-      setUser(null);
-    } else if (profile) {
-      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-      setUser({
-        id: profile.id,
-        email: supabaseUser.email,
-        name: fullName || supabaseUser.email || 'No name',
-        avatar: profile.avatar_url,
-        initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-      });
-    }
-  };
+  const [user, setUser] = useState<EnhancedUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const getSessionAndListen = async () => {
-      // Get initial session
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      if (initialSession) {
-        await fetchUserProfile(initialSession.user);
-      } else {
+    const updateUserProfile = async (currentUser: User | null) => {
+      if (!currentUser) {
         setUser(null);
+        return;
       }
-      setLoading(false);
 
-      // Listen for auth state changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-        if (event === 'PASSWORD_RECOVERY') {
-          navigate('/reset-password');
-        }
-        setSession(newSession);
-        if (newSession) {
-          await fetchUserProfile(newSession.user);
-        } else {
-          setUser(null);
-        }
-      });
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', currentUser.id)
+          .single();
 
-      return subscription;
+        const name = (profile && `${profile.first_name || ''} ${profile.last_name || ''}`.trim()) || currentUser.email || 'User';
+        setUser({ ...currentUser, name });
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        // Fallback to email if profile fetch fails
+        setUser({ ...currentUser, name: currentUser.email || 'User' });
+      }
     };
 
-    const subscriptionPromise = getSessionAndListen();
+    const getInitialSession = async () => {
+      setIsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      await updateUserProfile(session?.user ?? null);
+      setIsLoading(false);
+    };
+
+    getInitialSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setSession(session);
+        await updateUserProfile(session?.user ?? null);
+        // No need to set loading here as it's for subsequent changes
+      }
+    );
 
     return () => {
-      subscriptionPromise.then(subscription => subscription?.unsubscribe());
+      authListener.subscription.unsubscribe();
     };
-  }, [navigate]);
-
-  const refreshUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      await fetchUserProfile(session.user);
-    }
-  };
-
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-  };
+  }, []);
 
   const value = {
-    session,
     user,
-    loading,
-    logout,
-    refreshUser,
+    session,
+    isLoading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };
