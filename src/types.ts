@@ -1,12 +1,4 @@
 import { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js';
-import type { LucideIcon } from "lucide-react";
-
-export interface Service {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  iconColor: string;
-}
 
 export interface User {
   id: string;
@@ -14,17 +6,9 @@ export interface User {
   name: string;
   avatar?: string;
   initials: string;
-  first_name?: string | null;
-  last_name?: string | null;
+  first_name?: string;
+  last_name?: string;
   role?: string;
-}
-
-export interface AuthContextType {
-  session: SupabaseSession | null;
-  user: User | null;
-  loading: boolean;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
 }
 
 export interface Collaborator {

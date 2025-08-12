@@ -9,13 +9,13 @@ import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const DashboardPage = () => {
+const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(new Date().getFullYear(), 11, 31),
   });
-  const { user, loading: authLoading } = useAuth();
-  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: projects = [], isLoading } = useProjects();
+  const { user } = useAuth();
 
   const filteredProjects = projects.filter(project => {
     if (date?.from && project.startDate) {
@@ -32,7 +32,7 @@ const DashboardPage = () => {
     return true;
   });
 
-  if (authLoading || projectsLoading) {
+  if (isLoading) {
     return (
       <PortalLayout>
         <div className="space-y-8">
@@ -79,4 +79,4 @@ const DashboardPage = () => {
   );
 };
 
-export default DashboardPage;
+export default Index;

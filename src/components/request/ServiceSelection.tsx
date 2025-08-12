@@ -1,10 +1,8 @@
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Loader2 } from "lucide-react";
+import { services, Service } from "@/data/services";
+import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
-import { getServices } from "@/api/services";
-import { Service } from "@/types";
 
 interface ServiceSelectionProps {
   searchTerm: string;
@@ -19,11 +17,6 @@ const ServiceSelection = ({
   selectedServices,
   onServiceSelect,
 }: ServiceSelectionProps) => {
-  const { data: services = [], isLoading, isError } = useQuery<Service[]>({
-    queryKey: ["services"],
-    queryFn: getServices,
-  });
-
   const featuredService = services.find(
     (s) => s.title === "End to End Services"
   );
@@ -41,27 +34,11 @@ const ServiceSelection = ({
     return selectedServices.some((s) => s.title === service.title);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-10">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="text-center text-red-500 bg-red-500/10 p-4 rounded-md">
-        Failed to load services. Please try again later.
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold tracking-tight">
-        Select Services
-      </h2>
+    <div className="space-y-4 pb-40">
+      <h1 className="text-2xl font-bold tracking-tight">
+        Project Support Request
+      </h1>
       <p className="text-muted-foreground">
         Select the services you need for your project. You can select
         multiple services, or choose our end-to-end package.
