@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { useGoogleLogin, TokenResponse } from "@react-oauth/google";
+import { useState, useEffect, useCallback } from "react";
+import { useGoogleLogin } from "@react-oauth/google";
 import { toast } from "sonner";
 
 interface GoogleCalendar {
@@ -19,21 +19,43 @@ const GoogleCalendarPage = () => {
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([]);
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
 
-  useEffect(() => {
-    const storedConnected = localStorage.getItem('googleCalendarConnected');
-    const storedCalendars = localStorage.getItem('googleCalendarCalendars');
-    const storedSelected = localStorage.getItem('googleCalendarSelected');
-
-    if (storedConnected === 'true' && storedCalendars) {
-      setIsConnected(true);
-      setCalendars(JSON.parse(storedCalendars));
-      if (storedSelected) {
-        setSelectedCalendars(JSON.parse(storedSelected));
-      }
-    }
+  const handleDisconnect = useCallback(() => {
+    setIsConnected(false);
+    setCalendars([]);
+    setSelectedCalendars([]);
+    localStorage.removeItem('googleCalendarConnected');
+    localStorage.removeItem('googleCalendarCalendars');
+    localStorage.removeItem('googleCalendarSelected');
+    localStorage.removeItem('googleCalendarToken');
+    localStorage.removeItem('googleCalendarEvents');
+    toast.info("Disconnected from Google Calendar.");
   }, []);
 
-  const handleFetchCalendars = async (accessToken: string) => {
+  useEffect(() => {
+    try {
+      const storedConnected = localStorage.getItem('googleCalendarConnected');
+      const storedCalendars = localStorage.getItem('googleCalendarCalendars');
+      const storedSelected = localStorage.getItem('googleCalendarSelected');
+
+      if (storedConnected === 'true' && storedCalendars) {
+        const parsedCalendars = JSON.parse(storedCalendars);
+        const parsedSelected = storedSelected ? JSON.parse(storedSelected) : [];
+
+        if (Array.isArray(parsedCalendars) && Array.isArray(parsedSelected)) {
+          setIsConnected(true);
+          setCalendars(parsedCalendars);
+          setSelectedCalendars(parsedSelected);
+        } else {
+          throw new Error("Malformed calendar data in localStorage");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load Google Calendar data from localStorage:", error);
+      handleDisconnect();
+    }
+  }, [handleDisconnect]);
+
+  const handleFetchCalendars = useCallback(async (accessToken: string) => {
     setIsLoading(true);
     try {
       const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
@@ -58,7 +80,7 @@ const GoogleCalendarPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [handleDisconnect]);
 
   const login = useGoogleLogin({
     onSuccess: (tokenResponse) => {
@@ -78,19 +100,7 @@ const GoogleCalendarPage = () => {
     login();
   };
 
-  const handleDisconnect = () => {
-    setIsConnected(false);
-    setCalendars([]);
-    setSelectedCalendars([]);
-    localStorage.removeItem('googleCalendarConnected');
-    localStorage.removeItem('googleCalendarCalendars');
-    localStorage.removeItem('googleCalendarSelected');
-    localStorage.removeItem('googleCalendarToken');
-    localStorage.removeItem('googleCalendarEvents');
-    toast.info("Disconnected from Google Calendar.");
-  };
-
-  const handleSaveSelection = async () => {
+  const handleSaveSelection = useCallback(async () => {
     const token = localStorage.getItem('googleCalendarToken');
     if (!token) {
       toast.error("Your session has expired. Please reconnect.");
@@ -150,7 +160,7 @@ const GoogleCalendarPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedCalendars, handleDisconnect]);
 
   return (
     <PortalLayout>
