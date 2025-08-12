@@ -1,22 +1,25 @@
-interface UserProfile {
+export interface UserProfile {
   id: string;
   name: string;
   email: string;
   avatar: string;
   initials: string;
-  role?: string;
 }
 
-interface Task {
+export interface ProjectTask {
   id: string;
   title: string;
   completed: boolean;
   assignedTo: UserProfile[];
 }
 
-interface Comment {
-    id: string;
-    isTicket: boolean;
+export interface ProjectComment {
+  id: string;
+  isTicket: boolean;
+}
+
+export interface ProjectMember extends UserProfile {
+  role: 'owner' | 'member';
 }
 
 export interface Project {
@@ -31,7 +34,7 @@ export interface Project {
   due_date: string;
   payment_status: string;
   created_by: UserProfile;
-  assignedTo: UserProfile[];
-  tasks: Task[];
-  comments: Comment[];
+  assignedTo: ProjectMember[];
+  tasks: ProjectTask[];
+  comments: ProjectComment[];
 }
