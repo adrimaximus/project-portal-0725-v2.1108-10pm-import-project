@@ -16,8 +16,8 @@ export const getServices = async (): Promise<Service[]> => {
 
   return data.map((service) => ({
     title: service.title,
-    description: service.description,
+    description: service.description || "No description provided.",
     icon: getIcon(service.icon),
-    iconColor: service.color,
+    iconColor: service.color || "bg-muted",
   }));
 };
