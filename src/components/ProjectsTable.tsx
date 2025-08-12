@@ -234,18 +234,20 @@ const ProjectsTable = () => {
     }
   };
 
-  const handleImportEvent = async (event: CalendarEvent) => {
+  const handleImportEvent = async (event: CalendarEvent): Promise<void> => {
     if (!user) {
-        toast.error("You must be logged in to import events.");
-        return;
+        const err = new Error("You must be logged in to import events.");
+        toast.error(err.message);
+        throw err;
     }
 
     const startDate = event.start.date || event.start.dateTime?.split('T')[0];
     const dueDate = event.end.date || event.end.dateTime?.split('T')[0] || startDate;
 
     if (!startDate) {
-        toast.error("Cannot import event without a start date.");
-        return;
+        const err = new Error("Cannot import event without a start date.");
+        toast.error(err.message);
+        throw err;
     }
 
     const originEventId = `cal-${event.id}`;
@@ -256,8 +258,9 @@ const ProjectsTable = () => {
         .maybeSingle();
 
     if (checkError) {
-        toast.error(`Error checking for existing project: ${checkError.message}`);
-        return;
+        const err = new Error(`Error checking for existing project: ${checkError.message}`);
+        toast.error(err.message);
+        throw err;
     }
 
     if (existing) {
@@ -282,11 +285,13 @@ const ProjectsTable = () => {
     const { error } = await supabase.from('projects').insert([newProjectData]);
 
     if (error) {
-        toast.error(`Failed to import "${event.summary}": ${error.message}`);
+        const err = new Error(`Failed to import "${event.summary}": ${error.message}`);
+        toast.error(err.message);
+        throw err;
     } else {
         toast.success(`"${event.summary}" imported as a new project.`);
         setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-        refetch();
+        await refetch();
     }
   };
 
