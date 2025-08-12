@@ -42,6 +42,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStatusStyles } from "@/lib/utils";
 import { useProjects } from "@/hooks/useProjects";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CalendarEvent {
     id: string;
@@ -60,6 +61,7 @@ const ProjectsTable = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const refreshCalendarEvents = async () => {
     const token = localStorage.getItem('googleCalendarToken');
@@ -286,7 +288,7 @@ const ProjectsTable = () => {
     } else {
         toast.success(`"${event.summary}" imported as a new project.`);
         setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-        refetch();
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
     }
   };
 
