@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const LandingPage = () => {
-  const { session, loading } = useAuth();
+  const { session, isLoading: loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {

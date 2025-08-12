@@ -1,5 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 
 import Dashboard from './pages/Dashboard';
@@ -12,19 +11,17 @@ import PrivateRoute from './components/PrivateRoute';
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<PrivateRoute><Index /></PrivateRoute>} />
-          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          <Route path="/dashboard2" element={<PrivateRoute><Dashboard2 /></PrivateRoute>} />
-          <Route path="/projects" element={<PrivateRoute><Projects /></PrivateRoute>} />
-          <Route path="/projects/:id" element={<PrivateRoute><ProjectDetails /></PrivateRoute>} />
-        </Routes>
-        <Toaster />
-      </AuthProvider>
-    </BrowserRouter>
+    <>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<PrivateRoute><Index /></PrivateRoute>} />
+        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/dashboard2" element={<PrivateRoute><Dashboard2 /></PrivateRoute>} />
+        <Route path="/projects" element={<PrivateRoute><Projects /></PrivateRoute>} />
+        <Route path="/projects/:id" element={<PrivateRoute><ProjectDetails /></PrivateRoute>} />
+      </Routes>
+      <Toaster />
+    </>
   );
 }
 
