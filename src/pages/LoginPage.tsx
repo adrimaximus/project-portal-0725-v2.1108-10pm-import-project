@@ -20,7 +20,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
-  const { session, isFreshLogin, loading: authContextLoading } = useAuth();
+  const { session, loading: authContextLoading } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -28,13 +28,9 @@ const LoginPage = () => {
     if (authContextLoading) return;
 
     if (session) {
-      if (isFreshLogin) {
-        navigate('/welcome', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      navigate('/dashboard', { replace: true });
     }
-  }, [session, isFreshLogin, authContextLoading, navigate]);
+  }, [session, authContextLoading, navigate]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
