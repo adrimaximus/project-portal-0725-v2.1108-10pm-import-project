@@ -1,6 +1,5 @@
-import { Calendar, Clock, Import, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, Import } from 'lucide-react';
 import { Button } from './ui/button';
-import { useState } from 'react';
 
 interface CalendarEvent {
   id: string;
@@ -18,7 +17,7 @@ interface CalendarEvent {
 
 interface CalendarEventsListProps {
   events: CalendarEvent[];
-  onImportEvent?: (event: CalendarEvent) => Promise<void>;
+  onImportEvent?: (event: CalendarEvent) => void;
 }
 
 const formatDate = (dateStr: string | undefined, isAllDay: boolean) => {
@@ -42,23 +41,6 @@ const formatDate = (dateStr: string | undefined, isAllDay: boolean) => {
 }
 
 const CalendarEventsList = ({ events, onImportEvent }: CalendarEventsListProps) => {
-  const [importingId, setImportingId] = useState<string | null>(null);
-
-  const handleImportClick = async (event: CalendarEvent) => {
-    if (!onImportEvent) return;
-
-    setImportingId(event.id);
-    try {
-      await onImportEvent(event);
-      // Toast notifikasi ditangani oleh komponen induk
-    } catch (error) {
-      // Toast notifikasi error ditangani oleh komponen induk
-      console.error("Import failed:", error);
-    } finally {
-      setImportingId(null);
-    }
-  };
-
   if (!events || events.length === 0) {
     return (
         <div className="text-center text-muted-foreground py-12">
@@ -72,7 +54,6 @@ const CalendarEventsList = ({ events, onImportEvent }: CalendarEventsListProps) 
     <ul className="space-y-3">
       {events.map(event => {
         const isAllDay = !event.start.dateTime;
-        const isImporting = importingId === event.id;
         return (
             <li key={event.id} className="flex items-center space-x-4 p-3 rounded-lg border bg-background hover:bg-muted transition-colors">
               <div className="flex-shrink-0 pt-1 self-start">
@@ -88,13 +69,9 @@ const CalendarEventsList = ({ events, onImportEvent }: CalendarEventsListProps) 
                   </div>
               </div>
               {onImportEvent && (
-                <Button variant="ghost" size="sm" onClick={() => handleImportClick(event)} disabled={isImporting}>
-                  {isImporting ? (
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Import className="mr-2 h-4 w-4" />
-                  )}
-                  {isImporting ? 'Importing...' : 'Import'}
+                <Button variant="ghost" size="sm" onClick={() => onImportEvent(event)}>
+                  <Import className="mr-2 h-4 w-4" />
+                  Import
                 </Button>
               )}
             </li>

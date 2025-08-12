@@ -31,9 +31,7 @@ const fetchProjects = async (): Promise<Project[]> => {
 
   if (error) {
     console.error('Error fetching projects:', error);
-    toast.error('Failed to fetch projects.', {
-      description: error.message,
-    });
+    toast.error('Failed to fetch projects.');
     throw new Error(error.message);
   }
 
