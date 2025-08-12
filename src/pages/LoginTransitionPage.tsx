@@ -35,12 +35,12 @@ const LoginTransitionPage = () => {
 
     const fadeTimeout = setTimeout(() => {
       setFade(false); // Start fade out
-    }, 1000); // Time the slide is visible (1s)
+    }, 800); // Time the slide is visible
 
     const slideTimeout = setTimeout(() => {
       setCurrentSlide(prev => prev + 1);
       setFade(true); // Start fade in for the next slide
-    }, 1500); // Total time for slide + fade out (1.5s)
+    }, 1200); // Total time for slide + fade out
 
     return () => {
       clearTimeout(fadeTimeout);
