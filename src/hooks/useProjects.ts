@@ -25,7 +25,7 @@ interface ProjectFromRpc {
 }
 
 const fetchProjects = async (): Promise<Project[]> => {
-  const batchSize = 25;
+  const batchSize = 10;
   let offset = 0;
   let allData: ProjectFromRpc[] = [];
   
