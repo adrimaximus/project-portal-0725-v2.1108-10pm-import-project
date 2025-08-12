@@ -12,7 +12,7 @@ import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Plus } from "lucide-react";
 import ProjectsList from "./ProjectsList";
 import ProjectsMonthView from "./ProjectsMonthView";
 import { Button } from "./ui/button";
@@ -338,6 +338,12 @@ const ProjectsTable = () => {
             <CardTitle>Projects</CardTitle>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/projects/new">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Project
+              </Button>
+            </Link>
             {view === 'calendar' && (
               <Button variant="ghost" className="h-8 w-8 p-0" onClick={refreshCalendarEvents}>
                 <span className="sr-only">Refresh calendar events</span>
