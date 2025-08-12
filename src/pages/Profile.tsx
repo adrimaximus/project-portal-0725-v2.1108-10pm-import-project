@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,9 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 const Profile = () => {
   const { user, refreshUser, logout } = useAuth();
   
-  const [firstName, setFirstName] = useState(user?.first_name || "");
-  const [lastName, setLastName] = useState(user?.last_name || "");
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -24,6 +24,14 @@ const Profile = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.first_name || "");
+      setLastName(user.last_name || "");
+      setAvatarPreview(user.avatar || null);
+    }
+  }, [user]);
 
   if (!user) {
     return <PortalLayout><div>Loading...</div></PortalLayout>;
