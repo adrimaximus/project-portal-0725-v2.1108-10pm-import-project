@@ -33,19 +33,24 @@ import GitHubPage from "./pages/integrations/GitHubPage";
 import SlackPage from "./pages/integrations/SlackPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
-import LoadingSpinner from "./components/LoadingSpinner";
+import LoadingScreen from "./components/LoadingScreen";
 
 const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, featureId?: string }) => {
-  const { user, loading } = useAuth();
+  const { session, user, loading } = useAuth();
   const { isFeatureEnabled } = useFeatures();
   const location = useLocation();
 
   if (loading) {
-    return <LoadingSpinner />;
+    return <LoadingScreen />;
   }
 
-  if (!user) {
+  if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If there's a session but we're still fetching the user profile from our db
+  if (!user) {
+    return <LoadingScreen />;
   }
 
   if (featureId && !isFeatureEnabled(featureId)) {
