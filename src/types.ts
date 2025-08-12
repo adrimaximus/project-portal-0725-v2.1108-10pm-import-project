@@ -1,16 +1,74 @@
 import { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js';
 
+// --- User & Profile Types ---
 export interface User {
   id: string;
   email: string;
   name: string;
   avatar?: string;
   initials: string;
-  first_name?: string;
-  last_name?: string;
-  role?: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  role?: 'owner' | 'member' | string;
+}
+export type UserProfile = User;
+
+
+// --- Project Types ---
+export type ProjectStatus = 'Requested' | 'In Progress' | 'In Review' | 'On Hold' | 'Completed' | 'Cancelled';
+export type PaymentStatus = 'Proposed' | 'Pending' | 'Paid' | 'Overdue' | 'Cancelled';
+
+export interface ProjectTask {
+  id: string;
+  title: string;
+  completed: boolean;
+  originTicketId?: string;
+  assignedTo: UserProfile[];
 }
 
+export interface ProjectComment {
+  id: string;
+  text: string;
+  timestamp: string;
+  isTicket: boolean;
+  attachment_url?: string;
+  attachment_name?: string;
+  author: UserProfile;
+}
+
+export interface BriefFile {
+    id: string;
+    name: string;
+    size: number;
+    type: string;
+    url: string;
+    storage_path: string;
+    created_at: string;
+}
+
+export interface Project {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  description: string;
+  status: string;
+  progress: number;
+  budget: number;
+  startDate: string;
+  dueDate: string;
+  paymentStatus: string;
+  paymentDueDate?: string;
+  createdBy: UserProfile;
+  assignedTo: UserProfile[];
+  tasks: ProjectTask[];
+  comments: ProjectComment[];
+  services: string[];
+  briefFiles: BriefFile[];
+}
+
+
+// --- Chat Types ---
 export interface Collaborator {
   id: string;
   name: string;
@@ -45,6 +103,8 @@ export interface Conversation {
   members?: Collaborator[];
 }
 
+
+// --- Google Calendar Types ---
 export interface GoogleCalendarEvent {
   id: string;
   summary: string;
@@ -67,7 +127,7 @@ export interface GoogleCalendarListEntry {
   selected?: boolean;
 }
 
-// Types for Goals Feature
+// --- Goals Types ---
 export type GoalType = 'quantity' | 'value' | 'frequency';
 export type GoalPeriod = 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
 
@@ -106,4 +166,5 @@ export interface Goal {
 }
 
 
+// --- Supabase Types ---
 export type { SupabaseSession, SupabaseUser };

@@ -1,9 +1,8 @@
 import { cn, getStatusStyles } from "@/lib/utils";
-import { ProjectStatus, PaymentStatus } from "@/types";
 import { Badge } from "@/components/ui/badge";
 
 interface StatusBadgeProps {
-  status: ProjectStatus | PaymentStatus;
+  status: string;
 }
 
 const StatusBadge = ({ status }: StatusBadgeProps) => {

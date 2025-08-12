@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Project } from '@/types';
+import { Project } from '@/data/projects';
 import { toast } from 'sonner';
 
 // Ini adalah tipe data yang dikembalikan oleh fungsi RPC, dengan properti snake_case
@@ -18,11 +18,12 @@ interface ProjectFromRpc {
   payment_status: Project['paymentStatus'];
   payment_due_date?: string;
   created_by: Project['createdBy'];
-  assignedTo: Project['assignedTo'];
+  // Kunci ini peka huruf besar/kecil karena dikutip dalam fungsi SQL
+  "assignedTo": Project['assignedTo']; 
   tasks: Project['tasks'];
   comments: Project['comments'];
   services: Project['services'];
-  briefFiles: Project['briefFiles'];
+  "briefFiles": Project['briefFiles'];
 }
 
 const fetchProjects = async (): Promise<Project[]> => {
@@ -39,14 +40,14 @@ const fetchProjects = async (): Promise<Project[]> => {
   }
 
   // RPC mengembalikan snake_case, tetapi aplikasi menggunakan camelCase. Mari kita petakan datanya.
-  const projects: Project[] = (data as ProjectFromRpc[]).map(p => ({
+  const projects: Project[] = (data as any[]).map(p => ({
     ...p,
     startDate: p.start_date,
     dueDate: p.due_date,
     paymentStatus: p.payment_status,
     paymentDueDate: p.payment_due_date,
     createdBy: p.created_by,
-    // Pastikan array tidak null
+    // Gunakan notasi kurung siku untuk kunci yang peka huruf besar/kecil
     assignedTo: p.assignedTo || [],
     tasks: p.tasks || [],
     comments: p.comments || [],

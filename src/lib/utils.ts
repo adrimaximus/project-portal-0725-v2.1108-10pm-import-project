@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const getStatusStyles = (status: ProjectStatus | PaymentStatus) => {
+export const getStatusStyles = (status: string) => {
   switch (status) {
     case 'Requested':
       return { hex: '#3B82F6', tw: 'bg-blue-100 text-blue-800' };
