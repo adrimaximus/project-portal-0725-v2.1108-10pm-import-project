@@ -109,7 +109,6 @@ const LoginPage = () => {
                       <Input
                         placeholder="m@example.com"
                         {...field}
-                        disabled={isLoading}
                       />
                     </FormControl>
                     <FormMessage />
@@ -137,7 +136,6 @@ const LoginPage = () => {
                       <Input
                         type="password"
                         {...field}
-                        disabled={isLoading}
                       />
                     </FormControl>
                     <FormMessage />
