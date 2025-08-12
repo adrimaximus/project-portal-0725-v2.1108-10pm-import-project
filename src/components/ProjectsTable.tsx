@@ -288,7 +288,10 @@ const ProjectsTable = () => {
     } else {
         toast.success(`"${event.summary}" imported as a new project.`);
         setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        
+        // Invalidate cache and refetch data to ensure UI updates
+        await queryClient.invalidateQueries({ queryKey: ['projects'] });
+        await refetch();
     }
   };
 
