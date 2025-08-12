@@ -22,28 +22,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isFreshLogin, setIsFreshLogin] = useState(false);
   const navigate = useNavigate();
 
-  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', supabaseUser.id)
-      .single();
+  const fetchUserProfile = async (supabaseUser: SupabaseUser, retries = 3, delay = 500) => {
+    for (let i = 0; i < retries; i++) {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
 
-    if (error) {
-      console.error('Error fetching profile:', error);
-      setUser(null);
-    } else if (profile) {
-      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-      setUser({
-        id: profile.id,
-        email: supabaseUser.email,
-        name: fullName || supabaseUser.email || 'No name',
-        avatar: profile.avatar_url,
-        initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-      });
+      if (profile) {
+        const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+        setUser({
+          id: profile.id,
+          email: supabaseUser.email,
+          name: fullName || supabaseUser.email || 'No name',
+          avatar: profile.avatar_url,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        });
+        return; // Success, exit the function
+      }
+
+      // If there's an error but it's not "row not found", log it and stop.
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile:', error);
+        setUser(null);
+        return;
+      }
+
+      // If no profile was found (PGRST116 or no error but null data), wait and retry.
+      // This handles the small delay for new user profile creation via trigger.
+      if (i < retries - 1) {
+        await new Promise(res => setTimeout(res, delay));
+      }
     }
+
+    // If still no profile after all retries, create a fallback user object.
+    console.warn(`Could not fetch user profile for ${supabaseUser.id} after ${retries} attempts. Using fallback data.`);
+    setUser({
+      id: supabaseUser.id,
+      email: supabaseUser.email,
+      name: supabaseUser.email || 'New User',
+      avatar: undefined,
+      initials: supabaseUser.email?.substring(0, 2).toUpperCase() || 'NN',
+    });
   };
 
   useEffect(() => {
