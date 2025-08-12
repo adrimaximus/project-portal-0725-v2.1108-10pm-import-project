@@ -10,6 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
 import CollaboratorsList from "@/components/dashboard/CollaboratorsList";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 const DashboardSkeleton = () => (
   <div className="space-y-8 animate-pulse">
@@ -52,10 +54,12 @@ const Index = () => {
   });
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchProjects = useCallback(async (isInitialLoad = false) => {
     if (!user) return;
     if (isInitialLoad) setIsLoading(true);
+    else setIsRefreshing(true);
 
     try {
       const { data: rpcData, error: rpcError } = await supabase.rpc('get_dashboard_projects');
@@ -94,6 +98,7 @@ const Index = () => {
       console.error(e);
     } finally {
       if (isInitialLoad) setIsLoading(false);
+      else setIsRefreshing(false);
     }
   }, [user]);
 
@@ -159,7 +164,12 @@ const Index = () => {
 
           <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                  <h2 className="text-2xl font-bold">Insights</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-bold">Insights</h2>
+                    <Button variant="ghost" size="icon" onClick={() => fetchProjects(false)} disabled={isRefreshing}>
+                      <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </div>
                   <DateRangePicker date={date} onDateChange={setDate} />
               </div>
               <DashboardStatsGrid projects={filteredProjects} />
