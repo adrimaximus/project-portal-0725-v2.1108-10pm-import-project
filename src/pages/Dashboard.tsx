@@ -1,174 +1,149 @@
-import { useState, useEffect, useCallback } from "react";
-import { DateRangePicker } from "@/components/DateRangePicker";
-import { DateRange } from "react-day-picker";
-import { useAuth } from "@/contexts/AuthContext";
-import PortalLayout from "@/components/PortalLayout";
+import { DollarSign, Package, Users, Activity } from "lucide-react";
+import StatCard from "@/components/dashboard/StatCard";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Project } from "@/data/projects";
 import { toast } from "sonner";
+import { Project } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
-import CollaboratorsList from "@/components/dashboard/CollaboratorsList";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Link } from "react-router-dom";
+
+const fetchProjects = async (): Promise<Project[]> => {
+  const { data, error } = await supabase.rpc("get_dashboard_projects");
+  if (error) {
+    toast.error("Failed to sync project data.", {
+      description: "There was a problem loading project data from the server.",
+    });
+    console.error(error);
+    throw new Error(error.message);
+  }
+  return data || [];
+};
 
 const DashboardSkeleton = () => (
-  <div className="space-y-8 animate-pulse">
-    <div className="text-left">
-      <Skeleton className="h-10 w-3/4" />
-      <Skeleton className="h-6 w-1/2 mt-2" />
+  <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+    <div className="flex items-center justify-between space-y-2">
+      <Skeleton className="h-8 w-48" />
     </div>
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <Skeleton className="h-9 w-32" />
-        <Skeleton className="h-10 w-full sm:w-auto lg:w-[300px]" />
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 7 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-1/2" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <Card>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Skeleton className="h-28" />
+      <Skeleton className="h-28" />
+      <Skeleton className="h-28" />
+      <Skeleton className="h-28" />
+    </div>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <Card className="col-span-4">
         <CardHeader>
           <Skeleton className="h-6 w-40" />
         </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
+        </CardContent>
       </Card>
     </div>
   </div>
 );
 
-const Index = () => {
-  const { user } = useAuth();
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), 0, 1),
-    to: new Date(new Date().getFullYear(), 11, 31),
-  });
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchProjects = useCallback(async (isInitialLoad = false) => {
-    if (!user) return;
-    if (isInitialLoad) setIsLoading(true);
-
-    try {
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_dashboard_projects');
-
-      if (rpcError) {
-        console.error("Error calling get_dashboard_projects RPC:", rpcError);
-        throw new Error("There was a problem loading project data from the server.");
-      }
-
-      if (!rpcData) {
-        setProjects([]);
-      } else {
-        const mappedProjects: Project[] = rpcData.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          description: p.description,
-          status: p.status,
-          progress: p.progress,
-          budget: p.budget,
-          startDate: p.start_date,
-          dueDate: p.due_date,
-          paymentStatus: p.payment_status,
-          createdBy: p.created_by,
-          assignedTo: p.assignedTo || [],
-          tasks: p.tasks || [],
-          comments: p.comments || [],
-        }));
-        setProjects(mappedProjects);
-      }
-    } catch (e: any) {
-      toast.error("Failed to sync project data.", {
-        id: 'fetch-projects-error',
-        description: e.message || "Please try refreshing the page.",
-      });
-      console.error(e);
-    } finally {
-      if (isInitialLoad) setIsLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    fetchProjects(true);
-
-    const handleDbChange = (payload: any) => {
-      console.log('Realtime change detected:', payload);
-      toast.info("Project data has been updated.", { duration: 2000 });
-      fetchProjects(false);
-    };
-
-    const channel = supabase.channel('dashboard-projects-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, handleDbChange)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_members' }, handleDbChange)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, handleDbChange)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, handleDbChange)
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Realtime channel subscribed for dashboard.');
-        }
-        if (status === 'CHANNEL_ERROR') {
-          console.error('Realtime channel error.');
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, fetchProjects]);
-
-  const filteredProjects = projects.filter(project => {
-    if (date?.from && project.startDate) {
-        const projectStart = new Date(project.startDate);
-        const pickerFrom = date.from;
-        const pickerTo = date.to || date.from;
-
-        if (project.dueDate) {
-            const projectEnd = new Date(project.dueDate);
-            return projectStart <= pickerTo && projectEnd >= pickerFrom;
-        }
-        return projectStart >= pickerFrom && projectStart <= pickerTo;
-    }
-    return true;
+const Dashboard = () => {
+  const { data: projects, isLoading } = useQuery<Project[]>({
+    queryKey: ["dashboardProjects"],
+    queryFn: fetchProjects,
   });
 
-  if (!user) {
-    return null;
+  if (isLoading) {
+    return <DashboardSkeleton />;
   }
 
-  return (
-    <PortalLayout>
-      {isLoading ? (
-        <DashboardSkeleton />
-      ) : (
-        <div className="space-y-8">
-          <div className="text-left">
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user.name}, have a good day! 👋</h1>
-            <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
-          </div>
+  const totalProjects = projects?.length || 0;
+  const totalBudgetValue = projects?.reduce((sum, project) => sum + (project.budget || 0), 0) || 0;
+  const activeProjects = projects?.filter(p => p.status === 'In Progress').length || 0;
+  const teamMembers = new Set(projects?.flatMap(p => p.assignedTo.map(m => m.id))).size;
 
-          <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                  <h2 className="text-2xl font-bold">Insights</h2>
-                  <DateRangePicker date={date} onDateChange={setDate} />
-              </div>
-              <DashboardStatsGrid projects={filteredProjects} />
-              <CollaboratorsList projects={filteredProjects} />
-          </div>
-        </div>
-      )}
-    </PortalLayout>
+  const recentProjects = projects?.slice(0, 5) || [];
+
+  return (
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Projects"
+          value={totalProjects}
+          icon={<Package className="h-4 w-4 text-muted-foreground" />}
+          description={`${activeProjects} active`}
+        />
+        <StatCard
+          title="Total Project Value"
+          value={new Intl.NumberFormat("id-ID", {
+            style: "currency",
+            currency: "IDR",
+            minimumFractionDigits: 0,
+          }).format(totalBudgetValue)}
+          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          description="Sum of all project budgets"
+        />
+        <StatCard
+          title="Active Projects"
+          value={activeProjects}
+          icon={<Activity className="h-4 w-4 text-muted-foreground" />}
+          description="Projects currently in progress"
+        />
+        <StatCard
+          title="Team Members"
+          value={teamMembers}
+          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+          description="Unique users across all projects"
+        />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Recent Projects</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-8">
+              {recentProjects.map((project) => (
+                <Link to={`/projects/${project.id}`} key={project.id} className="flex items-center hover:bg-muted/50 p-2 rounded-lg">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={project.created_by.avatar} alt="Avatar" />
+                    <AvatarFallback>{project.name.substring(0, 2)}</AvatarFallback>
+                  </Avatar>
+                  <div className="ml-4 space-y-1">
+                    <p className="text-sm font-medium leading-none">{project.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {project.category}
+                    </p>
+                  </div>
+                  <div className="ml-auto font-medium">
+                    {new Intl.NumberFormat("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                      minimumFractionDigits: 0,
+                    }).format(project.budget)}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 
-export default Index;
+export default Dashboard;
