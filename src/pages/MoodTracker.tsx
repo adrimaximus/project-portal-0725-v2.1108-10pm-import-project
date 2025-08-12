@@ -28,7 +28,7 @@ const MoodTracker = () => {
   const [period, setPeriod] = useState<MoodTrackerPeriod>('week');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     const fetchHistory = async () => {

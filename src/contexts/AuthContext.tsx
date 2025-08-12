@@ -1,99 +1,89 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { User } from '@/types';
+import { User, SupabaseSession, SupabaseUser } from '@/types';
 
-export type EnhancedUser = User;
-
-export interface AuthContextType {
-  user: EnhancedUser | null;
-  session: Session | null;
-  isLoading: boolean;
+interface AuthContextType {
+  session: SupabaseSession | null;
+  user: User | null;
+  loading: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  isLoading: true,
-  logout: async () => {},
-  refreshUser: async () => {},
-});
-
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<EnhancedUser | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<SupabaseSession | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const fetchUserProfile = useCallback(async (currentUser: SupabaseUser | null): Promise<EnhancedUser | null> => {
-    if (!currentUser) {
-      return null;
+  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', supabaseUser.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+      setUser(null);
+    } else if (profile) {
+      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+      setUser({
+        id: profile.id,
+        email: supabaseUser.email,
+        name: fullName || supabaseUser.email || 'No name',
+        avatar: profile.avatar_url,
+        initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+      });
     }
-
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, avatar_url')
-        .eq('id', currentUser.id)
-        .single();
-
-      const name = (profile && `${profile.first_name || ''} ${profile.last_name || ''}`.trim()) || currentUser.email || 'User';
-      const initials = (profile && `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase()) || 'U';
-      
-      return {
-        id: currentUser.id,
-        email: currentUser.email,
-        name,
-        avatar: profile?.avatar_url || undefined,
-        initials,
-        first_name: profile?.first_name,
-        last_name: profile?.last_name,
-      };
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-      return {
-        id: currentUser.id,
-        email: currentUser.email,
-        name: currentUser.email || 'User',
-        initials: 'U',
-      };
-    }
-  }, []);
-
-  const refreshUser = useCallback(async () => {
-    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-    const enhancedUser = await fetchUserProfile(supabaseUser);
-    setUser(enhancedUser);
-  }, [fetchUserProfile]);
+  };
 
   useEffect(() => {
-    const getInitialSession = async () => {
-      setIsLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      const enhancedUser = await fetchUserProfile(session?.user ?? null);
-      setUser(enhancedUser);
-      setIsLoading(false);
+    const getSessionAndListen = async () => {
+      // Get initial session
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      if (initialSession) {
+        await fetchUserProfile(initialSession.user);
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+
+      // Listen for auth state changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          navigate('/reset-password');
+        }
+        setSession(newSession);
+        if (newSession) {
+          await fetchUserProfile(newSession.user);
+        } else {
+          setUser(null);
+        }
+      });
+
+      return subscription;
     };
 
-    getInitialSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        const enhancedUser = await fetchUserProfile(session?.user ?? null);
-      }
-    );
+    const subscriptionPromise = getSessionAndListen();
 
     return () => {
-      authListener.subscription.unsubscribe();
+      subscriptionPromise.then(subscription => subscription?.unsubscribe());
     };
-  }, [fetchUserProfile]);
+  }, [navigate]);
+
+  const refreshUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await fetchUserProfile(session.user);
+    }
+  };
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -102,12 +92,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const value = {
-    user,
     session,
-    isLoading,
+    user,
+    loading,
     logout,
     refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
