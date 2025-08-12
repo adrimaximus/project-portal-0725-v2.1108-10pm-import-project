@@ -107,97 +107,38 @@ const Index = () => {
     if (isInitialLoad) setIsLoading(true);
 
     try {
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('*');
-      if (projectsError) throw projectsError;
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_dashboard_projects');
 
-      if (!projectsData || projectsData.length === 0) {
+      if (rpcError) {
+        console.error("Error calling get_dashboard_projects RPC:", rpcError);
+        throw new Error("There was a problem loading project data from the server.");
+      }
+
+      if (!rpcData) {
         setProjects([]);
-        if (isInitialLoad) setIsLoading(false);
-        return;
-      }
-
-      const projectIds = projectsData.map(p => p.id);
-
-      const [membersRes, tasksRes, commentsRes] = await Promise.all([
-        supabase.from('project_members').select('*, profile:profiles(*)').in('project_id', projectIds),
-        supabase.from('tasks').select('*, assignedTo:task_assignees(profile:profiles(*))').in('project_id', projectIds),
-        supabase.from('comments').select('project_id, is_ticket, id').in('project_id', projectIds),
-      ]);
-
-      if (membersRes.error || tasksRes.error || commentsRes.error) {
-        console.error("Error fetching project details:", membersRes.error, tasksRes.error, commentsRes.error);
-        throw new Error("Failed to fetch project details.");
-      }
-
-      const creatorIds = [...new Set(projectsData.map(p => p.created_by).filter(Boolean))];
-      const { data: creatorProfilesData, error: creatorError } = await supabase.from('profiles').select('*').in('id', creatorIds);
-      if (creatorError) throw creatorError;
-      const creatorsMap = new Map(creatorProfilesData.map(p => [p.id, p]));
-
-      const mappedProjects: Project[] = projectsData.map(p => {
-        const members = membersRes.data?.filter(m => m.project_id === p.id) || [];
-        const tasks = tasksRes.data?.filter(t => t.project_id === p.id) || [];
-        const comments = commentsRes.data?.filter(c => c.project_id === p.id) || [];
-        const creatorProfile = creatorsMap.get(p.created_by);
-
-        return {
+      } else {
+        const mappedProjects: Project[] = rpcData.map((p: any) => ({
           id: p.id,
           name: p.name,
           category: p.category,
           description: p.description,
-          status: p.status as ProjectStatus,
+          status: p.status,
           progress: p.progress,
           budget: p.budget,
           startDate: p.start_date,
           dueDate: p.due_date,
-          paymentStatus: p.payment_status as PaymentStatus,
-          createdBy: creatorProfile ? {
-              id: creatorProfile.id,
-              name: `${creatorProfile.first_name || ''} ${creatorProfile.last_name || ''}`.trim() || creatorProfile.email,
-              email: creatorProfile.email,
-              avatar: creatorProfile.avatar_url,
-              initials: `${creatorProfile.first_name?.[0] || ''}${creatorProfile.last_name?.[0] || ''}`.toUpperCase(),
-          } : null,
-          assignedTo: members.map((m: any) => {
-              const profile = m.profile;
-              return {
-                  id: profile.id,
-                  name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
-                  email: profile.email,
-                  avatar: profile.avatar_url,
-                  initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
-                  role: m.role,
-              };
-          }),
-          tasks: tasks.map((t: any) => ({
-              id: t.id,
-              title: t.title,
-              completed: t.completed,
-              assignedTo: (t.assignedTo || []).map((a: any) => {
-                  const profile = a.profile;
-                  return {
-                      id: profile.id,
-                      name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
-                      email: profile.email,
-                      avatar: profile.avatar_url,
-                      initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
-                  };
-              }),
-          })),
-          comments: comments.map((c: any) => ({
-              id: c.id,
-              isTicket: c.is_ticket,
-          })),
-        } as Project;
-      });
-
-      setProjects(mappedProjects);
+          paymentStatus: p.payment_status,
+          createdBy: p.created_by,
+          assignedTo: p.assignedTo || [],
+          tasks: p.tasks || [],
+          comments: p.comments || [],
+        }));
+        setProjects(mappedProjects);
+      }
     } catch (e: any) {
-      toast.error("Failed to fetch projects.", {
+      toast.error("Failed to sync project data.", {
         id: 'fetch-projects-error',
-        description: e.message || "There was a problem loading your project data. Please try refreshing the page.",
+        description: e.message || "Please try refreshing the page.",
       });
       console.error(e);
     } finally {
@@ -210,7 +151,8 @@ const Index = () => {
 
     fetchProjects(true);
 
-    const handleDbChange = () => {
+    const handleDbChange = (payload: any) => {
+      console.log('Realtime change detected:', payload);
       toast.info("Project data has been updated.", { duration: 2000 });
       fetchProjects(false);
     };
@@ -220,7 +162,14 @@ const Index = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_members' }, handleDbChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, handleDbChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, handleDbChange)
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Realtime channel subscribed for dashboard.');
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Realtime channel error.');
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -228,22 +177,19 @@ const Index = () => {
   }, [user, fetchProjects]);
 
   const filteredProjects = projects.filter(project => {
-    if (date?.from) {
-      const pickerFrom = date.from;
-      const pickerTo = date.to || date.from;
+    if (date?.from && project.startDate) {
+        const projectStart = new Date(project.startDate);
+        const pickerFrom = date.from;
+        const pickerTo = date.to || date.from;
 
-      if (!project.startDate || !project.dueDate) {
-        return true;
-      }
-
-      const projectStart = new Date(project.startDate);
-      const projectEnd = new Date(project.dueDate);
-
-      if (projectStart > pickerTo || projectEnd < pickerFrom) {
-        return false;
-      }
+        // Basic range check
+        if (project.dueDate) {
+            const projectEnd = new Date(project.dueDate);
+            return projectStart <= pickerTo && projectEnd >= pickerFrom;
+        }
+        // If no due date, check if start date is within range
+        return projectStart >= pickerFrom && projectStart <= pickerTo;
     }
-
     return true;
   });
 
@@ -260,12 +206,11 @@ const Index = () => {
   }, {} as Record<string, number>);
 
   const ownerCounts = filteredProjects.reduce((acc, p) => {
-      if (p.assignedTo.length > 0) {
-          const owner = p.assignedTo[0];
-          if (!acc[owner.id]) {
-              acc[owner.id] = { ...owner, projectCount: 0 };
+      if (p.createdBy) {
+          if (!acc[p.createdBy.id]) {
+              acc[p.createdBy.id] = { ...p.createdBy, projectCount: 0 };
           }
-          acc[owner.id].projectCount++;
+          acc[p.createdBy.id].projectCount++;
       }
       return acc;
   }, {} as Record<string, any>);
@@ -278,19 +223,16 @@ const Index = () => {
               acc[user.id] = { ...user, projectCount: 0, taskCount: 0 };
           }
           acc[user.id].projectCount++;
+          if (p.tasks) {
+            p.tasks.forEach(task => {
+              if (task.assignedTo?.some(assignee => assignee.id === user.id)) {
+                acc[user.id].taskCount++;
+              }
+            });
+          }
       });
       return acc;
   }, {} as Record<string, any>);
-
-  filteredProjects.forEach(p => {
-      p.tasks?.forEach(task => {
-          (task.assignedTo || []).forEach(user => {
-              if (collaboratorStats[user.id]) {
-                  collaboratorStats[user.id].taskCount++;
-              }
-          });
-      });
-  });
 
   const collaborators = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount);
   const topCollaborator = collaborators[0] || null;
