@@ -6,36 +6,23 @@ const LoadingScreen = () => {
   const { user } = useAuth();
   const [messageIndex, setMessageIndex] = useState(0);
 
-  // We define the messages inside a useEffect hook to ensure the user's name is up-to-date.
-  const [messages, setMessages] = useState([
-    "Welcome back!",
+  const messages = [
+    `Welcome back, ${user?.name || 'friend'}!`,
     "Already have your coffee or tea cup?",
     "I'm preparing your workspace...",
     "Have a betterworks today :)",
-  ]);
+  ];
 
   useEffect(() => {
-    setMessages([
-      `Welcome back, ${user?.name || 'friend'}!`,
-      "Already have your coffee or tea cup?",
-      "I'm preparing your workspace...",
-      "Have a betterworks today :)",
-    ]);
-  }, [user]);
-
-  useEffect(() => {
-    // This timer will cycle through the messages.
     const timer = setTimeout(() => {
       setMessageIndex((prevIndex) => {
-        // Stop at the last message
         if (prevIndex >= messages.length - 1) {
           return prevIndex;
         }
         return prevIndex + 1;
       });
-    }, 2500); // Each message will be displayed for 2.5 seconds
+    }, 2500);
 
-    // Clean up the timer when the component unmounts or the index changes.
     return () => clearTimeout(timer);
   }, [messageIndex, messages.length]);
 
