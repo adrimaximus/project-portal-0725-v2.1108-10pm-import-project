@@ -2,10 +2,16 @@ import { Project } from "@/data/projects";
 import { Goal } from "@/types";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+const getOpenAIClient = () => {
+  const apiKey = localStorage.getItem("openai_api_key");
+  if (!apiKey) {
+    throw new Error("OpenAI API key not found. Please connect your OpenAI account in settings.");
+  }
+  return new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true,
+  });
+};
 
 const generateSystemPrompt = (project: Project) => {
   return `Anda adalah asisten AI yang berspesialisasi dalam manajemen proyek dan komunikasi klien untuk agensi digital di Indonesia. Tugas Anda adalah menghasilkan ringkasan proyek (project brief) yang jelas, profesional, dan mudah dipahami untuk klien.
@@ -35,6 +41,7 @@ Aturan:
 
 export const generateProjectBrief = async (project: Project): Promise<string> => {
   try {
+    const openai = getOpenAIClient();
     const systemPrompt = generateSystemPrompt(project);
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -52,9 +59,9 @@ export const generateProjectBrief = async (project: Project): Promise<string> =>
       max_tokens: 500,
     });
     return response.choices[0].message.content || "Tidak dapat menghasilkan brief.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating project brief:", error);
-    return "Terjadi kesalahan saat mencoba menghasilkan brief proyek. Silakan coba lagi nanti.";
+    return error.message || "Terjadi kesalahan saat mencoba menghasilkan brief proyek.";
   }
 };
 
@@ -83,6 +90,7 @@ Aturan:
 
 export const generateTaskSuggestions = async (project: Project, existingTasks: { title: string }[]): Promise<string[]> => {
     try {
+        const openai = getOpenAIClient();
         const systemPrompt = generateTaskSuggestionsSystemPrompt(project, existingTasks);
         const response = await openai.chat.completions.create({
             model: "gpt-3.5-turbo",
@@ -105,7 +113,6 @@ export const generateTaskSuggestions = async (project: Project, existingTasks: {
             return [];
         }
         
-        // GPT might return a JSON object with a key, e.g., { "tasks": [...] }
         const parsedContent = JSON.parse(content);
         if (Array.isArray(parsedContent)) {
             return parsedContent;
@@ -125,16 +132,25 @@ export const generateTaskSuggestions = async (project: Project, existingTasks: {
 };
 
 export const generateAiInsight = async (goal: Goal, context: any): Promise<string> => {
-  console.log("AI Insight generation requested for:", goal.title, context);
-  // This is a mock implementation
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return `Here is an AI-generated insight for your goal "${goal.title}". Based on your progress, you are doing great! Keep it up.`;
+  try {
+    const openai = getOpenAIClient();
+    // This is a mock implementation for now
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return `Here is an AI-generated insight for your goal "${goal.title}". Based on your progress, you are doing great! Keep it up.`;
+  } catch (error: any) {
+    console.error("Error generating AI insight:", error);
+    throw error;
+  }
 };
 
 export const generateAiIcon = async (prompt: string): Promise<string> => {
-  console.log("AI Icon generation requested with prompt:", prompt);
-  // This is a mock implementation
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  // Returning a placeholder image URL
-  return `https://via.placeholder.com/128/4ECDC4/FFFFFF?text=AI`;
+  try {
+    const openai = getOpenAIClient();
+    // This is a mock implementation for now
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return `https://via.placeholder.com/128/4ECDC4/FFFFFF?text=AI`;
+  } catch (error: any) {
+    console.error("Error generating AI icon:", error);
+    throw error;
+  }
 };
