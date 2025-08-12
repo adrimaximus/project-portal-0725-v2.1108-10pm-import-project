@@ -104,7 +104,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       .from('projects')
       .insert({
         name: projectName,
-        category: selectedServices.length > 0 ? selectedServices[0].title : "General",
+        category: "Requested Event",
         description: description,
         status: "Requested",
         budget: numericBudget,
