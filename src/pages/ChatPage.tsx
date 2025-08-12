@@ -94,7 +94,7 @@ const ChatPage = () => {
     setSelectedConversationId(id);
     const { data, error } = await supabase
       .from('messages')
-      .select('*, sender:profiles(id, first_name, last_name, avatar_url)')
+      .select('*, sender:profiles(id, first_name, last_name, avatar_url, email)')
       .eq('conversation_id', id)
       .order('created_at', { ascending: true });
 
@@ -112,6 +112,7 @@ const ChatPage = () => {
         name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim(),
         avatar: m.sender.avatar_url,
         initials: `${m.sender.first_name?.[0] || ''}${m.sender.last_name?.[0] || ''}`.toUpperCase(),
+        email: m.sender.email,
       },
       attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
     }));
