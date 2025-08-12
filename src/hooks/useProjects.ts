@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/data/projects';
 import { toast } from 'sonner';
 
-// Ini adalah tipe data yang dikembalikan oleh fungsi RPC, dengan properti snake_case
 interface ProjectFromRpc {
   id: string;
   slug: string;
@@ -27,20 +26,33 @@ interface ProjectFromRpc {
 }
 
 const fetchProjects = async (): Promise<Project[]> => {
-  const { data, error } = await supabase.rpc('get_dashboard_projects');
-
-  if (error) {
-    console.error('Error fetching projects:', error);
-    toast.error('Failed to fetch projects.');
-    throw new Error(error.message);
+  const batchSize = 50;
+  let offset = 0;
+  let allData: ProjectFromRpc[] = [];
+  
+  while (true) {
+    const { data, error } = await supabase
+      .rpc('get_dashboard_projects')
+      .range(offset, offset + batchSize - 1);
+      
+    if (error) {
+      console.error('Error fetching projects:', error);
+      toast.error('Failed to fetch projects.');
+      throw new Error(error.message);
+    }
+    
+    if (data) {
+      allData = allData.concat(data as ProjectFromRpc[]);
+      if ((data as any[]).length < batchSize) {
+        break;
+      }
+      offset += batchSize;
+    } else {
+      break;
+    }
   }
 
-  if (!data) {
-    return [];
-  }
-
-  // RPC mengembalikan snake_case, tetapi aplikasi menggunakan camelCase. Mari kita petakan datanya.
-  const projects: Project[] = (data as any[]).map(p => ({
+  const projects: Project[] = allData.map(p => ({
     ...p,
     startDate: p.start_date,
     dueDate: p.due_date,
@@ -54,7 +66,7 @@ const fetchProjects = async (): Promise<Project[]> => {
     services: p.services || [],
     briefFiles: p.briefFiles || [],
   }));
-
+  
   return projects;
 };
 
