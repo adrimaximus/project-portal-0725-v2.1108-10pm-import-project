@@ -56,84 +56,81 @@ const ProjectsTable = () => {
   const [view, setView] = useState<ViewMode>('table');
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const { user } = useAuth();
 
   const fetchProjects = async () => {
-    if (isLoading) return; // Prevent re-fetch if initial load is happening
-    setIsRefreshing(true);
+    setIsLoading(true);
     const { data: projectsData, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
 
     if (error) {
         toast.error("Failed to fetch projects.");
         console.error(error);
         setLocalProjects([]);
-    } else {
-        const userIds = [...new Set(projectsData.map(p => p.created_by).filter(Boolean))];
-        let profilesMap = new Map();
-
-        if (userIds.length > 0) {
-            const { data: profilesData, error: profilesError } = await supabase
-                .from('profiles')
-                .select('*')
-                .in('id', userIds);
-
-            if (profilesError) {
-                toast.error("Failed to fetch project creator details.");
-                console.error(profilesError);
-            } else {
-                profilesMap = new Map(profilesData.map(p => [p.id, p]));
-            }
-        }
-
-        const mappedProjects: Project[] = projectsData.map(p => {
-            const profile = profilesMap.get(p.created_by);
-            const createdBy = profile ? {
-                id: profile.id,
-                name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
-                email: profile.email,
-                avatar: profile.avatar_url,
-                initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
-                first_name: profile.first_name,
-                last_name: profile.last_name,
-            } : null;
-
-            return {
-                id: p.id,
-                name: p.name,
-                category: p.category,
-                description: p.description,
-                status: p.status as ProjectStatus,
-                progress: p.progress,
-                budget: p.budget,
-                startDate: p.start_date,
-                dueDate: p.due_date,
-                paymentStatus: p.payment_status as PaymentStatus,
-                createdBy: createdBy,
-                assignedTo: [],
-                tasks: [],
-                comments: [],
-                activities: [],
-                briefFiles: [],
-                services: p.services,
-            };
-        });
-        setLocalProjects(mappedProjects);
+        setIsLoading(false);
+        return;
     }
-    setIsRefreshing(false);
+
+    const userIds = [...new Set(projectsData.map(p => p.created_by).filter(Boolean))];
+    let profilesMap = new Map();
+
+    if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('id', userIds);
+
+        if (profilesError) {
+            toast.error("Failed to fetch project creator details.");
+            console.error(profilesError);
+        } else {
+            profilesMap = new Map(profilesData.map(p => [p.id, p]));
+        }
+    }
+
+    const mappedProjects: Project[] = projectsData.map(p => {
+        const profile = profilesMap.get(p.created_by);
+        const createdBy = profile ? {
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
+            email: profile.email,
+            avatar: profile.avatar_url,
+            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+        } : null;
+
+        return {
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            description: p.description,
+            status: p.status as ProjectStatus,
+            progress: p.progress,
+            budget: p.budget,
+            startDate: p.start_date,
+            dueDate: p.due_date,
+            paymentStatus: p.payment_status as PaymentStatus,
+            createdBy: createdBy,
+            assignedTo: [],
+            tasks: [],
+            comments: [],
+            activities: [],
+            briefFiles: [],
+            services: p.services,
+        };
+    });
+
+    setLocalProjects(mappedProjects);
+    setIsLoading(false);
   };
 
   useEffect(() => {
-    const initialFetch = async () => {
-        if (!user) return;
-        setIsLoading(true);
-        await fetchProjects();
-        setIsLoading(false);
-    };
-    initialFetch();
+    if (user) {
+      fetchProjects();
+    }
   }, [user]);
 
   const refreshCalendarEvents = () => {
@@ -413,9 +410,6 @@ const ProjectsTable = () => {
             <CardTitle>Projects</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" className="rounded-full h-8 w-8" onClick={fetchProjects} disabled={isLoading || isRefreshing}>
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </Button>
             {view === 'calendar' && (
               <Button variant="ghost" className="h-8 w-8 p-0" onClick={refreshCalendarEvents}>
                 <span className="sr-only">Refresh calendar events</span>

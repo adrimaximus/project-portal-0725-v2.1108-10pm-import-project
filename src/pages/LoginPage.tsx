@@ -20,17 +20,21 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
-  const { session, loading: authContextLoading } = useAuth();
+  const { session, isFreshLogin, loading: authContextLoading } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
 
   useEffect(() => {
-    // Redirect if a session already exists on initial load
-    if (!authContextLoading && session) {
-      navigate('/dashboard', { replace: true });
+    if (authContextLoading) return;
+
+    if (session) {
+      if (isFreshLogin) {
+        navigate('/welcome', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     }
-  }, [session, authContextLoading, navigate]);
+  }, [session, isFreshLogin, authContextLoading, navigate]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -42,8 +46,6 @@ const LoginPage = () => {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    setShowWelcomeMessage(true);
-
     const { error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
@@ -52,14 +54,8 @@ const LoginPage = () => {
     if (error) {
       toast.error(error.message);
       setIsLoading(false);
-      setShowWelcomeMessage(false);
-    } else {
-      // On success, wait a moment to show the welcome message before navigating.
-      // The AuthContext will update in the background.
-      setTimeout(() => {
-        navigate('/dashboard', { replace: true });
-      }, 1500);
     }
+    // On success, the onAuthStateChange listener in AuthContext will handle navigation.
   };
 
   const handleForgotPassword = async () => {
@@ -88,110 +84,98 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="relative min-h-screen">
-      <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
-        <div className="flex items-center justify-center py-12">
-          <div className="mx-auto grid w-[350px] gap-6">
-            <div className="grid gap-2 text-center">
-              <Link to="/" className="flex justify-center items-center gap-2 mb-4">
-                <Package className="h-8 w-8 text-primary" />
-                <span className="text-2xl font-bold">Client Portal</span>
-              </Link>
-              <h1 className="text-3xl font-bold">Welcome Back</h1>
-              <p className="text-balance text-muted-foreground">
-                Enter your credentials to access your portal.
-              </p>
-            </div>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="m@example.com"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center">
-                        <FormLabel>Password</FormLabel>
-                        <Button
-                          type="button"
-                          variant="link"
-                          className="ml-auto inline-block text-sm underline"
-                          onClick={handleForgotPassword}
-                          disabled={isLoading}
-                        >
-                          Forgot your password?
-                        </Button>
-                      </div>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign In
-                </Button>
-              </form>
-            </Form>
-            <p className="mt-4 px-8 text-center text-sm text-muted-foreground">
-              By signing in, you agree to our{" "}
-              <Link
-                to="/terms-of-service"
-                className="underline underline-offset-4 hover:text-primary"
-              >
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link
-                to="/privacy-policy"
-                className="underline underline-offset-4 hover:text-primary"
-              >
-                Privacy Policy
-              </Link>
-              .
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
+      <div className="flex items-center justify-center py-12">
+        <div className="mx-auto grid w-[350px] gap-6">
+          <div className="grid gap-2 text-center">
+            <Link to="/" className="flex justify-center items-center gap-2 mb-4">
+              <Package className="h-8 w-8 text-primary" />
+              <span className="text-2xl font-bold">Client Portal</span>
+            </Link>
+            <h1 className="text-3xl font-bold">Welcome Back</h1>
+            <p className="text-balance text-muted-foreground">
+              Enter your credentials to access your portal.
             </p>
           </div>
-        </div>
-        <div className="hidden bg-muted lg:block">
-          <img
-            src="/images/puppy.png"
-            alt="A cute puppy looking at the camera"
-            width="1920"
-            height="1080"
-            className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-          />
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="m@example.com"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center">
+                      <FormLabel>Password</FormLabel>
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="ml-auto inline-block text-sm underline"
+                        onClick={handleForgotPassword}
+                        disabled={isLoading}
+                      >
+                        Forgot your password?
+                      </Button>
+                    </div>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sign In
+              </Button>
+            </form>
+          </Form>
+          <p className="mt-4 px-8 text-center text-sm text-muted-foreground">
+            By signing in, you agree to our{" "}
+            <Link
+              to="/terms-of-service"
+              className="underline underline-offset-4 hover:text-primary"
+            >
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link
+              to="/privacy-policy"
+              className="underline underline-offset-4 hover:text-primary"
+            >
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </div>
       </div>
-
-      {showWelcomeMessage && (
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-            <h2 className="text-2xl font-bold">Welcome back!</h2>
-            <p className="text-muted-foreground">Please wait while we prepare your dashboard...</p>
-          </div>
-        </div>
-      )}
+      <div className="hidden bg-muted lg:block">
+        <img
+          src="/images/puppy.png"
+          alt="A cute puppy looking at the camera"
+          width="1920"
+          height="1080"
+          className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+        />
+      </div>
     </div>
   );
 };

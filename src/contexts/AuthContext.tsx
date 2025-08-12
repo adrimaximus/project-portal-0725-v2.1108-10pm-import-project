@@ -7,8 +7,10 @@ interface AuthContextType {
   session: SupabaseSession | null;
   user: User | null;
   loading: boolean;
+  isFreshLogin: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  clearFreshLoginFlag: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,13 +19,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFreshLogin, setIsFreshLogin] = useState(false);
   const navigate = useNavigate();
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser, retries = 3, delay = 500) => {
     for (let i = 0; i < retries; i++) {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, avatar_url')
+        .select('*')
         .eq('id', supabaseUser.id)
         .single();
 
@@ -41,17 +44,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return; // Success, exit the function
       }
 
+      // If there's an error but it's not "row not found", log it and stop.
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
         setUser(null);
         return;
       }
 
+      // If no profile was found (PGRST116 or no error but null data), wait and retry.
+      // This handles the small delay for new user profile creation via trigger.
       if (i < retries - 1) {
         await new Promise(res => setTimeout(res, delay));
       }
     }
 
+    // If still no profile after all retries, create a fallback user object.
     console.warn(`Could not fetch user profile for ${supabaseUser.id} after ${retries} attempts. Using fallback data.`);
     setUser({
       id: supabaseUser.id,
@@ -76,6 +83,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
         if (event === 'PASSWORD_RECOVERY') {
           navigate('/reset-password');
+        }
+        if (event === 'SIGNED_IN') {
+          setIsFreshLogin(true);
         }
         setSession(newSession);
         if (newSession) {
@@ -106,14 +116,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    setIsFreshLogin(false);
   };
+
+  const clearFreshLoginFlag = useCallback(() => {
+    setIsFreshLogin(false);
+  }, []);
 
   const value = {
     session,
     user,
     loading,
+    isFreshLogin,
     logout,
     refreshUser,
+    clearFreshLoginFlag,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
