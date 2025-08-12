@@ -28,10 +28,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-import { Project, ProjectStatus, PaymentStatus, AssignedUser, Task, Comment } from "@/data/projects";
+import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import DashboardProjectList from "@/components/DashboardProjectList";
+import { Badge } from "@/components/ui/badge";
 
 const DashboardSkeleton = () => (
   <div className="space-y-8 animate-pulse">
@@ -70,7 +70,7 @@ const DashboardSkeleton = () => (
           <Table>
             <TableHeader>
               <TableRow>
-                {Array.from({ length: 9 }).map((_, i) => (
+                {Array.from({ length: 7 }).map((_, i) => (
                   <TableHead key={i}><Skeleton className="h-5 w-full" /></TableHead>
                 ))}
               </TableRow>
@@ -78,7 +78,7 @@ const DashboardSkeleton = () => (
             <TableBody>
               {Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 9 }).map((_, j) => (
+                  {Array.from({ length: 7 }).map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                   ))}
                 </TableRow>
@@ -558,7 +558,107 @@ const Index = () => {
               <CardTitle>Projects</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <DashboardProjectList projects={filteredProjects} />
+              <TooltipProvider>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[250px]">Project</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Progress</TableHead>
+                        <TableHead>Assigned</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Payment</TableHead>
+                        <TableHead className="text-right">Budget</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredProjects.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="h-24 text-center">
+                            No projects found for the selected date range.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredProjects.map((project) => (
+                          <TableRow key={project.id} onClick={() => navigate(`/projects/${project.id}`)} className="cursor-pointer hover:bg-muted/50">
+                            <TableCell>
+                              <div className="font-medium">{project.name}</div>
+                              <div className="text-sm text-muted-foreground hidden md:inline">{project.category}</div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={
+                                  project.status === 'Completed' ? "border-transparent bg-green-100 text-green-800 hover:bg-green-200" :
+                                  project.status === 'In Progress' ? "border-transparent bg-blue-100 text-blue-800 hover:bg-blue-200" :
+                                  project.status === 'On Hold' ? "border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-200" :
+                                  project.status === 'Cancelled' ? "border-transparent bg-red-100 text-red-800 hover:bg-red-200" :
+                                  "border-transparent bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                }
+                              >
+                                {project.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Progress value={project.progress} className="w-20" />
+                                <span className="text-sm text-muted-foreground">{project.progress || 0}%</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center -space-x-2">
+                                {project.assignedTo.slice(0, 3).map(user => (
+                                  <Tooltip key={user.id}>
+                                    <TooltipTrigger asChild>
+                                      <Avatar className="h-8 w-8 border-2 border-background">
+                                        <AvatarImage src={user.avatar} alt={user.name} />
+                                        <AvatarFallback>{user.initials}</AvatarFallback>
+                                      </Avatar>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{user.name}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ))}
+                                {project.assignedTo.length > 3 && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Avatar className="h-8 w-8 border-2 border-background bg-muted-foreground text-background flex items-center justify-center">
+                                        <span className="text-xs font-bold">+{project.assignedTo.length - 3}</span>
+                                      </Avatar>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{project.assignedTo.length - 3} more</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {project.dueDate ? new Date(project.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={
+                                  project.paymentStatus === 'Paid' ? "border-transparent bg-green-100 text-green-800 hover:bg-green-200" :
+                                  project.paymentStatus === 'Pending' ? "border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-200" :
+                                  project.paymentStatus === 'Overdue' ? "border-transparent bg-red-100 text-red-800 hover:bg-red-200" :
+                                  "border-transparent bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                }
+                              >
+                                {project.paymentStatus}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {'Rp ' + (project.budget || 0).toLocaleString('id-ID')}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TooltipProvider>
             </CardContent>
           </Card>
         </div>
