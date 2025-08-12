@@ -109,10 +109,24 @@ const ProjectsTable = () => {
     toDate.setHours(23, 59, 59, 999);
 
     return localProjects.filter(project => {
-      if (!project.startDate || !project.dueDate) return false;
-      const projectStart = new Date(project.startDate);
-      const projectEnd = new Date(project.dueDate);
-      return projectStart <= toDate && projectEnd >= fromDate;
+      if (!project.startDate && !project.dueDate) {
+        return false;
+      }
+      
+      const projectStart = project.startDate ? new Date(project.startDate) : null;
+      const projectEnd = project.dueDate ? new Date(project.dueDate) : projectStart;
+
+      if (projectStart && projectEnd) {
+        return projectStart <= toDate && projectEnd >= fromDate;
+      }
+      if (projectStart) {
+        return projectStart >= fromDate && projectStart <= toDate;
+      }
+      if (projectEnd) {
+        return projectEnd >= fromDate && projectEnd <= toDate;
+      }
+
+      return false;
     });
   }, [localProjects, dateRange]);
 
@@ -239,7 +253,8 @@ const ProjectsTable = () => {
                 <TableHead className="w-[300px]">Project</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Progress</TableHead>
-                <TableHead>Dates</TableHead>
+                <TableHead>Start Date</TableHead>
+                <TableHead>Due Date</TableHead>
                 <TableHead>Payment</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -247,13 +262,13 @@ const ProjectsTable = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     Loading projects...
                   </TableCell>
                 </TableRow>
               ) : filteredProjects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -276,10 +291,10 @@ const ProjectsTable = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">
-                        <div>Start: {project.startDate ? format(new Date(project.startDate), 'MMM d, yyyy') : 'N/A'}</div>
-                        <div className="text-muted-foreground">Due: {project.dueDate ? format(new Date(project.dueDate), 'MMM d, yyyy') : 'N/A'}</div>
-                      </div>
+                      {project.startDate ? format(new Date(project.startDate), 'MMM d, yyyy') : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {project.dueDate ? format(new Date(project.dueDate), 'MMM d, yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={project.paymentStatus} />
