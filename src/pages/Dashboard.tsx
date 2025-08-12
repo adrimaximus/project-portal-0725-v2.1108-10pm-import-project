@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { subYears } from "date-fns";
 import {
   Tooltip,
   TooltipContent,
@@ -96,8 +95,8 @@ const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [date, setDate] = useState<DateRange | undefined>({
-    from: subYears(new Date(), 1),
-    to: new Date(),
+    from: new Date(new Date().getFullYear(), 0, 1),
+    to: new Date(new Date().getFullYear(), 11, 31),
   });
   const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
