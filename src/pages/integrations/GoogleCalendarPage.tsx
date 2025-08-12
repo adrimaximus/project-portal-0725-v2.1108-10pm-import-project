@@ -41,7 +41,12 @@ const GoogleCalendarPage = () => {
         const parsedCalendars = JSON.parse(storedCalendars);
         const parsedSelected = storedSelected ? JSON.parse(storedSelected) : [];
 
-        if (Array.isArray(parsedCalendars) && Array.isArray(parsedSelected)) {
+        // More robust validation
+        if (
+          Array.isArray(parsedCalendars) &&
+          parsedCalendars.every(cal => typeof cal === 'object' && cal !== null && 'id' in cal && 'summary' in cal) &&
+          Array.isArray(parsedSelected)
+        ) {
           setIsConnected(true);
           setCalendars(parsedCalendars);
           setSelectedCalendars(parsedSelected);
