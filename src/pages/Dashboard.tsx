@@ -1,5 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { subYears } from "date-fns";
@@ -25,7 +33,6 @@ import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import DashboardProjectList from "@/components/DashboardProjectList";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const DashboardSkeleton = () => (
   <div className="space-y-8 animate-pulse">
@@ -96,49 +103,66 @@ const Index = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      if (!user) {
+  const fetchProjects = useCallback(async (isInitialLoad = false) => {
+    if (!user) return;
+    if (isInitialLoad) setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.rpc('get_dashboard_projects');
+
+      if (error) {
+        toast.error("Failed to fetch projects.", {
+          id: 'fetch-projects-error',
+          description: "There was a problem loading your project data. Please try refreshing the page.",
+        });
+        console.error(error);
         return;
       }
       
-      try {
-        const { data, error } = await supabase.rpc('get_dashboard_projects');
+      const mappedProjects: Project[] = data.map((p: any) => ({
+        ...p,
+        status: p.status as ProjectStatus,
+        paymentStatus: p.payment_status as PaymentStatus,
+        assignedTo: p.assignedTo || [],
+        tasks: p.tasks || [],
+        comments: p.comments || [],
+        createdBy: p.created_by,
+        startDate: p.start_date,
+        dueDate: p.due_date,
+      }));
 
-        if (error) {
-          toast.error("Failed to fetch projects.", {
-            id: 'fetch-projects-error',
-            description: "There was a problem loading your project data. Please try refreshing the page.",
-          });
-          console.error(error);
-          return;
-        }
-        
-        const mappedProjects: Project[] = data.map((p: any) => ({
-          ...p,
-          status: p.status as ProjectStatus,
-          paymentStatus: p.payment_status as PaymentStatus,
-          assignedTo: p.assignedTo || [],
-          tasks: p.tasks || [],
-          comments: p.comments || [],
-          createdBy: p.created_by,
-          startDate: p.start_date,
-          dueDate: p.due_date,
-        }));
+      setProjects(mappedProjects);
+    } catch (e) {
+      toast.error("An unexpected error occurred while fetching projects.", {
+        id: 'fetch-projects-error',
+      });
+      console.error(e);
+    } finally {
+      if (isInitialLoad) setIsLoading(false);
+    }
+  }, [user]);
 
-        setProjects(mappedProjects);
-      } catch (e) {
-        toast.error("An unexpected error occurred while fetching projects.", {
-          id: 'fetch-projects-error',
-        });
-        console.error(e);
-      } finally {
-        setIsLoading(false);
-      }
+  useEffect(() => {
+    if (!user) return;
+
+    fetchProjects(true);
+
+    const handleDbChange = () => {
+      toast.info("Project data has been updated.", { duration: 2000 });
+      fetchProjects(false);
     };
 
-    fetchProjects();
-  }, [user?.id]);
+    const channel = supabase.channel('dashboard-projects-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, handleDbChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_members' }, handleDbChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, handleDbChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, handleDbChange)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchProjects]);
 
   const filteredProjects = projects.filter(project => {
     if (date?.from) {
