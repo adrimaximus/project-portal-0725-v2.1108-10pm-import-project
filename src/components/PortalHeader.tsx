@@ -72,9 +72,10 @@ const PortalHeader = () => {
     fetchUsers();
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    await logout();
+    // Navigation will be handled automatically by ProtectedRoute
+    // when the auth state changes.
   };
 
   const displayedContent = useMemo(() => {

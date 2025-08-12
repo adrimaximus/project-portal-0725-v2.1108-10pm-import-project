@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User, SupabaseSession, SupabaseUser } from '@/types';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   session: SupabaseSession | null;
@@ -107,9 +108,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Error logging out:", error);
+      toast.error("Logout failed. Please try again.");
+    }
+    // The onAuthStateChange listener will automatically handle setting user/session to null
+    // and trigger the necessary redirects via ProtectedRoute.
   };
 
   const value = {

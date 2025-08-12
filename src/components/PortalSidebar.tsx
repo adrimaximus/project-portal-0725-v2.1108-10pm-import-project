@@ -45,9 +45,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const { isFeatureEnabled } = useFeatures();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    await logout();
+    // Navigation is handled by the AuthContext state change.
   };
 
   if (!user) {
