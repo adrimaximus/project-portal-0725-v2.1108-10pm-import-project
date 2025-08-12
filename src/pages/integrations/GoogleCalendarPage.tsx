@@ -41,21 +41,29 @@ const GoogleCalendarPage = () => {
         const parsedCalendars = JSON.parse(storedCalendars);
         const parsedSelected = storedSelected ? JSON.parse(storedSelected) : [];
 
-        // More robust validation
+        // More robust validation to ensure data integrity
         if (
           Array.isArray(parsedCalendars) &&
-          parsedCalendars.every(cal => typeof cal === 'object' && cal !== null && 'id' in cal && 'summary' in cal) &&
-          Array.isArray(parsedSelected)
+          parsedCalendars.every(cal => 
+            typeof cal === 'object' && 
+            cal !== null && 
+            typeof cal.id === 'string' && 
+            typeof cal.summary === 'string'
+          ) &&
+          Array.isArray(parsedSelected) &&
+          parsedSelected.every(item => typeof item === 'string')
         ) {
           setIsConnected(true);
           setCalendars(parsedCalendars);
           setSelectedCalendars(parsedSelected);
         } else {
+          // If data is malformed, throw an error to be caught
           throw new Error("Malformed calendar data in localStorage");
         }
       }
     } catch (error) {
       console.error("Failed to load Google Calendar data from localStorage:", error);
+      // Clear corrupted data and reset state
       handleDisconnect();
     }
   }, [handleDisconnect]);
