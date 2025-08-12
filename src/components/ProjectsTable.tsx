@@ -61,15 +61,62 @@ const ProjectsTable = () => {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const { user } = useAuth();
 
-  const refreshCalendarEvents = () => {
-    const storedEvents = localStorage.getItem('googleCalendarEvents');
+  const refreshCalendarEvents = async () => {
+    const token = localStorage.getItem('googleCalendarToken');
+    const selectedCalendarsStr = localStorage.getItem('googleCalendarSelected');
+    
+    if (!token) {
+      toast.error("Google Calendar is not connected or session expired. Please connect in settings.");
+      return;
+    }
+    if (!selectedCalendarsStr) {
+      toast.info("No calendars selected to refresh.");
+      return;
+    }
+
+    const selectedCalendars = JSON.parse(selectedCalendarsStr);
+    if (!Array.isArray(selectedCalendars) || selectedCalendars.length === 0) {
+      toast.info("No calendars selected to refresh.");
+      return;
+    }
+
+    toast.info("Refreshing calendar events...");
     try {
-        const updatedEvents = storedEvents ? JSON.parse(storedEvents) : [];
-        setCalendarEvents(updatedEvents);
-        toast.success("Calendar events refreshed.");
-    } catch (e) {
-        console.error("Failed to parse calendar events from localStorage", e);
-        toast.error("Could not refresh calendar events.");
+      const timeMin = new Date().toISOString();
+      const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Next 30 days
+      const allEvents: any[] = [];
+
+      for (const calendarId of selectedCalendars) {
+        const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (response.status === 401) {
+            toast.error("Authentication expired. Please reconnect in settings.");
+            localStorage.removeItem('googleCalendarToken');
+            localStorage.removeItem('googleCalendarConnected');
+            return;
+        }
+        if (!response.ok) {
+            throw new Error(`Failed to fetch events for calendar ${calendarId}`);
+        }
+        
+        const data = await response.json();
+        if (data.items) allEvents.push(...data.items);
+      }
+      
+      allEvents.sort((a, b) => {
+        const dateA = new Date(a.start.dateTime || a.start.date);
+        const dateB = new Date(b.start.dateTime || b.start.date);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+      localStorage.setItem('googleCalendarEvents', JSON.stringify(allEvents));
+      setCalendarEvents(allEvents);
+      toast.success(`Successfully refreshed ${allEvents.length} events!`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to refresh events. Please try reconnecting in settings.");
     }
   };
 
