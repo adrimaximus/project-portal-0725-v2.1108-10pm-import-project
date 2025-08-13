@@ -30,6 +30,7 @@ const roles = [
     { value: 'member', label: 'Member', description: 'Can access and create projects.' },
     { value: 'admin', label: 'Admin', description: 'Can manage users and projects.' },
     { value: 'master admin', label: 'Master Admin', description: 'Full access to all application settings and users.' },
+    { value: 'client', label: 'Client', description: 'Can access assigned projects but cannot create new ones.' },
 ];
 
 const TeamSettingsPage = () => {
