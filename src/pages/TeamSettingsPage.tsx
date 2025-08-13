@@ -27,9 +27,9 @@ type Invite = {
 };
 
 const roles = [
-  { value: 'admin', label: 'Admin', description: 'Full access to manage the application and all its features.' },
-  { value: 'member', label: 'Member', description: 'Can access and create projects.' },
-  { value: 'client', label: 'Client', description: 'Can access assigned projects but cannot create new ones.' },
+    { value: 'member', label: 'Member', description: 'Can access and create projects.' },
+    { value: 'admin', label: 'Admin', description: 'Can manage users and projects.' },
+    { value: 'master admin', label: 'Master Admin', description: 'Full access to all application settings and users.' },
 ];
 
 const TeamSettingsPage = () => {
@@ -40,7 +40,8 @@ const TeamSettingsPage = () => {
   const [memberToDelete, setMemberToDelete] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isAdmin = currentUser?.role === 'admin';
+  const isMasterAdmin = currentUser?.role === 'master admin';
+  const isAdmin = currentUser?.role === 'admin' || isMasterAdmin;
 
   const fetchMembers = useCallback(async () => {
     setIsLoading(true);
@@ -130,7 +131,7 @@ const TeamSettingsPage = () => {
   const handleRoleChange = async (memberId: string, newRole: string) => {
     const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', memberId);
     if (error) {
-      toast.error("Failed to update role.");
+      toast.error(`Failed to update role: ${error.message}`);
     } else {
       toast.success("Role updated successfully.");
       fetchMembers();
@@ -142,7 +143,7 @@ const TeamSettingsPage = () => {
     const newStatus = member.status === 'suspended' ? 'active' : 'suspended';
     const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', member.id);
     if (error) {
-      toast.error(`Failed to ${newStatus === 'active' ? 'unsuspend' : 'suspend'} member.`);
+      toast.error(`Failed to ${newStatus === 'active' ? 'unsuspend' : 'suspend'} member: ${error.message}`);
     } else {
       toast.success(`Member has been ${newStatus}.`);
       fetchMembers();
@@ -235,7 +236,7 @@ const TeamSettingsPage = () => {
                           <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                         <SelectContent>
-                          {roles.map(role => (
+                          {roles.filter(r => isMasterAdmin || r.value !== 'master admin').map(role => (
                             <SelectItem key={role.value} value={role.value}>
                               <div className="flex flex-col items-start py-1">
                                 <span>{role.label}</span>
@@ -297,7 +298,11 @@ const TeamSettingsPage = () => {
                 <TableBody>
                   {isLoading ? (
                     <TableRow><TableCell colSpan={4} className="text-center">Loading members...</TableCell></TableRow>
-                  ) : filteredMembers.map((member) => (
+                  ) : filteredMembers.map((member) => {
+                    const isRoleChangeDisabled = !isAdmin || member.id === currentUser?.id || (member.role === 'master admin' && !isMasterAdmin);
+                    const availableRolesForMember = roles.filter(role => isMasterAdmin || role.value !== 'master admin');
+
+                    return (
                     <TableRow key={member.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -329,13 +334,13 @@ const TeamSettingsPage = () => {
                           <Select
                             value={member.role}
                             onValueChange={(value) => handleRoleChange(member.id, value)}
-                            disabled={!isAdmin || member.id === currentUser?.id}
+                            disabled={isRoleChangeDisabled}
                           >
                             <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent disabled:opacity-100 disabled:cursor-default">
                               <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                             <SelectContent>
-                              {roles.map(role => (
+                              {availableRolesForMember.map(role => (
                                 <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
                               ))}
                             </SelectContent>
@@ -354,7 +359,7 @@ const TeamSettingsPage = () => {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 onSelect={() => handleToggleSuspend(member)}
-                                disabled={member.status === 'Pending invite'}
+                                disabled={member.status === 'Pending invite' || (member.role === 'master admin' && !isMasterAdmin)}
                               >
                                 {member.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
                               </DropdownMenuItem>
@@ -362,6 +367,7 @@ const TeamSettingsPage = () => {
                               <DropdownMenuItem
                                 className="text-red-600"
                                 onSelect={() => openDeleteDialog(member)}
+                                disabled={(member.role === 'master admin' && !isMasterAdmin)}
                               >
                                 Delete
                               </DropdownMenuItem>
@@ -370,7 +376,7 @@ const TeamSettingsPage = () => {
                         )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )})}
                 </TableBody>
               </Table>
             </div>
