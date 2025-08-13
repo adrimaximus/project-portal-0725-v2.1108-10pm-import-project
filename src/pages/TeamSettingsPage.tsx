@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Invite = {
   id: number;
@@ -180,6 +181,13 @@ const TeamSettingsPage = () => {
     }
   };
 
+  const getDisabledTooltipMessage = (member: User, currentUser: User | null): string => {
+    if (!currentUser) return "You are not logged in.";
+    if (member.id === currentUser.id) return "You cannot change your own role.";
+    if (member.role === 'master admin' && currentUser.role !== 'master admin') return "Only a Master Admin can change this role.";
+    return "You do not have permission to change this role.";
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -302,6 +310,7 @@ const TeamSettingsPage = () => {
                   ) : filteredMembers.map((member) => {
                     const isRoleChangeDisabled = !isAdmin || member.id === currentUser?.id || (member.role === 'master admin' && !isMasterAdmin);
                     const availableRolesForMember = roles.filter(role => isMasterAdmin || role.value !== 'master admin');
+                    const tooltipMessage = getDisabledTooltipMessage(member, currentUser);
 
                     return (
                     <TableRow key={member.id}>
@@ -331,13 +340,27 @@ const TeamSettingsPage = () => {
                           <Badge variant={getStatusBadgeVariant(member.status)}>Suspended</Badge>
                         ) : member.status === 'Pending invite' ? (
                           <span className="text-muted-foreground capitalize">{member.role}</span>
+                        ) : isRoleChangeDisabled ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="w-full">
+                                  <Select value={member.role} disabled>
+                                    <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50">
+                                      <SelectValue placeholder={roles.find(r => r.value === member.role)?.label || member.role} />
+                                    </SelectTrigger>
+                                  </Select>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent><p>{tooltipMessage}</p></TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         ) : (
                           <Select
                             value={member.role}
                             onValueChange={(value) => handleRoleChange(member.id, value)}
-                            disabled={isRoleChangeDisabled}
                           >
-                            <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent disabled:opacity-100 disabled:cursor-default">
+                            <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent">
                               <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                             <SelectContent>
