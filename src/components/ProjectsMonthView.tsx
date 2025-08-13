@@ -27,6 +27,7 @@ import {
 import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { CreateProjectSheet } from './CreateProjectSheet';
 
 type CalendarItem = Project & { lane?: number };
 
@@ -218,6 +219,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
           {format(currentDate, 'MMMM yyyy', { locale: id })}
         </h2>
         <div className="flex items-center gap-2">
+          <CreateProjectSheet />
           <Button variant="outline" onClick={() => setCurrentDate(new Date())}>Hari Ini</Button>
           <Button variant="outline" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
             <ChevronLeft className="h-4 w-4" />
