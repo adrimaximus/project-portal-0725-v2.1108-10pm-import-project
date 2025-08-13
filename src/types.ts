@@ -9,7 +9,10 @@ export interface User {
   initials: string;
   first_name?: string | null;
   last_name?: string | null;
-  role?: 'owner' | 'member' | string;
+  role?: 'owner' | 'member' | 'admin' | string;
+  status?: 'active' | 'suspended' | 'Pending invite' | string;
+  lastActive?: string;
+  updated_at?: string;
 }
 export type UserProfile = User;
 

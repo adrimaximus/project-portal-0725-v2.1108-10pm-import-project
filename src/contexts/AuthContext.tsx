@@ -38,25 +38,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
           first_name: profile.first_name,
           last_name: profile.last_name,
+          role: profile.role,
+          status: profile.status,
         });
         return; // Success, exit the function
       }
 
-      // If there's an error but it's not "row not found", log it and stop.
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
         setUser(null);
         return;
       }
 
-      // If no profile was found (PGRST116 or no error but null data), wait and retry.
-      // This handles the small delay for new user profile creation via trigger.
       if (i < retries - 1) {
         await new Promise(res => setTimeout(res, delay));
       }
     }
 
-    // If still no profile after all retries, create a fallback user object.
     console.warn(`Could not fetch user profile for ${supabaseUser.id} after ${retries} attempts. Using fallback data.`);
     setUser({
       id: supabaseUser.id,
@@ -116,8 +114,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error logging out:", error);
       toast.error("Logout failed. Please try again.");
     }
-    // The onAuthStateChange listener will automatically handle setting user/session to null
-    // and trigger the necessary redirects via ProtectedRoute.
   };
 
   const value = {

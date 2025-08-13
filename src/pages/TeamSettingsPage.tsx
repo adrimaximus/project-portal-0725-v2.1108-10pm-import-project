@@ -1,22 +1,24 @@
 import { Link } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
-import { useFeatures } from '@/contexts/FeaturesContext';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MoreHorizontal, PlusCircle, Search, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
-import React, { useState, useEffect, useMemo } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { User } from '@/types';
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 type Invite = {
   id: number;
@@ -24,113 +26,54 @@ type Invite = {
   role: string;
 };
 
-type Member = {
-  name: string;
-  email: string;
-  avatar: string;
-  role: string;
-  status: 'Active' | 'Suspended' | 'Pending invite';
-  lastActive: string;
-};
-
-type Role = {
-  value: string;
-  label: string;
-  description: string;
-};
-
-type CustomRole = Role & {
-  permissions: Record<string, boolean>;
-};
-
-const initialMembers: Member[] = [
-  { name: 'Theresa Webb', email: 'david@withlantern.com', avatar: 'TW', role: 'Owner', status: 'Active', lastActive: '23 Dec 2022' },
-  { name: 'Darlene Robertson', email: 'darrell.steward@withlantern.com', avatar: 'DR', role: 'Member', status: 'Suspended', lastActive: '23 Dec 2022' },
-  { name: 'Anne Black', email: 'sagar@withlantern.com', avatar: 'AB', role: 'Client', status: 'Active', lastActive: '23 Dec 2022' },
-  { name: 'Floyd Miles', email: 'sagar@withlantern.com', avatar: 'FM', role: 'View Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
-  { name: 'Cody Fisher', email: 'sagar@withlantern.com', avatar: 'CF', role: 'Admin', status: 'Active', lastActive: '23 Dec 2022' },
-  { name: 'Kristin Watson', email: 'darrell.steward@withlantern.com', avatar: 'KW', role: 'Comment Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
-  { name: 'Leslie Alexander', email: 'sagar@withlantern.com', avatar: 'LA', role: 'View Only', status: 'Pending invite', lastActive: '23 Dec 2022' },
-];
-
-const defaultRoles: Role[] = [
-  { value: 'owner', label: 'Owner', description: 'Full access to the project and billing.' },
+const roles = [
   { value: 'admin', label: 'Admin', description: 'Full access to manage the application and all its features.' },
-  { value: 'member', label: 'Member', description: 'Can access the project and create new projects.' },
-  { value: 'client', label: 'Client', description: 'Can access the project but cannot create new projects.' },
-  { value: 'comment-only', label: 'Comment Only', description: 'Can comment in the project but cannot create or delete anything.' },
-  { value: 'view-only', label: 'View Only', description: 'Can view the project but cannot do anything else.' },
+  { value: 'member', label: 'Member', description: 'Can access and create projects.' },
+  { value: 'client', label: 'Client', description: 'Can access assigned projects but cannot create new ones.' },
 ];
 
 const TeamSettingsPage = () => {
-  const { features } = useFeatures();
-  const [members, setMembers] = useState<Member[]>(initialMembers);
+  const { user: currentUser } = useAuth();
+  const [members, setMembers] = useState<User[]>([]);
   const [invites, setInvites] = useState<Invite[]>([{ id: Date.now(), email: '', role: 'member' }]);
-  const [isCustomRoleDialogOpen, setCustomRoleDialogOpen] = useState(false);
-  const [customRoleName, setCustomRoleName] = useState('');
-  const [customRolePermissions, setCustomRolePermissions] = useState<Record<string, boolean>>({});
-  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
+  const [memberToDelete, setMemberToDelete] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const storedRoles = localStorage.getItem('customRoles');
-    if (storedRoles) {
-      setCustomRoles(JSON.parse(storedRoles));
+  const isAdmin = currentUser?.role === 'admin';
+
+  const fetchMembers = useCallback(async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase.from('profiles').select('*');
+    if (error) {
+      toast.error("Failed to fetch team members.");
+      console.error(error);
+    } else {
+      const mappedUsers: User[] = data.map(profile => ({
+        id: profile.id,
+        name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+        email: profile.email,
+        avatar: profile.avatar_url,
+        role: profile.role,
+        status: profile.status,
+        initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+        updated_at: profile.updated_at,
+      }));
+      setMembers(mappedUsers);
     }
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('customRoles', JSON.stringify(customRoles));
-  }, [customRoles]);
-
-  const allRoles = useMemo(() => [...defaultRoles, ...customRoles], [customRoles]);
+    fetchMembers();
+  }, [fetchMembers]);
 
   const filteredMembers = useMemo(() => {
     return members.filter(member =>
         member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.email.toLowerCase().includes(searchTerm.toLowerCase())
+        (member.email && member.email.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [members, searchTerm]);
-
-  const roleNameExists = useMemo(() => {
-    const trimmedName = customRoleName.trim().toLowerCase();
-    if (!trimmedName) return false;
-    return allRoles.some(role => role.label.toLowerCase() === trimmedName);
-  }, [customRoleName, allRoles]);
-
-  useEffect(() => {
-    if (isCustomRoleDialogOpen) {
-      const initialPermissions = features.reduce((acc, feature) => {
-        acc[feature.id] = false;
-        return acc;
-      }, {} as Record<string, boolean>);
-      setCustomRolePermissions(initialPermissions);
-      setCustomRoleName('');
-    }
-  }, [isCustomRoleDialogOpen, features]);
-
-  const handlePermissionToggle = (featureId: string) => {
-    setCustomRolePermissions(prev => ({
-      ...prev,
-      [featureId]: !prev[featureId],
-    }));
-  };
-
-  const handleSaveCustomRole = () => {
-    if (!customRoleName.trim() || roleNameExists) return;
-
-    const newRole: CustomRole = {
-      label: customRoleName.trim(),
-      value: customRoleName.trim().toLowerCase().replace(/\s+/g, '-'),
-      description: 'Custom role with specific permissions.',
-      permissions: customRolePermissions,
-    };
-
-    setCustomRoles(prev => [...prev, newRole]);
-    setCustomRoleDialogOpen(false);
-    toast.success(`Custom role "${newRole.label}" created.`);
-  };
 
   const handleInviteChange = (id: number, field: 'email' | 'role', value: string) => {
     setInvites(currentInvites =>
@@ -148,81 +91,85 @@ const TeamSettingsPage = () => {
     setInvites(currentInvites => currentInvites.filter(invite => invite.id !== id));
   };
 
-  const handleSendInvites = () => {
+  const handleSendInvites = async () => {
     const validInvites = invites.filter(invite => invite.email.trim() !== '');
     if (validInvites.length === 0) {
       toast.error("Please enter at least one email address.");
       return;
     }
 
-    const newMembers: Member[] = validInvites.map(invite => {
-        const roleInfo = allRoles.find(r => r.value === invite.role);
-        return {
-          name: invite.email.split('@')[0],
-          email: invite.email,
-          avatar: invite.email.substring(0, 2).toUpperCase(),
-          role: roleInfo ? roleInfo.label : 'Member',
-          status: 'Pending invite',
-          lastActive: '',
-        };
+    let successCount = 0;
+    toast.info(`Sending ${validInvites.length} invite(s)...`);
+
+    for (const invite of validInvites) {
+      const { error } = await supabase.functions.invoke('invite-user', {
+        body: { email: invite.email, role: invite.role },
       });
 
-    const membersWithNewInvites = [...members];
-    let addedCount = 0;
-    newMembers.forEach(newMember => {
-      if (!members.some(member => member.email === newMember.email)) {
-        membersWithNewInvites.push(newMember);
-        addedCount++;
+      if (error) {
+        toast.error(`Failed to send invite to ${invite.email}: ${error.message}`);
+      } else {
+        successCount++;
+        setMembers(prev => [...prev, {
+          id: invite.email,
+          name: invite.email,
+          email: invite.email,
+          role: invite.role,
+          status: 'Pending invite',
+          initials: '??',
+        }]);
       }
-    });
+    }
 
-    setMembers(membersWithNewInvites);
-    setInvites([{ id: Date.now(), email: '', role: 'member' }]);
-    toast.success(`${addedCount} invite(s) sent successfully!`);
+    if (successCount > 0) {
+      toast.success(`${successCount} invite(s) sent successfully!`);
+      setInvites([{ id: Date.now(), email: '', role: 'member' }]);
+    }
   };
 
-  const handleRoleChange = (memberEmail: string, newRoleValue: string) => {
-    const newRole = allRoles.find(r => r.value === newRoleValue);
-    if (!newRole) return;
-
-    setMembers(currentMembers =>
-        currentMembers.map(member =>
-            member.email === memberEmail ? { ...member, role: newRole.label } : member
-        )
-    );
-    toast.success(`Role for ${memberEmail} updated to ${newRole.label}.`);
+  const handleRoleChange = async (memberId: string, newRole: string) => {
+    const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', memberId);
+    if (error) {
+      toast.error("Failed to update role.");
+    } else {
+      toast.success("Role updated successfully.");
+      fetchMembers();
+    }
   };
 
-  const handleToggleSuspend = (member: Member) => {
-    setMembers(currentMembers =>
-      currentMembers.map(m => {
-        if (m.email === member.email) {
-          if (m.status === 'Pending invite') return m;
-          const newStatus = m.status === 'Suspended' ? 'Active' : 'Suspended';
-          toast.success(`Member ${m.name} has been ${newStatus.toLowerCase()}.`);
-          return { ...m, status: newStatus };
-        }
-        return m;
-      })
-    );
+  const handleToggleSuspend = async (member: User) => {
+    if (member.status === 'Pending invite') return;
+    const newStatus = member.status === 'suspended' ? 'active' : 'suspended';
+    const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', member.id);
+    if (error) {
+      toast.error(`Failed to ${newStatus === 'active' ? 'unsuspend' : 'suspend'} member.`);
+    } else {
+      toast.success(`Member has been ${newStatus}.`);
+      fetchMembers();
+    }
   };
 
-  const openDeleteDialog = (member: Member) => {
+  const openDeleteDialog = (member: User) => {
     setMemberToDelete(member);
   };
 
-  const confirmDeleteMember = () => {
+  const confirmDeleteMember = async () => {
     if (!memberToDelete) return;
-    setMembers(currentMembers =>
-        currentMembers.filter(member => member.email !== memberToDelete.email)
-    );
-    toast.success(`Member ${memberToDelete.name} has been deleted.`);
+    const { error } = await supabase.functions.invoke('delete-user', {
+      body: { user_id: memberToDelete.id },
+    });
+    if (error) {
+      toast.error(`Failed to delete member: ${error.message}`);
+    } else {
+      toast.success(`Member ${memberToDelete.name} has been deleted.`);
+      fetchMembers();
+    }
     setMemberToDelete(null);
   };
 
   const getStatusBadgeVariant = (status: string): "destructive" | "secondary" | "outline" => {
     switch (status) {
-      case 'Suspended':
+      case 'suspended':
         return 'destructive';
       case 'Pending invite':
         return 'secondary';
@@ -230,35 +177,6 @@ const TeamSettingsPage = () => {
         return 'outline';
     }
   };
-
-  const renderRoleOptions = (roles: Role[], customRoles: CustomRole[]) => (
-    <>
-      {roles.map(role => (
-        <SelectItem key={role.value} value={role.value}>
-          <div className="flex flex-col items-start py-1">
-            <span>{role.label}</span>
-            <span className="text-xs text-muted-foreground whitespace-normal">{role.description}</span>
-          </div>
-        </SelectItem>
-      ))}
-      {customRoles.length > 0 && <SelectSeparator />}
-      {customRoles.map(role => (
-        <SelectItem key={role.value} value={role.value}>
-          <div className="flex flex-col items-start py-1">
-            <span>{role.label}</span>
-            <span className="text-xs text-muted-foreground whitespace-normal">{role.description}</span>
-          </div>
-        </SelectItem>
-      ))}
-      <SelectSeparator />
-      <SelectItem value="create-custom">
-        <div className="flex flex-col items-start py-1">
-          <span>Create Custom Role</span>
-          <span className="text-xs text-muted-foreground">Set granular permissions.</span>
-        </div>
-      </SelectItem>
-    </>
-  );
 
   return (
     <PortalLayout>
@@ -286,64 +204,66 @@ const TeamSettingsPage = () => {
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Invite Team Members</CardTitle>
-            <CardDescription>
-              Add your colleagues to collaborate and assign them a role.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {invites.map((invite) => (
-                <div key={invite.id} className="flex flex-col sm:flex-row items-end gap-3">
-                  <div className="flex-grow space-y-1.5 w-full">
-                    <Label htmlFor={`email-${invite.id}`}>Email address</Label>
-                    <Input
-                      id={`email-${invite.id}`}
-                      placeholder="name@example.com"
-                      value={invite.email}
-                      onChange={(e) => handleInviteChange(invite.id, 'email', e.target.value)}
-                    />
+        {isAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Invite Team Members</CardTitle>
+              <CardDescription>
+                Add your colleagues to collaborate and assign them a role.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {invites.map((invite) => (
+                  <div key={invite.id} className="flex flex-col sm:flex-row items-end gap-3">
+                    <div className="flex-grow space-y-1.5 w-full">
+                      <Label htmlFor={`email-${invite.id}`}>Email address</Label>
+                      <Input
+                        id={`email-${invite.id}`}
+                        placeholder="name@example.com"
+                        value={invite.email}
+                        onChange={(e) => handleInviteChange(invite.id, 'email', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5 flex-shrink-0 w-full sm:w-auto">
+                      <Label htmlFor={`role-${invite.id}`}>Role</Label>
+                      <Select
+                        value={invite.role}
+                        onValueChange={(value) => handleInviteChange(invite.id, 'role', value)}
+                      >
+                        <SelectTrigger id={`role-${invite.id}`} className="w-full sm:w-[220px]">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roles.map(role => (
+                            <SelectItem key={role.value} value={role.value}>
+                              <div className="flex flex-col items-start py-1">
+                                <span>{role.label}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {invites.length > 1 && (
+                      <Button variant="ghost" size="icon" onClick={() => removeInviteField(invite.id)} className="flex-shrink-0">
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Remove</span>
+                      </Button>
+                    )}
                   </div>
-                  <div className="space-y-1.5 flex-shrink-0 w-full sm:w-auto">
-                    <Label htmlFor={`role-${invite.id}`}>Role</Label>
-                    <Select
-                      value={invite.role}
-                      onValueChange={(value) => {
-                        if (value === 'create-custom') {
-                          setCustomRoleDialogOpen(true);
-                        } else {
-                          handleInviteChange(invite.id, 'role', value);
-                        }
-                      }}
-                    >
-                      <SelectTrigger id={`role-${invite.id}`} className="w-full sm:w-[220px]">
-                        {allRoles.find(r => r.value === invite.role)?.label ?? <span className="text-muted-foreground">Select a role</span>}
-                      </SelectTrigger>
-                      <SelectContent>
-                        {renderRoleOptions(defaultRoles, customRoles)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {invites.length > 1 && (
-                    <Button variant="ghost" size="icon" onClick={() => removeInviteField(invite.id)} className="flex-shrink-0">
-                      <X className="h-4 w-4" />
-                      <span className="sr-only">Remove</span>
-                    </Button>
-                  )}
-                </div>
-              ))}
-              <Button variant="link" className="p-0 h-auto text-primary" onClick={addInviteField}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add another
-              </Button>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full sm:w-auto" onClick={handleSendInvites}>Send Invites</Button>
-          </CardFooter>
-        </Card>
+                ))}
+                <Button variant="link" className="p-0 h-auto text-primary" onClick={addInviteField}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add another
+                </Button>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button className="w-full sm:w-auto" onClick={handleSendInvites}>Send Invites</Button>
+            </CardFooter>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -369,50 +289,53 @@ const TeamSettingsPage = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Last Active</TableHead>
                     <TableHead className="w-[180px]">Role</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredMembers.map((member, index) => (
-                    <TableRow key={index}>
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={4} className="text-center">Loading members...</TableCell></TableRow>
+                  ) : filteredMembers.map((member) => (
+                    <TableRow key={member.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarFallback>{member.avatar}</AvatarFallback>
+                            <AvatarImage src={member.avatar} />
+                            <AvatarFallback>{member.initials}</AvatarFallback>
                           </Avatar>
-                          <span className="font-medium">{member.name}</span>
+                          <div>
+                            <span className="font-medium">{member.name}</span>
+                            <p className="text-sm text-muted-foreground">{member.email}</p>
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{member.email}</TableCell>
                       <TableCell>
                         {member.status === 'Pending invite' ? (
                           <Badge variant={getStatusBadgeVariant(member.status)}>Pending invite</Badge>
                         ) : (
-                          <span className="text-muted-foreground">{member.lastActive}</span>
+                          <span className="text-muted-foreground">
+                            {member.updated_at ? formatDistanceToNow(new Date(member.updated_at), { addSuffix: true, locale: id }) : 'N/A'}
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {member.status === 'Suspended' ? (
+                        {member.status === 'suspended' ? (
                           <Badge variant={getStatusBadgeVariant(member.status)}>Suspended</Badge>
                         ) : member.status === 'Pending invite' ? (
-                          <span className="text-muted-foreground">{member.role}</span>
+                          <span className="text-muted-foreground capitalize">{member.role}</span>
                         ) : (
                           <Select
-                            defaultValue={allRoles.find(r => r.label === member.role)?.value}
-                            onValueChange={(value) => handleRoleChange(member.email, value)}
+                            value={member.role}
+                            onValueChange={(value) => handleRoleChange(member.id, value)}
+                            disabled={!isAdmin || member.id === currentUser?.id}
                           >
-                            <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent">
+                            <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent disabled:opacity-100 disabled:cursor-default">
                               <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                             <SelectContent>
-                              {defaultRoles.map(role => (
-                                <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
-                              ))}
-                              {customRoles.length > 0 && <SelectSeparator />}
-                              {customRoles.map(role => (
+                              {roles.map(role => (
                                 <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
                               ))}
                             </SelectContent>
@@ -420,31 +343,31 @@ const TeamSettingsPage = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Edit</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onSelect={() => handleToggleSuspend(member)}
-                              disabled={member.status === 'Pending invite'}
-                            >
-                              {member.status === 'Suspended' ? 'Unsuspend' : 'Suspend'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onSelect={() => openDeleteDialog(member)}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {member.id !== currentUser?.id && isAdmin && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onSelect={() => handleToggleSuspend(member)}
+                                disabled={member.status === 'Pending invite'}
+                              >
+                                {member.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onSelect={() => openDeleteDialog(member)}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -454,53 +377,6 @@ const TeamSettingsPage = () => {
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={isCustomRoleDialogOpen} onOpenChange={setCustomRoleDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Custom Role</DialogTitle>
-            <DialogDescription>
-              Set granular permissions for people based on roles. With custom roles, you're in complete control of locking down your project.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="role-name">Role Name</Label>
-              <Input
-                id="role-name"
-                placeholder="e.g., Contractor"
-                value={customRoleName}
-                onChange={(e) => setCustomRoleName(e.target.value)}
-              />
-              {roleNameExists && (
-                <p className="text-sm text-red-500">A role with this name already exists.</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>Permissions</Label>
-              <div className="space-y-2 pt-2 max-h-[300px] overflow-y-auto pr-3">
-                {features
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map(feature => (
-                      <div key={feature.id} className="flex items-center justify-between rounded-lg border p-3">
-                        <Label htmlFor={`perm-${feature.id}`} className="font-normal">{feature.name}</Label>
-                        <Switch
-                          id={`perm-${feature.id}`}
-                          checked={customRolePermissions[feature.id] || false}
-                          onCheckedChange={() => handlePermissionToggle(feature.id)}
-                          disabled={feature.id === 'settings'}
-                        />
-                      </div>
-                    ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCustomRoleDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveCustomRole} disabled={!customRoleName.trim() || roleNameExists}>Save Role</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog open={!!memberToDelete} onOpenChange={(open) => !open && setMemberToDelete(null)}>
         <AlertDialogContent>
