@@ -193,27 +193,46 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
 
   const dayHeaders = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
-  const renderItem = (item: Project, isStart: boolean, startCol: number) => {
+  const renderItem = (item: Project, isStart: boolean, startCol: number, isSingleDay: boolean) => {
     const name = item.name;
     const assignedTo = item.assignedTo;
 
-    const content = (
-      <div className="flex items-center gap-2 w-full overflow-hidden">
-        <div className="flex-1 truncate">
-          <p className="font-semibold text-[10px] md:text-xs truncate">{name}</p>
+    let content;
+    if (isSingleDay) {
+      content = (
+        <div className="flex flex-col justify-between h-full">
+          <p className="font-semibold text-[10px] md:text-xs line-clamp-2 leading-tight">
+            {name}
+          </p>
+          <div className="flex -space-x-2 mt-auto self-end">
+            {assignedTo.slice(0, 2).map(user => (
+              <Avatar key={user.id} className="h-3 w-3 md:h-4 md:w-4 border border-background">
+                <AvatarImage src={user.avatar} />
+                <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
+              </Avatar>
+            ))}
+          </div>
         </div>
-        <div className="flex -space-x-2">
-          {assignedTo.slice(0, 2).map(user => (
-            <Avatar key={user.id} className="h-3 w-3 md:h-4 md:w-4 border border-background">
-              <AvatarImage src={user.avatar} />
-              <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
-            </Avatar>
-          ))}
+      );
+    } else {
+      content = (
+        <div className="flex items-center gap-2 w-full overflow-hidden">
+          <div className="flex-1 truncate">
+            <p className="font-semibold text-[10px] md:text-xs truncate">{name}</p>
+          </div>
+          <div className="flex -space-x-2">
+            {assignedTo.slice(0, 2).map(user => (
+              <Avatar key={user.id} className="h-3 w-3 md:h-4 md:w-4 border border-background">
+                <AvatarImage src={user.avatar} />
+                <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
+              </Avatar>
+            ))}
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
     
-    return <Link to={`/projects/${item.slug}`}>{content}</Link>;
+    return <Link to={`/projects/${item.slug}`} className="block h-full w-full">{content}</Link>;
   };
 
   return (
@@ -266,13 +285,16 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
                             Acara pada {format(day, 'd MMM', { locale: id })}
                           </div>
                           <ul className="space-y-1">
-                            {hiddenItems.map(item => (
-                              <li key={item.id}>
-                                <div className={cn("block p-2 rounded-md border-l-4 h-[20px] md:h-6", getProjectColorClasses(item))}>
-                                  {renderItem(item, true, 1)}
-                                </div>
-                              </li>
-                            ))}
+                            {hiddenItems.map(item => {
+                              const isSingleDayEvent = differenceInDays(parseISO(item.dueDate!), parseISO(item.startDate!)) === 0;
+                              return (
+                                <li key={item.id}>
+                                  <div className={cn("block p-2 rounded-md border-l-4 h-[20px] md:h-6", getProjectColorClasses(item))}>
+                                    {renderItem(item, true, 1, isSingleDayEvent)}
+                                  </div>
+                                </li>
+                              )
+                            })}
                           </ul>
                         </PopoverContent>
                       </Popover>
@@ -297,7 +319,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
                     width: `calc(${span / 7 * 100}% - 4px)`,
                   }}
                 >
-                  {(isStart || startCol === 1) && renderItem(item, isStart, startCol)}
+                  {(isStart || startCol === 1) && renderItem(item, isStart, startCol, span === 1)}
                 </div>
               ))}
             </div>
