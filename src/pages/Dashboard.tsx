@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 import { ProjectAiAssistant } from "@/components/ProjectAiAssistant";
+import AiHealthSummaryCard from "@/components/dashboard/AiHealthSummaryCard";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -79,6 +80,9 @@ const Index = () => {
                     </Button>
                 </div>
                 <DateRangePicker date={date} onDateChange={setDate} />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <AiHealthSummaryCard projects={filteredProjects} />
             </div>
             <DashboardStatsGrid projects={filteredProjects} />
             <CollaboratorsList projects={filteredProjects} />
