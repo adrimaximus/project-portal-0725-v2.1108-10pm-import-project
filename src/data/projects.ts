@@ -76,8 +76,8 @@ export interface Project {
   status: ProjectStatus | string;
   progress: number;
   budget: number;
-  startDate: string; // ISO string
-  dueDate: string; // ISO string
+  startDate?: string; // ISO string
+  dueDate?: string; // ISO string
   paymentStatus: PaymentStatus | string;
   paymentDueDate?: string;
   createdBy: UserProfile;

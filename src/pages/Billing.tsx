@@ -48,7 +48,7 @@ const Billing = () => {
   const invoices: Invoice[] = dummyProjects
     .map(project => {
       const status = getInvoiceStatus(project.paymentStatus);
-      if (!status || !project.budget) {
+      if (!status || !project.budget || !project.dueDate) {
         return null;
       }
       

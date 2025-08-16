@@ -25,7 +25,7 @@ const ProjectDetailsCard = ({ project }: ProjectDetailsCardProps) => {
           <div>
             <p className="font-medium">Timeline</p>
             <p className="text-muted-foreground">
-              {format(new Date(project.startDate || Date.now()), "dd MMM yyyy")} - {format(new Date(project.dueDate), "dd MMM yyyy")}
+              {format(new Date(project.startDate || Date.now()), "dd MMM yyyy")} - {project.dueDate ? format(new Date(project.dueDate), "dd MMM yyyy") : 'N/A'}
             </p>
           </div>
         </div>
