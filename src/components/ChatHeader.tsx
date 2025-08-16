@@ -9,6 +9,7 @@ import {
 import { Conversation } from "@/types";
 import { ArrowLeft, MoreVertical, Trash2, UserX, Users } from "lucide-react";
 import StackedAvatar from "./StackedAvatar";
+import { getInitials } from "@/lib/utils";
 
 interface ChatHeaderProps {
   selectedConversation: Conversation | null;
@@ -39,7 +40,7 @@ const ChatHeader = ({ selectedConversation, onBack }: ChatHeaderProps) => {
       ) : (
         <Avatar className="h-10 w-10 border">
           <AvatarImage src={userAvatar} alt={userName} />
-          <AvatarFallback>{userName.charAt(0)}</AvatarFallback>
+          <AvatarFallback>{getInitials(userName)}</AvatarFallback>
         </Avatar>
       )}
       <div className="ml-4 flex-1">

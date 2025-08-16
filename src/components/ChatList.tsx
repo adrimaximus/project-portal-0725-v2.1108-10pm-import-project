@@ -6,7 +6,7 @@ import { Search, MessageSquarePlus } from "lucide-react";
 import { Conversation } from "@/types";
 import { Collaborator } from "@/types";
 import NewConversationDialog from "./NewConversationDialog";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -81,7 +81,7 @@ const ChatList = ({
           >
             <Avatar>
               <AvatarImage src={c.userAvatar} />
-              <AvatarFallback>{c.userName.charAt(0)}</AvatarFallback>
+              <AvatarFallback>{getInitials(c.userName)}</AvatarFallback>
             </Avatar>
             <div className="flex-1 overflow-hidden">
               <p className="font-semibold truncate">{c.userName}</p>
