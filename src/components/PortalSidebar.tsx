@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -36,6 +36,7 @@ type NavItem = {
   icon: LucideIcon;
   badge?: number;
   isCustom?: boolean;
+  allowedRoles?: string[];
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
@@ -47,39 +48,50 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
   const handleLogout = async () => {
     await logout();
-    // Navigation is handled by the AuthContext state change.
   };
 
-  if (!user) {
-    return null;
-  }
-
-  const totalUnreadChatCount = 0; // Placeholder, will be implemented with real data later
-
+  const totalUnreadChatCount = 0;
   const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 
-  const [defaultNavItems] = useState<NavItem[]>(() => [
-    { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
-    { id: "projects", href: "/projects", label: "Projects", icon: Package },
-    { id: "request", href: "/request", label: "Request", icon: LayoutGrid },
-    { 
-      id: "chat",
-      href: "/chat", 
-      label: "Chat", 
-      icon: MessageSquare, 
-      ...(totalUnreadChatCount > 0 && { badge: totalUnreadChatCount }) 
-    },
-    { id: "mood-tracker", href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
-    { id: "goals", href: "/goals", label: "Goals", icon: Target },
-    { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
-    { id: "settings", href: "/settings", label: "Settings", icon: Settings },
-    { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, ...(unreadNotificationCount > 0 && { badge: unreadNotificationCount }) },
-  ]);
+  const defaultNavItems = useMemo(() => {
+    if (!user) return [];
+
+    const items: NavItem[] = [
+      { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
+      { id: "projects", href: "/projects", label: "Projects", icon: Package },
+      { id: "request", href: "/request", label: "Request", icon: LayoutGrid },
+      { 
+        id: "chat",
+        href: "/chat", 
+        label: "Chat", 
+        icon: MessageSquare, 
+        ...(totalUnreadChatCount > 0 && { badge: totalUnreadChatCount }) 
+      },
+      { id: "mood-tracker", href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
+      { id: "goals", href: "/goals", label: "Goals", icon: Target },
+      { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
+      { id: "settings", href: "/settings", label: "Settings", icon: Settings, allowedRoles: ['admin', 'master admin'] },
+      { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, ...(unreadNotificationCount > 0 && { badge: unreadNotificationCount }) },
+    ];
+
+    return items.filter(item => {
+      const featureEnabled = item.id === 'chat' || isFeatureEnabled(item.id);
+      if (!featureEnabled) return false;
+
+      if (item.allowedRoles && !item.allowedRoles.includes(user.role || '')) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [isFeatureEnabled, user, totalUnreadChatCount, unreadNotificationCount]);
   
   const [customNavItems, setCustomNavItems] = useState<NavItem[]>([]);
-  const localStorageKey = `customNavItems_${user.id}`;
+  const localStorageKey = user ? `customNavItems_${user.id}` : null;
 
   useEffect(() => {
+    if (!localStorageKey) return;
+    
     const loadCustomItems = () => {
         try {
           const storedItems = localStorage.getItem(localStorageKey);
@@ -116,6 +128,10 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         window.removeEventListener('storage', handleStorageChange);
     }
   }, [localStorageKey]);
+
+  if (!user) {
+    return null;
+  }
 
   const NavLink = ({ item }: { item: NavItem }) => {
     if (isCollapsed) {
@@ -162,10 +178,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     );
   };
 
-  const visibleDefaultNavItems = defaultNavItems.filter(item => item.id === 'chat' || isFeatureEnabled(item.id));
   const allVisibleNavItems = isFeatureEnabled('custom-links')
-    ? [...visibleDefaultNavItems, ...customNavItems]
-    : visibleDefaultNavItems;
+    ? [...defaultNavItems, ...customNavItems]
+    : defaultNavItems;
 
   return (
     <div
