@@ -7,6 +7,8 @@ import { Conversation } from "@/types";
 import { Collaborator } from "@/types";
 import NewConversationDialog from "./NewConversationDialog";
 import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 interface ChatListProps {
   conversations: Conversation[];
@@ -29,6 +31,20 @@ const ChatList = ({
   const filteredConversations = conversations.filter((c) =>
     c.userName.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      // Check for invalid or very old (likely default) dates
+      if (isNaN(date.getTime()) || date.getFullYear() < 2000) {
+        return "";
+      }
+      return formatDistanceToNow(date, { addSuffix: true, locale: id });
+    } catch (e) {
+      console.error("Error formatting date:", e);
+      return "";
+    }
+  };
 
   return (
     <div className="flex flex-col h-full border-r bg-background">
@@ -73,7 +89,7 @@ const ChatList = ({
                 {c.lastMessage}
               </p>
             </div>
-            <span className="text-xs text-muted-foreground">{c.lastMessageTimestamp}</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(c.lastMessageTimestamp)}</span>
           </div>
         ))}
       </div>
