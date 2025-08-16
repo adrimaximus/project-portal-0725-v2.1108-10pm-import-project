@@ -3,7 +3,7 @@ import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, C
 import { Project } from '@/types';
 import { analyzeProjects, diagnoseProjectVisibility } from '@/lib/openai';
 import { toast } from 'sonner';
-import { Activity, AlertTriangle, Loader2, ShieldQuestion } from 'lucide-react';
+import { Activity, AlertTriangle, Loader2, ShieldQuestion, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface ProjectAiAssistantProps {
@@ -20,8 +20,11 @@ const aiActions = [
 
 export function ProjectAiAssistant({ open, onOpenChange, projects }: ProjectAiAssistantProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [inputValue, setInputValue] = useState('');
 
-  const handleSelectAction = async (actionId: string) => {
+  const handleQuery = async (query: string) => {
+    if (!query) return;
+
     setIsLoading(true);
     const toastId = toast.loading("AI is analyzing...", {
       icon: <Loader2 className="h-4 w-4 animate-spin" />,
@@ -29,10 +32,10 @@ export function ProjectAiAssistant({ open, onOpenChange, projects }: ProjectAiAs
 
     try {
       let result;
-      if (actionId === 'diagnose_visibility') {
+      if (query === 'diagnose_visibility') {
         result = await diagnoseProjectVisibility();
       } else {
-        result = await analyzeProjects(projects, actionId);
+        result = await analyzeProjects(projects, query);
       }
       
       toast.success("AI Analysis Complete", {
@@ -54,20 +57,39 @@ export function ProjectAiAssistant({ open, onOpenChange, projects }: ProjectAiAs
       });
     } finally {
       setIsLoading(false);
+      setInputValue('');
       onOpenChange(false);
     }
   };
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="What can I help you with?" />
+      <CommandInput 
+        placeholder="Ask about your projects..." 
+        value={inputValue}
+        onValueChange={setInputValue}
+      />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
+        
+        {inputValue && (
+          <CommandGroup heading="Custom Query">
+            <CommandItem
+              onSelect={() => handleQuery(inputValue)}
+              disabled={isLoading}
+              className="cursor-pointer"
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              <span>Ask: "{inputValue}"</span>
+            </CommandItem>
+          </CommandGroup>
+        )}
+
         <CommandGroup heading="AI Actions">
           {aiActions.map(action => (
             <CommandItem
               key={action.id}
-              onSelect={() => handleSelectAction(action.id)}
+              onSelect={() => handleQuery(action.id)}
               disabled={isLoading}
               className="cursor-pointer"
             >
