@@ -20,31 +20,48 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   useEffect(() => {
     if (!currentUser) return;
 
-    const fetchCollaborators = async () => {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, avatar_url');
+    const channel = supabase.channel('online-users', {
+      config: {
+        presence: {
+          key: currentUser.id,
+        },
+      },
+    });
 
-      if (error) {
-        console.error("Error fetching profiles:", error);
-        return;
+    const handlePresenceChange = () => {
+      const newState = channel.presenceState<any>();
+      const collaborators: Collaborator[] = [];
+      for (const id in newState) {
+        if (id !== currentUser.id) {
+          collaborators.push(newState[id][0].user);
+        }
       }
-
-      if (profiles) {
-        const collaborators = profiles
-          .filter(profile => profile.id !== currentUser.id) // Filter out the current user
-          .map((profile): Collaborator => ({
-            id: profile.id,
-            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
-            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
-            online: true, // Simulate online status
-            avatar: profile.avatar_url || undefined,
-          }));
-        setOnlineCollaborators(collaborators);
-      }
+      setOnlineCollaborators(collaborators.sort((a, b) => a.name.localeCompare(b.name)));
     };
 
-    fetchCollaborators();
+    channel
+      .on('presence', { event: 'sync' }, handlePresenceChange)
+      .on('presence', { event: 'join' }, handlePresenceChange)
+      .on('presence', { event: 'leave' }, handlePresenceChange);
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({
+          user: {
+            id: currentUser.id,
+            name: currentUser.name,
+            initials: currentUser.initials,
+            avatar: currentUser.avatar,
+            online: true,
+          },
+          online_at: new Date().toISOString(),
+        });
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentUser]);
   
   const visibleCollaborators = onlineCollaborators.slice(0, 3);
