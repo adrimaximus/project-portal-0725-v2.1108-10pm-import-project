@@ -2,11 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, MessageSquarePlus, Users } from "lucide-react";
+import { Search, MessageSquarePlus } from "lucide-react";
 import { Conversation } from "@/types";
 import { Collaborator } from "@/types";
-import NewChatDialog from "./NewChatDialog";
-import NewGroupChatDialog from "./NewGroupChatDialog";
+import NewConversationDialog from "./NewConversationDialog";
 import { cn } from "@/lib/utils";
 
 interface ChatListProps {
@@ -25,8 +24,7 @@ const ChatList = ({
   onStartNewGroupChat,
 }: ChatListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
-  const [isNewGroupChatOpen, setIsNewGroupChatOpen] = useState(false);
+  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
 
   const filteredConversations = conversations.filter((c) =>
     c.userName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -45,20 +43,13 @@ const ChatList = ({
             className="pl-8"
           />
         </div>
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4">
           <Button
             variant="outline"
             className="w-full"
-            onClick={() => setIsNewChatOpen(true)}
+            onClick={() => setIsNewConversationOpen(true)}
           >
             <MessageSquarePlus className="mr-2 h-4 w-4" /> New Chat
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setIsNewGroupChatOpen(true)}
-          >
-            <Users className="mr-2 h-4 w-4" /> New Group
           </Button>
         </div>
       </div>
@@ -86,14 +77,11 @@ const ChatList = ({
           </div>
         ))}
       </div>
-      <NewChatDialog
-        open={isNewChatOpen}
-        onOpenChange={setIsNewChatOpen}
+      <NewConversationDialog
+        open={isNewConversationOpen}
+        onOpenChange={setIsNewConversationOpen}
         onStartNewChat={onStartNewChat}
-      />
-      <NewGroupChatDialog
-        open={isNewGroupChatOpen}
-        onOpenChange={setIsNewGroupChatOpen}
+        onStartNewGroupChat={onStartNewGroupChat}
       />
     </div>
   );

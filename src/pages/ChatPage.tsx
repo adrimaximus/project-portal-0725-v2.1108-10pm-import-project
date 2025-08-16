@@ -259,11 +259,30 @@ const ChatPage = () => {
     }
   };
 
-  const handleStartNewGroupChat = (
+  const handleStartNewGroupChat = async (
     members: Collaborator[],
     groupName: string
   ) => {
-    toast.info("Group chat creation is not fully implemented yet.");
+    if (!currentUser) return;
+    if (members.length === 0 || !groupName) {
+      toast.error("Please select members and provide a group name.");
+      return;
+    }
+
+    const participantIds = members.map(m => m.id);
+    
+    const { data, error } = await supabase.rpc('create_group_conversation', {
+      p_group_name: groupName,
+      p_participant_ids: participantIds
+    });
+
+    if (error) {
+      toast.error("Failed to create group chat.");
+      console.error("Failed to create group chat:", error);
+    } else {
+      await fetchConversations();
+      handleConversationSelect(data);
+    }
   };
 
   const selectedConversation = conversations.find(
