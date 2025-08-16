@@ -33,7 +33,10 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
       const collaborators: Collaborator[] = [];
       for (const id in newState) {
         if (id !== currentUser.id) {
-          collaborators.push(newState[id][0].user);
+          const presences = newState[id];
+          if (presences && presences.length > 0 && presences[0].user) {
+            collaborators.push(presences[0].user);
+          }
         }
       }
       setOnlineCollaborators(collaborators.sort((a, b) => a.name.localeCompare(b.name)));
