@@ -37,7 +37,7 @@ const ChatPage = () => {
       unreadCount: 0,
       messages: [],
       isGroup: c.is_group,
-      members: c.participants.map((p: any) => ({
+      members: (c.participants || []).map((p: any) => ({
         id: p.id,
         name: p.name,
         avatar: p.avatar_url,
@@ -121,24 +121,43 @@ const ChatPage = () => {
 
   useEffect(() => {
     if (!currentUser) return;
-    const subscription = supabase
-      .channel('public:messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        const newMessage = payload.new as any;
-        // Do not process messages sent by the current user, as they are handled optimistically
-        if (newMessage.sender_id === currentUser?.id) {
-          return;
-        }
 
-        setConversations(prev => prev.map(convo => {
-          if (convo.id === newMessage.conversation_id) {
-            const sender = convo.members?.find(m => m.id === newMessage.sender_id);
-            const updatedConvo = { 
-              ...convo, 
-              lastMessage: newMessage.content || (newMessage.attachment_name || 'Attachment'),
-              lastMessageTimestamp: newMessage.created_at 
-            };
-            if (convo.id === selectedConversationId && sender) {
+    const handleNewMessage = async (payload: any) => {
+      const newMessage = payload.new as any;
+      if (newMessage.sender_id === currentUser?.id) {
+        return;
+      }
+
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url, email')
+        .eq('id', newMessage.sender_id)
+        .single();
+
+      if (!senderProfile) {
+        console.warn("Could not find profile for sender:", newMessage.sender_id);
+        return;
+      }
+
+      const sender: User = {
+        id: senderProfile.id,
+        name: `${senderProfile.first_name || ''} ${senderProfile.last_name || ''}`.trim() || senderProfile.email || 'Unknown',
+        avatar: senderProfile.avatar_url,
+        initials: `${senderProfile.first_name?.[0] || ''}${senderProfile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+        email: senderProfile.email || '',
+      };
+
+      setConversations(prev => prev.map(convo => {
+        if (convo.id === newMessage.conversation_id) {
+          const updatedConvo = {
+            ...convo,
+            lastMessage: newMessage.content || (newMessage.attachment_name || 'Attachment'),
+            lastMessageTimestamp: newMessage.created_at,
+          };
+
+          if (convo.id === selectedConversationId) {
+            const messageExists = convo.messages.some(m => m.id === newMessage.id);
+            if (!messageExists) {
               updatedConvo.messages = [...convo.messages, {
                 id: newMessage.id,
                 text: newMessage.content,
@@ -147,11 +166,16 @@ const ChatPage = () => {
                 attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
               }];
             }
-            return updatedConvo;
           }
-          return convo;
-        }));
-      })
+          return updatedConvo;
+        }
+        return convo;
+      }));
+    };
+
+    const subscription = supabase
+      .channel('public:messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, handleNewMessage)
       .subscribe();
 
     return () => {
