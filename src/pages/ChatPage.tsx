@@ -284,6 +284,24 @@ const ChatPage = () => {
     }
   };
 
+  const handleClearChat = async (conversationId: string) => {
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('conversation_id', conversationId);
+
+    if (error) {
+      toast.error("Failed to clear chat history.");
+    } else {
+      toast.success("Chat history has been cleared.");
+      setConversations(prev => prev.map(c => 
+        c.id === conversationId 
+        ? { ...c, messages: [], lastMessage: "Chat cleared", lastMessageTimestamp: new Date().toISOString() } 
+        : c
+      ));
+    }
+  };
+
   const selectedConversation = conversations.find(
     (c) => c.id === selectedConversationId
   );
@@ -304,6 +322,7 @@ const ChatPage = () => {
             <ChatWindow
               selectedConversation={selectedConversation}
               onSendMessage={(text, attachment) => handleSendMessage(selectedConversation.id, text, attachment)}
+              onClearChat={handleClearChat}
               onBack={() => setSelectedConversationId(null)}
             />
           )}
@@ -325,6 +344,7 @@ const ChatPage = () => {
         <ChatWindow
           selectedConversation={selectedConversation}
           onSendMessage={(text, attachment) => handleSendMessage(selectedConversationId!, text, attachment)}
+          onClearChat={handleClearChat}
         />
       </div>
     </PortalLayout>

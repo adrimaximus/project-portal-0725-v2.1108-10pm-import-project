@@ -19,6 +19,7 @@ import NotificationsPage from "./pages/Notifications";
 import Profile from "./pages/Profile";
 import SearchPage from "./pages/SearchPage";
 import UserManagementPage from "./pages/UserManagement";
+import UserProfilePage from "./pages/UserProfilePage";
 import SettingsPage from "./pages/Settings";
 import TeamSettingsPage from "./pages/TeamSettingsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
@@ -98,6 +99,7 @@ function App() {
         <Route path="/profile" element={<ProtectedRoute featureId="profile"><Profile /></ProtectedRoute>} />
         <Route path="/search" element={<ProtectedRoute featureId="search"><SearchPage /></ProtectedRoute>} />
         <Route path="/users" element={<ProtectedRoute featureId="user-management" allowedRoles={ADMIN_ROLES}><UserManagementPage /></ProtectedRoute>} />
+        <Route path="/users/:id" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
         
         <Route path="/settings" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><SettingsPage /></ProtectedRoute>} />
         <Route path="/settings/team" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><TeamSettingsPage /></ProtectedRoute>} />

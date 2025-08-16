@@ -8,10 +8,11 @@ import ChatPlaceholder from "./ChatPlaceholder";
 interface ChatWindowProps {
   selectedConversation: Conversation | null;
   onSendMessage: (text: string, attachment: Attachment | null) => void;
+  onClearChat: (conversationId: string) => void;
   onBack?: () => void;
 }
 
-const ChatWindow = ({ selectedConversation, onSendMessage, onBack }: ChatWindowProps) => {
+const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onBack }: ChatWindowProps) => {
   const { user: currentUser } = useAuth();
 
   if (!selectedConversation || !currentUser) {
@@ -22,6 +23,7 @@ const ChatWindow = ({ selectedConversation, onSendMessage, onBack }: ChatWindowP
     <div className="flex-1 flex flex-col h-full">
       <ChatHeader
         selectedConversation={selectedConversation}
+        onClearChat={onClearChat}
         onBack={onBack}
       />
       <ChatConversation
