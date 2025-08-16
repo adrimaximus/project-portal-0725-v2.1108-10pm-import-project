@@ -18,7 +18,7 @@ const AiHealthSummaryCard = ({ projects }: AiHealthSummaryCardProps) => {
   const handleGetSummary = async () => {
     setIsLoading(true);
     try {
-      const result = await analyzeProjects(projects, 'summarize_health');
+      const result = await analyzeProjects('summarize_health');
       setSummary(result);
     } catch (error: any) {
       toast.error("Failed to get AI summary", { description: error.message });

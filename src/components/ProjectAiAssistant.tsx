@@ -35,7 +35,7 @@ export function ProjectAiAssistant({ open, onOpenChange, projects }: ProjectAiAs
       if (query === 'diagnose_visibility') {
         result = await diagnoseProjectVisibility();
       } else {
-        result = await analyzeProjects(projects, query);
+        result = await analyzeProjects(query);
       }
       
       toast.success("AI Analysis Complete", {
