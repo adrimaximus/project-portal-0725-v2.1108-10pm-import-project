@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PortalLayout from '@/components/PortalLayout';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -16,7 +16,7 @@ const GoalsPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const fetchGoals = async () => {
+  const fetchGoals = useCallback(async () => {
     if (!user) return;
     const { data, error } = await supabase.rpc('get_user_goals');
     if (error) {
@@ -25,11 +25,11 @@ const GoalsPage = () => {
     } else {
       setGoals(data || []);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchGoals();
-  }, [user]);
+  }, [fetchGoals]);
 
   const handleSuccess = (newGoal: Goal) => {
     setIsNewGoalDialogOpen(false);
