@@ -41,7 +41,6 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStatusStyles } from "@/lib/utils";
-import { useProjects } from "@/hooks/useProjects";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface CalendarEvent {
@@ -54,9 +53,14 @@ interface CalendarEvent {
 
 type ViewMode = 'table' | 'list' | 'month' | 'calendar';
 
-const ProjectsTable = () => {
+interface ProjectsTableProps {
+  projects: Project[];
+  isLoading: boolean;
+  refetch: () => void;
+}
+
+const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => {
   const [view, setView] = useState<ViewMode>('table');
-  const { data: localProjects = [], isLoading, refetch } = useProjects();
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
@@ -148,7 +152,7 @@ const ProjectsTable = () => {
 
   const filteredProjects = useMemo(() => {
     if (!dateRange || !dateRange.from) {
-      return localProjects;
+      return projects;
     }
 
     const fromDate = new Date(dateRange.from);
@@ -157,7 +161,7 @@ const ProjectsTable = () => {
     const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
     toDate.setHours(23, 59, 59, 999);
 
-    return localProjects.filter(project => {
+    return projects.filter(project => {
       if (!project.startDate && !project.dueDate) {
         return false;
       }
@@ -177,7 +181,7 @@ const ProjectsTable = () => {
 
       return false;
     });
-  }, [localProjects, dateRange]);
+  }, [projects, dateRange]);
 
   const filteredCalendarEvents = useMemo(() => {
     if (!dateRange || !dateRange.from) {
@@ -212,7 +216,7 @@ const ProjectsTable = () => {
   }, [calendarEvents, dateRange]);
 
   const handleDeleteProject = (projectId: string) => {
-    const project = localProjects.find(p => p.id === projectId);
+    const project = projects.find(p => p.id === projectId);
     if (project) {
       setProjectToDelete(project);
     }

@@ -39,3 +39,7 @@ export const generateAiInsight = async (goal: Goal, context: any): Promise<strin
 export const generateAiIcon = async (prompt: string): Promise<string> => {
   return invokeOpenAiGenerator('generate-icon', { prompt });
 };
+
+export const analyzeProjects = async (projects: Project[], request: string): Promise<string> => {
+  return invokeOpenAiGenerator('analyze-projects', { projects, request });
+};

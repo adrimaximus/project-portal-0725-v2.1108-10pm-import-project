@@ -82,6 +82,35 @@ serve(async (req) => {
         responseData = { result: `https://via.placeholder.com/128/4ECDC4/FFFFFF?text=AI` };
         break;
       }
+      case 'analyze-projects': {
+        const { projects, request } = payload;
+        if (!projects || !request) {
+          throw new Error("Projects data and a request type are required for analysis.");
+        }
+
+        let systemPrompt = "You are a helpful project management assistant. Analyze the provided JSON data and answer the user's question concisely and clearly in markdown format. Today's date is " + new Date().toDateString() + ".";
+        let userPrompt = "";
+
+        if (request === 'summarize_health') {
+          userPrompt = "Provide a brief, bulleted summary of the overall project health. Mention the number of projects in each status category, any projects that are at risk or overdue, and the total budget of active projects. The projects data is: \n" + JSON.stringify(projects, null, 2);
+        } else if (request === 'find_overdue') {
+          userPrompt = "Identify and list the names of any projects that are past their due date but are not marked as 'Completed'. If there are none, state that clearly. The projects data is: \n" + JSON.stringify(projects, null, 2);
+        } else {
+          throw new Error(`Unknown analysis request: ${request}`);
+        }
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            temperature: 0.5,
+            max_tokens: 400,
+        });
+        responseData = { result: response.choices[0].message.content };
+        break;
+      }
       default:
         throw new Error(`Unknown feature: ${feature}`);
     }
