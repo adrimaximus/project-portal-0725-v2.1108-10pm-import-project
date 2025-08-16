@@ -10,6 +10,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const Profile = () => {
   const { user, refreshUser, logout } = useAuth();
@@ -130,8 +131,17 @@ const Profile = () => {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-            <CardDescription>Update your personal details here.</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Personal Information</CardTitle>
+                <CardDescription>Update your personal details here.</CardDescription>
+              </div>
+              {user.role && (
+                <Badge variant="outline" className="capitalize text-sm">
+                  {user.role}
+                </Badge>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
