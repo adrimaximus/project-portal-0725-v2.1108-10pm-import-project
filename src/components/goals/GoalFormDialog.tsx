@@ -128,6 +128,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
     } else if (!isEditMode) {
       try {
         const goalInsertData = {
+          user_id: user.id,
           title,
           description,
           icon,
@@ -144,7 +145,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
 
         const { data: newGoal, error: goalError } = await supabase
           .from('goals')
-          .insert({ ...goalInsertData, user_id: user.id })
+          .insert(goalInsertData)
           .select()
           .single();
 
