@@ -128,6 +128,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
     } else if (!isEditMode) {
       try {
         const goalInsertData = {
+          user_id: user.id,
           title,
           description,
           icon,
