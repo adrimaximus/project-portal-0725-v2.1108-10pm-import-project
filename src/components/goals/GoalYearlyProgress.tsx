@@ -17,7 +17,7 @@ interface GoalYearlyProgressProps {
 }
 
 const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProps) => {
-  const { completions: rawCompletions, color, frequency, specificDays } = goal;
+  const { completions: rawCompletions, color, frequency, specific_days: specificDays } = goal;
   const completions = rawCompletions.map(c => ({ date: c.date, completed: c.value === 1 }));
 
   const today = new Date();

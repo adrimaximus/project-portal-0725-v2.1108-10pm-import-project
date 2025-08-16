@@ -40,7 +40,7 @@ const fetchGoalBySlug = async (slug: string): Promise<Goal | null> => {
     console.error("Error fetching goal details:", error);
     throw new Error(error.message);
   }
-  return data;
+  return data as Goal | null;
 };
 
 const GoalDetailPage = () => {
