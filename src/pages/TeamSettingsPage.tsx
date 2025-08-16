@@ -373,15 +373,17 @@ const TeamSettingsPage = () => {
                         ) : isRoleChangeDisabled ? (
                           <TooltipProvider><Tooltip><TooltipTrigger asChild>
                                 <div className="w-full">
-                                  <Select value={member.role} disabled>
+                                  <Select value={member.role || undefined} disabled>
                                     <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50">
-                                      <SelectValue placeholder={roles.find(r => r.name === member.role)?.name || member.role} />
+                                      <SelectValue placeholder="No role assigned">
+                                        {roles.find(r => r.name === member.role)?.name || member.role}
+                                      </SelectValue>
                                     </SelectTrigger>
                                   </Select>
                                 </div>
                               </TooltipTrigger><TooltipContent><p>{tooltipMessage}</p></TooltipContent></Tooltip></TooltipProvider>
                         ) : (
-                          <Select value={member.role} onValueChange={(value) => handleRoleChange(member.id, value)}>
+                          <Select value={member.role || undefined} onValueChange={(value) => handleRoleChange(member.id, value)}>
                             <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent"><SelectValue placeholder="Select a role" /></SelectTrigger>
                             <SelectContent>
                               {availableRolesForMember.map(role => (
