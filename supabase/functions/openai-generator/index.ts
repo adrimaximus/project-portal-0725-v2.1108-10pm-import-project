@@ -58,11 +58,10 @@ serve(async (req) => {
           break;
         }
 
-        // **OPTIMIZATION**: Summarize project data before sending to OpenAI
         const summarizedProjects = projects.map(p => ({
           name: p.name,
           status: p.status,
-          description: p.description?.substring(0, 100), // Truncate description
+          description: p.description?.substring(0, 100),
           startDate: p.start_date,
           dueDate: p.due_date,
           budget: p.budget,
@@ -94,6 +93,38 @@ serve(async (req) => {
             temperature: 0.3,
             max_tokens: 500,
         });
+        responseData = { result: response.choices[0].message.content };
+        break;
+      }
+      case 'generate-insight': {
+        const { goal, context } = payload;
+        if (!goal || !context) {
+          throw new Error("Goal and context are required for generating insights.");
+        }
+
+        const systemPrompt = `You are a supportive and insightful AI coach. Your goal is to provide encouraging and actionable advice to a user based on their progress towards a specific goal. You will be given a JSON object with the goal's details and their recent progress. Analyze this information and provide a short, helpful insight in markdown format.
+
+- Keep the tone positive and motivational.
+- Address the user directly.
+- If progress is good, celebrate it and suggest ways to maintain momentum.
+- If progress is lagging, be encouraging, not critical. Suggest small, manageable steps to get back on track.
+- Keep the response concise (2-4 sentences).
+- Do not repeat the data back to the user; interpret it.`;
+
+        const userPrompt = `Here is my goal and my recent progress. Please give me some coaching advice.
+Goal: ${JSON.stringify(goal, null, 2)}
+Progress Context: ${JSON.stringify(context, null, 2)}`;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4-turbo",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 200,
+        });
+
         responseData = { result: response.choices[0].message.content };
         break;
       }
