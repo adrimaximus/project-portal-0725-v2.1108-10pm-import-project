@@ -133,12 +133,11 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const [customItemsTrigger, setCustomItemsTrigger] = useState(0);
 
   const navItemsOrderKey = user ? `navItemsOrder_${user.id}` : null;
+  const totalUnreadChatCount = 0;
+  const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 
   useEffect(() => {
     if (!user) return;
-
-    const totalUnreadChatCount = 0;
-    const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 
     const defaultItemsList: NavItem[] = [
       { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
