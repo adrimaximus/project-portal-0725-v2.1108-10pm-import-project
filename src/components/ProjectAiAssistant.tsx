@@ -37,7 +37,7 @@ export function ProjectAiAssistant({ open, onOpenChange, projects }: ProjectAiAs
       toast.success("AI Analysis Complete", {
         id: toastId,
         description: <div className="prose prose-sm max-w-none"><pre className="whitespace-pre-wrap font-sans">{result}</pre></div>,
-        duration: 20000,
+        duration: Infinity,
         closeButton: true,
       });
     } catch (error: any) {
