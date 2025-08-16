@@ -3,6 +3,7 @@ import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
 import { Conversation, Attachment } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
+import ChatPlaceholder from "./ChatPlaceholder";
 
 interface ChatWindowProps {
   selectedConversation: Conversation | null;
@@ -14,11 +15,7 @@ const ChatWindow = ({ selectedConversation, onSendMessage, onBack }: ChatWindowP
   const { user: currentUser } = useAuth();
 
   if (!selectedConversation || !currentUser) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        Select a conversation to start chatting
-      </div>
-    );
+    return <ChatPlaceholder />;
   }
 
   return (

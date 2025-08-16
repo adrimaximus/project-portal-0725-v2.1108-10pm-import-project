@@ -33,7 +33,7 @@ const ChatList = ({
   );
 
   return (
-    <div className="flex flex-col h-full border-r">
+    <div className="flex flex-col h-full border-r bg-background">
       <div className="p-4 border-b">
         <h2 className="text-xl font-bold">Chats</h2>
         <div className="relative mt-4">
@@ -67,8 +67,8 @@ const ChatList = ({
           <div
             key={c.id}
             className={cn(
-              "flex items-center gap-3 p-3 cursor-pointer hover:bg-muted",
-              selectedConversationId === c.id && "bg-muted"
+              "flex items-center gap-3 p-3 cursor-pointer hover:bg-muted border-l-4 border-transparent transition-colors",
+              selectedConversationId === c.id && "bg-muted border-l-primary"
             )}
             onClick={() => onSelectConversation(c.id)}
           >
@@ -76,8 +76,8 @@ const ChatList = ({
               <AvatarImage src={c.userAvatar} />
               <AvatarFallback>{c.userName.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <p className="font-semibold">{c.userName}</p>
+            <div className="flex-1 overflow-hidden">
+              <p className="font-semibold truncate">{c.userName}</p>
               <p className="text-sm text-muted-foreground truncate">
                 {c.lastMessage}
               </p>
