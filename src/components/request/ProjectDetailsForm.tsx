@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@/types";
 import { toast } from "sonner";
+import { useCreateProject } from "@/hooks/useCreateProject";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -34,8 +35,8 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const [description, setDescription] = useState("");
   const [team, setTeam] = useState<User[]>([]);
   const [files, setFiles] = useState<File[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const createProjectMutation = useCreateProject();
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -96,93 +97,74 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       return;
     }
 
-    setIsSubmitting(true);
-
     const numericBudget = parseInt(budget.replace(/[^0-9]/g, ''), 10) || 0;
 
-    const { data: projectData, error: projectError } = await supabase
-      .from('projects')
-      .insert({
-        name: projectName,
-        category: "Requested Event",
-        description: description,
-        status: "Requested",
-        budget: numericBudget,
-        start_date: date?.from?.toISOString(),
-        due_date: date?.to?.toISOString(),
-      })
-      .select('id, slug')
-      .single();
+    createProjectMutation.mutate({
+      name: projectName,
+      description: description,
+      category: "Requested Event",
+      budget: numericBudget,
+      startDate: date?.from?.toISOString(),
+      dueDate: date?.to?.toISOString(),
+    }, {
+      onSuccess: async (newProject) => {
+        const newProjectId = newProject.id;
+        const newProjectSlug = newProject.slug;
 
-    if (projectError) {
-      toast.error("Failed to create project.");
-      console.error('Error creating project:', projectError);
-      setIsSubmitting(false);
-      return;
-    }
-
-    const newProjectId = projectData.id;
-    const newProjectSlug = projectData.slug;
-
-    // Link services to the project
-    if (selectedServices.length > 0) {
-      const servicesToInsert = selectedServices.map(service => ({
-        project_id: newProjectId,
-        service_title: service.title,
-      }));
-      const { error: servicesError } = await supabase.from('project_services').insert(servicesToInsert);
-      if (servicesError) {
-        console.error('Failed to link services:', servicesError);
-        toast.warning('Project created, but could not link services.');
-      }
-    }
-
-    if (team.length > 0) {
-      const membersToInsert = team.map(member => ({
-        project_id: newProjectId,
-        user_id: member.id,
-        role: 'member' as const
-      }));
-
-      const { error: membersError } = await supabase
-        .from('project_members')
-        .insert(membersToInsert);
-
-      if (membersError) {
-        toast.error("Failed to add team members to the project.");
-        console.error('Error adding project members:', membersError);
-      }
-    }
-
-    if (files.length > 0) {
-      toast.info(`Uploading ${files.length} file(s)...`);
-      for (const file of files) {
-        const filePath = `${newProjectId}/${Date.now()}-${file.name}`;
-        const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
-        
-        if (uploadError) {
-          toast.error(`Failed to upload ${file.name}.`);
-          console.error('Error uploading file:', uploadError);
-          continue;
+        if (selectedServices.length > 0) {
+          const servicesToInsert = selectedServices.map(service => ({
+            project_id: newProjectId,
+            service_title: service.title,
+          }));
+          const { error: servicesError } = await supabase.from('project_services').insert(servicesToInsert);
+          if (servicesError) {
+            console.error('Failed to link services:', servicesError);
+            toast.warning('Project created, but could not link services.');
+          }
         }
 
-        const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+        if (team.length > 0) {
+          const membersToInsert = team.map(member => ({
+            project_id: newProjectId,
+            user_id: member.id,
+            role: 'member' as const
+          }));
+          const { error: membersError } = await supabase.from('project_members').insert(membersToInsert);
+          if (membersError) {
+            toast.error("Failed to add team members to the project.");
+            console.error('Error adding project members:', membersError);
+          }
+        }
+
+        if (files.length > 0) {
+          toast.info(`Uploading ${files.length} file(s)...`);
+          for (const file of files) {
+            const filePath = `${newProjectId}/${Date.now()}-${file.name}`;
+            const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+            
+            if (uploadError) {
+              toast.error(`Failed to upload ${file.name}.`);
+              console.error('Error uploading file:', uploadError);
+              continue;
+            }
+
+            const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+            
+            await supabase.from('project_files').insert({
+              project_id: newProjectId,
+              user_id: currentUser.id,
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              url: urlData.publicUrl,
+              storage_path: filePath,
+            });
+          }
+        }
         
-        await supabase.from('project_files').insert({
-          project_id: newProjectId,
-          user_id: currentUser.id,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          url: urlData.publicUrl,
-          storage_path: filePath,
-        });
+        navigate(`/projects/${newProjectSlug}`);
       }
-    }
-    
-    toast.success("Project created successfully!");
-    setIsSubmitting(false);
-    navigate(`/projects/${newProjectSlug}`);
+    });
   };
 
   const serviceDetails = selectedServices
@@ -290,9 +272,9 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </div>
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>Back</Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Submitting..." : "Submit Project Request"}
+          <Button type="button" variant="outline" onClick={onBack} disabled={createProjectMutation.isPending}>Back</Button>
+          <Button type="submit" disabled={createProjectMutation.isPending}>
+            {createProjectMutation.isPending ? "Submitting..." : "Submit Project Request"}
           </Button>
         </CardFooter>
       </Card>
