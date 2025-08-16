@@ -4,6 +4,7 @@ import { Project } from '@/types';
 import { analyzeProjects, diagnoseProjectVisibility } from '@/lib/openai';
 import { toast } from 'sonner';
 import { Activity, AlertTriangle, Loader2, ShieldQuestion } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 interface ProjectAiAssistantProps {
   open: boolean;
@@ -38,10 +39,8 @@ export function ProjectAiAssistant({ open, onOpenChange, projects }: ProjectAiAs
         id: toastId,
         description: (
           <div className="max-h-64 overflow-y-auto pr-4">
-            <div className="prose prose-sm max-w-none">
-              <pre className="whitespace-pre-wrap font-sans bg-transparent p-0 m-0">
-                {result}
-              </pre>
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown>{result}</ReactMarkdown>
             </div>
           </div>
         ),
