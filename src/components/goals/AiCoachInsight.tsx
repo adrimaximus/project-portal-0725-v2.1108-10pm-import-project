@@ -7,6 +7,7 @@ import { generateAiInsight } from '@/lib/openai';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AiCoachInsightProps {
   goal: Goal;
@@ -19,14 +20,17 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
 
-  useEffect(() => {
-    const checkConnection = () => {
-      const storedStatus = localStorage.getItem("openai_connected");
-      setIsConnected(storedStatus === "true");
-    };
-    checkConnection();
-    window.addEventListener('storage', checkConnection);
-    return () => window.removeEventListener('storage', checkConnection);
+  const checkConnection = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-openai-key', { method: 'GET' });
+      if (error) throw error;
+      setIsConnected(data.connected);
+      return data.connected;
+    } catch (error) {
+      console.error("Failed to check OpenAI connection status:", error);
+      setIsConnected(false);
+      return false;
+    }
   }, []);
 
   const fetchInsight = useCallback(async () => {
@@ -49,19 +53,23 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
       
       const newInsight = await generateAiInsight(goal, context);
       setInsight(newInsight);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to generate AI insight:", error);
-      toast.error("Couldn't get an insight from the AI coach right now.");
+      if (!error.message.includes("configured")) {
+        toast.error("Couldn't get an insight from the AI coach right now.");
+      }
     } finally {
       setIsLoading(false);
     }
   }, [goal, yearlyProgress, monthlyProgress]);
 
   useEffect(() => {
-    if (isConnected && (yearlyProgress || monthlyProgress)) {
-      fetchInsight();
-    }
-  }, [fetchInsight, isConnected, yearlyProgress, monthlyProgress]);
+    checkConnection().then(connected => {
+      if (connected && (yearlyProgress || monthlyProgress)) {
+        fetchInsight();
+      }
+    });
+  }, [checkConnection, fetchInsight, yearlyProgress, monthlyProgress]);
 
   if (!isConnected) {
     return (
@@ -73,9 +81,9 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-2">Connect your OpenAI account to get personalized insights and coaching.</p>
+          <p className="text-sm text-muted-foreground mb-2">Connect OpenAI in the admin settings to get personalized insights.</p>
           <Button asChild size="sm" variant="link" className="px-0 h-auto text-yellow-600">
-            <Link to="/settings/integrations/openai">Connect OpenAI</Link>
+            <Link to="/settings/integrations/openai">Integration Settings</Link>
           </Button>
         </CardContent>
       </Card>
