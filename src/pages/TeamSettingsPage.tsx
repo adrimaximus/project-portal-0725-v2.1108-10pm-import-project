@@ -214,6 +214,40 @@ const TeamSettingsPage = () => {
           </p>
         </div>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Role Details</CardTitle>
+            <CardDescription>
+              Understand the permissions for each role in the application.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[150px]">Role</TableHead>
+                  <TableHead>Description & Permissions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {roles.map((role) => (
+                  <TableRow key={role.value}>
+                    <TableCell className="font-medium">{role.label}</TableCell>
+                    <TableCell>
+                      <p>{role.description}</p>
+                      {(role.value === 'admin' || role.value === 'master admin') && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          - Access to <Link to="/settings" className="text-primary hover:underline">Settings</Link> page.
+                        </p>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
         {isAdmin && (
           <Card>
             <CardHeader>
