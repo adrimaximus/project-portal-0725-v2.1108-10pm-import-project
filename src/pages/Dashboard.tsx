@@ -2,12 +2,14 @@ import { useState } from "react";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import PortalLayout from "@/components/PortalLayout";
-import { Project } from "@/data/projects";
 import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
 import CollaboratorsList from "@/components/dashboard/CollaboratorsList";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Sparkles } from "lucide-react";
+import { ProjectAiAssistant } from "@/components/ProjectAiAssistant";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -16,6 +18,7 @@ const Index = () => {
   });
   const { data: projects = [], isLoading } = useProjects();
   const { user } = useAuth();
+  const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
 
   const filteredProjects = projects.filter(project => {
     if (date?.from && project.startDate) {
@@ -68,13 +71,24 @@ const Index = () => {
 
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <h2 className="text-2xl font-bold">Insights</h2>
+                <div className="flex items-center gap-4">
+                    <h2 className="text-2xl font-bold">Insights</h2>
+                    <Button variant="outline" size="sm" onClick={() => setIsAiAssistantOpen(true)}>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Ask AI
+                    </Button>
+                </div>
                 <DateRangePicker date={date} onDateChange={setDate} />
             </div>
             <DashboardStatsGrid projects={filteredProjects} />
             <CollaboratorsList projects={filteredProjects} />
         </div>
       </div>
+      <ProjectAiAssistant 
+        open={isAiAssistantOpen} 
+        onOpenChange={setIsAiAssistantOpen} 
+        projects={projects}
+      />
     </PortalLayout>
   );
 };
