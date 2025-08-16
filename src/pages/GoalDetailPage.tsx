@@ -137,10 +137,19 @@ const GoalDetailPage = () => {
   };
 
   const handleGoalUpdate = async (updatedGoal: Goal) => {
-    const { title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, color, icon, icon_url } = updatedGoal;
-    const { error } = await supabase.from('goals').update({
+    const { id, title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, color, icon, icon_url, tags } = updatedGoal;
+    
+    const goalData = {
         title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, color, icon, icon_url
-    }).eq('id', updatedGoal.id);
+    };
+
+    const { error } = await supabase.functions.invoke('update-goal', {
+        body: {
+            goalId: id,
+            tags: tags.map(t => ({ name: t.name, color: t.color })),
+            ...goalData
+        }
+    });
 
     if (error) {
         toast.error("Failed to update goal.");
