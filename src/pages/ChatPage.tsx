@@ -120,16 +120,22 @@ const ChatPage = () => {
   }, [location.state, currentUser, conversations, navigate, handleConversationSelect, handleStartNewChat]);
 
   useEffect(() => {
+    if (!currentUser) return;
     const subscription = supabase
       .channel('public:messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         const newMessage = payload.new as any;
+        // Do not process messages sent by the current user, as they are handled optimistically
+        if (newMessage.sender_id === currentUser?.id) {
+          return;
+        }
+
         setConversations(prev => prev.map(convo => {
           if (convo.id === newMessage.conversation_id) {
-            const sender = convo.members?.find(m => m.id === newMessage.sender_id) || currentUser;
+            const sender = convo.members?.find(m => m.id === newMessage.sender_id);
             const updatedConvo = { 
               ...convo, 
-              lastMessage: newMessage.content, 
+              lastMessage: newMessage.content || (newMessage.attachment_name || 'Attachment'),
               lastMessageTimestamp: newMessage.created_at 
             };
             if (convo.id === selectedConversationId && sender) {
@@ -156,6 +162,29 @@ const ChatPage = () => {
   const handleSendMessage = async (conversationId: string, messageText: string, attachment: Attachment | null) => {
     if (!conversationId || !currentUser) return;
 
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      text: messageText,
+      timestamp: new Date().toISOString(),
+      sender: currentUser,
+      attachment: attachment,
+    };
+
+    setConversations(prev =>
+      prev.map(convo => {
+        if (convo.id === conversationId) {
+          return {
+            ...convo,
+            messages: [...convo.messages, optimisticMessage],
+            lastMessage: messageText || (attachment ? attachment.name : 'Attachment'),
+            lastMessageTimestamp: optimisticMessage.timestamp,
+          };
+        }
+        return convo;
+      })
+    );
+
     let attachmentData = {};
     if (attachment) {
       attachmentData = {
@@ -165,15 +194,44 @@ const ChatPage = () => {
       };
     }
 
-    const { error } = await supabase.from('messages').insert({
-      conversation_id: conversationId,
-      sender_id: currentUser.id,
-      content: messageText,
-      ...attachmentData,
-    });
+    const { data: dbMessage, error } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_id: currentUser.id,
+        content: messageText,
+        ...attachmentData,
+      })
+      .select()
+      .single();
 
     if (error) {
-        toast.error("Failed to send message.", { description: error.message });
+      toast.error("Failed to send message.", { description: error.message });
+      setConversations(prev =>
+        prev.map(convo => {
+          if (convo.id === conversationId) {
+            return {
+              ...convo,
+              messages: convo.messages.filter(m => m.id !== tempId),
+            };
+          }
+          return convo;
+        })
+      );
+    } else {
+      setConversations(prev =>
+        prev.map(convo => {
+          if (convo.id === conversationId) {
+            return {
+              ...convo,
+              messages: convo.messages.map(m =>
+                m.id === tempId ? { ...m, id: dbMessage.id, timestamp: dbMessage.created_at } : m
+              ),
+            };
+          }
+          return convo;
+        })
+      );
     }
   };
 
