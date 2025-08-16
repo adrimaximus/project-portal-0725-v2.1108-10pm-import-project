@@ -13,6 +13,7 @@ export interface User {
   status?: 'active' | 'suspended' | 'Pending invite' | string;
   lastActive?: string;
   updated_at?: string;
+  sidebar_order?: string[];
 }
 export type UserProfile = User;
 

@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           last_name: profile.last_name,
           role: profile.role,
           status: profile.status,
+          sidebar_order: profile.sidebar_order,
         });
         return; // Success, exit the function
       }

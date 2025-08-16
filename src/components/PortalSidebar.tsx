@@ -40,6 +40,8 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -123,7 +125,7 @@ const SortableItem = ({ item, isCollapsed, location }: { item: NavItem, isCollap
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -131,7 +133,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [customItemsTrigger, setCustomItemsTrigger] = useState(0);
 
-  const navItemsOrderKey = user ? `navItemsOrder_${user.id}` : null;
   const totalUnreadChatCount = 0;
   const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 
@@ -177,7 +178,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
     const allAvailableItems = [...visibleDefaultItems, ...customItems];
     const itemsById = new Map(allAvailableItems.map(item => [item.id, item]));
-    const savedOrder: string[] = navItemsOrderKey ? JSON.parse(localStorage.getItem(navItemsOrderKey) || '[]') : [];
+    const savedOrder: string[] = user.sidebar_order || [];
     
     const ordered = savedOrder
       .map(id => itemsById.get(id))
@@ -208,20 +209,28 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     })
   );
 
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      setNavItems((currentItems) => {
-        const oldIndex = currentItems.findIndex((item) => item.id === active.id);
-        const newIndex = currentItems.findIndex((item) => item.id === over.id);
-        const newArray = arrayMove(currentItems, oldIndex, newIndex);
+      const newArray = arrayMove(navItems, navItems.findIndex(i => i.id === active.id), navItems.findIndex(i => i.id === over.id));
+      setNavItems(newArray);
+      
+      if (user) {
+        const newOrder = newArray.map(item => item.id);
+        const { error } = await supabase
+          .from('profiles')
+          .update({ sidebar_order: newOrder })
+          .eq('id', user.id);
         
-        if (navItemsOrderKey) {
-          localStorage.setItem(navItemsOrderKey, JSON.stringify(newArray.map(item => item.id)));
+        if (error) {
+          toast.error("Could not save sidebar order.");
+          // Optionally revert UI change
+          setNavItems(navItems);
+        } else {
+          // Refresh user context to have the latest order
+          refreshUser();
         }
-        
-        return newArray;
-      });
+      }
     }
   }
 
