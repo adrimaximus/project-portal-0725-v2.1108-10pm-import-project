@@ -36,7 +36,15 @@ export function ProjectAiAssistant({ open, onOpenChange, projects }: ProjectAiAs
       
       toast.success("AI Analysis Complete", {
         id: toastId,
-        description: <div className="prose prose-sm max-w-none"><pre className="whitespace-pre-wrap font-sans">{result}</pre></div>,
+        description: (
+          <div className="max-h-64 overflow-y-auto pr-4">
+            <div className="prose prose-sm max-w-none">
+              <pre className="whitespace-pre-wrap font-sans bg-transparent p-0 m-0">
+                {result}
+              </pre>
+            </div>
+          </div>
+        ),
         duration: Infinity,
         closeButton: true,
       });
