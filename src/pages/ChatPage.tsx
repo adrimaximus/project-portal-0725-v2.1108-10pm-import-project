@@ -33,7 +33,7 @@ const ChatPage = () => {
       userName: c.is_group ? c.group_name : c.other_user_name,
       userAvatar: c.is_group ? undefined : c.other_user_avatar,
       lastMessage: c.last_message_content || "No messages yet.",
-      lastMessageTimestamp: c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
       unreadCount: 0,
       messages: [],
       isGroup: c.is_group,
@@ -47,10 +47,10 @@ const ChatPage = () => {
     }));
 
     setConversations(mappedConversations);
-    if (!isMobile && mappedConversations.length > 0) {
+    if (!isMobile && mappedConversations.length > 0 && !selectedConversationId) {
       setSelectedConversationId(mappedConversations[0].id);
     }
-  }, [currentUser, isMobile]);
+  }, [currentUser, isMobile, selectedConversationId]);
 
   useEffect(() => {
     fetchConversations();
@@ -63,20 +63,20 @@ const ChatPage = () => {
         const newMessage = payload.new as any;
         setConversations(prev => prev.map(convo => {
           if (convo.id === newMessage.conversation_id) {
-            // This is a simplified update. A full implementation would fetch the sender's profile.
-            const updatedConvo = { ...convo, lastMessage: newMessage.content, lastMessageTimestamp: new Date(newMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-            if (convo.id === selectedConversationId) {
-              // If the conversation is open, add the message to the view
-              const sender = convo.members?.find(m => m.id === newMessage.sender_id) || currentUser;
-              if (sender) {
-                updatedConvo.messages = [...convo.messages, {
-                  id: newMessage.id,
-                  text: newMessage.content,
-                  timestamp: new Date(newMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  sender: sender,
-                  attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
-                }];
-              }
+            const sender = convo.members?.find(m => m.id === newMessage.sender_id) || currentUser;
+            const updatedConvo = { 
+              ...convo, 
+              lastMessage: newMessage.content, 
+              lastMessageTimestamp: newMessage.created_at 
+            };
+            if (convo.id === selectedConversationId && sender) {
+              updatedConvo.messages = [...convo.messages, {
+                id: newMessage.id,
+                text: newMessage.content,
+                timestamp: newMessage.created_at,
+                sender: sender,
+                attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
+              }];
             }
             return updatedConvo;
           }
@@ -106,7 +106,7 @@ const ChatPage = () => {
     const mappedMessages: Message[] = data.map((m: any) => ({
       id: m.id,
       text: m.content,
-      timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: m.created_at,
       sender: {
         id: m.sender.id,
         name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim(),
@@ -125,8 +125,6 @@ const ChatPage = () => {
 
     let attachmentData = {};
     if (attachment) {
-      // In a real app, you'd upload the file to Supabase Storage first
-      // For now, we'll just save the URL if it's already hosted
       attachmentData = {
         attachment_url: attachment.url,
         attachment_name: attachment.name,
@@ -134,12 +132,16 @@ const ChatPage = () => {
       };
     }
 
-    await supabase.from('messages').insert({
+    const { error } = await supabase.from('messages').insert({
       conversation_id: conversationId,
       sender_id: currentUser.id,
       content: messageText,
       ...attachmentData,
     });
+
+    if (error) {
+        toast.error("Failed to send message.", { description: error.message });
+    }
   };
 
   const handleStartNewChat = async (collaborator: Collaborator) => {
@@ -153,7 +155,7 @@ const ChatPage = () => {
       toast.error("Failed to start chat.");
     } else {
       await fetchConversations();
-      setSelectedConversationId(data);
+      handleConversationSelect(data);
     }
   };
 
@@ -161,7 +163,6 @@ const ChatPage = () => {
     members: Collaborator[],
     groupName: string
   ) => {
-    // This would require a more complex RPC function in Supabase
     toast.info("Group chat creation is not fully implemented yet.");
   };
 

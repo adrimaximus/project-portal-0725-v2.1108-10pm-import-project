@@ -1,8 +1,7 @@
 import ChatHeader from "./ChatHeader";
 import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
-import { Conversation } from "@/types";
-import { Collaborator, Attachment } from "@/types";
+import { Conversation, Attachment } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ChatWindowProps {
@@ -22,13 +21,6 @@ const ChatWindow = ({ selectedConversation, onSendMessage, onBack }: ChatWindowP
     );
   }
 
-  const handleSendMessage = (text: string, attachment: Attachment | null) => {
-    onSendMessage(text, attachment);
-  };
-
-  const otherMembers = selectedConversation.members?.filter(m => m.id !== currentUser.id) || [];
-  const selectedCollaborator = otherMembers[0];
-
   return (
     <div className="flex-1 flex flex-col h-full">
       <ChatHeader
@@ -37,9 +29,12 @@ const ChatWindow = ({ selectedConversation, onSendMessage, onBack }: ChatWindowP
       />
       <ChatConversation
         messages={selectedConversation.messages}
-        selectedCollaborator={selectedCollaborator}
+        members={selectedConversation.members || []}
       />
-      <ChatInput onSendMessage={handleSendMessage} />
+      <ChatInput 
+        conversationId={selectedConversation.id}
+        onSendMessage={onSendMessage} 
+      />
     </div>
   );
 };
