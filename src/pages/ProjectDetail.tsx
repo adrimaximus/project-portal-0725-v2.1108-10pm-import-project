@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Project, Task, Comment, AssignedUser, ProjectStatus, PaymentStatus, ProjectFile } from "@/data/projects";
+import { Project, Task, Comment, AssignedUser, ProjectStatus, PaymentStatus, ProjectFile } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

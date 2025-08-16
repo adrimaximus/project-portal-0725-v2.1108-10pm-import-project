@@ -1,4 +1,8 @@
 import { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js';
+import { ProjectStatus, PaymentStatus } from '@/data/projects';
+
+// Re-export the enums so other files can import them from here
+export { ProjectStatus, PaymentStatus };
 
 // --- User & Profile Types ---
 export interface User {
@@ -16,12 +20,12 @@ export interface User {
   sidebar_order?: string[];
 }
 export type UserProfile = User;
+export interface AssignedUser extends UserProfile {
+  role?: string;
+}
 
 
 // --- Project Types ---
-export type ProjectStatus = 'Requested' | 'In Progress' | 'In Review' | 'On Hold' | 'Completed' | 'Cancelled';
-export type PaymentStatus = 'Proposed' | 'Pending' | 'Paid' | 'Overdue' | 'Cancelled';
-
 export interface ProjectTask {
   id: string;
   title: string;
@@ -29,6 +33,7 @@ export interface ProjectTask {
   originTicketId?: string;
   assignedTo: UserProfile[];
 }
+export type Task = ProjectTask;
 
 export interface ProjectComment {
   id: string;
@@ -39,6 +44,7 @@ export interface ProjectComment {
   attachment_name?: string;
   author: UserProfile;
 }
+export type Comment = ProjectComment;
 
 export interface BriefFile {
     id: string;
@@ -49,6 +55,7 @@ export interface BriefFile {
     storage_path: string;
     created_at: string;
 }
+export type ProjectFile = BriefFile;
 
 export interface Activity {
   id: string;
@@ -66,15 +73,15 @@ export interface Project {
   name: string;
   category: string;
   description: string;
-  status: string;
+  status: ProjectStatus | string;
   progress: number;
   budget: number;
   startDate?: string;
   dueDate?: string;
-  paymentStatus: string;
+  paymentStatus: PaymentStatus | string;
   paymentDueDate?: string;
   createdBy: UserProfile;
-  assignedTo: UserProfile[];
+  assignedTo: AssignedUser[];
   tasks: ProjectTask[];
   comments: ProjectComment[];
   services?: string[];

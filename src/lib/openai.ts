@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Project } from "@/data/projects";
-import { Goal } from "@/types";
+import { Project, Goal } from "@/types";
 
 const invokeOpenAiGenerator = async (feature: string, payload: any) => {
   const { data, error } = await supabase.functions.invoke('openai-generator', {

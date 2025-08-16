@@ -1,4 +1,4 @@
-import { Project } from '@/data/projects';
+import { Project } from '@/types';
 import { GoogleCalendarEvent } from '@/types';
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -141,7 +141,7 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
                   return isGcal ? (
                     <div key={index}>{itemContent}</div>
                   ) : (
-                    <Link to={`/projects/${item.id}`} key={index}>{itemContent}</Link>
+                    <Link to={`/projects/${(item as Project).slug}`} key={index}>{itemContent}</Link>
                   );
                 })}
               </ul>

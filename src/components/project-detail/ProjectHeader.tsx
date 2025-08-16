@@ -1,4 +1,4 @@
-import { Project } from "@/data/projects";
+import { Project } from "@/types";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";

@@ -1,4 +1,4 @@
-import { Project, ProjectStatus } from "@/data/projects";
+import { Project, ProjectStatus } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, CircleDollarSign, Flag } from "lucide-react";
 import { getStatusStyles } from "@/lib/utils";
@@ -47,7 +47,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
                 {projectStatuses.map(status => (
                   <SelectItem key={status} value={status}>
                     <span className="flex items-center">
-                      <span className={`mr-2 h-2 w-2 rounded-full ${getStatusStyles(status).tw}`}></span>
+                      <span className={`mr-2 h-2 w-2 rounded-full ${getStatusStyles(status).dot}`}></span>
                       {status}
                     </span>
                   </SelectItem>
@@ -56,7 +56,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
             </Select>
           ) : (
             <div className="flex items-center">
-              <span className={`mr-2 h-2 w-2 rounded-full ${statusStyles.tw}`}></span>
+              <span className={`mr-2 h-2 w-2 rounded-full ${statusStyles.dot}`}></span>
               <div className="text-2xl font-bold">{project.status}</div>
             </div>
           )}

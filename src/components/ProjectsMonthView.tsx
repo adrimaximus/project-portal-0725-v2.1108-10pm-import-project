@@ -1,4 +1,4 @@
-import { Project } from '@/data/projects';
+import { Project } from '@/types';
 import { useState, useMemo } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';

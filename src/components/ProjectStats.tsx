@@ -1,4 +1,4 @@
-import { Project } from '@/data/projects';
+import { Project } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 const ProjectStats = ({ project }: { project: Project }) => {
