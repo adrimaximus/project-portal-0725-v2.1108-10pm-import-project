@@ -77,6 +77,8 @@ const TeamSettingsPage = () => {
     fetchData();
   }, [fetchData]);
 
+  const validRoles = useMemo(() => roles.filter(r => r.name && r.name.trim() !== ''), [roles]);
+
   const filteredMembers = useMemo(() => {
     return members.filter(member =>
         member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -289,7 +291,7 @@ const TeamSettingsPage = () => {
                       <Select value={invite.role} onValueChange={(value) => handleInviteChange(invite.id, 'role', value)}>
                         <SelectTrigger id={`role-${invite.id}`} className="w-full sm:w-[220px]"><SelectValue placeholder="Select a role" /></SelectTrigger>
                         <SelectContent>
-                          {roles.filter(r => isMasterAdmin || r.name !== 'master admin').map(role => (
+                          {validRoles.filter(r => isMasterAdmin || r.name !== 'master admin').map(role => (
                             <SelectItem key={role.id} value={role.name}>{role.name}</SelectItem>
                           ))}
                         </SelectContent>
@@ -342,7 +344,7 @@ const TeamSettingsPage = () => {
                     <TableRow><TableCell colSpan={4} className="text-center">Loading members...</TableCell></TableRow>
                   ) : filteredMembers.map((member) => {
                     const isRoleChangeDisabled = !isAdmin || member.id === currentUser?.id || (member.role === 'master admin' && !isMasterAdmin);
-                    const availableRolesForMember = roles.filter(role => isMasterAdmin || role.name !== 'master admin');
+                    const availableRolesForMember = validRoles.filter(role => isMasterAdmin || role.name !== 'master admin');
                     const tooltipMessage = getDisabledTooltipMessage(member, currentUser);
 
                     return (

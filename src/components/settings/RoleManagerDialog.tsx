@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PERMISSIONS } from '@/data/permissions';
 import { ScrollArea } from '../ui/scroll-area';
+import { toast } from 'sonner';
 
 export type Role = {
   id?: string;
@@ -30,16 +31,16 @@ const RoleManagerDialog = ({ open, onOpenChange, onSave, role }: RoleManagerDial
   const isEditMode = !!role;
 
   useEffect(() => {
-    if (role) {
+    if (open && role) {
       setName(role.name);
       setDescription(role.description || '');
       setPermissions(role.permissions || []);
-    } else {
+    } else if (open) {
       setName('');
       setDescription('');
       setPermissions([]);
     }
-  }, [role]);
+  }, [role, open]);
 
   const handlePermissionChange = (permissionId: string, checked: boolean) => {
     if (checked) {
@@ -50,6 +51,10 @@ const RoleManagerDialog = ({ open, onOpenChange, onSave, role }: RoleManagerDial
   };
 
   const handleSave = () => {
+    if (!name.trim()) {
+      toast.error("Role name cannot be empty.");
+      return;
+    }
     onSave({ ...role, name, description, permissions });
   };
 
@@ -102,7 +107,7 @@ const RoleManagerDialog = ({ open, onOpenChange, onSave, role }: RoleManagerDial
         </ScrollArea>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave}>Save Role</Button>
+          <Button onClick={handleSave} disabled={!name.trim()}>Save Role</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
