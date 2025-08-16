@@ -28,6 +28,7 @@ import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { CreateProjectSheet } from './CreateProjectSheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type CalendarItem = Project & { lane?: number };
 
@@ -46,10 +47,11 @@ interface ProjectsMonthViewProps {
   projects: Project[];
 }
 
-const MAX_VISIBLE_LANES = 2;
+const MAX_VISIBLE_LANES = 3;
 
 const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const isMobile = useIsMobile();
 
   const { weeks, weeklyLayouts, moreByDay } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -118,6 +120,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
 
     const weeklyLayouts = weeks.map(() => []);
     const processedInLayout = new Set<string>();
+    const barStep = isMobile ? 1.375 : 1.625; // 22px on mobile, 26px on desktop
 
     (activeItems as CalendarItem[]).forEach(item => {
         if (item.lane === undefined || item.lane >= MAX_VISIBLE_LANES || processedInLayout.has(item.id)) {
@@ -158,7 +161,8 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
                     startCol,
                     span,
                     isStart: isSameDay(projectStart, segmentStart),
-                    isEnd: isSameDay(projectEnd, segmentEnd)
+                    isEnd: isSameDay(projectEnd, segmentEnd),
+                    top: `calc(1.75rem + ${item.lane! * barStep}rem)`
                 });
             }
             
@@ -185,7 +189,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
     });
 
     return { weeks, weeklyLayouts, moreByDay };
-  }, [projects, currentDate]);
+  }, [projects, currentDate, isMobile]);
 
   const dayHeaders = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
@@ -196,11 +200,11 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
     const content = (
       <div className="flex items-center gap-2 truncate">
         <div className="flex-1 truncate">
-          <p className="font-semibold truncate">{name}</p>
+          <p className="font-semibold truncate text-[10px] md:text-xs">{name}</p>
         </div>
         <div className="flex -space-x-2">
           {assignedTo.slice(0, 2).map(user => (
-            <Avatar key={user.id} className="h-4 w-4 border border-background">
+            <Avatar key={user.id} className="h-3 w-3 md:h-4 md:w-4 border border-background">
               <AvatarImage src={user.avatar} />
               <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
             </Avatar>
@@ -241,7 +245,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
               const dayKey = format(day, 'yyyy-MM-dd');
               const hiddenItems = moreByDay.get(dayKey);
               return (
-                <div key={day.toString()} className={cn("p-1.5 flex flex-col border-r border-gray-200 dark:border-gray-700", dayIndex === 6 && "border-r-0")}>
+                <div key={day.toString()} className={cn("p-1.5 flex flex-col border-r border-gray-200 dark:border-gray-700 min-h-[6rem] md:min-h-[9rem]", dayIndex === 6 && "border-r-0")}>
                   <span className={cn(
                     "self-end flex items-center justify-center h-6 w-6 rounded-full text-sm",
                     !isSameMonth(day, currentDate) && "text-muted-foreground/50",
@@ -249,7 +253,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
                   )}>
                     {format(day, 'd')}
                   </span>
-                  <div className="flex-grow mt-1 pt-[5.5rem]">
+                  <div className="flex-grow mt-auto">
                     {hiddenItems && (
                        <Popover>
                         <PopoverTrigger asChild>
@@ -264,7 +268,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
                           <ul className="space-y-1">
                             {hiddenItems.map(item => (
                               <li key={item.id}>
-                                <div className={cn("block p-2 rounded-md border-l-4", getProjectColorClasses(item))}>
+                                <div className={cn("block p-2 rounded-md border-l-4 h-[20px] md:h-6", getProjectColorClasses(item))}>
                                   {renderItem(item, true, 1)}
                                 </div>
                               </li>
@@ -278,20 +282,19 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
               )
             })}
             <div className="absolute inset-0 pointer-events-none">
-              {(weeklyLayouts[weekIndex] as any[]).map(({ item, startCol, span, isStart, isEnd }) => (
+              {(weeklyLayouts[weekIndex] as any[]).map(({ item, startCol, span, isStart, isEnd, top }) => (
                 <div
                   key={item.id}
                   className={cn(
-                    "absolute flex items-center p-1.5 text-xs border-l-4 pointer-events-auto",
+                    "absolute flex items-center p-1.5 border-l-4 pointer-events-auto h-[20px] md:h-6",
                     getProjectColorClasses(item),
                     isStart ? "rounded-l-lg" : "",
                     isEnd ? "rounded-r-lg" : "",
                   )}
                   style={{
-                    top: `calc(2.25rem + ${item.lane! * 2.75}rem)`,
+                    top: top,
                     left: `calc(${(startCol - 1) / 7 * 100}% + 2px)`,
                     width: `calc(${span / 7 * 100}% - 4px)`,
-                    height: '2.5rem',
                   }}
                 >
                   {(isStart || startCol === 1) && renderItem(item, isStart, startCol)}
