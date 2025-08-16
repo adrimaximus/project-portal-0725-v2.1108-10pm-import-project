@@ -33,7 +33,13 @@ export const generateTaskSuggestions = async (project: Project, existingTasks: {
 };
 
 export const generateAiInsight = async (goal: Goal, context: any): Promise<string> => {
-  return invokeOpenAiGenerator('generate-insight', { goal, context });
+  // Create a summary of the goal without the full completions list to avoid large payloads.
+  const { completions, ...goalSummary } = goal;
+  const summarizedGoal = {
+    ...goalSummary,
+    completionCount: completions.length, // Send a count instead of the full array
+  };
+  return invokeOpenAiGenerator('generate-insight', { goal: summarizedGoal, context });
 };
 
 export const generateAiIcon = async (prompt: string): Promise<string> => {
