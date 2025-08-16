@@ -58,27 +58,41 @@ serve(async (req) => {
           break;
         }
 
+        // **OPTIMIZATION**: Summarize project data before sending to OpenAI
+        const summarizedProjects = projects.map(p => ({
+          name: p.name,
+          status: p.status,
+          description: p.description?.substring(0, 100), // Truncate description
+          startDate: p.start_date,
+          dueDate: p.due_date,
+          budget: p.budget,
+          paymentStatus: p.payment_status,
+          assigneeCount: p.assignedTo?.length || 0,
+          taskCount: p.tasks?.length || 0,
+        }));
+
         let systemPrompt, userPrompt;
+        const today = new Date().toISOString();
 
         if (request === 'summarize_health') {
-          systemPrompt = "You are a helpful project management assistant. Analyze the provided JSON data and answer the user's question concisely and clearly in markdown format. Today's date is " + new Date().toDateString() + ".";
-          userPrompt = "Provide a brief, bulleted summary of the overall project health. Mention the number of projects in each status category, any projects that are at risk or overdue, and the total budget of active projects. The projects data is: \n" + JSON.stringify(projects, null, 2);
+          systemPrompt = `You are a helpful project management assistant. Analyze the provided JSON data and answer the user's question concisely and clearly in markdown format. Today's date is ${today}.`;
+          userPrompt = "Provide a brief, bulleted summary of the overall project health. Mention the number of projects in each status category, any projects that are at risk or overdue, and the total budget of active projects. The projects data is: \n" + JSON.stringify(summarizedProjects, null, 2);
         } else if (request === 'find_overdue') {
-          systemPrompt = "You are a helpful project management assistant. Analyze the provided JSON data and answer the user's question concisely and clearly in markdown format. Today's date is " + new Date().toDateString() + ".";
-          userPrompt = "Identify and list the names of any projects that are past their due date but are not marked as 'Completed'. If there are none, state that clearly. The projects data is: \n" + JSON.stringify(projects, null, 2);
+          systemPrompt = `You are a helpful project management assistant. Analyze the provided JSON data and answer the user's question concisely and clearly in markdown format. Today's date is ${today}.`;
+          userPrompt = "Identify and list the names of any projects that are past their due date but are not marked as 'Completed'. If there are none, state that clearly. The projects data is: \n" + JSON.stringify(summarizedProjects, null, 2);
         } else {
-          systemPrompt = `You are an expert project management AI assistant. You will be given a user's question and a JSON object containing all the projects they have access to. Answer the user's question based *only* on the provided project data. Be concise and helpful. Today's date is ${new Date().toDateString()}.`;
-          userPrompt = `Question: "${request}"\n\nProjects Data:\n${JSON.stringify(projects, null, 2)}`;
+          systemPrompt = `You are an expert project management AI assistant. You will be given a user's question and a JSON object containing all the projects they have access to. Answer the user's question based *only* on the provided project data. Be concise and helpful. Today's date is ${today}. When asked about dates, compare them to today's date to determine if they are in the past, present, or future.`;
+          userPrompt = `Question: "${request}"\n\nProjects Data:\n${JSON.stringify(summarizedProjects, null, 2)}`;
         }
 
         const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4-turbo",
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            temperature: 0.5,
-            max_tokens: 400,
+            temperature: 0.3,
+            max_tokens: 500,
         });
         responseData = { result: response.choices[0].message.content };
         break;
@@ -93,6 +107,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    console.error("Edge function error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
