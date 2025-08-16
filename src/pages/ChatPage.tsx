@@ -56,6 +56,68 @@ const ChatPage = () => {
     fetchConversations();
   }, [fetchConversations]);
 
+  const handleConversationSelect = useCallback(async (id: string) => {
+    setSelectedConversationId(id);
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*, sender:profiles(id, first_name, last_name, avatar_url, email)')
+      .eq('conversation_id', id)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      toast.error("Failed to fetch messages.");
+      return;
+    }
+
+    const mappedMessages: Message[] = data.map((m: any) => ({
+      id: m.id,
+      text: m.content,
+      timestamp: m.created_at,
+      sender: {
+        id: m.sender.id,
+        name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim(),
+        avatar: m.sender.avatar_url,
+        initials: `${m.sender.first_name?.[0] || ''}${m.sender.last_name?.[0] || ''}`.toUpperCase(),
+        email: m.sender.email,
+      },
+      attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
+    }));
+
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, messages: mappedMessages } : c));
+  }, []);
+
+  const handleStartNewChat = useCallback(async (collaborator: Collaborator) => {
+    if (!currentUser) return;
+    const { data, error } = await supabase.rpc('create_or_get_conversation', {
+      p_other_user_id: collaborator.id,
+      p_is_group: false
+    });
+
+    if (error) {
+      toast.error("Failed to start chat.");
+    } else {
+      await fetchConversations();
+      handleConversationSelect(data);
+    }
+  }, [currentUser, fetchConversations, handleConversationSelect]);
+
+  useEffect(() => {
+    const collaboratorToChat = location.state?.selectedCollaborator;
+    if (collaboratorToChat && currentUser) {
+      const existingConvo = conversations.find(c => 
+        !c.isGroup && c.members?.some(m => m.id === collaboratorToChat.id && m.id !== currentUser.id)
+      );
+
+      if (existingConvo) {
+        handleConversationSelect(existingConvo.id);
+      } else {
+        handleStartNewChat(collaboratorToChat);
+      }
+      
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, currentUser, conversations, navigate, handleConversationSelect, handleStartNewChat]);
+
   useEffect(() => {
     const subscription = supabase
       .channel('public:messages')
@@ -90,36 +152,6 @@ const ChatPage = () => {
     };
   }, [selectedConversationId, currentUser]);
 
-  const handleConversationSelect = async (id: string) => {
-    setSelectedConversationId(id);
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*, sender:profiles(id, first_name, last_name, avatar_url, email)')
-      .eq('conversation_id', id)
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      toast.error("Failed to fetch messages.");
-      return;
-    }
-
-    const mappedMessages: Message[] = data.map((m: any) => ({
-      id: m.id,
-      text: m.content,
-      timestamp: m.created_at,
-      sender: {
-        id: m.sender.id,
-        name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim(),
-        avatar: m.sender.avatar_url,
-        initials: `${m.sender.first_name?.[0] || ''}${m.sender.last_name?.[0] || ''}`.toUpperCase(),
-        email: m.sender.email,
-      },
-      attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
-    }));
-
-    setConversations(prev => prev.map(c => c.id === id ? { ...c, messages: mappedMessages } : c));
-  };
-
   const handleSendMessage = async (conversationId: string, messageText: string, attachment: Attachment | null) => {
     if (!conversationId || !currentUser) return;
 
@@ -141,21 +173,6 @@ const ChatPage = () => {
 
     if (error) {
         toast.error("Failed to send message.", { description: error.message });
-    }
-  };
-
-  const handleStartNewChat = async (collaborator: Collaborator) => {
-    if (!currentUser) return;
-    const { data, error } = await supabase.rpc('create_or_get_conversation', {
-      p_other_user_id: collaborator.id,
-      p_is_group: false
-    });
-
-    if (error) {
-      toast.error("Failed to start chat.");
-    } else {
-      await fetchConversations();
-      handleConversationSelect(data);
     }
   };
 
