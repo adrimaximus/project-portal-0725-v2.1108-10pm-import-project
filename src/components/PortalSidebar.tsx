@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, GripVertical } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -97,7 +97,6 @@ const NavLink = ({ item, isCollapsed, location }: { item: NavItem, isCollapsed: 
           {item.badge}
         </Badge>
       )}
-      <GripVertical className="h-4 w-4 ml-auto text-muted-foreground/20 group-hover:text-muted-foreground transition-colors" />
     </Link>
   );
 };
@@ -117,7 +116,7 @@ const SortableItem = ({ item, isCollapsed, location }: { item: NavItem, isCollap
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="cursor-grab">
       <NavLink item={item} isCollapsed={isCollapsed} location={location} />
     </div>
   );
