@@ -42,6 +42,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStatusStyles } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCreateProject } from "@/hooks/useCreateProject";
 
 interface CalendarEvent {
     id: string;
@@ -66,6 +67,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const createProjectMutation = useCreateProject();
 
   const refreshCalendarEvents = async () => {
     const token = localStorage.getItem('googleCalendarToken');
@@ -241,62 +243,33 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   };
 
   const handleImportEvent = async (event: CalendarEvent) => {
-    if (!user) {
-        toast.error("You must be logged in to import events.");
-        return;
-    }
-
-    const startDate = event.start.date || event.start.dateTime?.split('T')[0];
-    const dueDate = event.end.date || event.end.dateTime?.split('T')[0] || startDate;
+    const startDate = event.start.date || event.start.dateTime;
+    const dueDate = event.end.date || event.end.dateTime || startDate;
 
     if (!startDate) {
         toast.error("Cannot import event without a start date.");
         return;
     }
 
-    const originEventId = `cal-${event.id}`;
-    const { data: existing, error: checkError } = await supabase
-        .from('projects')
-        .select('id')
-        .eq('origin_event_id', originEventId)
-        .maybeSingle();
-
-    if (checkError) {
-        toast.error(`Error checking for existing project: ${checkError.message}`);
-        return;
-    }
-
-    if (existing) {
-        toast.info(`"${event.summary}" has already been imported.`);
-        setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-        return;
-    }
-
     const newProjectData = {
       name: event.summary || "Untitled Event",
-      category: 'Imported Event' as const,
-      status: 'Requested' as ProjectStatus,
-      progress: 0,
-      budget: 0,
-      start_date: startDate,
-      due_date: dueDate,
-      payment_status: 'Proposed' as PaymentStatus,
-      created_by: user.id,
-      origin_event_id: originEventId,
+      category: 'Imported Event',
+      startDate: new Date(startDate).toISOString(),
+      dueDate: new Date(dueDate).toISOString(),
+      origin_event_id: `cal-${event.id}`,
     };
 
-    const { error } = await supabase.from('projects').insert([newProjectData]);
-
-    if (error) {
-        toast.error(`Failed to import "${event.summary}": ${error.message}`);
-    } else {
-        toast.success(`"${event.summary}" imported as a new project.`);
-        setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-        
-        // Invalidate cache and refetch data to ensure UI updates
-        await queryClient.invalidateQueries({ queryKey: ['projects'] });
-        await refetch();
-    }
+    createProjectMutation.mutate(newProjectData, {
+        onSuccess: () => {
+            setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
+        },
+        onError: (error) => {
+            if (error.message.includes('duplicate key value violates unique constraint')) {
+                toast.info(`"${event.summary}" has already been imported.`);
+                setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
+            }
+        }
+    });
   };
 
   const renderContent = () => {
