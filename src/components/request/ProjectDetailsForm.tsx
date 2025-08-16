@@ -110,7 +110,6 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         budget: numericBudget,
         start_date: date?.from?.toISOString(),
         due_date: date?.to?.toISOString(),
-        created_by: currentUser.id,
       })
       .select('id, slug')
       .single();

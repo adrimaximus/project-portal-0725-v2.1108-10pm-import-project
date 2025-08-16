@@ -22,8 +22,6 @@ const createProject = async (projectData: NewProjectData) => {
         start_date: projectData.startDate,
         due_date: projectData.dueDate,
         budget: projectData.budget,
-        created_by: user.id,
-        status: 'Requested',
     };
 
     const { data, error } = await supabase.from('projects').insert(dataToInsert).select().single();
