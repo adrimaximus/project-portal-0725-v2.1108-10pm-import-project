@@ -10,12 +10,12 @@ import { useAuth } from "@/contexts/AuthContext";
 interface NewChatDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onStartNewChat: (collaborator: Collaborator) => void;
 }
 
-const NewChatDialog = ({ open, onOpenChange }: NewChatDialogProps) => {
+const NewChatDialog = ({ open, onOpenChange, onStartNewChat }: NewChatDialogProps) => {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
@@ -53,8 +53,8 @@ const NewChatDialog = ({ open, onOpenChange }: NewChatDialogProps) => {
   );
 
   const handleSelectCollaborator = (collaborator: Collaborator) => {
+    onStartNewChat(collaborator);
     onOpenChange(false);
-    navigate('/chat', { state: { selectedCollaborator: collaborator } });
   };
 
   return (

@@ -89,6 +89,7 @@ const ChatList = ({
       <NewChatDialog
         open={isNewChatOpen}
         onOpenChange={setIsNewChatOpen}
+        onStartNewChat={onStartNewChat}
       />
       <NewGroupChatDialog
         open={isNewGroupChatOpen}
