@@ -127,12 +127,10 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
       setIsSaving(false);
     } else if (!isEditMode) {
       try {
-        const goalInsertData = {
-          // user_id is now handled by the database default
+        const goalPayload = {
           title,
           description,
           icon,
-          icon_url: null,
           color,
           type,
           frequency,
@@ -141,33 +139,15 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
           target_period: targetPeriod,
           target_value: targetValue,
           unit,
+          tags: tags.map(t => ({ name: t.name, color: t.color })),
         };
 
-        const { data: newGoal, error: goalError } = await supabase
-          .from('goals')
-          .insert([goalInsertData], { defaultToNull: false })
-          .select()
-          .single();
+        const { data: newGoal, error: goalError } = await supabase.functions.invoke(
+          'secure-create-goal',
+          { body: goalPayload }
+        );
 
         if (goalError) throw goalError;
-
-        if (tags && tags.length > 0) {
-          const { data: existingTagsData } = await supabase.from('tags').select('name').eq('user_id', user.id);
-          const existingTagNames = new Set(existingTagsData?.map(t => t.name));
-          const newTagsToCreate = tags.filter(t => !existingTagNames.has(t.name));
-          
-          if (newTagsToCreate.length > 0) {
-            const newTagsForDb = newTagsToCreate.map(t => ({ name: t.name, color: t.color, user_id: user.id }));
-            await supabase.from('tags').insert(newTagsForDb);
-          }
-
-          const { data: allRelevantTags } = await supabase.from('tags').select('id, name').in('name', tags.map(t => t.name));
-
-          if (allRelevantTags) {
-            const goalTagsToInsert = allRelevantTags.map(t => ({ goal_id: newGoal.id, tag_id: t.id }));
-            await supabase.from('goal_tags').insert(goalTagsToInsert);
-          }
-        }
 
         toast.success(`Goal "${newGoal.title}" created!`);
         onSuccess();
