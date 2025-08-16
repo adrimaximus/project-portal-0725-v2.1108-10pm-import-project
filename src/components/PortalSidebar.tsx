@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,23 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { dummyNotifications } from "@/data/notifications";
 import { useFeatures } from "@/contexts/FeaturesContext";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -39,148 +56,184 @@ type NavItem = {
   allowedRoles?: string[];
 };
 
+const NavLink = ({ item, isCollapsed, location }: { item: NavItem, isCollapsed: boolean, location: any }) => {
+  if (isCollapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            to={item.href}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative",
+              location.pathname === item.href && "bg-muted text-primary"
+            )}
+          >
+            <item.icon className="h-5 w-5" />
+            <span className="sr-only">{item.label}</span>
+            {item.badge && (
+              <Badge className="absolute -top-1 -right-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full p-0 text-xs">
+                {item.badge}
+              </Badge>
+            )}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right">{item.label}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Link
+      to={item.href}
+      className={cn(
+        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary group",
+        location.pathname === item.href && "bg-muted text-primary"
+      )}
+    >
+      <item.icon className="h-4 w-4" />
+      {item.label}
+      {item.badge && (
+        <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+          {item.badge}
+        </Badge>
+      )}
+      <GripVertical className="h-4 w-4 ml-auto text-muted-foreground/20 group-hover:text-muted-foreground transition-colors" />
+    </Link>
+  );
+};
+
+const SortableItem = ({ item, isCollapsed, location }: { item: NavItem, isCollapsed: boolean, location: any }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <NavLink item={item} isCollapsed={isCollapsed} location={location} />
+    </div>
+  );
+};
+
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const { isFeatureEnabled } = useFeatures();
+  const [navItems, setNavItems] = useState<NavItem[]>([]);
+  const [customItemsTrigger, setCustomItemsTrigger] = useState(0);
+
+  const navItemsOrderKey = user ? `navItemsOrder_${user.id}` : null;
+
+  useEffect(() => {
+    if (!user) return;
+
+    const totalUnreadChatCount = 0;
+    const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
+
+    const defaultItemsList: NavItem[] = [
+      { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
+      { id: "projects", href: "/projects", label: "Projects", icon: Package },
+      { id: "request", href: "/request", label: "Request", icon: LayoutGrid },
+      { id: "chat", href: "/chat", label: "Chat", icon: MessageSquare, badge: totalUnreadChatCount > 0 ? totalUnreadChatCount : undefined },
+      { id: "mood-tracker", href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
+      { id: "goals", href: "/goals", label: "Goals", icon: Target },
+      { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
+      { id: "settings", href: "/settings", label: "Settings", icon: Settings, allowedRoles: ['admin', 'master admin'] },
+      { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined },
+    ];
+
+    const visibleDefaultItems = defaultItemsList.filter(item => {
+      const featureEnabled = item.id === 'chat' || isFeatureEnabled(item.id);
+      if (!featureEnabled) return false;
+      if (item.allowedRoles && !item.allowedRoles.includes(user.role || '')) return false;
+      return true;
+    });
+
+    let customItems: NavItem[] = [];
+    const customNavItemsKey = `customNavItems_${user.id}`;
+    if (isFeatureEnabled('custom-links')) {
+      try {
+        const stored = localStorage.getItem(customNavItemsKey);
+        if (stored) {
+          const parsed: {id: string, name: string, url: string}[] = JSON.parse(stored);
+          customItems = parsed.map(item => ({
+            id: item.id,
+            href: `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}`,
+            label: item.name,
+            icon: LinkIcon,
+            isCustom: true,
+          }));
+        }
+      } catch (e) { console.error("Failed to parse custom nav items", e); }
+    }
+
+    const allAvailableItems = [...visibleDefaultItems, ...customItems];
+    const itemsById = new Map(allAvailableItems.map(item => [item.id, item]));
+    const savedOrder: string[] = navItemsOrderKey ? JSON.parse(localStorage.getItem(navItemsOrderKey) || '[]') : [];
+    
+    const ordered = savedOrder
+      .map(id => itemsById.get(id))
+      .filter((i): i is NavItem => !!i);
+      
+    const newItems = allAvailableItems.filter(item => !savedOrder.includes(item.id));
+    
+    setNavItems([...ordered, ...newItems]);
+
+  }, [user, isFeatureEnabled, customItemsTrigger, totalUnreadChatCount, unreadNotificationCount]);
+
+  useEffect(() => {
+    const customNavItemsKey = user ? `customNavItems_${user.id}` : null;
+    if (!customNavItemsKey) return;
+    const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === customNavItemsKey) {
+            setCustomItemsTrigger(c => c + 1);
+        }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [user]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setNavItems((currentItems) => {
+        const oldIndex = currentItems.findIndex((item) => item.id === active.id);
+        const newIndex = currentItems.findIndex((item) => item.id === over.id);
+        const newArray = arrayMove(currentItems, oldIndex, newIndex);
+        
+        if (navItemsOrderKey) {
+          localStorage.setItem(navItemsOrderKey, JSON.stringify(newArray.map(item => item.id)));
+        }
+        
+        return newArray;
+      });
+    }
+  }
 
   const handleLogout = async () => {
     await logout();
   };
 
-  const totalUnreadChatCount = 0;
-  const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
-
-  const defaultNavItems = useMemo(() => {
-    if (!user) return [];
-
-    const items: NavItem[] = [
-      { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
-      { id: "projects", href: "/projects", label: "Projects", icon: Package },
-      { id: "request", href: "/request", label: "Request", icon: LayoutGrid },
-      { 
-        id: "chat",
-        href: "/chat", 
-        label: "Chat", 
-        icon: MessageSquare, 
-        ...(totalUnreadChatCount > 0 && { badge: totalUnreadChatCount }) 
-      },
-      { id: "mood-tracker", href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
-      { id: "goals", href: "/goals", label: "Goals", icon: Target },
-      { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
-      { id: "settings", href: "/settings", label: "Settings", icon: Settings, allowedRoles: ['admin', 'master admin'] },
-      { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, ...(unreadNotificationCount > 0 && { badge: unreadNotificationCount }) },
-    ];
-
-    return items.filter(item => {
-      const featureEnabled = item.id === 'chat' || isFeatureEnabled(item.id);
-      if (!featureEnabled) return false;
-
-      if (item.allowedRoles && !item.allowedRoles.includes(user.role || '')) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [isFeatureEnabled, user, totalUnreadChatCount, unreadNotificationCount]);
-  
-  const [customNavItems, setCustomNavItems] = useState<NavItem[]>([]);
-  const localStorageKey = user ? `customNavItems_${user.id}` : null;
-
-  useEffect(() => {
-    if (!localStorageKey) return;
-    
-    const loadCustomItems = () => {
-        try {
-          const storedItems = localStorage.getItem(localStorageKey);
-          if (storedItems) {
-            const parsedItems: {id: string, name: string, url: string}[] = JSON.parse(storedItems);
-            const hydratedItems: NavItem[] = parsedItems.map(item => ({
-              id: item.id,
-              href: `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}`,
-              label: item.name,
-              icon: LinkIcon,
-              isCustom: true,
-            }));
-            setCustomNavItems(hydratedItems);
-          } else {
-            setCustomNavItems([]);
-          }
-        } catch (error) {
-          console.error("Failed to parse custom nav items from localStorage", error);
-          setCustomNavItems([]);
-        }
-    };
-    
-    loadCustomItems();
-
-    const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === localStorageKey) {
-            loadCustomItems();
-        }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-        window.removeEventListener('storage', handleStorageChange);
-    }
-  }, [localStorageKey]);
-
   if (!user) {
     return null;
   }
-
-  const NavLink = ({ item }: { item: NavItem }) => {
-    if (isCollapsed) {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link
-              to={item.href}
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative",
-                location.pathname === item.href && "bg-muted text-primary"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              <span className="sr-only">{item.label}</span>
-              {item.badge && (
-                <Badge className="absolute -top-1 -right-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full p-0 text-xs">
-                  {item.badge}
-                </Badge>
-              )}
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent side="right">{item.label}</TooltipContent>
-        </Tooltip>
-      );
-    }
-
-    return (
-      <Link
-        to={item.href}
-        className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-          location.pathname === item.href && "bg-muted text-primary"
-        )}
-      >
-        <item.icon className="h-4 w-4" />
-        {item.label}
-        {item.badge && (
-          <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-            {item.badge}
-          </Badge>
-        )}
-      </Link>
-    );
-  };
-
-  const allVisibleNavItems = isFeatureEnabled('custom-links')
-    ? [...defaultNavItems, ...customNavItems]
-    : defaultNavItems;
 
   return (
     <div
@@ -207,16 +260,20 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         </div>
         <div className="flex-1 overflow-y-auto py-2">
           <TooltipProvider delayDuration={0}>
-            <nav
-              className={cn(
-                "grid items-start gap-1 text-sm font-medium",
-                isCollapsed ? "px-2" : "px-2 lg:px-4"
-              )}
-            >
-              {allVisibleNavItems.map((item) => (
-                <NavLink key={item.id} item={item} />
-              ))}
-            </nav>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={navItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
+                <nav
+                  className={cn(
+                    "grid items-start gap-1 text-sm font-medium",
+                    isCollapsed ? "px-2" : "px-2 lg:px-4"
+                  )}
+                >
+                  {navItems.map((item) => (
+                    <SortableItem key={item.id} item={item} isCollapsed={isCollapsed} location={location} />
+                  ))}
+                </nav>
+              </SortableContext>
+            </DndContext>
           </TooltipProvider>
         </div>
         <div className="mt-auto">
