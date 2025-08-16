@@ -198,9 +198,9 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
     const assignedTo = item.assignedTo;
 
     const content = (
-      <div className="flex items-center gap-2 truncate">
+      <div className="flex items-center gap-2 w-full overflow-hidden">
         <div className="flex-1 truncate">
-          <p className="font-semibold truncate text-[10px] md:text-xs">{name}</p>
+          <p className="font-semibold text-[10px] md:text-xs truncate">{name}</p>
         </div>
         <div className="flex -space-x-2">
           {assignedTo.slice(0, 2).map(user => (
@@ -286,7 +286,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
                 <div
                   key={item.id}
                   className={cn(
-                    "absolute flex items-center p-1.5 border-l-4 pointer-events-auto h-[20px] md:h-6",
+                    "absolute flex items-center p-1.5 border-l-4 pointer-events-auto h-[20px] md:h-6 overflow-hidden",
                     getProjectColorClasses(item),
                     isStart ? "rounded-l-lg" : "",
                     isEnd ? "rounded-r-lg" : "",
