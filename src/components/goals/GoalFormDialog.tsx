@@ -20,7 +20,7 @@ import IconPicker from './IconPicker';
 interface GoalFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (newGoal: any) => void;
   onGoalUpdate?: (updatedGoal: Goal) => void;
   goal?: Goal | null;
 }
@@ -68,10 +68,10 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
         setDescription(goal.description || '');
         setType(goal.type);
         setFrequency(goal.frequency);
-        setSpecificDays(goal.specificDays);
-        setTargetQuantity(goal.targetQuantity);
-        setTargetPeriod(goal.targetPeriod || 'Monthly');
-        setTargetValue(goal.targetValue);
+        setSpecificDays(goal.specific_days);
+        setTargetQuantity(goal.target_quantity);
+        setTargetPeriod(goal.target_period || 'Monthly');
+        setTargetValue(goal.target_value);
         setUnit(goal.unit || '');
         setColor(goal.color);
         setIcon(goal.icon);
@@ -118,10 +118,13 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
       const updatedGoalData: Goal = {
         ...goal,
         title, description, type, frequency,
-        specificDays: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
-        targetQuantity, targetPeriod, targetValue, unit, color, tags,
+        specific_days: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
+        target_quantity: targetQuantity, 
+        target_period: targetPeriod, 
+        target_value: targetValue, 
+        unit, color, tags,
         icon,
-        iconUrl: undefined,
+        icon_url: undefined,
       };
       onGoalUpdate(updatedGoalData);
       setIsSaving(false);
@@ -150,7 +153,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
         if (goalError) throw goalError;
 
         toast.success(`Goal "${newGoal.title}" created!`);
-        onSuccess();
+        onSuccess(newGoal);
         onOpenChange(false);
       } catch (error: any) {
         toast.error(`Failed to create goal: ${error.message}`);

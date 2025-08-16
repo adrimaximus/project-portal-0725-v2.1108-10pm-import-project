@@ -166,18 +166,18 @@ export interface Goal {
   title: string;
   description: string;
   icon: string;
-  iconUrl?: string;
+  icon_url?: string;
   color: string;
   type: GoalType;
-  targetQuantity?: number;
-  targetValue?: number;
+  target_quantity?: number;
+  target_value?: number;
   frequency: 'Daily' | 'Weekly';
-  targetPeriod?: GoalPeriod;
+  target_period?: GoalPeriod;
   unit?: string;
   collaborators: User[];
   completions: GoalCompletion[];
   tags: Tag[];
-  specificDays: string[];
+  specific_days: string[];
 }
 
 

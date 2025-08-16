@@ -8,11 +8,13 @@ import GoalCard from '@/components/goals/GoalCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const GoalsPage = () => {
   const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const fetchGoals = async () => {
     if (!user) return;
@@ -28,6 +30,12 @@ const GoalsPage = () => {
   useEffect(() => {
     fetchGoals();
   }, [user]);
+
+  const handleSuccess = (newGoal: Goal) => {
+    setIsNewGoalDialogOpen(false);
+    navigate(`/goals/${newGoal.slug}`);
+    fetchGoals();
+  };
 
   return (
     <PortalLayout>
@@ -47,7 +55,7 @@ const GoalsPage = () => {
       <GoalFormDialog
         open={isNewGoalDialogOpen}
         onOpenChange={setIsNewGoalDialogOpen}
-        onSuccess={fetchGoals}
+        onSuccess={handleSuccess}
       />
     </PortalLayout>
   );

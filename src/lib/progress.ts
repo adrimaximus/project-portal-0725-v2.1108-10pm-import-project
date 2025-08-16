@@ -4,8 +4,8 @@ export const getProgress = (goal: Goal) => {
   const current = goal.completions.reduce((sum, c) => sum + c.value, 0);
   
   const target = goal.type === 'quantity' 
-    ? goal.targetQuantity 
-    : goal.targetValue || 0;
+    ? goal.target_quantity 
+    : goal.target_value || 0;
 
   const percentage = target > 0 ? (current / target) * 100 : 0;
 

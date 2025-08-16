@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
-import { Goal, GoalCompletion, User } from '@/types';
+import { Goal, User } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,49 +21,52 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
-import { isBefore, startOfDay, format } from 'date-fns';
+import { format } from 'date-fns';
 import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import GoalQuantityTracker from '@/components/goals/GoalQuantityTracker';
 import GoalValueTracker from '@/components/goals/GoalValueTracker';
 import { formatNumber, formatValue } from '@/lib/formatting';
 import GoalProgressChart from '@/components/goals/GoalProgressChart';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
+const fetchGoalBySlug = async (slug: string): Promise<Goal | null> => {
+  const { data, error } = await supabase
+    .rpc('get_goal_by_slug', { p_slug: slug })
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    console.error("Error fetching goal details:", error);
+    throw new Error(error.message);
+  }
+  return data;
+};
 
 const GoalDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const [goal, setGoal] = useState<Goal | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const fetchGoal = async () => {
-    if (!slug || !currentUser) return;
-    setIsLoading(true);
-    const { data, error } = await supabase.rpc('get_user_goals');
-    if (error) {
-        toast.error('Failed to fetch goal details.');
-        navigate('/goals');
-        return;
-    }
-    const goalData = data.find((g: Goal) => g.slug === slug);
-    if (goalData) {
-        setGoal(goalData);
-    } else {
-        toast.error('Goal not found or you do not have access.');
-        navigate('/goals');
-    }
-    setIsLoading(false);
-  };
+  const { data: goal, isLoading, error: queryError } = useQuery({
+    queryKey: ['goal', slug],
+    queryFn: () => fetchGoalBySlug(slug!),
+    enabled: !!slug && !!currentUser,
+  });
 
   useEffect(() => {
-    fetchGoal();
-  }, [slug, currentUser]);
+    if (!isLoading && !goal) {
+      toast.error('Goal not found or you do not have access.');
+      navigate('/goals');
+    }
+  }, [isLoading, goal, navigate]);
 
   const handleToggleCompletion = async (date: Date) => {
     if (!goal || goal.type !== 'frequency' || !currentUser) return;
-    const dateString = format(startOfDay(date), 'yyyy-MM-dd');
-    const existing = goal.completions.find(c => format(startOfDay(new Date(c.date)), 'yyyy-MM-dd') === dateString);
+    const dateString = format(date, 'yyyy-MM-dd');
+    const existing = goal.completions.find(c => format(new Date(c.date), 'yyyy-MM-dd') === dateString);
 
     const { error } = await supabase.from('goal_completions').upsert({
         id: existing?.id,
@@ -77,7 +80,7 @@ const GoalDetailPage = () => {
         toast.error("Failed to update progress.");
     } else {
         toast.success(`Progress for ${format(date, 'PPP')} has been updated.`);
-        fetchGoal();
+        queryClient.invalidateQueries({ queryKey: ['goal', slug] });
     }
   };
 
@@ -89,7 +92,7 @@ const GoalDetailPage = () => {
         date: date.toISOString(),
         value: value,
     });
-    if (error) { toast.error("Failed to log progress."); } else { fetchGoal(); }
+    if (error) { toast.error("Failed to log progress."); } else { queryClient.invalidateQueries({ queryKey: ['goal', slug] }); }
   };
 
   const handleLogValue = async (date: Date, value: number) => {
@@ -100,7 +103,7 @@ const GoalDetailPage = () => {
         date: date.toISOString(),
         value: value,
     });
-    if (error) { toast.error("Failed to log value."); } else { fetchGoal(); }
+    if (error) { toast.error("Failed to log value."); } else { queryClient.invalidateQueries({ queryKey: ['goal', slug] }); }
   };
 
   const handleDeleteGoal = async () => {
@@ -110,6 +113,7 @@ const GoalDetailPage = () => {
         toast.error("Failed to delete goal.");
     } else {
         toast.success(`Goal "${goal.title}" has been deleted.`);
+        queryClient.invalidateQueries({ queryKey: ['goals'] });
         navigate('/goals');
     }
   };
@@ -129,20 +133,21 @@ const GoalDetailPage = () => {
       await supabase.from('goal_collaborators').insert(toAdd.map(c => ({ goal_id: goal.id, user_id: c.id })));
     }
     
-    fetchGoal();
+    queryClient.invalidateQueries({ queryKey: ['goal', slug] });
   };
 
   const handleGoalUpdate = async (updatedGoal: Goal) => {
-    const { title, description, type, frequency, specificDays, targetQuantity, targetPeriod, targetValue, unit, color, tags, icon, iconUrl } = updatedGoal;
+    const { title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, color, icon, icon_url } = updatedGoal;
     const { error } = await supabase.from('goals').update({
-        title, description, type, frequency, specific_days: specificDays, target_quantity: targetQuantity, target_period: targetPeriod, target_value: targetValue, unit, color, icon, icon_url: iconUrl
+        title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, color, icon, icon_url
     }).eq('id', updatedGoal.id);
 
     if (error) {
         toast.error("Failed to update goal.");
     } else {
         toast.success("Goal updated.");
-        fetchGoal();
+        queryClient.invalidateQueries({ queryKey: ['goal', slug] });
+        queryClient.invalidateQueries({ queryKey: ['goals'] });
         setIsEditDialogOpen(false);
     }
   };
@@ -153,17 +158,17 @@ const GoalDetailPage = () => {
 
   const getFrequencyText = () => {
     if (goal.type === 'quantity') {
-      return `${formatNumber(goal.targetQuantity!)} per ${goal.targetPeriod}`;
+      return `${formatNumber(goal.target_quantity!)} per ${goal.target_period}`;
     }
     if (goal.type === 'value') {
-      return `Target: ${formatValue(goal.targetValue!, goal.unit)}`;
+      return `Target: ${formatValue(goal.target_value!, goal.unit)}`;
     }
     if (goal.frequency === 'Daily') return 'Daily';
-    if (goal.frequency === 'Weekly' && goal.specificDays.length > 0) {
-      if (goal.specificDays.length === 7) return 'Daily';
-      if (goal.specificDays.length === 2 && goal.specificDays.includes('Sa') && goal.specificDays.includes('Su')) return 'Weekends';
-      if (goal.specificDays.length === 5 && !goal.specificDays.includes('Sa') && !goal.specificDays.includes('Su')) return 'Weekdays';
-      return `Weekly on ${goal.specificDays.join(', ')}`;
+    if (goal.frequency === 'Weekly' && goal.specific_days.length > 0) {
+      if (goal.specific_days.length === 7) return 'Daily';
+      if (goal.specific_days.length === 2 && goal.specific_days.includes('Sa') && goal.specific_days.includes('Su')) return 'Weekends';
+      if (goal.specific_days.length === 5 && !goal.specific_days.includes('Sa') && !goal.specific_days.includes('Su')) return 'Weekdays';
+      return `Weekly on ${goal.specific_days.join(', ')}`;
     }
     return 'Weekly';
   };
@@ -238,7 +243,7 @@ const GoalDetailPage = () => {
       <GoalFormDialog
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
-        onSuccess={fetchGoal}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['goal', slug] })}
         onGoalUpdate={handleGoalUpdate}
         goal={goal}
       />

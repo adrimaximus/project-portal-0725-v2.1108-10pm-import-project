@@ -22,7 +22,7 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
     const today = new Date();
     let periodStart, periodEnd, periodName;
 
-    if (goal.targetPeriod === 'Weekly') {
+    if (goal.target_period === 'Weekly') {
       periodStart = startOfWeek(today, { weekStartsOn: 1 });
       periodEnd = endOfWeek(today, { weekStartsOn: 1 });
       periodName = "minggu ini";
@@ -40,8 +40,8 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
     });
 
     const currentPeriodTotal = logsInPeriod.reduce((sum, c) => sum + c.value, 0);
-    const periodProgress = goal.targetValue ? Math.round((currentPeriodTotal / goal.targetValue) * 100) : 0;
-    const valueToGo = Math.max(0, (goal.targetValue || 0) - currentPeriodTotal);
+    const periodProgress = goal.target_value ? Math.round((currentPeriodTotal / goal.target_value) * 100) : 0;
+    const valueToGo = Math.max(0, (goal.target_value || 0) - currentPeriodTotal);
     
     const achieverSummary = goal.collaborators.map(collaborator => {
         const collaboratorLogs = logsInPeriod.filter(log => log.userId === collaborator.id);
@@ -94,7 +94,7 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
           )}
         </div>
         <CardDescription>
-          Anda telah mencatat {formatValue(currentPeriodTotal, goal.unit)} dari {formatValue(goal.targetValue || 0, goal.unit)}.
+          Anda telah mencatat {formatValue(currentPeriodTotal, goal.unit)} dari {formatValue(goal.target_value || 0, goal.unit)}.
           {valueToGo > 0 ? (
             <span className="font-medium"> {formatValue(valueToGo, goal.unit)} lagi.</span>
           ) : (
