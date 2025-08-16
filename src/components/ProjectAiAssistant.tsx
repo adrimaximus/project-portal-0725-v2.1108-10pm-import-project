@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Project } from '@/types';
-import { analyzeProjects } from '@/lib/openai';
+import { analyzeProjects, diagnoseProjectVisibility } from '@/lib/openai';
 import { toast } from 'sonner';
-import { Activity, AlertTriangle, Loader2 } from 'lucide-react';
+import { Activity, AlertTriangle, Loader2, ShieldQuestion } from 'lucide-react';
 
 interface ProjectAiAssistantProps {
   open: boolean;
@@ -14,6 +14,7 @@ interface ProjectAiAssistantProps {
 const aiActions = [
   { id: 'summarize_health', label: 'Summarize project health', icon: Activity },
   { id: 'find_overdue', label: 'Find overdue projects', icon: AlertTriangle },
+  { id: 'diagnose_visibility', label: "Diagnose why projects aren't showing", icon: ShieldQuestion },
 ];
 
 export function ProjectAiAssistant({ open, onOpenChange, projects }: ProjectAiAssistantProps) {
@@ -21,16 +22,22 @@ export function ProjectAiAssistant({ open, onOpenChange, projects }: ProjectAiAs
 
   const handleSelectAction = async (actionId: string) => {
     setIsLoading(true);
-    const toastId = toast.loading("AI is analyzing your projects...", {
+    const toastId = toast.loading("AI is analyzing...", {
       icon: <Loader2 className="h-4 w-4 animate-spin" />,
     });
 
     try {
-      const result = await analyzeProjects(projects, actionId);
+      let result;
+      if (actionId === 'diagnose_visibility') {
+        result = await diagnoseProjectVisibility();
+      } else {
+        result = await analyzeProjects(projects, actionId);
+      }
+      
       toast.success("AI Analysis Complete", {
         id: toastId,
         description: <div className="prose prose-sm max-w-none"><pre className="whitespace-pre-wrap font-sans">{result}</pre></div>,
-        duration: 15000,
+        duration: 20000,
         closeButton: true,
       });
     } catch (error: any) {

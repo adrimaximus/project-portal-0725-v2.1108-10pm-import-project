@@ -43,3 +43,10 @@ export const generateAiIcon = async (prompt: string): Promise<string> => {
 export const analyzeProjects = async (projects: Project[], request: string): Promise<string> => {
   return invokeOpenAiGenerator('analyze-projects', { projects, request });
 };
+
+export const diagnoseProjectVisibility = async (): Promise<string> => {
+  const { data, error } = await supabase.functions.invoke('diagnose-projects');
+  if (error) throw new Error(error.message);
+  if (data.error) throw new Error(data.error);
+  return data.result;
+};
