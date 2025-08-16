@@ -122,55 +122,54 @@ const ChatPage = () => {
   useEffect(() => {
     if (!currentUser) return;
 
-    const handleNewMessage = async (payload: any) => {
+    const handleNewMessage = (payload: any) => {
       const newMessage = payload.new as any;
       if (newMessage.sender_id === currentUser?.id) {
         return;
       }
 
-      const { data: senderProfile } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, avatar_url, email')
-        .eq('id', newMessage.sender_id)
-        .single();
-
-      if (!senderProfile) {
-        console.warn("Could not find profile for sender:", newMessage.sender_id);
-        return;
-      }
-
-      const sender: User = {
-        id: senderProfile.id,
-        name: `${senderProfile.first_name || ''} ${senderProfile.last_name || ''}`.trim() || senderProfile.email || 'Unknown',
-        avatar: senderProfile.avatar_url,
-        initials: `${senderProfile.first_name?.[0] || ''}${senderProfile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-        email: senderProfile.email || '',
-      };
-
-      setConversations(prev => prev.map(convo => {
-        if (convo.id === newMessage.conversation_id) {
-          const updatedConvo = {
-            ...convo,
-            lastMessage: newMessage.content || (newMessage.attachment_name || 'Attachment'),
-            lastMessageTimestamp: newMessage.created_at,
-          };
-
-          if (convo.id === selectedConversationId) {
-            const messageExists = convo.messages.some(m => m.id === newMessage.id);
-            if (!messageExists) {
-              updatedConvo.messages = [...convo.messages, {
-                id: newMessage.id,
-                text: newMessage.content,
-                timestamp: newMessage.created_at,
-                sender: sender,
-                attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
-              }];
-            }
-          }
-          return updatedConvo;
+      setConversations(prevConvos => {
+        const convoIndex = prevConvos.findIndex(c => c.id === newMessage.conversation_id);
+        if (convoIndex === -1) {
+          fetchConversations();
+          return prevConvos;
         }
-        return convo;
-      }));
+
+        const targetConvo = prevConvos[convoIndex];
+        const sender = targetConvo.members?.find(m => m.id === newMessage.sender_id);
+
+        if (!sender) {
+          console.warn("Could not find sender in conversation members:", newMessage.sender_id);
+          return prevConvos;
+        }
+
+        const updatedConvo = {
+          ...targetConvo,
+          lastMessage: newMessage.content || (newMessage.attachment_name || 'Attachment'),
+          lastMessageTimestamp: newMessage.created_at,
+        };
+
+        if (targetConvo.id === selectedConversationId) {
+          const messageExists = targetConvo.messages.some(m => m.id === newMessage.id);
+          if (!messageExists) {
+            updatedConvo.messages = [...targetConvo.messages, {
+              id: newMessage.id,
+              text: newMessage.content,
+              timestamp: newMessage.created_at,
+              sender: sender,
+              attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
+            }];
+          }
+        }
+
+        const newConvos = [...prevConvos];
+        newConvos[convoIndex] = updatedConvo;
+        
+        const [movedConvo] = newConvos.splice(convoIndex, 1);
+        newConvos.unshift(movedConvo);
+
+        return newConvos;
+      });
     };
 
     const subscription = supabase
@@ -181,7 +180,7 @@ const ChatPage = () => {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [selectedConversationId, currentUser]);
+  }, [selectedConversationId, currentUser, fetchConversations]);
 
   const handleSendMessage = async (conversationId: string, messageText: string, attachment: Attachment | null) => {
     if (!conversationId || !currentUser) return;
