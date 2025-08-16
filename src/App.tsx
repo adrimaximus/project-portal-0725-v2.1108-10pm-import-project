@@ -1,8 +1,9 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { useFeatures } from "./contexts/FeaturesContext";
 import { useAuth } from "./contexts/AuthContext";
-import React from "react";
+import React, { useEffect } from "react";
+import { toast } from "sonner";
 
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/Dashboard";
@@ -35,7 +36,16 @@ import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 import LoadingScreen from "./components/LoadingScreen";
 
-const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, featureId?: string }) => {
+const AccessDenied = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    toast.error("You do not have permission to access this page.");
+    navigate('/dashboard', { replace: true });
+  }, [navigate]);
+  return <LoadingScreen />;
+};
+
+const ProtectedRoute = ({ children, featureId, allowedRoles }: { children: React.ReactNode, featureId?: string, allowedRoles?: string[] }) => {
   const { session, user, loading } = useAuth();
   const { isFeatureEnabled } = useFeatures();
   const location = useLocation();
@@ -48,7 +58,6 @@ const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, fe
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If there's a session but we're still fetching the user profile from our db
   if (!user) {
     return <LoadingScreen />;
   }
@@ -57,8 +66,14 @@ const ProtectedRoute = ({ children, featureId }: { children: React.ReactNode, fe
     return <Navigate to="/dashboard" replace />;
   }
 
+  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role || '')) {
+    return <AccessDenied />;
+  }
+
   return <>{children}</>;
 };
+
+const ADMIN_ROLES = ['admin', 'master admin'];
 
 function App() {
   return (
@@ -82,17 +97,17 @@ function App() {
         <Route path="/notifications" element={<ProtectedRoute featureId="notifications"><NotificationsPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute featureId="profile"><Profile /></ProtectedRoute>} />
         <Route path="/search" element={<ProtectedRoute featureId="search"><SearchPage /></ProtectedRoute>} />
-        <Route path="/users" element={<ProtectedRoute featureId="user-management"><UserManagementPage /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute featureId="user-management" allowedRoles={ADMIN_ROLES}><UserManagementPage /></ProtectedRoute>} />
         
-        <Route path="/settings" element={<ProtectedRoute featureId="settings"><SettingsPage /></ProtectedRoute>} />
-        <Route path="/settings/team" element={<ProtectedRoute featureId="settings"><TeamSettingsPage /></ProtectedRoute>} />
-        <Route path="/settings/integrations" element={<ProtectedRoute featureId="settings"><IntegrationsPage /></ProtectedRoute>} />
-        <Route path="/settings/integrations/openai" element={<ProtectedRoute featureId="settings"><OpenAiIntegrationPage /></ProtectedRoute>} />
-        <Route path="/settings/integrations/github" element={<ProtectedRoute featureId="settings"><GitHubPage /></ProtectedRoute>} />
-        <Route path="/settings/integrations/slack" element={<ProtectedRoute featureId="settings"><SlackPage /></ProtectedRoute>} />
-        <Route path="/settings/integrations/google-drive" element={<ProtectedRoute featureId="settings"><GoogleDrivePage /></ProtectedRoute>} />
-        <Route path="/settings/integrations/google-calendar" element={<ProtectedRoute featureId="settings"><GoogleCalendarPage /></ProtectedRoute>} />
-        <Route path="/settings/navigation" element={<ProtectedRoute featureId="settings"><NavigationSettingsPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><SettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/team" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><TeamSettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><IntegrationsPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/openai" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><OpenAiIntegrationPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/github" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><GitHubPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/slack" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><SlackPage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/google-drive" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><GoogleDrivePage /></ProtectedRoute>} />
+        <Route path="/settings/integrations/google-calendar" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><GoogleCalendarPage /></ProtectedRoute>} />
+        <Route path="/settings/navigation" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><NavigationSettingsPage /></ProtectedRoute>} />
 
         <Route path="/custom" element={<ProtectedRoute><EmbedPage /></ProtectedRoute>} />
         
