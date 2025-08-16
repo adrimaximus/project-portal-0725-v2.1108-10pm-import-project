@@ -95,6 +95,7 @@ const ChatPage = () => {
 
     if (error) {
       toast.error("Failed to start chat.");
+      console.error("Failed to start chat:", error);
     } else {
       await fetchConversations();
       handleConversationSelect(data);
