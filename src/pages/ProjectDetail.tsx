@@ -8,10 +8,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
-import ProjectInfoCards from "@/components/project-detail/ProjectInfoCards";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mapProfileToUser } from "@/lib/utils";
+import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
+import ProjectFinancialsCard from "@/components/project-detail/ProjectFinancialsCard";
+import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
+import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
 
 const fetchProject = async (slug: string) => {
   const { data, error } = await supabase
@@ -29,18 +31,14 @@ const ProjectDetailSkeleton = () => (
   <PortalLayout>
     <div className="space-y-4">
       <Skeleton className="h-16 w-full" />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Skeleton className="h-28" />
-        <Skeleton className="h-28" />
-        <Skeleton className="h-28" />
-        <Skeleton className="h-28" />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <Skeleton className="h-96" />
         </div>
         <div className="space-y-4">
-          <Skeleton className="h-64" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-48" />
         </div>
       </div>
     </div>
@@ -113,18 +111,14 @@ const ProjectDetail = () => {
       if (updatedProjectRow) {
           const typedUpdatedProjectRow = updatedProjectRow as { slug: string };
           
-          // Invalidate queries to refetch data in the background
           queryClient.invalidateQueries({ queryKey: ["projects"] });
           
           if (slug !== typedUpdatedProjectRow.slug) {
-              // If slug changes, navigate. The new page will fetch fresh data.
               toast.success("Project updated successfully! Redirecting...");
               navigate(`/projects/${typedUpdatedProjectRow.slug}`, { replace: true });
           } else {
-              // If slug is the same, invalidate and wait for the refetch to complete.
               await queryClient.invalidateQueries({ queryKey: ["project", slug] });
               toast.success("Project updated successfully!");
-              // Now that the data is fresh, we can exit edit mode.
               setIsEditing(false);
           }
       }
@@ -294,7 +288,7 @@ const ProjectDetail = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-4">
+      <div className="space-y-6">
         <ProjectHeader
           project={project}
           isEditing={isEditing}
@@ -304,29 +298,31 @@ const ProjectDetail = () => {
           onCancelChanges={handleCancel}
           canEdit={canEdit}
         />
-        <ProjectInfoCards
-          project={project}
-          isEditing={isEditing}
-          editedProject={editedProject}
-          onFieldChange={handleFieldChange}
-          onDateChange={(name, date) => handleFieldChange(name, date?.toISOString())}
-          onBudgetChange={(value) => handleFieldChange('budget', value)}
-        />
-        <ProjectMainContent
-          project={editedProject}
-          isEditing={isEditing}
-          onDescriptionChange={(value) => handleFieldChange('description', value)}
-          onCategoryChange={(value) => handleFieldChange('category', value)}
-          onTeamChange={(users) => handleFieldChange('assignedTo', users)}
-          onFilesAdd={handleFilesAdd}
-          onFileDelete={handleFileDelete}
-          onServicesChange={(services) => handleFieldChange('services', services)}
-          onTaskAdd={handleTaskAdd}
-          onTaskAssignUsers={handleTaskAssignUsers}
-          onTaskStatusChange={handleTaskStatusChange}
-          onTaskDelete={handleTaskDelete}
-          onAddCommentOrTicket={handleAddCommentOrTicket}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2">
+            <ProjectMainContent
+              project={editedProject}
+              isEditing={isEditing}
+              onDescriptionChange={(value) => handleFieldChange('description', value)}
+              onCategoryChange={(value) => handleFieldChange('category', value)}
+              onTeamChange={(users) => handleFieldChange('assignedTo', users)}
+              onFilesAdd={handleFilesAdd}
+              onFileDelete={handleFileDelete}
+              onServicesChange={(services) => handleFieldChange('services', services)}
+              onTaskAdd={handleTaskAdd}
+              onTaskAssignUsers={handleTaskAssignUsers}
+              onTaskStatusChange={handleTaskStatusChange}
+              onTaskDelete={handleTaskDelete}
+              onAddCommentOrTicket={handleAddCommentOrTicket}
+            />
+          </div>
+          <div className="lg:col-span-1 space-y-6">
+            <ProjectProgressCard project={project} />
+            <ProjectFinancialsCard project={project} />
+            <ProjectTeamCard project={project} />
+            <ProjectDetailsCard project={project} />
+          </div>
+        </div>
       </div>
     </PortalLayout>
   );

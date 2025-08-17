@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types";
+import { ListChecks } from "lucide-react";
 
 interface ProjectProgressCardProps {
   project: Project;
@@ -10,21 +11,19 @@ const ProjectProgressCard = ({ project }: ProjectProgressCardProps) => {
   const tasks = project.tasks || [];
   const completedTasks = tasks.filter(task => task.completed).length;
   const totalTasks = tasks.length;
-  const progressPercentage = project.progress;
+  const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Project Progress</CardTitle>
-        <CardDescription>
-          {`${completedTasks} of ${totalTasks} tasks completed.`}
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Project Progress</CardTitle>
+        <ListChecks className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-muted-foreground">Overall Progress</span>
-          <span className="text-sm font-bold">{progressPercentage}%</span>
-        </div>
+        <div className="text-2xl font-bold">{progressPercentage}%</div>
+        <p className="text-xs text-muted-foreground mb-2">
+          {`${completedTasks} of ${totalTasks} tasks completed.`}
+        </p>
         <Progress value={progressPercentage} />
       </CardContent>
     </Card>
