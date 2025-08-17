@@ -4,6 +4,7 @@ import { ArrowLeft, Pencil, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "../StatusBadge";
 import { getStatusStyles } from "@/lib/utils";
+import { Input } from "../ui/input";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -13,6 +14,7 @@ interface ProjectHeaderProps {
   onSaveChanges: () => void;
   onCancelChanges: () => void;
   canEdit: boolean;
+  onFieldChange: (field: keyof Project, value: any) => void;
 }
 
 const ProjectHeader = ({
@@ -23,6 +25,7 @@ const ProjectHeader = ({
   onSaveChanges,
   onCancelChanges,
   canEdit,
+  onFieldChange,
 }: ProjectHeaderProps) => {
   const navigate = useNavigate();
   const statusStyles = getStatusStyles(project.status);
@@ -36,7 +39,15 @@ const ProjectHeader = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8 items-center">
         <div className="lg:col-span-2 flex items-center gap-3">
           <div className="w-1 h-8" style={{ backgroundColor: statusStyles.hex }} />
-          <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+          {isEditing ? (
+            <Input
+              value={project.name || ''}
+              onChange={(e) => onFieldChange('name', e.target.value)}
+              className="text-3xl font-bold tracking-tight h-auto p-0 border-0 shadow-none focus-visible:ring-0"
+            />
+          ) : (
+            <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+          )}
           {project.status && <StatusBadge status={project.status} />}
         </div>
         {canEdit && (

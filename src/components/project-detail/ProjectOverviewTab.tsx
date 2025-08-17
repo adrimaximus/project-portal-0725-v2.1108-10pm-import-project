@@ -73,7 +73,7 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategor
         <CardContent>
           {isEditing ? (
             <Input
-              value={project.category}
+              value={project.category || ''}
               onChange={(e) => onCategoryChange(e.target.value)}
               placeholder="Enter project category"
             />

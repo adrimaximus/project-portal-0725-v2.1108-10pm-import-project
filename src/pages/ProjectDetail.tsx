@@ -290,13 +290,14 @@ const ProjectDetail = () => {
     <PortalLayout>
       <div className="space-y-6">
         <ProjectHeader
-          project={project}
+          project={editedProject}
           isEditing={isEditing}
           isSaving={isSaving}
           onEditToggle={() => setIsEditing(true)}
           onSaveChanges={handleSave}
           onCancelChanges={handleCancel}
           canEdit={canEdit}
+          onFieldChange={handleFieldChange}
         />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2">
@@ -317,10 +318,14 @@ const ProjectDetail = () => {
             />
           </div>
           <div className="lg:col-span-1 space-y-6">
-            <ProjectProgressCard project={project} />
-            <ProjectFinancialsCard project={project} />
-            <ProjectTeamCard project={project} />
-            <ProjectDetailsCard project={project} />
+            <ProjectProgressCard project={editedProject} />
+            <ProjectFinancialsCard project={editedProject} />
+            <ProjectTeamCard project={editedProject} />
+            <ProjectDetailsCard
+              project={editedProject}
+              isEditing={isEditing}
+              onFieldChange={handleFieldChange}
+            />
           </div>
         </div>
       </div>
