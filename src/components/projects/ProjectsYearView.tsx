@@ -41,7 +41,7 @@ const getItemColor = (item: CombinedItem): string => {
   }
 };
 
-const MonthView = ({ projects, gcalEvents }: { projects: Project[], gcalEvents: GoogleCalendarEvent[] }) => {
+const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalEvents: GoogleCalendarEvent[] }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const combinedItems: CombinedItem[] = useMemo(() => [...projects, ...gcalEvents], [projects, gcalEvents]);
@@ -200,4 +200,4 @@ const MonthView = ({ projects, gcalEvents }: { projects: Project[], gcalEvents: 
   );
 };
 
-export default MonthView;
+export default ProjectsYearView;
