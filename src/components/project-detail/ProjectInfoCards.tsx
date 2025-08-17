@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project, PROJECT_STATUSES, PAYMENT_STATUSES, PaymentStatus } from "@/types";
-import { format, formatDistanceToNow, startOfDay } from "date-fns";
+import { format, formatDistanceToNow, startOfDay, differenceInDays, isBefore } from "date-fns";
 import { id } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -40,13 +40,20 @@ const paymentStatusConfig: Record<PaymentStatus | 'Proposed' | 'Cancelled', { co
 
 const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, onDateChange, onBudgetChange }: ProjectInfoCardsProps) => {
   const startDateObj = project.startDate ? startOfDay(new Date(project.startDate)) : null;
-  const dueDateObj = project.dueDate ? startOfDay(new Date(project.dueDate)) : null;
+  const dueDateObj = project.dueDate ? startOfDay(new Date(project.dueDate)) : startDateObj;
   const paymentDueDateObj = project.paymentDueDate ? startOfDay(new Date(project.paymentDueDate)) : null;
 
   const timeRemaining = dueDateObj ? formatDistanceToNow(dueDateObj, { addSuffix: true, locale: id }) : "Not set";
   const paymentDueDateFormatted = paymentDueDateObj
     ? formatDistanceToNow(paymentDueDateObj, { addSuffix: true, locale: id })
     : "Not set";
+
+  let durationText = "";
+  if (startDateObj && dueDateObj) {
+    const effectiveEndDate = isBefore(dueDateObj, startDateObj) ? startDateObj : dueDateObj;
+    const duration = differenceInDays(effectiveEndDate, startDateObj) + 1;
+    durationText = `(${duration} day${duration > 1 ? 's' : ''})`;
+  }
 
   const StatusIcon = statusConfig[project.status as keyof typeof statusConfig]?.icon || CircleDashed;
   const statusColor = statusConfig[project.status as keyof typeof statusConfig]?.color || "text-muted-foreground";
@@ -154,7 +161,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
             <div className="text-2xl font-bold">{timeRemaining}</div>
           )}
           {!isEditing && <p className="text-xs text-muted-foreground">
-            {startDateObj ? format(startDateObj, "d MMM yyyy", { locale: id }) : "Not set"} - {dueDateObj ? format(dueDateObj, "d MMM yyyy", { locale: id }) : "Not set"}
+            {startDateObj ? format(startDateObj, "d MMM yyyy", { locale: id }) : "Not set"} - {dueDateObj ? format(dueDateObj, "d MMM yyyy", { locale: id }) : "Not set"} {durationText}
           </p>}
         </CardContent>
       </Card>
