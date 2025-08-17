@@ -45,7 +45,7 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategor
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader><CardTitle>Description</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Description & Brief</CardTitle></CardHeader>
         <CardContent>
           <ProjectDescription
             description={project.description}
@@ -73,7 +73,7 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategor
       )}
 
       <Card>
-        <CardHeader><CardTitle>Brief & Files</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Shared Files</CardTitle></CardHeader>
         <CardContent>
           <ProjectBrief
             files={project.briefFiles || []}
