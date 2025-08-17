@@ -39,11 +39,11 @@ const paymentStatusConfig: Record<PaymentStatus | 'Proposed' | 'Cancelled', { co
 };
 
 const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, onDateChange, onBudgetChange }: ProjectInfoCardsProps) => {
-  const startDateObj = startOfDay(new Date(project.startDate));
-  const dueDateObj = startOfDay(new Date(project.dueDate));
+  const startDateObj = project.startDate ? startOfDay(new Date(project.startDate)) : null;
+  const dueDateObj = project.dueDate ? startOfDay(new Date(project.dueDate)) : null;
   const paymentDueDateObj = project.paymentDueDate ? startOfDay(new Date(project.paymentDueDate)) : null;
 
-  const timeRemaining = formatDistanceToNow(dueDateObj, { addSuffix: true, locale: id });
+  const timeRemaining = dueDateObj ? formatDistanceToNow(dueDateObj, { addSuffix: true, locale: id }) : "Not set";
   const paymentDueDateFormatted = paymentDueDateObj
     ? formatDistanceToNow(paymentDueDateObj, { addSuffix: true, locale: id })
     : "Not set";
@@ -135,7 +135,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={new Date(editedProject.startDate)} onSelect={(date) => onDateChange('startDate', date)} initialFocus />
+                  <Calendar mode="single" selected={editedProject.startDate ? new Date(editedProject.startDate) : undefined} onSelect={(date) => onDateChange('startDate', date)} initialFocus />
                 </PopoverContent>
               </Popover>
               <Popover>
@@ -146,7 +146,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={new Date(editedProject.dueDate)} onSelect={(date) => onDateChange('dueDate', date)} initialFocus />
+                  <Calendar mode="single" selected={editedProject.dueDate ? new Date(editedProject.dueDate) : undefined} onSelect={(date) => onDateChange('dueDate', date)} initialFocus />
                 </PopoverContent>
               </Popover>
             </div>
@@ -154,7 +154,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
             <div className="text-2xl font-bold">{timeRemaining}</div>
           )}
           {!isEditing && <p className="text-xs text-muted-foreground">
-            {format(startDateObj, "d MMM yyyy", { locale: id })} - {format(dueDateObj, "d MMM yyyy", { locale: id })}
+            {startDateObj ? format(startDateObj, "d MMM yyyy", { locale: id }) : "Not set"} - {dueDateObj ? format(dueDateObj, "d MMM yyyy", { locale: id }) : "Not set"}
           </p>}
         </CardContent>
       </Card>
