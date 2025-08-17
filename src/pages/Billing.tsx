@@ -24,6 +24,7 @@ const getInvoiceStatus = (status: PaymentStatus | string): Invoice['status'] | n
     case 'Paid':
       return 'Paid';
     case 'Pending':
+    case 'In Process':
       return 'Due';
     case 'Overdue':
       return 'Overdue';

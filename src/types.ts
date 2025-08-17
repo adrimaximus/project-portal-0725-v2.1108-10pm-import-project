@@ -34,12 +34,13 @@ export const PROJECT_STATUS_OPTIONS = [
   { value: 'Cancelled', label: 'Cancelled' },
 ] as const;
 
-export const PAYMENT_STATUSES = ['Proposed', 'Pending', 'Paid', 'Overdue', 'Cancelled'] as const;
+export const PAYMENT_STATUSES = ['Proposed', 'Pending', 'In Process', 'Paid', 'Overdue', 'Cancelled'] as const;
 export type PaymentStatus = typeof PAYMENT_STATUSES[number];
 
 export const PAYMENT_STATUS_OPTIONS = [
   { value: 'Proposed', label: 'Proposed' },
   { value: 'Pending', label: 'Pending' },
+  { value: 'In Process', label: 'In Process' },
   { value: 'Paid', label: 'Paid' },
   { value: 'Overdue', label: 'Overdue' },
   { value: 'Cancelled', label: 'Cancelled' },
