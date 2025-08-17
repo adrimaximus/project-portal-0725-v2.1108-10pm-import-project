@@ -4,10 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProjectDescription from './ProjectDescription';
-import ProjectServices from './ProjectServices';
 import ProjectBrief from './ProjectBrief';
-import ModernTeamSelector from '../request/ModernTeamSelector';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Input } from '../ui/input';
 
 interface ProjectOverviewTabProps {
@@ -21,7 +18,7 @@ interface ProjectOverviewTabProps {
   onServicesChange: (services: string[]) => void;
 }
 
-const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategoryChange, onTeamChange, onFilesAdd, onFileDelete, onServicesChange }: ProjectOverviewTabProps) => {
+const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategoryChange, onFilesAdd, onFileDelete }: ProjectOverviewTabProps) => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   useEffect(() => {
@@ -43,18 +40,6 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategor
     fetchUsers();
   }, []);
   
-  const handleTeamSelectionToggle = (userToToggle: AssignedUser) => {
-    const isSelected = project.assignedTo.some(u => u.id === userToToggle.id);
-    const newTeam = isSelected
-      ? project.assignedTo.filter(u => u.id !== userToToggle.id)
-      : [...project.assignedTo, userToToggle];
-    onTeamChange(newTeam);
-  };
-
-  const assignableUsers = project.createdBy
-    ? allUsers.filter(u => u.id !== project.createdBy.id)
-    : allUsers;
-
   const showCategoryCard = project.category !== 'Requested Event' && project.category !== 'Imported Event';
 
   return (
@@ -86,17 +71,6 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategor
           </CardContent>
         </Card>
       )}
-
-      <Card>
-        <CardHeader><CardTitle>Services</CardTitle></CardHeader>
-        <CardContent>
-          <ProjectServices
-            selectedServices={project.services}
-            isEditing={isEditing}
-            onServicesChange={onServicesChange}
-          />
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader><CardTitle>Brief & Files</CardTitle></CardHeader>

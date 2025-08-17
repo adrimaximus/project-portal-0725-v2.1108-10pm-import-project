@@ -5,9 +5,7 @@ import { format, isSameDay } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
-import { Badge } from "@/components/ui/badge";
-import { services as allServicesData, Service } from "@/data/services";
-import { cn } from "@/lib/utils";
+import ProjectServices from "./ProjectServices";
 
 interface ProjectDetailsCardProps {
   project: Project;
@@ -34,10 +32,6 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     currency: "IDR",
     minimumFractionDigits: 0,
   }).format(amount);
-
-  const serviceDetails = (project.services || [])
-    .map((serviceName) => allServicesData.find((s) => s.title === serviceName))
-    .filter((s): s is Service => s !== undefined);
 
   const renderDateRange = () => {
     if (!project.startDate) return 'N/A';
@@ -95,28 +89,15 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
         </div>
         <div className="flex items-start gap-4">
           <Briefcase className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-          <div>
+          <div className="w-full">
             <p className="font-medium">Services</p>
-            {isEditing ? (
-              <p className="text-muted-foreground text-xs">Services can be edited in the main content area below.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2 mt-1">
-                {serviceDetails.length > 0 ? (
-                  serviceDetails.map((service) => (
-                    <Badge
-                      key={service.title}
-                      variant="secondary"
-                      className="flex items-center gap-2"
-                    >
-                      <service.icon className={cn("h-4 w-4", service.iconColor)} />
-                      <span>{service.title}</span>
-                    </Badge>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground">No services selected.</p>
-                )}
-              </div>
-            )}
+            <div className="mt-1">
+              <ProjectServices
+                selectedServices={project.services || []}
+                isEditing={isEditing}
+                onServicesChange={(services) => onFieldChange('services', services)}
+              />
+            </div>
           </div>
         </div>
       </CardContent>
