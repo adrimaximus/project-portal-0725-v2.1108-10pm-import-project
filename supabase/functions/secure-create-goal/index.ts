@@ -14,7 +14,7 @@ serve(async (req) => {
 
   try {
     // 1. Buat klien Supabase dengan token otentikasi pengguna
-    const userSupabase = createClient(
+    const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -23,63 +23,40 @@ serve(async (req) => {
       }
     )
 
-    // 2. Dapatkan pengguna yang terotentikasi
-    const { data: { user }, error: userError } = await userSupabase.auth.getUser()
+    // 2. Dapatkan pengguna yang terotentikasi untuk memastikan panggilan diotorisasi
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) throw new Error("User not authenticated.");
 
     // 3. Uraikan body permintaan untuk data goal
     const payload = await req.json();
-    const { tags = [], ...goalData } = payload;
-    const { title, icon, color, type } = goalData;
+    const { title, description, icon, color, type, frequency, specific_days, target_quantity, target_period, target_value, unit, tags } = payload;
 
     // 4. Validasi field yang diperlukan
     if (!title || !icon || !color || !type) {
       throw new Error("Missing required fields: title, icon, color, and type are required.");
     }
 
-    // 5. Buat klien admin Supabase untuk melakukan penyisipan
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
-
-    // 6. Sisipkan goal baru, dengan secara eksplisit mengatur user_id
-    const { data: newGoal, error: insertError } = await supabaseAdmin
-      .from('goals')
-      .insert({ ...goalData, user_id: user.id })
-      .select()
+    // 5. Panggil fungsi RPC untuk membuat goal dan tag-nya secara atomik
+    const { data: newGoal, error: rpcError } = await supabase
+      .rpc('create_goal_with_tags', {
+        p_title: title,
+        p_description: description,
+        p_icon: icon,
+        p_color: color,
+        p_type: type,
+        p_frequency: frequency,
+        p_specific_days: specific_days,
+        p_target_quantity: target_quantity,
+        p_target_period: target_period,
+        p_target_value: target_value,
+        p_unit: unit,
+        p_tags: tags,
+      })
       .single();
 
-    if (insertError) throw insertError;
+    if (rpcError) throw rpcError;
 
-    // 7. Tangani tag jika ada
-    if (tags.length > 0) {
-      const tagsToUpsert = tags.map(tag => ({
-        user_id: user.id,
-        name: tag.name,
-        color: tag.color,
-      }));
-      
-      await supabaseAdmin.from('tags').upsert(tagsToUpsert, { onConflict: 'user_id, name' });
-
-      const tagNames = tags.map(t => t.name);
-      const { data: relevantTags } = await supabaseAdmin
-        .from('tags')
-        .select('id, name')
-        .eq('user_id', user.id)
-        .in('name', tagNames);
-
-      if (relevantTags && relevantTags.length > 0) {
-        const goalTagsToInsert = relevantTags.map(tag => ({
-          goal_id: newGoal.id,
-          tag_id: tag.id,
-        }));
-        await supabaseAdmin.from('goal_tags').insert(goalTagsToInsert);
-      }
-    }
-
-    // 8. Kembalikan goal yang baru dibuat
+    // 6. Kembalikan goal yang baru dibuat
     return new Response(JSON.stringify(newGoal), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 201,
