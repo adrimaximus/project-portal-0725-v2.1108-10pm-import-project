@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Project, Task, Comment, AssignedUser, ProjectStatus, PaymentStatus, ProjectFile } from "@/data/projects";
+import { Project, Task, Comment, AssignedUser, ProjectStatus, PaymentStatus, ProjectFile } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -86,61 +86,33 @@ const ProjectDetail = () => {
   const handleSave = async () => {
     if (!editedProject || !project) return;
 
-    const { name, description, category, status, budget, startDate, dueDate, paymentStatus, paymentDueDate, services, assignedTo } = editedProject;
+    const { id, name, description, category, status, budget, startDate, dueDate, paymentStatus, paymentDueDate, services, assignedTo } = editedProject;
     
     const { error } = await supabase
-      .from('projects')
-      .update({
-        name,
-        description,
-        category,
-        status,
-        budget,
-        start_date: startDate,
-        due_date: dueDate,
-        payment_status: paymentStatus,
-        payment_due_date: paymentDueDate,
-      })
-      .eq('id', project.id);
+      .rpc('update_project_details', {
+        p_project_id: id,
+        p_name: name,
+        p_description: description,
+        p_category: category,
+        p_status: status,
+        p_budget: budget,
+        p_start_date: startDate,
+        p_due_date: dueDate,
+        p_payment_status: paymentStatus,
+        p_payment_due_date: paymentDueDate,
+        p_member_ids: assignedTo.map(m => m.id),
+        p_service_titles: services || [],
+      });
 
     if (error) {
       toast.error("Failed to save project", { description: error.message });
       return;
     }
 
-    // Team members
-    const originalMemberIds = new Set(project.assignedTo.map(m => m.id));
-    const newMemberIds = new Set(assignedTo.map(m => m.id));
-    const membersToAdd = assignedTo.filter(m => !originalMemberIds.has(m.id));
-    const membersToRemove = project.assignedTo.filter(m => !newMemberIds.has(m.id));
-
-    if (membersToAdd.length > 0) {
-      const { error: addError } = await supabase.from('project_members').insert(membersToAdd.map(m => ({ project_id: project.id, user_id: m.id, role: m.role })));
-      if (addError) toast.error("Failed to add team members", { description: addError.message });
-    }
-    if (membersToRemove.length > 0) {
-      const { error: removeError } = await supabase.from('project_members').delete().eq('project_id', project.id).in('user_id', membersToRemove.map(m => m.id));
-      if (removeError) toast.error("Failed to remove team members", { description: removeError.message });
-    }
-
-    // Services
-    const originalServiceTitles = new Set(project.services || []);
-    const newServiceTitles = new Set(editedProject.services || []);
-    const servicesToAdd = (editedProject.services || []).filter(s => !originalServiceTitles.has(s));
-    const servicesToRemove = (project.services || []).filter(s => !newServiceTitles.has(s));
-
-    if (servicesToAdd.length > 0) {
-        const { error: addError } = await supabase.from('project_services').insert(servicesToAdd.map(s => ({ project_id: project.id, service_title: s })));
-        if (addError) toast.error("Failed to add services", { description: addError.message });
-    }
-    if (servicesToRemove.length > 0) {
-        const { error: removeError } = await supabase.from('project_services').delete().eq('project_id', project.id).in('service_title', servicesToRemove);
-        if (removeError) toast.error("Failed to remove services", { description: removeError.message });
-    }
-
     toast.success("Project saved successfully!");
     setIsEditing(false);
     queryClient.invalidateQueries({ queryKey: ["project", slug] });
+    queryClient.invalidateQueries({ queryKey: ["projects"] });
   };
 
   const handleCancel = () => {
@@ -221,6 +193,8 @@ const ProjectDetail = () => {
   }
   if (!project || !editedProject) return null;
 
+  const canEdit = user && (user.id === project.createdBy.id || user.role === 'admin' || user.role === 'master admin');
+
   return (
     <PortalLayout>
       <div className="space-y-4">
@@ -230,7 +204,7 @@ const ProjectDetail = () => {
           onEditToggle={() => setIsEditing(true)}
           onSaveChanges={handleSave}
           onCancelChanges={handleCancel}
-          canEdit={true}
+          canEdit={canEdit}
         />
         <ProjectInfoCards
           project={project}

@@ -16,13 +16,16 @@ export interface User {
   sidebar_order?: string[];
 }
 export type UserProfile = User;
+export interface AssignedUser extends UserProfile {
+  role?: string;
+}
 
 
 // --- Project Types ---
 export type ProjectStatus = 'Requested' | 'In Progress' | 'In Review' | 'On Hold' | 'Completed' | 'Cancelled';
 export type PaymentStatus = 'Proposed' | 'Pending' | 'Paid' | 'Overdue' | 'Cancelled';
 
-export interface ProjectTask {
+export interface Task {
   id: string;
   title: string;
   completed: boolean;
@@ -30,7 +33,7 @@ export interface ProjectTask {
   assignedTo: UserProfile[];
 }
 
-export interface ProjectComment {
+export interface Comment {
   id: string;
   text: string;
   timestamp: string;
@@ -40,7 +43,7 @@ export interface ProjectComment {
   author: UserProfile;
 }
 
-export interface BriefFile {
+export interface ProjectFile {
     id: string;
     name: string;
     size: number;
@@ -74,11 +77,11 @@ export interface Project {
   paymentStatus: string;
   paymentDueDate?: string;
   createdBy: UserProfile;
-  assignedTo: UserProfile[];
-  tasks: ProjectTask[];
-  comments: ProjectComment[];
+  assignedTo: AssignedUser[];
+  tasks: Task[];
+  comments: Comment[];
   services?: string[];
-  briefFiles?: BriefFile[];
+  briefFiles?: ProjectFile[];
   activities?: Activity[];
 }
 
