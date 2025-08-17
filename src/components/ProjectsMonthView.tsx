@@ -65,17 +65,16 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
     const activeItems = projects
         .filter(p => {
             const startDate = p.startDate;
-            const dueDate = p.dueDate;
-            if (!startDate || !dueDate) return false;
+            if (!startDate) return false; // Hanya perlu tanggal mulai
             const projectStart = startOfDay(parseISO(startDate));
-            const projectEnd = endOfDay(parseISO(dueDate));
+            const projectEnd = p.dueDate ? endOfDay(parseISO(p.dueDate)) : projectStart;
             return projectStart <= calendarEnd && projectEnd >= calendarStart;
         })
         .sort((a, b) => {
             const startA = startOfDay(parseISO(a.startDate!));
             const startB = startOfDay(parseISO(b.startDate!));
-            const durationA = differenceInDays(parseISO(a.dueDate!), startA);
-            const durationB = differenceInDays(parseISO(b.dueDate!), startB);
+            const durationA = differenceInDays(parseISO(a.dueDate || a.startDate!), startA);
+            const durationB = differenceInDays(parseISO(b.dueDate || b.startDate!), startB);
             if (durationA !== durationB) return durationB - durationA;
             return startA.getTime() - startB.getTime();
         });
@@ -84,7 +83,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
 
     for (const item of activeItems as CalendarItem[]) {
         const startDate = item.startDate!;
-        const dueDate = item.dueDate!;
+        const dueDate = item.dueDate || item.startDate!;
         const projectStart = startOfDay(parseISO(startDate));
         const projectEnd = endOfDay(parseISO(dueDate));
 
@@ -126,7 +125,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         processedInLayout.add(item.id);
 
         const startDate = item.startDate!;
-        const dueDate = item.dueDate!;
+        const dueDate = item.dueDate || item.startDate!;
         const projectStart = startOfDay(parseISO(startDate));
         const projectEnd = endOfDay(parseISO(dueDate));
 
