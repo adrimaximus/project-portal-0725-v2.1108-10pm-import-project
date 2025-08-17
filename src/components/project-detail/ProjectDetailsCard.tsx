@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project } from "@/types";
 import { Calendar, Wallet, Briefcase } from "lucide-react";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
@@ -17,8 +17,12 @@ interface ProjectDetailsCardProps {
 
 const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
   const handleDateChange = (range: DateRange | undefined) => {
-    onFieldChange('startDate', range?.from?.toISOString());
-    onFieldChange('dueDate', range?.to?.toISOString());
+    const startDate = range?.from ? range.from.toISOString() : undefined;
+    const endDateValue = range?.to || range?.from;
+    const endDate = endDateValue ? endDateValue.toISOString() : undefined;
+
+    onFieldChange('startDate', startDate);
+    onFieldChange('dueDate', endDate);
   };
 
   const handleBudgetChange = (value: number | null) => {
@@ -34,6 +38,17 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   const serviceDetails = (project.services || [])
     .map((serviceName) => allServicesData.find((s) => s.title === serviceName))
     .filter((s): s is Service => s !== undefined);
+
+  const renderDateRange = () => {
+    if (!project.startDate) return 'N/A';
+    const start = new Date(project.startDate);
+    const end = project.dueDate ? new Date(project.dueDate) : start;
+
+    if (isSameDay(start, end)) {
+        return format(start, "dd MMM yyyy");
+    }
+    return `${format(start, "dd MMM yyyy")} - ${format(end, "dd MMM yyyy")}`;
+  };
 
   return (
     <Card>
@@ -55,7 +70,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
               />
             ) : (
               <p className="text-muted-foreground">
-                {project.startDate ? format(new Date(project.startDate), "dd MMM yyyy") : 'N/A'} - {project.dueDate ? format(new Date(project.dueDate), "dd MMM yyyy") : 'N/A'}
+                {renderDateRange()}
               </p>
             )}
           </div>
