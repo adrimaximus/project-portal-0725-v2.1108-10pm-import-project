@@ -77,7 +77,7 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
             <div className="flex items-start space-x-2 sm:space-x-4">
               <div className="flex flex-col items-center w-10 sm:w-12 text-center flex-shrink-0">
                 <span className="text-xs sm:text-sm text-muted-foreground">{dayOfWeek}</span>
-                <span className="text-xl sm:text-2xl font-bold text-primary">{dayOfMonth}</span>
+                <span className="text-lg sm:text-xl font-bold text-primary">{dayOfMonth}</span>
               </div>
               <div className="flex-1 space-y-3 pt-1 min-w-0">
                 {projectsOnDay.map(project => {
@@ -104,18 +104,10 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
                             </Badge>
                           )}
                         </div>
-                        <div className="flex-1 font-medium truncate min-w-0" title={project.name}>{project.name}</div>
+                        <div className="flex-1 font-medium min-w-0" title={project.name}>{project.name}</div>
                       </div>
                       
-                      <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
-                        <div className="flex flex-shrink-0 -space-x-2">
-                          {project.assignedTo.slice(0, 3).map((user) => (
-                            <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
-                              <AvatarImage src={user.avatar} alt={user.name} />
-                              <AvatarFallback>{user.initials}</AvatarFallback>
-                            </Avatar>
-                          ))}
-                        </div>
+                      <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 pl-2">
                         <div onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -151,6 +143,14 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
+                        </div>
+                        <div className="flex flex-shrink-0 -space-x-2">
+                          {project.assignedTo.slice(0, 3).map((user) => (
+                            <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
+                              <AvatarImage src={user.avatar} alt={user.name} />
+                              <AvatarFallback>{user.initials}</AvatarFallback>
+                            </Avatar>
+                          ))}
                         </div>
                       </div>
                     </div>
