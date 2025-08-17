@@ -65,9 +65,9 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
     const activeItems = projects
         .filter(p => {
             const startDate = p.startDate;
-            if (!startDate) return false; // Hanya perlu tanggal mulai
+            if (!startDate) return false;
             const projectStart = startOfDay(parseISO(startDate));
-            const projectEnd = p.dueDate ? endOfDay(parseISO(p.dueDate)) : projectStart;
+            const projectEnd = p.dueDate ? startOfDay(parseISO(p.dueDate)) : projectStart;
             return projectStart <= calendarEnd && projectEnd >= calendarStart;
         })
         .sort((a, b) => {
@@ -85,7 +85,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         const startDate = item.startDate!;
         const dueDate = item.dueDate || item.startDate!;
         const projectStart = startOfDay(parseISO(startDate));
-        const projectEnd = endOfDay(parseISO(dueDate));
+        const projectEnd = startOfDay(parseISO(dueDate));
 
         const startIndex = Math.max(0, differenceInDays(projectStart, calendarStart));
         const endIndex = Math.min(days.length - 1, differenceInDays(projectEnd, calendarStart));
@@ -127,7 +127,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
         const startDate = item.startDate!;
         const dueDate = item.dueDate || item.startDate!;
         const projectStart = startOfDay(parseISO(startDate));
-        const projectEnd = endOfDay(parseISO(dueDate));
+        const projectEnd = startOfDay(parseISO(dueDate));
 
         let currentDay = projectStart;
         while (isBefore(currentDay, projectEnd) || isSameDay(currentDay, projectEnd)) {
