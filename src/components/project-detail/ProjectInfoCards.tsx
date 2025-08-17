@@ -81,7 +81,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
               </SelectContent>
             </Select>
           ) : (
-            <div className="text-2xl font-bold">{project.status}</div>
+            <div className={cn("text-2xl font-bold", statusColor)}>{project.status}</div>
           )}
           <p className="text-xs text-muted-foreground">
             Last updated {formatDistanceToNow(new Date(), { addSuffix: true, locale: id })}
