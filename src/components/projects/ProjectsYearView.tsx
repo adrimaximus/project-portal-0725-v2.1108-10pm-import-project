@@ -79,7 +79,7 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
       <div className={cn("h-full w-full flex flex-col items-center justify-center text-xs", isToday(day) && "bg-primary/10 rounded-md")}>
         <span>{format(day, 'd')}</span>
         <div className="flex mt-1">
-          {items.slice(0, 3).map((item, index) => (
+          {items.slice(0, 2).map((item, index) => (
             <TooltipProvider key={index} delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger>
@@ -94,6 +94,18 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
               </Tooltip>
             </TooltipProvider>
           ))}
+          {items.length > 2 && (
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger>
+                  <div className="h-1.5 w-1.5 rounded-full bg-gray-300 mx-px" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{items.length - 2} more items</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       </div>
     );
