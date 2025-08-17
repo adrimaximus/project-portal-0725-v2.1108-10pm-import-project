@@ -112,18 +112,20 @@ const ProjectDetail = () => {
 
       if (updatedProjectRow) {
           const typedUpdatedProjectRow = updatedProjectRow as { slug: string };
-          toast.success("Project saved successfully!");
-          setIsEditing(false);
-
-          // Invalidate queries to refetch data
-          await queryClient.invalidateQueries({ queryKey: ["projects"] });
+          
+          // Invalidate queries to refetch data in the background
+          queryClient.invalidateQueries({ queryKey: ["projects"] });
           
           if (slug !== typedUpdatedProjectRow.slug) {
-              // If slug changes, navigate to the new URL, which will trigger a refetch
+              // If slug changes, navigate. The new page will fetch fresh data.
+              toast.success("Project updated successfully! Redirecting...");
               navigate(`/projects/${typedUpdatedProjectRow.slug}`, { replace: true });
           } else {
-              // If slug is the same, just invalidate the current project's data
+              // If slug is the same, invalidate and wait for the refetch to complete.
               await queryClient.invalidateQueries({ queryKey: ["project", slug] });
+              toast.success("Project updated successfully!");
+              // Now that the data is fresh, we can exit edit mode.
+              setIsEditing(false);
           }
       }
     } catch (err: any) {
