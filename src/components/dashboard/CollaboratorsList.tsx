@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Project } from '@/data/projects';
+import { Project, User } from '@/types';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
@@ -27,6 +27,11 @@ interface CollaboratorsListProps {
   projects: Project[];
 }
 
+interface CollaboratorStat extends User {
+  projectCount: number;
+  taskCount: number;
+}
+
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -46,7 +51,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
             }
         });
         return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, CollaboratorStat>);
 
     return Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount);
   }, [projects]);

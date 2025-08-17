@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Download } from "lucide-react";
 import React, { useRef } from "react";
 import FileIcon from "../FileIcon";
-import { ProjectFile } from "@/data/projects";
+import { ProjectFile } from "@/types";
 
 interface ProjectBriefProps {
   files: ProjectFile[];

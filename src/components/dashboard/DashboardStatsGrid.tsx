@@ -1,12 +1,16 @@
 import React, { useMemo } from 'react';
-import { Project } from '@/data/projects';
+import { Project, User } from '@/types';
 import StatCard from './StatCard';
-import { DollarSign, ListChecks, CreditCard, User, Users, TrendingUp, Hourglass } from "lucide-react";
+import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, TrendingUp, Hourglass } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface DashboardStatsGridProps {
   projects: Project[];
 }
+
+interface UserWithProjectCount extends User { projectCount: number; }
+interface UserWithTotalValue extends User { totalValue: number; }
+interface UserWithPendingValue extends User { pendingValue: number; }
 
 const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
   const stats = useMemo(() => {
@@ -30,7 +34,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
             acc[p.createdBy.id].projectCount++;
         }
         return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, UserWithProjectCount>);
     const topOwner = Object.values(ownerCounts).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
 
     const collaboratorStats = projects.reduce((acc, p) => {
@@ -41,7 +45,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
             acc[user.id].projectCount++;
         });
         return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, UserWithProjectCount>);
     const topCollaborator = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
 
     const userValueCounts = projects.reduce((acc, p) => {
@@ -52,7 +56,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
             acc[user.id].totalValue += p.budget || 0;
         });
         return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, UserWithTotalValue>);
     const topUserByValue = Object.values(userValueCounts).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
 
     const pendingPaymentCounts = projects
@@ -65,7 +69,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
               acc[user.id].pendingValue += p.budget || 0;
           });
           return acc;
-      }, {} as Record<string, any>);
+      }, {} as Record<string, UserWithPendingValue>);
     const topUserByPendingValue = Object.values(pendingPaymentCounts).sort((a, b) => b.pendingValue - a.pendingValue)[0] || null;
 
     return {
@@ -116,7 +120,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
       />
       <StatCard
         title="Top Project Owner"
-        icon={<User className="h-4 w-4 text-muted-foreground" />}
+        icon={<UserIcon className="h-4 w-4 text-muted-foreground" />}
         value={
           stats.topOwner ? (
             <div className="flex items-center gap-4 pt-2">

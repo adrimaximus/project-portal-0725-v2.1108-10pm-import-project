@@ -1,5 +1,9 @@
-import { Project } from '@/data/projects';
+import { Project } from '@/types';
 import ProjectTeam from './ProjectTeam';
+
+interface ProjectOverviewProps {
+  project: Project;
+}
 
 const ProjectOverview = ({ project }: ProjectOverviewProps) => {
   return (
@@ -15,9 +19,5 @@ const ProjectOverview = ({ project }: ProjectOverviewProps) => {
     </div>
   );
 };
-
-interface ProjectOverviewProps {
-  project: Project;
-}
 
 export default ProjectOverview;

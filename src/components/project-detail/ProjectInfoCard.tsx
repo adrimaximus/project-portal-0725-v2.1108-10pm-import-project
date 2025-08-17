@@ -1,4 +1,4 @@
-import { Project } from "@/data/projects";
+import { Project } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ProjectInfoCardProps {

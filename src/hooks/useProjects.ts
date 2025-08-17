@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Project } from '@/data/projects';
+import { Project } from '@/types';
 import { toast } from 'sonner';
 
 interface ProjectFromRpc {

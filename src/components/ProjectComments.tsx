@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { Project, Comment, dummyProjects, User } from "@/data/projects";
+import { Project, Comment, User } from "@/types";
+import { dummyProjects } from "@/data/projects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";

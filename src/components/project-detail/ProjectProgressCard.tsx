@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Project } from "@/data/projects";
+import { Project } from "@/types";
 
 interface ProjectProgressCardProps {
   project: Project;

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { dummyProjects, Project, User } from "@/data/projects";
+import { dummyProjects } from "@/data/projects";
+import { Project, User } from "@/types";
 import {
   CommandDialog,
   CommandEmpty,

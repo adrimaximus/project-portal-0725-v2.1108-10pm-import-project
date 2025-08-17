@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project, ProjectStatus, PaymentStatus } from "@/data/projects";
+import { Project, PROJECT_STATUSES, PAYMENT_STATUSES, PaymentStatus } from "@/types";
 import { format, formatDistanceToNow, startOfDay } from "date-fns";
 import { id } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -22,17 +22,20 @@ interface ProjectInfoCardsProps {
 }
 
 const statusConfig = {
-  [ProjectStatus.InProgress]: { icon: Clock, color: "text-blue-500", label: "In Progress" },
-  [ProjectStatus.Completed]: { icon: CheckCircle, color: "text-green-500", label: "Completed" },
-  [ProjectStatus.OnHold]: { icon: AlertCircle, color: "text-yellow-500", label: "On Hold" },
-  [ProjectStatus.Canceled]: { icon: AlertCircle, color: "text-red-500", label: "Canceled" },
+  'In Progress': { icon: Clock, color: "text-blue-500", label: "In Progress" },
+  'Completed': { icon: CheckCircle, color: "text-green-500", label: "Completed" },
+  'On Hold': { icon: AlertCircle, color: "text-yellow-500", label: "On Hold" },
+  'Cancelled': { icon: AlertCircle, color: "text-red-500", label: "Canceled" },
+  'Requested': { icon: CircleDashed, color: "text-gray-500", label: "Requested" },
+  'In Review': { icon: Clock, color: "text-purple-500", label: "In Review" },
 };
 
-const paymentStatusConfig = {
-  [PaymentStatus.Paid]: { color: "bg-green-100 text-green-800", label: "Paid" },
-  [PaymentStatus.Pending]: { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
-  [PaymentStatus.Overdue]: { color: "bg-red-100 text-red-800", label: "Overdue" },
-  [PaymentStatus.Draft]: { color: "bg-gray-100 text-gray-800", label: "Draft" },
+const paymentStatusConfig: Record<PaymentStatus | 'Proposed' | 'Cancelled', { color: string; label: string }> = {
+  'Paid': { color: "bg-green-100 text-green-800", label: "Paid" },
+  'Pending': { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
+  'Overdue': { color: "bg-red-100 text-red-800", label: "Overdue" },
+  'Proposed': { color: "bg-blue-100 text-blue-800", label: "Proposed" },
+  'Cancelled': { color: "bg-gray-100 text-gray-800", label: "Cancelled" },
 };
 
 const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, onDateChange, onBudgetChange }: ProjectInfoCardsProps) => {
@@ -45,10 +48,10 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
     ? formatDistanceToNow(paymentDueDateObj, { addSuffix: true, locale: id })
     : "Not set";
 
-  const StatusIcon = statusConfig[project.status as ProjectStatus]?.icon || CircleDashed;
-  const statusColor = statusConfig[project.status as ProjectStatus]?.color || "text-muted-foreground";
+  const StatusIcon = statusConfig[project.status as keyof typeof statusConfig]?.icon || CircleDashed;
+  const statusColor = statusConfig[project.status as keyof typeof statusConfig]?.color || "text-muted-foreground";
 
-  const paymentBadgeColor = paymentStatusConfig[project.paymentStatus as PaymentStatus]?.color || "bg-gray-100 text-gray-800";
+  const paymentBadgeColor = paymentStatusConfig[project.paymentStatus as keyof typeof paymentStatusConfig]?.color || "bg-gray-100 text-gray-800";
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -67,7 +70,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                {Object.values(ProjectStatus).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {PROJECT_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
           ) : (
@@ -104,7 +107,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
                 <SelectValue placeholder="Select payment status" />
               </SelectTrigger>
               <SelectContent>
-                {Object.values(PaymentStatus).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {PAYMENT_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
           ) : (

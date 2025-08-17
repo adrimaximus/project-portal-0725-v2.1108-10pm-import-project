@@ -22,8 +22,11 @@ export interface AssignedUser extends UserProfile {
 
 
 // --- Project Types ---
-export type ProjectStatus = 'Requested' | 'In Progress' | 'In Review' | 'On Hold' | 'Completed' | 'Cancelled';
-export type PaymentStatus = 'Proposed' | 'Pending' | 'Paid' | 'Overdue' | 'Cancelled';
+export const PROJECT_STATUSES = ['Requested', 'In Progress', 'In Review', 'On Hold', 'Completed', 'Cancelled'] as const;
+export type ProjectStatus = typeof PROJECT_STATUSES[number];
+
+export const PAYMENT_STATUSES = ['Proposed', 'Pending', 'Paid', 'Overdue', 'Cancelled'] as const;
+export type PaymentStatus = typeof PAYMENT_STATUSES[number];
 
 export interface Task {
   id: string;
@@ -69,12 +72,12 @@ export interface Project {
   name: string;
   category: string;
   description: string;
-  status: string;
+  status: ProjectStatus | string;
   progress: number;
   budget: number;
   startDate: string;
   dueDate: string;
-  paymentStatus: string;
+  paymentStatus: PaymentStatus | string;
   paymentDueDate?: string;
   createdBy: UserProfile;
   assignedTo: AssignedUser[];
