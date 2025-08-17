@@ -54,6 +54,7 @@ const ProjectDetail = () => {
   const queryClient = useQueryClient();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
 
   const { data: projectData, isLoading, error } = useQuery<any>({
@@ -85,43 +86,47 @@ const ProjectDetail = () => {
 
   const handleSave = async () => {
     if (!editedProject || !project) return;
+    setIsSaving(true);
 
-    const { id, name, description, category, status, budget, startDate, dueDate, paymentStatus, paymentDueDate, services, assignedTo } = editedProject;
-    
-    const { data: updatedProjectRow, error } = await supabase
-      .rpc('update_project_details', {
-        p_project_id: id,
-        p_name: name,
-        p_description: description,
-        p_category: category,
-        p_status: status,
-        p_budget: budget,
-        p_start_date: startDate,
-        p_due_date: dueDate,
-        p_payment_status: paymentStatus,
-        p_payment_due_date: paymentDueDate,
-        p_member_ids: assignedTo.map(m => m.id),
-        p_service_titles: services || [],
-      })
-      .single();
+    try {
+      const { id, name, description, category, status, budget, startDate, dueDate, paymentStatus, paymentDueDate, services, assignedTo } = editedProject;
+      
+      const { data: updatedProjectRow, error } = await supabase
+        .rpc('update_project_details', {
+          p_project_id: id,
+          p_name: name,
+          p_description: description,
+          p_category: category,
+          p_status: status,
+          p_budget: budget,
+          p_start_date: startDate,
+          p_due_date: dueDate,
+          p_payment_status: paymentStatus,
+          p_payment_due_date: paymentDueDate,
+          p_member_ids: assignedTo.map(m => m.id),
+          p_service_titles: services || [],
+        })
+        .single();
 
-    if (error) {
-      toast.error("Failed to save project", { description: error.message });
-      return;
-    }
+      if (error) throw error;
 
-    if (updatedProjectRow) {
-        const typedUpdatedProjectRow = updatedProjectRow as { slug: string };
-        toast.success("Project saved successfully!");
-        setIsEditing(false);
+      if (updatedProjectRow) {
+          const typedUpdatedProjectRow = updatedProjectRow as { slug: string };
+          toast.success("Project saved successfully!");
+          setIsEditing(false);
 
-        queryClient.invalidateQueries({ queryKey: ["projects"] });
+          await queryClient.invalidateQueries({ queryKey: ["projects"] });
 
-        if (slug !== typedUpdatedProjectRow.slug) {
-            navigate(`/projects/${typedUpdatedProjectRow.slug}`, { replace: true });
-        } else {
-            queryClient.invalidateQueries({ queryKey: ["project", slug] });
-        }
+          if (slug !== typedUpdatedProjectRow.slug) {
+              navigate(`/projects/${typedUpdatedProjectRow.slug}`, { replace: true });
+          } else {
+              await queryClient.invalidateQueries({ queryKey: ["project", slug] });
+          }
+      }
+    } catch (err: any) {
+      toast.error("Failed to save project", { description: err.message });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -211,6 +216,7 @@ const ProjectDetail = () => {
         <ProjectHeader
           project={project}
           isEditing={isEditing}
+          isSaving={isSaving}
           onEditToggle={() => setIsEditing(true)}
           onSaveChanges={handleSave}
           onCancelChanges={handleCancel}

@@ -1,6 +1,6 @@
-import { Project } from "@/data/projects";
+import { Project } from "@/types";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "../StatusBadge";
 import { getStatusStyles } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { getStatusStyles } from "@/lib/utils";
 interface ProjectHeaderProps {
   project: Project;
   isEditing: boolean;
+  isSaving: boolean;
   onEditToggle: () => void;
   onSaveChanges: () => void;
   onCancelChanges: () => void;
@@ -17,6 +18,7 @@ interface ProjectHeaderProps {
 const ProjectHeader = ({
   project,
   isEditing,
+  isSaving,
   onEditToggle,
   onSaveChanges,
   onCancelChanges,
@@ -41,8 +43,13 @@ const ProjectHeader = ({
           <div className="lg:col-span-1 flex justify-start lg:justify-end">
             {isEditing ? (
               <div className="flex gap-2">
-                <Button onClick={onSaveChanges}>Save Changes</Button>
-                <Button variant="outline" onClick={onCancelChanges}>Cancel</Button>
+                <Button onClick={onSaveChanges} disabled={isSaving}>
+                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={onCancelChanges} disabled={isSaving}>
+                  Cancel
+                </Button>
               </div>
             ) : (
               <Button variant="outline" onClick={onEditToggle}>
