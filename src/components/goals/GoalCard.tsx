@@ -1,5 +1,5 @@
 import { Goal } from '@/types';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Card, CardFooter, CardHeader } from '@/components/ui/card';
 import GoalIcon from './GoalIcon';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,28 +19,27 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
           <div className="flex-grow overflow-hidden">
             <h3 className="text-lg font-bold leading-tight truncate">{goal.title}</h3>
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{goal.description}</p>
+            {goal.tags && goal.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {goal.tags.slice(0, 3).map(tag => (
+                  <Badge
+                    key={tag.id}
+                    variant="outline"
+                    className="text-xs"
+                    style={{
+                      backgroundColor: `${tag.color}20`,
+                      borderColor: tag.color,
+                      color: tag.color,
+                    }}
+                  >
+                    {tag.name}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </CardHeader>
-        <CardContent className="flex-grow">
-          {goal.tags && goal.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {goal.tags.slice(0, 3).map(tag => (
-                <Badge
-                  key={tag.id}
-                  variant="outline"
-                  className="text-xs"
-                  style={{
-                    backgroundColor: `${tag.color}20`,
-                    borderColor: tag.color,
-                    color: tag.color,
-                  }}
-                >
-                  {tag.name}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
+        <div className="flex-grow" />
         <CardFooter className="flex flex-col items-stretch gap-4 pt-0">
           <div>
             <div className="flex justify-between items-center mb-1">
