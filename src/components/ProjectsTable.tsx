@@ -1,28 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
-import { Project, ProjectStatus, PaymentStatus } from "@/types";
-import { Link } from "react-router-dom";
+import { Project } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw } from "lucide-react";
-import ProjectsList from "./ProjectsList";
-import ProjectsMonthView from "./ProjectsMonthView";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,14 +17,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "./ui/date-picker-with-range";
-import CalendarEventsList from "./CalendarEventsList";
-import StatusBadge from "./StatusBadge";
-import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { getStatusStyles } from "@/lib/utils";
-import { useQueryClient } from "@tanstack/react-query";
 import { useCreateProject } from "@/hooks/useCreateProject";
+
+import TableView from "./projects/TableView";
+import ListView from "./projects/ListView";
+import MonthView from "./projects/MonthView";
+import CalendarImportView from "./projects/CalendarImportView";
 
 interface CalendarEvent {
     id: string;
@@ -65,8 +46,6 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
   const createProjectMutation = useCreateProject();
 
   const refreshCalendarEvents = async () => {
@@ -275,87 +254,13 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   const renderContent = () => {
     switch (view) {
       case 'table':
-        return (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[300px]">Project</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Progress</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    Loading projects...
-                  </TableCell>
-                </TableRow>
-              ) : filteredProjects.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    No projects found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredProjects.map((project) => (
-                  <TableRow key={project.id}>
-                    <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
-                      <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
-                        {project.name}
-                      </Link>
-                      <div className="text-sm text-muted-foreground">{project.category}</div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={project.status} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress value={project.progress} className="h-2" />
-                        <span className="text-sm text-muted-foreground">{project.progress}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {project.startDate ? format(new Date(project.startDate), 'MMM d, yyyy') : 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      {project.dueDate ? format(new Date(project.dueDate), 'MMM d, yyyy') : 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={project.paymentStatus} />
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => handleDeleteProject(project.id)} className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Hapus Proyek</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        );
+        return <TableView projects={filteredProjects} isLoading={isLoading} onDeleteProject={handleDeleteProject} />;
       case 'list':
-        return <ProjectsList projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
+        return <ListView projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
       case 'month':
-        return <ProjectsMonthView projects={filteredProjects} />;
+        return <MonthView projects={filteredProjects} gcalEvents={filteredCalendarEvents} />;
       case 'calendar':
-        return <CalendarEventsList events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
+        return <CalendarImportView events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
       default:
         return null;
     }

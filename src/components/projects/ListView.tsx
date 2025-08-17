@@ -32,7 +32,7 @@ interface ProjectsListProps {
   onDeleteProject: (projectId: string) => void;
 }
 
-const ProjectsList = ({ projects, onDeleteProject }: ProjectsListProps) => {
+const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
   const navigate = useNavigate();
 
   const sortedProjects = projects
@@ -162,4 +162,4 @@ const ProjectsList = ({ projects, onDeleteProject }: ProjectsListProps) => {
   );
 };
 
-export default ProjectsList;
+export default ListView;
