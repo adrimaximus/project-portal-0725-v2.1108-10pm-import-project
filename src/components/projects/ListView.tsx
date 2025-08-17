@@ -74,12 +74,12 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
             {showMonthHeader && (
               <h2 className="text-lg font-semibold my-4 pl-2">{currentMonth}</h2>
             )}
-            <div className="flex items-start space-x-4 md:space-x-6">
-              <div className="flex flex-col items-center w-16 text-center">
+            <div className="flex items-start space-x-2 sm:space-x-4 md:space-x-6">
+              <div className="flex flex-col items-center w-12 md:w-16 text-center flex-shrink-0">
                 <span className="text-sm text-muted-foreground">{dayOfWeek}</span>
-                <span className="text-3xl font-bold text-primary">{dayOfMonth}</span>
+                <span className="text-2xl md:text-3xl font-bold text-primary">{dayOfMonth}</span>
               </div>
-              <div className="flex-1 space-y-3 pt-1">
+              <div className="flex-1 space-y-3 pt-1 min-w-0">
                 {projectsOnDay.map(project => {
                   const isMultiDay = project.startDate && project.dueDate && new Date(project.startDate).toDateString() !== new Date(project.dueDate).toDateString();
 
@@ -90,7 +90,7 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
                       style={{ borderLeftColor: getStatusStyles(project.status).hex }}
                     >
                       <div 
-                        className="flex-1 flex items-center space-x-4 cursor-pointer"
+                        className="flex-1 flex items-center space-x-3 cursor-pointer min-w-0"
                         onClick={() => navigate(`/projects/${project.slug}`)}
                       >
                         <div className="w-32 text-sm text-muted-foreground hidden md:block">
@@ -104,8 +104,8 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
                             </Badge>
                           )}
                         </div>
-                        <div className="font-medium truncate" title={project.name}>{project.name}</div>
-                        <div className="flex -space-x-2 ml-auto pr-4">
+                        <div className="flex-1 font-medium truncate min-w-0" title={project.name}>{project.name}</div>
+                        <div className="flex flex-shrink-0 -space-x-2">
                           {project.assignedTo.slice(0, 3).map((user) => (
                             <Avatar key={user.id} className="h-8 w-8 border-2 border-card">
                               <AvatarImage src={user.avatar} alt={user.name} />
