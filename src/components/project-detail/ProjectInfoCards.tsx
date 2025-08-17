@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project, ProjectStatus, PROJECT_STATUSES, PAYMENT_STATUSES, PaymentStatus, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/types";
-import { format, formatDistanceToNow, startOfDay, differenceInDays, isBefore, subDays } from "date-fns";
+import { format, formatDistanceToNow, startOfDay, differenceInDays, isBefore } from "date-fns";
 import { id } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "../ui/input";
 import { CurrencyInput } from "react-currency-mask";
-import { useMemo } from "react";
 
 interface ProjectInfoCardsProps {
   project: Project;
@@ -41,32 +40,17 @@ const paymentStatusConfig: Record<PaymentStatus | 'Proposed' | 'Cancelled', { co
 
 const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, onDateChange, onBudgetChange }: ProjectInfoCardsProps) => {
   const startDateObj = project.startDate ? startOfDay(new Date(project.startDate)) : null;
-  
-  const isGCalAllDayEvent = useMemo(() => 
-    project.origin_event_id?.startsWith('cal-') && 
-    project.dueDate?.endsWith('T00:00:00.000Z'),
-    [project.origin_event_id, project.dueDate]
-  );
-
   const dueDateObj = project.dueDate ? startOfDay(new Date(project.dueDate)) : startDateObj;
-
-  const displayDueDateObj = useMemo(() => {
-    if (isGCalAllDayEvent && dueDateObj) {
-      return subDays(dueDateObj, 1);
-    }
-    return dueDateObj;
-  }, [dueDateObj, isGCalAllDayEvent]);
-
   const paymentDueDateObj = project.paymentDueDate ? startOfDay(new Date(project.paymentDueDate)) : null;
 
-  const timeRemaining = displayDueDateObj ? formatDistanceToNow(displayDueDateObj, { addSuffix: true, locale: id }) : "Not set";
+  const timeRemaining = dueDateObj ? formatDistanceToNow(dueDateObj, { addSuffix: true, locale: id }) : "Not set";
   const paymentDueDateFormatted = paymentDueDateObj
     ? formatDistanceToNow(paymentDueDateObj, { addSuffix: true, locale: id })
     : "Not set";
 
   let durationText = "";
-  if (startDateObj && displayDueDateObj) {
-    const effectiveEndDate = isBefore(displayDueDateObj, startDateObj) ? startDateObj : displayDueDateObj;
+  if (startDateObj && dueDateObj) {
+    const effectiveEndDate = isBefore(dueDateObj, startDateObj) ? startDateObj : dueDateObj;
     const duration = differenceInDays(effectiveEndDate, startDateObj) + 1;
     durationText = `(${duration} day${duration > 1 ? 's' : ''})`;
   }
@@ -177,7 +161,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
             <div className="text-2xl font-bold">{timeRemaining}</div>
           )}
           {!isEditing && <p className="text-xs text-muted-foreground">
-            {startDateObj ? format(startDateObj, "d MMM yyyy", { locale: id }) : "Not set"} - {displayDueDateObj ? format(displayDueDateObj, "d MMM yyyy", { locale: id }) : "Not set"} {durationText}
+            {startDateObj ? format(startDateObj, "d MMM yyyy", { locale: id }) : "Not set"} - {dueDateObj ? format(dueDateObj, "d MMM yyyy", { locale: id }) : "Not set"} {durationText}
           </p>}
         </CardContent>
       </Card>
