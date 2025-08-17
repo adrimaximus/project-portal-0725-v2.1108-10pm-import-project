@@ -74,10 +74,10 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
             {showMonthHeader && (
               <h2 className="text-lg font-semibold my-4 pl-2">{currentMonth}</h2>
             )}
-            <div className="flex items-start space-x-2 sm:space-x-4 md:space-x-6">
-              <div className="flex flex-col items-center w-12 md:w-16 text-center flex-shrink-0">
-                <span className="text-sm text-muted-foreground">{dayOfWeek}</span>
-                <span className="text-2xl md:text-3xl font-bold text-primary">{dayOfMonth}</span>
+            <div className="flex items-start space-x-2 sm:space-x-4">
+              <div className="flex flex-col items-center w-10 sm:w-12 text-center flex-shrink-0">
+                <span className="text-xs sm:text-sm text-muted-foreground">{dayOfWeek}</span>
+                <span className="text-xl sm:text-2xl font-bold text-primary">{dayOfMonth}</span>
               </div>
               <div className="flex-1 space-y-3 pt-1 min-w-0">
                 {projectsOnDay.map(project => {
@@ -86,7 +86,7 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
                   return (
                     <div 
                       key={project.id} 
-                      className="bg-card border border-l-4 rounded-lg p-3 flex items-center justify-between hover:shadow-md transition-shadow group"
+                      className="bg-card border border-l-4 rounded-lg p-2 sm:p-3 flex items-center justify-between hover:shadow-md transition-shadow group"
                       style={{ borderLeftColor: getStatusStyles(project.status).hex }}
                     >
                       <div 
@@ -105,50 +105,53 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
                           )}
                         </div>
                         <div className="flex-1 font-medium truncate min-w-0" title={project.name}>{project.name}</div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
                         <div className="flex flex-shrink-0 -space-x-2">
                           {project.assignedTo.slice(0, 3).map((user) => (
-                            <Avatar key={user.id} className="h-8 w-8 border-2 border-card">
+                            <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
                               <AvatarImage src={user.avatar} alt={user.name} />
                               <AvatarFallback>{user.initials}</AvatarFallback>
                             </Avatar>
                           ))}
                         </div>
-                      </div>
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              Edit
-                              <MoreHorizontal className="h-4 w-4 ml-1" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Clock className="mr-2 h-4 w-4" />
-                              <span>Jadwalkan ulang</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Send className="mr-2 h-4 w-4" />
-                              <span>Minta penjadwalan ulang</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => navigate(`/projects/${project.slug}`)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              <span>Edit detail</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <UserPlus className="mr-2 h-4 w-4" />
-                              <span>Undang orang</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              <span>Hapus proyek</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
-                              <CalendarOff className="mr-2 h-4 w-4" />
-                              <span>Batalkan proyek</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 sm:h-auto sm:w-auto sm:px-3 sm:py-1.5">
+                                <span className="hidden sm:inline">Edit</span>
+                                <MoreHorizontal className="h-4 w-4 sm:ml-1" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Clock className="mr-2 h-4 w-4" />
+                                <span>Jadwalkan ulang</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Send className="mr-2 h-4 w-4" />
+                                <span>Minta penjadwalan ulang</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate(`/projects/${project.slug}`)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                <span>Edit detail</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                <span>Undang orang</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Hapus proyek</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive">
+                                <CalendarOff className="mr-2 h-4 w-4" />
+                                <span>Batalkan proyek</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     </div>
                   );
