@@ -55,6 +55,8 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategor
     ? allUsers.filter(u => u.id !== project.createdBy.id)
     : allUsers;
 
+  const showCategoryCard = project.category !== 'Requested Event' && project.category !== 'Imported Event';
+
   return (
     <div className="space-y-6">
       <Card>
@@ -68,20 +70,22 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategor
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Category</CardTitle></CardHeader>
-        <CardContent>
-          {isEditing ? (
-            <Input
-              value={project.category || ''}
-              onChange={(e) => onCategoryChange(e.target.value)}
-              placeholder="Enter project category"
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">{project.category || "No category set."}</p>
-          )}
-        </CardContent>
-      </Card>
+      {showCategoryCard && (
+        <Card>
+          <CardHeader><CardTitle>Category</CardTitle></CardHeader>
+          <CardContent>
+            {isEditing ? (
+              <Input
+                value={project.category || ''}
+                onChange={(e) => onCategoryChange(e.target.value)}
+                placeholder="Enter project category"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">{project.category || "No category set."}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader><CardTitle>Team</CardTitle></CardHeader>
