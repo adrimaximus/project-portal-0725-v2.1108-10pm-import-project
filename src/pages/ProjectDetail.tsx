@@ -14,6 +14,7 @@ import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard
 import ProjectFinancialsCard from "@/components/project-detail/ProjectFinancialsCard";
 import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
+import ProjectStatusCard from "@/components/project-detail/ProjectStatusCard";
 
 const fetchProject = async (slug: string) => {
   const { data, error } = await supabase
@@ -322,6 +323,11 @@ const ProjectDetail = () => {
           </div>
           <div className="lg:col-span-1 space-y-6">
             <ProjectProgressCard project={editedProject} />
+            <ProjectStatusCard
+              project={editedProject}
+              isEditing={isEditing}
+              onFieldChange={handleFieldChange}
+            />
             <ProjectFinancialsCard project={editedProject} />
             <ProjectTeamCard project={editedProject} />
             <ProjectDetailsCard
