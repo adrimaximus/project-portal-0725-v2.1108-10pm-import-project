@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Project, Task, Comment, AssignedUser, ProjectStatus, PaymentStatus, ProjectFile } from "@/types";
+import { Project } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -61,16 +61,19 @@ const ProjectDetail = () => {
     enabled: !!slug && !!user,
   });
 
-  const project: Project | null = projectData ? {
-    ...projectData,
-    startDate: projectData.start_date,
-    dueDate: projectData.due_date,
-    paymentStatus: projectData.payment_status,
-    paymentDueDate: projectData.payment_due_date,
-    createdBy: projectData.created_by,
-    assignedTo: projectData.assignedTo,
-    briefFiles: projectData.briefFiles,
-  } : null;
+  const project: Project | null = useMemo(() => {
+    if (!projectData) return null;
+    return {
+      ...projectData,
+      startDate: projectData.start_date,
+      dueDate: projectData.due_date,
+      paymentStatus: projectData.payment_status,
+      paymentDueDate: projectData.payment_due_date,
+      createdBy: projectData.created_by,
+      assignedTo: projectData.assignedTo,
+      briefFiles: projectData.briefFiles,
+    };
+  }, [projectData]);
 
   useEffect(() => {
     if (project) {
