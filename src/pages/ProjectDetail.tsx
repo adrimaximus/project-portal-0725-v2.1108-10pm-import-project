@@ -140,13 +140,8 @@ const ProjectDetail = () => {
     toast.info(`Uploading ${files.length} file(s)...`);
 
     for (const file of files) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${file.name}`;
-      const filePath = `${project.id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('project-files')
-        .upload(filePath, file);
+      const filePath = `${project.id}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
 
       if (uploadError) {
         toast.error(`Failed to upload ${file.name}`, { description: uploadError.message });
@@ -194,11 +189,93 @@ const ProjectDetail = () => {
     queryClient.invalidateQueries({ queryKey: ["project", slug] });
   };
 
-  const handleTaskAdd = (title: string) => console.log("Add task:", title);
-  const handleTaskAssignUsers = (taskId: string, userIds: string[]) => console.log("Assign users to task:", taskId, userIds);
-  const handleTaskStatusChange = (taskId: string, completed: boolean) => console.log("Change task status:", taskId, completed);
-  const handleTaskDelete = (taskId: string) => console.log("Delete task:", taskId);
-  const handleAddCommentOrTicket = (text: string, isTicket: boolean, attachment: File | null) => console.log("Add comment/ticket:", text, isTicket, attachment);
+  const handleTaskAdd = async (title: string) => {
+    if (!project || !user) return;
+    const { error } = await supabase.from('tasks').insert({ project_id: project.id, title, created_by: user.id });
+    if (error) toast.error("Failed to add task", { description: error.message });
+    else {
+      toast.success("Task added successfully.");
+      queryClient.invalidateQueries({ queryKey: ["project", slug] });
+    }
+  };
+
+  const handleTaskAssignUsers = async (taskId: string, userIds: string[]) => {
+    await supabase.from('task_assignees').delete().eq('task_id', taskId);
+    if (userIds.length > 0) {
+      const newAssignees = userIds.map(uid => ({ task_id: taskId, user_id: uid }));
+      const { error } = await supabase.from('task_assignees').insert(newAssignees);
+      if (error) toast.error("Failed to assign users", { description: error.message });
+      else toast.success("Task assignments updated.");
+    }
+    queryClient.invalidateQueries({ queryKey: ["project", slug] });
+  };
+
+  const handleTaskStatusChange = async (taskId: string, completed: boolean) => {
+    const { error } = await supabase.from('tasks').update({ completed }).eq('id', taskId);
+    if (error) toast.error("Failed to update task status", { description: error.message });
+    else {
+      toast.success(`Task marked as ${completed ? 'complete' : 'incomplete'}.`);
+      queryClient.invalidateQueries({ queryKey: ["project", slug] });
+    }
+  };
+
+  const handleTaskDelete = async (taskId: string) => {
+    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+    if (error) toast.error("Failed to delete task", { description: error.message });
+    else {
+      toast.success("Task deleted.");
+      queryClient.invalidateQueries({ queryKey: ["project", slug] });
+    }
+  };
+
+  const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachment: File | null) => {
+    if (!project || !user) return;
+    let attachment_url = null;
+    let attachment_name = null;
+
+    if (attachment) {
+      const filePath = `${project.id}/comments/${Date.now()}-${attachment.name}`;
+      const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, attachment);
+      if (uploadError) {
+        toast.error("Failed to upload attachment.", { description: uploadError.message });
+        return;
+      }
+      const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+      attachment_url = urlData.publicUrl;
+      attachment_name = attachment.name;
+    }
+
+    const { data: commentData, error: commentError } = await supabase.from('comments').insert({
+      project_id: project.id,
+      author_id: user.id,
+      text,
+      is_ticket: isTicket,
+      attachment_url,
+      attachment_name,
+    }).select().single();
+
+    if (commentError) {
+      toast.error("Failed to post comment.", { description: commentError.message });
+      return;
+    }
+
+    if (isTicket && commentData) {
+      const { error: taskError } = await supabase.from('tasks').insert({
+        project_id: project.id,
+        created_by: user.id,
+        title: text.substring(0, 100),
+        origin_ticket_id: commentData.id,
+      });
+      if (taskError) {
+        toast.warning("Ticket created, but failed to create a corresponding task.", { description: taskError.message });
+      } else {
+        toast.success("Ticket created and added to tasks.");
+      }
+    } else {
+      toast.success("Comment posted.");
+    }
+    queryClient.invalidateQueries({ queryKey: ["project", slug] });
+  };
 
   if (isLoading) return <ProjectDetailSkeleton />;
   if (error) {
@@ -236,9 +313,9 @@ const ProjectDetail = () => {
           onDescriptionChange={(value) => handleFieldChange('description', value)}
           onCategoryChange={(value) => handleFieldChange('category', value)}
           onTeamChange={(users) => handleFieldChange('assignedTo', users)}
-          onServicesChange={(services) => handleFieldChange('services', services)}
           onFilesAdd={handleFilesAdd}
           onFileDelete={handleFileDelete}
+          onServicesChange={(services) => handleFieldChange('services', services)}
           onTaskAdd={handleTaskAdd}
           onTaskAssignUsers={handleTaskAssignUsers}
           onTaskStatusChange={handleTaskStatusChange}
