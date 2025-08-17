@@ -1,13 +1,51 @@
-import { Project } from "@/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Project, AssignedUser, User } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users } from "lucide-react";
+import ModernTeamSelector from "../request/ModernTeamSelector";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProjectTeamCardProps {
   project: Project;
+  isEditing: boolean;
+  onFieldChange: (field: keyof Project, value: any) => void;
 }
 
-const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
+const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardProps) => {
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (data) {
+        const users = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }));
+        setAllUsers(users);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const handleTeamSelectionToggle = (userToToggle: AssignedUser) => {
+    const isSelected = project.assignedTo.some(u => u.id === userToToggle.id);
+    const newTeam = isSelected
+      ? project.assignedTo.filter(u => u.id !== userToToggle.id)
+      : [...project.assignedTo, userToToggle];
+    onFieldChange('assignedTo', newTeam);
+  };
+
+  const assignableUsers = project.createdBy
+    ? allUsers.filter(u => u.id !== project.createdBy.id)
+    : allUsers;
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -15,39 +53,67 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
         <Users className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
-        {project.createdBy && (
-          <div>
-            <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT OWNER</h4>
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={project.createdBy.avatar} />
-                <AvatarFallback>{project.createdBy.initials}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium">{project.createdBy.name}</p>
-                <p className="text-xs text-muted-foreground">{project.createdBy.email}</p>
+        {isEditing ? (
+          <>
+            <div>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT OWNER</h4>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={project.createdBy.avatar} />
+                  <AvatarFallback>{project.createdBy.initials}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">{project.createdBy.name}</p>
+                  <p className="text-xs text-muted-foreground">{project.createdBy.email}</p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        {project.assignedTo.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
-            <div className="space-y-3">
-              {project.assignedTo.map(member => (
-                <div key={member.id} className="flex items-center gap-3">
+            <div>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
+              <ModernTeamSelector
+                users={assignableUsers}
+                selectedUsers={project.assignedTo}
+                onSelectionChange={handleTeamSelectionToggle}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            {project.createdBy && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT OWNER</h4>
+                <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={member.avatar} />
-                    <AvatarFallback>{member.initials}</AvatarFallback>
+                    <AvatarImage src={project.createdBy.avatar} />
+                    <AvatarFallback>{project.createdBy.initials}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-sm font-medium">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                    <p className="text-sm font-medium">{project.createdBy.name}</p>
+                    <p className="text-xs text-muted-foreground">{project.createdBy.email}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            )}
+            {project.assignedTo.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
+                <div className="space-y-3">
+                  {project.assignedTo.map(member => (
+                    <div key={member.id} className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={member.avatar} />
+                        <AvatarFallback>{member.initials}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{member.name}</p>
+                        <p className="text-xs text-muted-foreground">{member.email}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

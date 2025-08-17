@@ -88,46 +88,6 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategor
       )}
 
       <Card>
-        <CardHeader><CardTitle>Team</CardTitle></CardHeader>
-        <CardContent>
-          {isEditing ? (
-            <ModernTeamSelector
-              users={assignableUsers}
-              selectedUsers={project.assignedTo}
-              onSelectionChange={handleTeamSelectionToggle}
-            />
-          ) : (
-            <div className="space-y-3">
-              {project.createdBy && (
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={project.createdBy.avatar} />
-                    <AvatarFallback>{project.createdBy.initials}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">{project.createdBy.name}</p>
-                    <p className="text-xs text-muted-foreground">Project Owner</p>
-                  </div>
-                </div>
-              )}
-              {project.assignedTo.map(member => (
-                <div key={member.id} className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={member.avatar} />
-                    <AvatarFallback>{member.initials}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">Team Member</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardHeader><CardTitle>Services</CardTitle></CardHeader>
         <CardContent>
           <ProjectServices

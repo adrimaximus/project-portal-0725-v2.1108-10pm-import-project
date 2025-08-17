@@ -329,7 +329,11 @@ const ProjectDetail = () => {
               onFieldChange={handleFieldChange}
             />
             <ProjectFinancialsCard project={editedProject} />
-            <ProjectTeamCard project={editedProject} />
+            <ProjectTeamCard
+              project={editedProject}
+              isEditing={isEditing}
+              onFieldChange={handleFieldChange}
+            />
             <ProjectDetailsCard
               project={editedProject}
               isEditing={isEditing}
