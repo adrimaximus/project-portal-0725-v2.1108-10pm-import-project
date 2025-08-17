@@ -148,11 +148,11 @@ export interface GoogleCalendarEvent {
   summary: string;
   status: string;
   start: {
-    dateTime: string;
+    dateTime?: string;
     date?: string;
   };
   end: {
-    dateTime: string;
+    dateTime?: string;
     date?: string;
   };
 }
