@@ -57,7 +57,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
   useEffect(() => {
     const fetchTags = async () => {
         if (!user) return;
-        const { data } = await supabase.from('tags').select('*').eq('user_id', user.id);
+        const { data } = await supabase.from('tags').select('*').or(`user_id.eq.${user.id},user_id.is.null`);
         if (data) setAllTags(data);
     };
 

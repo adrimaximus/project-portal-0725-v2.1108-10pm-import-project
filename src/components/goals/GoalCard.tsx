@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getProgress } from '@/lib/progress';
 import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 
 const GoalCard = ({ goal }: { goal: Goal }) => {
   const { percentage, current, target } = getProgress(goal);
@@ -20,7 +21,26 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{goal.description}</p>
           </div>
         </CardHeader>
-        <CardContent className="flex-grow" />
+        <CardContent className="flex-grow">
+          {goal.tags && goal.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {goal.tags.slice(0, 3).map(tag => (
+                <Badge
+                  key={tag.id}
+                  variant="outline"
+                  className="text-xs"
+                  style={{
+                    backgroundColor: `${tag.color}20`,
+                    borderColor: tag.color,
+                    color: tag.color,
+                  }}
+                >
+                  {tag.name}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
         <CardFooter className="flex flex-col items-stretch gap-4 pt-0">
           <div>
             <div className="flex justify-between items-center mb-1">
