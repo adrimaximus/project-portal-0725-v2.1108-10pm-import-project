@@ -11,7 +11,6 @@ import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
-import ProjectFinancialsCard from "@/components/project-detail/ProjectFinancialsCard";
 import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
 import ProjectStatusCard from "@/components/project-detail/ProjectStatusCard";
@@ -334,7 +333,6 @@ const ProjectDetail = () => {
               isEditing={isEditing}
               onFieldChange={handleFieldChange}
             />
-            <ProjectFinancialsCard project={editedProject} />
             <ProjectPaymentStatusCard
               project={editedProject}
               isEditing={isEditing}
