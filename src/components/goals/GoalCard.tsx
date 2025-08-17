@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getProgress } from '@/lib/progress';
 import { Link } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
 
 const GoalCard = ({ goal }: { goal: Goal }) => {
   const { percentage, current, target } = getProgress(goal);
@@ -14,34 +13,15 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
   return (
     <Link to={`/goals/${goal.slug}`} className="block group">
       <Card className="h-full flex flex-col transition-all duration-200 group-hover:shadow-lg group-hover:-translate-y-1 cursor-pointer">
-        <CardHeader className="flex flex-row items-start gap-4 space-y-0 p-6 pb-4">
+        <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
           <GoalIcon goal={goal} className="w-16 h-16 flex-shrink-0" />
           <div className="flex-grow overflow-hidden">
             <h3 className="text-lg font-bold leading-tight truncate">{goal.title}</h3>
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{goal.description}</p>
           </div>
         </CardHeader>
-        <CardContent className="flex-grow px-6 pt-0 pb-4">
-          {goal.tags && goal.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {goal.tags.map(tag => (
-                <Badge 
-                  key={tag.id} 
-                  variant="outline" 
-                  className="font-normal text-xs"
-                  style={{ 
-                    backgroundColor: `${tag.color}20`, 
-                    borderColor: `${tag.color}80`, 
-                    color: tag.color 
-                  }}
-                >
-                  {tag.name}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex flex-col items-stretch gap-4 p-6 pt-0">
+        <CardContent className="flex-grow" />
+        <CardFooter className="flex flex-col items-stretch gap-4 pt-0">
           <div>
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-semibold text-muted-foreground tracking-wider">PROGRESS</span>

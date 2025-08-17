@@ -43,7 +43,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getStatusStyles } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateProject } from "@/hooks/useCreateProject";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CalendarEvent {
     id: string;
@@ -62,18 +61,13 @@ interface ProjectsTableProps {
 }
 
 const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => {
-  const isMobile = useIsMobile();
-  const [view, setView] = useState<ViewMode>(isMobile ? 'list' : 'table');
+  const [view, setView] = useState<ViewMode>('table');
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const createProjectMutation = useCreateProject();
-
-  useEffect(() => {
-    setView(isMobile ? 'list' : 'table');
-  }, [isMobile]);
 
   const refreshCalendarEvents = async () => {
     const token = localStorage.getItem('googleCalendarToken');

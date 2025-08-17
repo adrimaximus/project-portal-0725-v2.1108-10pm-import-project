@@ -6,27 +6,24 @@ import { PlusCircle, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/hooks/useProjects";
 import { ProjectAiAssistant } from "@/components/ProjectAiAssistant";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 
 const Projects = () => {
   const navigate = useNavigate();
   const { data: projects = [], isLoading, refetch } = useProjects();
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
-  const isMobile = useIsMobile();
 
   return (
     <PortalLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">All Projects</h1>
+        <h1 className="text-3xl font-bold tracking-tight">All Projects</h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setIsAiAssistantOpen(true)} size={isMobile ? "icon" : "default"}>
-            <Sparkles className={cn(!isMobile && "mr-2", "h-4 w-4")} />
-            <span className={cn(isMobile && "sr-only")}>Ask AI</span>
+          <Button variant="outline" onClick={() => setIsAiAssistantOpen(true)}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Ask AI
           </Button>
-          <Button onClick={() => navigate('/request')} size={isMobile ? "icon" : "default"}>
-            <PlusCircle className={cn(!isMobile && "mr-2", "h-4 w-4")} />
-            <span className={cn(isMobile && "sr-only")}>New Project</span>
+          <Button onClick={() => navigate('/request')}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            New Project
           </Button>
         </div>
       </div>
