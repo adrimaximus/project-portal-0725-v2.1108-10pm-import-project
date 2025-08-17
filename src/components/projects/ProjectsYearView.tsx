@@ -19,7 +19,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import { cn, getStatusStyles } from '@/lib/utils';
 
 type CombinedItem = Project | GoogleCalendarEvent;
 
@@ -31,13 +31,7 @@ const getItemColor = (item: CombinedItem): string => {
   if (isGCalEvent(item)) {
     return '#f97316'; // Orange for Google Calendar events
   } else {
-    switch (item.status) {
-      case 'On Track': case 'Completed': case 'Done': case 'Billed': return '#22c55e'; // Green
-      case 'At Risk': return '#f97316'; // Orange
-      case 'Off Track': return '#ef4444'; // Red
-      case 'On Hold': return '#64748b'; // Slate
-      default: return '#a1a1aa'; // Zinc
-    }
+    return getStatusStyles(item.status).hex;
   }
 };
 
