@@ -103,6 +103,7 @@ export interface Project {
   services?: string[];
   briefFiles?: ProjectFile[];
   activities?: Activity[];
+  origin_event_id?: string;
 }
 
 

@@ -9,6 +9,7 @@ type NewProjectData = {
     startDate?: string;
     dueDate?: string;
     budget?: number;
+    origin_event_id?: string;
 };
 
 const createProject = async (projectData: NewProjectData) => {
@@ -22,6 +23,7 @@ const createProject = async (projectData: NewProjectData) => {
         start_date: projectData.startDate,
         due_date: projectData.dueDate,
         budget: projectData.budget,
+        origin_event_id: projectData.origin_event_id,
     };
 
     const { data, error } = await supabase.from('projects').insert(dataToInsert).select().single();

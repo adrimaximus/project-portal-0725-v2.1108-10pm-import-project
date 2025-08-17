@@ -223,19 +223,25 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   };
 
   const handleImportEvent = async (event: CalendarEvent) => {
-    const startDate = event.start.date || event.start.dateTime;
-    const dueDate = event.end.date || event.end.dateTime || startDate;
+    const startDateStr = event.start.date || event.start.dateTime;
+    let dueDateStr = event.end.date || event.end.dateTime || startDateStr;
 
-    if (!startDate) {
+    if (!startDateStr) {
         toast.error("Cannot import event without a start date.");
         return;
+    }
+
+    if (event.end.date && !event.end.dateTime) {
+        const endDate = new Date(event.end.date);
+        endDate.setUTCDate(endDate.getUTCDate() - 1);
+        dueDateStr = endDate.toISOString();
     }
 
     const newProjectData = {
       name: event.summary || "Untitled Event",
       category: 'Imported Event',
-      startDate: new Date(startDate).toISOString(),
-      dueDate: new Date(dueDate).toISOString(),
+      startDate: new Date(startDateStr).toISOString(),
+      dueDate: new Date(dueDateStr).toISOString(),
       origin_event_id: `cal-${event.id}`,
     };
 
