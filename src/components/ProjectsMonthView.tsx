@@ -1,4 +1,4 @@
-import { Project } from '@/types';
+import { Project } from '@/data/projects';
 import { useState, useMemo } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -28,7 +28,6 @@ import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { CreateProjectSheet } from './CreateProjectSheet';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 type CalendarItem = Project & { lane?: number };
 
@@ -47,11 +46,10 @@ interface ProjectsMonthViewProps {
   projects: Project[];
 }
 
-const MAX_VISIBLE_LANES = 3;
+const MAX_VISIBLE_LANES = 2;
 
 const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const isMobile = useIsMobile();
 
   const { weeks, weeklyLayouts, moreByDay } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -120,7 +118,6 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
 
     const weeklyLayouts = weeks.map(() => []);
     const processedInLayout = new Set<string>();
-    const barStep = isMobile ? 1.375 : 1.625; // 22px on mobile, 26px on desktop
 
     (activeItems as CalendarItem[]).forEach(item => {
         if (item.lane === undefined || item.lane >= MAX_VISIBLE_LANES || processedInLayout.has(item.id)) {
@@ -161,8 +158,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
                     startCol,
                     span,
                     isStart: isSameDay(projectStart, segmentStart),
-                    isEnd: isSameDay(projectEnd, segmentEnd),
-                    top: `calc(1.75rem + ${item.lane! * barStep}rem)`
+                    isEnd: isSameDay(projectEnd, segmentEnd)
                 });
             }
             
@@ -189,50 +185,31 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
     });
 
     return { weeks, weeklyLayouts, moreByDay };
-  }, [projects, currentDate, isMobile]);
+  }, [projects, currentDate]);
 
   const dayHeaders = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
-  const renderItem = (item: Project, isStart: boolean, startCol: number, isSingleDay: boolean) => {
+  const renderItem = (item: Project, isStart: boolean, startCol: number) => {
     const name = item.name;
     const assignedTo = item.assignedTo;
 
-    let content;
-    if (isSingleDay) {
-      content = (
-        <div className="flex flex-col justify-between h-full">
-          <p className="font-semibold text-[10px] md:text-xs line-clamp-2 leading-tight">
-            {name}
-          </p>
-          <div className="flex -space-x-2 mt-auto self-end">
-            {assignedTo.slice(0, 2).map(user => (
-              <Avatar key={user.id} className="h-3 w-3 md:h-4 md:w-4 border border-background">
-                <AvatarImage src={user.avatar} />
-                <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
-              </Avatar>
-            ))}
-          </div>
+    const content = (
+      <div className="flex items-center gap-2 truncate">
+        <div className="flex-1 truncate">
+          <p className="font-semibold truncate">{name}</p>
         </div>
-      );
-    } else {
-      content = (
-        <div className="flex items-center gap-2 w-full overflow-hidden">
-          <div className="flex-1 truncate">
-            <p className="font-semibold text-[10px] md:text-xs truncate">{name}</p>
-          </div>
-          <div className="flex -space-x-2">
-            {assignedTo.slice(0, 2).map(user => (
-              <Avatar key={user.id} className="h-3 w-3 md:h-4 md:w-4 border border-background">
-                <AvatarImage src={user.avatar} />
-                <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
-              </Avatar>
-            ))}
-          </div>
+        <div className="flex -space-x-2">
+          {assignedTo.slice(0, 2).map(user => (
+            <Avatar key={user.id} className="h-4 w-4 border border-background">
+              <AvatarImage src={user.avatar} />
+              <AvatarFallback className="text-[8px]">{user.initials}</AvatarFallback>
+            </Avatar>
+          ))}
         </div>
-      );
-    }
+      </div>
+    );
     
-    return <Link to={`/projects/${item.slug}`} className="block h-full w-full">{content}</Link>;
+    return <Link to={`/projects/${item.slug}`}>{content}</Link>;
   };
 
   return (
@@ -264,7 +241,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
               const dayKey = format(day, 'yyyy-MM-dd');
               const hiddenItems = moreByDay.get(dayKey);
               return (
-                <div key={day.toString()} className={cn("p-1.5 flex flex-col border-r border-gray-200 dark:border-gray-700 min-h-[6rem] md:min-h-[9rem]", dayIndex === 6 && "border-r-0")}>
+                <div key={day.toString()} className={cn("p-1.5 flex flex-col border-r border-gray-200 dark:border-gray-700", dayIndex === 6 && "border-r-0")}>
                   <span className={cn(
                     "self-end flex items-center justify-center h-6 w-6 rounded-full text-sm",
                     !isSameMonth(day, currentDate) && "text-muted-foreground/50",
@@ -272,7 +249,7 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
                   )}>
                     {format(day, 'd')}
                   </span>
-                  <div className="flex-grow mt-auto">
+                  <div className="flex-grow mt-1 pt-[5.5rem]">
                     {hiddenItems && (
                        <Popover>
                         <PopoverTrigger asChild>
@@ -285,16 +262,13 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
                             Acara pada {format(day, 'd MMM', { locale: id })}
                           </div>
                           <ul className="space-y-1">
-                            {hiddenItems.map(item => {
-                              const isSingleDayEvent = differenceInDays(parseISO(item.dueDate!), parseISO(item.startDate!)) === 0;
-                              return (
-                                <li key={item.id}>
-                                  <div className={cn("block p-2 rounded-md border-l-4 h-[20px] md:h-6", getProjectColorClasses(item))}>
-                                    {renderItem(item, true, 1, isSingleDayEvent)}
-                                  </div>
-                                </li>
-                              )
-                            })}
+                            {hiddenItems.map(item => (
+                              <li key={item.id}>
+                                <div className={cn("block p-2 rounded-md border-l-4", getProjectColorClasses(item))}>
+                                  {renderItem(item, true, 1)}
+                                </div>
+                              </li>
+                            ))}
                           </ul>
                         </PopoverContent>
                       </Popover>
@@ -304,22 +278,23 @@ const ProjectsMonthView = ({ projects }: ProjectsMonthViewProps) => {
               )
             })}
             <div className="absolute inset-0 pointer-events-none">
-              {(weeklyLayouts[weekIndex] as any[]).map(({ item, startCol, span, isStart, isEnd, top }) => (
+              {(weeklyLayouts[weekIndex] as any[]).map(({ item, startCol, span, isStart, isEnd }) => (
                 <div
                   key={item.id}
                   className={cn(
-                    "absolute flex items-center p-1.5 border-l-4 pointer-events-auto h-[20px] md:h-6 overflow-hidden",
+                    "absolute flex items-center p-1.5 text-xs border-l-4 pointer-events-auto",
                     getProjectColorClasses(item),
                     isStart ? "rounded-l-lg" : "",
                     isEnd ? "rounded-r-lg" : "",
                   )}
                   style={{
-                    top: top,
+                    top: `calc(2.25rem + ${item.lane! * 2.75}rem)`,
                     left: `calc(${(startCol - 1) / 7 * 100}% + 2px)`,
                     width: `calc(${span / 7 * 100}% - 4px)`,
+                    height: '2.5rem',
                   }}
                 >
-                  {(isStart || startCol === 1) && renderItem(item, isStart, startCol, span === 1)}
+                  {(isStart || startCol === 1) && renderItem(item, isStart, startCol)}
                 </div>
               ))}
             </div>

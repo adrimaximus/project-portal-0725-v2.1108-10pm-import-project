@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Project, Task, Comment, AssignedUser, ProjectStatus, PaymentStatus, ProjectFile } from "@/types";
+import { Project, Task, Comment, AssignedUser, ProjectStatus, PaymentStatus, ProjectFile } from "@/data/projects";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -86,44 +86,56 @@ const ProjectDetail = () => {
   const handleSave = async () => {
     if (!editedProject || !project) return;
 
-    const updates = {
-      name: editedProject.name,
-      description: editedProject.description,
-      category: editedProject.category,
-      status: editedProject.status,
-      budget: editedProject.budget,
-      start_date: editedProject.startDate,
-      due_date: editedProject.dueDate,
-      payment_status: editedProject.paymentStatus,
-      payment_due_date: editedProject.paymentDueDate,
-    };
+    const { name, description, category, status, budget, startDate, dueDate, paymentStatus, paymentDueDate, services, assignedTo } = editedProject;
+    
+    const { error } = await supabase
+      .from('projects')
+      .update({
+        name,
+        description,
+        category,
+        status,
+        budget,
+        start_date: startDate,
+        due_date: dueDate,
+        payment_status: paymentStatus,
+        payment_due_date: paymentDueDate,
+      })
+      .eq('id', project.id);
 
+    if (error) {
+      toast.error("Failed to save project", { description: error.message });
+      return;
+    }
+
+    // Team members
     const originalMemberIds = new Set(project.assignedTo.map(m => m.id));
-    const newMemberIds = new Set(editedProject.assignedTo.map(m => m.id));
-    const teamUpdates = {
-      toAdd: editedProject.assignedTo.filter(m => !originalMemberIds.has(m.id)),
-      toRemove: project.assignedTo.filter(m => !newMemberIds.has(m.id)),
-    };
+    const newMemberIds = new Set(assignedTo.map(m => m.id));
+    const membersToAdd = assignedTo.filter(m => !originalMemberIds.has(m.id));
+    const membersToRemove = project.assignedTo.filter(m => !newMemberIds.has(m.id));
 
+    if (membersToAdd.length > 0) {
+      const { error: addError } = await supabase.from('project_members').insert(membersToAdd.map(m => ({ project_id: project.id, user_id: m.id, role: m.role })));
+      if (addError) toast.error("Failed to add team members", { description: addError.message });
+    }
+    if (membersToRemove.length > 0) {
+      const { error: removeError } = await supabase.from('project_members').delete().eq('project_id', project.id).in('user_id', membersToRemove.map(m => m.id));
+      if (removeError) toast.error("Failed to remove team members", { description: removeError.message });
+    }
+
+    // Services
     const originalServiceTitles = new Set(project.services || []);
     const newServiceTitles = new Set(editedProject.services || []);
-    const serviceUpdates = {
-      toAdd: (editedProject.services || []).filter(s => !originalServiceTitles.has(s)),
-      toRemove: (project.services || []).filter(s => !newServiceTitles.has(s)),
-    };
+    const servicesToAdd = (editedProject.services || []).filter(s => !originalServiceTitles.has(s));
+    const servicesToRemove = (project.services || []).filter(s => !newServiceTitles.has(s));
 
-    const { error: functionError } = await supabase.functions.invoke('update-project-details', {
-      body: {
-        projectId: project.id,
-        updates,
-        teamUpdates,
-        serviceUpdates,
-      },
-    });
-
-    if (functionError) {
-      toast.error("Failed to save project", { description: functionError.message });
-      return;
+    if (servicesToAdd.length > 0) {
+        const { error: addError } = await supabase.from('project_services').insert(servicesToAdd.map(s => ({ project_id: project.id, service_title: s })));
+        if (addError) toast.error("Failed to add services", { description: addError.message });
+    }
+    if (servicesToRemove.length > 0) {
+        const { error: removeError } = await supabase.from('project_services').delete().eq('project_id', project.id).in('service_title', servicesToRemove);
+        if (removeError) toast.error("Failed to remove services", { description: removeError.message });
     }
 
     toast.success("Project saved successfully!");

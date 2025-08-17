@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AssignedUser } from "@/types";
+import { AssignedUser } from "@/data/projects";
 
 interface ModernTeamSelectorProps {
   users: AssignedUser[];

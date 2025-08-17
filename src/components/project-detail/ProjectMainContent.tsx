@@ -1,4 +1,4 @@
-import { Project, AssignedUser, Comment, Task, ProjectFile } from "@/types";
+import { Project, AssignedUser, Comment, Task, ProjectFile } from "@/data/projects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectComments from "@/components/ProjectComments";
 import { Badge } from "@/components/ui/badge";

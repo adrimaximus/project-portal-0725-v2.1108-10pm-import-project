@@ -1,4 +1,4 @@
-import { AssignedUser } from '@/types';
+import { AssignedUser } from '@/data/projects';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 interface ProjectTeamProps {

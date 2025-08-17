@@ -1,4 +1,4 @@
-import { Project, AssignedUser } from '@/types';
+import { Project, AssignedUser } from '@/data/projects';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';

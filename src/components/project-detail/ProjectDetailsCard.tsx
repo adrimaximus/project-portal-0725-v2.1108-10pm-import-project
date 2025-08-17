@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project } from "@/types";
+import { Project } from "@/data/projects";
 import { Calendar, Wallet, Briefcase } from "lucide-react";
 import { format } from "date-fns";
 
@@ -25,7 +25,7 @@ const ProjectDetailsCard = ({ project }: ProjectDetailsCardProps) => {
           <div>
             <p className="font-medium">Timeline</p>
             <p className="text-muted-foreground">
-              {format(new Date(project.startDate || Date.now()), "dd MMM yyyy")} - {project.dueDate ? format(new Date(project.dueDate), "dd MMM yyyy") : 'N/A'}
+              {format(new Date(project.startDate || Date.now()), "dd MMM yyyy")} - {format(new Date(project.dueDate), "dd MMM yyyy")}
             </p>
           </div>
         </div>

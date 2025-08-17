@@ -1,4 +1,4 @@
-import { Project } from '@/types';
+import { Project } from '@/data/projects';
 import ProjectTeam from './ProjectTeam';
 
 const ProjectOverview = ({ project }: ProjectOverviewProps) => {

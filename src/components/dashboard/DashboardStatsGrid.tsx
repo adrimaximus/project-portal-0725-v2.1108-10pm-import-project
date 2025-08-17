@@ -1,17 +1,11 @@
 import React, { useMemo } from 'react';
-import { Project, User } from '@/types';
+import { Project } from '@/data/projects';
 import StatCard from './StatCard';
-import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, TrendingUp, Hourglass } from "lucide-react";
+import { DollarSign, ListChecks, CreditCard, User, Users, TrendingUp, Hourglass } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface DashboardStatsGridProps {
   projects: Project[];
-}
-
-interface UserStat extends User {
-  projectCount: number;
-  totalValue: number;
-  pendingValue: number;
 }
 
 const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
@@ -31,34 +25,34 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
     const ownerCounts = projects.reduce((acc, p) => {
         if (p.createdBy) {
             if (!acc[p.createdBy.id]) {
-                acc[p.createdBy.id] = { ...p.createdBy, projectCount: 0, totalValue: 0, pendingValue: 0 };
+                acc[p.createdBy.id] = { ...p.createdBy, projectCount: 0 };
             }
             acc[p.createdBy.id].projectCount++;
         }
         return acc;
-    }, {} as Record<string, UserStat>);
+    }, {} as Record<string, any>);
     const topOwner = Object.values(ownerCounts).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
 
     const collaboratorStats = projects.reduce((acc, p) => {
         p.assignedTo.forEach(user => {
             if (!acc[user.id]) {
-                acc[user.id] = { ...user, projectCount: 0, totalValue: 0, pendingValue: 0 };
+                acc[user.id] = { ...user, projectCount: 0 };
             }
             acc[user.id].projectCount++;
         });
         return acc;
-    }, {} as Record<string, UserStat>);
+    }, {} as Record<string, any>);
     const topCollaborator = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
 
     const userValueCounts = projects.reduce((acc, p) => {
         p.assignedTo.forEach(user => {
             if (!acc[user.id]) {
-                acc[user.id] = { ...user, projectCount: 0, totalValue: 0, pendingValue: 0 };
+                acc[user.id] = { ...user, totalValue: 0 };
             }
             acc[user.id].totalValue += p.budget || 0;
         });
         return acc;
-    }, {} as Record<string, UserStat>);
+    }, {} as Record<string, any>);
     const topUserByValue = Object.values(userValueCounts).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
 
     const pendingPaymentCounts = projects
@@ -66,12 +60,12 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
       .reduce((acc, p) => {
           p.assignedTo.forEach(user => {
               if (!acc[user.id]) {
-                  acc[user.id] = { ...user, projectCount: 0, totalValue: 0, pendingValue: 0 };
+                  acc[user.id] = { ...user, pendingValue: 0 };
               }
               acc[user.id].pendingValue += p.budget || 0;
           });
           return acc;
-      }, {} as Record<string, UserStat>);
+      }, {} as Record<string, any>);
     const topUserByPendingValue = Object.values(pendingPaymentCounts).sort((a, b) => b.pendingValue - a.pendingValue)[0] || null;
 
     return {
@@ -122,7 +116,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
       />
       <StatCard
         title="Top Project Owner"
-        icon={<UserIcon className="h-4 w-4 text-muted-foreground" />}
+        icon={<User className="h-4 w-4 text-muted-foreground" />}
         value={
           stats.topOwner ? (
             <div className="flex items-center gap-4 pt-2">

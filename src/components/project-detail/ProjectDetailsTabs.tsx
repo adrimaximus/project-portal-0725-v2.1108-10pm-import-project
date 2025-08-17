@@ -1,4 +1,4 @@
-import { Project, Task } from "@/types";
+import { Project, Task } from "@/data/projects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectBrief from "./ProjectBrief";
 import RequestComments from "../request/RequestComments";
