@@ -15,6 +15,7 @@ import ProjectFinancialsCard from "@/components/project-detail/ProjectFinancials
 import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
 import ProjectStatusCard from "@/components/project-detail/ProjectStatusCard";
+import ProjectPaymentStatusCard from "@/components/project-detail/ProjectPaymentStatusCard";
 
 const fetchProject = async (slug: string) => {
   const { data, error } = await supabase
@@ -329,6 +330,11 @@ const ProjectDetail = () => {
               onFieldChange={handleFieldChange}
             />
             <ProjectFinancialsCard project={editedProject} />
+            <ProjectPaymentStatusCard
+              project={editedProject}
+              isEditing={isEditing}
+              onFieldChange={handleFieldChange}
+            />
             <ProjectTeamCard
               project={editedProject}
               isEditing={isEditing}
