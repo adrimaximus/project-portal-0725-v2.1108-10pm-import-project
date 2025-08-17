@@ -25,8 +25,25 @@ export interface AssignedUser extends UserProfile {
 export const PROJECT_STATUSES = ['Requested', 'In Progress', 'In Review', 'On Hold', 'Completed', 'Cancelled'] as const;
 export type ProjectStatus = typeof PROJECT_STATUSES[number];
 
+export const PROJECT_STATUS_OPTIONS = [
+  { value: 'Requested', label: 'Requested' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'In Review', label: 'In Review' },
+  { value: 'On Hold', label: 'On Hold' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Cancelled', label: 'Cancelled' },
+] as const;
+
 export const PAYMENT_STATUSES = ['Proposed', 'Pending', 'Paid', 'Overdue', 'Cancelled'] as const;
 export type PaymentStatus = typeof PAYMENT_STATUSES[number];
+
+export const PAYMENT_STATUS_OPTIONS = [
+  { value: 'Proposed', label: 'Proposed' },
+  { value: 'Pending', label: 'Pending' },
+  { value: 'Paid', label: 'Paid' },
+  { value: 'Overdue', label: 'Overdue' },
+  { value: 'Cancelled', label: 'Cancelled' },
+] as const;
 
 export interface Task {
   id: string;

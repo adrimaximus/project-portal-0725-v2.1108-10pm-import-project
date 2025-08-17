@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project, PROJECT_STATUSES, PAYMENT_STATUSES, PaymentStatus } from "@/types";
+import { Project, ProjectStatus, PROJECT_STATUSES, PAYMENT_STATUSES, PaymentStatus, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/types";
 import { format, formatDistanceToNow, startOfDay, differenceInDays, isBefore } from "date-fns";
 import { id } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ interface ProjectInfoCardsProps {
   onBudgetChange: (value: number | string) => void;
 }
 
-const statusConfig = {
+const statusConfig: Record<ProjectStatus, { icon: React.ElementType; color: string; label: string }> = {
   'In Progress': { icon: Clock, color: "text-blue-500", label: "In Progress" },
   'Completed': { icon: CheckCircle, color: "text-green-500", label: "Completed" },
   'On Hold': { icon: AlertCircle, color: "text-yellow-500", label: "On Hold" },
@@ -55,8 +55,8 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
     durationText = `(${duration} day${duration > 1 ? 's' : ''})`;
   }
 
-  const StatusIcon = statusConfig[project.status as keyof typeof statusConfig]?.icon || CircleDashed;
-  const statusColor = statusConfig[project.status as keyof typeof statusConfig]?.color || "text-muted-foreground";
+  const StatusIcon = statusConfig[project.status as ProjectStatus]?.icon || CircleDashed;
+  const statusColor = statusConfig[project.status as ProjectStatus]?.color || "text-muted-foreground";
 
   const paymentBadgeColor = paymentStatusConfig[project.paymentStatus as keyof typeof paymentStatusConfig]?.color || "bg-gray-100 text-gray-800";
 
@@ -77,7 +77,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                {PROJECT_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {PROJECT_STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
           ) : (
@@ -114,7 +114,7 @@ const ProjectInfoCards = ({ project, isEditing, editedProject, onFieldChange, on
                 <SelectValue placeholder="Select payment status" />
               </SelectTrigger>
               <SelectContent>
-                {PAYMENT_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {PAYMENT_STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
           ) : (
