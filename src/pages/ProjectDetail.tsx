@@ -88,7 +88,7 @@ const ProjectDetail = () => {
 
     const { id, name, description, category, status, budget, startDate, dueDate, paymentStatus, paymentDueDate, services, assignedTo } = editedProject;
     
-    const { error } = await supabase
+    const { data: updatedProjectRow, error } = await supabase
       .rpc('update_project_details', {
         p_project_id: id,
         p_name: name,
@@ -102,17 +102,27 @@ const ProjectDetail = () => {
         p_payment_due_date: paymentDueDate,
         p_member_ids: assignedTo.map(m => m.id),
         p_service_titles: services || [],
-      });
+      })
+      .single();
 
     if (error) {
       toast.error("Failed to save project", { description: error.message });
       return;
     }
 
-    toast.success("Project saved successfully!");
-    setIsEditing(false);
-    queryClient.invalidateQueries({ queryKey: ["project", slug] });
-    queryClient.invalidateQueries({ queryKey: ["projects"] });
+    if (updatedProjectRow) {
+        const typedUpdatedProjectRow = updatedProjectRow as { slug: string };
+        toast.success("Project saved successfully!");
+        setIsEditing(false);
+
+        queryClient.invalidateQueries({ queryKey: ["projects"] });
+
+        if (slug !== typedUpdatedProjectRow.slug) {
+            navigate(`/projects/${typedUpdatedProjectRow.slug}`, { replace: true });
+        } else {
+            queryClient.invalidateQueries({ queryKey: ["project", slug] });
+        }
+    }
   };
 
   const handleCancel = () => {
