@@ -231,17 +231,24 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
         return;
     }
 
-    if (event.end.date && !event.end.dateTime) {
-        const endDate = new Date(event.end.date);
+    const isAllDay = event.start.date && !event.start.dateTime;
+    
+    const finalStartDate = isAllDay ? new Date(startDateStr + 'T00:00:00Z') : new Date(startDateStr);
+    let finalDueDate;
+
+    if (isAllDay) {
+        const endDate = new Date(dueDateStr + 'T00:00:00Z');
         endDate.setUTCDate(endDate.getUTCDate() - 1);
-        dueDateStr = endDate.toISOString();
+        finalDueDate = endDate;
+    } else {
+        finalDueDate = new Date(dueDateStr);
     }
 
     const newProjectData = {
       name: event.summary || "Untitled Event",
       category: 'Imported Event',
-      startDate: new Date(startDateStr).toISOString(),
-      dueDate: new Date(dueDateStr).toISOString(),
+      startDate: finalStartDate.toISOString(),
+      dueDate: finalDueDate.toISOString(),
       origin_event_id: `cal-${event.id}`,
     };
 
