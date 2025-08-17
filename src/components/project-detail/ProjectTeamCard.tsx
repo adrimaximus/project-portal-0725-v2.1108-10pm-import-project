@@ -45,6 +45,8 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
   const assignableUsers = project.createdBy
     ? allUsers.filter(u => u.id !== project.createdBy.id)
     : allUsers;
+    
+  const teamMembers = project.assignedTo.filter(member => member.id !== project.createdBy.id);
 
   return (
     <Card>
@@ -72,7 +74,7 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
               <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
               <ModernTeamSelector
                 users={assignableUsers}
-                selectedUsers={project.assignedTo}
+                selectedUsers={teamMembers}
                 onSelectionChange={handleTeamSelectionToggle}
               />
             </div>
@@ -94,11 +96,11 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
                 </div>
               </div>
             )}
-            {project.assignedTo.length > 0 && (
+            {teamMembers.length > 0 && (
               <div>
                 <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
                 <div className="space-y-3">
-                  {project.assignedTo.map(member => (
+                  {teamMembers.map(member => (
                     <div key={member.id} className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={member.avatar} />
