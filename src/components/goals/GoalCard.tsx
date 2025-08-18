@@ -14,11 +14,11 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
   return (
     <Link to={`/goals/${goal.slug}`} className="block group">
       <Card className="h-full flex flex-col transition-all duration-200 group-hover:shadow-lg group-hover:-translate-y-1 cursor-pointer">
-        <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
-          <GoalIcon goal={goal} className="w-16 h-16 flex-shrink-0" />
+        <CardHeader className="flex flex-row items-start gap-3 sm:gap-4 space-y-0 pb-4 p-4 sm:p-6">
+          <GoalIcon goal={goal} className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0" />
           <div className="flex-grow overflow-hidden">
-            <h3 className="text-lg font-bold leading-tight truncate">{goal.title}</h3>
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{goal.description}</p>
+            <h3 className="text-md sm:text-lg font-bold leading-tight truncate">{goal.title}</h3>
+            <p className="text-sm text-muted-foreground mt-1 line-clamp-1 sm:line-clamp-2">{goal.description}</p>
             {goal.tags && goal.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {goal.tags.slice(0, 3).map(tag => (
@@ -40,7 +40,7 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
           </div>
         </CardHeader>
         <div className="flex-grow" />
-        <CardFooter className="flex flex-col items-stretch gap-4 pt-0">
+        <CardFooter className="flex flex-col items-stretch gap-4 pt-0 p-4 sm:p-6">
           <div>
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-semibold text-muted-foreground tracking-wider">PROGRESS</span>
