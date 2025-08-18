@@ -16,6 +16,7 @@ const ChatPage = () => {
     handleStartNewChat,
     handleStartNewGroupChat,
     sendTyping,
+    fetchConversations,
   } = useChat();
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
@@ -40,6 +41,7 @@ const ChatPage = () => {
               onBack={() => handleConversationSelect(null)}
               typing={isSomeoneTyping}
               onTyping={sendTyping}
+              onUpdate={fetchConversations}
             />
           )}
         </div>
@@ -63,6 +65,7 @@ const ChatPage = () => {
           onClearChat={handleClearChat}
           typing={isSomeoneTyping}
           onTyping={sendTyping}
+          onUpdate={fetchConversations}
         />
       </div>
     </PortalLayout>

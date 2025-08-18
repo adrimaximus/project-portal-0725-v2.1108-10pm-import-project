@@ -28,7 +28,7 @@ export const useChat = () => {
       const mappedConversations: Conversation[] = data.map((c: any) => ({
         id: c.conversation_id,
         userName: c.is_group ? c.group_name : c.other_user_name,
-        userAvatar: c.is_group ? undefined : c.other_user_avatar,
+        userAvatar: c.is_group ? c.avatar_url : c.other_user_avatar,
         lastMessage: c.last_message_content || "No messages yet.",
         lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
         unreadCount: 0,
@@ -204,5 +204,6 @@ export const useChat = () => {
     handleStartNewChat,
     handleStartNewGroupChat,
     sendTyping,
+    fetchConversations,
   };
 };
