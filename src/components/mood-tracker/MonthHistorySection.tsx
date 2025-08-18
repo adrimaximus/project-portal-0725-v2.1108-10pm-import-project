@@ -36,8 +36,9 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
   const monthIndex = monthDate.getMonth();
 
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  // getDay() is 0 for Sunday, 1 for Monday... Assuming the week starts on Sunday.
+  // Adjust to start the week on Monday. getDay() is 0 for Sunday.
   const firstDayOfWeek = new Date(year, monthIndex, 1).getDay();
+  const placeholders = (firstDayOfWeek + 6) % 7; // Monday = 0 placeholders, Sunday = 6
 
   const entriesMap = new Map<number, MoodHistoryEntry>();
   entries.forEach(entry => {
@@ -50,7 +51,7 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
   const calendarDays = [];
 
   // Add empty placeholders for days before the 1st of the month
-  for (let i = 0; i < firstDayOfWeek; i++) {
+  for (let i = 0; i < placeholders; i++) {
     calendarDays.push(<div key={`empty-${i}`} className="w-5 h-5 sm:w-6 sm:h-6" />);
   }
 
