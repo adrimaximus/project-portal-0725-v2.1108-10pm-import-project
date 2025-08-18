@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import PortalLayout from '@/components/PortalLayout';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -31,6 +31,24 @@ const GoalsPage = () => {
     fetchGoals();
   }, [fetchGoals]);
 
+  const { specialGoals, otherGoals } = useMemo(() => {
+    const specialTags = ['office', '7inked', 'betterworks.id'];
+    const sGoals: Goal[] = [];
+    const oGoals: Goal[] = [];
+
+    if (goals) {
+      goals.forEach(goal => {
+        const hasSpecialTag = goal.tags && goal.tags.some(tag => specialTags.includes(tag.name.toLowerCase()));
+        if (hasSpecialTag) {
+          sGoals.push(goal);
+        } else {
+          oGoals.push(goal);
+        }
+      });
+    }
+    return { specialGoals: sGoals, otherGoals: oGoals };
+  }, [goals]);
+
   const handleSuccess = (newGoal: Goal) => {
     setIsNewGoalDialogOpen(false);
     navigate(`/goals/${newGoal.slug}`);
@@ -46,11 +64,34 @@ const GoalsPage = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {goals.map(goal => (
-          <GoalCard key={goal.id} goal={goal} />
-        ))}
-      </div>
+      {specialGoals.length > 0 && (
+        <div className="mb-12">
+          <h2 className="text-2xl font-semibold mb-4 border-b pb-2">Company Goals</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {specialGoals.map(goal => (
+              <GoalCard key={goal.id} goal={goal} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {otherGoals.length > 0 && (
+        <div>
+          <h2 className="text-2xl font-semibold mb-4 border-b pb-2">Personal Goals</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {otherGoals.map(goal => (
+              <GoalCard key={goal.id} goal={goal} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {goals.length === 0 && (
+        <div className="text-center py-12 text-muted-foreground">
+          <p>You haven't created any goals yet.</p>
+          <p>Click "New Goal" to get started!</p>
+        </div>
+      )}
 
       <GoalFormDialog
         open={isNewGoalDialogOpen}
