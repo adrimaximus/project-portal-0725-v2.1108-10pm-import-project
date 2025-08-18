@@ -401,22 +401,24 @@ CONTEXT:
                 break;
             }
 
+            const rpcParams = {
+                p_title: goal_details.title,
+                p_description: goal_details.description || null,
+                p_icon: goal_details.icon || 'Target',
+                p_color: goal_details.color || '#3366FF',
+                p_type: goal_details.type || 'frequency',
+                p_frequency: goal_details.frequency || null,
+                p_specific_days: goal_details.specific_days || null,
+                p_target_quantity: goal_details.target_quantity ?? null,
+                p_target_period: goal_details.target_period || null,
+                p_target_value: goal_details.target_value ?? null,
+                p_unit: goal_details.unit || null,
+                p_existing_tags: [],
+                p_custom_tags: goal_details.tags || [],
+            };
+
             const { data: newGoal, error: rpcError } = await userSupabase
-                .rpc('create_goal_and_link_tags', {
-                    p_title: goal_details.title,
-                    p_description: goal_details.description,
-                    p_icon: goal_details.icon,
-                    p_color: goal_details.color,
-                    p_type: goal_details.type,
-                    p_frequency: goal_details.frequency,
-                    p_specific_days: goal_details.specific_days,
-                    p_target_quantity: goal_details.target_quantity,
-                    p_target_period: goal_details.target_period,
-                    p_target_value: goal_details.target_value,
-                    p_unit: goal_details.unit,
-                    p_existing_tags: [],
-                    p_custom_tags: goal_details.tags || [],
-                })
+                .rpc('create_goal_and_link_tags', rpcParams)
                 .single();
 
             if (rpcError) {
