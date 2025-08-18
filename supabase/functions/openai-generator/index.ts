@@ -403,6 +403,7 @@ CONTEXT:
 
             const { data: newGoal, error: rpcError } = await supabaseAdmin
                 .rpc('create_goal_and_link_tags', {
+                    p_user_id: user.id,
                     p_title: goal_details.title,
                     p_description: goal_details.description,
                     p_icon: goal_details.icon,
