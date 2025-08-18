@@ -26,6 +26,9 @@ const ChatPage = () => {
   const messageChannelRef = useRef<RealtimeChannelRef | null>(null);
   const conversationsChannelRef = useRef<RealtimeChannelRef | null>(null);
   const messagesGlobalChannelRef = useRef<RealtimeChannelRef | null>(null);
+  // NEW: simpan instance channel aktif untuk broadcast typing
+  const activeConvChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   const typingTimerRef = useRef<number | null>(null);
 
   const fetchConversations = useCallback(async () => {
@@ -70,10 +73,14 @@ const ChatPage = () => {
   }, [fetchConversations]);
 
   const attachConversationRealtime = useCallback((conversationId: string) => {
-    // Cleanup previous channel if any
+    // Bersihkan channel lama
     if (messageChannelRef.current) {
       messageChannelRef.current.unsubscribe();
       messageChannelRef.current = null;
+    }
+    if (activeConvChannelRef.current) {
+      supabase.removeChannel(activeConvChannelRef.current);
+      activeConvChannelRef.current = null;
     }
     if (!currentUser) return;
 
@@ -81,6 +88,7 @@ const ChatPage = () => {
       config: { broadcast: { self: true } },
     });
 
+    // Pesan baru pada percakapan ini saja
     ch.on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
@@ -118,7 +126,7 @@ const ChatPage = () => {
 
           const copy = [...prevConvos];
           copy[idx] = updatedConvo;
-          // move to top
+          // Naikkan ke atas
           const [moved] = copy.splice(idx, 1);
           copy.unshift(moved);
           return copy;
@@ -126,6 +134,7 @@ const ChatPage = () => {
       }
     );
 
+    // Typing indicator (broadcast)
     ch.on('broadcast', { event: 'typing' }, (payload: any) => {
       if (payload?.userId && payload.userId !== currentUser.id) {
         setIsSomeoneTyping(true);
@@ -137,12 +146,24 @@ const ChatPage = () => {
     });
 
     ch.subscribe();
+
+    // Simpan ref untuk kirim broadcast
+    activeConvChannelRef.current = ch;
+
     messageChannelRef.current = {
-      unsubscribe: () => supabase.removeChannel(ch),
+      unsubscribe: () => {
+        try {
+          supabase.removeChannel(ch);
+        } finally {
+          if (activeConvChannelRef.current === ch) {
+            activeConvChannelRef.current = null;
+          }
+        }
+      },
     };
   }, [currentUser, selectedConversationId]);
 
-  // Keep conversations list fresh
+  // Jaga daftar percakapan tetap segar
   useEffect(() => {
     if (conversationsChannelRef.current) return;
 
@@ -165,7 +186,7 @@ const ChatPage = () => {
     };
   }, [fetchConversations]);
 
-  // NEW: global messages listener to auto-open latest incoming conversation if none selected
+  // Global listener: auto-buka percakapan saat pesan baru masuk jika belum ada yang dipilih
   useEffect(() => {
     if (!currentUser) return;
     if (messagesGlobalChannelRef.current) return;
@@ -179,18 +200,15 @@ const ChatPage = () => {
           const msg = payload.new as any;
           if (!msg || msg.sender_id === currentUser.id) return;
 
-          // Only auto-select when no conversation is currently selected
           if (!selectedConversationId) {
             const convId = msg.conversation_id as string;
 
-            // If conversation not in list yet, refresh first, then open
             const exists = conversations.some(c => c.id === convId);
             if (!exists) {
               await fetchConversations();
             }
 
             setSelectedConversationId(convId);
-            // Load messages and attach realtime for this conversation
             handleConversationSelect(convId);
           }
         }
@@ -240,7 +258,6 @@ const ChatPage = () => {
       prev.some(c => c.id === id)
         ? prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c))
         : [
-            // Ensure the conversation exists in state if not present yet
             {
               id,
               userName: 'Conversation',
@@ -259,7 +276,7 @@ const ChatPage = () => {
     attachConversationRealtime(id);
   }, [attachConversationRealtime]);
 
-  // Deep-link: start chat with a collaborator from other pages
+  // Deep-link: mulai chat dari halaman lain
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
     if (collaboratorToChat && currentUser) {
@@ -286,12 +303,16 @@ const ChatPage = () => {
     }
   }, [location.state, currentUser, conversations, navigate, handleConversationSelect, fetchConversations]);
 
-  // Cleanup on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
       messageChannelRef.current?.unsubscribe();
       conversationsChannelRef.current?.unsubscribe();
       messagesGlobalChannelRef.current?.unsubscribe();
+      if (activeConvChannelRef.current) {
+        supabase.removeChannel(activeConvChannelRef.current);
+        activeConvChannelRef.current = null;
+      }
       if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
     };
   }, []);
@@ -366,18 +387,15 @@ const ChatPage = () => {
     }
   };
 
+  // NEW: kirim typing menggunakan channel aktif
   const sendTyping = useCallback(() => {
-    if (!selectedConversationId || !messageChannelRef.current) return;
-    const chName = `conversation:${selectedConversationId}`;
-    const ch = (supabase as any).realtime.channels.find((c: any) => c.topic === `realtime:${chName}`);
-    if (ch && ch.send) {
-      ch.send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: { userId: currentUser?.id },
-      });
-    }
-  }, [selectedConversationId, currentUser]);
+    if (!activeConvChannelRef.current || !currentUser) return;
+    activeConvChannelRef.current.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { userId: currentUser.id },
+    });
+  }, [currentUser]);
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
 
