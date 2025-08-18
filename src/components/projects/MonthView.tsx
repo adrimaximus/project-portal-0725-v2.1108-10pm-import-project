@@ -39,6 +39,7 @@ const getItemColor = (item: CombinedItem): string => {
 const MobileMonthView = ({ projects, gcalEvents, currentMonth }: { projects: Project[], gcalEvents: GoogleCalendarEvent[], currentMonth: Date }) => {
     const navigate = useNavigate();
     const combinedItems: CombinedItem[] = useMemo(() => [...projects, ...gcalEvents], [projects, gcalEvents]);
+    const [visibleDays, setVisibleDays] = useState(5);
 
     const itemsInMonth = useMemo(() => combinedItems.filter(p => {
         const startDate = isGCalEvent(p) ? (p.start.dateTime || p.start.date) : p.start_date;
@@ -56,7 +57,6 @@ const MobileMonthView = ({ projects, gcalEvents, currentMonth }: { projects: Pro
         const startDateStr = isGCalEvent(project) ? (project.start.dateTime || project.start.date) : project.start_date;
         if (!startDateStr) return acc;
         
-        // Robustly parse date string, treating date part as local date
         const d = new Date(startDateStr);
         const localDate = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
         const dateKey = format(localDate, 'yyyy-MM-dd');
@@ -68,6 +68,9 @@ const MobileMonthView = ({ projects, gcalEvents, currentMonth }: { projects: Pro
         return acc;
     }, {} as Record<string, CombinedItem[]>);
 
+    const dayEntries = Object.entries(groupedByDay);
+    const visibleDayEntries = dayEntries.slice(0, visibleDays);
+
     if (sortedItems.length === 0) {
         return (
             <div className="flex items-center justify-center h-40 text-muted-foreground">
@@ -78,8 +81,7 @@ const MobileMonthView = ({ projects, gcalEvents, currentMonth }: { projects: Pro
 
     return (
         <div className="space-y-4">
-            {Object.entries(groupedByDay).map(([dateStr, itemsOnDay]) => {
-                // Parse the date string as local date
+            {visibleDayEntries.map(([dateStr, itemsOnDay]) => {
                 const [year, month, day] = dateStr.split('-').map(Number);
                 const date = new Date(year, month - 1, day);
                 
@@ -127,6 +129,13 @@ const MobileMonthView = ({ projects, gcalEvents, currentMonth }: { projects: Pro
                     </div>
                 );
             })}
+            {dayEntries.length > visibleDays && (
+                <div className="text-center mt-4">
+                    <Button variant="outline" onClick={() => setVisibleDays(prev => prev + 5)}>
+                        Load More
+                    </Button>
+                </div>
+            )}
         </div>
     );
 };

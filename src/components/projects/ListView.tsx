@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Project } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,6 +15,7 @@ import { getStatusStyles, formatInJakarta } from '@/lib/utils';
 
 const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
   const navigate = useNavigate();
+  const [visibleDays, setVisibleDays] = useState(10);
 
   const sortedProjects = projects
     .filter(p => p.start_date)
@@ -29,6 +31,9 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
     return acc;
   }, {} as Record<string, Project[]>);
 
+  const dayEntries = Object.entries(groupedByDay);
+  const visibleDayEntries = dayEntries.slice(0, visibleDays);
+
   let lastMonth: string | null = null;
 
   if (sortedProjects.length === 0) {
@@ -41,7 +46,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
 
   return (
     <div className="space-y-4">
-      {Object.entries(groupedByDay).map(([dateStr, projectsOnDay]) => {
+      {visibleDayEntries.map(([dateStr, projectsOnDay]) => {
         const date = new Date(`${dateStr}T00:00:00`);
         const currentMonth = formatInJakarta(date, 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastMonth;
@@ -142,6 +147,13 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
           </div>
         );
       })}
+      {dayEntries.length > visibleDays && (
+        <div className="text-center mt-6">
+          <Button variant="outline" onClick={() => setVisibleDays(prev => prev + 10)}>
+            Load More
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
