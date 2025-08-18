@@ -9,38 +9,38 @@ export const useChat = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isSomeoneTyping, setIsSomeoneTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const location = useLocation();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
-  const messageChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const conversationsChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const messagesGlobalChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimerRef = useRef<number | null>(null);
 
   const fetchConversations = useCallback(async () => {
     if (!currentUser) return;
+    setIsLoading(true);
     const { data, error } = await supabase.rpc('get_user_conversations');
     if (error) {
       toast.error("Failed to fetch conversations.");
       console.error(error);
-      return;
+    } else {
+      const mappedConversations: Conversation[] = data.map((c: any) => ({
+        id: c.conversation_id,
+        userName: c.is_group ? c.group_name : c.other_user_name,
+        userAvatar: c.is_group ? undefined : c.other_user_avatar,
+        lastMessage: c.last_message_content || "No messages yet.",
+        lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
+        unreadCount: 0,
+        messages: [],
+        isGroup: c.is_group,
+        members: (c.participants || []).map((p: any) => ({
+          id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
+        })),
+      }));
+      setConversations(mappedConversations);
     }
-    const mappedConversations: Conversation[] = data.map((c: any) => ({
-      id: c.conversation_id,
-      userName: c.is_group ? c.group_name : c.other_user_name,
-      userAvatar: c.is_group ? undefined : c.other_user_avatar,
-      lastMessage: c.last_message_content || "No messages yet.",
-      lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
-      unreadCount: 0,
-      messages: [],
-      isGroup: c.is_group,
-      members: (c.participants || []).map((p: any) => ({
-        id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials, online: true,
-      })),
-    }));
-    setConversations(mappedConversations);
+    setIsLoading(false);
   }, [currentUser]);
 
   useEffect(() => {
@@ -48,14 +48,7 @@ export const useChat = () => {
   }, [fetchConversations]);
 
   const handleConversationSelect = useCallback(async (id: string | null) => {
-    if (messageChannelRef.current) {
-      supabase.removeChannel(messageChannelRef.current);
-      messageChannelRef.current = null;
-    }
-    
     setSelectedConversationId(id);
-    setIsSomeoneTyping(false);
-
     if (!id) return;
 
     const { data, error } = await supabase
@@ -82,71 +75,80 @@ export const useChat = () => {
     }));
 
     setConversations(prev => prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c)));
-
-    const ch = supabase.channel(`conversation:${id}`, { config: { broadcast: { self: true } } });
-    ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` }, (payload: any) => {
-      const newMessage = payload.new as any;
-      if (newMessage.sender_id === currentUser?.id) return;
-      fetchConversations(); // Refresh list to bring to top
-      handleConversationSelect(id); // Re-fetch messages for current conversation
-    });
-    ch.on('broadcast', { event: 'typing' }, (payload: any) => {
-      if (payload?.userId && payload.userId !== currentUser?.id) {
-        setIsSomeoneTyping(true);
-        if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
-        typingTimerRef.current = window.setTimeout(() => setIsSomeoneTyping(false), 1500);
-      }
-    });
-    ch.subscribe();
-    messageChannelRef.current = ch;
-  }, [currentUser, fetchConversations]);
+  }, []);
 
   useEffect(() => {
     if (!currentUser) return;
-    const ch = supabase.channel('conversations-list')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => fetchConversations())
-      .subscribe();
-    conversationsChannelRef.current = ch;
-    return () => { supabase.removeChannel(ch); };
-  }, [currentUser, fetchConversations]);
 
-  useEffect(() => {
-    if (!currentUser) return;
-    const ch = supabase.channel('messages-global')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload: any) => {
-        const msg = payload.new as any;
-        if (!msg || msg.sender_id === currentUser.id) return;
-        if (!selectedConversationId) {
-          await fetchConversations();
-          handleConversationSelect(msg.conversation_id);
+    const channel = supabase.channel('chat-room', { config: { broadcast: { self: false } } });
+
+    channel
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
+        const newMessage = payload.new;
+        const conversationId = newMessage.conversation_id;
+
+        setConversations(prev => {
+          const convoIndex = prev.findIndex(c => c.id === conversationId);
+          if (convoIndex === -1) {
+            fetchConversations(); // New conversation, refetch list
+            return prev;
+          }
+
+          const updatedConvo = { ...prev[convoIndex] };
+          updatedConvo.lastMessage = newMessage.content || "Attachment";
+          updatedConvo.lastMessageTimestamp = newMessage.created_at;
+
+          if (conversationId === selectedConversationId) {
+            const senderProfile = updatedConvo.members.find(m => m.id === newMessage.sender_id);
+            const mappedMessage: Message = {
+              id: newMessage.id, text: newMessage.content, timestamp: newMessage.created_at,
+              sender: {
+                id: senderProfile?.id || '', name: senderProfile?.name || 'Unknown',
+                avatar: senderProfile?.avatar, initials: senderProfile?.initials || '??',
+                email: senderProfile?.email,
+              },
+              attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
+            };
+            updatedConvo.messages = [...updatedConvo.messages, mappedMessage];
+          }
+
+          const newConversations = [...prev];
+          newConversations.splice(convoIndex, 1);
+          newConversations.unshift(updatedConvo);
+          return newConversations;
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
+        fetchConversations();
+      })
+      .on('broadcast', { event: 'typing' }, (payload: any) => {
+        if (payload?.userId && payload.userId !== currentUser?.id && payload.conversationId === selectedConversationId) {
+          setIsSomeoneTyping(true);
+          if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
+          typingTimerRef.current = window.setTimeout(() => setIsSomeoneTyping(false), 1500);
         }
       })
       .subscribe();
-    messagesGlobalChannelRef.current = ch;
-    return () => { supabase.removeChannel(ch); };
-  }, [currentUser, selectedConversationId, fetchConversations, handleConversationSelect]);
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser, selectedConversationId, fetchConversations]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
     if (collaboratorToChat && currentUser) {
-      const existingConvo = conversations.find(c => !c.isGroup && c.members?.some(m => m.id === collaboratorToChat.id));
-      if (existingConvo) {
-        handleConversationSelect(existingConvo.id);
-      } else {
-        handleStartNewChat(collaboratorToChat);
-      }
+      handleStartNewChat(collaboratorToChat);
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state, currentUser, conversations, navigate, handleConversationSelect]);
+  }, [location.state, currentUser, navigate]);
 
   const handleSendMessage = async (text: string, attachment: Attachment | null) => {
     if (!selectedConversationId || !currentUser) return;
-    const convo = conversations.find(c => c.id === selectedConversationId);
-    if (!convo) return;
 
     const tempId = `temp-${Date.now()}`;
     const optimistic: Message = { id: tempId, text, timestamp: new Date().toISOString(), sender: currentUser, attachment };
-    setConversations(prev => prev.map(c => c.id === selectedConversationId ? { ...c, messages: [...c.messages, optimistic] } : c));
+    setConversations(prev => prev.map(c => c.id === selectedConversationId ? { ...c, messages: [...c.messages, optimistic], lastMessage: text || "Attachment", lastMessageTimestamp: new Date().toISOString() } : c));
 
     const { error } = await supabase.from('messages').insert({
       conversation_id: selectedConversationId, sender_id: currentUser.id, content: text,
@@ -156,8 +158,6 @@ export const useChat = () => {
     if (error) {
       toast.error("Failed to send message.", { description: error.message });
       setConversations(prev => prev.map(c => c.id === selectedConversationId ? { ...c, messages: c.messages.filter(m => m.id !== tempId) } : c));
-    } else {
-      fetchConversations();
     }
   };
 
@@ -189,15 +189,15 @@ export const useChat = () => {
   };
 
   const sendTyping = useCallback(() => {
-    if (messageChannelRef.current) {
-      messageChannelRef.current.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser?.id } });
-    }
-  }, [currentUser]);
+    const channel = supabase.channel('chat-room');
+    channel.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser?.id, conversationId: selectedConversationId } });
+  }, [currentUser, selectedConversationId]);
 
   return {
     conversations,
     selectedConversationId,
     isSomeoneTyping,
+    isLoading,
     handleConversationSelect,
     handleSendMessage,
     handleClearChat,

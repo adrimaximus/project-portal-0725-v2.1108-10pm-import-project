@@ -4,7 +4,7 @@ import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useEffect, useRef } from "react";
-import { format, isToday, isYesterday } from 'date-fns';
+import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 
 interface ChatConversationProps {
   messages: Message[];
@@ -13,15 +13,20 @@ interface ChatConversationProps {
 
 const formatTimestamp = (timestamp: string) => {
   try {
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return ""; // Invalid date
-    if (isToday(date)) {
-      return format(date, 'p');
-    }
-    if (isYesterday(date)) {
-      return `Yesterday at ${format(date, 'p')}`;
-    }
-    return format(date, 'MMM d, yyyy');
+    const date = parseISO(timestamp);
+    if (isNaN(date.getTime())) return "";
+    return format(date, 'p');
+  } catch (e) {
+    return "";
+  }
+};
+
+const formatDateSeparator = (timestamp: string) => {
+  try {
+    const date = parseISO(timestamp);
+    if (isToday(date)) return "Today";
+    if (isYesterday(date)) return "Yesterday";
+    return format(date, 'MMMM d, yyyy');
   } catch (e) {
     return "";
   }
@@ -33,7 +38,7 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+      scrollRef.current.scrollIntoView({ behavior: "auto", block: "end" });
     }
   }, [messages]);
 
@@ -50,12 +55,21 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
         const prevMessage = messages[index - 1];
         const isSameSenderAsPrevious = prevMessage && prevMessage.sender.id === message.sender.id;
         
-        const showTimestamp = !isSameSenderAsPrevious || (prevMessage && new Date(message.timestamp).getTime() - new Date(prevMessage.timestamp).getTime() > 5 * 60 * 1000);
+        const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
 
         return (
           <div key={message.id || index}>
-            {showTimestamp && (
-              <div className="text-center text-xs text-muted-foreground my-2">{formatTimestamp(message.timestamp)}</div>
+            {showDateSeparator && (
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    {formatDateSeparator(message.timestamp)}
+                  </span>
+                </div>
+              </div>
             )}
             <div
               className={cn(
@@ -72,7 +86,7 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
               )}
               <div
                 className={cn(
-                  "max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2",
+                  "max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 group relative",
                   isCurrentUser
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted",
@@ -86,6 +100,9 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
                 {message.attachment && (
                   <MessageAttachment attachment={message.attachment} />
                 )}
+                <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-5 right-2 text-muted-foreground">
+                  {formatTimestamp(message.timestamp)}
+                </span>
               </div>
             </div>
           </div>
