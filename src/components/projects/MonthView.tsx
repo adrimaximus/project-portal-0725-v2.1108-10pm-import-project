@@ -56,8 +56,10 @@ const MobileMonthView = ({ projects, gcalEvents, currentMonth }: { projects: Pro
         const startDateStr = isGCalEvent(project) ? (project.start.dateTime || project.start.date) : project.start_date;
         if (!startDateStr) return acc;
         
-        // Correctly format the date to avoid timezone shifts
-        const dateKey = format(new Date(startDateStr), 'yyyy-MM-dd');
+        // Robustly parse date string, treating date part as local date
+        const d = new Date(startDateStr);
+        const localDate = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+        const dateKey = format(localDate, 'yyyy-MM-dd');
 
         if (!acc[dateKey]) {
             acc[dateKey] = [];
@@ -77,7 +79,7 @@ const MobileMonthView = ({ projects, gcalEvents, currentMonth }: { projects: Pro
     return (
         <div className="space-y-4">
             {Object.entries(groupedByDay).map(([dateStr, itemsOnDay]) => {
-                // Parse the date string as local date to avoid timezone shifts
+                // Parse the date string as local date
                 const [year, month, day] = dateStr.split('-').map(Number);
                 const date = new Date(year, month - 1, day);
                 
