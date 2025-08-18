@@ -29,7 +29,7 @@ const PortalLayout = ({ children, summary, pageHeader, disableMainScroll, noPadd
         <PortalHeader summary={summary} />
 
         {/* Refactored scrollable content area */}
-        <div className={cn("flex-1", !disableMainScroll && "overflow-y-auto")}>
+        <div className={cn("flex-1 min-h-0", !disableMainScroll && "overflow-y-auto")}>
           {pageHeader}
           <main className={cn("h-full", !noPadding && "p-4 md:p-8")}>
             {children}
