@@ -181,7 +181,7 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
                   <div key={`empty-${i}`} />
                 ))}
                 {daysInMonth.map(day => (
-                  <div key={day.toString()} className="h-12 border rounded-md hover:bg-muted/ ৫০ transition-colors">
+                  <div key={day.toString()} className="h-12 border rounded-md hover:bg-muted/50 transition-colors">
                     {renderDayCell(day)}
                   </div>
                 ))}
