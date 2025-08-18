@@ -30,7 +30,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
 
   const mentionableUsers = useMemo(() => {
     if (!project) return [];
-    const users = [project.created_by, ...project.assignedTo];
+    const users = [project.createdBy, ...project.assignedTo];
     const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
     return uniqueUsers.map(u => ({ id: u.id, display: u.name }));
   }, [project]);

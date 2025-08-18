@@ -21,7 +21,7 @@ const paymentStatusConfig: Record<string, { color: string; label: string }> = {
 };
 
 const ProjectPaymentStatusCard = ({ project, isEditing, onFieldChange }: ProjectPaymentStatusCardProps) => {
-  const paymentBadgeColor = paymentStatusConfig[project.payment_status]?.color || "bg-gray-100 text-gray-800";
+  const paymentBadgeColor = paymentStatusConfig[project.paymentStatus]?.color || "bg-gray-100 text-gray-800";
 
   return (
     <Card>
@@ -32,8 +32,8 @@ const ProjectPaymentStatusCard = ({ project, isEditing, onFieldChange }: Project
       <CardContent>
         {isEditing ? (
           <Select
-            value={project.payment_status}
-            onValueChange={(value) => onFieldChange('payment_status', value)}
+            value={project.paymentStatus}
+            onValueChange={(value) => onFieldChange('paymentStatus', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a payment status" />
@@ -49,7 +49,7 @@ const ProjectPaymentStatusCard = ({ project, isEditing, onFieldChange }: Project
         ) : (
           <div className="pt-2">
             <Badge variant="outline" className={cn("font-normal", paymentBadgeColor)}>
-              {project.payment_status}
+              {project.paymentStatus}
             </Badge>
           </div>
         )}

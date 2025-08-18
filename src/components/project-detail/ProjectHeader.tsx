@@ -32,7 +32,7 @@ const ProjectHeader = ({
 
   return (
     <div className="space-y-4">
-      <Button variant="ghost" onClick={() => navigate(-1)} className="text-muted-foreground px-0 hover:bg-transparent">
+      <Button variant="ghost" onClick={() => navigate("/projects")} className="text-muted-foreground px-0 hover:bg-transparent">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Projects
       </Button>

@@ -18,7 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StatusBadge from "../StatusBadge";
-import { getStatusStyles, cn, formatInJakarta } from "@/lib/utils";
+import { format } from "date-fns";
+import { getStatusStyles, cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 interface TableViewProps {
@@ -46,7 +47,6 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
           <TableHead>Progress</TableHead>
           <TableHead>Start Date</TableHead>
           <TableHead>Due Date</TableHead>
-          <TableHead>Venue</TableHead>
           <TableHead>Payment</TableHead>
           <TableHead className="w-[50px]"></TableHead>
         </TableRow>
@@ -54,19 +54,19 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
       <TableBody>
         {isLoading ? (
           <TableRow>
-            <TableCell colSpan={8} className="h-24 text-center">
+            <TableCell colSpan={7} className="h-24 text-center">
               Loading projects...
             </TableCell>
           </TableRow>
         ) : projects.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={8} className="h-24 text-center">
+            <TableCell colSpan={7} className="h-24 text-center">
               No projects found.
             </TableCell>
           </TableRow>
         ) : (
           projects.map((project) => {
-            const paymentBadgeColor = paymentStatusConfig[project.payment_status]?.color || "bg-gray-100 text-gray-800";
+            const paymentBadgeColor = paymentStatusConfig[project.paymentStatus]?.color || "bg-gray-100 text-gray-800";
             return (
               <TableRow key={project.id}>
                 <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
@@ -85,15 +85,14 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
                   </div>
                 </TableCell>
                 <TableCell>
-                  {formatInJakarta(project.start_date, 'MMM d, yyyy')}
+                  {project.startDate ? format(new Date(project.startDate), 'MMM d, yyyy') : 'N/A'}
                 </TableCell>
                 <TableCell>
-                  {formatInJakarta(project.due_date, 'MMM d, yyyy')}
+                  {project.dueDate ? format(new Date(project.dueDate), 'MMM d, yyyy') : 'N/A'}
                 </TableCell>
-                <TableCell>{project.venue || '-'}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
-                    {project.payment_status}
+                    {project.paymentStatus}
                   </Badge>
                 </TableCell>
                 <TableCell>

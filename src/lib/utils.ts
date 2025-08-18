@@ -1,7 +1,5 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { formatInTimeZone } from 'date-fns-tz'
-import { id } from 'date-fns/locale'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -68,13 +66,3 @@ export const getColorForTag = (tagName: string) => {
   const index = Math.abs(hash % tagColors.length);
   return tagColors[index];
 };
-
-export const formatInJakarta = (dateString: string | Date | null | undefined, formatStr: string): string => {
-    if (!dateString) return 'N/A';
-    try {
-        return formatInTimeZone(dateString, 'Asia/Jakarta', formatStr, { locale: id });
-    } catch (error) {
-        console.error("Error formatting date:", error);
-        return "Invalid Date";
-    }
-}

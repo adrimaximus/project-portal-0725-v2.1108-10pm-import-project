@@ -1,13 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project } from "@/types";
-import { Calendar, Wallet, Briefcase, MapPin } from "lucide-react";
-import { isSameDay } from "date-fns";
+import { Calendar, Wallet, Briefcase } from "lucide-react";
+import { format, isSameDay } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
-import { formatInJakarta } from "@/lib/utils";
-import { Input } from "../ui/input";
 
 interface ProjectDetailsCardProps {
   project: Project;
@@ -21,8 +19,8 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     const endDateValue = range?.to || range?.from;
     const endDate = endDateValue ? endDateValue.toISOString() : undefined;
 
-    onFieldChange('start_date', startDate);
-    onFieldChange('due_date', endDate);
+    onFieldChange('startDate', startDate);
+    onFieldChange('dueDate', endDate);
   };
 
   const handleBudgetChange = (value: number | null) => {
@@ -36,14 +34,14 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   }).format(amount);
 
   const renderDateRange = () => {
-    if (!project.start_date) return 'N/A';
-    const start = new Date(project.start_date);
-    const end = project.due_date ? new Date(project.due_date) : start;
+    if (!project.startDate) return 'N/A';
+    const start = new Date(project.startDate);
+    const end = project.dueDate ? new Date(project.dueDate) : start;
 
     if (isSameDay(start, end)) {
-        return formatInJakarta(project.start_date, "dd MMM yyyy");
+        return format(start, "dd MMM yyyy");
     }
-    return `${formatInJakarta(project.start_date, "dd MMM yyyy")} - ${formatInJakarta(project.due_date!, "dd MMM yyyy")}`;
+    return `${format(start, "dd MMM yyyy")} - ${format(end, "dd MMM yyyy")}`;
   };
 
   return (
@@ -59,8 +57,8 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
             {isEditing ? (
               <DateRangePicker
                 date={{
-                  from: project.start_date ? new Date(project.start_date) : undefined,
-                  to: project.due_date ? new Date(project.due_date) : undefined,
+                  from: project.startDate ? new Date(project.startDate) : undefined,
+                  to: project.dueDate ? new Date(project.dueDate) : undefined,
                 }}
                 onDateChange={handleDateChange}
               />
@@ -85,23 +83,6 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
             ) : (
               <p className="text-muted-foreground">
                 {formatCurrency(project.budget || 0)}
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-start gap-4">
-          <MapPin className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-          <div className="w-full">
-            <p className="font-medium">Venue</p>
-            {isEditing ? (
-              <Input
-                value={project.venue || ''}
-                onChange={(e) => onFieldChange('venue', e.target.value)}
-                placeholder="Enter project venue"
-              />
-            ) : (
-              <p className="text-muted-foreground">
-                {project.venue || 'No venue specified'}
               </p>
             )}
           </div>

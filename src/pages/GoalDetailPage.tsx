@@ -136,6 +136,38 @@ const GoalDetailPage = () => {
     queryClient.invalidateQueries({ queryKey: ['goal', slug] });
   };
 
+  const handleGoalUpdate = async (updatedGoal: Goal) => {
+    const { id, title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, color, icon, icon_url, tags } = updatedGoal;
+    
+    const { error } = await supabase
+      .rpc('update_goal_with_tags', {
+        p_goal_id: id,
+        p_title: title,
+        p_description: description,
+        p_icon: icon,
+        p_icon_url: icon_url,
+        p_color: color,
+        p_type: type,
+        p_frequency: frequency,
+        p_specific_days: specific_days,
+        p_target_quantity: target_quantity,
+        p_target_period: target_period,
+        p_target_value: target_value,
+        p_unit: unit,
+        p_tags: tags.map(t => t.id),
+      });
+
+    if (error) {
+        toast.error("Failed to update goal.");
+        console.error(error);
+    } else {
+        toast.success("Goal updated.");
+        await queryClient.invalidateQueries({ queryKey: ['goal', slug] });
+        await queryClient.invalidateQueries({ queryKey: ['goals'] });
+        setIsEditDialogOpen(false);
+    }
+  };
+
   if (isLoading || !goal) {
     return <PortalLayout><div className="text-center">Loading goal details...</div></PortalLayout>;
   }
@@ -148,7 +180,7 @@ const GoalDetailPage = () => {
       return `Target: ${formatValue(goal.target_value!, goal.unit)}`;
     }
     if (goal.frequency === 'Daily') return 'Daily';
-    if (goal.frequency === 'Weekly' && goal.specific_days && goal.specific_days.length > 0) {
+    if (goal.frequency === 'Weekly' && goal.specific_days.length > 0) {
       if (goal.specific_days.length === 7) return 'Daily';
       if (goal.specific_days.length === 2 && goal.specific_days.includes('Sa') && goal.specific_days.includes('Su')) return 'Weekends';
       if (goal.specific_days.length === 5 && !goal.specific_days.includes('Sa') && !goal.specific_days.includes('Su')) return 'Weekdays';
@@ -227,7 +259,8 @@ const GoalDetailPage = () => {
       <GoalFormDialog
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
-        onSuccess={() => setIsEditDialogOpen(false)}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['goal', slug] })}
+        onGoalUpdate={handleGoalUpdate}
         goal={goal}
       />
     </PortalLayout>

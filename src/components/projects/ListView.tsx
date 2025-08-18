@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Project } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,30 +8,45 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2, MapPin } from 'lucide-react';
+import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getStatusStyles, formatInJakarta } from '@/lib/utils';
+import { getStatusStyles } from '@/lib/utils';
 
-const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
+// Helper to format dates
+const formatDate = (date: Date) => {
+  const day = date.toLocaleDateString('id-ID', { weekday: 'short' });
+  const dayOfMonth = date.getDate().toString().padStart(2, '0');
+  return { day, dayOfMonth };
+};
+
+const formatMonthYear = (date: Date) => {
+  return date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+};
+
+const formatEndDate = (date: Date) => {
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+};
+
+interface ProjectsListProps {
+  projects: Project[];
+  onDeleteProject: (projectId: string) => void;
+}
+
+const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
   const navigate = useNavigate();
-  const [visibleDays, setVisibleDays] = useState(10);
 
   const sortedProjects = projects
-    .filter(p => p.start_date)
-    .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
+    .filter(p => p.startDate)
+    .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime());
 
   const groupedByDay = sortedProjects.reduce((acc, project) => {
-    const dateKey = formatInJakarta(project.start_date!, 'yyyy-MM-dd');
-    
+    const dateKey = new Date(project.startDate!).toISOString().split('T')[0];
     if (!acc[dateKey]) {
       acc[dateKey] = [];
     }
     acc[dateKey].push(project);
     return acc;
   }, {} as Record<string, Project[]>);
-
-  const dayEntries = Object.entries(groupedByDay);
-  const visibleDayEntries = dayEntries.slice(0, visibleDays);
 
   let lastMonth: string | null = null;
 
@@ -46,14 +60,14 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
 
   return (
     <div className="space-y-4">
-      {visibleDayEntries.map(([dateStr, projectsOnDay]) => {
-        const date = new Date(`${dateStr}T00:00:00`);
-        const currentMonth = formatInJakarta(date, 'MMMM yyyy');
+      {Object.entries(groupedByDay).map(([dateStr, projectsOnDay]) => {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        const currentMonth = formatMonthYear(date);
         const showMonthHeader = currentMonth !== lastMonth;
         lastMonth = currentMonth;
 
-        const dayOfWeek = formatInJakarta(date, 'EEE');
-        const dayOfMonth = formatInJakarta(date, 'dd');
+        const { day: dayOfWeek, dayOfMonth } = formatDate(date);
 
         return (
           <div key={dateStr}>
@@ -67,7 +81,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
               </div>
               <div className="flex-1 space-y-3 pt-1 min-w-0">
                 {projectsOnDay.map(project => {
-                  const isMultiDay = project.start_date && project.due_date && new Date(project.start_date).toDateString() !== new Date(project.due_date).toDateString();
+                  const isMultiDay = project.startDate && project.dueDate && new Date(project.startDate).toDateString() !== new Date(project.dueDate).toDateString();
 
                   return (
                     <div 
@@ -84,21 +98,13 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                             <Clock size={14} />
                             <span>Seharian</span>
                           </div>
-                          {isMultiDay && project.due_date && (
+                          {isMultiDay && project.dueDate && (
                             <Badge variant="outline" className="mt-1.5 font-normal text-xs">
-                              Hingga {formatInJakarta(project.due_date, 'd MMM')}
+                              Hingga {formatEndDate(new Date(project.dueDate))}
                             </Badge>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate" title={project.name}>{project.name}</p>
-                          {project.venue && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                              <MapPin size={12} />
-                              <span className="truncate">{project.venue}</span>
-                            </div>
-                          )}
-                        </div>
+                        <div className="flex-1 font-medium min-w-0" title={project.name}>{project.name}</div>
                       </div>
                       
                       <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 pl-2">
@@ -155,13 +161,6 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
           </div>
         );
       })}
-      {dayEntries.length > visibleDays && (
-        <div className="text-center mt-6">
-          <Button variant="outline" onClick={() => setVisibleDays(prev => prev + 10)}>
-            Load More
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

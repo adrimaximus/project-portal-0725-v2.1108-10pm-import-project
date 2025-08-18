@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useProjects } from "@/hooks/useProjects";
+import { dummyProjects } from "@/data/projects";
 import { PaymentStatus } from "@/types";
 import { cn } from "@/lib/utils";
 import { format, addDays, isPast } from "date-fns";
-import { DollarSign, Clock, AlertTriangle, Download, Loader2 } from "lucide-react";
+import { DollarSign, Clock, AlertTriangle, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 
 type Invoice = {
@@ -23,7 +23,6 @@ const getInvoiceStatus = (status: PaymentStatus | string): Invoice['status'] | n
   switch (status) {
     case 'Paid':
       return 'Paid';
-    case 'Unpaid':
     case 'Pending':
     case 'In Process':
       return 'Due';
@@ -48,16 +47,14 @@ const getStatusClass = (status: Invoice['status']) => {
 };
 
 const Billing = () => {
-  const { data: projects = [], isLoading } = useProjects();
-
-  const invoices: Invoice[] = projects
+  const invoices: Invoice[] = dummyProjects
     .map(project => {
-      const status = getInvoiceStatus(project.payment_status);
-      if (!status || !project.budget || !project.due_date) {
+      const status = getInvoiceStatus(project.paymentStatus);
+      if (!status || !project.budget) {
         return null;
       }
       
-      const dueDate = addDays(new Date(project.due_date), 30);
+      const dueDate = addDays(new Date(project.dueDate), 30);
 
       let finalStatus = status;
       if (status === 'Due' && isPast(dueDate)) {
@@ -66,7 +63,7 @@ const Billing = () => {
 
       return {
         id: `INV-${project.id}`,
-        projectId: project.slug,
+        projectId: project.id,
         projectName: project.name,
         amount: project.budget,
         dueDate: dueDate,
@@ -85,16 +82,6 @@ const Billing = () => {
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]?.dueDate;
 
   const overdueInvoicesCount = invoices.filter(inv => inv.status === 'Overdue').length;
-
-  if (isLoading) {
-    return (
-      <PortalLayout>
-        <div className="flex items-center justify-center h-full">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </PortalLayout>
-    );
-  }
 
   return (
     <PortalLayout>
@@ -158,37 +145,29 @@ const Billing = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      No invoices found.
+                {invoices.map((invoice) => (
+                  <TableRow key={invoice.id}>
+                    <TableCell className="font-medium">{invoice.id}</TableCell>
+                    <TableCell>
+                      <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
+                        {invoice.projectName}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
+                    <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn("border-transparent", getStatusClass(invoice.status))}>
+                        {invoice.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  invoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">{invoice.id}</TableCell>
-                      <TableCell>
-                        <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
-                          {invoice.projectName}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
-                      <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={cn("border-transparent", getStatusClass(invoice.status))}>
-                          {invoice.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="outline" size="sm">
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                ))}
               </TableBody>
             </Table>
           </CardContent>

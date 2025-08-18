@@ -1,217 +1,219 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Project, User } from '@/types';
 import StatCard from './StatCard';
-import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass, Briefcase } from "lucide-react";
+import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, TrendingUp, Hourglass } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface DashboardStatsGridProps {
   projects: Project[];
 }
 
-type UserStatData = User & { projectCount: number; totalValue: number };
-
-const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, metric: number, metricType: 'quantity' | 'value' }) => {
-  if (!user || metric === 0) {
-    return (
-      <div className="pt-2">
-        <div className="text-2xl font-bold">N/A</div>
-        <p className="text-xs text-muted-foreground">No data available</p>
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-center gap-4 pt-2">
-      <Avatar>
-        <AvatarImage src={user.avatar} alt={user.name} />
-        <AvatarFallback>{user.initials}</AvatarFallback>
-      </Avatar>
-      <div>
-        <div className="text-lg font-bold">{user.name}</div>
-        <p className="text-xs text-muted-foreground">
-          {metricType === 'quantity'
-            ? `${metric} project${metric === 1 ? '' : 's'}`
-            : `Rp ${metric.toLocaleString('id-ID')}`}
-        </p>
-      </div>
-    </div>
-  );
-};
+interface UserWithProjectCount extends User { projectCount: number; }
+interface UserWithTotalValue extends User { totalValue: number; }
+interface UserWithPendingValue extends User { pendingValue: number; }
 
 const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
-  const [viewMode, setViewMode] = useState<'quantity' | 'value'>('quantity');
-
   const stats = useMemo(() => {
-    const totalProjects = projects.length;
     const totalValue = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
 
     const projectStatusCounts = projects.reduce((acc, p) => {
-      if (p.status) {
         acc[p.status] = (acc[p.status] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
-
-    const projectStatusValues = projects.reduce((acc, p) => {
-      if (p.status) {
-        acc[p.status] = (acc[p.status] || 0) + (p.budget || 0);
-      }
-      return acc;
+        return acc;
     }, {} as Record<string, number>);
 
     const paymentStatusCounts = projects.reduce((acc, p) => {
-      if (p.payment_status) {
-        acc[p.payment_status] = (acc[p.payment_status] || 0) + 1;
-      }
-      return acc;
+        acc[p.paymentStatus] = (acc[p.paymentStatus] || 0) + 1;
+        return acc;
     }, {} as Record<string, number>);
 
-    const paymentStatusValues = projects.reduce((acc, p) => {
-      if (p.payment_status) {
-        acc[p.payment_status] = (acc[p.payment_status] || 0) + (p.budget || 0);
-      }
-      return acc;
-    }, {} as Record<string, number>);
-
-    const ownerStats = projects.reduce((acc, p) => {
-        if (p.created_by) {
-            if (!acc[p.created_by.id]) acc[p.created_by.id] = { ...p.created_by, projectCount: 0, totalValue: 0 };
-            acc[p.created_by.id].projectCount++;
-            acc[p.created_by.id].totalValue += p.budget || 0;
+    const ownerCounts = projects.reduce((acc, p) => {
+        if (p.createdBy) {
+            if (!acc[p.createdBy.id]) {
+                acc[p.createdBy.id] = { ...p.createdBy, projectCount: 0 };
+            }
+            acc[p.createdBy.id].projectCount++;
         }
         return acc;
-    }, {} as Record<string, UserStatData>);
-    const topOwnerByCount = Object.values(ownerStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
-    const topOwnerByValue = Object.values(ownerStats).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
+    }, {} as Record<string, UserWithProjectCount>);
+    const topOwner = Object.values(ownerCounts).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
 
     const collaboratorStats = projects.reduce((acc, p) => {
         p.assignedTo.forEach(user => {
-            if (!acc[user.id]) acc[user.id] = { ...user, projectCount: 0, totalValue: 0 };
+            if (!acc[user.id]) {
+                acc[user.id] = { ...user, projectCount: 0 };
+            }
             acc[user.id].projectCount++;
-            acc[user.id].totalValue += p.budget || 0;
         });
         return acc;
-    }, {} as Record<string, UserStatData>);
-    const topCollaboratorByCount = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
-    const topCollaboratorByValue = Object.values(collaboratorStats).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
+    }, {} as Record<string, UserWithProjectCount>);
+    const topCollaborator = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
 
-    const pendingProjects = projects.filter(p => p.payment_status === 'Pending');
-    const pendingStats = pendingProjects.reduce((acc, p) => {
+    const userValueCounts = projects.reduce((acc, p) => {
         p.assignedTo.forEach(user => {
-            if (!acc[user.id]) acc[user.id] = { ...user, projectCount: 0, totalValue: 0 };
-            acc[user.id].projectCount++;
+            if (!acc[user.id]) {
+                acc[user.id] = { ...user, totalValue: 0 };
+            }
             acc[user.id].totalValue += p.budget || 0;
         });
         return acc;
-    }, {} as Record<string, UserStatData>);
-    const topUserByPendingCount = Object.values(pendingStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
-    const topUserByPendingValue = Object.values(pendingStats).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
+    }, {} as Record<string, UserWithTotalValue>);
+    const topUserByValue = Object.values(userValueCounts).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
+
+    const pendingPaymentCounts = projects
+      .filter(p => p.paymentStatus === 'Pending')
+      .reduce((acc, p) => {
+          p.assignedTo.forEach(user => {
+              if (!acc[user.id]) {
+                  acc[user.id] = { ...user, pendingValue: 0 };
+              }
+              acc[user.id].pendingValue += p.budget || 0;
+          });
+          return acc;
+      }, {} as Record<string, UserWithPendingValue>);
+    const topUserByPendingValue = Object.values(pendingPaymentCounts).sort((a, b) => b.pendingValue - a.pendingValue)[0] || null;
 
     return {
-      totalProjects,
       totalValue,
-      projectStatusCounts, projectStatusValues,
-      paymentStatusCounts, paymentStatusValues,
-      topOwnerByCount, topOwnerByValue,
-      topCollaboratorByCount, topCollaboratorByValue,
-      topUserByPendingCount, topUserByPendingValue,
+      projectStatusCounts,
+      paymentStatusCounts,
+      topOwner,
+      topCollaborator,
+      topUserByValue,
+      topUserByPendingValue,
     };
   }, [projects]);
 
-  const topOwner = viewMode === 'quantity' ? stats.topOwnerByCount : stats.topOwnerByValue;
-  const topCollaborator = viewMode === 'quantity' ? stats.topCollaboratorByCount : stats.topCollaboratorByValue;
-  const topPendingUser = viewMode === 'quantity' ? stats.topUserByPendingCount : stats.topUserByPendingValue;
-
   return (
-    <div>
-      <div className="flex justify-end mb-4">
-        <ToggleGroup 
-          type="single" 
-          value={viewMode} 
-          onValueChange={(value) => { if (value) setViewMode(value as 'quantity' | 'value')}}
-          className="h-8"
-        >
-          <ToggleGroupItem value="quantity" className="text-xs px-3">By Quantity</ToggleGroupItem>
-          <ToggleGroupItem value="value" className="text-xs px-3">By Value</ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Projects"
-          value={stats.totalProjects}
-          icon={<Briefcase className="h-4 w-4 text-muted-foreground" />}
-        />
-        <StatCard
-          title="Total Project Value"
-          value={'Rp ' + stats.totalValue.toLocaleString('id-ID')}
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-        />
-        <StatCard
-          title="Project Status"
-          icon={<ListChecks className="h-4 w-4 text-muted-foreground" />}
-          value={
-            <div className="space-y-1 text-sm pt-2">
-              {Object.entries(viewMode === 'quantity' ? stats.projectStatusCounts : stats.projectStatusValues).map(([status, val]) => (
-                <div key={status} className="flex justify-between">
-                  <span>{status}</span>
-                  <span className="font-semibold">
-                    {viewMode === 'quantity' ? val : `Rp ${val.toLocaleString('id-ID')}`}
-                  </span>
-                </div>
-              ))}
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <StatCard
+        title="Total Project Value"
+        value={'Rp ' + stats.totalValue.toLocaleString('id-ID')}
+        icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+      />
+      <StatCard
+        title="Project Status"
+        icon={<ListChecks className="h-4 w-4 text-muted-foreground" />}
+        value={
+          <div className="space-y-1 text-sm pt-2">
+            {Object.entries(stats.projectStatusCounts).map(([status, count]) => (
+              <div key={status} className="flex justify-between">
+                <span>{status}</span>
+                <span className="font-semibold">{count}</span>
+              </div>
+            ))}
+          </div>
+        }
+      />
+      <StatCard
+        title="Payment Status"
+        icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
+        value={
+          <div className="space-y-1 text-sm pt-2">
+            {Object.entries(stats.paymentStatusCounts).map(([status, count]) => (
+              <div key={status} className="flex justify-between">
+                <span>{status}</span>
+                <span className="font-semibold">{count}</span>
+              </div>
+            ))}
+          </div>
+        }
+      />
+      <StatCard
+        title="Top Project Owner"
+        icon={<UserIcon className="h-4 w-4 text-muted-foreground" />}
+        value={
+          stats.topOwner ? (
+            <div className="flex items-center gap-4 pt-2">
+              <Avatar>
+                <AvatarImage src={stats.topOwner.avatar} alt={stats.topOwner.name} />
+                <AvatarFallback>{stats.topOwner.initials}</AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="text-lg font-bold">{stats.topOwner.name}</div>
+                <p className="text-xs text-muted-foreground">{stats.topOwner.projectCount} projects</p>
+              </div>
             </div>
-          }
-        />
-        <StatCard
-          title="Payment Status"
-          icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
-          value={
-            <div className="space-y-1 text-sm pt-2">
-              {Object.entries(viewMode === 'quantity' ? stats.paymentStatusCounts : stats.paymentStatusValues).map(([status, val]) => (
-                <div key={status} className="flex justify-between">
-                  <span>{status}</span>
-                  <span className="font-semibold">
-                    {viewMode === 'quantity' ? val : `Rp ${val.toLocaleString('id-ID')}`}
-                  </span>
-                </div>
-              ))}
+          ) : (
+            <div className="pt-2">
+              <div className="text-2xl font-bold">N/A</div>
+              <p className="text-xs text-muted-foreground">0 projects</p>
             </div>
-          }
-        />
-        <StatCard
-          title="Top Project Owner"
-          icon={<UserIcon className="h-4 w-4 text-muted-foreground" />}
-          value={
-            <UserStat 
-              user={topOwner}
-              metric={viewMode === 'quantity' ? topOwner?.projectCount ?? 0 : topOwner?.totalValue ?? 0}
-              metricType={viewMode}
-            />
-          }
-        />
-        <StatCard
-          title="Top Collaborator"
-          icon={<Users className="h-4 w-4 text-muted-foreground" />}
-          value={
-            <UserStat 
-              user={topCollaborator}
-              metric={viewMode === 'quantity' ? topCollaborator?.projectCount ?? 0 : topCollaborator?.totalValue ?? 0}
-              metricType={viewMode}
-            />
-          }
-        />
-        <StatCard
-          title="Most Pending Payment"
-          icon={<Hourglass className="h-4 w-4 text-muted-foreground" />}
-          value={
-            <UserStat 
-              user={topPendingUser}
-              metric={viewMode === 'quantity' ? topPendingUser?.projectCount ?? 0 : topPendingUser?.totalValue ?? 0}
-              metricType={viewMode}
-            />
-          }
-        />
-      </div>
+          )
+        }
+      />
+      <StatCard
+        title="Most Collabs"
+        icon={<Users className="h-4 w-4 text-muted-foreground" />}
+        value={
+          stats.topCollaborator ? (
+            <div className="flex items-center gap-4 pt-2">
+              <Avatar>
+                <AvatarImage src={stats.topCollaborator.avatar} alt={stats.topCollaborator.name} />
+                <AvatarFallback>{stats.topCollaborator.initials}</AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="text-lg font-bold">{stats.topCollaborator.name}</div>
+                <p className="text-xs text-muted-foreground">{stats.topCollaborator.projectCount} projects</p>
+              </div>
+            </div>
+          ) : (
+            <div className="pt-2">
+              <div className="text-2xl font-bold">N/A</div>
+              <p className="text-xs text-muted-foreground">0 projects</p>
+            </div>
+          )
+        }
+      />
+      <StatCard
+        title="Top Contributor"
+        icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+        value={
+          stats.topUserByValue ? (
+            <div className="flex items-center gap-4 pt-2">
+              <Avatar>
+                <AvatarImage src={stats.topUserByValue.avatar} alt={stats.topUserByValue.name} />
+                <AvatarFallback>{stats.topUserByValue.initials}</AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="text-lg font-bold">{stats.topUserByValue.name}</div>
+                <p className="text-xs text-muted-foreground">
+                  {'Rp ' + stats.topUserByValue.totalValue.toLocaleString('id-ID')}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="pt-2">
+              <div className="text-2xl font-bold">N/A</div>
+              <p className="text-xs text-muted-foreground">No value</p>
+            </div>
+          )
+        }
+      />
+      <StatCard
+        title="Most Pending Payment"
+        icon={<Hourglass className="h-4 w-4 text-muted-foreground" />}
+        value={
+          stats.topUserByPendingValue ? (
+            <div className="flex items-center gap-4 pt-2">
+              <Avatar>
+                <AvatarImage src={stats.topUserByPendingValue.avatar} alt={stats.topUserByPendingValue.name} />
+                <AvatarFallback>{stats.topUserByPendingValue.initials}</AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="text-lg font-bold">{stats.topUserByPendingValue.name}</div>
+                <p className="text-xs text-muted-foreground">
+                  {'Rp ' + stats.topUserByPendingValue.pendingValue.toLocaleString('id-ID')}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="pt-2">
+              <div className="text-2xl font-bold">N/A</div>
+              <p className="text-xs text-muted-foreground">No pending payments</p>
+            </div>
+          )
+        }
+      />
     </div>
   );
 };
