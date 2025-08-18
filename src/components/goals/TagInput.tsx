@@ -4,10 +4,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
-  CommandEmpty,
+  CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -19,6 +18,7 @@ import { Tag, User } from "@/types";
 import TagEditorDialog from "./TagEditorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ScrollArea } from "../ui/scroll-area";
 
 interface TagInputProps {
   allTags: Tag[];
@@ -145,39 +145,50 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                 value={inputValue}
                 onValueChange={setInputValue}
               />
-              <CommandList>
-                <CommandEmpty>
+              <ScrollArea className="h-[200px]">
+                {filteredTags.length === 0 && inputValue ? (
                   <div className="p-1">
-                    <Button variant="ghost" className="w-full justify-start" onClick={handleCreate}>
+                    <CommandItem
+                      onSelect={handleCreate}
+                      className="cursor-pointer"
+                    >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Create "{inputValue}"
-                    </Button>
+                    </CommandItem>
                   </div>
-                </CommandEmpty>
-                {filteredTags.map((tag) => (
-                  <CommandItem
-                    key={tag.id}
-                    value={tag.name}
-                    onSelect={() => handleToggleTag(tag)}
-                    className="flex justify-between items-center cursor-pointer"
-                  >
-                    <div className="flex items-center">
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          selectedTags.some(st => st.id === tag.id) ? "opacity-100" : "opacity-0"
+                ) : null}
+                {filteredTags.length === 0 && !inputValue ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">No tags found.</p>
+                ) : null}
+                
+                {filteredTags.length > 0 ? (
+                  <CommandGroup>
+                    {filteredTags.map((tag) => (
+                      <CommandItem
+                        key={tag.id}
+                        value={tag.name}
+                        onSelect={() => handleToggleTag(tag)}
+                        className="flex justify-between items-center cursor-pointer"
+                      >
+                        <div className="flex items-center">
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedTags.some(st => st.id === tag.id) ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {tag.name}
+                        </div>
+                        {tag.user_id === user?.id && (
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onMouseDown={(e) => e.preventDefault()} onClick={(e) => handleEdit(e, tag)}>
+                            <Edit className="h-3 w-3" />
+                          </Button>
                         )}
-                      />
-                      {tag.name}
-                    </div>
-                    {tag.user_id === user?.id && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onMouseDown={(e) => e.preventDefault()} onClick={(e) => handleEdit(e, tag)}>
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </CommandItem>
-                ))}
-              </CommandList>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                ) : null}
+              </ScrollArea>
             </Command>
           </PopoverContent>
         </Popover>
