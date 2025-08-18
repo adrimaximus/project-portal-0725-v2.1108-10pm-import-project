@@ -495,10 +495,21 @@ CONTEXT:
           throw new Error("Goal and context are required for generating insights.");
         }
 
-        const systemPrompt = `Anda adalah seorang pelatih AI yang suportif dan berwawasan luas. Tujuan Anda adalah memberikan saran yang memotivasi dan dapat ditindaklanjuti kepada pengguna berdasarkan kemajuan mereka. Analisis detail tujuan berikut: judul, deskripsi, tipe, tag, pemilik, kolaborator, dan kemajuan terbaru. Berdasarkan analisis holistik ini, berikan wawasan singkat yang bermanfaat dalam format markdown.
+        const owner = goal.collaborators.find(c => c.id === goal.user_id);
+        const otherCollaborators = goal.collaborators.filter(c => c.id !== goal.user_id);
+
+        const modifiedGoal = {
+          ...goal,
+          owner: owner,
+          collaborators: otherCollaborators,
+        };
+        delete modifiedGoal.user_id;
+
+        const systemPrompt = `Anda adalah seorang pelatih AI yang suportif dan berwawasan luas. Tujuan Anda adalah memberikan saran yang memotivasi dan dapat ditindaklanjuti kepada pengguna berdasarkan kemajuan mereka. Analisis detail tujuan berikut: judul, deskripsi, tipe, tag, pemilik (owner), kolaborator lain (collaborators), dan kemajuan terbaru. Berdasarkan analisis holistik ini, berikan wawasan singkat yang bermanfaat dalam format markdown.
 
 - Pertahankan nada yang positif dan memotivasi.
-- Sapa pengguna secara langsung.
+- Sapa pengguna secara langsung. Jika ada pemilik (owner), sapa mereka sebagai pemilik tujuan.
+- Jika ada kolaborator lain, Anda bisa menyebutkan mereka dalam konteks kolaborasi.
 - Jika kemajuan baik, berikan pujian dan sarankan cara untuk mempertahankan momentum.
 - Jika kemajuan tertinggal, berikan semangat, bukan kritik. Sarankan langkah-langkah kecil yang dapat dikelola untuk kembali ke jalur yang benar.
 - Jaga agar respons tetap ringkas (2-4 kalimat).
@@ -506,7 +517,7 @@ CONTEXT:
 - PENTING: Selalu berikan respons dalam Bahasa Indonesia.`;
 
         const userPrompt = `Berikut adalah tujuan saya dan kemajuan terbaru saya. Tolong berikan saya beberapa saran pembinaan.
-Tujuan: ${JSON.stringify(goal, null, 2)}
+Tujuan: ${JSON.stringify(modifiedGoal, null, 2)}
 Konteks Kemajuan: ${JSON.stringify(context, null, 2)}`;
 
         const response = await openai.chat.completions.create({
