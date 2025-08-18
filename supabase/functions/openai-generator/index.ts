@@ -38,7 +38,7 @@ serve(async (req) => {
 
     switch (feature) {
       case 'analyze-projects': {
-        const { request } = payload;
+        const { request, conversationHistory } = payload;
         if (!request) {
           throw new Error("An analysis request type is required.");
         }
@@ -70,26 +70,37 @@ serve(async (req) => {
           taskCount: p.tasks?.length || 0,
         }));
 
-        let systemPrompt, userPrompt;
+        let systemPrompt, messages;
         const today = new Date().toISOString();
 
-        if (request === 'summarize_health') {
-          systemPrompt = `You are a helpful project management assistant. Analyze the provided JSON data and answer the user's question concisely and clearly in markdown format. Today's date is ${today}.`;
-          userPrompt = "Provide a brief, bulleted summary of the overall project health. Mention the number of projects in each status category, any projects that are at risk or overdue, and the total budget of active projects. The projects data is: \n" + JSON.stringify(summarizedProjects, null, 2);
-        } else if (request === 'find_overdue') {
-          systemPrompt = `You are a helpful project management assistant. Analyze the provided JSON data and answer the user's question concisely and clearly in markdown format. Today's date is ${today}.`;
-          userPrompt = "Identify and list the names of any projects that are past their due date but are not marked as 'Completed'. If there are none, state that clearly. The projects data is: \n" + JSON.stringify(summarizedProjects, null, 2);
+        if (conversationHistory && conversationHistory.length > 0) {
+          systemPrompt = `You are an expert project management AI assistant. You are in a conversation with a user. Use the provided conversation history and the JSON object of their projects to answer their latest question. Be concise and helpful. Today's date is ${today}. The user's projects data is: \n${JSON.stringify(summarizedProjects, null, 2)}`;
+          messages = [
+            { role: "system", content: systemPrompt },
+            ...conversationHistory.map(msg => ({ role: msg.sender === 'ai' ? 'assistant' : 'user', content: msg.content })),
+            { role: "user", content: request }
+          ];
         } else {
-          systemPrompt = `You are an expert project management AI assistant. You will be given a user's question and a JSON object containing all the projects they have access to. Answer the user's question based *only* on the provided project data. Be concise and helpful. Today's date is ${today}. When asked about dates, compare them to today's date to determine if they are in the past, present, or future.`;
-          userPrompt = `Question: "${request}"\n\nProjects Data:\n${JSON.stringify(summarizedProjects, null, 2)}`;
+          let userPrompt;
+          if (request === 'summarize_health') {
+            systemPrompt = `You are a helpful project management assistant. Analyze the provided JSON data and answer the user's question concisely and clearly in markdown format. Today's date is ${today}.`;
+            userPrompt = "Provide a brief, bulleted summary of the overall project health. Mention the number of projects in each status category, any projects that are at risk or overdue, and the total budget of active projects. The projects data is: \n" + JSON.stringify(summarizedProjects, null, 2);
+          } else if (request === 'find_overdue') {
+            systemPrompt = `You are a helpful project management assistant. Analyze the provided JSON data and answer the user's question concisely and clearly in markdown format. Today's date is ${today}.`;
+            userPrompt = "Identify and list the names of any projects that are past their due date but are not marked as 'Completed'. If there are none, state that clearly. The projects data is: \n" + JSON.stringify(summarizedProjects, null, 2);
+          } else {
+            systemPrompt = `You are an expert project management AI assistant. You will be given a user's question and a JSON object containing all the projects they have access to. Answer the user's question based *only* on the provided project data. Be concise and helpful. Today's date is ${today}. When asked about dates, compare them to today's date to determine if they are in the past, present, or future.`;
+            userPrompt = `Question: "${request}"\n\nProjects Data:\n${JSON.stringify(summarizedProjects, null, 2)}`;
+          }
+          messages = [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ];
         }
 
         const response = await openai.chat.completions.create({
             model: "gpt-4-turbo",
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt }
-            ],
+            messages,
             temperature: 0.3,
             max_tokens: 500,
         });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Project, User } from "@/types";
@@ -15,6 +15,7 @@ import { FileText, User as UserIcon, Trophy, Sparkles, Search as SearchIcon, Cre
 import debounce from 'lodash.debounce';
 import { analyzeProjects } from "@/lib/openai";
 import ReactMarkdown from "react-markdown";
+import { Avatar, AvatarFallback } from "./ui/avatar";
 
 type Goal = { id: string; title: string; slug: string; };
 type Bill = { id: string; name: string; slug: string; payment_status: string };
@@ -26,14 +27,34 @@ type SearchResults = {
   bills: Bill[];
 };
 
+type ConversationMessage = {
+  sender: 'user' | 'ai';
+  content: string;
+};
+
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>({ projects: [], users: [], goals: [], bills: [] });
   const [loading, setLoading] = useState(false);
-  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [conversation, setConversation] = useState<ConversationMessage[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const navigate = useNavigate();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [conversation, isAiLoading]);
+
+  const resetSearch = () => {
+    setQuery("");
+    setResults({ projects: [], users: [], goals: [], bills: [] });
+    setConversation([]);
+    setIsAiLoading(false);
+    setLoading(false);
+  };
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -82,7 +103,7 @@ export function GlobalSearch() {
   const debouncedSearch = useCallback(debounce(performSearch, 300), []);
 
   useEffect(() => {
-    setAiResponse(null);
+    if (conversation.length > 0) return;
     if (query) {
       setLoading(true);
       debouncedSearch(query);
@@ -91,26 +112,29 @@ export function GlobalSearch() {
       setLoading(false);
       debouncedSearch.cancel();
     }
-  }, [query, debouncedSearch]);
+  }, [query, debouncedSearch, conversation]);
 
   const handleSelect = (callback: () => void) => {
     setOpen(false);
-    setQuery("");
+    resetSearch();
     callback();
   };
 
-  const handleAiQuery = async () => {
-    if (!query.trim()) return;
+  const handleSendMessage = async (message: string) => {
+    if (!message.trim()) return;
 
+    const newConversation: ConversationMessage[] = [...conversation, { sender: 'user', content: message }];
+    setConversation(newConversation);
+    setQuery("");
     setIsAiLoading(true);
     setResults({ projects: [], users: [], goals: [], bills: [] });
     setLoading(false);
 
     try {
-      const result = await analyzeProjects(query);
-      setAiResponse(result);
+      const result = await analyzeProjects(message, newConversation);
+      setConversation(prev => [...prev, { sender: 'ai', content: result }]);
     } catch (error: any) {
-      setAiResponse(`Sorry, I encountered an error: ${error.message}`);
+      setConversation(prev => [...prev, { sender: 'ai', content: `Sorry, I encountered an error: ${error.message}` }]);
     } finally {
       setIsAiLoading(false);
     }
@@ -132,45 +156,61 @@ export function GlobalSearch() {
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandDialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) resetSearch(); }}>
         <CommandInput 
-          placeholder="Search for projects, users, goals or ask AI..." 
+          placeholder="Search or ask AI..." 
           value={query}
           onValueChange={setQuery}
         />
-        <CommandList>
-          {isAiLoading && (
-            <div className="p-4 flex items-center justify-center text-sm text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              AI is thinking...
-            </div>
-          )}
-          {aiResponse && (
-            <div className="p-4 text-sm border-t prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown>
-                {aiResponse}
-              </ReactMarkdown>
-            </div>
-          )}
-
-          {!isAiLoading && !aiResponse && (
-            <>
-              {loading && <CommandEmpty>Searching...</CommandEmpty>}
-              {!loading && !hasResults && query.length > 1 && <CommandEmpty>No results found.</CommandEmpty>}
-              
-              {query.length > 1 && (
-                <CommandGroup heading="AI Assistant">
-                  <CommandItem
-                    onSelect={handleAiQuery}
-                    value={`ai-${query}`}
-                    className="cursor-pointer"
-                  >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    <span>Ask AI: "{query}"</span>
-                  </CommandItem>
-                </CommandGroup>
+        <div ref={scrollRef} className="max-h-[400px] overflow-y-auto">
+          {conversation.length > 0 && (
+            <div className="p-4 space-y-4 border-t">
+              {conversation.map((msg, index) => (
+                <div key={index} className={`flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
+                  {msg.sender === 'ai' && (
+                    <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
+                      <AvatarFallback><Sparkles className="h-4 w-4" /></AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className={`max-w-sm rounded-lg px-3 py-2 ${msg.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'} prose prose-sm dark:prose-invert max-w-none`}>
+                    <ReactMarkdown>
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              ))}
+              {isAiLoading && (
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
+                    <AvatarFallback><Sparkles className="h-4 w-4" /></AvatarFallback>
+                  </Avatar>
+                  <div className="max-w-sm rounded-lg px-3 py-2 bg-muted flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                </div>
               )}
+            </div>
+          )}
+        </div>
+        <CommandList>
+          {loading && <CommandEmpty>Searching...</CommandEmpty>}
+          {!loading && !hasResults && query.length > 1 && conversation.length === 0 && <CommandEmpty>No results found.</CommandEmpty>}
+          
+          {query.length > 1 && (
+            <CommandGroup heading={conversation.length > 0 ? "Send message" : "AI Assistant"}>
+              <CommandItem
+                onSelect={() => handleSendMessage(query)}
+                value={`ai-${query}`}
+                className="cursor-pointer"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                <span>{conversation.length > 0 ? `Send: "${query}"` : `Ask AI: "${query}"`}</span>
+              </CommandItem>
+            </CommandGroup>
+          )}
 
+          {conversation.length === 0 && (
+            <>
               {results.projects.length > 0 && (
                 <CommandGroup heading="Projects">
                   {results.projects.map(project => (

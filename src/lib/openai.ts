@@ -46,8 +46,8 @@ export const generateAiIcon = async (prompt: string): Promise<string> => {
   return invokeOpenAiGenerator('generate-icon', { prompt });
 };
 
-export const analyzeProjects = async (request: string): Promise<string> => {
-  return invokeOpenAiGenerator('analyze-projects', { request });
+export const analyzeProjects = async (request: string, conversationHistory?: { sender: 'user' | 'ai', content: string }[]): Promise<string> => {
+  return invokeOpenAiGenerator('analyze-projects', { request, conversationHistory });
 };
 
 export const diagnoseProjectVisibility = async (): Promise<string> => {
