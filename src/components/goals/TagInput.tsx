@@ -20,7 +20,6 @@ import { Tag, User } from "@/types";
 import TagEditorDialog from "./TagEditorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TagInputProps {
   allTags: Tag[];
@@ -129,40 +128,38 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                 value={inputValue}
                 onValueChange={setInputValue}
               />
-              <CommandList>
+              <CommandList className="max-h-48">
                 <CommandEmpty>
                   <Button variant="ghost" className="w-full justify-start" onClick={handleCreate}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Create "{inputValue}"
                   </Button>
                 </CommandEmpty>
-                <ScrollArea className="max-h-48">
-                  <CommandGroup>
-                    {allTags.map((tag) => (
-                      <CommandItem
-                        key={tag.id}
-                        value={tag.name}
-                        onSelect={handleSelect}
-                        className="flex justify-between items-center"
-                      >
-                        <div className="flex items-center">
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedTags.some(st => st.id === tag.id) ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {tag.name}
-                        </div>
-                        {tag.user_id === user?.id && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => handleEdit(e, tag)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </ScrollArea>
+                <CommandGroup>
+                  {allTags.map((tag) => (
+                    <CommandItem
+                      key={tag.id}
+                      value={tag.name}
+                      onSelect={handleSelect}
+                      className="flex justify-between items-center"
+                    >
+                      <div className="flex items-center">
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedTags.some(st => st.id === tag.id) ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {tag.name}
+                      </div>
+                      {tag.user_id === user?.id && (
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => handleEdit(e, tag)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
               </CommandList>
             </Command>
           </PopoverContent>
