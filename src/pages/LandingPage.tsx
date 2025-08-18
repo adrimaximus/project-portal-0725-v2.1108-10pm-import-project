@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
-import { Package, BarChart, Users, ListChecks, ArrowRight, CalendarCheck } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Package, BarChart, Users, ListChecks, ArrowRight } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const LandingPage = () => {
@@ -85,32 +84,6 @@ const LandingPage = () => {
                   <p className="text-muted-foreground">{feature.description}</p>
                 </div>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Google Calendar Integration Section */}
-        <section className="py-20 md:py-28">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
-              <div className="md:w-1/2 text-center md:text-left">
-                <Badge variant="outline" className="mb-4">Data Transparency</Badge>
-                <h2 className="text-3xl md:text-4xl font-bold">Google Calendar Integration</h2>
-                <p className="mt-4 text-muted-foreground">
-                  To enhance your project management experience, our application offers an optional integration with Google Calendar. This feature helps you visualize your personal and team schedules alongside project deadlines.
-                </p>
-                <p className="mt-4 text-muted-foreground">
-                  <strong>Purpose:</strong> We request access to your Google Calendar to display your events within the project timeline. This allows you to easily identify potential scheduling conflicts and manage your time more effectively.
-                </p>
-                <p className="mt-4 text-muted-foreground">
-                  <strong>Permissions:</strong> We only request <code className="bg-muted px-1 py-0.5 rounded">read-only</code> access (view events on your calendars). Our application cannot create, modify, or delete your events. Your privacy is paramount, and we handle your data in accordance with our <Link to="/privacy-policy" className="text-primary underline">Privacy Policy</Link>.
-                </p>
-              </div>
-              <div className="md:w-1/2 flex justify-center">
-                <div className="bg-muted/40 p-8 rounded-lg">
-                  <CalendarCheck className="h-24 w-24 text-primary" />
-                </div>
-              </div>
             </div>
           </div>
         </section>
