@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Goal, GoalType, GoalPeriod, Tag } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,13 +48,13 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    const fetchTags = async () => {
-      if (!user) return;
-      const { data } = await supabase.from('tags').select('*').or(`user_id.eq.${user.id},user_id.is.null`);
-      if (data) setAllTags(data);
-    };
+  const fetchTags = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from('tags').select('*').or(`user_id.eq.${user.id},user_id.is.null`);
+    if (data) setAllTags(data);
+  }, [user]);
 
+  useEffect(() => {
     if (open) {
       fetchTags();
       if (isEditMode && goal) {
@@ -75,7 +75,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
         });
       }
     }
-  }, [goal, open, isEditMode, user]);
+  }, [goal, open, isEditMode, user, fetchTags]);
 
   const handleChange = (field: keyof typeof formData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -249,7 +249,14 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
           <div className="grid grid-cols-4 items-start gap-4">
             <Label className="text-right pt-2">Tags</Label>
             <div className="col-span-3">
-              <TagInput allTags={allTags} selectedTags={formData.tags} onTagsChange={(v) => handleChange('tags', v)} onTagCreate={handleTagCreate} />
+              <TagInput
+                allTags={allTags}
+                selectedTags={formData.tags}
+                onTagsChange={(v) => handleChange('tags', v)}
+                onTagCreate={handleTagCreate}
+                user={user}
+                onTagsUpdated={fetchTags}
+              />
             </div>
           </div>
         </div>
