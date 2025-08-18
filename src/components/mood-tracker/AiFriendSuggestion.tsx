@@ -27,24 +27,7 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
     setError('');
     setInsight('');
 
-    const periodInIndonesian = {
-      week: 'minggu',
-      month: 'bulan',
-      year: 'tahun'
-    }[period];
-
-    const moodSummary = data.length > 0 
-      ? data.map(mood => `${mood.label} (${mood.value} kali)`).join(', ')
-      : 'belum ada data suasana hati yang tercatat';
-
-    const prompt = `
-      Nama saya ${userName}. Selama ${periodInIndonesian} terakhir, ringkasan suasana hati saya adalah: ${moodSummary}.
-      Berdasarkan data ini, berikan saya saran yang membangun.
-    `;
-
     try {
-      // This is a simplified call. A real implementation would use a dedicated edge function.
-      // For now, we simulate the call and check for connection status.
       const { data: statusData, error: statusError } = await supabase.functions.invoke('manage-openai-key', { method: 'GET' });
       if (statusError || !statusData.connected) {
         setIsConnected(false);
@@ -53,12 +36,33 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
       }
       setIsConnected(true);
 
-      // Here you would call your AI generation edge function
-      // const { data: insightData, error: insightError } = await supabase.functions.invoke('openai-generator', { ... });
-      // For now, we'll use a placeholder.
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const result = `Ini adalah saran yang bagus untuk Anda, ${userName}, berdasarkan suasana hati Anda baru-baru ini. Teruslah bekerja dengan baik!`;
-      setInsight(result);
+      const periodInIndonesian = {
+        week: 'minggu',
+        month: 'bulan',
+        year: 'tahun'
+      }[period];
+
+      const moodSummary = data.length > 0 
+        ? data.map(mood => `${mood.label} (${mood.value} kali)`).join(', ')
+        : 'belum ada data suasana hati yang tercatat';
+
+      const prompt = `
+        Nama saya ${userName}. Selama ${periodInIndonesian} terakhir, ringkasan suasana hati saya adalah: ${moodSummary}.
+        Berdasarkan data ini, berikan saya saran yang membangun.
+      `;
+
+      const { data: insightData, error: insightError } = await supabase.functions.invoke('openai-generator', {
+        body: {
+          feature: 'generate-mood-insight',
+          payload: { prompt, userName }
+        }
+      });
+
+      if (insightError) {
+        throw insightError;
+      }
+
+      setInsight(insightData.result);
 
     } catch (err: any) {
       console.error(err);

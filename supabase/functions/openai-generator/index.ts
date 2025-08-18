@@ -522,6 +522,27 @@ Konteks Kemajuan: ${JSON.stringify(context, null, 2)}`;
         responseData = { result: response.choices[0].message.content };
         break;
       }
+      case 'generate-mood-insight': {
+        const { prompt, userName } = payload;
+        if (!prompt) {
+          throw new Error("Prompt is required for generating mood insights.");
+        }
+
+        const systemPrompt = `Anda adalah seorang teman AI yang suportif dan berwawasan luas. Tujuan Anda adalah memberikan saran yang memotivasi dan dapat ditindaklanjuti kepada pengguna berdasarkan ringkasan suasana hati mereka. Anda akan diberikan ringkasan suasana hati pengguna. Analisis informasi ini dan berikan wawasan singkat (2-3 kalimat) yang bermanfaat dalam format markdown. Pertahankan nada yang positif dan memotivasi. Sapa pengguna dengan nama mereka. Selalu berikan respons dalam Bahasa Indonesia.`;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4-turbo",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 200,
+        });
+
+        responseData = { result: response.choices[0].message.content };
+        break;
+      }
       default:
         throw new Error(`Unknown feature: ${feature}`);
     }
