@@ -10,6 +10,8 @@ const ChatPage = () => {
     conversations,
     selectedConversationId,
     isSomeoneTyping,
+    searchTerm,
+    setSearchTerm,
     handleConversationSelect,
     handleSendMessage,
     handleClearChat,
@@ -31,6 +33,8 @@ const ChatPage = () => {
             <ChatList
               conversations={conversations}
               selectedConversationId={selectedConversationId}
+              searchTerm={searchTerm}
+              onSearchTermChange={setSearchTerm}
               onSelectConversation={handleConversationSelect}
               onStartNewChat={handleStartNewChat}
               onStartNewGroupChat={handleStartNewGroupChat}
@@ -59,6 +63,8 @@ const ChatPage = () => {
         <ChatList
           conversations={conversations}
           selectedConversationId={selectedConversationId}
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
           onSelectConversation={handleConversationSelect}
           onStartNewChat={handleStartNewChat}
           onStartNewGroupChat={handleStartNewGroupChat}

@@ -14,6 +14,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 interface ChatListProps {
   conversations: Conversation[];
   selectedConversationId: string | null;
+  searchTerm: string;
+  onSearchTermChange: (term: string) => void;
   onSelectConversation: (id: string | null) => void;
   onStartNewChat: (collaborator: Collaborator) => void;
   onStartNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
@@ -23,17 +25,14 @@ interface ChatListProps {
 const ChatList = ({
   conversations,
   selectedConversationId,
+  searchTerm,
+  onSearchTermChange,
   onSelectConversation,
   onStartNewChat,
   onStartNewGroupChat,
   onDeleteConversation,
 }: ChatListProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
-
-  const filteredConversations = conversations.filter((c) =>
-    c.userName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const formatTimestamp = (timestamp: string) => {
     try {
@@ -57,7 +56,7 @@ const ChatList = ({
           <Input
             placeholder="Search chats..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => onSearchTermChange(e.target.value)}
             className="pl-8"
           />
         </div>
@@ -72,7 +71,7 @@ const ChatList = ({
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {filteredConversations.map((c) => (
+        {conversations.map((c) => (
           <div
             key={c.id}
             className={cn(

@@ -1,15 +1,18 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Collaborator, Attachment, Message, Conversation } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import debounce from 'lodash.debounce';
 
 export const useChat = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isSomeoneTyping, setIsSomeoneTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [messageSearchResults, setMessageSearchResults] = useState<string[]>([]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -47,6 +50,51 @@ export const useChat = () => {
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
+
+  const debouncedSearchMessages = useCallback(
+    debounce(async (term: string) => {
+      const { data, error } = await supabase.rpc('search_conversations', { p_search_term: term });
+      if (error) {
+        console.error("Message search error:", error);
+        setMessageSearchResults([]);
+      } else {
+        setMessageSearchResults(data.map((r: any) => r.conversation_id));
+      }
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    if (searchTerm.length > 2) {
+      debouncedSearchMessages(searchTerm);
+    } else {
+      setMessageSearchResults([]);
+    }
+  }, [searchTerm, debouncedSearchMessages]);
+
+  const filteredConversations = useMemo(() => {
+    if (!searchTerm) {
+      return conversations;
+    }
+
+    const lowercasedSearchTerm = searchTerm.toLowerCase();
+    
+    const nameMatches = conversations.filter(c =>
+      c.userName.toLowerCase().includes(lowercasedSearchTerm)
+    );
+
+    const messageMatches = conversations.filter(c =>
+      messageSearchResults.includes(c.id)
+    );
+
+    const combined = new Map<string, Conversation>();
+    nameMatches.forEach(c => combined.set(c.id, c));
+    messageMatches.forEach(c => combined.set(c.id, c));
+
+    return Array.from(combined.values()).sort((a, b) => 
+      new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()
+    );
+  }, [conversations, searchTerm, messageSearchResults]);
 
   const handleConversationSelect = useCallback(async (id: string | null) => {
     setSelectedConversationId(id);
@@ -221,10 +269,12 @@ export const useChat = () => {
   }, [currentUser, selectedConversationId]);
 
   return {
-    conversations,
+    conversations: filteredConversations,
     selectedConversationId,
     isSomeoneTyping,
     isLoading,
+    searchTerm,
+    setSearchTerm,
     handleConversationSelect,
     handleSendMessage,
     handleClearChat,
