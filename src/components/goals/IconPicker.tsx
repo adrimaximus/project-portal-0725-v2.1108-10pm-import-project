@@ -1,5 +1,6 @@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { allIcons, getIconComponent } from '@/data/icons';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface IconPickerProps {
   value: string;
@@ -9,7 +10,7 @@ interface IconPickerProps {
 
 const IconPicker = ({ value, onChange, color }: IconPickerProps) => {
   return (
-    <div className="max-h-[150px] overflow-y-auto p-2 border rounded-md">
+    <ScrollArea className="h-[150px] p-2 border rounded-md">
       <ToggleGroup
         type="single"
         variant="outline"
@@ -26,7 +27,7 @@ const IconPicker = ({ value, onChange, color }: IconPickerProps) => {
           );
         })}
       </ToggleGroup>
-    </div>
+    </ScrollArea>
   );
 };
 
