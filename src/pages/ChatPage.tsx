@@ -22,7 +22,7 @@ const ChatPage = () => {
 
   if (isMobile) {
     return (
-      <PortalLayout noPadding>
+      <PortalLayout noPadding disableMainScroll>
         <div className="h-full">
           {!selectedConversation ? (
             <ChatList
@@ -48,7 +48,7 @@ const ChatPage = () => {
   }
 
   return (
-    <PortalLayout noPadding>
+    <PortalLayout noPadding disableMainScroll>
       <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full">
         <ChatList
           conversations={conversations}
