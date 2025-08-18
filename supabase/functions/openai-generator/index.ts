@@ -53,6 +53,12 @@ serve(async (req) => {
         if (rpcError) {
           throw new Error(`Failed to fetch project data for analysis: ${rpcError.message}`);
         }
+        
+        const { data: users, error: usersError } = await userSupabase.from('profiles').select('id, first_name, last_name, email');
+        if (usersError) {
+          throw new Error(`Failed to fetch users for context: ${usersError.message}`);
+        }
+
         if (!projects || projects.length === 0) {
           responseData = { result: "I couldn't find any projects associated with your account to analyze. Try creating a project or ask a team member to be added to one." };
           break;
@@ -61,50 +67,86 @@ serve(async (req) => {
         const summarizedProjects = projects.map(p => ({
           name: p.name,
           status: p.status,
+          owner: p.created_by.name,
           description: p.description?.substring(0, 100),
           startDate: p.start_date,
           dueDate: p.due_date,
-          budget: p.budget,
-          paymentStatus: p.payment_status,
-          assigneeCount: p.assignedTo?.length || 0,
-          taskCount: p.tasks?.length || 0,
         }));
+        const userList = users.map(u => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
 
-        let systemPrompt, messages;
         const today = new Date().toISOString();
+        const systemPrompt = `You are an expert project management AI assistant. You can answer questions and perform actions.
+Today's date is ${today}.
 
-        if (conversationHistory && conversationHistory.length > 0) {
-          systemPrompt = `You are an expert project management AI assistant. You are in a conversation with a user. Use the provided conversation history and the JSON object of their projects to answer their latest question. Be concise and helpful. Today's date is ${today}. The user's projects data is: \n${JSON.stringify(summarizedProjects, null, 2)}`;
-          messages = [
-            { role: "system", content: systemPrompt },
-            ...conversationHistory.map(msg => ({ role: msg.sender === 'ai' ? 'assistant' : 'user', content: msg.content })),
-            { role: "user", content: request }
-          ];
-        } else {
-          let userPrompt;
-          if (request === 'summarize_health') {
-            systemPrompt = `You are a helpful project management assistant. Analyze the provided JSON data and answer the user's question concisely and clearly in markdown format. Today's date is ${today}.`;
-            userPrompt = "Provide a brief, bulleted summary of the overall project health. Mention the number of projects in each status category, any projects that are at risk or overdue, and the total budget of active projects. The projects data is: \n" + JSON.stringify(summarizedProjects, null, 2);
-          } else if (request === 'find_overdue') {
-            systemPrompt = `You are a helpful project management assistant. Analyze the provided JSON data and answer the user's question concisely and clearly in markdown format. Today's date is ${today}.`;
-            userPrompt = "Identify and list the names of any projects that are past their due date but are not marked as 'Completed'. If there are none, state that clearly. The projects data is: \n" + JSON.stringify(summarizedProjects, null, 2);
-          } else {
-            systemPrompt = `You are an expert project management AI assistant. You will be given a user's question and a JSON object containing all the projects they have access to. Answer the user's question based *only* on the provided project data. Be concise and helpful. Today's date is ${today}. When asked about dates, compare them to today's date to determine if they are in the past, present, or future.`;
-            userPrompt = `Question: "${request}"\n\nProjects Data:\n${JSON.stringify(summarizedProjects, null, 2)}`;
-          }
-          messages = [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ];
-        }
+AVAILABLE ACTIONS:
+If the user asks to update a project, you MUST respond ONLY with a JSON object in this format:
+{"action": "UPDATE_PROJECT", "project_name": "<project name>", "updates": {"field": "value"}}
+
+- Valid fields for updates are: "owner".
+- For "owner", the value must be the full name of an existing user.
+- Be smart about identifying the project and user from the user's request. Use the context provided.
+
+If the user's request is not an action, answer their question based on the provided data.
+
+CONTEXT:
+- Available Projects: ${JSON.stringify(summarizedProjects, null, 2)}
+- Available Users: ${JSON.stringify(userList, null, 2)}
+`;
+
+        const messages = [
+          { role: "system", content: systemPrompt },
+          ...(conversationHistory || []).map(msg => ({ role: msg.sender === 'ai' ? 'assistant' : 'user', content: msg.content })),
+          { role: "user", content: request }
+        ];
 
         const response = await openai.chat.completions.create({
             model: "gpt-4-turbo",
             messages,
-            temperature: 0.3,
+            temperature: 0.1,
             max_tokens: 500,
         });
-        responseData = { result: response.choices[0].message.content };
+
+        const responseText = response.choices[0].message.content;
+        let actionData;
+        try {
+            actionData = JSON.parse(responseText);
+        } catch (e) {
+            responseData = { result: responseText };
+            break;
+        }
+
+        if (actionData && actionData.action === 'UPDATE_PROJECT') {
+            const { project_name, updates } = actionData;
+            
+            const project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
+            if (!project) {
+                responseData = { result: `I couldn't find a project named "${project_name}". Please be more specific.` };
+                break;
+            }
+
+            if (updates.owner) {
+                const newOwner = users.find(u => (`${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase() === updates.owner.toLowerCase()) || (u.email && u.email.toLowerCase() === updates.owner.toLowerCase()));
+                if (!newOwner) {
+                    responseData = { result: `I couldn't find a user named "${updates.owner}". Please make sure they are a member of the workspace.` };
+                    break;
+                }
+
+                const { error: transferError } = await supabaseAdmin.rpc('transfer_project_ownership', {
+                    p_project_id: project.id,
+                    p_new_owner_id: newOwner.id
+                });
+
+                if (transferError) {
+                    responseData = { result: `I tried, but failed to change the owner. The database said: ${transferError.message}` };
+                } else {
+                    responseData = { result: `Done! I've made ${updates.owner} the new owner of "${project.name}".` };
+                }
+            } else {
+                responseData = { result: "I understood you want to update a project, but I don't know what to change. You can ask me to change the 'owner'." };
+            }
+        } else {
+            responseData = { result: responseText };
+        }
         break;
       }
       case 'generate-insight': {
