@@ -52,7 +52,7 @@ serve(async (req) => {
         const { data: { user } } = await userSupabase.auth.getUser();
         if (!user) throw new Error("User not authenticated.");
 
-        const { data: projects, error: rpcError } = await userSupabase.rpc('get_dashboard_projects');
+        const { data: projects, error: rpcError } = await userSupabase.rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 });
         if (rpcError) {
           throw new Error(`Failed to fetch project data for analysis: ${rpcError.message}`);
         }
@@ -124,7 +124,13 @@ CONTEXT:
         const responseText = response.choices[0].message.content;
         let actionData;
         try {
-            actionData = JSON.parse(responseText);
+            const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```|({[\s\S]*})/);
+            if (!jsonMatch) {
+                responseData = { result: responseText };
+                break;
+            }
+            const jsonString = jsonMatch[1] || jsonMatch[2];
+            actionData = JSON.parse(jsonString);
         } catch (e) {
             responseData = { result: responseText };
             break;
