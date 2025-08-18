@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Menu, Search, Building, Sun, Moon } from "lucide-react";
+import { Menu, Sun, Moon, Laptop } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,23 +9,11 @@ import {
   DropdownMenuTrigger,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PortalSidebar from "./PortalSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { useState, useMemo, useRef, useEffect, ReactNode } from "react";
-import { dummyProjects } from "@/data/projects";
-import { Project, User } from "@/types";
-import { supabase } from "@/integrations/supabase/client";
-import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
-import HighlightMatch from "./HighlightMatch";
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { ReactNode } from "react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { GlobalSearch } from "./GlobalSearch";
 
@@ -36,7 +24,7 @@ interface PortalHeaderProps {
 const PortalHeader = ({ summary }: PortalHeaderProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   if (!user) {
     return null;
@@ -44,6 +32,16 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const toggleTheme = () => {
+    if (theme === "dark") {
+      setTheme("light");
+    } else if (theme === "light") {
+      setTheme("system");
+    } else {
+      setTheme("dark");
+    }
   };
 
   return (
@@ -67,26 +65,12 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
         {summary}
       </div>
       <GlobalSearch />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon">
-            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setTheme("light")}>
-            Light
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme("dark")}>
-            Dark
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme("system")}>
-            System
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button variant="outline" size="icon" onClick={toggleTheme}>
+        {theme === 'light' && <Sun className="h-[1.2rem] w-[1.2rem]" />}
+        {theme === 'dark' && <Moon className="h-[1.2rem] w-[1.2rem]" />}
+        {theme === 'system' && <Laptop className="h-[1.2rem] w-[1.2rem]" />}
+        <span className="sr-only">Toggle theme</span>
+      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="secondary" size="icon" className="rounded-full">
