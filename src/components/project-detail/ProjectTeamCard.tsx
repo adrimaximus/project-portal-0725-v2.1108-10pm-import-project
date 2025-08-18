@@ -57,9 +57,9 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
     });
 
     if (error) {
-      toast.error("Gagal mentransfer kepemilikan.", { description: error.message });
+      toast.error("Failed to transfer ownership.", { description: error.message });
     } else {
-      toast.success("Kepemilikan proyek berhasil ditransfer. Memuat ulang proyek...");
+      toast.success("Project ownership transferred. Reloading project...");
       setIsChangeOwnerDialogOpen(false);
       await queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -78,17 +78,17 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Tim</CardTitle>
+          <CardTitle className="text-sm font-medium">Team</CardTitle>
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
           <div>
             <div className="flex justify-between items-center">
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">PEMILIK PROYEK</h4>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT OWNER</h4>
               {isEditing && canChangeOwner && (
                 <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setIsChangeOwnerDialogOpen(true)}>
                   <RefreshCw className="mr-1 h-3 w-3" />
-                  Ubah
+                  Change
                 </Button>
               )}
             </div>
@@ -106,7 +106,7 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
 
           {isEditing ? (
             <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">ANGGOTA TIM</h4>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
               <ModernTeamSelector
                 users={assignableUsers}
                 selectedUsers={teamMembers}
@@ -116,7 +116,7 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
           ) : (
             teamMembers.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold text-muted-foreground mb-2">ANGGOTA TIM</h4>
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
                 <div className="space-y-3">
                   {teamMembers.map(member => (
                     <div key={member.id} className="flex items-center gap-3">

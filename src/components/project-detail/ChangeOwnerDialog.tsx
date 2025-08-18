@@ -28,10 +28,10 @@ const ChangeOwnerDialog = ({ open, onOpenChange, project, onOwnerChange }: Chang
       const isAdmin = currentUser.role === 'admin' || currentUser.role === 'master admin';
 
       if (isAdmin) {
-        // Admin dapat mentransfer ke pengguna mana pun kecuali pemilik saat ini
+        // Admin can transfer to any user except the current owner
         query = supabase.from('profiles').select('*').neq('id', project.created_by.id);
       } else {
-        // Pemilik hanya dapat mentransfer ke kolaborator yang sudah ada
+        // Owner can only transfer to existing collaborators
         const collaboratorIds = project.assignedTo.map(u => u.id).filter(id => id !== project.created_by.id);
         if (collaboratorIds.length === 0) {
           setPotentialOwners([]);
@@ -44,7 +44,7 @@ const ChangeOwnerDialog = ({ open, onOpenChange, project, onOwnerChange }: Chang
       const { data, error } = await query;
 
       if (error) {
-        toast.error("Gagal mengambil data pengguna.");
+        toast.error("Failed to fetch users.");
       } else {
         const users = data.map(profile => ({
           id: profile.id,
@@ -69,14 +69,14 @@ const ChangeOwnerDialog = ({ open, onOpenChange, project, onOwnerChange }: Chang
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Transfer Kepemilikan Proyek</DialogTitle>
-          <DialogDescription>Pilih pemilik baru untuk proyek ini. Pemilik saat ini akan menjadi anggota.</DialogDescription>
+          <DialogTitle>Transfer Project Ownership</DialogTitle>
+          <DialogDescription>Select a new owner for this project. The current owner will become a member.</DialogDescription>
         </DialogHeader>
         <Command>
-          <CommandInput placeholder="Cari pengguna..." />
+          <CommandInput placeholder="Search for a user..." />
           <CommandList>
-            {isLoading && <CommandEmpty>Memuat pengguna...</CommandEmpty>}
-            {!isLoading && potentialOwners.length === 0 && <CommandEmpty>Tidak ada pengguna yang memenuhi syarat untuk ditransfer.</CommandEmpty>}
+            {isLoading && <CommandEmpty>Loading users...</CommandEmpty>}
+            {!isLoading && potentialOwners.length === 0 && <CommandEmpty>No eligible users to transfer to.</CommandEmpty>}
             <CommandGroup>
               {potentialOwners.map(user => (
                 <CommandItem
