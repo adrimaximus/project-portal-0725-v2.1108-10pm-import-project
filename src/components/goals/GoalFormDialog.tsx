@@ -16,6 +16,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import IconPicker from './IconPicker';
+import { colors as tagColors } from '@/data/colors';
 
 interface GoalFormDialogProps {
   open: boolean;
@@ -48,7 +49,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
   const [targetPeriod, setTargetPeriod] = useState<GoalPeriod>('Monthly');
   const [targetValue, setTargetValue] = useState<number | undefined>(undefined);
   const [unit, setUnit] = useState<string>('');
-  const [color, setColor] = useState('#BFDBFE');
+  const [color, setColor] = useState('#141414');
   const [icon, setIcon] = useState('Target');
   const [tags, setTags] = useState<Tag[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
@@ -85,7 +86,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
         setTargetQuantity(undefined);
         setTargetPeriod('Monthly');
         setUnit('');
-        setColor('#BFDBFE');
+        setColor('#141414');
         setIcon('Target');
         setTags([]);
       }
@@ -93,10 +94,11 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
   }, [goal, open, isEditMode, user]);
 
   const handleTagCreate = (tagName: string): Tag => {
+    const randomColor = tagColors[Math.floor(Math.random() * tagColors.length)];
     const newTag: Tag = {
       id: uuidv4(),
       name: tagName,
-      color: color,
+      color: randomColor,
     };
     setAllTags(prev => [...prev, newTag]);
     return newTag;
