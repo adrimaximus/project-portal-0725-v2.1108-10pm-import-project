@@ -32,11 +32,11 @@ serve(async (req) => {
       throw new Error("Missing required fields: title, icon, color, and type are required.");
     }
 
-    // Memisahkan tag yang sudah ada dan tag baru
-    const existingTagIds = tags.filter(t => !t.isNew).map(t => t.id);
+    // Separate existing and new tags
+    const existingTagIds = tags.filter(t => !t.isNew && t.id).map(t => t.id);
     const newCustomTags = tags.filter(t => t.isNew).map(({ name, color }) => ({ name, color }));
 
-    // Memanggil fungsi RPC yang sudah diperbaiki dengan parameter yang benar
+    // Call the refactored RPC function
     const { data: newGoal, error: rpcError } = await supabase
       .rpc('create_goal_and_link_tags', {
         p_title: title,
@@ -56,16 +56,9 @@ serve(async (req) => {
       .single();
 
     if (rpcError) throw rpcError;
-    if (!newGoal || !newGoal.slug) throw new Error("Goal creation failed to return the new goal data.");
+    if (!newGoal) throw new Error("Goal creation failed to return the new goal data.");
 
-    // Mengambil objek goal lengkap untuk dikembalikan ke klien
-    const { data: fullGoal, error: fetchError } = await supabase
-      .rpc('get_goal_by_slug', { p_slug: newGoal.slug })
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    return new Response(JSON.stringify(fullGoal), {
+    return new Response(JSON.stringify(newGoal), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 201,
     })

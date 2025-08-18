@@ -131,7 +131,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
         onSuccess(goal);
       } else {
         const { tags, ...restOfFormData } = formData;
-        const createPayload = { ...restOfFormData, tags: tags.map(({ name, color }) => ({ name, color })) };
+        const createPayload = { ...restOfFormData, tags: tags };
         const { data: newGoal, error: goalError } = await supabase.functions.invoke('secure-create-goal', { body: createPayload });
         if (goalError) throw goalError;
         toast.success(`Goal "${newGoal.title}" created!`);
