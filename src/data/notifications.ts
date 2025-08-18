@@ -1,10 +1,11 @@
-import { MessageSquare, AtSign, FolderKanban, Info } from "lucide-react";
+import { MessageSquare, AtSign, FolderKanban, Info, Target } from "lucide-react";
 
 export const notificationIcons = {
   comment: MessageSquare,
   mention: AtSign,
   project: FolderKanban,
   system: Info,
+  goal: Target,
 };
 
 export type Notification = {
