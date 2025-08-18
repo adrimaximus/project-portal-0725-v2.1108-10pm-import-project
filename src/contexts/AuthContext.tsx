@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (profile) {
         const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-        setUser({
+        const userToSet = {
           id: profile.id,
           email: supabaseUser.email,
           name: fullName || supabaseUser.email || 'No name',
@@ -41,8 +41,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           role: profile.role,
           status: profile.status,
           sidebar_order: profile.sidebar_order,
-        });
-        return; // Success, exit the function
+        };
+        setUser(userToSet);
+        localStorage.setItem('lastUserName', userToSet.name); // Store user name
+        return;
       }
 
       if (error && error.code !== 'PGRST116') {
@@ -57,13 +59,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     console.warn(`Could not fetch user profile for ${supabaseUser.id} after ${retries} attempts. Using fallback data.`);
-    setUser({
+    const fallbackUser = {
       id: supabaseUser.id,
       email: supabaseUser.email,
       name: supabaseUser.email || 'New User',
       avatar: undefined,
       initials: supabaseUser.email?.substring(0, 2).toUpperCase() || 'NN',
-    });
+    };
+    setUser(fallbackUser);
+    localStorage.setItem('lastUserName', fallbackUser.name); // Store fallback name
   };
 
   useEffect(() => {
@@ -89,6 +93,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           fetchUserProfile(newSession.user);
         } else {
           setUser(null);
+          localStorage.removeItem('lastUserName'); // Clear on logout
         }
       });
 
@@ -117,6 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setUser(null);
       setSession(null);
+      localStorage.removeItem('lastUserName'); // Also clear on explicit logout
       navigate('/', { replace: true });
     }
   };

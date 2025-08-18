@@ -25,6 +25,14 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [lastUserName, setLastUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedName = localStorage.getItem('lastUserName');
+    if (storedName) {
+      setLastUserName(storedName);
+    }
+  }, []);
 
   useEffect(() => {
     if (authContextLoading) return;
@@ -55,6 +63,23 @@ const LoginPage = () => {
     }
     // On success, the onAuthStateChange listener in AuthContext will handle navigation.
   };
+
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 's') {
+        const target = event.target as HTMLElement;
+        if (target.tagName.toLowerCase() !== 'input' && target.tagName.toLowerCase() !== 'textarea' && !target.isContentEditable) {
+          event.preventDefault();
+          form.handleSubmit(onSubmit)();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [form, onSubmit]);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -117,7 +142,9 @@ const LoginPage = () => {
               <Package className="h-7 w-7 text-primary" />
               <span className="text-xl font-bold">Client Portal</span>
             </div>
-            <h1 className="text-3xl font-serif font-bold mb-2">Welcome Back</h1>
+            <h1 className="text-3xl font-serif font-bold mb-2">
+              Welcome Back{lastUserName ? `, ${lastUserName}` : ''}!👋
+            </h1>
             <p className="text-muted-foreground mb-8">Enter your email and password to access your account</p>
             
             <Form {...form}>
@@ -183,7 +210,7 @@ const LoginPage = () => {
                 </div>
                 <Button type="submit" className="w-full bg-black hover:bg-gray-800 text-white" disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign In
+                  Press S to Sign In
                 </Button>
                 <Button type="button" variant="outline" className="w-full" disabled={isLoading} onClick={handleGoogleSignIn}>
                   <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 21.2 172.9 60.3l-66.8 64.2C314.6 99.8 283.5 84 248 84c-84.3 0-152.3 68.2-152.3 152S163.7 428 248 428c97.3 0 131.2-75.3 134.8-112.9H248v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.4z"></path></svg>
