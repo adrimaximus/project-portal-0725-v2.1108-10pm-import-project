@@ -26,13 +26,14 @@ serve(async (req) => {
     if (userError || !user) throw new Error("User not authenticated.");
 
     const payload = await req.json();
-    const { title, description, icon, color, type, frequency, specific_days, target_quantity, target_period, target_value, unit, tag_ids } = payload;
+    const { title, description, icon, color, type, frequency, specific_days, target_quantity, target_period, target_value, unit, tags } = payload;
 
     if (!title || !icon || !color || !type) {
       throw new Error("Missing required fields: title, icon, color, and type are required.");
     }
 
-    const { data: newGoal, error: rpcError } = await supabase
+    // Use the RPC function that accepts a JSON object for tags
+    const { data: newGoalId, error: rpcError } = await supabase
       .rpc('create_goal_with_tags', {
         p_title: title,
         p_description: description,
@@ -45,11 +46,18 @@ serve(async (req) => {
         p_target_period: target_period,
         p_target_value: target_value,
         p_unit: unit,
-        p_tags: tag_ids,
+        p_tags: tags, // Pass the array of tag objects directly
       })
       .single();
 
     if (rpcError) throw rpcError;
+
+    // Fetch the full goal object to return to the client
+    const { data: newGoal, error: fetchError } = await supabase
+      .rpc('get_goal_by_slug', { p_slug: (await supabase.from('goals').select('slug').eq('id', newGoalId).single()).data.slug })
+      .single();
+
+    if (fetchError) throw fetchError;
 
     return new Response(JSON.stringify(newGoal), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
