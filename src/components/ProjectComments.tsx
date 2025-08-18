@@ -9,6 +9,7 @@ import { id } from "date-fns/locale";
 import { Mention, MentionsInput } from "react-mentions";
 import { Badge } from "./ui/badge";
 import CommentRenderer from "./CommentRenderer";
+import "@/components/mentions-style.css";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -27,13 +28,20 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
     if (!project) return [];
     const users = [project.created_by, ...project.assignedTo];
     const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
-    return uniqueUsers.map(u => ({
-      id: u.id,
-      display: u.name,
-      avatar: u.avatar,
-      initials: u.initials,
-      email: u.email,
-    }));
+    return uniqueUsers.map(u => {
+      let displayName = u.name;
+      // Check if name is an email and doesn't contain a space (likely not a full name)
+      if (displayName.includes('@') && !displayName.includes(' ')) {
+        displayName = displayName.split('@')[0];
+      }
+      return {
+        id: u.id,
+        display: displayName,
+        avatar: u.avatar,
+        initials: u.initials,
+        email: u.email,
+      };
+    });
   }, [project]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,15 +87,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
-            classNames={{
-              control: "w-full",
-              input: "w-full p-2 border rounded-md min-h-[100px] bg-background text-sm",
-              suggestions: {
-                list: "bg-background border rounded-md shadow-lg p-1",
-                item: "p-2 hover:bg-muted rounded-sm flex items-center gap-3 cursor-pointer",
-                itemFocused: "bg-muted",
-              },
-            }}
           >
             <Mention
               trigger="@"
@@ -104,7 +103,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
                   </div>
                 </>
               )}
-              className="bg-blue-100"
             />
           </MentionsInput>
         </div>

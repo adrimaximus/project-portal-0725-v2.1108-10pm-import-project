@@ -9,9 +9,9 @@
 /* Both input and highlighter share the same box model for alignment */
 .mentions__input,
 .mentions__highlighter {
-  @apply w-full min-h-[100px] p-3 pr-[130px] text-sm rounded-lg border bg-background;
+  @apply w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background;
   @apply whitespace-pre-wrap break-words;
-  @apply focus-visible:outline-none;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
 }
 
 /* The actual textarea element where user types */
@@ -29,15 +29,15 @@
 
 /* The suggestions dropdown */
 .mentions__suggestions {
-  @apply mt-1 z-20; /* Ensure suggestions appear above everything else */
+  @apply mt-1 z-50; /* Ensure suggestions appear above everything else */
 }
 
 .mentions__suggestions__list {
-  @apply bg-popover text-popover-foreground border rounded-md shadow-lg overflow-hidden p-1;
+  @apply bg-popover text-popover-foreground border rounded-md shadow-lg overflow-hidden p-1 max-h-60 overflow-y-auto;
 }
 
 .mentions__suggestions__item {
-  @apply flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm cursor-pointer;
+  @apply flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer;
 }
 
 .mentions__suggestions__item--focused {
@@ -46,5 +46,5 @@
 
 /* The style for a mention tag within the input */
 .mentions__mention {
-  @apply bg-primary/20 text-primary font-semibold rounded-sm px-1 py-0.5;
+  @apply bg-primary/10 text-primary font-semibold rounded-sm px-1 py-0.5;
 }
