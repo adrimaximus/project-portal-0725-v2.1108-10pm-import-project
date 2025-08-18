@@ -1,14 +1,13 @@
 import { Project } from '@/types';
 import { GoogleCalendarEvent } from '@/types';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   eachDayOfInterval,
-  startOfYear,
-  endOfYear,
+  startOfMonth,
+  endOfMonth,
   format,
   isSameDay,
-  startOfMonth,
   getDay,
   isToday,
   addMonths,
@@ -36,155 +35,81 @@ const getItemColor = (item: CombinedItem): string => {
 };
 
 const MonthView = ({ projects, gcalEvents }: { projects: Project[], gcalEvents: GoogleCalendarEvent[] }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const combinedItems: CombinedItem[] = useMemo(() => [...projects, ...gcalEvents], [projects, gcalEvents]);
 
-  const year = currentDate.getFullYear();
-  const daysInYear = eachDayOfInterval({
-    start: startOfYear(currentDate),
-    end: endOfYear(currentDate),
+  const daysInMonth = eachDayOfInterval({
+    start: startOfMonth(currentMonth),
+    end: endOfMonth(currentMonth),
   });
+  const firstDayOfMonth = (getDay(startOfMonth(currentMonth)) + 6) % 7; // Monday is 0
 
   const itemsByDay = useMemo(() => {
     const map = new Map<string, CombinedItem[]>();
-    daysInYear.forEach(day => {
+    daysInMonth.forEach(day => {
       const dayKey = format(day, 'yyyy-MM-dd');
       const itemsOnDay = combinedItems.filter(p => {
         const startDate = isGCalEvent(p) ? (p.start.dateTime || p.start.date) : p.start_date;
         const dueDate = isGCalEvent(p) ? (p.end.dateTime || p.end.date) : p.due_date;
-        if (!startDate || !dueDate) return false;
+        if (!startDate) return false;
         const start = new Date(startDate);
-        const end = new Date(dueDate);
-        return isSameDay(day, start) || isSameDay(day, end) || (day > start && day < end);
+        const end = dueDate ? new Date(dueDate) : start;
+        return day >= start && day <= end;
       });
       if (itemsOnDay.length > 0) {
-        map.set(dayKey, itemsOnDay);
+        map.set(dayKey, itemsOnDay.sort((a, b) => {
+            const aStart = new Date(isGCalEvent(a) ? (a.start.dateTime || a.start.date!) : a.start_date);
+            const bStart = new Date(isGCalEvent(b) ? (b.start.dateTime || b.start.date!) : b.start_date);
+            return aStart.getTime() - bStart.getTime();
+        }));
       }
     });
     return map;
-  }, [daysInYear, combinedItems]);
+  }, [daysInMonth, combinedItems]);
 
-  const renderDayCell = (day: Date) => {
-    const dayKey = format(day, 'yyyy-MM-dd');
-    const items = itemsByDay.get(dayKey) || [];
-
-    const content = (
-      <div className={cn("h-full w-full flex flex-col items-center justify-center text-xs", isToday(day) && "bg-primary/10 rounded-md")}>
-        <span>{format(day, 'd')}</span>
-        <div className="flex mt-1">
-          {items.slice(0, 2).map((item, index) => (
-            <TooltipProvider key={index} delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger>
-                  <div
-                    className="h-1.5 w-1.5 rounded-full mx-px"
-                    style={{ backgroundColor: getItemColor(item) }}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{isGCalEvent(item) ? item.summary : item.name}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-          {items.length > 2 && (
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger>
-                  <div className="h-1.5 w-1.5 rounded-full bg-gray-300 mx-px" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{items.length - 2} more items</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-      </div>
-    );
-
-    if (items.length > 0) {
-      return (
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {content}
-            </TooltipTrigger>
-            <TooltipContent className="p-2">
-              <div className="font-bold mb-2">{format(day, 'PPP')}</div>
-              <ul className="space-y-2">
-                {items.map((item, index) => {
-                  const isGcal = isGCalEvent(item);
-                  const name = isGcal ? item.summary : item.name;
-                  const assignedTo = !isGcal ? (item as Project).assignedTo : [];
-                  const itemContent = (
-                    <li key={index} className="flex items-center gap-2 text-xs">
-                      <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: getItemColor(item) }} />
-                      <span className="font-medium flex-1 truncate">{name}</span>
-                      <div className="flex -space-x-2">
-                        {assignedTo.slice(0, 2).map(user => (
-                          <Avatar key={user.id} className="h-5 w-5 border-2 border-background">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback>{user.initials}</AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                    </li>
-                  );
-                  return isGcal ? (
-                    <div key={index}>{itemContent}</div>
-                  ) : (
-                    <Link to={`/projects/${(item as Project).slug}`} key={index}>{itemContent}</Link>
-                  );
-                })}
-              </ul>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-
-    return content;
-  };
-
-  const months = Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
   const weekDays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 
   return (
     <div className="p-4 bg-background rounded-lg border">
       <div className="flex justify-between items-center mb-4">
-        <Button variant="outline" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 12))}>
+        <Button variant="outline" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h2 className="text-xl font-bold">{year}</h2>
-        <Button variant="outline" size="icon" onClick={() => setCurrentDate(addMonths(currentDate, 12))}>
+        <h2 className="text-xl font-bold">{format(currentMonth, 'MMMM yyyy', { locale: id })}</h2>
+        <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {months.map(month => {
-          const daysInMonth = eachDayOfInterval({
-            start: startOfMonth(month),
-            end: new Date(month.getFullYear(), month.getMonth() + 1, 0),
-          });
-          const firstDayOfMonth = (getDay(startOfMonth(month)) + 6) % 7;
-
+      <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground border-b pb-2">
+        {weekDays.map(day => <div key={day}>{day}</div>)}
+      </div>
+      <div className="grid grid-cols-7 grid-rows-5 gap-1 mt-1">
+        {Array.from({ length: firstDayOfMonth }).map((_, i) => (
+          <div key={`empty-${i}`} className="border-r border-b" />
+        ))}
+        {daysInMonth.map(day => {
+          const dayKey = format(day, 'yyyy-MM-dd');
+          const items = itemsByDay.get(dayKey) || [];
           return (
-            <div key={format(month, 'yyyy-MM')}>
-              <h3 className="font-semibold text-center mb-2">{format(month, 'MMMM', { locale: id })}</h3>
-              <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
-                {weekDays.map(day => <div key={day}>{day}</div>)}
-              </div>
-              <div className="grid grid-cols-7 gap-1 mt-1">
-                {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-                  <div key={`empty-${i}`} />
-                ))}
-                {daysInMonth.map(day => (
-                  <div key={day.toString()} className="h-12 border rounded-md hover:bg-muted/50 transition-colors">
-                    {renderDayCell(day)}
-                  </div>
-                ))}
+            <div key={day.toString()} className={cn("h-28 border-r border-b p-1 overflow-hidden", isToday(day) && "bg-blue-50")}>
+              <span className={cn("font-semibold", isToday(day) && "text-primary font-bold")}>{format(day, 'd')}</span>
+              <div className="mt-1 space-y-1">
+                {items.map((item, index) => {
+                  const isGcal = isGCalEvent(item);
+                  const name = isGcal ? item.summary : item.name;
+                  const itemContent = (
+                     <div className="flex items-center gap-1 text-xs px-1 py-0.5 rounded" style={{ backgroundColor: `${getItemColor(item)}20` }}>
+                        <div className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: getItemColor(item) }} />
+                        <span className="font-medium truncate" style={{ color: getItemColor(item) }}>{name}</span>
+                      </div>
+                  );
+                  return isGcal ? (
+                    <a key={index} href={item.htmlLink} target="_blank" rel="noopener noreferrer">{itemContent}</a>
+                  ) : (
+                    <Link to={`/projects/${(item as Project).slug}`} key={index}>{itemContent}</Link>
+                  );
+                })}
               </div>
             </div>
           );

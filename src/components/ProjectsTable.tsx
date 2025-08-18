@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Project } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import {
@@ -22,6 +22,7 @@ import { useCreateProject } from "@/hooks/useCreateProject";
 
 import TableView from "./projects/TableView";
 import ListView from "./projects/ListView";
+import YearView from "./projects/YearView";
 import MonthView from "./projects/MonthView";
 import CalendarImportView from "./projects/CalendarImportView";
 
@@ -34,7 +35,7 @@ interface CalendarEvent {
     status: string;
 }
 
-type ViewMode = 'table' | 'list' | 'month' | 'calendar';
+type ViewMode = 'table' | 'list' | 'month' | 'year' | 'calendar';
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -273,6 +274,8 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
         return <ListView projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
       case 'month':
         return <MonthView projects={filteredProjects} gcalEvents={filteredCalendarEvents} />;
+      case 'year':
+        return <YearView projects={filteredProjects} gcalEvents={filteredCalendarEvents} />;
       case 'calendar':
         return <CalendarImportView events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
       default:
@@ -332,6 +335,9 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
                 <List className="h-4 w-4" />
               </ToggleGroupItem>
               <ToggleGroupItem value="month" aria-label="Month view">
+                <CalendarIcon className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="year" aria-label="Year view">
                 <CalendarDays className="h-4 w-4" />
               </ToggleGroupItem>
               <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
@@ -341,7 +347,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
           </div>
         </CardHeader>
         <CardContent>
-          {(view === 'table' || view === 'list' || view === 'calendar' || view === 'month') && (
+          {(view === 'table' || view === 'list' || view === 'calendar' || view === 'month' || view === 'year') && (
             <div className="py-4">
               <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             </div>
