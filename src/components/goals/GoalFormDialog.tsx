@@ -16,7 +16,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import IconPicker from './IconPicker';
-import { colors as tagColors } from '@/data/colors';
+import { colors } from '@/data/colors';
+import { allIcons } from '@/data/icons';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface GoalFormDialogProps {
@@ -65,10 +66,12 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
           icon: goal.icon, tags: goal.tags || [],
         });
       } else {
+        const randomIcon = allIcons[Math.floor(Math.random() * allIcons.length)];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
         setFormData({
           title: '', description: '', type: 'frequency', frequency: 'Daily',
           specificDays: [], targetQuantity: undefined, targetPeriod: 'Monthly',
-          targetValue: undefined, unit: '', color: '#141414', icon: 'Target', tags: [],
+          targetValue: undefined, unit: '', color: randomColor, icon: randomIcon, tags: [],
         });
       }
     }
@@ -79,7 +82,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
   };
 
   const handleTagCreate = (tagName: string): Tag => {
-    const randomColor = tagColors[Math.floor(Math.random() * tagColors.length)];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
     const newTag: Tag = { id: uuidv4(), name: tagName, color: randomColor, isNew: true };
     setAllTags(prev => [...prev, newTag]);
     return newTag;
