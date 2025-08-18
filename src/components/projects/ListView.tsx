@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getStatusStyles, formatInJakarta } from '@/lib/utils';
 
@@ -90,7 +90,15 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                             </Badge>
                           )}
                         </div>
-                        <div className="flex-1 font-medium min-w-0" title={project.name}>{project.name}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate" title={project.name}>{project.name}</p>
+                          {project.venue && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                              <MapPin size={12} />
+                              <span className="truncate">{project.venue}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 pl-2">

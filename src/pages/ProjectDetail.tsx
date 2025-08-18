@@ -77,7 +77,7 @@ const ProjectDetail = () => {
     setIsSaving(true);
 
     try {
-      const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo } = editedProject;
+      const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo, venue } = editedProject;
       
       const { data: updatedProjectRow, error } = await supabase
         .rpc('update_project_details', {
@@ -93,6 +93,7 @@ const ProjectDetail = () => {
           p_payment_due_date: payment_due_date,
           p_member_ids: assignedTo.map(m => m.id),
           p_service_titles: services || [],
+          p_venue: venue,
         })
         .single();
 

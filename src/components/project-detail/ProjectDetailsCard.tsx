@@ -1,12 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project } from "@/types";
-import { Calendar, Wallet, Briefcase } from "lucide-react";
+import { Calendar, Wallet, Briefcase, MapPin } from "lucide-react";
 import { isSameDay } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
 import { formatInJakarta } from "@/lib/utils";
+import { Input } from "../ui/input";
 
 interface ProjectDetailsCardProps {
   project: Project;
@@ -84,6 +85,23 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
             ) : (
               <p className="text-muted-foreground">
                 {formatCurrency(project.budget || 0)}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-start gap-4">
+          <MapPin className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+          <div className="w-full">
+            <p className="font-medium">Venue</p>
+            {isEditing ? (
+              <Input
+                value={project.venue || ''}
+                onChange={(e) => onFieldChange('venue', e.target.value)}
+                placeholder="Enter project venue"
+              />
+            ) : (
+              <p className="text-muted-foreground">
+                {project.venue || 'No venue specified'}
               </p>
             )}
           </div>

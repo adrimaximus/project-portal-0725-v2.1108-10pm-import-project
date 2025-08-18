@@ -77,6 +77,7 @@ export interface Project {
   services: string[];
   briefFiles: ProjectFile[];
   activities?: Activity[];
+  venue?: string;
 }
 
 export type GoalType = 'frequency' | 'quantity' | 'value';
@@ -160,6 +161,7 @@ export interface GoogleCalendarEvent {
   };
   htmlLink: string;
   status: string;
+  location?: string;
 }
 
 export const PROJECT_STATUS_OPTIONS = [

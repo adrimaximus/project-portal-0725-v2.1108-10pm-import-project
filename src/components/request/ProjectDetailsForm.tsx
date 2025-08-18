@@ -35,6 +35,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const [description, setDescription] = useState("");
   const [team, setTeam] = useState<User[]>([]);
   const [files, setFiles] = useState<File[]>([]);
+  const [venue, setVenue] = useState("");
   const navigate = useNavigate();
   const createProjectMutation = useCreateProject();
 
@@ -106,6 +107,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       budget: numericBudget,
       startDate: date?.from?.toISOString(),
       dueDate: date?.to?.toISOString(),
+      venue: venue,
     }, {
       onSuccess: async (newProject) => {
         const newProjectId = newProject.id;
@@ -251,6 +253,15 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
                 onChange={handleBudgetChange}
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="venue">Venue</Label>
+            <Input
+              id="venue"
+              placeholder="e.g., Jakarta Convention Center"
+              value={venue}
+              onChange={(e) => setVenue(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="description">Project Description</Label>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Project } from "@/types";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
@@ -33,6 +34,7 @@ interface CalendarEvent {
     end: { dateTime?: string; date?: string; };
     htmlLink: string;
     status: string;
+    location?: string;
 }
 
 type ViewMode = 'table' | 'list' | 'month' | 'year' | 'calendar';
@@ -251,6 +253,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
       startDate: finalStartDate.toISOString(),
       dueDate: finalDueDate.toISOString(),
       origin_event_id: `cal-${event.id}`,
+      venue: event.location,
     };
 
     createProjectMutation.mutate(newProjectData, {

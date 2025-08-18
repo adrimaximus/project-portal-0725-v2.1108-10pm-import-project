@@ -46,6 +46,7 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
           <TableHead>Progress</TableHead>
           <TableHead>Start Date</TableHead>
           <TableHead>Due Date</TableHead>
+          <TableHead>Venue</TableHead>
           <TableHead>Payment</TableHead>
           <TableHead className="w-[50px]"></TableHead>
         </TableRow>
@@ -53,13 +54,13 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
       <TableBody>
         {isLoading ? (
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
+            <TableCell colSpan={8} className="h-24 text-center">
               Loading projects...
             </TableCell>
           </TableRow>
         ) : projects.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
+            <TableCell colSpan={8} className="h-24 text-center">
               No projects found.
             </TableCell>
           </TableRow>
@@ -89,6 +90,7 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
                 <TableCell>
                   {formatInJakarta(project.due_date, 'MMM d, yyyy')}
                 </TableCell>
+                <TableCell>{project.venue || '-'}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
                     {project.payment_status}
