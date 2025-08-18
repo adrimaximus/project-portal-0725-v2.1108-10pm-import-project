@@ -126,14 +126,22 @@ const GoalDetailPage = () => {
     const toAdd = updatedCollaborators.filter(c => !currentCollaboratorIds.has(c.id));
     const toRemove = goal.collaborators.filter(c => !updatedCollaboratorIds.has(c.id) && c.id !== currentUser.id);
 
-    if (toRemove.length > 0) {
-      await supabase.from('goal_collaborators').delete().eq('goal_id', goal.id).in('user_id', toRemove.map(c => c.id));
+    try {
+      if (toRemove.length > 0) {
+        const { error } = await supabase.from('goal_collaborators').delete().eq('goal_id', goal.id).in('user_id', toRemove.map(c => c.id));
+        if (error) throw error;
+      }
+      if (toAdd.length > 0) {
+        const { error } = await supabase.from('goal_collaborators').insert(toAdd.map(c => ({ goal_id: goal.id, user_id: c.id })));
+        if (error) throw error;
+      }
+      toast.success("Collaborators updated successfully!");
+    } catch (error: any) {
+      toast.error("Failed to update collaborators.", { description: error.message });
+    } finally {
+      queryClient.invalidateQueries({ queryKey: ['goal', slug] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
     }
-    if (toAdd.length > 0) {
-      await supabase.from('goal_collaborators').insert(toAdd.map(c => ({ goal_id: goal.id, user_id: c.id })));
-    }
-    
-    queryClient.invalidateQueries({ queryKey: ['goal', slug] });
   };
 
   if (isLoading || !goal) {
