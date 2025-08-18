@@ -131,10 +131,31 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
         onSuccess(goal);
       } else {
         const { tags, ...restOfFormData } = formData;
-        const createPayload = { ...restOfFormData, tags: tags };
-        const { data: newGoal, error: goalError } = await supabase.functions.invoke('secure-create-goal', { body: createPayload });
-        if (goalError) throw goalError;
-        toast.success(`Goal "${newGoal.title}" created!`);
+        const existingTagIds = tags.filter(t => !t.isNew && t.id).map(t => t.id);
+        const newCustomTags = tags.filter(t => t.isNew).map(({ name, color }) => ({ name, color }));
+
+        const { data: newGoal, error: rpcError } = await supabase
+          .rpc('create_goal_and_link_tags', {
+            p_title: restOfFormData.title,
+            p_description: restOfFormData.description,
+            p_icon: restOfFormData.icon,
+            p_color: restOfFormData.color,
+            p_type: restOfFormData.type,
+            p_frequency: restOfFormData.frequency,
+            p_specific_days: restOfFormData.specificDays,
+            p_target_quantity: restOfFormData.targetQuantity,
+            p_target_period: restOfFormData.targetPeriod,
+            p_target_value: restOfFormData.targetValue,
+            p_unit: restOfFormData.unit,
+            p_existing_tags: existingTagIds,
+            p_custom_tags: newCustomTags,
+          })
+          .single();
+
+        if (rpcError) throw rpcError;
+        if (!newGoal) throw new Error("Goal creation did not return the new goal data.");
+
+        toast.success(`Goal "${(newGoal as Goal).title}" created!`);
         onSuccess(newGoal);
       }
     } catch (error: any) {
