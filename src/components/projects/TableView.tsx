@@ -18,8 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StatusBadge from "../StatusBadge";
-import { format } from "date-fns";
-import { getStatusStyles, cn, parseUTCDate } from "@/lib/utils";
+import { getStatusStyles, cn, formatInJakarta } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 interface TableViewProps {
@@ -85,10 +84,10 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
                   </div>
                 </TableCell>
                 <TableCell>
-                  {project.start_date ? format(parseUTCDate(project.start_date)!, 'MMM d, yyyy') : 'N/A'}
+                  {formatInJakarta(project.start_date, 'MMM d, yyyy')}
                 </TableCell>
                 <TableCell>
-                  {project.due_date ? format(parseUTCDate(project.due_date)!, 'MMM d, yyyy') : 'N/A'}
+                  {formatInJakarta(project.due_date, 'MMM d, yyyy')}
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>

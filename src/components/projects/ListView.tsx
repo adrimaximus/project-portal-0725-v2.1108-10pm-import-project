@@ -10,32 +10,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getStatusStyles, parseUTCDate } from '@/lib/utils';
+import { getStatusStyles, parseUTCDate, formatInJakarta } from '@/lib/utils';
 import { format } from 'date-fns';
 
-// Helper to format dates
-const formatDate = (date: Date) => {
-  const day = date.toLocaleDateString('id-ID', { weekday: 'short' });
-  const dayOfMonth = date.getDate().toString().padStart(2, '0');
-  return { day, dayOfMonth };
-};
-
-const formatMonthYear = (date: Date) => {
-  return date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-};
-
-const formatEndDate = (dateStr: string) => {
-  const date = parseUTCDate(dateStr);
-  if (!date) return '';
-  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-};
-
-interface ProjectsListProps {
-  projects: Project[];
-  onDeleteProject: (projectId: string) => void;
-}
-
-const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
+const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
   const navigate = useNavigate();
 
   const sortedProjects = projects
@@ -68,13 +46,13 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
   return (
     <div className="space-y-4">
       {Object.entries(groupedByDay).map(([dateStr, projectsOnDay]) => {
-        const [year, month, day] = dateStr.split('-').map(Number);
-        const date = new Date(year, month - 1, day);
-        const currentMonth = formatMonthYear(date);
+        const date = new Date(dateStr);
+        const currentMonth = formatInJakarta(date, 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastMonth;
         lastMonth = currentMonth;
 
-        const { day: dayOfWeek, dayOfMonth } = formatDate(date);
+        const dayOfWeek = formatInJakarta(date, 'EEE');
+        const dayOfMonth = formatInJakarta(date, 'dd');
 
         return (
           <div key={dateStr}>
@@ -107,7 +85,7 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
                           </div>
                           {isMultiDay && project.due_date && (
                             <Badge variant="outline" className="mt-1.5 font-normal text-xs">
-                              Hingga {formatEndDate(project.due_date)}
+                              Hingga {formatInJakarta(project.due_date, 'd MMM')}
                             </Badge>
                           )}
                         </div>

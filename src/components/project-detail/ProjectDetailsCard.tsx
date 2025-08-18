@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project } from "@/types";
 import { Calendar, Wallet, Briefcase } from "lucide-react";
-import { format, isSameDay } from "date-fns";
+import { isSameDay } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
+import { formatInJakarta } from "@/lib/utils";
 
 interface ProjectDetailsCardProps {
   project: Project;
@@ -39,9 +40,9 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     const end = project.due_date ? new Date(project.due_date) : start;
 
     if (isSameDay(start, end)) {
-        return format(start, "dd MMM yyyy");
+        return formatInJakarta(project.start_date, "dd MMM yyyy");
     }
-    return `${format(start, "dd MMM yyyy")} - ${format(end, "dd MMM yyyy")}`;
+    return `${formatInJakarta(project.start_date, "dd MMM yyyy")} - ${formatInJakarta(project.due_date!, "dd MMM yyyy")}`;
   };
 
   return (

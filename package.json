@@ -65,6 +65,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
     "dayjs": "^1.11.13",
     "embla-carousel-react": "^8.3.0",
     "gapi-script": "^1.2.0",

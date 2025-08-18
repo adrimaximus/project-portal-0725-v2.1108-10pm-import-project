@@ -1,5 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatInTimeZone } from 'date-fns-tz'
+import { id } from 'date-fns/locale'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -72,3 +74,13 @@ export const parseUTCDate = (dateString: string | null | undefined): Date | null
   const date = new Date(dateString);
   return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 };
+
+export const formatInJakarta = (dateString: string | Date | null | undefined, formatStr: string): string => {
+    if (!dateString) return 'N/A';
+    try {
+        return formatInTimeZone(dateString, 'Asia/Jakarta', formatStr, { locale: id });
+    } catch (error) {
+        console.error("Error formatting date:", error);
+        return "Invalid Date";
+    }
+}
