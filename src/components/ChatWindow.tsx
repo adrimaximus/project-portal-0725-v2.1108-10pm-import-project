@@ -2,7 +2,6 @@ import ChatHeader from "./ChatHeader";
 import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
 import { Conversation, Attachment } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
 import ChatPlaceholder from "./ChatPlaceholder";
 
 interface ChatWindowProps {
@@ -10,12 +9,12 @@ interface ChatWindowProps {
   onSendMessage: (text: string, attachment: Attachment | null) => void;
   onClearChat: (conversationId: string) => void;
   onBack?: () => void;
+  typing?: boolean;
+  onTyping?: () => void;
 }
 
-const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onBack }: ChatWindowProps) => {
-  const { user: currentUser } = useAuth();
-
-  if (!selectedConversation || !currentUser) {
+const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onBack, typing, onTyping }: ChatWindowProps) => {
+  if (!selectedConversation) {
     return <ChatPlaceholder />;
   }
 
@@ -25,6 +24,7 @@ const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onBack }
         selectedConversation={selectedConversation}
         onClearChat={onClearChat}
         onBack={onBack}
+        typing={typing}
       />
       <ChatConversation
         messages={selectedConversation.messages}
@@ -32,7 +32,8 @@ const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onBack }
       />
       <ChatInput 
         conversationId={selectedConversation.id}
-        onSendMessage={onSendMessage} 
+        onSendMessage={onSendMessage}
+        onTyping={onTyping}
       />
     </div>
   );

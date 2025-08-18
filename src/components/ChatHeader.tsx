@@ -28,9 +28,10 @@ interface ChatHeaderProps {
   selectedConversation: Conversation | null;
   onClearChat: (conversationId: string) => void;
   onBack?: () => void;
+  typing?: boolean;
 }
 
-const ChatHeader = ({ selectedConversation, onClearChat, onBack }: ChatHeaderProps) => {
+const ChatHeader = ({ selectedConversation, onClearChat, onBack, typing = false }: ChatHeaderProps) => {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -52,7 +53,7 @@ const ChatHeader = ({ selectedConversation, onClearChat, onBack }: ChatHeaderPro
   };
 
   return (
-    <div className="flex items-center p-4 border-b">
+    <div className="flex items-center p-4 border-b bg-background/60 backdrop-blur">
       {onBack && (
         <Button variant="ghost" size="icon" className="mr-2 md:hidden" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
@@ -72,7 +73,9 @@ const ChatHeader = ({ selectedConversation, onClearChat, onBack }: ChatHeaderPro
         {isGroup ? (
           <p className="text-sm text-muted-foreground">{members?.length} members</p>
         ) : (
-          <p className="text-sm text-muted-foreground">Online</p>
+          <p className="text-sm text-muted-foreground">
+            {typing ? "Typing..." : "Online"}
+          </p>
         )}
       </div>
       <div className="flex items-center gap-2">

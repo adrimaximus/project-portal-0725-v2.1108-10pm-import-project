@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Paperclip, Send, X, Loader2 } from "lucide-react";
@@ -11,13 +11,23 @@ import { toast } from "sonner";
 interface ChatInputProps {
   conversationId: string;
   onSendMessage: (text: string, attachment: Attachment | null) => void;
+  onTyping?: () => void;
 }
 
-const ChatInput = ({ conversationId, onSendMessage }: ChatInputProps) => {
+const ChatInput = ({ conversationId, onSendMessage, onTyping }: ChatInputProps) => {
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { user: currentUser } = useAuth();
+  const lastTypingSentAtRef = useRef<number>(0);
+
+  const triggerTyping = () => {
+    const now = Date.now();
+    if (onTyping && now - lastTypingSentAtRef.current > 800) {
+      lastTypingSentAtRef.current = now;
+      onTyping();
+    }
+  };
 
   const handleSend = async () => {
     if ((!text.trim() && !attachmentFile) || !currentUser) return;
@@ -68,11 +78,16 @@ const ChatInput = ({ conversationId, onSendMessage }: ChatInputProps) => {
         <Textarea
           placeholder="Type a message..."
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            triggerTyping();
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               handleSend();
+            } else {
+              triggerTyping();
             }
           }}
           className="pr-24"

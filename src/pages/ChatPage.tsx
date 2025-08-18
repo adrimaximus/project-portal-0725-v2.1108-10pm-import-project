@@ -1,21 +1,31 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ChatList from "@/components/ChatList";
 import ChatWindow from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
-import { Collaborator, Attachment, User, Message, Conversation } from "@/types";
+import { Collaborator, Attachment, Message, Conversation } from "@/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+type RealtimeChannelRef = {
+  unsubscribe: () => void;
+};
+
 const ChatPage = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [isSomeoneTyping, setIsSomeoneTyping] = useState(false);
+
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { user: currentUser } = useAuth();
+
+  const messageChannelRef = useRef<RealtimeChannelRef | null>(null);
+  const conversationsChannelRef = useRef<RealtimeChannelRef | null>(null);
+  const typingTimerRef = useRef<number | null>(null);
 
   const fetchConversations = useCallback(async () => {
     if (!currentUser) return;
@@ -42,11 +52,12 @@ const ChatPage = () => {
         name: p.name,
         avatar: p.avatar_url,
         initials: p.initials,
-        online: true, // Placeholder
+        online: true,
       })),
     }));
 
     setConversations(mappedConversations);
+    // Auto-select first conversation on desktop for speed
     if (!isMobile && mappedConversations.length > 0 && !selectedConversationId) {
       setSelectedConversationId(mappedConversations[0].id);
     }
@@ -56,8 +67,114 @@ const ChatPage = () => {
     fetchConversations();
   }, [fetchConversations]);
 
+  const attachConversationRealtime = useCallback((conversationId: string) => {
+    // Cleanup previous channel if any
+    if (messageChannelRef.current) {
+      messageChannelRef.current.unsubscribe();
+      messageChannelRef.current = null;
+    }
+    if (!currentUser) return;
+
+    // Create a dedicated channel for this conversation:
+    const ch = supabase.channel(`conversation:${conversationId}`, {
+      config: { broadcast: { self: true } },
+    });
+
+    // Receive new messages for this conversation only (fast & scoped)
+    ch.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+      (payload: any) => {
+        const newMessage = payload.new as any;
+        if (newMessage.sender_id === currentUser.id) return;
+
+        setConversations(prevConvos => {
+          const idx = prevConvos.findIndex(c => c.id === conversationId);
+          if (idx === -1) return prevConvos;
+
+          const convo = prevConvos[idx];
+          const sender = convo.members?.find(m => m.id === newMessage.sender_id);
+
+          if (!sender) return prevConvos;
+
+          const updatedConvo = {
+            ...convo,
+            lastMessage: newMessage.content || (newMessage.attachment_name || 'Attachment'),
+            lastMessageTimestamp: newMessage.created_at,
+          };
+
+          if (selectedConversationId === conversationId) {
+            const exists = updatedConvo.messages.some(m => m.id === newMessage.id);
+            if (!exists) {
+              updatedConvo.messages = [
+                ...updatedConvo.messages,
+                {
+                  id: newMessage.id,
+                  text: newMessage.content,
+                  timestamp: newMessage.created_at,
+                  sender: sender,
+                  attachment: newMessage.attachment_url
+                    ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type }
+                    : undefined,
+                } as Message,
+              ];
+            }
+          }
+
+          const copy = [...prevConvos];
+          copy[idx] = updatedConvo;
+          // Move to top
+          const [moved] = copy.splice(idx, 1);
+          copy.unshift(moved);
+          return copy;
+        });
+      }
+    );
+
+    // Typing indicator via broadcast events
+    ch.on('broadcast', { event: 'typing' }, (payload: any) => {
+      if (payload?.userId && payload.userId !== currentUser.id) {
+        setIsSomeoneTyping(true);
+        if (typingTimerRef.current) {
+          window.clearTimeout(typingTimerRef.current);
+        }
+        typingTimerRef.current = window.setTimeout(() => setIsSomeoneTyping(false), 1500);
+      }
+    });
+
+    ch.subscribe();
+    messageChannelRef.current = {
+      unsubscribe: () => supabase.removeChannel(ch),
+    };
+  }, [currentUser, selectedConversationId]);
+
+  useEffect(() => {
+    // Global conversations channel to keep the list fresh (trigger updates on new messages)
+    if (conversationsChannelRef.current) return;
+
+    const ch = supabase
+      .channel('conversations-list')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'conversations' },
+        () => fetchConversations()
+      )
+      .subscribe();
+
+    conversationsChannelRef.current = {
+      unsubscribe: () => supabase.removeChannel(ch),
+    };
+
+    return () => {
+      conversationsChannelRef.current?.unsubscribe();
+      conversationsChannelRef.current = null;
+    };
+  }, [fetchConversations]);
+
   const handleConversationSelect = useCallback(async (id: string) => {
     setSelectedConversationId(id);
+    setIsSomeoneTyping(false);
+
     const { data, error } = await supabase
       .from('messages')
       .select('*, sender:profiles(id, first_name, last_name, avatar_url, email)')
@@ -69,13 +186,13 @@ const ChatPage = () => {
       return;
     }
 
-    const mappedMessages: Message[] = data.map((m: any) => ({
+    const mappedMessages: Message[] = (data || []).map((m: any) => ({
       id: m.id,
       text: m.content,
       timestamp: m.created_at,
       sender: {
         id: m.sender.id,
-        name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim(),
+        name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim() || m.sender.email,
         avatar: m.sender.avatar_url,
         initials: `${m.sender.first_name?.[0] || ''}${m.sender.last_name?.[0] || ''}`.toUpperCase(),
         email: m.sender.email,
@@ -83,110 +200,55 @@ const ChatPage = () => {
       attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
     }));
 
-    setConversations(prev => prev.map(c => c.id === id ? { ...c, messages: mappedMessages } : c));
-  }, []);
+    setConversations(prev =>
+      prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c))
+    );
 
-  const handleStartNewChat = useCallback(async (collaborator: Collaborator) => {
-    if (!currentUser) return;
-    const { data, error } = await supabase.rpc('create_or_get_conversation', {
-      p_other_user_id: collaborator.id,
-      p_is_group: false
-    });
+    // Attach scoped realtime subscription for this conversation
+    attachConversationRealtime(id);
+  }, [attachConversationRealtime]);
 
-    if (error) {
-      toast.error("Failed to start chat.");
-      console.error("Failed to start chat:", error);
-    } else {
-      await fetchConversations();
-      handleConversationSelect(data);
-    }
-  }, [currentUser, fetchConversations, handleConversationSelect]);
-
+  // Deep-link: start chat with a collaborator from other pages
   useEffect(() => {
-    const collaboratorToChat = location.state?.selectedCollaborator;
+    const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
     if (collaboratorToChat && currentUser) {
-      const existingConvo = conversations.find(c => 
+      const existingConvo = conversations.find(c =>
         !c.isGroup && c.members?.some(m => m.id === collaboratorToChat.id && m.id !== currentUser.id)
       );
 
       if (existingConvo) {
         handleConversationSelect(existingConvo.id);
       } else {
-        handleStartNewChat(collaboratorToChat);
+        (async () => {
+          const { data, error } = await supabase.rpc('create_or_get_conversation', {
+            p_other_user_id: collaboratorToChat.id,
+            p_is_group: false
+          });
+          if (!error && data) {
+            await fetchConversations();
+            handleConversationSelect(data as string);
+          }
+        })();
       }
-      
+
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state, currentUser, conversations, navigate, handleConversationSelect, handleStartNewChat]);
+  }, [location.state, currentUser, conversations, navigate, handleConversationSelect, fetchConversations]);
 
+  // Cleanup on unmount
   useEffect(() => {
-    if (!currentUser) return;
-
-    const handleNewMessage = (payload: any) => {
-      const newMessage = payload.new as any;
-      if (newMessage.sender_id === currentUser?.id) {
-        return;
-      }
-
-      setConversations(prevConvos => {
-        const convoIndex = prevConvos.findIndex(c => c.id === newMessage.conversation_id);
-        if (convoIndex === -1) {
-          fetchConversations();
-          return prevConvos;
-        }
-
-        const targetConvo = prevConvos[convoIndex];
-        const sender = targetConvo.members?.find(m => m.id === newMessage.sender_id);
-
-        if (!sender) {
-          console.warn("Could not find sender in conversation members:", newMessage.sender_id);
-          return prevConvos;
-        }
-
-        const updatedConvo = {
-          ...targetConvo,
-          lastMessage: newMessage.content || (newMessage.attachment_name || 'Attachment'),
-          lastMessageTimestamp: newMessage.created_at,
-        };
-
-        if (targetConvo.id === selectedConversationId) {
-          const messageExists = targetConvo.messages.some(m => m.id === newMessage.id);
-          if (!messageExists) {
-            updatedConvo.messages = [...targetConvo.messages, {
-              id: newMessage.id,
-              text: newMessage.content,
-              timestamp: newMessage.created_at,
-              sender: sender,
-              attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
-            }];
-          }
-        }
-
-        const newConvos = [...prevConvos];
-        newConvos[convoIndex] = updatedConvo;
-        
-        const [movedConvo] = newConvos.splice(convoIndex, 1);
-        newConvos.unshift(movedConvo);
-
-        return newConvos;
-      });
-    };
-
-    const subscription = supabase
-      .channel('public:messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, handleNewMessage)
-      .subscribe();
-
     return () => {
-      supabase.removeChannel(subscription);
+      messageChannelRef.current?.unsubscribe();
+      conversationsChannelRef.current?.unsubscribe();
+      if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
     };
-  }, [selectedConversationId, currentUser, fetchConversations]);
+  }, []);
 
   const handleSendMessage = async (conversationId: string, messageText: string, attachment: Attachment | null) => {
     if (!conversationId || !currentUser) return;
 
     const tempId = `temp-${Date.now()}`;
-    const optimisticMessage: Message = {
+    const optimistic: Message = {
       id: tempId,
       text: messageText,
       timestamp: new Date().toISOString(),
@@ -195,20 +257,19 @@ const ChatPage = () => {
     };
 
     setConversations(prev =>
-      prev.map(convo => {
-        if (convo.id === conversationId) {
-          return {
-            ...convo,
-            messages: [...convo.messages, optimisticMessage],
-            lastMessage: messageText || (attachment ? attachment.name : 'Attachment'),
-            lastMessageTimestamp: optimisticMessage.timestamp,
-          };
-        }
-        return convo;
-      })
+      prev.map(convo =>
+        convo.id === conversationId
+          ? {
+              ...convo,
+              messages: [...convo.messages, optimistic],
+              lastMessage: messageText || (attachment ? attachment.name : 'Attachment'),
+              lastMessageTimestamp: optimistic.timestamp,
+            }
+          : convo
+      )
     );
 
-    let attachmentData = {};
+    let attachmentData: any = {};
     if (attachment) {
       attachmentData = {
         attachment_url: attachment.url,
@@ -231,80 +292,57 @@ const ChatPage = () => {
     if (error) {
       toast.error("Failed to send message.", { description: error.message });
       setConversations(prev =>
-        prev.map(convo => {
-          if (convo.id === conversationId) {
-            return {
-              ...convo,
-              messages: convo.messages.filter(m => m.id !== tempId),
-            };
-          }
-          return convo;
-        })
+        prev.map(convo =>
+          convo.id === conversationId
+            ? { ...convo, messages: convo.messages.filter(m => m.id !== tempId) }
+            : convo
+        )
       );
     } else {
       setConversations(prev =>
-        prev.map(convo => {
-          if (convo.id === conversationId) {
-            return {
-              ...convo,
-              messages: convo.messages.map(m =>
-                m.id === tempId ? { ...m, id: dbMessage.id, timestamp: dbMessage.created_at } : m
-              ),
-            };
-          }
-          return convo;
-        })
+        prev.map(convo =>
+          convo.id === conversationId
+            ? {
+                ...convo,
+                messages: convo.messages.map(m =>
+                  m.id === tempId ? { ...m, id: dbMessage.id, timestamp: dbMessage.created_at } : m
+                ),
+              }
+            : convo
+        )
       );
     }
   };
 
-  const handleStartNewGroupChat = async (
-    members: Collaborator[],
-    groupName: string
-  ) => {
-    if (!currentUser) return;
-    if (members.length === 0 || !groupName) {
-      toast.error("Please select members and provide a group name.");
-      return;
-    }
-
-    const participantIds = members.map(m => m.id);
-    
-    const { data, error } = await supabase.rpc('create_group_conversation', {
-      p_group_name: groupName,
-      p_participant_ids: participantIds
-    });
-
-    if (error) {
-      toast.error("Failed to create group chat.");
-      console.error("Failed to create group chat:", error);
+  const sendTyping = useCallback(() => {
+    if (!selectedConversationId || !messageChannelRef.current) return;
+    // Broadcast a typing event to the current conversation channel
+    const chName = `conversation:${selectedConversationId}`;
+    const ch = (supabase as any).realtime.channels.find((c: any) => c.topic === `realtime:${chName}`);
+    // Fallback: use the existing reference
+    if (ch && ch.send) {
+      ch.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { userId: currentUser?.id },
+      });
     } else {
-      await fetchConversations();
-      handleConversationSelect(data);
+      // Use the stored channel ref if available
+      try {
+        // @ts-ignore
+        const internal = (messageChannelRef.current as any);
+        if (internal?.send) {
+          internal.send({
+            type: 'broadcast',
+            event: 'typing',
+            payload: { userId: currentUser?.id },
+          });
+        }
+      } catch (_) {}
     }
-  };
+  }, [selectedConversationId, currentUser]);
 
-  const handleClearChat = async (conversationId: string) => {
-    const { error } = await supabase
-      .from('messages')
-      .delete()
-      .eq('conversation_id', conversationId);
-
-    if (error) {
-      toast.error("Failed to clear chat history.");
-    } else {
-      toast.success("Chat history has been cleared.");
-      setConversations(prev => prev.map(c => 
-        c.id === conversationId 
-        ? { ...c, messages: [], lastMessage: "Chat cleared", lastMessageTimestamp: new Date().toISOString() } 
-        : c
-      ));
-    }
-  };
-
-  const selectedConversation = conversations.find(
-    (c) => c.id === selectedConversationId
-  );
+  const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
 
   if (isMobile) {
     return (
@@ -315,15 +353,47 @@ const ChatPage = () => {
               conversations={conversations}
               selectedConversationId={selectedConversationId}
               onSelectConversation={handleConversationSelect}
-              onStartNewChat={handleStartNewChat}
-              onStartNewGroupChat={handleStartNewGroupChat}
+              onStartNewChat={async (collaborator: Collaborator) => {
+                if (!currentUser) return;
+                const { data, error } = await supabase.rpc('create_or_get_conversation', {
+                  p_other_user_id: collaborator.id,
+                  p_is_group: false
+                });
+                if (!error && data) {
+                  await fetchConversations();
+                  handleConversationSelect(data as string);
+                }
+              }}
+              onStartNewGroupChat={async (members: Collaborator[], groupName: string) => {
+                if (!currentUser) return;
+                const participantIds = members.map(m => m.id);
+                const { data, error } = await supabase.rpc('create_group_conversation', {
+                  p_group_name: groupName,
+                  p_participant_ids: participantIds
+                });
+                if (!error && data) {
+                  await fetchConversations();
+                  handleConversationSelect(data as string);
+                }
+              }}
             />
           ) : (
             <ChatWindow
               selectedConversation={selectedConversation}
               onSendMessage={(text, attachment) => handleSendMessage(selectedConversation.id, text, attachment)}
-              onClearChat={handleClearChat}
+              onClearChat={async (conversationId: string) => {
+                const { error } = await supabase.from('messages').delete().eq('conversation_id', conversationId);
+                if (error) toast.error("Failed to clear chat history.");
+                else {
+                  toast.success("Chat history has been cleared.");
+                  setConversations(prev => prev.map(c =>
+                    c.id === conversationId ? { ...c, messages: [], lastMessage: "Chat cleared", lastMessageTimestamp: new Date().toISOString() } : c
+                  ));
+                }
+              }}
               onBack={() => setSelectedConversationId(null)}
+              typing={isSomeoneTyping}
+              onTyping={sendTyping}
             />
           )}
         </div>
@@ -338,13 +408,45 @@ const ChatPage = () => {
           conversations={conversations}
           selectedConversationId={selectedConversationId}
           onSelectConversation={handleConversationSelect}
-          onStartNewChat={handleStartNewChat}
-          onStartNewGroupChat={handleStartNewGroupChat}
+          onStartNewChat={async (collaborator: Collaborator) => {
+            if (!currentUser) return;
+            const { data, error } = await supabase.rpc('create_or_get_conversation', {
+              p_other_user_id: collaborator.id,
+              p_is_group: false
+            });
+            if (!error && data) {
+              await fetchConversations();
+              handleConversationSelect(data as string);
+            }
+          }}
+          onStartNewGroupChat={async (members: Collaborator[], groupName: string) => {
+            if (!currentUser) return;
+            const participantIds = members.map(m => m.id);
+            const { data, error } = await supabase.rpc('create_group_conversation', {
+              p_group_name: groupName,
+              p_participant_ids: participantIds
+            });
+            if (!error && data) {
+              await fetchConversations();
+              handleConversationSelect(data as string);
+            }
+          }}
         />
         <ChatWindow
           selectedConversation={selectedConversation}
-          onSendMessage={(text, attachment) => handleSendMessage(selectedConversationId!, text, attachment)}
-          onClearChat={handleClearChat}
+          onSendMessage={(text, attachment) => selectedConversationId && handleSendMessage(selectedConversationId, text, attachment)}
+          onClearChat={async (conversationId: string) => {
+            const { error } = await supabase.from('messages').delete().eq('conversation_id', conversationId);
+            if (error) toast.error("Failed to clear chat history.");
+            else {
+              toast.success("Chat history has been cleared.");
+              setConversations(prev => prev.map(c =>
+                c.id === conversationId ? { ...c, messages: [], lastMessage: "Chat cleared", lastMessageTimestamp: new Date().toISOString() } : c
+              ));
+            }
+          }}
+          typing={isSomeoneTyping}
+          onTyping={sendTyping}
         />
       </div>
     </PortalLayout>
