@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
-import { Package, BarChart, Users, ListChecks, ArrowRight } from 'lucide-react';
+import { Package, BarChart, Users, ListChecks, ArrowRight, BrainCircuit } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const LandingPage = () => {
@@ -34,6 +34,11 @@ const LandingPage = () => {
       icon: <Users className="h-10 w-10 text-primary" />,
       title: 'Seamless Collaboration',
       description: 'Work together with your team and clients effortlessly. Assign tasks, share files, and keep all project-related communication centralized and organized.',
+    },
+    {
+      icon: <BrainCircuit className="h-10 w-10 text-primary" />,
+      title: 'Smart AI Agent',
+      description: 'Leverage our smart AI to get insights, recall data, and execute tasks like creating projects, updating goals, and more—all through simple conversation.',
     },
   ];
 
@@ -76,12 +81,12 @@ const LandingPage = () => {
                 Everything you need to stay on top of your client work.
               </p>
             </div>
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {features.map((feature, index) => (
-                <div key={index} className="bg-background p-8 rounded-lg shadow-sm">
+                <div key={index} className="bg-background p-8 rounded-lg shadow-sm flex flex-col">
                   <div className="mb-6">{feature.icon}</div>
                   <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
+                  <p className="text-muted-foreground flex-grow">{feature.description}</p>
                 </div>
               ))}
             </div>
