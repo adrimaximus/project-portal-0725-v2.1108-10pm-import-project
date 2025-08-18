@@ -175,6 +175,7 @@ export interface Tag {
     id: string;
     name: string;
     color: string;
+    isNew?: boolean;
 }
 
 export interface GoalCompletion {
