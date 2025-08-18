@@ -179,13 +179,34 @@ CONTEXT:
             }
             params.p_service_titles = Array.from(currentServices);
 
-            // Use the admin client to perform the update, bypassing user-level RLS.
             const { error: updateError } = await supabaseAdmin.rpc('update_project_details', params);
 
             if (updateError) {
                 responseData = { result: `I tried to update the project, but failed. The database said: ${updateError.message}` };
             } else {
-                responseData = { result: `Done! I've updated the project "${project.name}".` };
+                const changes = [];
+                for (const [key, value] of Object.entries(updates)) {
+                    switch (key) {
+                        case 'name': changes.push(`renamed it to "${value}"`); break;
+                        case 'description': changes.push(`updated the description`); break;
+                        case 'status': changes.push(`changed the status to "${value}"`); break;
+                        case 'payment_status': changes.push(`updated the payment status to "${value}"`); break;
+                        case 'budget': changes.push(`set the budget to a new value`); break;
+                        case 'start_date': changes.push(`set the start date to ${new Date(value).toLocaleDateString('en-CA')}`); break;
+                        case 'due_date': changes.push(`set the due date to ${new Date(value).toLocaleDateString('en-CA')}`); break;
+                        case 'venue': changes.push(`set the venue to "${value}"`); break;
+                        case 'add_members': changes.push(`added ${value.join(', ')} to the team`); break;
+                        case 'remove_members': changes.push(`removed ${value.join(', ')} from the team`); break;
+                        case 'add_services': changes.push(`added the services: ${value.join(', ')}`); break;
+                        case 'remove_services': changes.push(`removed the services: ${value.join(', ')}`); break;
+                    }
+                }
+                if (changes.length > 0) {
+                    const changesString = changes.join(' and ');
+                    responseData = { result: `Done! For the project "${project.name}", I've ${changesString}.` };
+                } else {
+                    responseData = { result: `Done! I've updated the project "${project.name}".` };
+                }
             }
 
         } else if (actionData && actionData.action === 'CREATE_TASK') {
@@ -196,7 +217,6 @@ CONTEXT:
                 break;
             }
 
-            // Use the admin client to create the task.
             const { error: taskError } = await supabaseAdmin.from('tasks').insert({
                 project_id: project.id,
                 title: task_title,
