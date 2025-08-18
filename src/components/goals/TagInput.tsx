@@ -128,7 +128,7 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                 value={inputValue}
                 onValueChange={setInputValue}
               />
-              <CommandList className="max-h-48">
+              <CommandList className="max-h-48 overflow-y-auto">
                 <CommandEmpty>
                   <Button variant="ghost" className="w-full justify-start" onClick={handleCreate}>
                     <PlusCircle className="mr-2 h-4 w-4" />
