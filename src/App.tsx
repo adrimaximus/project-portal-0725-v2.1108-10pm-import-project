@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { useFeatures } from "./contexts/FeaturesContext";
 import { useAuth } from "./contexts/AuthContext";
 import React, { useEffect } from "react";
-import { showError } from "./utils/toast";
+import { toast } from "sonner";
 
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/Dashboard";
@@ -40,7 +40,7 @@ import LoadingScreen from "./components/LoadingScreen";
 const AccessDenied = () => {
   const navigate = useNavigate();
   useEffect(() => {
-    showError("You do not have permission to access this page.");
+    toast.error("You do not have permission to access this page.");
     navigate('/dashboard', { replace: true });
   }, [navigate]);
   return <LoadingScreen />;
