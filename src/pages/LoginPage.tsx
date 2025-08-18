@@ -56,6 +56,20 @@ const LoginPage = () => {
     // On success, the onAuthStateChange listener in AuthContext will handle navigation.
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+    if (error) {
+      toast.error(error.message);
+      setIsLoading(false);
+    }
+  };
+
   const handleForgotPassword = async () => {
     const email = form.getValues("email");
     if (!email) {
@@ -171,7 +185,7 @@ const LoginPage = () => {
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Sign In
                 </Button>
-                <Button type="button" variant="outline" className="w-full" disabled={isLoading}>
+                <Button type="button" variant="outline" className="w-full" disabled={isLoading} onClick={handleGoogleSignIn}>
                   <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 21.2 172.9 60.3l-66.8 64.2C314.6 99.8 283.5 84 248 84c-84.3 0-152.3 68.2-152.3 152S163.7 428 248 428c97.3 0 131.2-75.3 134.8-112.9H248v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.4z"></path></svg>
                   Sign In with Google
                 </Button>
