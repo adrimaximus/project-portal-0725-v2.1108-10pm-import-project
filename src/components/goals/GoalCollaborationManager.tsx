@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Goal } from '@/types';
-import { User } from '@/types';
+import { useState } from 'react';
+import { Goal, User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, MoreVertical, UserCog } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,10 +14,28 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '../ui/badge';
 
 interface GoalCollaborationManagerProps {
   goal: Goal;
@@ -29,25 +46,9 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
   const { user: currentUser } = useAuth();
   const [selectedUsers, setSelectedUsers] = useState<string[]>(goal.collaborators.map(c => c.id));
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [userToMakeOwner, setUserToMakeOwner] = useState<User | null>(null);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const { data, error } = await supabase.from('profiles').select('*');
-      if (data && currentUser) {
-        const users = data.map(profile => ({
-          id: profile.id,
-          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
-          avatar: profile.avatar_url,
-          email: profile.email,
-          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-        }));
-        setAvailableUsers(users.filter(u => u.id !== currentUser.id));
-      }
-    };
-    fetchUsers();
-  }, [currentUser]);
+  const isOwner = currentUser?.id === goal.user_id;
 
   const handleUserSelect = (userId: string, isSelected: boolean) => {
     if (isSelected) {
@@ -63,60 +64,82 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
     toast.success('Collaborators updated successfully!');
   };
 
+  const handleTransferOwnership = async () => {
+    if (!userToMakeOwner) return;
+
+    const { error } = await supabase.rpc('transfer_goal_ownership', {
+      p_goal_id: goal.id,
+      p_new_owner_id: userToMakeOwner.id,
+    });
+
+    if (error) {
+      toast.error("Failed to transfer ownership.", { description: error.message });
+    } else {
+      toast.success(`Ownership transferred to ${userToMakeOwner.name}.`);
+      onCollaboratorsUpdate([]); // Trigger a refetch
+    }
+    setUserToMakeOwner(null);
+  };
+
   if (!currentUser) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Collaborators</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center space-x-2">
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Collaborators</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           {goal.collaborators.map(user => (
-            <Avatar key={user.id}>
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback>{user.initials}</AvatarFallback>
-            </Avatar>
-          ))}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="icon" className="rounded-full">
-                <PlusCircle className="h-5 w-5" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Invite Collaborators</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                {availableUsers.map(user => (
-                  <div key={user.id} className="flex items-center space-x-3">
-                    <Checkbox
-                      id={`user-${user.id}`}
-                      checked={selectedUsers.includes(user.id)}
-                      onCheckedChange={(checked) => handleUserSelect(user.id, !!checked)}
-                    />
-                    <Avatar>
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback>{user.initials}</AvatarFallback>
-                    </Avatar>
-                    <Label htmlFor={`user-${user.id}`} className="font-medium">{user.name}</Label>
-                  </div>
-                ))}
+            <div key={user.id} className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar>
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback>{user.initials}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{user.name}</p>
+                  {user.id === goal.user_id && <Badge variant="secondary">Owner</Badge>}
+                </div>
               </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="ghost">Cancel</Button>
-                </DialogClose>
-                <DialogClose asChild>
-                  <Button onClick={handleSaveChanges}>Save Changes</Button>
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </CardContent>
-    </Card>
+              {isOwner && user.id !== currentUser.id && (
+                <AlertDialog>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={() => setUserToMakeOwner(user)}>
+                          <UserCog className="mr-2 h-4 w-4" />
+                          Make Owner
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </AlertDialog>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      <AlertDialog open={!!userToMakeOwner} onOpenChange={() => setUserToMakeOwner(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Transfer Ownership?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to make {userToMakeOwner?.name} the new owner of this goal? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleTransferOwnership}>Transfer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
