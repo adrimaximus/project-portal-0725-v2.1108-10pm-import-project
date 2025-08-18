@@ -32,8 +32,8 @@ serve(async (req) => {
       throw new Error("Missing required fields: title, icon, color, and type are required.");
     }
 
-    // Use the RPC function that accepts a JSON object for tags
-    const { data: newGoalId, error: rpcError } = await supabase
+    // Step 1: Create the goal and get the basic goal row back
+    const { data: newGoal, error: rpcError } = await supabase
       .rpc('create_goal_with_tags', {
         p_title: title,
         p_description: description,
@@ -46,20 +46,22 @@ serve(async (req) => {
         p_target_period: target_period,
         p_target_value: target_value,
         p_unit: unit,
-        p_tags: tags, // Pass the array of tag objects directly
+        p_tags: tags,
       })
       .single();
 
     if (rpcError) throw rpcError;
+    if (!newGoal || !newGoal.slug) throw new Error("Goal creation failed to return the new goal data.");
 
-    // Fetch the full goal object to return to the client
-    const { data: newGoal, error: fetchError } = await supabase
-      .rpc('get_goal_by_slug', { p_slug: (await supabase.from('goals').select('slug').eq('id', newGoalId).single()).data.slug })
+    // Step 2: Fetch the full, decorated goal object using the slug from the created goal
+    // This ensures the data returned to the client is in the same shape as from get_user_goals
+    const { data: fullGoal, error: fetchError } = await supabase
+      .rpc('get_goal_by_slug', { p_slug: newGoal.slug })
       .single();
 
     if (fetchError) throw fetchError;
 
-    return new Response(JSON.stringify(newGoal), {
+    return new Response(JSON.stringify(fullGoal), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 201,
     })
