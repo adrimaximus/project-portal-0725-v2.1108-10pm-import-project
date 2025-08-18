@@ -1,14 +1,13 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Project } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Paperclip, Send, Ticket, MessageSquare, CheckCircle2, X } from "lucide-react";
+import { Paperclip, Ticket, MessageSquare, CheckCircle2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
-import { Mention, MentionsInput } from "react-mentions";
 import { Badge } from "./ui/badge";
 import CommentRenderer from "./CommentRenderer";
+import CommentInput from "./CommentInput";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -16,52 +15,7 @@ interface ProjectCommentsProps {
 }
 
 const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps) => {
-  const { user } = useAuth();
-  const [newComment, setNewComment] = useState("");
-  const [isTicket, setIsTicket] = useState(false);
-  const [attachment, setAttachment] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTickets, setShowTickets] = useState(false);
-
-  const mentionableUsers = useMemo(() => {
-    if (!project) return [];
-    const users = [project.created_by, ...project.assignedTo];
-    const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
-    return uniqueUsers.map(u => {
-      let displayName = u.name;
-      if (displayName.includes('@') && !displayName.includes(' ')) {
-        displayName = displayName.split('@')[0];
-      }
-      return {
-        id: u.id,
-        display: displayName,
-        avatar: u.avatar,
-        initials: u.initials,
-        email: u.email,
-      };
-    });
-  }, [project]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setAttachment(e.target.files[0]);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim() || !user) return;
-
-    setIsSubmitting(true);
-    try {
-      await onAddCommentOrTicket(newComment, isTicket, attachment);
-      setNewComment("");
-      setIsTicket(false);
-      setAttachment(null);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const sortedItems = useMemo(() => 
     [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
@@ -77,85 +31,31 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
 
   const allProjectMembers = useMemo(() => [project.created_by, ...project.assignedTo], [project.created_by, project.assignedTo]);
 
+  const openTicketCount = useMemo(() => {
+    return sortedItems.filter(item => {
+      if (!item.isTicket) return false;
+      const correspondingTask = project.tasks?.find(t => t.originTicketId === item.id);
+      return !correspondingTask || !correspondingTask.completed;
+    }).length;
+  }, [sortedItems, project.tasks]);
+
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="relative">
-          <MentionsInput
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
-            classNames={{
-              control: 'relative w-full',
-              input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-              suggestions: {
-                list: 'bg-popover text-popover-foreground border rounded-md shadow-lg overflow-hidden p-1 max-h-60 overflow-y-auto mt-2',
-                item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer',
-                itemFocused: 'bg-accent text-accent-foreground',
-              },
-              mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-1 py-0.5',
-            }}
-          >
-            <Mention
-              trigger="@"
-              data={mentionableUsers}
-              renderSuggestion={(suggestion: any) => (
-                <div className="flex items-center gap-3 cursor-pointer">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={suggestion.avatar} />
-                    <AvatarFallback>{suggestion.initials}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">{suggestion.display}</p>
-                    <p className="text-xs text-muted-foreground">{suggestion.email}</p>
-                  </div>
-                </div>
-              )}
-            />
-          </MentionsInput>
-        </div>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Button type="button" variant={isTicket ? "default" : "outline"} size="sm" onClick={() => setIsTicket(!isTicket)}>
-              <Ticket className="mr-2 h-4 w-4" />
-              {isTicket ? "This is a Ticket" : "Make a Ticket"}
-            </Button>
-            <Button type="button" variant="outline" size="sm" asChild>
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <Paperclip className="mr-2 h-4 w-4" />
-                Attach File
-                <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} />
-              </label>
-            </Button>
-          </div>
-          <Button type="submit" disabled={isSubmitting || !newComment.trim()}>
-            <Send className="mr-2 h-4 w-4" />
-            {isSubmitting ? "Posting..." : "Post"}
-          </Button>
-        </div>
-        {attachment && (
-          <div className="text-sm text-muted-foreground flex items-center gap-2">
-            <Paperclip className="h-4 w-4" />
-            <span>{attachment.name}</span>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAttachment(null)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </form>
+      <CommentInput project={project} onAddCommentOrTicket={onAddCommentOrTicket} />
 
       <div>
-        <div className="flex items-center gap-4 mb-4">
-          <Button variant={!showTickets ? "secondary" : "ghost"} onClick={() => setShowTickets(false)}>
+        <div className="flex items-center gap-4 mb-4 border-b">
+          <Button variant="ghost" onClick={() => setShowTickets(false)} className={`rounded-none ${!showTickets ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}>
             <MessageSquare className="mr-2 h-4 w-4" /> All Comments ({sortedItems.length})
           </Button>
-          <Button variant={showTickets ? "secondary" : "ghost"} onClick={() => setShowTickets(true)}>
-            <Ticket className="mr-2 h-4 w-4" /> Tickets ({sortedItems.filter(i => i.isTicket).length})
+          <Button variant="ghost" onClick={() => setShowTickets(true)} className={`rounded-none ${showTickets ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}>
+            <Ticket className="mr-2 h-4 w-4" /> Tickets 
+            {openTicketCount > 0 && <Badge variant="secondary" className="ml-2">{openTicketCount}</Badge>}
           </Button>
         </div>
 
         <div className="space-y-6">
-          {filteredItems.map(item => {
+          {filteredItems.length > 0 ? filteredItems.map(item => {
             const isTicketCompleted = item.isTicket && project.tasks?.find(t => t.originTicketId === item.id)?.completed;
             return (
               <div key={item.id} className="flex items-start space-x-4">
@@ -168,7 +68,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
                     <p className="text-sm font-medium text-card-foreground flex items-center gap-2">
                       {item.author.name}
                       {item.isTicket && (
-                        <Badge variant={isTicketCompleted ? "default" : "secondary"} className={isTicketCompleted ? "bg-green-500 hover:bg-green-600" : ""}>
+                        <Badge variant={isTicketCompleted ? "default" : "secondary"} className={isTicketCompleted ? "bg-green-100 text-green-800 border-green-300" : ""}>
                           <Ticket className="mr-1.5 h-3 w-3" />
                           Ticket
                           {isTicketCompleted && <CheckCircle2 className="ml-1.5 h-3 w-3" />}
@@ -179,21 +79,25 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
                       {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true, locale: id })}
                     </p>
                   </div>
-                  <div className="mt-1">
+                  <div className="mt-1 prose prose-sm max-w-none text-muted-foreground">
                     <CommentRenderer text={item.text || ''} members={allProjectMembers} />
                   </div>
                   {item.attachment_url && (
                     <div className="mt-2">
-                      <a href={item.attachment_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md">
-                        <Paperclip className="h-4 w-4" />
-                        {item.attachment_name || 'View Attachment'}
+                      <a href={item.attachment_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md max-w-xs truncate">
+                        <Paperclip className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{item.attachment_name || 'View Attachment'}</span>
                       </a>
                     </div>
                   )}
                 </div>
               </div>
             )
-          })}
+          }) : (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              {showTickets ? "No tickets yet." : "No comments yet. Start the conversation!"}
+            </p>
+          )}
         </div>
       </div>
     </div>

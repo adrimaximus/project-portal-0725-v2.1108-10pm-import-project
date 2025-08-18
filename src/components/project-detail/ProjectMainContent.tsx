@@ -1,4 +1,4 @@
-import { Project, AssignedUser, Comment, Task, ProjectFile } from "@/types";
+import { Project, AssignedUser } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectComments from "@/components/ProjectComments";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,6 @@ import ProjectOverviewTab from "./ProjectOverviewTab";
 import ProjectActivityFeed from "./ProjectActivityFeed";
 import ProjectTasks from "./ProjectTasks";
 import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-react";
-import { useMemo } from "react";
 
 interface ProjectMainContentProps {
   project: Project;
@@ -41,15 +40,6 @@ const ProjectMainContent = ({
   onServicesChange,
 }: ProjectMainContentProps) => {
   const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
-  
-  const ticketCount = useMemo(() => {
-    const tickets = project.comments?.filter(c => c.isTicket) || [];
-    const openTickets = tickets.filter(ticket => {
-      const correspondingTask = project.tasks?.find(t => t.originTicketId === ticket.id);
-      return !correspondingTask || !correspondingTask.completed;
-    });
-    return openTickets.length;
-  }, [project.comments, project.tasks]);
 
   return (
     <Card>
@@ -68,7 +58,6 @@ const ProjectMainContent = ({
             <TabsTrigger value="discussion">
               <MessageSquare className="h-4 w-4 flex-shrink-0" />
               <span className="hidden sm:inline ml-2">Discussion</span>
-              {ticketCount > 0 && <Badge className="ml-2 bg-orange-500">{ticketCount}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="activity">
               <History className="h-4 w-4 flex-shrink-0" />
