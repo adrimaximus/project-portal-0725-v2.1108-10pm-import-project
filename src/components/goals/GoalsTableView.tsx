@@ -25,7 +25,7 @@ const GoalRow = ({ goal }: { goal: Goal }) => {
           <GoalIcon goal={goal} className="h-10 w-10 flex-shrink-0" />
           <div className="flex-grow overflow-hidden">
             <p className="font-semibold truncate group-hover:underline">{goal.title}</p>
-            <p className="text-sm text-muted-foreground truncate">{goal.description}</p>
+            <p className="text-sm text-muted-foreground line-clamp-2">{goal.description}</p>
           </div>
         </Link>
       </TableCell>
@@ -124,7 +124,7 @@ const GoalsTableView = ({ goals }: GoalsTableViewProps) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[40%]">Goal</TableHead>
+            <TableHead className="w-[30%]">Goal</TableHead>
             <TableHead>Progress</TableHead>
             <TableHead>Tags</TableHead>
             <TableHead>Team</TableHead>
