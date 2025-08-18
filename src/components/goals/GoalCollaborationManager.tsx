@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Goal, User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,13 +29,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '../ui/badge';
+import { ScrollArea } from '../ui/scroll-area';
+import { Input } from '../ui/input';
 
 interface GoalCollaborationManagerProps {
   goal: Goal;
@@ -44,24 +44,49 @@ interface GoalCollaborationManagerProps {
 
 const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollaborationManagerProps) => {
   const { user: currentUser } = useAuth();
-  const [selectedUsers, setSelectedUsers] = useState<string[]>(goal.collaborators.map(c => c.id));
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>(goal.collaborators.map(c => c.id));
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [userToMakeOwner, setUserToMakeOwner] = useState<User | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const isOwner = currentUser?.id === goal.user_id;
 
+  useEffect(() => {
+    setSelectedUserIds(goal.collaborators.map(c => c.id));
+  }, [goal.collaborators]);
+
+  useEffect(() => {
+    if (isManageDialogOpen) {
+      const fetchUsers = async () => {
+        const { data, error } = await supabase.from('profiles').select('*');
+        if (data) {
+          const users = data.map(profile => ({
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+            avatar: profile.avatar_url,
+            email: profile.email,
+            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          }));
+          setAvailableUsers(users);
+        }
+      };
+      fetchUsers();
+    }
+  }, [isManageDialogOpen]);
+
   const handleUserSelect = (userId: string, isSelected: boolean) => {
     if (isSelected) {
-      setSelectedUsers(prev => [...prev, userId]);
+      setSelectedUserIds(prev => [...prev, userId]);
     } else {
-      setSelectedUsers(prev => prev.filter(id => id !== userId));
+      setSelectedUserIds(prev => prev.filter(id => id !== userId));
     }
   };
 
   const handleSaveChanges = () => {
-    const updatedCollaborators = availableUsers.filter(u => selectedUsers.includes(u.id));
+    const updatedCollaborators = availableUsers.filter(u => selectedUserIds.includes(u.id));
     onCollaboratorsUpdate(updatedCollaborators);
-    toast.success('Collaborators updated successfully!');
+    setIsManageDialogOpen(false);
   };
 
   const handleTransferOwnership = async () => {
@@ -81,13 +106,69 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
     setUserToMakeOwner(null);
   };
 
+  const filteredUsers = availableUsers.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   if (!currentUser) return null;
 
   return (
     <>
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Collaborators</CardTitle>
+          {isOwner && (
+            <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Manage
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Manage Collaborators</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <Input
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  <ScrollArea className="h-64">
+                    <div className="space-y-2 pr-4">
+                      {filteredUsers.map(user => (
+                        <div key={user.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={user.avatar} />
+                              <AvatarFallback>{user.initials}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{user.name}</p>
+                              <p className="text-xs text-muted-foreground">{user.email}</p>
+                            </div>
+                          </div>
+                          <Checkbox
+                            checked={selectedUserIds.includes(user.id)}
+                            onCheckedChange={(checked) => handleUserSelect(user.id, !!checked)}
+                            disabled={user.id === goal.user_id}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="ghost">Cancel</Button>
+                  </DialogClose>
+                  <Button onClick={handleSaveChanges}>Save Changes</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {goal.collaborators.map(user => (
@@ -103,23 +184,19 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
                 </div>
               </div>
               {isOwner && user.id !== currentUser.id && (
-                <AlertDialog>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <AlertDialogTrigger asChild>
-                        <DropdownMenuItem onSelect={() => setUserToMakeOwner(user)}>
-                          <UserCog className="mr-2 h-4 w-4" />
-                          Make Owner
-                        </DropdownMenuItem>
-                      </AlertDialogTrigger>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </AlertDialog>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => setUserToMakeOwner(user)}>
+                      <UserCog className="mr-2 h-4 w-4" />
+                      Make Owner
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           ))}
