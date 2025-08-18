@@ -125,24 +125,25 @@ export function GlobalSearch() {
 
   const handleSendMessage = async (message: string) => {
     if (!message.trim()) return;
-
-    const newConversation: ConversationMessage[] = [...conversation, { sender: 'user', content: message }];
-    setConversation(newConversation);
+  
+    const oldConversation = [...conversation];
+    const newConversationForUi: ConversationMessage[] = [...conversation, { sender: 'user', content: message }];
+    setConversation(newConversationForUi);
     setQuery("");
     setIsAiLoading(true);
     setResults({ projects: [], users: [], goals: [], bills: [] });
     setLoading(false);
-
+  
     try {
-      const result = await analyzeProjects(message, newConversation);
+      const result = await analyzeProjects(message, oldConversation);
       
       const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made'];
       if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
         toast.info("Action successful. Refreshing project data...");
         await queryClient.invalidateQueries({ queryKey: ['projects'] });
-        await queryClient.invalidateQueries({ queryKey: ['project'] }); // Invalidate individual project caches
+        await queryClient.invalidateQueries({ queryKey: ['project'] });
       }
-
+  
       setConversation(prev => [...prev, { sender: 'ai', content: result }]);
     } catch (error: any) {
       setConversation(prev => [...prev, { sender: 'ai', content: `Sorry, I encountered an error: ${error.message}` }]);

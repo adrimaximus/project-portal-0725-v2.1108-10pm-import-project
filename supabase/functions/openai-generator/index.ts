@@ -79,7 +79,7 @@ serve(async (req) => {
         const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
 
         const today = new Date().toISOString();
-        const systemPrompt = `You are an expert project management AI assistant. You can answer questions and perform actions based on user requests.
+        const systemPrompt = `You are an expert project management AI assistant. You can answer questions and perform actions based on user requests. You will receive a conversation history. Use it to understand the context of the user's latest message. For example, if they mention a project and then follow up with a request without naming the project again, you should assume they are referring to the same project.
 Today's date is ${today}.
 
 AVAILABLE ACTIONS:
