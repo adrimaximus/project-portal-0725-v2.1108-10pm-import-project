@@ -32,9 +32,13 @@ serve(async (req) => {
       throw new Error("Missing required fields: title, icon, color, and type are required.");
     }
 
-    // Step 1: Create the goal and get the basic goal row back
+    // Memisahkan tag yang sudah ada dan tag baru
+    const existingTagIds = tags.filter(t => !t.isNew).map(t => t.id);
+    const newCustomTags = tags.filter(t => t.isNew).map(({ name, color }) => ({ name, color }));
+
+    // Memanggil fungsi RPC yang sudah diperbaiki dengan parameter yang benar
     const { data: newGoal, error: rpcError } = await supabase
-      .rpc('create_goal_with_tags', {
+      .rpc('create_goal_and_link_tags', {
         p_title: title,
         p_description: description,
         p_icon: icon,
@@ -46,15 +50,15 @@ serve(async (req) => {
         p_target_period: target_period,
         p_target_value: target_value,
         p_unit: unit,
-        p_tags: tags,
+        p_existing_tags: existingTagIds,
+        p_custom_tags: newCustomTags,
       })
       .single();
 
     if (rpcError) throw rpcError;
     if (!newGoal || !newGoal.slug) throw new Error("Goal creation failed to return the new goal data.");
 
-    // Step 2: Fetch the full, decorated goal object using the slug from the created goal
-    // This ensures the data returned to the client is in the same shape as from get_user_goals
+    // Mengambil objek goal lengkap untuk dikembalikan ke klien
     const { data: fullGoal, error: fetchError } = await supabase
       .rpc('get_goal_by_slug', { p_slug: newGoal.slug })
       .single();
