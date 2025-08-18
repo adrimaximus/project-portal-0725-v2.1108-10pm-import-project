@@ -13,7 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Buat klien Supabase dengan token otentikasi pengguna
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -23,20 +22,16 @@ serve(async (req) => {
       }
     )
 
-    // 2. Dapatkan pengguna yang terotentikasi untuk memastikan panggilan diotorisasi
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) throw new Error("User not authenticated.");
 
-    // 3. Uraikan body permintaan untuk data goal
     const payload = await req.json();
-    const { title, description, icon, color, type, frequency, specific_days, target_quantity, target_period, target_value, unit, tags } = payload;
+    const { title, description, icon, color, type, frequency, specific_days, target_quantity, target_period, target_value, unit, tag_ids } = payload;
 
-    // 4. Validasi field yang diperlukan
     if (!title || !icon || !color || !type) {
       throw new Error("Missing required fields: title, icon, color, and type are required.");
     }
 
-    // 5. Panggil fungsi RPC untuk membuat goal dan tag-nya secara atomik
     const { data: newGoal, error: rpcError } = await supabase
       .rpc('create_goal_with_tags', {
         p_title: title,
@@ -50,13 +45,12 @@ serve(async (req) => {
         p_target_period: target_period,
         p_target_value: target_value,
         p_unit: unit,
-        p_tags: tags,
+        p_tags: tag_ids,
       })
       .single();
 
     if (rpcError) throw rpcError;
 
-    // 6. Kembalikan goal yang baru dibuat
     return new Response(JSON.stringify(newGoal), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 201,

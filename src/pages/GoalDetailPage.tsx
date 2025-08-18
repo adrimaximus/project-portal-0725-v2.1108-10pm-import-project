@@ -139,9 +139,6 @@ const GoalDetailPage = () => {
   const handleGoalUpdate = async (updatedGoal: Goal) => {
     const { id, title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, color, icon, icon_url, tags } = updatedGoal;
     
-    const existingTagIds = tags.filter(t => !t.isNew).map(t => t.id);
-    const newCustomTags = tags.filter(t => t.isNew).map(t => ({ name: t.name, color: t.color }));
-
     const { error } = await supabase
       .rpc('update_goal_with_tags', {
         p_goal_id: id,
@@ -157,8 +154,7 @@ const GoalDetailPage = () => {
         p_target_period: target_period,
         p_target_value: target_value,
         p_unit: unit,
-        p_tags: existingTagIds,
-        p_custom_tags: newCustomTags.length > 0 ? newCustomTags : null,
+        p_tags: tags.map(t => t.id),
       });
 
     if (error) {
