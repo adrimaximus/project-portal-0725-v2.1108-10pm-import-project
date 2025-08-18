@@ -16,6 +16,8 @@ import debounce from 'lodash.debounce';
 import { analyzeProjects } from "@/lib/openai";
 import ReactMarkdown from "react-markdown";
 import { Avatar, AvatarFallback } from "./ui/avatar";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 type Goal = { id: string; title: string; slug: string; };
 type Bill = { id: string; name: string; slug: string; payment_status: string };
@@ -41,6 +43,7 @@ export function GlobalSearch() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -132,6 +135,14 @@ export function GlobalSearch() {
 
     try {
       const result = await analyzeProjects(message, newConversation);
+      
+      const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made'];
+      if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
+        toast.info("Action successful. Refreshing project data...");
+        await queryClient.invalidateQueries({ queryKey: ['projects'] });
+        await queryClient.invalidateQueries({ queryKey: ['project'] }); // Invalidate individual project caches
+      }
+
       setConversation(prev => [...prev, { sender: 'ai', content: result }]);
     } catch (error: any) {
       setConversation(prev => [...prev, { sender: 'ai', content: `Sorry, I encountered an error: ${error.message}` }]);

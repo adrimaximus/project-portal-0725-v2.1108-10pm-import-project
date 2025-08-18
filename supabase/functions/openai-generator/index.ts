@@ -179,7 +179,8 @@ CONTEXT:
             }
             params.p_service_titles = Array.from(currentServices);
 
-            const { error: updateError } = await userSupabase.rpc('update_project_details', params);
+            // Use the admin client to perform the update, bypassing user-level RLS.
+            const { error: updateError } = await supabaseAdmin.rpc('update_project_details', params);
 
             if (updateError) {
                 responseData = { result: `I tried to update the project, but failed. The database said: ${updateError.message}` };
@@ -195,7 +196,8 @@ CONTEXT:
                 break;
             }
 
-            const { error: taskError } = await userSupabase.from('tasks').insert({
+            // Use the admin client to create the task.
+            const { error: taskError } = await supabaseAdmin.from('tasks').insert({
                 project_id: project.id,
                 title: task_title,
                 created_by: user.id,
