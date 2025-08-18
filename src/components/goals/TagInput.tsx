@@ -8,7 +8,6 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -20,6 +19,7 @@ import { Tag, User } from "@/types";
 import TagEditorDialog from "./TagEditorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ScrollArea } from "../ui/scroll-area";
 
 interface TagInputProps {
   allTags: Tag[];
@@ -146,7 +146,7 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                 value={inputValue}
                 onValueChange={setInputValue}
               />
-              <CommandList className="max-h-[200px]">
+              <ScrollArea className="h-[200px]">
                 <CommandEmpty>
                   {inputValue ? 'No tags found.' : 'Start typing to see tags.'}
                 </CommandEmpty>
@@ -190,7 +190,7 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                     ))}
                   </CommandGroup>
                 )}
-              </CommandList>
+              </ScrollArea>
             </Command>
           </PopoverContent>
         </Popover>
