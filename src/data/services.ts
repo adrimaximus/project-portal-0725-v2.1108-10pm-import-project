@@ -301,4 +301,10 @@ export const services: Service[] = [
     icon: Briefcase,
     iconColor: "text-blue-600 bg-blue-100",
   },
+  {
+    title: "Workshop",
+    description: "Planning and execution of workshops",
+    icon: Briefcase,
+    iconColor: "text-gray-600 bg-gray-100",
+  },
 ];
