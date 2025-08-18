@@ -45,10 +45,33 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
     const totalProjects = projects.length;
     const totalValue = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
 
-    const projectStatusCounts = projects.reduce((acc, p) => ({ ...acc, [p.status]: (acc[p.status] || 0) + 1 }), {} as Record<string, number>);
-    const projectStatusValues = projects.reduce((acc, p) => ({ ...acc, [p.status]: (acc[p.status] || 0) + (p.budget || 0) }), {} as Record<string, number>);
-    const paymentStatusCounts = projects.reduce((acc, p) => ({ ...acc, [p.payment_status]: (acc[p.payment_status] || 0) + 1 }), {} as Record<string, number>);
-    const paymentStatusValues = projects.reduce((acc, p) => ({ ...acc, [p.payment_status]: (acc[p.payment_status] || 0) + (p.budget || 0) }), {} as Record<string, number>);
+    const projectStatusCounts = projects.reduce((acc, p) => {
+      if (p.status) {
+        acc[p.status] = (acc[p.status] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    const projectStatusValues = projects.reduce((acc, p) => {
+      if (p.status) {
+        acc[p.status] = (acc[p.status] || 0) + (p.budget || 0);
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    const paymentStatusCounts = projects.reduce((acc, p) => {
+      if (p.payment_status) {
+        acc[p.payment_status] = (acc[p.payment_status] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    const paymentStatusValues = projects.reduce((acc, p) => {
+      if (p.payment_status) {
+        acc[p.payment_status] = (acc[p.payment_status] || 0) + (p.budget || 0);
+      }
+      return acc;
+    }, {} as Record<string, number>);
 
     const ownerStats = projects.reduce((acc, p) => {
         if (p.created_by) {
