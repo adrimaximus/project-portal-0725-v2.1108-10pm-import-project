@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
+  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -145,9 +146,13 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                 value={inputValue}
                 onValueChange={setInputValue}
               />
-              <CommandList>
-                {filteredTags.length === 0 && inputValue ? (
-                  <div className="p-1">
+              <CommandList className="max-h-[200px]">
+                <CommandEmpty>
+                  {inputValue ? 'No tags found.' : 'Start typing to see tags.'}
+                </CommandEmpty>
+                
+                {inputValue && !allTags.some(t => t.name.toLowerCase() === inputValue.toLowerCase()) && (
+                  <CommandGroup>
                     <CommandItem
                       onSelect={handleCreate}
                       className="cursor-pointer"
@@ -155,14 +160,11 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Create "{inputValue}"
                     </CommandItem>
-                  </div>
-                ) : null}
-                {filteredTags.length === 0 && !inputValue ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">No tags found.</p>
-                ) : null}
+                  </CommandGroup>
+                )}
                 
-                {filteredTags.length > 0 ? (
-                  <CommandGroup>
+                {filteredTags.length > 0 && (
+                  <CommandGroup heading="Available Tags">
                     {filteredTags.map((tag) => (
                       <CommandItem
                         key={tag.id}
@@ -187,7 +189,7 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                       </CommandItem>
                     ))}
                   </CommandGroup>
-                ) : null}
+                )}
               </CommandList>
             </Command>
           </PopoverContent>
