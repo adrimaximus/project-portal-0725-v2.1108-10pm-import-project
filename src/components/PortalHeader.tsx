@@ -26,7 +26,6 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ThemeToggle } from "./ThemeToggle";
 
 const PortalHeader = () => {
   const { user, logout } = useAuth();
@@ -149,7 +148,7 @@ const PortalHeader = () => {
               className="cursor-pointer flex items-center"
             >
               <Avatar className="mr-2 h-6 w-6">
-                <AvatarImage src={(userResult as any).avatar} />
+                <AvatarImage src={userResult.avatar} />
                 <AvatarFallback>{userResult.initials}</AvatarFallback>
               </Avatar>
               <HighlightMatch text={userResult.name} query={searchQuery} />
@@ -240,7 +239,6 @@ const PortalHeader = () => {
           </form>
         </div>
       </div>
-      <ThemeToggle />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="secondary" size="icon" className="rounded-full">
