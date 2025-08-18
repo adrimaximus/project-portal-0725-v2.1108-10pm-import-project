@@ -25,6 +25,7 @@ const ChatPage = () => {
 
   const messageChannelRef = useRef<RealtimeChannelRef | null>(null);
   const conversationsChannelRef = useRef<RealtimeChannelRef | null>(null);
+  const messagesGlobalChannelRef = useRef<RealtimeChannelRef | null>(null);
   const typingTimerRef = useRef<number | null>(null);
 
   const fetchConversations = useCallback(async () => {
@@ -57,7 +58,8 @@ const ChatPage = () => {
     }));
 
     setConversations(mappedConversations);
-    // Auto-select first conversation on desktop for speed
+
+    // Auto-select first conversation on desktop (initial load)
     if (!isMobile && mappedConversations.length > 0 && !selectedConversationId) {
       setSelectedConversationId(mappedConversations[0].id);
     }
@@ -75,12 +77,10 @@ const ChatPage = () => {
     }
     if (!currentUser) return;
 
-    // Create a dedicated channel for this conversation:
     const ch = supabase.channel(`conversation:${conversationId}`, {
       config: { broadcast: { self: true } },
     });
 
-    // Receive new messages for this conversation only (fast & scoped)
     ch.on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
@@ -94,36 +94,31 @@ const ChatPage = () => {
 
           const convo = prevConvos[idx];
           const sender = convo.members?.find(m => m.id === newMessage.sender_id);
-
           if (!sender) return prevConvos;
 
-          const updatedConvo = {
+          const updatedConvo: Conversation = {
             ...convo,
             lastMessage: newMessage.content || (newMessage.attachment_name || 'Attachment'),
             lastMessageTimestamp: newMessage.created_at,
+            messages: selectedConversationId === conversationId
+              ? [
+                  ...convo.messages,
+                  {
+                    id: newMessage.id,
+                    text: newMessage.content,
+                    timestamp: newMessage.created_at,
+                    sender,
+                    attachment: newMessage.attachment_url
+                      ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type }
+                      : undefined,
+                  } as Message,
+                ]
+              : convo.messages,
           };
-
-          if (selectedConversationId === conversationId) {
-            const exists = updatedConvo.messages.some(m => m.id === newMessage.id);
-            if (!exists) {
-              updatedConvo.messages = [
-                ...updatedConvo.messages,
-                {
-                  id: newMessage.id,
-                  text: newMessage.content,
-                  timestamp: newMessage.created_at,
-                  sender: sender,
-                  attachment: newMessage.attachment_url
-                    ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type }
-                    : undefined,
-                } as Message,
-              ];
-            }
-          }
 
           const copy = [...prevConvos];
           copy[idx] = updatedConvo;
-          // Move to top
+          // move to top
           const [moved] = copy.splice(idx, 1);
           copy.unshift(moved);
           return copy;
@@ -131,7 +126,6 @@ const ChatPage = () => {
       }
     );
 
-    // Typing indicator via broadcast events
     ch.on('broadcast', { event: 'typing' }, (payload: any) => {
       if (payload?.userId && payload.userId !== currentUser.id) {
         setIsSomeoneTyping(true);
@@ -148,8 +142,8 @@ const ChatPage = () => {
     };
   }, [currentUser, selectedConversationId]);
 
+  // Keep conversations list fresh
   useEffect(() => {
-    // Global conversations channel to keep the list fresh (trigger updates on new messages)
     if (conversationsChannelRef.current) return;
 
     const ch = supabase
@@ -170,6 +164,48 @@ const ChatPage = () => {
       conversationsChannelRef.current = null;
     };
   }, [fetchConversations]);
+
+  // NEW: global messages listener to auto-open latest incoming conversation if none selected
+  useEffect(() => {
+    if (!currentUser) return;
+    if (messagesGlobalChannelRef.current) return;
+
+    const ch = supabase
+      .channel('messages-global')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        async (payload: any) => {
+          const msg = payload.new as any;
+          if (!msg || msg.sender_id === currentUser.id) return;
+
+          // Only auto-select when no conversation is currently selected
+          if (!selectedConversationId) {
+            const convId = msg.conversation_id as string;
+
+            // If conversation not in list yet, refresh first, then open
+            const exists = conversations.some(c => c.id === convId);
+            if (!exists) {
+              await fetchConversations();
+            }
+
+            setSelectedConversationId(convId);
+            // Load messages and attach realtime for this conversation
+            handleConversationSelect(convId);
+          }
+        }
+      )
+      .subscribe();
+
+    messagesGlobalChannelRef.current = {
+      unsubscribe: () => supabase.removeChannel(ch),
+    };
+
+    return () => {
+      messagesGlobalChannelRef.current?.unsubscribe();
+      messagesGlobalChannelRef.current = null;
+    };
+  }, [currentUser, selectedConversationId, conversations, fetchConversations]);
 
   const handleConversationSelect = useCallback(async (id: string) => {
     setSelectedConversationId(id);
@@ -201,10 +237,25 @@ const ChatPage = () => {
     }));
 
     setConversations(prev =>
-      prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c))
+      prev.some(c => c.id === id)
+        ? prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c))
+        : [
+            // Ensure the conversation exists in state if not present yet
+            {
+              id,
+              userName: 'Conversation',
+              userAvatar: undefined,
+              lastMessage: mappedMessages[mappedMessages.length - 1]?.text || 'No messages yet.',
+              lastMessageTimestamp: mappedMessages[mappedMessages.length - 1]?.timestamp || new Date().toISOString(),
+              unreadCount: 0,
+              messages: mappedMessages,
+              isGroup: true,
+              members: [],
+            },
+            ...prev,
+          ]
     );
 
-    // Attach scoped realtime subscription for this conversation
     attachConversationRealtime(id);
   }, [attachConversationRealtime]);
 
@@ -240,6 +291,7 @@ const ChatPage = () => {
     return () => {
       messageChannelRef.current?.unsubscribe();
       conversationsChannelRef.current?.unsubscribe();
+      messagesGlobalChannelRef.current?.unsubscribe();
       if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
     };
   }, []);
@@ -316,29 +368,14 @@ const ChatPage = () => {
 
   const sendTyping = useCallback(() => {
     if (!selectedConversationId || !messageChannelRef.current) return;
-    // Broadcast a typing event to the current conversation channel
     const chName = `conversation:${selectedConversationId}`;
     const ch = (supabase as any).realtime.channels.find((c: any) => c.topic === `realtime:${chName}`);
-    // Fallback: use the existing reference
     if (ch && ch.send) {
       ch.send({
         type: 'broadcast',
         event: 'typing',
         payload: { userId: currentUser?.id },
       });
-    } else {
-      // Use the stored channel ref if available
-      try {
-        // @ts-ignore
-        const internal = (messageChannelRef.current as any);
-        if (internal?.send) {
-          internal.send({
-            type: 'broadcast',
-            event: 'typing',
-            payload: { userId: currentUser?.id },
-          });
-        }
-      } catch (_) {}
     }
   }, [selectedConversationId, currentUser]);
 
