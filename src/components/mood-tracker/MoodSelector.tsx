@@ -1,6 +1,12 @@
 import { moods, Mood } from '@/data/mood';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface MoodSelectorProps {
   selectedMoodId: Mood['id'];
@@ -9,27 +15,33 @@ interface MoodSelectorProps {
 
 const MoodSelector = ({ selectedMoodId, onSelectMood }: MoodSelectorProps) => {
   return (
-    <div className="grid grid-cols-1 gap-1">
-      {moods.map((mood) => (
-        <Button
-          key={mood.id}
-          variant="ghost"
-          onClick={() => onSelectMood(mood.id)}
-          className="w-full justify-start h-auto p-2 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-        >
-          <div
-            className={cn(
-              'w-10 h-10 flex items-center justify-center rounded-lg mr-3 transition-colors',
-              { 'bg-gray-100': selectedMoodId !== mood.id }
-            )}
-            style={selectedMoodId === mood.id ? { backgroundColor: mood.color } : {}}
-          >
-            <span className="text-2xl">{mood.emoji}</span>
-          </div>
-          <span className="font-semibold">{mood.label}</span>
-        </Button>
-      ))}
-    </div>
+    <TooltipProvider delayDuration={100}>
+      <div className="flex items-center justify-center gap-2 py-2">
+        {moods.map((mood) => (
+          <Tooltip key={mood.id}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onSelectMood(mood.id)}
+                className={cn(
+                  'h-12 w-12 rounded-full transition-all duration-200 ease-in-out',
+                  selectedMoodId === mood.id
+                    ? 'scale-110 ring-2 ring-primary ring-offset-2'
+                    : 'hover:scale-105'
+                )}
+                style={{ backgroundColor: mood.color }}
+              >
+                <span className="text-2xl">{mood.emoji}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{mood.label}</p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
+    </TooltipProvider>
   );
 };
 
