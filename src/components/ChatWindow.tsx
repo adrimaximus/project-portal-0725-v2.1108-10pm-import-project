@@ -19,7 +19,7 @@ const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onBack, 
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
       <ChatHeader
         selectedConversation={selectedConversation}
         onClearChat={onClearChat}

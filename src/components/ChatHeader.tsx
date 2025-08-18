@@ -37,7 +37,7 @@ const ChatHeader = ({ selectedConversation, onClearChat, onBack, typing = false 
 
   if (!selectedConversation) {
     return (
-      <div className="flex items-center justify-center p-4 border-b h-[81px]">
+      <div className="flex items-center justify-center p-4 border-b h-[81px] flex-shrink-0">
         <p className="text-muted-foreground">Select a conversation to start chatting</p>
       </div>
     );
@@ -53,7 +53,7 @@ const ChatHeader = ({ selectedConversation, onClearChat, onBack, typing = false 
   };
 
   return (
-    <div className="flex items-center p-4 border-b bg-background/60 backdrop-blur">
+    <div className="flex items-center p-4 border-b bg-background/60 backdrop-blur flex-shrink-0">
       {onBack && (
         <Button variant="ghost" size="icon" className="mr-2 md:hidden" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />

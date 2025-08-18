@@ -73,7 +73,7 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping }: ChatInputProps) 
   };
 
   return (
-    <div className="border-t p-4">
+    <div className="border-t p-4 flex-shrink-0">
       <div className="relative">
         <Textarea
           placeholder="Type a message..."
