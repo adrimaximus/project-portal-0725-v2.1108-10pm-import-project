@@ -139,18 +139,20 @@ CONTEXT:
                 break;
             }
 
-            const params = {
+            const rpcParams = {
                 p_project_id: project.id,
                 p_name: updates.name !== undefined ? updates.name : project.name,
-                p_description: updates.description !== undefined ? updates.description : project.description,
+                p_description: updates.description !== undefined ? updates.description : (project.description || null),
+                p_category: updates.category !== undefined ? updates.category : (project.category || null),
                 p_status: updates.status !== undefined ? updates.status : project.status,
-                p_budget: updates.budget !== undefined ? updates.budget : project.budget,
-                p_start_date: updates.start_date !== undefined ? updates.start_date : project.start_date,
-                p_due_date: updates.due_date !== undefined ? updates.due_date : project.due_date,
+                p_budget: updates.budget !== undefined ? updates.budget : (project.budget || null),
+                p_start_date: updates.start_date !== undefined ? updates.start_date : (project.start_date || null),
+                p_due_date: updates.due_date !== undefined ? updates.due_date : (project.due_date || null),
                 p_payment_status: updates.payment_status !== undefined ? updates.payment_status : project.payment_status,
-                p_venue: updates.venue !== undefined ? updates.venue : project.venue,
-                p_payment_due_date: project.payment_due_date, // Not editable by AI for now
-                p_category: project.category, // Not editable by AI for now
+                p_payment_due_date: updates.payment_due_date !== undefined ? updates.payment_due_date : (project.payment_due_date || null),
+                p_venue: updates.venue !== undefined ? updates.venue : (project.venue || null),
+                p_member_ids: project.assignedTo.map(m => m.id),
+                p_service_titles: project.services || [],
             };
 
             // Handle members
@@ -167,7 +169,7 @@ CONTEXT:
                     if (userToRemove) currentMemberIds.delete(userToRemove.id);
                 });
             }
-            params.p_member_ids = Array.from(currentMemberIds);
+            rpcParams.p_member_ids = Array.from(currentMemberIds);
 
             // Handle services
             let currentServices = new Set(project.services || []);
@@ -177,9 +179,9 @@ CONTEXT:
             if (updates.remove_services) {
                 updates.remove_services.forEach(service => currentServices.delete(service));
             }
-            params.p_service_titles = Array.from(currentServices);
+            rpcParams.p_service_titles = Array.from(currentServices);
 
-            const { error: updateError } = await supabaseAdmin.rpc('update_project_details', params);
+            const { error: updateError } = await supabaseAdmin.rpc('update_project_details', rpcParams);
 
             if (updateError) {
                 responseData = { result: `I tried to update the project, but failed. The database said: ${updateError.message}` };

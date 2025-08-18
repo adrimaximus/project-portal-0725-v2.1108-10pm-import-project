@@ -83,17 +83,17 @@ const ProjectDetail = () => {
         .rpc('update_project_details', {
           p_project_id: id,
           p_name: name,
-          p_description: description,
-          p_category: category,
+          p_description: description || null,
+          p_category: category || null,
           p_status: status,
-          p_budget: budget,
-          p_start_date: start_date,
-          p_due_date: due_date,
+          p_budget: budget || null,
+          p_start_date: start_date || null,
+          p_due_date: due_date || null,
           p_payment_status: payment_status,
-          p_payment_due_date: payment_due_date,
+          p_payment_due_date: payment_due_date || null,
           p_member_ids: assignedTo.map(m => m.id),
           p_service_titles: services || [],
-          p_venue: venue,
+          p_venue: venue || null,
         })
         .single();
 
