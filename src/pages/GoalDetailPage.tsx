@@ -136,36 +136,14 @@ const GoalDetailPage = () => {
     queryClient.invalidateQueries({ queryKey: ['goal', slug] });
   };
 
-  const handleGoalUpdate = async (updatedGoal: Goal) => {
-    const { id, title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, color, icon, icon_url, tags } = updatedGoal;
-    
-    const { error } = await supabase
-      .rpc('update_goal_with_tags', {
-        p_goal_id: id,
-        p_title: title,
-        p_description: description,
-        p_icon: icon,
-        p_icon_url: icon_url,
-        p_color: color,
-        p_type: type,
-        p_frequency: frequency,
-        p_specific_days: specific_days,
-        p_target_quantity: target_quantity,
-        p_target_period: target_period,
-        p_target_value: target_value,
-        p_unit: unit,
-        p_tags: tags,
-      });
-
-    if (error) {
-        toast.error("Failed to update goal.");
-        console.error(error);
-    } else {
-        toast.success("Goal updated.");
-        queryClient.invalidateQueries({ queryKey: ['goal', slug] });
-        queryClient.invalidateQueries({ queryKey: ['goals'] });
-        setIsEditDialogOpen(false);
+  const handleUpdateSuccess = (updatedGoal: any) => {
+    setIsEditDialogOpen(false);
+    if (slug !== updatedGoal.slug) {
+      navigate(`/goals/${updatedGoal.slug}`, { replace: true });
     }
+    queryClient.invalidateQueries({ queryKey: ['goal', updatedGoal.slug] });
+    queryClient.invalidateQueries({ queryKey: ['goal', slug] });
+    queryClient.invalidateQueries({ queryKey: ['goals'] });
   };
 
   if (isLoading || !goal) {
@@ -259,8 +237,7 @@ const GoalDetailPage = () => {
       <GoalFormDialog
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['goal', slug] })}
-        onGoalUpdate={handleGoalUpdate}
+        onSuccess={handleUpdateSuccess}
         goal={goal}
       />
     </PortalLayout>
