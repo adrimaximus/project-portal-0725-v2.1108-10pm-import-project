@@ -7,6 +7,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -144,7 +145,7 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                 value={inputValue}
                 onValueChange={setInputValue}
               />
-              <div className="h-[200px] overflow-y-auto">
+              <CommandList>
                 {filteredTags.length === 0 && inputValue ? (
                   <div className="p-1">
                     <CommandItem
@@ -187,7 +188,7 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                     ))}
                   </CommandGroup>
                 ) : null}
-              </div>
+              </CommandList>
             </Command>
           </PopoverContent>
         </Popover>
