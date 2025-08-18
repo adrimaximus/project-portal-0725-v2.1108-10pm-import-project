@@ -53,8 +53,12 @@ const MobileMonthView = ({ projects, gcalEvents, currentMonth }: { projects: Pro
     });
 
     const groupedByDay = sortedItems.reduce((acc, project) => {
-        const startDate = isGCalEvent(project) ? (project.start.dateTime || project.start.date) : project.start_date;
-        const dateKey = new Date(startDate!).toISOString().split('T')[0];
+        const startDateStr = isGCalEvent(project) ? (project.start.dateTime || project.start.date) : project.start_date;
+        if (!startDateStr) return acc;
+        
+        // Correctly format the date to avoid timezone shifts
+        const dateKey = format(new Date(startDateStr), 'yyyy-MM-dd');
+
         if (!acc[dateKey]) {
             acc[dateKey] = [];
         }
@@ -73,7 +77,10 @@ const MobileMonthView = ({ projects, gcalEvents, currentMonth }: { projects: Pro
     return (
         <div className="space-y-4">
             {Object.entries(groupedByDay).map(([dateStr, itemsOnDay]) => {
-                const date = new Date(dateStr);
+                // Parse the date string as local date to avoid timezone shifts
+                const [year, month, day] = dateStr.split('-').map(Number);
+                const date = new Date(year, month - 1, day);
+                
                 const { day: dayOfWeek, dayOfMonth } = {
                     day: date.toLocaleDateString('id-ID', { weekday: 'short' }),
                     dayOfMonth: date.getDate().toString().padStart(2, '0')
