@@ -16,7 +16,7 @@ import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
 import ProjectStatusCard from "@/components/project-detail/ProjectStatusCard";
 import ProjectPaymentStatusCard from "@/components/project-detail/ProjectPaymentStatusCard";
 
-const fetchProject = async (slug: string) => {
+const fetchProject = async (slug: string): Promise<Project | null> => {
   const { data, error } = await supabase
     .rpc('get_project_by_slug', { p_slug: slug })
     .single();
@@ -25,7 +25,7 @@ const fetchProject = async (slug: string) => {
     console.error("Error fetching project:", error);
     throw new Error(error.message);
   }
-  return data;
+  return data as Project | null;
 };
 
 const ProjectDetailSkeleton = () => (
@@ -56,25 +56,11 @@ const ProjectDetail = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
 
-  const { data: projectData, isLoading, error } = useQuery<any>({
+  const { data: project, isLoading, error } = useQuery<Project | null>({
     queryKey: ["project", slug],
     queryFn: () => fetchProject(slug!),
     enabled: !!slug && !!user,
   });
-
-  const project: Project | null = useMemo(() => {
-    if (!projectData) return null;
-    return {
-      ...projectData,
-      startDate: projectData.start_date,
-      dueDate: projectData.due_date,
-      paymentStatus: projectData.payment_status,
-      paymentDueDate: projectData.payment_due_date,
-      createdBy: projectData.created_by,
-      assignedTo: projectData.assignedTo,
-      briefFiles: projectData.briefFiles,
-    };
-  }, [projectData]);
 
   useEffect(() => {
     if (project) {
@@ -91,7 +77,7 @@ const ProjectDetail = () => {
     setIsSaving(true);
 
     try {
-      const { id, name, description, category, status, budget, startDate, dueDate, paymentStatus, paymentDueDate, services, assignedTo } = editedProject;
+      const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo } = editedProject;
       
       const { data: updatedProjectRow, error } = await supabase
         .rpc('update_project_details', {
@@ -101,10 +87,10 @@ const ProjectDetail = () => {
           p_category: category,
           p_status: status,
           p_budget: budget,
-          p_start_date: startDate,
-          p_due_date: dueDate,
-          p_payment_status: paymentStatus,
-          p_payment_due_date: paymentDueDate,
+          p_start_date: start_date,
+          p_due_date: due_date,
+          p_payment_status: payment_status,
+          p_payment_due_date: payment_due_date,
           p_member_ids: assignedTo.map(m => m.id),
           p_service_titles: services || [],
         })
@@ -115,7 +101,7 @@ const ProjectDetail = () => {
       if (updatedProjectRow) {
           const typedUpdatedProjectRow = updatedProjectRow as { slug: string };
           
-          queryClient.invalidateQueries({ queryKey: ["projects"] });
+          queryClient.invalidateQueries({ queryKey: ['projects'] });
           
           if (slug !== typedUpdatedProjectRow.slug) {
               toast.success("Project updated successfully! Redirecting...");
@@ -288,7 +274,7 @@ const ProjectDetail = () => {
   }
   if (!project || !editedProject) return null;
 
-  const canEdit = user && (user.id === project.createdBy.id || user.role === 'admin' || user.role === 'master admin');
+  const canEdit = user && (user.id === project.created_by.id || user.role === 'admin' || user.role === 'master admin');
 
   return (
     <PortalLayout>

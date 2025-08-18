@@ -36,11 +36,11 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
   const navigate = useNavigate();
 
   const sortedProjects = projects
-    .filter(p => p.startDate)
-    .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime());
+    .filter(p => p.start_date)
+    .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
 
   const groupedByDay = sortedProjects.reduce((acc, project) => {
-    const dateKey = new Date(project.startDate!).toISOString().split('T')[0];
+    const dateKey = new Date(project.start_date!).toISOString().split('T')[0];
     if (!acc[dateKey]) {
       acc[dateKey] = [];
     }
@@ -81,7 +81,7 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
               </div>
               <div className="flex-1 space-y-3 pt-1 min-w-0">
                 {projectsOnDay.map(project => {
-                  const isMultiDay = project.startDate && project.dueDate && new Date(project.startDate).toDateString() !== new Date(project.dueDate).toDateString();
+                  const isMultiDay = project.start_date && project.due_date && new Date(project.start_date).toDateString() !== new Date(project.due_date).toDateString();
 
                   return (
                     <div 
@@ -98,9 +98,9 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
                             <Clock size={14} />
                             <span>Seharian</span>
                           </div>
-                          {isMultiDay && project.dueDate && (
+                          {isMultiDay && project.due_date && (
                             <Badge variant="outline" className="mt-1.5 font-normal text-xs">
-                              Hingga {formatEndDate(new Date(project.dueDate))}
+                              Hingga {formatEndDate(new Date(project.due_date))}
                             </Badge>
                           )}
                         </div>

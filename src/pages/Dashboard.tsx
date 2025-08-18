@@ -22,13 +22,13 @@ const Index = () => {
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
 
   const filteredProjects = projects.filter(project => {
-    if (date?.from && project.startDate) {
-        const projectStart = new Date(project.startDate);
+    if (date?.from && project.start_date) {
+        const projectStart = new Date(project.start_date);
         const pickerFrom = date.from;
         const pickerTo = date.to || date.from;
 
-        if (project.dueDate) {
-            const projectEnd = new Date(project.dueDate);
+        if (project.due_date) {
+            const projectEnd = new Date(project.due_date);
             return projectStart <= pickerTo && projectEnd >= pickerFrom;
         }
         return projectStart >= pickerFrom && projectStart <= pickerTo;

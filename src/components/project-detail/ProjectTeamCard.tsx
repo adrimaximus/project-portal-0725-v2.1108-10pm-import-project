@@ -42,11 +42,11 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
     onFieldChange('assignedTo', newTeam);
   };
 
-  const assignableUsers = project.createdBy
-    ? allUsers.filter(u => u.id !== project.createdBy.id)
+  const assignableUsers = project.created_by
+    ? allUsers.filter(u => u.id !== project.created_by.id)
     : allUsers;
     
-  const teamMembers = project.assignedTo.filter(member => member.id !== project.createdBy.id);
+  const teamMembers = project.assignedTo.filter(member => member.id !== project.created_by.id);
 
   return (
     <Card>
@@ -61,12 +61,12 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
               <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT OWNER</h4>
               <div className="flex items-center gap-3">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={project.createdBy.avatar} />
-                  <AvatarFallback>{project.createdBy.initials}</AvatarFallback>
+                  <AvatarImage src={project.created_by.avatar} />
+                  <AvatarFallback>{project.created_by.initials}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-medium">{project.createdBy.name}</p>
-                  <p className="text-xs text-muted-foreground">{project.createdBy.email}</p>
+                  <p className="text-sm font-medium">{project.created_by.name}</p>
+                  <p className="text-xs text-muted-foreground">{project.created_by.email}</p>
                 </div>
               </div>
             </div>
@@ -81,17 +81,17 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
           </>
         ) : (
           <>
-            {project.createdBy && (
+            {project.created_by && (
               <div>
                 <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT OWNER</h4>
                 <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={project.createdBy.avatar} />
-                    <AvatarFallback>{project.createdBy.initials}</AvatarFallback>
+                    <AvatarImage src={project.created_by.avatar} />
+                    <AvatarFallback>{project.created_by.initials}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-sm font-medium">{project.createdBy.name}</p>
-                    <p className="text-xs text-muted-foreground">{project.createdBy.email}</p>
+                    <p className="text-sm font-medium">{project.created_by.name}</p>
+                    <p className="text-xs text-muted-foreground">{project.created_by.email}</p>
                   </div>
                 </div>
               </div>

@@ -19,8 +19,8 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     const endDateValue = range?.to || range?.from;
     const endDate = endDateValue ? endDateValue.toISOString() : undefined;
 
-    onFieldChange('startDate', startDate);
-    onFieldChange('dueDate', endDate);
+    onFieldChange('start_date', startDate);
+    onFieldChange('due_date', endDate);
   };
 
   const handleBudgetChange = (value: number | null) => {
@@ -34,9 +34,9 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   }).format(amount);
 
   const renderDateRange = () => {
-    if (!project.startDate) return 'N/A';
-    const start = new Date(project.startDate);
-    const end = project.dueDate ? new Date(project.dueDate) : start;
+    if (!project.start_date) return 'N/A';
+    const start = new Date(project.start_date);
+    const end = project.due_date ? new Date(project.due_date) : start;
 
     if (isSameDay(start, end)) {
         return format(start, "dd MMM yyyy");
@@ -57,8 +57,8 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
             {isEditing ? (
               <DateRangePicker
                 date={{
-                  from: project.startDate ? new Date(project.startDate) : undefined,
-                  to: project.dueDate ? new Date(project.dueDate) : undefined,
+                  from: project.start_date ? new Date(project.start_date) : undefined,
+                  to: project.due_date ? new Date(project.due_date) : undefined,
                 }}
                 onDateChange={handleDateChange}
               />

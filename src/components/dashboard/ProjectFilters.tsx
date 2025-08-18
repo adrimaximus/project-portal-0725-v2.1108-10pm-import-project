@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PROJECT_STATUSES, PAYMENT_STATUSES } from "@/config/constants";
+import { PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/types";
 
 interface ProjectFiltersProps {
   statusFilter: string;
@@ -14,6 +14,9 @@ interface ProjectFiltersProps {
   onStatusFilterChange: (value: string) => void;
   onPaymentStatusFilterChange: (value: string) => void;
 }
+
+const projectStatuses = [{ value: "All", label: "All" }, ...PROJECT_STATUS_OPTIONS];
+const paymentStatuses = [{ value: "All", label: "All" }, ...PAYMENT_STATUS_OPTIONS];
 
 const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   statusFilter,
@@ -32,9 +35,9 @@ const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             <SelectValue placeholder="Filter by project status..." />
           </SelectTrigger>
           <SelectContent>
-            {PROJECT_STATUSES.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status}
+            {projectStatuses.map((status) => (
+              <SelectItem key={status.value} value={status.value}>
+                {status.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -49,9 +52,9 @@ const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             <SelectValue placeholder="Filter by payment status..." />
           </SelectTrigger>
           <SelectContent>
-            {PAYMENT_STATUSES.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status}
+            {paymentStatuses.map((status) => (
+              <SelectItem key={status.value} value={status.value}>
+                {status.label}
               </SelectItem>
             ))}
           </SelectContent>

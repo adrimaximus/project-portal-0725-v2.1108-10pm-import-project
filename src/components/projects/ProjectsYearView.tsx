@@ -51,8 +51,8 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
     daysInYear.forEach(day => {
       const dayKey = format(day, 'yyyy-MM-dd');
       const itemsOnDay = combinedItems.filter(p => {
-        const startDate = isGCalEvent(p) ? (p.start.dateTime || p.start.date) : p.startDate;
-        const dueDate = isGCalEvent(p) ? (p.end.dateTime || p.end.date) : p.dueDate;
+        const startDate = isGCalEvent(p) ? (p.start.dateTime || p.start.date) : p.start_date;
+        const dueDate = isGCalEvent(p) ? (p.end.dateTime || p.end.date) : p.due_date;
         if (!startDate || !dueDate) return false;
         const start = new Date(startDate);
         const end = new Date(dueDate);
@@ -149,7 +149,7 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
   };
 
   const months = Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
-  const weekDays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+  const weekDays = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
   return (
     <div className="p-4 bg-background rounded-lg border">
@@ -168,7 +168,7 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
             start: startOfMonth(month),
             end: new Date(month.getFullYear(), month.getMonth() + 1, 0),
           });
-          const firstDayOfMonth = (getDay(startOfMonth(month)) + 6) % 7;
+          const firstDayOfMonth = getDay(startOfMonth(month));
 
           return (
             <div key={format(month, 'yyyy-MM')}>

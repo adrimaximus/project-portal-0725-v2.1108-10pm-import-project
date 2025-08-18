@@ -29,7 +29,7 @@ export function GlobalSearch() {
   }, []);
 
   const uniqueUsers: User[] = useMemo(() => {
-    const allUsers = dummyProjects.flatMap(p => [p.createdBy, ...p.assignedTo]);
+    const allUsers = dummyProjects.flatMap(p => [p.created_by, ...p.assignedTo]);
     return [...new Map(allUsers.map(item => [item.id, item])).values()];
   }, []);
 

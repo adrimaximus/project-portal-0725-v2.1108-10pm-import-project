@@ -144,12 +144,12 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
     toDate.setHours(23, 59, 59, 999);
 
     return projects.filter(project => {
-      if (!project.startDate && !project.dueDate) {
+      if (!project.start_date && !project.due_date) {
         return false;
       }
       
-      const projectStart = project.startDate ? new Date(project.startDate) : null;
-      const projectEnd = project.dueDate ? new Date(project.dueDate) : projectStart;
+      const projectStart = project.start_date ? new Date(project.start_date) : null;
+      const projectEnd = project.due_date ? new Date(project.due_date) : projectStart;
 
       if (projectStart && projectEnd) {
         return projectStart <= toDate && projectEnd >= fromDate;

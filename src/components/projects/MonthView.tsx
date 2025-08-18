@@ -51,8 +51,8 @@ const MonthView = ({ projects, gcalEvents }: { projects: Project[], gcalEvents: 
     daysInYear.forEach(day => {
       const dayKey = format(day, 'yyyy-MM-dd');
       const itemsOnDay = combinedItems.filter(p => {
-        const startDate = isGCalEvent(p) ? (p.start.dateTime || p.start.date) : p.startDate;
-        const dueDate = isGCalEvent(p) ? (p.end.dateTime || p.end.date) : p.dueDate;
+        const startDate = isGCalEvent(p) ? (p.start.dateTime || p.start.date) : p.start_date;
+        const dueDate = isGCalEvent(p) ? (p.end.dateTime || p.end.date) : p.due_date;
         if (!startDate || !dueDate) return false;
         const start = new Date(startDate);
         const end = new Date(dueDate);

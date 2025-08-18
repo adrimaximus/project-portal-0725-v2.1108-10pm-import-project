@@ -66,7 +66,7 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
           </TableRow>
         ) : (
           projects.map((project) => {
-            const paymentBadgeColor = paymentStatusConfig[project.paymentStatus]?.color || "bg-gray-100 text-gray-800";
+            const paymentBadgeColor = paymentStatusConfig[project.payment_status]?.color || "bg-gray-100 text-gray-800";
             return (
               <TableRow key={project.id}>
                 <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
@@ -85,14 +85,14 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
                   </div>
                 </TableCell>
                 <TableCell>
-                  {project.startDate ? format(new Date(project.startDate), 'MMM d, yyyy') : 'N/A'}
+                  {project.start_date ? format(new Date(project.start_date), 'MMM d, yyyy') : 'N/A'}
                 </TableCell>
                 <TableCell>
-                  {project.dueDate ? format(new Date(project.dueDate), 'MMM d, yyyy') : 'N/A'}
+                  {project.due_date ? format(new Date(project.due_date), 'MMM d, yyyy') : 'N/A'}
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
-                    {project.paymentStatus}
+                    {project.payment_status}
                   </Badge>
                 </TableCell>
                 <TableCell>

@@ -22,16 +22,16 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
     }, {} as Record<string, number>);
 
     const paymentStatusCounts = projects.reduce((acc, p) => {
-        acc[p.paymentStatus] = (acc[p.paymentStatus] || 0) + 1;
+        acc[p.payment_status] = (acc[p.payment_status] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
 
     const ownerCounts = projects.reduce((acc, p) => {
-        if (p.createdBy) {
-            if (!acc[p.createdBy.id]) {
-                acc[p.createdBy.id] = { ...p.createdBy, projectCount: 0 };
+        if (p.created_by) {
+            if (!acc[p.created_by.id]) {
+                acc[p.created_by.id] = { ...p.created_by, projectCount: 0 };
             }
-            acc[p.createdBy.id].projectCount++;
+            acc[p.created_by.id].projectCount++;
         }
         return acc;
     }, {} as Record<string, UserWithProjectCount>);
@@ -60,7 +60,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
     const topUserByValue = Object.values(userValueCounts).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
 
     const pendingPaymentCounts = projects
-      .filter(p => p.paymentStatus === 'Pending')
+      .filter(p => p.payment_status === 'Pending')
       .reduce((acc, p) => {
           p.assignedTo.forEach(user => {
               if (!acc[user.id]) {
