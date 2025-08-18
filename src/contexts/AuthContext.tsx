@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User, SupabaseSession, SupabaseUser } from '@/types';
-import { toast } from 'sonner';
+import { showSuccess, showError } from '@/utils/toast';
 
 interface AuthContextType {
   session: SupabaseSession | null;
@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           navigate('/reset-password');
         }
         if (event === 'SIGNED_OUT') {
-          toast.success("You have been successfully logged out.");
+          showSuccess("You have been successfully logged out.");
         }
         setSession(newSession);
         if (newSession) {
@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.auth.signOut({ scope: 'global' });
     if (error) {
       console.error("Error logging out:", error);
-      toast.error("Logout failed. Please try again.");
+      showError("Logout failed. Please try again.");
     }
   };
 

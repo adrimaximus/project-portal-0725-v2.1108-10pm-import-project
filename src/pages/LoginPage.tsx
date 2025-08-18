@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { showError, showSuccess } from "@/utils/toast";
 import { Loader2, Package } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
@@ -48,7 +48,7 @@ const LoginPage = () => {
     });
 
     if (error) {
-      toast.error(error.message);
+      showError(error.message);
       setIsLoading(false);
     }
     // On success, the onAuthStateChange listener in AuthContext will handle navigation.
@@ -57,12 +57,12 @@ const LoginPage = () => {
   const handleForgotPassword = async () => {
     const email = form.getValues("email");
     if (!email) {
-        toast.error("Please enter your email address to reset your password.");
+        showError("Please enter your email address to reset your password.");
         return;
     }
     const emailValidation = z.string().email().safeParse(email);
     if (!emailValidation.success) {
-        toast.error("Please enter a valid email address.");
+        showError("Please enter a valid email address.");
         return;
     }
 
@@ -73,9 +73,9 @@ const LoginPage = () => {
     setIsLoading(false);
 
     if (error) {
-        toast.error(error.message);
+        showError(error.message);
     } else {
-        toast.success("Password reset instructions have been sent to your email.");
+        showSuccess("Password reset instructions have been sent to your email.");
     }
   };
 
