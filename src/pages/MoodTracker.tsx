@@ -3,7 +3,7 @@ import { DateRange } from "react-day-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import PortalLayout from '@/components/PortalLayout';
 import MoodSelector from '@/components/mood-tracker/MoodSelector';
@@ -114,58 +114,64 @@ const MoodTracker = () => {
     setPeriod('custom');
   };
 
-  const getOverviewTitle = () => {
+  const getTitleForPeriod = (baseTitle: string) => {
     switch (period) {
-      case 'month':
-        return "This Month's Overview";
-      case 'year':
-        return "This Year's Overview";
+      case 'month': return `${baseTitle} for This Month`;
+      case 'year': return `${baseTitle} for This Year`;
       case 'custom':
         if (dateRange?.from && dateRange?.to) {
-          return `Overview: ${format(dateRange.from, "LLL dd")} - ${format(dateRange.to, "LLL dd, y")}`;
+          return `${baseTitle}: ${format(dateRange.from, "LLL dd")} - ${format(dateRange.to, "LLL dd, y")}`;
         }
-        return "Custom Range Overview";
+        return `${baseTitle} for Custom Range`;
       case 'week':
       default:
-        return "This Week's Overview";
+        return `${baseTitle} for This Week`;
     }
   };
 
-  const moodDataForPeriod = useMemo(() => {
+  const { moodDataForPeriod, historyForPeriod } = useMemo(() => {
+    const today = new Date();
+    let startDate, endDate;
+
+    switch (period) {
+      case 'week':
+        startDate = startOfWeek(today, { weekStartsOn: 1 });
+        endDate = endOfWeek(today, { weekStartsOn: 1 });
+        break;
+      case 'month':
+        startDate = startOfMonth(today);
+        endDate = endOfMonth(today);
+        break;
+      case 'year':
+        startDate = startOfYear(today);
+        endDate = endOfYear(today);
+        break;
+      case 'custom':
+        if (dateRange?.from) {
+          startDate = dateRange.from;
+          endDate = dateRange.to || dateRange.from;
+        }
+        break;
+    }
+
+    if (!startDate || !endDate) {
+      return { moodDataForPeriod: [], historyForPeriod: [] };
+    }
+    
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+
     const filteredHistory = history.filter(entry => {
       const entryDate = new Date(entry.date);
-      const today = new Date();
-
-      if (period === 'week') {
-        const dayOfWeek = today.getDay();
-        const firstDay = new Date(today);
-        firstDay.setDate(today.getDate() - dayOfWeek);
-        firstDay.setHours(0, 0, 0, 0);
-        const lastDay = new Date(firstDay);
-        lastDay.setDate(firstDay.getDate() + 6);
-        lastDay.setHours(23, 59, 59, 999);
-        return entryDate >= firstDay && entryDate <= lastDay;
-      }
-      if (period === 'month') {
-        return entryDate.getMonth() === today.getMonth() && entryDate.getFullYear() === today.getFullYear();
-      }
-      if (period === 'year') {
-        return entryDate.getFullYear() === today.getFullYear();
-      }
-      if (period === 'custom' && dateRange?.from && dateRange?.to) {
-        const from = new Date(dateRange.from);
-        from.setHours(0, 0, 0, 0);
-        const to = new Date(dateRange.to);
-        to.setHours(23, 59, 59, 999);
-        return entryDate >= from && entryDate <= to;
-      }
-      return false;
+      return isWithinInterval(entryDate, { start: startDate!, end: endDate! });
     });
 
-    return moods.map(mood => ({
+    const calculatedMoodData = moods.map(mood => ({
       ...mood,
       value: filteredHistory.filter(entry => entry.moodId === mood.id).length,
     })).filter(mood => mood.value > 0);
+
+    return { moodDataForPeriod: calculatedMoodData, historyForPeriod: filteredHistory };
   }, [history, period, dateRange]);
 
   const effectivePeriodForSuggestion = useMemo(() => {
@@ -246,7 +252,7 @@ const MoodTracker = () => {
 
           <Card className="lg:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle>{getOverviewTitle()}</CardTitle>
+              <CardTitle>{getTitleForPeriod("Overview")}</CardTitle>
               <div className="flex flex-wrap items-center gap-1 rounded-md bg-secondary p-1">
                 <Button variant={period === 'week' ? 'default' : 'ghost'} size="sm" onClick={() => handlePeriodChange('week')} className="h-7">This Week</Button>
                 <Button variant={period === 'month' ? 'default' : 'ghost'} size="sm" onClick={() => handlePeriodChange('month')} className="h-7">This Month</Button>
@@ -304,7 +310,11 @@ const MoodTracker = () => {
             </CardContent>
           </Card>
 
-          <MoodHistory history={history} className="lg:col-span-3" />
+          <MoodHistory 
+            history={historyForPeriod} 
+            title={getTitleForPeriod("History")}
+            className="lg:col-span-3" 
+          />
         </div>
       </div>
     </PortalLayout>
