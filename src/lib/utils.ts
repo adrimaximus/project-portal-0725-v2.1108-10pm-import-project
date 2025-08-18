@@ -66,3 +66,9 @@ export const getColorForTag = (tagName: string) => {
   const index = Math.abs(hash % tagColors.length);
   return tagColors[index];
 };
+
+export const parseUTCDate = (dateString: string | null | undefined): Date | null => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+};

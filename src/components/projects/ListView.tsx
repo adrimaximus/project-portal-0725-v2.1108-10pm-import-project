@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getStatusStyles } from '@/lib/utils';
+import { getStatusStyles, parseUTCDate } from '@/lib/utils';
+import { format } from 'date-fns';
 
 // Helper to format dates
 const formatDate = (date: Date) => {
@@ -23,7 +24,9 @@ const formatMonthYear = (date: Date) => {
   return date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 };
 
-const formatEndDate = (date: Date) => {
+const formatEndDate = (dateStr: string) => {
+  const date = parseUTCDate(dateStr);
+  if (!date) return '';
   return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 };
 
@@ -40,7 +43,11 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
     .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
 
   const groupedByDay = sortedProjects.reduce((acc, project) => {
-    const dateKey = new Date(project.start_date!).toISOString().split('T')[0];
+    const localDate = parseUTCDate(project.start_date!);
+    if (!localDate) return acc;
+    
+    const dateKey = format(localDate, 'yyyy-MM-dd');
+    
     if (!acc[dateKey]) {
       acc[dateKey] = [];
     }
@@ -100,7 +107,7 @@ const ListView = ({ projects, onDeleteProject }: ProjectsListProps) => {
                           </div>
                           {isMultiDay && project.due_date && (
                             <Badge variant="outline" className="mt-1.5 font-normal text-xs">
-                              Hingga {formatEndDate(new Date(project.due_date))}
+                              Hingga {formatEndDate(project.due_date)}
                             </Badge>
                           )}
                         </div>
