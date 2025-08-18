@@ -18,7 +18,6 @@ import { Tag, User } from "@/types";
 import TagEditorDialog from "./TagEditorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ScrollArea } from "../ui/scroll-area";
 
 interface TagInputProps {
   allTags: Tag[];
@@ -145,7 +144,7 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                 value={inputValue}
                 onValueChange={setInputValue}
               />
-              <ScrollArea className="h-[200px]">
+              <div className="h-[200px] overflow-y-auto">
                 {filteredTags.length === 0 && inputValue ? (
                   <div className="p-1">
                     <CommandItem
@@ -188,7 +187,7 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                     ))}
                   </CommandGroup>
                 ) : null}
-              </ScrollArea>
+              </div>
             </Command>
           </PopoverContent>
         </Popover>
