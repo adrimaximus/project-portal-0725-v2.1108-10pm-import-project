@@ -8,6 +8,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -19,7 +20,6 @@ import { Tag, User } from "@/types";
 import TagEditorDialog from "./TagEditorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ScrollArea } from "../ui/scroll-area";
 
 interface TagInputProps {
   allTags: Tag[];
@@ -146,7 +146,7 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                 value={inputValue}
                 onValueChange={setInputValue}
               />
-              <ScrollArea className="h-48">
+              <CommandList>
                 <CommandEmpty>
                   <div className="p-1">
                     <Button variant="ghost" className="w-full justify-start" onClick={handleCreate}>
@@ -180,7 +180,7 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                     </CommandItem>
                   ))}
                 </CommandGroup>
-              </ScrollArea>
+              </CommandList>
             </Command>
           </PopoverContent>
         </Popover>
