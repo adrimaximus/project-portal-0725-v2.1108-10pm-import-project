@@ -20,7 +20,6 @@ import { Tag, User } from "@/types";
 import TagEditorDialog from "./TagEditorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ScrollArea } from "../ui/scroll-area";
 
 interface TagInputProps {
   allTags: Tag[];
@@ -147,42 +146,40 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                 value={inputValue}
                 onValueChange={setInputValue}
               />
-              <CommandList>
-                <ScrollArea className="h-[200px]">
-                  <CommandEmpty>
-                    <div className="p-1">
-                      <Button variant="ghost" className="w-full justify-start" onClick={handleCreate}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Create "{inputValue}"
-                      </Button>
-                    </div>
-                  </CommandEmpty>
-                  <CommandGroup>
-                    {filteredTags.map((tag) => (
-                      <CommandItem
-                        key={tag.id}
-                        value={tag.name}
-                        onSelect={() => handleToggleTag(tag)}
-                        className="flex justify-between items-center cursor-pointer"
-                      >
-                        <div className="flex items-center">
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedTags.some(st => st.id === tag.id) ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {tag.name}
-                        </div>
-                        {tag.user_id === user?.id && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onMouseDown={(e) => e.preventDefault()} onClick={(e) => handleEdit(e, tag)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </ScrollArea>
+              <CommandList className="max-h-[200px]">
+                <CommandEmpty>
+                  <div className="p-1">
+                    <Button variant="ghost" className="w-full justify-start" onClick={handleCreate}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Create "{inputValue}"
+                    </Button>
+                  </div>
+                </CommandEmpty>
+                <CommandGroup>
+                  {filteredTags.map((tag) => (
+                    <CommandItem
+                      key={tag.id}
+                      value={tag.name}
+                      onSelect={() => handleToggleTag(tag)}
+                      className="flex justify-between items-center cursor-pointer"
+                    >
+                      <div className="flex items-center">
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedTags.some(st => st.id === tag.id) ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {tag.name}
+                      </div>
+                      {tag.user_id === user?.id && (
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onMouseDown={(e) => e.preventDefault()} onClick={(e) => handleEdit(e, tag)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
               </CommandList>
             </Command>
           </PopoverContent>
