@@ -39,7 +39,6 @@ serve(async (req) => {
     // Memanggil fungsi RPC yang sudah diperbaiki dengan parameter yang benar
     const { data: newGoal, error: rpcError } = await supabase
       .rpc('create_goal_and_link_tags', {
-        p_user_id: user.id,
         p_title: title,
         p_description: description,
         p_icon: icon,
