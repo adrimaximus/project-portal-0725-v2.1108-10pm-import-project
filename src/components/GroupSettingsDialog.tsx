@@ -56,7 +56,7 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
 
   const handleSaveDetails = async () => {
     setIsSaving(true);
-    let newAvatarUrl = conversation.userAvatar;
+    let newAvatarUrl: string | null = conversation.userAvatar || null;
 
     if (avatarFile) {
       const filePath = `group-avatars/${conversation.id}/${Date.now()}-${avatarFile.name}`;
