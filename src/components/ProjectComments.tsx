@@ -27,7 +27,13 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
     if (!project) return [];
     const users = [project.created_by, ...project.assignedTo];
     const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
-    return uniqueUsers.map(u => ({ id: u.id, display: u.name }));
+    return uniqueUsers.map(u => ({
+      id: u.id,
+      display: u.name,
+      avatar: u.avatar,
+      initials: u.initials,
+      email: u.email,
+    }));
   }, [project]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,20 +79,31 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
-            className="mentions-textarea"
             classNames={{
               control: "w-full",
               input: "w-full p-2 border rounded-md min-h-[100px] bg-background text-sm",
               suggestions: {
-                list: "bg-background border rounded-md shadow-lg",
-                item: "p-2 hover:bg-muted",
-                "&focused": "bg-muted",
+                list: "bg-background border rounded-md shadow-lg p-1",
+                item: "p-2 hover:bg-muted rounded-sm flex items-center gap-3 cursor-pointer",
+                itemFocused: "bg-muted",
               },
             }}
           >
             <Mention
               trigger="@"
               data={mentionableUsers}
+              renderSuggestion={(suggestion: any) => (
+                <>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={suggestion.avatar} />
+                    <AvatarFallback>{suggestion.initials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{suggestion.display}</p>
+                    <p className="text-xs text-muted-foreground">{suggestion.email}</p>
+                  </div>
+                </>
+              )}
               className="bg-blue-100"
             />
           </MentionsInput>

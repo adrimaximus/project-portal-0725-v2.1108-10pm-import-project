@@ -7,6 +7,7 @@ import ProjectOverviewTab from "./ProjectOverviewTab";
 import ProjectActivityFeed from "./ProjectActivityFeed";
 import ProjectTasks from "./ProjectTasks";
 import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-react";
+import { useMemo } from "react";
 
 interface ProjectMainContentProps {
   project: Project;
@@ -40,7 +41,15 @@ const ProjectMainContent = ({
   onServicesChange,
 }: ProjectMainContentProps) => {
   const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
-  const ticketCount = project.comments?.filter(c => c.isTicket).length || 0;
+  
+  const ticketCount = useMemo(() => {
+    const tickets = project.comments?.filter(c => c.isTicket) || [];
+    const openTickets = tickets.filter(ticket => {
+      const correspondingTask = project.tasks?.find(t => t.originTicketId === ticket.id);
+      return !correspondingTask || !correspondingTask.completed;
+    });
+    return openTickets.length;
+  }, [project.comments, project.tasks]);
 
   return (
     <Card>
