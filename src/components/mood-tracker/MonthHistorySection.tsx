@@ -1,5 +1,7 @@
 import { moods, MoodHistoryEntry } from '@/data/mood';
 import { Card } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { format } from 'date-fns';
 
 interface MonthHistorySectionProps {
   month: string;
@@ -36,13 +38,11 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
   const monthIndex = monthDate.getMonth();
 
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  // Adjust to start the week on Monday. getDay() is 0 for Sunday.
   const firstDayOfWeek = new Date(year, monthIndex, 1).getDay();
-  const placeholders = (firstDayOfWeek + 6) % 7; // Monday = 0 placeholders, Sunday = 6
+  const placeholders = (firstDayOfWeek + 6) % 7;
 
   const entriesMap = new Map<number, MoodHistoryEntry>();
   entries.forEach(entry => {
-    // Using UTC date to avoid timezone shifts. The date string is 'YYYY-MM-DD'.
     const entryDate = new Date(entry.date + 'T00:00:00Z');
     const dayOfMonth = entryDate.getUTCDate();
     entriesMap.set(dayOfMonth, entry);
@@ -50,31 +50,52 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
 
   const calendarDays = [];
 
-  // Add empty placeholders for days before the 1st of the month
   for (let i = 0; i < placeholders; i++) {
     calendarDays.push(<div key={`empty-${i}`} className="w-5 h-5 sm:w-6 sm:h-6" />);
   }
 
-  // Add the actual days of the month
   for (let day = 1; day <= daysInMonth; day++) {
     const entry = entriesMap.get(day);
+    const currentDate = new Date(year, monthIndex, day);
+    const formattedDate = format(currentDate, 'ccc, d MMM yyyy');
+
     if (entry) {
       const mood = getMoodById(entry.moodId);
       calendarDays.push(
-        <div
-          key={entry.id}
-          className="w-5 h-5 sm:w-6 sm:h-6 rounded-full"
-          style={{ backgroundColor: mood?.color }}
-          title={`${mood?.label} on ${new Date(year, monthIndex, day).toLocaleDateString()}`}
-        />
+        <TooltipProvider key={entry.id} delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="w-5 h-5 sm:w-6 sm:h-6 rounded-full"
+                style={{ backgroundColor: mood?.color }}
+              />
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{mood?.emoji}</span>
+                <div>
+                  <p className="font-bold" style={{ color: mood?.color }}>{mood?.label}</p>
+                  <p className="text-xs text-muted-foreground">{formattedDate}</p>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     } else {
       calendarDays.push(
-        <div
-          key={`day-${day}`}
-          className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-muted/50"
-          title={`No entry for ${new Date(year, monthIndex, day).toLocaleDateString()}`}
-        />
+        <TooltipProvider key={`day-${day}`} delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-muted/50"
+              />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-sm text-muted-foreground">No entry on {formattedDate}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     }
   }
