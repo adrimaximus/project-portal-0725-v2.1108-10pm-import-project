@@ -20,6 +20,7 @@ interface GoalFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: (newGoal: any) => void;
+  onGoalUpdate?: (updatedGoal: Goal) => void;
   goal?: Goal | null;
 }
 
@@ -33,7 +34,7 @@ const weekDays = [
   { label: 'S', value: 'Sa' },
 ];
 
-const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogProps) => {
+const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: GoalFormDialogProps) => {
   const isEditMode = !!goal;
   const { user } = useAuth();
 
@@ -114,10 +115,11 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
 
     try {
       if (isEditMode && goal) {
+        // Logic for updating a goal
         const existingTagIds = tags.filter(t => !t.id.startsWith('new_')).map(t => t.id);
         const newCustomTags = tags.filter(t => t.id.startsWith('new_')).map(t => ({ name: t.name, color: t.color }));
 
-        const { data: updatedGoalData, error } = await supabase.rpc('update_goal_with_tags', {
+        const { error } = await supabase.rpc('update_goal_with_tags', {
           p_goal_id: goal.id,
           p_title: title,
           p_description: description,
@@ -132,12 +134,15 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
           p_unit: unit,
           p_tags: existingTagIds,
           p_custom_tags: newCustomTags.length > 0 ? newCustomTags : null,
-        }).single();
+        });
 
         if (error) throw error;
-        toast.success(`Goal "${(updatedGoalData as Goal).title}" updated!`);
-        onSuccess(updatedGoalData);
+        toast.success(`Goal "${title}" updated!`);
+        if (onGoalUpdate) onGoalUpdate({ ...goal, title, description, type, frequency, specific_days: specificDays, target_quantity: targetQuantity, target_period: targetPeriod, target_value: targetValue, unit, color, icon, tags });
+        onOpenChange(false);
+
       } else {
+        // Logic for creating a new goal
         const { data: newGoal, error } = await supabase.rpc('create_goal_with_tags', {
           p_title: title,
           p_description: description,
@@ -151,11 +156,12 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
           p_target_value: targetValue,
           p_unit: unit,
           p_tags: tags.map(t => ({ name: t.name, color: t.color })),
-        }).single();
+        });
 
         if (error) throw error;
-        toast.success(`Goal "${(newGoal as Goal).title}" created!`);
+        toast.success(`Goal "${newGoal.title}" created!`);
         onSuccess(newGoal);
+        onOpenChange(false);
       }
     } catch (error: any) {
       toast.error(`Failed to save goal: ${error.message}`);
