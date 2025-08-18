@@ -45,6 +45,17 @@ const MoodHistory = ({ history, className }: MoodHistoryProps) => {
     };
   });
 
+  const currentActualYear = new Date().getFullYear();
+  const currentMonthIndex = new Date().getMonth();
+
+  // Only reorder if we are viewing the current year
+  const displayMonths = selectedYear === currentActualYear
+    ? [
+        ...monthsOfYear.slice(currentMonthIndex),
+        ...monthsOfYear.slice(0, currentMonthIndex)
+      ]
+    : monthsOfYear;
+
   return (
     <Card className={cn(className)}>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -63,7 +74,7 @@ const MoodHistory = ({ history, className }: MoodHistoryProps) => {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-          {monthsOfYear.map(monthData => (
+          {displayMonths.map(monthData => (
             <MonthHistorySection key={monthData.name} month={monthData.name} entries={monthData.entries} />
           ))}
         </div>
