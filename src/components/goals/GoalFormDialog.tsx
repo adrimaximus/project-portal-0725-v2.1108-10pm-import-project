@@ -181,9 +181,11 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isSaving && onOpenChange(isOpen)}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader><DialogTitle>{isEditMode ? 'Edit Goal' : 'Create a New Goal'}</DialogTitle></DialogHeader>
-        <div className="grid gap-4 py-4 max-h-[80vh] overflow-y-auto pr-4">
+      <DialogContent className="sm:max-w-[425px] flex flex-col max-h-[90vh]">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle>{isEditMode ? 'Edit Goal' : 'Create a New Goal'}</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 grid gap-4 py-4 overflow-y-auto pr-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="title" className="text-right">Title</Label>
             <Input id="title" value={formData.title} onChange={(e) => handleChange('title', e.target.value)} className="col-span-3" placeholder="e.g., Drink more water" />
@@ -283,7 +285,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
             </div>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 pt-4 border-t">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
