@@ -11,8 +11,10 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { FileText, User as UserIcon, Trophy, Sparkles, Search as SearchIcon, CreditCard } from "lucide-react";
+import { FileText, User as UserIcon, Trophy, Sparkles, Search as SearchIcon, CreditCard, Loader2 } from "lucide-react";
 import debounce from 'lodash.debounce';
+import { analyzeProjects } from "@/lib/openai";
+import ReactMarkdown from "react-markdown";
 
 type Goal = { id: string; title: string; slug: string; };
 type Bill = { id: string; name: string; slug: string; payment_status: string };
@@ -29,6 +31,8 @@ export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>({ projects: [], users: [], goals: [], bills: [] });
   const [loading, setLoading] = useState(false);
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -78,6 +82,7 @@ export function GlobalSearch() {
   const debouncedSearch = useCallback(debounce(performSearch, 300), []);
 
   useEffect(() => {
+    setAiResponse(null);
     if (query) {
       setLoading(true);
       debouncedSearch(query);
@@ -92,6 +97,23 @@ export function GlobalSearch() {
     setOpen(false);
     setQuery("");
     callback();
+  };
+
+  const handleAiQuery = async () => {
+    if (!query.trim()) return;
+
+    setIsAiLoading(true);
+    setResults({ projects: [], users: [], goals: [], bills: [] });
+    setLoading(false);
+
+    try {
+      const result = await analyzeProjects(query);
+      setAiResponse(result);
+    } catch (error: any) {
+      setAiResponse(`Sorry, I encountered an error: ${error.message}`);
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   const hasResults = results.projects.length > 0 || results.users.length > 0 || results.goals.length > 0 || results.bills.length > 0;
@@ -117,84 +139,102 @@ export function GlobalSearch() {
           onValueChange={setQuery}
         />
         <CommandList>
-          {loading && <CommandEmpty>Searching...</CommandEmpty>}
-          {!loading && !hasResults && query.length > 1 && <CommandEmpty>No results found.</CommandEmpty>}
-          
-          {query.length > 1 && (
-            <CommandGroup heading="AI Assistant">
-              <CommandItem
-                onSelect={() => handleSelect(() => navigate(`/ai-chat?q=${encodeURIComponent(query)}`))}
-                value={`ai-${query}`}
-                className="cursor-pointer"
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                <span>Ask AI: "{query}"</span>
-              </CommandItem>
-            </CommandGroup>
+          {isAiLoading && (
+            <div className="p-4 flex items-center justify-center text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              AI is thinking...
+            </div>
+          )}
+          {aiResponse && (
+            <div className="p-4 text-sm border-t prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown>
+                {aiResponse}
+              </ReactMarkdown>
+            </div>
           )}
 
-          {results.projects.length > 0 && (
-            <CommandGroup heading="Projects">
-              {results.projects.map(project => (
-                <CommandItem
-                  key={project.id}
-                  onSelect={() => handleSelect(() => navigate(`/projects/${project.slug}`))}
-                  value={`project-${project.name}`}
-                  className="cursor-pointer"
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  <span>{project.name}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
+          {!isAiLoading && !aiResponse && (
+            <>
+              {loading && <CommandEmpty>Searching...</CommandEmpty>}
+              {!loading && !hasResults && query.length > 1 && <CommandEmpty>No results found.</CommandEmpty>}
+              
+              {query.length > 1 && (
+                <CommandGroup heading="AI Assistant">
+                  <CommandItem
+                    onSelect={handleAiQuery}
+                    value={`ai-${query}`}
+                    className="cursor-pointer"
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    <span>Ask AI: "{query}"</span>
+                  </CommandItem>
+                </CommandGroup>
+              )}
 
-          {results.users.length > 0 && (
-            <CommandGroup heading="Users">
-              {results.users.map(user => (
-                <CommandItem
-                  key={user.id}
-                  onSelect={() => handleSelect(() => navigate(`/users/${user.id}`))}
-                  value={`user-${user.name}`}
-                  className="cursor-pointer"
-                >
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  <span>{user.name}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
+              {results.projects.length > 0 && (
+                <CommandGroup heading="Projects">
+                  {results.projects.map(project => (
+                    <CommandItem
+                      key={project.id}
+                      onSelect={() => handleSelect(() => navigate(`/projects/${project.slug}`))}
+                      value={`project-${project.name}`}
+                      className="cursor-pointer"
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>{project.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
 
-          {results.goals.length > 0 && (
-            <CommandGroup heading="Goals">
-              {results.goals.map(goal => (
-                <CommandItem
-                  key={goal.id}
-                  onSelect={() => handleSelect(() => navigate(`/goals/${goal.slug}`))}
-                  value={`goal-${goal.title}`}
-                  className="cursor-pointer"
-                >
-                  <Trophy className="mr-2 h-4 w-4" />
-                  <span>{goal.title}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
+              {results.users.length > 0 && (
+                <CommandGroup heading="Users">
+                  {results.users.map(user => (
+                    <CommandItem
+                      key={user.id}
+                      onSelect={() => handleSelect(() => navigate(`/users/${user.id}`))}
+                      value={`user-${user.name}`}
+                      className="cursor-pointer"
+                    >
+                      <UserIcon className="mr-2 h-4 w-4" />
+                      <span>{user.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
 
-          {results.bills.length > 0 && (
-            <CommandGroup heading="Bills">
-              {results.bills.map(bill => (
-                <CommandItem
-                  key={bill.id}
-                  onSelect={() => handleSelect(() => navigate(`/projects/${bill.slug}?tab=billing`))}
-                  value={`bill-${bill.name}`}
-                  className="cursor-pointer"
-                >
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  <span>{bill.name} ({bill.payment_status})</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+              {results.goals.length > 0 && (
+                <CommandGroup heading="Goals">
+                  {results.goals.map(goal => (
+                    <CommandItem
+                      key={goal.id}
+                      onSelect={() => handleSelect(() => navigate(`/goals/${goal.slug}`))}
+                      value={`goal-${goal.title}`}
+                      className="cursor-pointer"
+                    >
+                      <Trophy className="mr-2 h-4 w-4" />
+                      <span>{goal.title}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {results.bills.length > 0 && (
+                <CommandGroup heading="Bills">
+                  {results.bills.map(bill => (
+                    <CommandItem
+                      key={bill.id}
+                      onSelect={() => handleSelect(() => navigate(`/projects/${bill.slug}?tab=billing`))}
+                      value={`bill-${bill.name}`}
+                      className="cursor-pointer"
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      <span>{bill.name} ({bill.payment_status})</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </>
           )}
         </CommandList>
       </CommandDialog>
