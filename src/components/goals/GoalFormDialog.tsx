@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Goal, GoalType, GoalPeriod, Tag } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,13 +16,14 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import IconPicker from './IconPicker';
-import { colors as tagColors } from '@/data/colors';
+import { colors } from '@/data/colors';
+import { allIcons } from '@/data/icons';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface GoalFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: (newGoal: any) => void;
-  onGoalUpdate?: (updatedGoal: Goal) => void;
   goal?: Goal | null;
 }
 
@@ -32,9 +33,10 @@ const weekDays = [
   { label: 'S', value: 'Sa' },
 ];
 
-const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: GoalFormDialogProps) => {
+const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogProps) => {
   const isEditMode = !!goal;
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     title: '', description: '', type: 'frequency' as GoalType,
@@ -46,39 +48,41 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    const fetchTags = async () => {
-      if (!user) return;
-      const { data } = await supabase.from('tags').select('*').or(`user_id.eq.${user.id},user_id.is.null`);
-      if (data) setAllTags(data);
-    };
+  const fetchTags = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from('tags').select('*').or(`user_id.eq.${user.id},user_id.is.null`);
+    if (data) setAllTags(data);
+  }, [user]);
 
+  useEffect(() => {
     if (open) {
       fetchTags();
       if (isEditMode && goal) {
         setFormData({
           title: goal.title, description: goal.description || '', type: goal.type,
-          frequency: goal.frequency, specificDays: goal.specific_days,
+          frequency: goal.frequency, specificDays: goal.specific_days || [],
           targetQuantity: goal.target_quantity, targetPeriod: goal.target_period || 'Monthly',
           targetValue: goal.target_value, unit: goal.unit || '', color: goal.color,
-          icon: goal.icon, tags: goal.tags,
+          icon: goal.icon, tags: goal.tags || [],
         });
       } else {
+        const randomIcon = allIcons[Math.floor(Math.random() * allIcons.length)];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
         setFormData({
           title: '', description: '', type: 'frequency', frequency: 'Daily',
           specificDays: [], targetQuantity: undefined, targetPeriod: 'Monthly',
-          targetValue: undefined, unit: '', color: '#141414', icon: 'Target', tags: [],
+          targetValue: undefined, unit: '', color: randomColor, icon: randomIcon, tags: [],
         });
       }
     }
-  }, [goal, open, isEditMode, user]);
+  }, [goal, open, isEditMode, user, fetchTags]);
 
   const handleChange = (field: keyof typeof formData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleTagCreate = (tagName: string): Tag => {
-    const randomColor = tagColors[Math.floor(Math.random() * tagColors.length)];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
     const newTag: Tag = { id: uuidv4(), name: tagName, color: randomColor, isNew: true };
     setAllTags(prev => [...prev, newTag]);
     return newTag;
@@ -97,25 +101,37 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
     setIsSaving(true);
 
     try {
-      const newTagsToCreate = formData.tags.filter(t => t.isNew);
-      const existingTags = formData.tags.filter(t => !t.isNew);
-      let createdTags: Tag[] = [];
-
-      if (newTagsToCreate.length > 0) {
-        const newTagPayloads = newTagsToCreate.map(t => ({ name: t.name, color: t.color, user_id: user.id }));
-        const { data: newDbTags, error: tagError } = await supabase.from('tags').insert(newTagPayloads).select();
-        if (tagError) throw new Error(`Failed to create new tags: ${tagError.message}`);
-        createdTags = newDbTags as Tag[];
-      }
-
-      const finalTags = [...existingTags, ...createdTags];
-      const finalTagIds = finalTags.map(t => t.id);
-
-      if (isEditMode && onGoalUpdate && goal) {
-        onGoalUpdate({ ...goal, ...formData, tags: finalTags });
-      } else if (!isEditMode && onSuccess) {
+      if (isEditMode && goal) {
+        const newTags = formData.tags.filter(t => t.isNew);
+        const existingTagIds = formData.tags.filter(t => !t.isNew).map(t => t.id);
         const { tags, ...restOfFormData } = formData;
-        const createPayload = { ...restOfFormData, tag_ids: finalTagIds };
+        
+        const { error } = await supabase
+          .rpc('update_goal_with_tags', {
+            p_goal_id: goal.id,
+            p_title: restOfFormData.title,
+            p_description: restOfFormData.description,
+            p_icon: restOfFormData.icon,
+            p_color: restOfFormData.color,
+            p_type: restOfFormData.type,
+            p_frequency: restOfFormData.frequency,
+            p_specific_days: restOfFormData.specificDays,
+            p_target_quantity: restOfFormData.targetQuantity,
+            p_target_period: restOfFormData.targetPeriod,
+            p_target_value: restOfFormData.targetValue,
+            p_unit: restOfFormData.unit,
+            p_tags: existingTagIds,
+            p_custom_tags: newTags.map(({ name, color }) => ({ name, color })),
+          });
+
+        if (error) throw error;
+        toast.success("Goal updated successfully.");
+        queryClient.invalidateQueries({ queryKey: ['goal', goal.slug] });
+        queryClient.invalidateQueries({ queryKey: ['goals'] });
+        onSuccess(goal);
+      } else {
+        const { tags, ...restOfFormData } = formData;
+        const createPayload = { ...restOfFormData, tags: tags };
         const { data: newGoal, error: goalError } = await supabase.functions.invoke('secure-create-goal', { body: createPayload });
         if (goalError) throw goalError;
         toast.success(`Goal "${newGoal.title}" created!`);
@@ -233,7 +249,14 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
           <div className="grid grid-cols-4 items-start gap-4">
             <Label className="text-right pt-2">Tags</Label>
             <div className="col-span-3">
-              <TagInput allTags={allTags} selectedTags={formData.tags} onTagsChange={(v) => handleChange('tags', v)} onTagCreate={handleTagCreate} />
+              <TagInput
+                allTags={allTags}
+                selectedTags={formData.tags}
+                onTagsChange={(v) => handleChange('tags', v)}
+                onTagCreate={handleTagCreate}
+                user={user}
+                onTagsUpdated={fetchTags}
+              />
             </div>
           </div>
         </div>

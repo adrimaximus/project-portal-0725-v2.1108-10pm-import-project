@@ -1,88 +1,61 @@
 import { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js';
+export type { SupabaseSession, SupabaseUser };
 
-// --- User & Profile Types ---
 export interface User {
   id: string;
-  email: string;
+  email?: string;
   name: string;
   avatar?: string;
   initials: string;
   first_name?: string | null;
   last_name?: string | null;
-  role?: 'owner' | 'member' | 'admin' | string;
-  status?: 'active' | 'suspended' | 'Pending invite' | string;
-  lastActive?: string;
-  updated_at?: string;
-  sidebar_order?: string[];
-}
-export type UserProfile = User;
-export interface AssignedUser extends UserProfile {
   role?: string;
+  status?: string;
+  sidebar_order?: string[];
+  updated_at?: string;
 }
 
-
-// --- Project Types ---
-export const PROJECT_STATUSES = ['Requested', 'In Progress', 'In Review', 'On Hold', 'Completed', 'Cancelled'] as const;
-export type ProjectStatus = typeof PROJECT_STATUSES[number];
-
-export const PROJECT_STATUS_OPTIONS = [
-  { value: 'Requested', label: 'Requested' },
-  { value: 'In Progress', label: 'In Progress' },
-  { value: 'In Review', label: 'In Review' },
-  { value: 'On Hold', label: 'On Hold' },
-  { value: 'Completed', label: 'Completed' },
-  { value: 'Cancelled', label: 'Cancelled' },
-] as const;
-
-export const PAYMENT_STATUSES = ['Proposed', 'Pending', 'In Process', 'Paid', 'Overdue', 'Cancelled'] as const;
-export type PaymentStatus = typeof PAYMENT_STATUSES[number];
-
-export const PAYMENT_STATUS_OPTIONS = [
-  { value: 'Proposed', label: 'Proposed' },
-  { value: 'Pending', label: 'Pending' },
-  { value: 'In Process', label: 'In Process' },
-  { value: 'Paid', label: 'Paid' },
-  { value: 'Overdue', label: 'Overdue' },
-  { value: 'Cancelled', label: 'Cancelled' },
-] as const;
+export type Collaborator = User & { online?: boolean };
+export type AssignedUser = User;
 
 export interface Task {
   id: string;
   title: string;
   completed: boolean;
+  assignedTo: User[];
   originTicketId?: string;
-  assignedTo: UserProfile[];
 }
 
 export interface Comment {
   id: string;
-  text: string;
+  author: User;
   timestamp: string;
+  text: string;
   isTicket: boolean;
   attachment_url?: string;
   attachment_name?: string;
-  author: UserProfile;
 }
 
 export interface ProjectFile {
-    id: string;
-    name: string;
-    size: number;
-    type: string;
-    url: string;
-    storage_path: string;
-    created_at: string;
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+  storage_path: string;
+  created_at: string;
 }
 
 export interface Activity {
   id: string;
-  user: UserProfile;
   type: string;
-  timestamp: string; // ISO string
-  details?: {
-    description: string;
-  };
+  user: User;
+  details: { description: string };
+  timestamp: string;
 }
+
+export type ProjectStatus = 'Requested' | 'In Progress' | 'In Review' | 'On Hold' | 'Completed' | 'Cancelled';
+export type PaymentStatus = 'Unpaid' | 'Paid' | 'Pending' | 'In Process' | 'Overdue' | 'Proposed' | 'Cancelled';
 
 export interface Project {
   id: string;
@@ -90,105 +63,45 @@ export interface Project {
   name: string;
   category: string;
   description: string;
-  status: ProjectStatus | string;
+  status: ProjectStatus;
   progress: number;
   budget: number;
-  startDate: string;
-  dueDate: string;
-  paymentStatus: PaymentStatus | string;
-  paymentDueDate?: string;
-  createdBy: UserProfile;
+  start_date: string;
+  due_date: string;
+  payment_status: PaymentStatus;
+  payment_due_date?: string;
+  created_by: User;
   assignedTo: AssignedUser[];
   tasks: Task[];
   comments: Comment[];
-  services?: string[];
-  briefFiles?: ProjectFile[];
+  services: string[];
+  briefFiles: ProjectFile[];
   activities?: Activity[];
-  origin_event_id?: string;
+  venue?: string;
 }
 
-
-// --- Chat Types ---
-export interface Collaborator {
-  id: string;
-  name: string;
-  initials: string;
-  online: boolean;
-  avatar?: string;
-}
-
-export interface Attachment {
-  name:string;
-  type: 'image' | 'file';
-  url: string;
-}
-
-export interface Message {
-  id: string;
-  sender: User | Collaborator;
-  text: string;
-  timestamp: string;
-  attachment?: Attachment | null;
-}
-
-export interface Conversation {
-  id: string;
-  userName: string;
-  userAvatar?: string;
-  lastMessage: string;
-  lastMessageTimestamp: string;
-  unreadCount: number;
-  messages: Message[];
-  isGroup?: boolean;
-  members?: Collaborator[];
-}
-
-
-// --- Google Calendar Types ---
-export interface GoogleCalendarEvent {
-  id: string;
-  summary: string;
-  status: string;
-  start: {
-    dateTime?: string;
-    date?: string;
-  };
-  end: {
-    dateTime?: string;
-    date?: string;
-  };
-}
-
-export interface GoogleCalendarListEntry {
-  id: string;
-  summary: string;
-  backgroundColor: string;
-  foregroundColor: string;
-  selected?: boolean;
-}
-
-// --- Goals Types ---
-export type GoalType = 'quantity' | 'value' | 'frequency';
-export type GoalPeriod = 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
-
-export interface Tag {
-    id: string;
-    name: string;
-    color: string;
-    isNew?: boolean;
-}
+export type GoalType = 'frequency' | 'quantity' | 'value';
+export type GoalPeriod = 'Weekly' | 'Monthly';
 
 export interface GoalCompletion {
   id: string;
-  date: string; // ISO 8601 date string
+  date: string;
   value: number;
   notes?: string;
   userId: string;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  user_id?: string;
+  isNew?: boolean;
+}
+
 export interface Goal {
   id: string;
-  slug: string;
+  user_id: string;
   title: string;
   description: string;
   icon: string;
@@ -200,12 +113,72 @@ export interface Goal {
   frequency: 'Daily' | 'Weekly';
   target_period?: GoalPeriod;
   unit?: string;
-  collaborators: User[];
-  completions: GoalCompletion[];
+  specific_days?: string[];
+  created_at: string;
+  updated_at: string;
+  slug: string;
   tags: Tag[];
-  specific_days: string[];
+  collaborators: Collaborator[];
+  completions: GoalCompletion[];
 }
 
+export interface Attachment {
+  name: string;
+  url: string;
+  type: 'image' | 'file';
+}
 
-// --- Supabase Types ---
-export type { SupabaseSession, SupabaseUser };
+export interface Message {
+  id: string;
+  text: string;
+  timestamp: string;
+  sender: User;
+  attachment?: Attachment;
+}
+
+export interface Conversation {
+  id: string;
+  userName: string;
+  userAvatar?: string;
+  lastMessage: string;
+  lastMessageTimestamp: string;
+  unreadCount: number;
+  messages: Message[];
+  isGroup: boolean;
+  members: Collaborator[];
+}
+
+export interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  start: {
+    dateTime?: string;
+    date?: string;
+  };
+  end: {
+    dateTime?: string;
+    date?: string;
+  };
+  htmlLink: string;
+  status: string;
+  location?: string;
+}
+
+export const PROJECT_STATUS_OPTIONS = [
+  { value: 'Requested', label: 'Requested' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'In Review', label: 'In Review' },
+  { value: 'On Hold', label: 'On Hold' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Cancelled', label: 'Cancelled' },
+];
+
+export const PAYMENT_STATUS_OPTIONS = [
+  { value: 'Unpaid', label: 'Unpaid' },
+  { value: 'Paid', label: 'Paid' },
+  { value: 'Pending', label: 'Pending' },
+  { value: 'In Process', label: 'In Process' },
+  { value: 'Overdue', label: 'Overdue' },
+  { value: 'Proposed', label: 'Proposed' },
+  { value: 'Cancelled', label: 'Cancelled' },
+];

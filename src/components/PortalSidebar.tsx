@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, ChevronDown, LifeBuoy, LogOut, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, Home, Package, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -9,17 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "./ui/button";
 import OnlineCollaborators from "./OnlineCollaborators";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { dummyNotifications } from "@/data/notifications";
 import { useFeatures } from "@/contexts/FeaturesContext";
@@ -125,10 +115,8 @@ const SortableItem = ({ item, isCollapsed, location }: { item: NavItem, isCollap
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
-  const { user, logout, refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
-  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const { isFeatureEnabled } = useFeatures();
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [customItemsTrigger, setCustomItemsTrigger] = useState(0);
@@ -234,10 +222,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     }
   }
 
-  const handleLogout = async () => {
-    await logout();
-  };
-
   if (!user) {
     return null;
   }
@@ -283,99 +267,8 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             </DndContext>
           </TooltipProvider>
         </div>
-        <div className="mt-auto">
-          <div className="border-t">
-            <OnlineCollaborators isCollapsed={isCollapsed} />
-          </div>
-          <div className="border-t">
-            <div className={cn("p-4", isCollapsed && "p-2")}>
-              {isCollapsed ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="w-full h-auto p-1">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={user.avatar} alt={user.name} />
-                              <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <span className="sr-only">{user.name}</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">{user.name}</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="right" align="end" className="w-56">
-                    <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => navigate('/profile')}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <LifeBuoy className="mr-2 h-4 w-4" />
-                      <span>Support</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={handleLogout}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Logout</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-between gap-3 px-3"
-                    onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-                  >
-                    <span className="flex items-center gap-3">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      {user.name}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 transition-transform",
-                        isAccountMenuOpen && "rotate-180"
-                      )}
-                    />
-                  </Button>
-                  {isAccountMenuOpen && (
-                    <nav className="grid items-start gap-1 text-sm font-medium mt-2 pl-8">
-                      <Link
-                        to="/profile"
-                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                      >
-                        <Settings className="h-4 w-4" />
-                        Profile
-                      </Link>
-                      <Link
-                        to="#"
-                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                      >
-                        <LifeBuoy className="h-4 w-4" />
-                        Support
-                      </Link>
-                      <Link
-                        to="#"
-                        onClick={handleLogout}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Logout
-                      </Link>
-                    </nav>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="mt-auto border-t">
+          <OnlineCollaborators isCollapsed={isCollapsed} />
         </div>
       </div>
     </div>

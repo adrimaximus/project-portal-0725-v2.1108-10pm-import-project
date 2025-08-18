@@ -1,6 +1,6 @@
 import { Project } from '@/types';
 import { GoogleCalendarEvent } from '@/types';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   eachDayOfInterval,
@@ -35,7 +35,7 @@ const getItemColor = (item: CombinedItem): string => {
   }
 };
 
-const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalEvents: GoogleCalendarEvent[] }) => {
+const MonthView = ({ projects, gcalEvents }: { projects: Project[], gcalEvents: GoogleCalendarEvent[] }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const combinedItems: CombinedItem[] = useMemo(() => [...projects, ...gcalEvents], [projects, gcalEvents]);
@@ -149,7 +149,7 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
   };
 
   const months = Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
-  const weekDays = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  const weekDays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 
   return (
     <div className="p-4 bg-background rounded-lg border">
@@ -168,7 +168,7 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
             start: startOfMonth(month),
             end: new Date(month.getFullYear(), month.getMonth() + 1, 0),
           });
-          const firstDayOfMonth = getDay(startOfMonth(month));
+          const firstDayOfMonth = (getDay(startOfMonth(month)) + 6) % 7;
 
           return (
             <div key={format(month, 'yyyy-MM')}>
@@ -194,4 +194,4 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
   );
 };
 
-export default ProjectsYearView;
+export default MonthView;

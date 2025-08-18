@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { dummyProjects } from "@/data/projects";
+import { supabase } from "@/integrations/supabase/client";
 import { Project, User } from "@/types";
 import {
   CommandDialog,
@@ -10,12 +10,54 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { FileText, User as UserIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText, User as UserIcon, Trophy, Sparkles, Search as SearchIcon, CreditCard, Loader2 } from "lucide-react";
+import debounce from 'lodash.debounce';
+import { analyzeProjects } from "@/lib/openai";
+import ReactMarkdown from "react-markdown";
+import { Avatar, AvatarFallback } from "./ui/avatar";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+type Goal = { id: string; title: string; slug: string; };
+type Bill = { id: string; name: string; slug: string; payment_status: string };
+
+type SearchResults = {
+  projects: Pick<Project, 'id' | 'name' | 'slug'>[];
+  users: Pick<User, 'id' | 'name'>[];
+  goals: Goal[];
+  bills: Bill[];
+};
+
+type ConversationMessage = {
+  sender: 'user' | 'ai';
+  content: string;
+};
 
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResults>({ projects: [], users: [], goals: [], bills: [] });
+  const [loading, setLoading] = useState(false);
+  const [conversation, setConversation] = useState<ConversationMessage[]>([]);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const navigate = useNavigate();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [conversation, isAiLoading]);
+
+  const resetSearch = () => {
+    setQuery("");
+    setResults({ projects: [], users: [], goals: [], bills: [] });
+    setConversation([]);
+    setIsAiLoading(false);
+    setLoading(false);
+  };
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -28,77 +70,223 @@ export function GlobalSearch() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  const uniqueUsers: User[] = useMemo(() => {
-    const allUsers = dummyProjects.flatMap(p => [p.createdBy, ...p.assignedTo]);
-    return [...new Map(allUsers.map(item => [item.id, item])).values()];
-  }, []);
+  const performSearch = async (searchQuery: string) => {
+    if (searchQuery.length < 2) {
+      setResults({ projects: [], users: [], goals: [], bills: [] });
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
 
-  const filteredProjects = query.length > 1
-    ? dummyProjects.filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
-    : [];
+    try {
+      const [projectsRes, usersRes, goalsRes, billsRes] = await Promise.all([
+        supabase.from('projects').select('id, name, slug').ilike('name', `%${searchQuery}%`).limit(5),
+        supabase.from('profiles').select('id, first_name, last_name, email').or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`).limit(5),
+        supabase.from('goals').select('id, title, slug').ilike('title', `%${searchQuery}%`).limit(5),
+        supabase.from('projects').select('id, name, slug, payment_status').in('payment_status', ['Unpaid', 'Overdue']).ilike('name', `%${searchQuery}%`).limit(5)
+      ]);
 
-  const filteredUsers = query.length > 1
-    ? uniqueUsers.filter(u => u.name.toLowerCase().includes(query.toLowerCase()))
-    : [];
+      const projects = projectsRes.data || [];
+      const users = (usersRes.data || []).map(p => ({
+        id: p.id,
+        name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email,
+      }));
+      const goals = goalsRes.data || [];
+      const bills = billsRes.data || [];
 
-  const handleSelectProject = (project: Project) => {
-    setOpen(false);
-    navigate(`/projects/${project.id}`);
+      setResults({ projects, users, goals, bills });
+    } catch (error) {
+      console.error("Error performing search:", error);
+      setResults({ projects: [], users: [], goals: [], bills: [] });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSelectUser = (user: User) => {
+  const debouncedSearch = useCallback(debounce(performSearch, 300), []);
+
+  useEffect(() => {
+    if (conversation.length > 0) return;
+    if (query) {
+      setLoading(true);
+      debouncedSearch(query);
+    } else {
+      setResults({ projects: [], users: [], goals: [], bills: [] });
+      setLoading(false);
+      debouncedSearch.cancel();
+    }
+  }, [query, debouncedSearch, conversation]);
+
+  const handleSelect = (callback: () => void) => {
     setOpen(false);
-    // You might want to navigate to a user profile page
-    console.log("Selected user:", user);
+    resetSearch();
+    callback();
   };
+
+  const handleSendMessage = async (message: string) => {
+    if (!message.trim()) return;
+  
+    const oldConversation = [...conversation];
+    const newConversationForUi: ConversationMessage[] = [...conversation, { sender: 'user', content: message }];
+    setConversation(newConversationForUi);
+    setQuery("");
+    setIsAiLoading(true);
+    setResults({ projects: [], users: [], goals: [], bills: [] });
+    setLoading(false);
+  
+    try {
+      const result = await analyzeProjects(message, oldConversation);
+      
+      const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made'];
+      if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
+        toast.info("Action successful. Refreshing project data...");
+        await queryClient.invalidateQueries({ queryKey: ['projects'] });
+        await queryClient.invalidateQueries({ queryKey: ['project'] });
+      }
+  
+      setConversation(prev => [...prev, { sender: 'ai', content: result }]);
+    } catch (error: any) {
+      setConversation(prev => [...prev, { sender: 'ai', content: `Sorry, I encountered an error: ${error.message}` }]);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const hasResults = results.projects.length > 0 || results.users.length > 0 || results.goals.length > 0 || results.bills.length > 0;
 
   return (
     <>
-      <p className="text-sm text-muted-foreground cursor-pointer" onClick={() => setOpen(true)}>
-        Search...
-        <kbd className="pointer-events-none ml-4 inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+      <Button
+        variant="outline"
+        className="relative h-9 w-full justify-start rounded-[0.5rem] text-sm text-muted-foreground sm:pr-12 md:w-40 lg:w-64"
+        onClick={() => setOpen(true)}
+      >
+        <SearchIcon className="h-4 w-4 mr-2" />
+        <span className="hidden lg:inline-flex">Search or ask AI...</span>
+        <span className="inline-flex lg:hidden">Search...</span>
+        <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
           <span className="text-xs">⌘</span>K
         </kbd>
-      </p>
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      </Button>
+      <CommandDialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) resetSearch(); }}>
         <CommandInput 
-          placeholder="Search for projects or users..." 
+          placeholder="Search or ask AI..." 
           value={query}
           onValueChange={setQuery}
         />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          
-          {filteredProjects.length > 0 && (
-            <CommandGroup heading="Projects">
-              {filteredProjects.map(project => (
-                <CommandItem
-                  key={project.id}
-                  onSelect={() => handleSelectProject(project)}
-                  value={`project-${project.name}`}
-                  className="cursor-pointer"
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  <span>{project.name}</span>
-                </CommandItem>
+        <div ref={scrollRef} className="max-h-[400px] overflow-y-auto">
+          {conversation.length > 0 && (
+            <div className="p-4 space-y-4 border-t">
+              {conversation.map((msg, index) => (
+                <div key={index} className={`flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
+                  {msg.sender === 'ai' && (
+                    <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
+                      <AvatarFallback><Sparkles className="h-4 w-4" /></AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className={`max-w-sm rounded-lg px-3 py-2 ${msg.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'} prose prose-sm dark:prose-invert max-w-none`}>
+                    <ReactMarkdown>
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
+                </div>
               ))}
+              {isAiLoading && (
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
+                    <AvatarFallback><Sparkles className="h-4 w-4" /></AvatarFallback>
+                  </Avatar>
+                  <div className="max-w-sm rounded-lg px-3 py-2 bg-muted flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <CommandList>
+          {loading && <CommandEmpty>Searching...</CommandEmpty>}
+          {!loading && !hasResults && query.length > 1 && conversation.length === 0 && <CommandEmpty>No results found.</CommandEmpty>}
+          
+          {query.length > 1 && (
+            <CommandGroup heading={conversation.length > 0 ? "Send message" : "AI Assistant"}>
+              <CommandItem
+                onSelect={() => handleSendMessage(query)}
+                value={`ai-${query}`}
+                className="cursor-pointer"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                <span>{conversation.length > 0 ? `Send: "${query}"` : `Ask AI: "${query}"`}</span>
+              </CommandItem>
             </CommandGroup>
           )}
 
-          {filteredUsers.length > 0 && (
-            <CommandGroup heading="Users">
-              {filteredUsers.map(user => (
-                <CommandItem
-                  key={user.id}
-                  onSelect={() => handleSelectUser(user)}
-                  value={`user-${user.name}`}
-                  className="cursor-pointer"
-                >
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  <span>{user.name}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+          {conversation.length === 0 && (
+            <>
+              {results.projects.length > 0 && (
+                <CommandGroup heading="Projects">
+                  {results.projects.map(project => (
+                    <CommandItem
+                      key={project.id}
+                      onSelect={() => handleSelect(() => navigate(`/projects/${project.slug}`))}
+                      value={`project-${project.name}`}
+                      className="cursor-pointer"
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>{project.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {results.users.length > 0 && (
+                <CommandGroup heading="Users">
+                  {results.users.map(user => (
+                    <CommandItem
+                      key={user.id}
+                      onSelect={() => handleSelect(() => navigate(`/users/${user.id}`))}
+                      value={`user-${user.name}`}
+                      className="cursor-pointer"
+                    >
+                      <UserIcon className="mr-2 h-4 w-4" />
+                      <span>{user.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {results.goals.length > 0 && (
+                <CommandGroup heading="Goals">
+                  {results.goals.map(goal => (
+                    <CommandItem
+                      key={goal.id}
+                      onSelect={() => handleSelect(() => navigate(`/goals/${goal.slug}`))}
+                      value={`goal-${goal.title}`}
+                      className="cursor-pointer"
+                    >
+                      <Trophy className="mr-2 h-4 w-4" />
+                      <span>{goal.title}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {results.bills.length > 0 && (
+                <CommandGroup heading="Bills">
+                  {results.bills.map(bill => (
+                    <CommandItem
+                      key={bill.id}
+                      onSelect={() => handleSelect(() => navigate(`/projects/${bill.slug}?tab=billing`))}
+                      value={`bill-${bill.name}`}
+                      className="cursor-pointer"
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      <span>{bill.name} ({bill.payment_status})</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </>
           )}
         </CommandList>
       </CommandDialog>

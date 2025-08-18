@@ -26,14 +26,19 @@ serve(async (req) => {
     if (userError || !user) throw new Error("User not authenticated.");
 
     const payload = await req.json();
-    const { title, description, icon, color, type, frequency, specific_days, target_quantity, target_period, target_value, unit, tag_ids } = payload;
+    const { title, description, icon, color, type, frequency, specific_days, target_quantity, target_period, target_value, unit, tags } = payload;
 
     if (!title || !icon || !color || !type) {
       throw new Error("Missing required fields: title, icon, color, and type are required.");
     }
 
+    // Separate existing and new tags
+    const existingTagIds = tags.filter(t => !t.isNew && t.id).map(t => t.id);
+    const newCustomTags = tags.filter(t => t.isNew).map(({ name, color }) => ({ name, color }));
+
+    // Call the refactored RPC function
     const { data: newGoal, error: rpcError } = await supabase
-      .rpc('create_goal_with_tags', {
+      .rpc('create_goal_and_link_tags', {
         p_title: title,
         p_description: description,
         p_icon: icon,
@@ -45,11 +50,13 @@ serve(async (req) => {
         p_target_period: target_period,
         p_target_value: target_value,
         p_unit: unit,
-        p_tags: tag_ids,
+        p_existing_tags: existingTagIds,
+        p_custom_tags: newCustomTags,
       })
       .single();
 
     if (rpcError) throw rpcError;
+    if (!newGoal) throw new Error("Goal creation failed to return the new goal data.");
 
     return new Response(JSON.stringify(newGoal), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
