@@ -2,7 +2,14 @@ import * as React from "react";
 import { Check, ChevronsUpDown, PlusCircle, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
@@ -13,7 +20,6 @@ import { Tag, User } from "@/types";
 import TagEditorDialog from "./TagEditorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TagInputProps {
   allTags: Tag[];
@@ -30,15 +36,12 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
   const [isEditorOpen, setIsEditorOpen] = React.useState(false);
   const [editingTag, setEditingTag] = React.useState<Tag | null>(null);
 
-  const filteredTags = allTags.filter(tag => 
-    tag.name.toLowerCase().includes(inputValue.toLowerCase())
-  );
-
-  const handleSelect = (tag: Tag) => {
-    if (!selectedTags.some(st => st.id === tag.id)) {
-      onTagsChange([...selectedTags, tag]);
-    } else {
+  const handleToggleTag = (tag: Tag) => {
+    const isSelected = selectedTags.some(st => st.id === tag.id);
+    if (isSelected) {
       onTagsChange(selectedTags.filter(st => st.id !== tag.id));
+    } else {
+      onTagsChange([...selectedTags, tag]);
     }
     setInputValue("");
   };
@@ -50,10 +53,6 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
     }
     setInputValue("");
     setOpen(false);
-  };
-
-  const handleRemove = (tagToRemove: Tag) => {
-    onTagsChange(selectedTags.filter(tag => tag.id !== tagToRemove.id));
   };
 
   const handleEdit = (e: React.MouseEvent, tag: Tag) => {
@@ -109,54 +108,36 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="w-full justify-between h-auto min-h-[40px]"
+              className="w-full justify-between"
             >
-              <div className="flex gap-1 flex-wrap">
-                {selectedTags.length > 0 ? (
-                  selectedTags.map(tag => (
-                    <Badge
-                      key={tag.id}
-                      variant="secondary"
-                      className="mr-1"
-                      style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}
-                      onClick={(e) => { e.stopPropagation(); handleRemove(tag); }}
-                    >
-                      {tag.name}
-                      <span className="ml-1.5 text-xs">&times;</span>
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-muted-foreground font-normal">Select tags...</span>
-                )}
-              </div>
+              <span>
+                {selectedTags.length > 0 ? `${selectedTags.length} tag(s) selected` : "Select tags..."}
+              </span>
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <div className="p-2">
-              <Input 
+            <Command>
+              <CommandInput 
                 placeholder="Search or create tag..." 
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                autoFocus
+                onValueChange={setInputValue}
               />
-            </div>
-            <ScrollArea className="h-48">
-              <div className="p-1">
-                {filteredTags.length === 0 && inputValue && (
-                  <Button variant="ghost" className="w-full justify-start" onClick={handleCreate}>
+              <CommandList className="max-h-48">
+                <CommandEmpty>
+                  <CommandItem onSelect={handleCreate} className="cursor-pointer">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Create "{inputValue}"
-                  </Button>
-                )}
-                {filteredTags.map((tag) => (
-                  <Button
-                    variant="ghost"
-                    key={tag.id}
-                    onClick={() => handleSelect(tag)}
-                    className="w-full justify-start mb-1"
-                  >
-                    <div className="flex justify-between items-center w-full">
+                  </CommandItem>
+                </CommandEmpty>
+                <CommandGroup>
+                  {allTags.map((tag) => (
+                    <CommandItem
+                      key={tag.id}
+                      value={tag.name}
+                      onSelect={() => handleToggleTag(tag)}
+                      className="flex justify-between items-center cursor-pointer"
+                    >
                       <div className="flex items-center">
                         <Check
                           className={cn(
@@ -164,20 +145,37 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                             selectedTags.some(st => st.id === tag.id) ? "opacity-100" : "opacity-0"
                           )}
                         />
-                        <span className="truncate">{tag.name}</span>
+                        {tag.name}
                       </div>
                       {tag.user_id === user?.id && (
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => handleEdit(e, tag)}>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onMouseDown={(e) => e.preventDefault()} onClick={(e) => handleEdit(e, tag)}>
                           <Edit className="h-3 w-3" />
                         </Button>
                       )}
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            </ScrollArea>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
           </PopoverContent>
         </Popover>
+        <div className="flex flex-wrap gap-1 min-h-[24px]">
+          {selectedTags.map(tag => (
+            <Badge
+              key={tag.id}
+              variant="secondary"
+              style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}
+            >
+              {tag.name}
+              <button
+                className="ml-1.5 text-xs"
+                onClick={() => handleToggleTag(tag)}
+              >
+                &times;
+              </button>
+            </Badge>
+          ))}
+        </div>
       </div>
       <TagEditorDialog
         open={isEditorOpen}
