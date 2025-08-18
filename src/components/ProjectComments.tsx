@@ -9,7 +9,6 @@ import { id } from "date-fns/locale";
 import { Mention, MentionsInput } from "react-mentions";
 import { Badge } from "./ui/badge";
 import CommentRenderer from "./CommentRenderer";
-import "@/components/mentions-style.css";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -30,7 +29,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
     const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
     return uniqueUsers.map(u => {
       let displayName = u.name;
-      // Check if name is an email and doesn't contain a space (likely not a full name)
       if (displayName.includes('@') && !displayName.includes(' ')) {
         displayName = displayName.split('@')[0];
       }
@@ -87,21 +85,31 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
+            classNames={{
+              control: 'relative w-full',
+              input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              suggestions: {
+                list: 'bg-popover text-popover-foreground border rounded-md shadow-lg overflow-hidden p-1 max-h-60 overflow-y-auto mt-2',
+                item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer',
+                itemFocused: 'bg-accent text-accent-foreground',
+              },
+              mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-1 py-0.5',
+            }}
           >
             <Mention
               trigger="@"
               data={mentionableUsers}
               renderSuggestion={(suggestion: any) => (
-                <>
+                <div className="flex items-center gap-3 cursor-pointer">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={suggestion.avatar} />
                     <AvatarFallback>{suggestion.initials}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{suggestion.display}</p>
+                    <p className="font-medium text-sm">{suggestion.display}</p>
                     <p className="text-xs text-muted-foreground">{suggestion.email}</p>
                   </div>
-                </>
+                </div>
               )}
             />
           </MentionsInput>
