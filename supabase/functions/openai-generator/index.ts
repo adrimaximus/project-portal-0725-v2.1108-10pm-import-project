@@ -48,6 +48,9 @@ serve(async (req) => {
           Deno.env.get('SUPABASE_ANON_KEY') ?? '',
           { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
         );
+        
+        const { data: { user } } = await userSupabase.auth.getUser();
+        if (!user) throw new Error("User not authenticated.");
 
         const { data: projects, error: rpcError } = await userSupabase.rpc('get_dashboard_projects');
         if (rpcError) {
@@ -73,24 +76,36 @@ serve(async (req) => {
           dueDate: p.due_date,
         }));
         const userList = users.map(u => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
+        const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
 
         const today = new Date().toISOString();
-        const systemPrompt = `You are an expert project management AI assistant. You can answer questions and perform actions.
+        const systemPrompt = `You are an expert project management AI assistant. You can answer questions and perform actions based on user requests.
 Today's date is ${today}.
 
 AVAILABLE ACTIONS:
-If the user asks to update a project, you MUST respond ONLY with a JSON object in this format:
-{"action": "UPDATE_PROJECT", "project_name": "<project name>", "updates": {"field": "value"}}
+You can perform two types of actions: UPDATE_PROJECT and CREATE_TASK.
+When asked to perform an action, you MUST respond ONLY with a JSON object in the specified format.
 
-- Valid fields for updates are: "owner".
-- For "owner", the value must be the full name of an existing user.
-- Be smart about identifying the project and user from the user's request. Use the context provided.
+1. UPDATE_PROJECT:
+{"action": "UPDATE_PROJECT", "project_name": "<project name>", "updates": {"field": "value", "another_field": "value"}}
+- Be smart about identifying the project name from the user's request.
+- Valid fields for 'updates' are: name, description, status, payment_status, budget, start_date, due_date, venue, add_members, remove_members, add_services, remove_services.
+- For 'status', valid values are: 'Requested', 'In Progress', 'In Review', 'On Hold', 'Completed', 'Cancelled'.
+- For 'payment_status', valid values are: 'Unpaid', 'Paid', 'Pending', 'In Process', 'Overdue', 'Proposed', 'Cancelled'.
+- For 'budget', the value should be a number.
+- For 'start_date' and 'due_date', the value should be an ISO 8601 date string (e.g., "2025-12-31").
+- For 'add_members' and 'remove_members', the value should be an array of user names.
+- For 'add_services' and 'remove_services', the value should be an array of service titles.
 
-If the user's request is not an action, answer their question based on the provided data.
+2. CREATE_TASK:
+{"action": "CREATE_TASK", "project_name": "<project name>", "task_title": "<title of the new task>"}
+
+If the user's request is a question and not an action, answer it based on the provided data.
 
 CONTEXT:
 - Available Projects: ${JSON.stringify(summarizedProjects, null, 2)}
 - Available Users: ${JSON.stringify(userList, null, 2)}
+- Available Services: ${JSON.stringify(serviceList, null, 2)}
 `;
 
         const messages = [
@@ -103,7 +118,7 @@ CONTEXT:
             model: "gpt-4-turbo",
             messages,
             temperature: 0.1,
-            max_tokens: 500,
+            max_tokens: 1000,
         });
 
         const responseText = response.choices[0].message.content;
@@ -124,26 +139,74 @@ CONTEXT:
                 break;
             }
 
-            if (updates.owner) {
-                const newOwner = users.find(u => (`${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase() === updates.owner.toLowerCase()) || (u.email && u.email.toLowerCase() === updates.owner.toLowerCase()));
-                if (!newOwner) {
-                    responseData = { result: `I couldn't find a user named "${updates.owner}". Please make sure they are a member of the workspace.` };
-                    break;
-                }
+            const params = {
+                p_project_id: project.id,
+                p_name: updates.name !== undefined ? updates.name : project.name,
+                p_description: updates.description !== undefined ? updates.description : project.description,
+                p_status: updates.status !== undefined ? updates.status : project.status,
+                p_budget: updates.budget !== undefined ? updates.budget : project.budget,
+                p_start_date: updates.start_date !== undefined ? updates.start_date : project.start_date,
+                p_due_date: updates.due_date !== undefined ? updates.due_date : project.due_date,
+                p_payment_status: updates.payment_status !== undefined ? updates.payment_status : project.payment_status,
+                p_venue: updates.venue !== undefined ? updates.venue : project.venue,
+                p_payment_due_date: project.payment_due_date, // Not editable by AI for now
+                p_category: project.category, // Not editable by AI for now
+            };
 
-                const { error: transferError } = await supabaseAdmin.rpc('transfer_project_ownership', {
-                    p_project_id: project.id,
-                    p_new_owner_id: newOwner.id
+            // Handle members
+            let currentMemberIds = new Set(project.assignedTo.map(m => m.id));
+            if (updates.add_members) {
+                updates.add_members.forEach(name => {
+                    const userToAdd = userList.find(u => u.name.toLowerCase() === name.toLowerCase());
+                    if (userToAdd) currentMemberIds.add(userToAdd.id);
                 });
-
-                if (transferError) {
-                    responseData = { result: `I tried, but failed to change the owner. The database said: ${transferError.message}` };
-                } else {
-                    responseData = { result: `Done! I've made ${updates.owner} the new owner of "${project.name}".` };
-                }
-            } else {
-                responseData = { result: "I understood you want to update a project, but I don't know what to change. You can ask me to change the 'owner'." };
             }
+            if (updates.remove_members) {
+                updates.remove_members.forEach(name => {
+                    const userToRemove = userList.find(u => u.name.toLowerCase() === name.toLowerCase());
+                    if (userToRemove) currentMemberIds.delete(userToRemove.id);
+                });
+            }
+            params.p_member_ids = Array.from(currentMemberIds);
+
+            // Handle services
+            let currentServices = new Set(project.services || []);
+            if (updates.add_services) {
+                updates.add_services.forEach(service => currentServices.add(service));
+            }
+            if (updates.remove_services) {
+                updates.remove_services.forEach(service => currentServices.delete(service));
+            }
+            params.p_service_titles = Array.from(currentServices);
+
+            const { error: updateError } = await userSupabase.rpc('update_project_details', params);
+
+            if (updateError) {
+                responseData = { result: `I tried to update the project, but failed. The database said: ${updateError.message}` };
+            } else {
+                responseData = { result: `Done! I've updated the project "${project.name}".` };
+            }
+
+        } else if (actionData && actionData.action === 'CREATE_TASK') {
+            const { project_name, task_title } = actionData;
+            const project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
+            if (!project) {
+                responseData = { result: `I couldn't find a project named "${project_name}" to add the task to.` };
+                break;
+            }
+
+            const { error: taskError } = await userSupabase.from('tasks').insert({
+                project_id: project.id,
+                title: task_title,
+                created_by: user.id,
+            });
+
+            if (taskError) {
+                responseData = { result: `I tried to create the task, but failed. The database said: ${taskError.message}` };
+            } else {
+                responseData = { result: `OK, I've added the task "${task_title}" to the project "${project.name}".` };
+            }
+
         } else {
             responseData = { result: responseText };
         }
