@@ -523,19 +523,30 @@ Konteks Kemajuan: ${JSON.stringify(context, null, 2)}`;
         break;
       }
       case 'generate-mood-insight': {
-        const { prompt, userName } = payload;
+        const { prompt, userName, conversationHistory } = payload;
         if (!prompt) {
           throw new Error("Prompt is required for generating mood insights.");
         }
 
-        const systemPrompt = `Anda adalah seorang teman AI yang suportif dan berwawasan luas. Tujuan Anda adalah memberikan saran yang memotivasi dan dapat ditindaklanjuti kepada pengguna berdasarkan ringkasan suasana hati mereka. Anda akan diberikan ringkasan suasana hati pengguna. Analisis informasi ini dan berikan wawasan yang sangat singkat (maksimal 2 kalimat) yang bermanfaat. Pertahankan nada yang positif dan memotivasi. Sapa pengguna dengan nama mereka. Selalu berikan respons dalam Bahasa Indonesia.`;
+        const systemPrompt = `Anda adalah seorang teman AI yang suportif, empatik, dan berwawasan luas. Tujuan Anda adalah untuk terlibat dalam percakapan yang mendukung dengan pengguna tentang suasana hati dan perasaan mereka. Anda akan menerima riwayat percakapan. Tugas Anda adalah memberikan respons berikutnya dalam percakapan tersebut. Pertahankan nada yang positif dan memotivasi. Sapa pengguna dengan nama mereka jika ini adalah awal percakapan. Jaga agar respons tetap ringkas (2-4 kalimat) dan terasa seperti percakapan alami. Jangan mengulangi diri sendiri. Selalu berikan respons dalam Bahasa Indonesia.`;
+
+        const messages = [
+          { role: "system", content: systemPrompt },
+          ...(conversationHistory || []).map(msg => ({
+            role: msg.sender === 'ai' ? 'assistant' : 'user',
+            content: msg.content
+          })),
+          { role: "user", content: prompt }
+        ];
+        
+        // Hapus pesan pengguna terakhir dari messages jika itu adalah pesan yang sama dengan prompt saat ini
+        if (messages.length > 2 && messages[messages.length-2].role === 'user' && messages[messages.length-2].content === prompt) {
+          messages.splice(messages.length-2, 1);
+        }
 
         const response = await openai.chat.completions.create({
           model: "gpt-4-turbo",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: prompt }
-          ],
+          messages: messages,
           temperature: 0.7,
           max_tokens: 200,
         });
