@@ -401,9 +401,8 @@ CONTEXT:
                 break;
             }
 
-            const { data: newGoal, error: rpcError } = await supabaseAdmin
+            const { data: newGoal, error: rpcError } = await userSupabase
                 .rpc('create_goal_and_link_tags', {
-                    p_user_id: user.id,
                     p_title: goal_details.title,
                     p_description: goal_details.description,
                     p_icon: goal_details.icon,
@@ -459,7 +458,7 @@ CONTEXT:
                 });
             }
 
-            const { error: updateError } = await supabaseAdmin
+            const { error: updateError } = await userSupabase
                 .rpc('update_goal_with_tags', {
                     p_goal_id: goal.id,
                     p_title: updates.title,
