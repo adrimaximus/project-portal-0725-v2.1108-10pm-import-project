@@ -2,20 +2,22 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, MessageSquarePlus } from "lucide-react";
-import { Conversation } from "@/types";
-import { Collaborator } from "@/types";
+import { Search, MessageSquarePlus, MoreHorizontal, Trash2 } from "lucide-react";
+import { Conversation, Collaborator } from "@/types";
 import NewConversationDialog from "./NewConversationDialog";
 import { cn, getInitials } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 
 interface ChatListProps {
   conversations: Conversation[];
   selectedConversationId: string | null;
-  onSelectConversation: (id: string) => void;
+  onSelectConversation: (id: string | null) => void;
   onStartNewChat: (collaborator: Collaborator) => void;
   onStartNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
+  onDeleteConversation: (conversationId: string) => void;
 }
 
 const ChatList = ({
@@ -24,6 +26,7 @@ const ChatList = ({
   onSelectConversation,
   onStartNewChat,
   onStartNewGroupChat,
+  onDeleteConversation,
 }: ChatListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
@@ -35,7 +38,6 @@ const ChatList = ({
   const formatTimestamp = (timestamp: string) => {
     try {
       const date = new Date(timestamp);
-      // Check for invalid or very old (likely default) dates
       if (isNaN(date.getTime()) || date.getFullYear() < 2000) {
         return "";
       }
@@ -74,22 +76,57 @@ const ChatList = ({
           <div
             key={c.id}
             className={cn(
-              "flex items-center gap-3 p-3 cursor-pointer hover:bg-muted border-l-4 border-transparent transition-colors",
+              "flex items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group",
               selectedConversationId === c.id && "bg-muted border-l-primary"
             )}
-            onClick={() => onSelectConversation(c.id)}
           >
-            <Avatar>
-              <AvatarImage src={c.userAvatar} />
-              <AvatarFallback>{getInitials(c.userName)}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 overflow-hidden">
-              <p className="font-semibold truncate">{c.userName}</p>
-              <p className="text-sm text-muted-foreground truncate">
-                {c.lastMessage}
-              </p>
+            <div
+              className="flex-1 flex items-center gap-3 overflow-hidden cursor-pointer"
+              onClick={() => onSelectConversation(c.id)}
+            >
+              <Avatar>
+                <AvatarImage src={c.userAvatar} />
+                <AvatarFallback>{getInitials(c.userName)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 overflow-hidden">
+                <p className="font-semibold truncate">{c.userName}</p>
+                <p className="text-sm text-muted-foreground truncate">
+                  {c.lastMessage}
+                </p>
+              </div>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(c.lastMessageTimestamp)}</span>
             </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(c.lastMessageTimestamp)}</span>
+            <AlertDialog>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Chat
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Chat?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove the chat from your list. You will not be able to see past messages. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onDeleteConversation(c.id)}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         ))}
       </div>

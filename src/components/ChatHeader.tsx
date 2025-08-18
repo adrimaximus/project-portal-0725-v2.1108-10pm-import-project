@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -25,16 +26,18 @@ import { getInitials } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import GroupSettingsDialog from "./GroupSettingsDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 interface ChatHeaderProps {
   selectedConversation: Conversation | null;
   onClearChat: (conversationId: string) => void;
+  onLeaveGroup: (conversationId: string) => void;
   onUpdate: () => void;
   onBack?: () => void;
   typing?: boolean;
 }
 
-const ChatHeader = ({ selectedConversation, onClearChat, onUpdate, onBack, typing = false }: ChatHeaderProps) => {
+const ChatHeader = ({ selectedConversation, onClearChat, onLeaveGroup, onUpdate, onBack, typing = false }: ChatHeaderProps) => {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -47,14 +50,24 @@ const ChatHeader = ({ selectedConversation, onClearChat, onUpdate, onBack, typin
     );
   }
 
-  const { userName, userAvatar, isGroup, members } = selectedConversation;
+  const { userName, userAvatar, isGroup, members, created_by } = selectedConversation;
   const otherUser = !isGroup ? members?.find(m => m.id !== currentUser?.id) : null;
+  const isOwner = currentUser?.id === created_by;
 
   const handleViewProfile = () => {
     if (otherUser) {
       navigate(`/users/${otherUser.id}`);
     }
   };
+
+  const LeaveGroupMenuItem = () => (
+    <AlertDialogTrigger asChild>
+      <DropdownMenuItem className="text-red-500 focus:text-red-500" onSelect={(e) => e.preventDefault()} disabled={isOwner}>
+        <UserX className="mr-2 h-4 w-4" />
+        <span>Leave Group</span>
+      </DropdownMenuItem>
+    </AlertDialogTrigger>
+  );
 
   return (
     <>
@@ -98,10 +111,21 @@ const ChatHeader = ({ selectedConversation, onClearChat, onUpdate, onBack, typin
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Group Settings</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-500 focus:text-red-500" onClick={() => console.log("Leave Group")}>
-                      <UserX className="mr-2 h-4 w-4" />
-                      <span>Leave Group</span>
-                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {isOwner ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div><LeaveGroupMenuItem /></div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Owners cannot leave a group.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <LeaveGroupMenuItem />
+                    )}
                   </>
                 ) : (
                   <>
@@ -123,13 +147,15 @@ const ChatHeader = ({ selectedConversation, onClearChat, onUpdate, onBack, typin
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete all messages in this conversation. This action cannot be undone.
+                  {isGroup
+                    ? "You will be removed from this group and will no longer receive messages. Are you sure?"
+                    : "This will permanently delete all messages in this conversation. This action cannot be undone."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onClearChat(selectedConversation.id)}>
-                  Continue
+                <AlertDialogAction onClick={() => isGroup ? onLeaveGroup(selectedConversation.id) : onClearChat(selectedConversation.id)}>
+                  {isGroup ? "Leave" : "Continue"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

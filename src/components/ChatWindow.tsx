@@ -8,13 +8,14 @@ interface ChatWindowProps {
   selectedConversation: Conversation | null;
   onSendMessage: (text: string, attachment: Attachment | null) => void;
   onClearChat: (conversationId: string) => void;
+  onLeaveGroup: (conversationId: string) => void;
   onUpdate: () => void;
   onBack?: () => void;
   typing?: boolean;
   onTyping?: () => void;
 }
 
-const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onUpdate, onBack, typing, onTyping }: ChatWindowProps) => {
+const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onLeaveGroup, onUpdate, onBack, typing, onTyping }: ChatWindowProps) => {
   if (!selectedConversation) {
     return <ChatPlaceholder />;
   }
@@ -24,6 +25,7 @@ const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onUpdate
       <ChatHeader
         selectedConversation={selectedConversation}
         onClearChat={onClearChat}
+        onLeaveGroup={onLeaveGroup}
         onBack={onBack}
         typing={typing}
         onUpdate={onUpdate}

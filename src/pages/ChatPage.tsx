@@ -17,6 +17,8 @@ const ChatPage = () => {
     handleStartNewGroupChat,
     sendTyping,
     fetchConversations,
+    handleLeaveGroup,
+    handleDeleteConversation,
   } = useChat();
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
@@ -32,12 +34,14 @@ const ChatPage = () => {
               onSelectConversation={handleConversationSelect}
               onStartNewChat={handleStartNewChat}
               onStartNewGroupChat={handleStartNewGroupChat}
+              onDeleteConversation={handleDeleteConversation}
             />
           ) : (
             <ChatWindow
               selectedConversation={selectedConversation}
               onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
               onClearChat={handleClearChat}
+              onLeaveGroup={handleLeaveGroup}
               onBack={() => handleConversationSelect(null)}
               typing={isSomeoneTyping}
               onTyping={sendTyping}
@@ -58,11 +62,13 @@ const ChatPage = () => {
           onSelectConversation={handleConversationSelect}
           onStartNewChat={handleStartNewChat}
           onStartNewGroupChat={handleStartNewGroupChat}
+          onDeleteConversation={handleDeleteConversation}
         />
         <ChatWindow
           selectedConversation={selectedConversation}
           onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
           onClearChat={handleClearChat}
+          onLeaveGroup={handleLeaveGroup}
           typing={isSomeoneTyping}
           onTyping={sendTyping}
           onUpdate={fetchConversations}

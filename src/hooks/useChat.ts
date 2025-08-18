@@ -37,6 +37,7 @@ export const useChat = () => {
         members: (c.participants || []).map((p: any) => ({
           id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
         })),
+        created_by: c.created_by,
       }));
       setConversations(mappedConversations);
     }
@@ -188,6 +189,32 @@ export const useChat = () => {
     }
   };
 
+  const handleLeaveGroup = async (conversationId: string) => {
+    const { error } = await supabase.rpc('leave_group', { p_conversation_id: conversationId });
+    if (error) {
+      toast.error("Failed to leave group.", { description: error.message });
+    } else {
+      toast.success("You have left the group.");
+      if (selectedConversationId === conversationId) {
+        setSelectedConversationId(null);
+      }
+      fetchConversations();
+    }
+  };
+
+  const handleDeleteConversation = async (conversationId: string) => {
+    const { error } = await supabase.rpc('hide_conversation', { p_conversation_id: conversationId });
+    if (error) {
+      toast.error("Failed to delete chat.", { description: error.message });
+    } else {
+      toast.success("Chat has been removed from your list.");
+      if (selectedConversationId === conversationId) {
+        setSelectedConversationId(null);
+      }
+      setConversations(prev => prev.filter(c => c.id !== conversationId));
+    }
+  };
+
   const sendTyping = useCallback(() => {
     const channel = supabase.channel('chat-room');
     channel.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser?.id, conversationId: selectedConversationId } });
@@ -205,5 +232,7 @@ export const useChat = () => {
     handleStartNewGroupChat,
     sendTyping,
     fetchConversations,
+    handleLeaveGroup,
+    handleDeleteConversation,
   };
 };

@@ -146,6 +146,7 @@ export interface Conversation {
   messages: Message[];
   isGroup: boolean;
   members: Collaborator[];
+  created_by?: string;
 }
 
 export interface GoogleCalendarEvent {
