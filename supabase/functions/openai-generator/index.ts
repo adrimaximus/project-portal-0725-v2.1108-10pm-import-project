@@ -62,11 +62,6 @@ serve(async (req) => {
           throw new Error(`Failed to fetch users for context: ${usersError.message}`);
         }
 
-        if (!projects || projects.length === 0) {
-          responseData = { result: "I couldn't find any projects associated with your account to analyze. Try creating a project or ask a team member to be added to one." };
-          break;
-        }
-
         const summarizedProjects = projects.map(p => ({
             name: p.name,
             status: p.status,
@@ -86,7 +81,11 @@ Today's date is ${today}.
 AVAILABLE ACTIONS:
 You can perform several types of actions. When asked to perform an action, you MUST respond ONLY with a JSON object in the specified format.
 
-1. UPDATE_PROJECT:
+1. CREATE_PROJECT:
+{"action": "CREATE_PROJECT", "project_details": {"name": "<project name>", "description": "<desc>", "start_date": "YYYY-MM-DD", "due_date": "YYYY-MM-DD", "venue": "<venue>", "budget": 12345, "services": ["Service 1"], "members": ["User Name"]}}
+- The current user will be the project owner. 'members' are additional people to add to the project.
+
+2. UPDATE_PROJECT:
 {"action": "UPDATE_PROJECT", "project_name": "<project name>", "updates": {"field": "value", "another_field": "value"}}
 - Valid fields for 'updates' are: name, description, status, payment_status, budget, start_date, due_date, venue, add_members, remove_members, add_services, remove_services.
 - For 'status', valid values are: 'Requested', 'In Progress', 'In Review', 'On Hold', 'Completed', 'Cancelled'.
@@ -96,13 +95,13 @@ You can perform several types of actions. When asked to perform an action, you M
 - For 'add_members' and 'remove_members', the value should be an array of user names.
 - For 'add_services' and 'remove_services', the value should be an array of service titles.
 
-2. CREATE_TASK:
+3. CREATE_TASK:
 {"action": "CREATE_TASK", "project_name": "<project name>", "task_title": "<title of the new task>", "assignees": ["<optional user name>"]}
 
-3. ASSIGN_TASK:
+4. ASSIGN_TASK:
 {"action": "ASSIGN_TASK", "project_name": "<project name>", "task_title": "<title of the task>", "assignees": ["<user name 1>", "<user name 2>"]}
 
-4. UNASSIGN_TASK:
+5. UNASSIGN_TASK:
 {"action": "UNASSIGN_TASK", "project_name": "<project name>", "task_title": "<title of the task>", "assignees": ["<user name 1>"]}
 
 If the user's request is a question and not an action, answer it based on the provided data.
@@ -141,7 +140,72 @@ CONTEXT:
             break;
         }
 
-        if (actionData && actionData.action === 'UPDATE_PROJECT') {
+        if (actionData && actionData.action === 'CREATE_PROJECT') {
+            const { project_details } = actionData;
+            if (!project_details || !project_details.name) {
+                responseData = { result: "To create a project, I need at least a name." };
+                break;
+            }
+
+            const { data: newProject, error: projectInsertError } = await supabaseAdmin
+                .from('projects')
+                .insert({
+                    name: project_details.name,
+                    description: project_details.description,
+                    start_date: project_details.start_date,
+                    due_date: project_details.due_date,
+                    venue: project_details.venue,
+                    budget: project_details.budget,
+                    created_by: user.id,
+                    status: 'Requested',
+                })
+                .select()
+                .single();
+
+            if (projectInsertError) {
+                responseData = { result: `I tried to create the project, but failed. The database said: ${projectInsertError.message}` };
+                break;
+            }
+
+            const newProjectId = newProject.id;
+            let followUpMessages = [];
+
+            if (project_details.services && project_details.services.length > 0) {
+                const servicesToInsert = project_details.services.map(serviceTitle => ({
+                    project_id: newProjectId,
+                    service_title: serviceTitle,
+                }));
+                const { error: servicesError } = await supabaseAdmin.from('project_services').insert(servicesToInsert);
+                if (servicesError) followUpMessages.push("I couldn't add the services due to an error.");
+                else followUpMessages.push(`I've added ${project_details.services.length} services.`);
+            }
+
+            if (project_details.members && project_details.members.length > 0) {
+                const memberIdsToAssign = userList
+                    .filter(u => project_details.members.some(name => u.name.toLowerCase() === name.toLowerCase()))
+                    .map(u => u.id);
+                
+                if (memberIdsToAssign.length > 0) {
+                    const membersToInsert = memberIdsToAssign.map(userId => ({
+                        project_id: newProjectId,
+                        user_id: userId,
+                        role: 'member',
+                    }));
+                    const { error: membersError } = await supabaseAdmin.from('project_members').insert(membersToInsert);
+                    if (membersError) followUpMessages.push("I couldn't add the team members due to an error.");
+                    else followUpMessages.push(`I've assigned ${project_details.members.join(', ')} to the project.`);
+                } else {
+                    followUpMessages.push(`I couldn't find the users ${project_details.members.join(', ')} to assign.`);
+                }
+            }
+
+            let finalMessage = `Done! I've created the project "${newProject.name}".`;
+            if (followUpMessages.length > 0) {
+                finalMessage += " " + followUpMessages.join(' ');
+            }
+            responseData = { result: finalMessage };
+
+        } else if (actionData && actionData.action === 'UPDATE_PROJECT') {
             const { project_name, updates } = actionData;
             
             const project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
