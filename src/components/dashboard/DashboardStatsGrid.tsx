@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Project, User } from '@/types';
 import StatCard from './StatCard';
-import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass } from "lucide-react";
+import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -42,6 +42,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
   const [viewMode, setViewMode] = useState<'quantity' | 'value'>('quantity');
 
   const stats = useMemo(() => {
+    const totalProjects = projects.length;
     const totalValue = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
 
     const projectStatusCounts = projects.reduce((acc, p) => ({ ...acc, [p.status]: (acc[p.status] || 0) + 1 }), {} as Record<string, number>);
@@ -84,6 +85,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
     const topUserByPendingValue = Object.values(pendingStats).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
 
     return {
+      totalProjects,
       totalValue,
       projectStatusCounts, projectStatusValues,
       paymentStatusCounts, paymentStatusValues,
@@ -110,7 +112,12 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
           <ToggleGroupItem value="value" className="text-xs px-3">By Value</ToggleGroupItem>
         </ToggleGroup>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Projects"
+          value={stats.totalProjects}
+          icon={<Briefcase className="h-4 w-4 text-muted-foreground" />}
+        />
         <StatCard
           title="Total Project Value"
           value={'Rp ' + stats.totalValue.toLocaleString('id-ID')}
