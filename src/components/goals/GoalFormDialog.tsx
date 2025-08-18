@@ -9,12 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import ColorPicker from './ColorPicker';
 import { Textarea } from '@/components/ui/textarea';
 import { TagInput } from './TagInput';
+import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import IconPicker from './IconPicker';
+import { colors as tagColors } from '@/data/colors';
 
 interface GoalFormDialogProps {
   open: boolean;
@@ -47,7 +49,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
   const [targetPeriod, setTargetPeriod] = useState<GoalPeriod>('Monthly');
   const [targetValue, setTargetValue] = useState<number | undefined>(undefined);
   const [unit, setUnit] = useState<string>('');
-  const [color, setColor] = useState('#BFDBFE');
+  const [color, setColor] = useState('#141414');
   const [icon, setIcon] = useState('Target');
   const [tags, setTags] = useState<Tag[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
@@ -74,7 +76,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
         setUnit(goal.unit || '');
         setColor(goal.color);
         setIcon(goal.icon);
-        setTags(goal.tags || []);
+        setTags(goal.tags);
       } else {
         setTitle('');
         setDescription('');
@@ -84,7 +86,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
         setTargetQuantity(undefined);
         setTargetPeriod('Monthly');
         setUnit('');
-        setColor('#BFDBFE');
+        setColor('#141414');
         setIcon('Target');
         setTags([]);
       }
@@ -92,10 +94,11 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
   }, [goal, open, isEditMode, user]);
 
   const handleTagCreate = (tagName: string): Tag => {
+    const randomColor = tagColors[Math.floor(Math.random() * tagColors.length)];
     const newTag: Tag = {
-      id: `new_${tagName}_${Date.now()}`, // Temporary ID for new tags
+      id: uuidv4(),
       name: tagName,
-      color: color,
+      color: randomColor,
     };
     setAllTags(prev => [...prev, newTag]);
     return newTag;
@@ -113,61 +116,53 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, onGoalUpdate, goal }: G
     
     setIsSaving(true);
 
-    try {
-      if (isEditMode && goal) {
-        // Logic for updating a goal
-        const existingTagIds = tags.filter(t => !t.id.startsWith('new_')).map(t => t.id);
-        const newCustomTags = tags.filter(t => t.id.startsWith('new_')).map(t => ({ name: t.name, color: t.color }));
+    if (isEditMode && onGoalUpdate && goal) {
+      const updatedGoalData: Goal = {
+        ...goal,
+        title, description, type, frequency,
+        specific_days: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
+        target_quantity: targetQuantity, 
+        target_period: targetPeriod, 
+        target_value: targetValue, 
+        unit, color, tags,
+        icon,
+        icon_url: undefined,
+      };
+      onGoalUpdate(updatedGoalData);
+      setIsSaving(false);
+    } else if (!isEditMode) {
+      try {
+        const goalPayload = {
+          title,
+          description,
+          icon,
+          color,
+          type,
+          frequency,
+          specific_days: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
+          target_quantity: targetQuantity,
+          target_period: targetPeriod,
+          target_value: targetValue,
+          unit,
+          tags: tags.map(t => ({ name: t.name, color: t.color })),
+        };
 
-        const { error } = await supabase.rpc('update_goal_with_tags', {
-          p_goal_id: goal.id,
-          p_title: title,
-          p_description: description,
-          p_icon: icon,
-          p_color: color,
-          p_type: type,
-          p_frequency: frequency,
-          p_specific_days: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
-          p_target_quantity: targetQuantity,
-          p_target_period: targetPeriod,
-          p_target_value: targetValue,
-          p_unit: unit,
-          p_tags: existingTagIds,
-          p_custom_tags: newCustomTags.length > 0 ? newCustomTags : null,
-        });
+        const { data: newGoal, error: goalError } = await supabase.functions.invoke(
+          'secure-create-goal',
+          { body: goalPayload }
+        );
 
-        if (error) throw error;
-        toast.success(`Goal "${title}" updated!`);
-        if (onGoalUpdate) onGoalUpdate({ ...goal, title, description, type, frequency, specific_days: specificDays, target_quantity: targetQuantity, target_period: targetPeriod, target_value: targetValue, unit, color, icon, tags });
-        onOpenChange(false);
+        if (goalError) throw goalError;
 
-      } else {
-        // Logic for creating a new goal
-        const { data: newGoal, error } = await supabase.rpc('create_goal_with_tags', {
-          p_title: title,
-          p_description: description,
-          p_icon: icon,
-          p_color: color,
-          p_type: type,
-          p_frequency: frequency,
-          p_specific_days: type === 'frequency' && frequency === 'Weekly' ? specificDays : [],
-          p_target_quantity: targetQuantity,
-          p_target_period: targetPeriod,
-          p_target_value: targetValue,
-          p_unit: unit,
-          p_tags: tags.map(t => ({ name: t.name, color: t.color })),
-        });
-
-        if (error) throw error;
         toast.success(`Goal "${newGoal.title}" created!`);
         onSuccess(newGoal);
         onOpenChange(false);
+      } catch (error: any) {
+        toast.error(`Failed to create goal: ${error.message}`);
+        console.error("Goal creation failed:", error);
+      } finally {
+        setIsSaving(false);
       }
-    } catch (error: any) {
-      toast.error(`Failed to save goal: ${error.message}`);
-      console.error("Goal saving failed:", error);
-    } finally {
-      setIsSaving(false);
     }
   };
 
