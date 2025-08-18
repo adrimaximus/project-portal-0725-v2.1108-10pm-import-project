@@ -62,6 +62,11 @@ serve(async (req) => {
           throw new Error(`Failed to fetch users for context: ${usersError.message}`);
         }
 
+        const { data: goals, error: goalsError } = await userSupabase.rpc('get_user_goals');
+        if (goalsError) {
+          throw new Error(`Failed to fetch goals for context: ${goalsError.message}`);
+        }
+
         const summarizedProjects = projects.map(p => ({
             name: p.name,
             status: p.status,
@@ -71,11 +76,18 @@ serve(async (req) => {
                 assignedTo: (t.assignedTo || []).map(a => a.name)
             }))
         }));
+        const summarizedGoals = goals.map(g => ({
+            title: g.title,
+            type: g.type,
+            progress: g.completions ? g.completions.length : 0,
+            tags: g.tags ? g.tags.map(t => t.name) : []
+        }));
         const userList = users.map(u => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
         const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
+        const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
 
         const today = new Date().toISOString();
-        const systemPrompt = `You are an expert project management AI assistant. You can answer questions and perform actions based on user requests. You will receive a conversation history. Use it to understand the context of the user's latest message. For example, if they mention a project and then follow up with a request without naming the project again, you should assume they are referring to the same project.
+        const systemPrompt = `You are an expert project and goal management AI assistant. You can answer questions and perform actions based on user requests. You will receive a conversation history. Use it to understand the context of the user's latest message.
 Today's date is ${today}.
 
 AVAILABLE ACTIONS:
@@ -89,12 +101,6 @@ You can perform several types of actions. When asked to perform an action, you M
 2. UPDATE_PROJECT:
 {"action": "UPDATE_PROJECT", "project_name": "<project name>", "updates": {"field": "value", "another_field": "value"}}
 - Valid fields for 'updates' are: name, description, status, payment_status, budget, start_date, due_date, venue, add_members, remove_members, add_services, remove_services.
-- For 'status', valid values are: 'Requested', 'In Progress', 'In Review', 'On Hold', 'Completed', 'Cancelled'.
-- For 'payment_status', valid values are: 'Unpaid', 'Paid', 'Pending', 'In Process', 'Overdue', 'Proposed', 'Cancelled'.
-- For 'budget', the value should be a number.
-- For 'start_date' and 'due_date', the value should be an ISO 8601 date string (e.g., "2025-12-31").
-- For 'add_members' and 'remove_members', the value should be an array of user names.
-- For 'add_services' and 'remove_services', the value should be an array of service titles.
 
 3. CREATE_TASK:
 {"action": "CREATE_TASK", "project_name": "<project name>", "task_title": "<title of the new task>", "assignees": ["<optional user name>"]}
@@ -105,12 +111,28 @@ You can perform several types of actions. When asked to perform an action, you M
 5. UNASSIGN_TASK:
 {"action": "UNASSIGN_TASK", "project_name": "<project name>", "task_title": "<title of the task>", "assignees": ["<user name 1>"]}
 
+6. CREATE_GOAL:
+{"action": "CREATE_GOAL", "goal_details": {"title": "<goal title>", "description": "<desc>", "type": "<type>", "frequency": "<freq>", "specific_days": ["Mo", "We"], "target_quantity": 123, "target_period": "Weekly", "target_value": 123, "unit": "USD", "icon": "IconName", "color": "#RRGGBB", "tags": [{"name": "Tag1", "color": "#RRGGBB"}]}}
+- If a user provides only a title for a new goal, you MUST infer the other details.
+- Infer a suitable 'description'.
+- Choose an appropriate 'type' ('frequency', 'quantity', or 'value').
+- Suggest a relevant 'icon' from the 'Available Icons' list and a suitable 'color'.
+- Create 2-3 relevant 'tags' as an array of objects like '[{"name": "Health", "color": "#FF6B6B"}, ...]'. These will be new tags.
+- Example: User says "create a goal to learn guitar". You might respond with: {"action": "CREATE_GOAL", "goal_details": {"title": "Learn Guitar", "description": "Practice guitar regularly to improve skills.", "type": "frequency", "frequency": "Weekly", "specific_days": ["Mo", "We", "Fr"], "icon": "Music", "color": "#4ECDC4", "tags": [{"name": "Music", "color": "#4ECDC4"}, {"name": "Hobby", "color": "#F7B801"}]}}
+
+7. UPDATE_GOAL:
+{"action": "UPDATE_GOAL", "goal_title": "<title of the goal to update>", "updates": {"field": "value", "another_field": "value"}}
+- Valid fields for 'updates' are: title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, icon, color, add_tags, remove_tags.
+- For 'add_tags' and 'remove_tags', the value should be an array of tag names.
+
 If the user's request is a question and not an action, answer it based on the provided data.
 
 CONTEXT:
 - Available Projects (with their tasks): ${JSON.stringify(summarizedProjects, null, 2)}
+- Available Goals: ${JSON.stringify(summarizedGoals, null, 2)}
 - Available Users: ${JSON.stringify(userList, null, 2)}
 - Available Services: ${JSON.stringify(serviceList, null, 2)}
+- Available Icons: ${JSON.stringify(iconList, null, 2)}
 `;
 
         const messages = [
@@ -370,6 +392,94 @@ CONTEXT:
                 } else {
                     responseData = { result: `Done! I've unassigned ${assignees.join(', ')} from the task "${task.title}".` };
                 }
+            }
+
+        } else if (actionData && actionData.action === 'CREATE_GOAL') {
+            const { goal_details } = actionData;
+            if (!goal_details || !goal_details.title) {
+                responseData = { result: "To create a goal, I need at least a title." };
+                break;
+            }
+
+            const { data: newGoal, error: rpcError } = await supabaseAdmin
+                .rpc('create_goal_and_link_tags', {
+                    p_title: goal_details.title,
+                    p_description: goal_details.description,
+                    p_icon: goal_details.icon,
+                    p_color: goal_details.color,
+                    p_type: goal_details.type,
+                    p_frequency: goal_details.frequency,
+                    p_specific_days: goal_details.specific_days,
+                    p_target_quantity: goal_details.target_quantity,
+                    p_target_period: goal_details.target_period,
+                    p_target_value: goal_details.target_value,
+                    p_unit: goal_details.unit,
+                    p_existing_tags: [],
+                    p_custom_tags: goal_details.tags || [],
+                })
+                .single();
+
+            if (rpcError) {
+                responseData = { result: `I tried to create the goal, but failed. The database said: ${rpcError.message}` };
+            } else {
+                responseData = { result: `Done! I've created the new goal: "${newGoal.title}".` };
+            }
+
+        } else if (actionData && actionData.action === 'UPDATE_GOAL') {
+            const { goal_title, updates } = actionData;
+            const goal = goals.find(g => g.title.toLowerCase() === goal_title.toLowerCase());
+            if (!goal) {
+                responseData = { result: `I couldn't find a goal named "${goal_title}".` };
+                break;
+            }
+
+            const { data: existingTags } = await supabaseAdmin.from('tags').select('id, name').or(`user_id.eq.${user.id},user_id.is.null`);
+            const existingTagMap = new Map(existingTags.map(t => [t.name.toLowerCase(), t.id]));
+            
+            let currentTagIds = new Set(goal.tags.map(t => t.id));
+            let newCustomTags = [];
+
+            if (updates.add_tags) {
+                updates.add_tags.forEach(tagName => {
+                    const existingId = existingTagMap.get(tagName.toLowerCase());
+                    if (existingId) {
+                        currentTagIds.add(existingId);
+                    } else {
+                        newCustomTags.push({ name: tagName, color: '#CCCCCC' }); // Default color
+                    }
+                });
+            }
+            if (updates.remove_tags) {
+                updates.remove_tags.forEach(tagName => {
+                    const tagToRemove = goal.tags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+                    if (tagToRemove) {
+                        currentTagIds.delete(tagToRemove.id);
+                    }
+                });
+            }
+
+            const { error: updateError } = await supabaseAdmin
+                .rpc('update_goal_with_tags', {
+                    p_goal_id: goal.id,
+                    p_title: updates.title,
+                    p_description: updates.description,
+                    p_icon: updates.icon,
+                    p_color: updates.color,
+                    p_type: updates.type,
+                    p_frequency: updates.frequency,
+                    p_specific_days: updates.specific_days,
+                    p_target_quantity: updates.target_quantity,
+                    p_target_period: updates.target_period,
+                    p_target_value: updates.target_value,
+                    p_unit: updates.unit,
+                    p_tags: Array.from(currentTagIds),
+                    p_custom_tags: newCustomTags,
+                });
+
+            if (updateError) {
+                responseData = { result: `I tried to update the goal, but failed: ${updateError.message}` };
+            } else {
+                responseData = { result: `Done! I've updated the goal "${goal.title}".` };
             }
 
         } else {
