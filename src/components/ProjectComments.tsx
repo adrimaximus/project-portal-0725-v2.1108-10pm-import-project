@@ -1,18 +1,14 @@
-import { useState, useMemo, useEffect } from "react";
-import { Project, Comment, User } from "@/types";
-import { dummyProjects } from "@/data/projects";
+import { useState, useMemo } from "react";
+import { Project } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, Ticket, MessageSquare, CheckCircle2, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 import { Mention, MentionsInput } from "react-mentions";
-import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { Badge } from "./ui/badge";
+import CommentRenderer from "./CommentRenderer";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -21,7 +17,6 @@ interface ProjectCommentsProps {
 
 const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps) => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState("");
   const [isTicket, setIsTicket] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -67,6 +62,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
     }
     return sortedItems;
   }, [sortedItems, showTickets]);
+
+  const allProjectMembers = useMemo(() => [project.created_by, ...project.assignedTo], [project.created_by, project.assignedTo]);
 
   return (
     <div className="space-y-6">
@@ -159,10 +156,9 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
                       {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true, locale: id })}
                     </p>
                   </div>
-                  <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{
-                    __html: (item.text || '')
-                      .replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '<span class="bg-blue-100 text-blue-600 font-semibold rounded-sm px-1">@$1</span>')
-                  }} />
+                  <div className="mt-1">
+                    <CommentRenderer text={item.text || ''} members={allProjectMembers} />
+                  </div>
                   {item.attachment_url && (
                     <div className="mt-2">
                       <a href={item.attachment_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md">
