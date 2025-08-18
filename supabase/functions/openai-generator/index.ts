@@ -68,12 +68,13 @@ serve(async (req) => {
         }
 
         const summarizedProjects = projects.map(p => ({
-          name: p.name,
-          status: p.status,
-          owner: p.created_by.name,
-          description: p.description?.substring(0, 100),
-          startDate: p.start_date,
-          dueDate: p.due_date,
+            name: p.name,
+            status: p.status,
+            tasks: (p.tasks || []).map(t => ({
+                title: t.title,
+                completed: t.completed,
+                assignedTo: (t.assignedTo || []).map(a => a.name)
+            }))
         }));
         const userList = users.map(u => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
         const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
@@ -83,12 +84,10 @@ serve(async (req) => {
 Today's date is ${today}.
 
 AVAILABLE ACTIONS:
-You can perform two types of actions: UPDATE_PROJECT and CREATE_TASK.
-When asked to perform an action, you MUST respond ONLY with a JSON object in the specified format.
+You can perform several types of actions. When asked to perform an action, you MUST respond ONLY with a JSON object in the specified format.
 
 1. UPDATE_PROJECT:
 {"action": "UPDATE_PROJECT", "project_name": "<project name>", "updates": {"field": "value", "another_field": "value"}}
-- Be smart about identifying the project name from the user's request.
 - Valid fields for 'updates' are: name, description, status, payment_status, budget, start_date, due_date, venue, add_members, remove_members, add_services, remove_services.
 - For 'status', valid values are: 'Requested', 'In Progress', 'In Review', 'On Hold', 'Completed', 'Cancelled'.
 - For 'payment_status', valid values are: 'Unpaid', 'Paid', 'Pending', 'In Process', 'Overdue', 'Proposed', 'Cancelled'.
@@ -98,12 +97,18 @@ When asked to perform an action, you MUST respond ONLY with a JSON object in the
 - For 'add_services' and 'remove_services', the value should be an array of service titles.
 
 2. CREATE_TASK:
-{"action": "CREATE_TASK", "project_name": "<project name>", "task_title": "<title of the new task>"}
+{"action": "CREATE_TASK", "project_name": "<project name>", "task_title": "<title of the new task>", "assignees": ["<optional user name>"]}
+
+3. ASSIGN_TASK:
+{"action": "ASSIGN_TASK", "project_name": "<project name>", "task_title": "<title of the task>", "assignees": ["<user name 1>", "<user name 2>"]}
+
+4. UNASSIGN_TASK:
+{"action": "UNASSIGN_TASK", "project_name": "<project name>", "task_title": "<title of the task>", "assignees": ["<user name 1>"]}
 
 If the user's request is a question and not an action, answer it based on the provided data.
 
 CONTEXT:
-- Available Projects: ${JSON.stringify(summarizedProjects, null, 2)}
+- Available Projects (with their tasks): ${JSON.stringify(summarizedProjects, null, 2)}
 - Available Users: ${JSON.stringify(userList, null, 2)}
 - Available Services: ${JSON.stringify(serviceList, null, 2)}
 `;
@@ -218,23 +223,88 @@ CONTEXT:
             }
 
         } else if (actionData && actionData.action === 'CREATE_TASK') {
-            const { project_name, task_title } = actionData;
+            const { project_name, task_title, assignees } = actionData;
             const project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
             if (!project) {
                 responseData = { result: `I couldn't find a project named "${project_name}" to add the task to.` };
                 break;
             }
 
-            const { error: taskError } = await supabaseAdmin.from('tasks').insert({
+            const { data: newTask, error: taskError } = await supabaseAdmin.from('tasks').insert({
                 project_id: project.id,
                 title: task_title,
                 created_by: user.id,
-            });
+            }).select().single();
 
             if (taskError) {
                 responseData = { result: `I tried to create the task, but failed. The database said: ${taskError.message}` };
-            } else {
-                responseData = { result: `OK, I've added the task "${task_title}" to the project "${project.name}".` };
+                break;
+            }
+
+            let assignmentMessage = "";
+            if (assignees && assignees.length > 0) {
+                const userIdsToAssign = userList
+                    .filter(u => assignees.some(name => u.name.toLowerCase() === name.toLowerCase()))
+                    .map(u => u.id);
+                
+                if (userIdsToAssign.length > 0) {
+                    const newAssignees = userIdsToAssign.map(uid => ({ task_id: newTask.id, user_id: uid }));
+                    const { error: assignError } = await supabaseAdmin.from('task_assignees').insert(newAssignees);
+                    if (assignError) {
+                        assignmentMessage = ` I created the task, but couldn't assign it due to an error: ${assignError.message}`;
+                    } else {
+                        assignmentMessage = ` and assigned it to ${assignees.join(', ')}`;
+                    }
+                } else {
+                    assignmentMessage = ` but I couldn't find the user(s) ${assignees.join(', ')} to assign.`;
+                }
+            }
+
+            responseData = { result: `OK, I've added the task "${task_title}" to the project "${project.name}"${assignmentMessage}.` };
+
+        } else if (actionData && (actionData.action === 'ASSIGN_TASK' || actionData.action === 'UNASSIGN_TASK')) {
+            const { project_name, task_title, assignees } = actionData;
+            if (!project_name || !task_title || !assignees || assignees.length === 0) {
+                responseData = { result: "To assign a task, I need the project name, task title, and at least one user." };
+                break;
+            }
+
+            const project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
+            if (!project) {
+                responseData = { result: `I couldn't find a project named "${project_name}".` };
+                break;
+            }
+
+            const task = project.tasks.find(t => t.title.toLowerCase() === task_title.toLowerCase());
+            if (!task) {
+                responseData = { result: `I couldn't find a task named "${task_title}" in the project "${project.name}".` };
+                break;
+            }
+
+            const userIdsToModify = userList
+                .filter(u => assignees.some(name => u.name.toLowerCase() === name.toLowerCase()))
+                .map(u => u.id);
+
+            if (userIdsToModify.length === 0) {
+                responseData = { result: `I couldn't find any of the users you mentioned: ${assignees.join(', ')}.` };
+                break;
+            }
+
+            if (actionData.action === 'ASSIGN_TASK') {
+                const newAssignees = userIdsToModify.map(uid => ({ task_id: task.id, user_id: uid }));
+                const { error: assignError } = await supabaseAdmin.from('task_assignees').insert(newAssignees);
+                if (assignError) {
+                    responseData = { result: `I tried to assign the task, but failed: ${assignError.message}` };
+                } else {
+                    responseData = { result: `Done! I've assigned ${assignees.join(', ')} to the task "${task.title}".` };
+                }
+            } else { // UNASSIGN_TASK
+                const { error: unassignError } = await supabaseAdmin.from('task_assignees').delete().eq('task_id', task.id).in('user_id', userIdsToModify);
+                if (unassignError) {
+                    responseData = { result: `I tried to unassign from the task, but failed: ${unassignError.message}` };
+                } else {
+                    responseData = { result: `Done! I've unassigned ${assignees.join(', ')} from the task "${task.title}".` };
+                }
             }
 
         } else {
