@@ -69,12 +69,6 @@ export const getColorForTag = (tagName: string) => {
   return tagColors[index];
 };
 
-export const parseUTCDate = (dateString: string | null | undefined): Date | null => {
-  if (!dateString) return null;
-  const date = new Date(dateString);
-  return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-};
-
 export const formatInJakarta = (dateString: string | Date | null | undefined, formatStr: string): string => {
     if (!dateString) return 'N/A';
     try {

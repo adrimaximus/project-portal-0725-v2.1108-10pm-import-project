@@ -10,8 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getStatusStyles, parseUTCDate, formatInJakarta } from '@/lib/utils';
-import { format } from 'date-fns';
+import { getStatusStyles, formatInJakarta } from '@/lib/utils';
 
 const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
   const navigate = useNavigate();
@@ -21,10 +20,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
     .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
 
   const groupedByDay = sortedProjects.reduce((acc, project) => {
-    const localDate = parseUTCDate(project.start_date!);
-    if (!localDate) return acc;
-    
-    const dateKey = format(localDate, 'yyyy-MM-dd');
+    const dateKey = formatInJakarta(project.start_date!, 'yyyy-MM-dd');
     
     if (!acc[dateKey]) {
       acc[dateKey] = [];
@@ -46,7 +42,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
   return (
     <div className="space-y-4">
       {Object.entries(groupedByDay).map(([dateStr, projectsOnDay]) => {
-        const date = new Date(dateStr);
+        const date = new Date(`${dateStr}T00:00:00`);
         const currentMonth = formatInJakarta(date, 'MMMM yyyy');
         const showMonthHeader = currentMonth !== lastMonth;
         lastMonth = currentMonth;
