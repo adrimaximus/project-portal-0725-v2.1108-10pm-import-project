@@ -1,6 +1,6 @@
 import { Project } from '@/types';
 import { GoogleCalendarEvent } from '@/types';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   eachDayOfInterval,
@@ -19,7 +19,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn, getStatusStyles } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 type CombinedItem = Project | GoogleCalendarEvent;
 
@@ -31,7 +31,13 @@ const getItemColor = (item: CombinedItem): string => {
   if (isGCalEvent(item)) {
     return '#f97316'; // Orange for Google Calendar events
   } else {
-    return getStatusStyles(item.status).hex;
+    switch (item.status) {
+      case 'On Track': case 'Completed': case 'Done': case 'Billed': return '#22c55e'; // Green
+      case 'At Risk': return '#f97316'; // Orange
+      case 'Off Track': return '#ef4444'; // Red
+      case 'On Hold': return '#64748b'; // Slate
+      default: return '#a1a1aa'; // Zinc
+    }
   }
 };
 
@@ -51,8 +57,8 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
     daysInYear.forEach(day => {
       const dayKey = format(day, 'yyyy-MM-dd');
       const itemsOnDay = combinedItems.filter(p => {
-        const startDate = isGCalEvent(p) ? (p.start.dateTime || p.start.date) : p.start_date;
-        const dueDate = isGCalEvent(p) ? (p.end.dateTime || p.end.date) : p.due_date;
+        const startDate = isGCalEvent(p) ? (p.start.dateTime || p.start.date) : p.startDate;
+        const dueDate = isGCalEvent(p) ? (p.end.dateTime || p.end.date) : p.dueDate;
         if (!startDate || !dueDate) return false;
         const start = new Date(startDate);
         const end = new Date(dueDate);

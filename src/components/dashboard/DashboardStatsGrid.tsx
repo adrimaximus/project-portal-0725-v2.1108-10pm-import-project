@@ -16,13 +16,13 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
   const stats = useMemo(() => {
     const totalValue = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
 
-    const projectStatusValues = projects.reduce((acc, p) => {
-        acc[p.status] = (acc[p.status] || 0) + (p.budget || 0);
+    const projectStatusCounts = projects.reduce((acc, p) => {
+        acc[p.status] = (acc[p.status] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
 
-    const paymentStatusValues = projects.reduce((acc, p) => {
-        acc[p.payment_status] = (acc[p.payment_status] || 0) + (p.budget || 0);
+    const paymentStatusCounts = projects.reduce((acc, p) => {
+        acc[p.payment_status] = (acc[p.payment_status] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
 
@@ -74,8 +74,8 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
 
     return {
       totalValue,
-      projectStatusValues,
-      paymentStatusValues,
+      projectStatusCounts,
+      paymentStatusCounts,
       topOwner,
       topCollaborator,
       topUserByValue,
@@ -91,28 +91,28 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
         icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
       />
       <StatCard
-        title="Value by Project Status"
+        title="Project Status"
         icon={<ListChecks className="h-4 w-4 text-muted-foreground" />}
         value={
           <div className="space-y-1 text-sm pt-2">
-            {Object.entries(stats.projectStatusValues).map(([status, value]) => (
+            {Object.entries(stats.projectStatusCounts).map(([status, count]) => (
               <div key={status} className="flex justify-between">
                 <span>{status}</span>
-                <span className="font-semibold">{'Rp ' + value.toLocaleString('id-ID')}</span>
+                <span className="font-semibold">{count}</span>
               </div>
             ))}
           </div>
         }
       />
       <StatCard
-        title="Value by Payment Status"
+        title="Payment Status"
         icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
         value={
           <div className="space-y-1 text-sm pt-2">
-            {Object.entries(stats.paymentStatusValues).map(([status, value]) => (
+            {Object.entries(stats.paymentStatusCounts).map(([status, count]) => (
               <div key={status} className="flex justify-between">
                 <span>{status}</span>
-                <span className="font-semibold">{'Rp ' + value.toLocaleString('id-ID')}</span>
+                <span className="font-semibold">{count}</span>
               </div>
             ))}
           </div>
