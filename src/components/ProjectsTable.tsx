@@ -44,7 +44,7 @@ interface ProjectsTableProps {
 }
 
 const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => {
-  const [view, setView] = useState<ViewMode>('table');
+  const [view, setView] = useState<ViewMode>('list');
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
@@ -328,11 +328,11 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
               }}
               aria-label="View mode"
             >
-              <ToggleGroupItem value="table" aria-label="Table view">
-                <TableIcon className="h-4 w-4" />
-              </ToggleGroupItem>
               <ToggleGroupItem value="list" aria-label="List view">
                 <List className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="table" aria-label="Table view">
+                <TableIcon className="h-4 w-4" />
               </ToggleGroupItem>
               <ToggleGroupItem value="month" aria-label="Month view">
                 <CalendarIcon className="h-4 w-4" />
