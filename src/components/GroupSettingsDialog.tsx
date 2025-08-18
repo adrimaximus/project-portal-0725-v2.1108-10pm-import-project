@@ -163,7 +163,7 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
                       </Avatar>
                       <span className="font-medium text-sm">{member.name}</span>
                     </div>
-                    {currentUser?.id === conversation.members.find(m => m.role === 'owner')?.id && member.id !== currentUser.id && (
+                    {currentUser?.id === conversation.created_by && member.id !== currentUser.id && (
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveMember(member.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
