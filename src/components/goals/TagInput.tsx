@@ -8,6 +8,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -19,7 +20,6 @@ import { Tag, User } from "@/types";
 import TagEditorDialog from "./TagEditorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ScrollArea } from "../ui/scroll-area";
 
 interface TagInputProps {
   allTags: Tag[];
@@ -99,10 +99,6 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
     }
   };
 
-  const filteredTags = allTags.filter(tag => 
-    tag.name.toLowerCase().includes(inputValue.toLowerCase())
-  );
-
   return (
     <>
       <div className="space-y-2">
@@ -112,30 +108,11 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="w-full justify-between h-auto min-h-[40px]"
+              className="w-full justify-between"
             >
-              <div className="flex gap-1 flex-wrap">
-                {selectedTags.length > 0 ? (
-                  selectedTags.map(tag => (
-                    <Badge
-                      key={tag.id}
-                      variant="secondary"
-                      className="mr-1"
-                      style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}
-                    >
-                      {tag.name}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleToggleTag(tag); }}
-                        className="ml-1.5 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-muted-foreground font-normal">Select tags...</span>
-                )}
-              </div>
+              <span>
+                {selectedTags.length > 0 ? `${selectedTags.length} tag(s) selected` : "Select tags..."}
+              </span>
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -146,17 +123,15 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                 value={inputValue}
                 onValueChange={setInputValue}
               />
-              <ScrollArea className="h-48">
+              <CommandList className="max-h-[200px]">
                 <CommandEmpty>
-                  <div className="p-1">
-                    <Button variant="ghost" className="w-full justify-start" onClick={handleCreate}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Create "{inputValue}"
-                    </Button>
-                  </div>
+                  <CommandItem onSelect={handleCreate} className="cursor-pointer">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create "{inputValue}"
+                  </CommandItem>
                 </CommandEmpty>
                 <CommandGroup>
-                  {filteredTags.map((tag) => (
+                  {allTags.map((tag) => (
                     <CommandItem
                       key={tag.id}
                       value={tag.name}
@@ -180,10 +155,27 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
                     </CommandItem>
                   ))}
                 </CommandGroup>
-              </ScrollArea>
+              </CommandList>
             </Command>
           </PopoverContent>
         </Popover>
+        <div className="flex flex-wrap gap-1 min-h-[24px]">
+          {selectedTags.map(tag => (
+            <Badge
+              key={tag.id}
+              variant="secondary"
+              style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}
+            >
+              {tag.name}
+              <button
+                className="ml-1.5 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                onClick={() => handleToggleTag(tag)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
       </div>
       <TagEditorDialog
         open={isEditorOpen}
