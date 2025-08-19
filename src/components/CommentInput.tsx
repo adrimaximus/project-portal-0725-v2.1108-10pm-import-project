@@ -13,13 +13,13 @@ interface CommentInputProps {
 const mentionInputClassNames = {
   control: "relative w-full",
   input:
-    // padding 8px (p-2)
     "w-full min-h-[100px] p-2 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
   suggestions: {
     list:
       "bg-popover text-popover-foreground border rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto mt-2 z-50 p-1",
+    // set to text-sm (14px)
     item:
-      "px-4 py-3 text-[0.95rem] leading-5 rounded-md border-b last:border-b-0 border-border cursor-pointer transition-colors text-foreground hover:bg-accent/60",
+      "px-4 py-3 text-sm leading-5 rounded-md border-b last:border-b-0 border-border cursor-pointer transition-colors text-foreground hover:bg-accent/60",
     itemFocused: "bg-accent text-accent-foreground",
   },
   mention: "bg-primary/15 text-primary font-semibold rounded-full px-2 py-0.5",
@@ -73,7 +73,16 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
           classNames={mentionInputClassNames}
         >
-          <Mention trigger="@" data={[]} />
+          <Mention
+            trigger="@"
+            data={mentionableUsers}
+            appendSpaceOnAdd
+            renderSuggestion={(suggestion: any) => (
+              <div className="w-full">
+                <span className="font-medium">{suggestion.display}</span>
+              </div>
+            )}
+          />
         </MentionsInput>
       </div>
 
