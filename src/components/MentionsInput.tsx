@@ -49,7 +49,7 @@ function highlight(text: string, query: string) {
   return (
     <>
       {before}
-      <span className="font-semibold text-[#64758b]">{match}</span>
+      <span className="font-semibold text-foreground">{match}</span>
       {after}
     </>
   );
@@ -193,22 +193,22 @@ const MentionsInput: React.FC<Props> = ({
         placeholder={placeholder}
         aria-activedescendant={ariaActiveId}
         className={cn(
-          "w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-700 outline-none focus:border-neutral-400 placeholder:text-neutral-500 min-h-[56px]",
+          "w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring placeholder:text-muted-foreground min-h-[56px]",
           inputClassName
         )}
       />
 
       {panelVisible && (
         <div
-          className="absolute left-0 z-50 mt-2 w-full rounded-xl border border-[#e5e7eb] bg-white shadow-xl"
+          className="absolute left-0 z-50 mt-2 w-full rounded-xl border border-border bg-background shadow-xl"
           role="listbox"
           style={{ top: "100%" }}
         >
           <div className="py-2 max-h-[280px] overflow-auto">
             {!token ? (
-              <div className="px-3 py-2 text-sm text-[#64758b]">No matches</div>
+              <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
             ) : filtered.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-[#64758b]">No matches</div>
+              <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
             ) : (
               filtered.map((u, i) => {
                 const isActive = i === activeIdx;
@@ -220,9 +220,10 @@ const MentionsInput: React.FC<Props> = ({
                     id={itemId}
                     role="option"
                     aria-selected={isActive}
-                    className={`w-full px-3 py-2 text-left cursor-pointer select-none rounded-lg ${
-                      isActive ? "bg-[#eef2f7] text-[#64758b]" : "text-[#64758b] hover:bg-[#f5f7fa]"
-                    }`}
+                    className={cn(
+                      "w-full px-3 py-2 text-left cursor-pointer select-none rounded-lg",
+                      isActive ? "bg-accent text-accent-foreground" : "text-foreground hover:bg-accent/50"
+                    )}
                     onMouseEnter={() => setActiveIdx(i)}
                     onMouseDown={(e) => {
                       e.preventDefault();
