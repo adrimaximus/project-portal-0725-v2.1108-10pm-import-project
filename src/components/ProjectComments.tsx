@@ -60,7 +60,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
   );
 
   const filteredItems = useMemo(
-    () => (showTickets ? sortedItems.filter((i) => i.isTicket) : sortedItems),
+    () => (showTickets ? sortedItems.filter(i => i.isTicket) : sortedItems),
     [sortedItems, showTickets]
   );
 
@@ -77,17 +77,15 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             classNames={{
               control: "relative w-full",
               input:
-                "w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                // padding 8px (p-2)
+                "w-full min-h-[100px] p-2 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
               suggestions: {
-                // WhatsApp-like rounded sheet with strong shadow
                 list:
                   "bg-popover text-popover-foreground border rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto mt-2 z-50 p-1",
-                // Each item padded, with divider like WA (border-b), hover/selected accent
                 item:
                   "px-4 py-3 text-[0.95rem] leading-5 rounded-md border-b last:border-b-0 border-border cursor-pointer transition-colors text-foreground hover:bg-accent/60",
                 itemFocused: "bg-accent text-accent-foreground",
               },
-              // Mention chip inside text area
               mention: "bg-primary/15 text-primary font-semibold rounded-full px-2 py-0.5",
             }}
           >
