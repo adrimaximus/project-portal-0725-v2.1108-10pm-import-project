@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { User } from '@/types';
-import { toTitleCase } from '@/lib/utils';
 
 interface UserMentionProps {
   user: User;
@@ -23,10 +22,9 @@ const UserMention = ({ user }: UserMentionProps) => {
     <a
       href={`/users/${user.id}`}
       onClick={handleMentionClick}
-      className="font-semibold hover:underline"
-      style={{ color: '#2463eb' }}
+      className="font-semibold text-mention hover:underline"
     >
-      @{toTitleCase(user.name)}
+      @{user.name}
     </a>
   );
 };

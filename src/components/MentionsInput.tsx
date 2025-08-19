@@ -142,8 +142,7 @@ const MentionsInput: React.FC<Props> = ({
 
     const prefix = value.slice(0, t.start);
     const suffix = value.slice(t.end);
-    const mentionText =
-      insertFormat === "text" ? `@${u.handle ?? u.display_name}` : `@${u.display_name}`;
+    const mentionText = `@\[${u.display_name}\](${u.id})`;
     const next = `${prefix}${mentionText} ${suffix}`;
     const newCaret = (prefix + mentionText + " ").length;
     onChange(next);
