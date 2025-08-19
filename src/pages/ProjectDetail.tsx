@@ -69,27 +69,29 @@ const ProjectDetail = () => {
     }
   }, [project]);
 
-  // Realtime: sinkron komentar proyek
+  // Realtime: sinkron komentar & aktivitas proyek
   useEffect(() => {
     if (!project || !slug) return;
 
-    const channel = supabase.channel(`project-comments-${project.id}`);
+    const channel = supabase.channel(`project-detail-${project.id}`);
 
-    const resolveAuthor = async (authorId: string) => {
+    const resolveUser = async (userId: string) => {
       const cached = queryClient.getQueryData<Project>(["project", slug]);
       if (cached) {
-        if (cached.created_by?.id === authorId) return cached.created_by;
-        const found = cached.assignedTo?.find(u => u.id === authorId);
+        if (cached.created_by?.id === userId) return cached.created_by;
+        const found = cached.assignedTo?.find(u => u.id === userId);
         if (found) return found;
-        const fromComments = cached.comments?.find(c => c.author?.id === authorId)?.author;
+        const fromComments = cached.comments?.find(c => c.author?.id === userId)?.author;
         if (fromComments) return fromComments;
+        const fromActivities = cached.activities?.find(a => a.user?.id === userId)?.user;
+        if (fromActivities) return fromActivities;
       }
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', authorId).single();
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
       return mapProfileToUser(profile);
     };
 
     const upsertCommentInCache = async (row: any) => {
-      const author = await resolveAuthor(row.author_id);
+      const author = await resolveUser(row.author_id);
       queryClient.setQueryData(["project", slug], (prev: any) => {
         if (!prev) return prev;
         const newComment = {
@@ -117,6 +119,32 @@ const ProjectDetail = () => {
       });
     };
 
+    const upsertActivityInCache = async (row: any) => {
+      const user = await resolveUser(row.user_id);
+      if (!user) return;
+
+      queryClient.setQueryData(["project", slug], (prev: any) => {
+        if (!prev) return prev;
+        const newActivity = {
+          id: row.id,
+          type: row.type,
+          details: row.details,
+          timestamp: row.created_at,
+          user,
+        };
+        
+        const exists = (prev.activities || []).some((a: any) => a.id === row.id);
+        
+        const activities = exists
+          ? prev.activities.map((a: any) => (a.id === row.id ? { ...a, ...newActivity } : a))
+          : [newActivity, ...(prev.activities || [])];
+        
+        activities.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+        return { ...prev, activities };
+      });
+    };
+
     channel
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, async (payload) => {
         await upsertCommentInCache(payload.new);
@@ -126,6 +154,9 @@ const ProjectDetail = () => {
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, (payload) => {
         removeCommentInCache(payload.old.id);
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'project_activities', filter: `project_id=eq.${project.id}` }, async (payload) => {
+        await upsertActivityInCache(payload.new);
       })
       .subscribe();
 
