@@ -17,6 +17,9 @@ import {
   Undo2,
   Briefcase,
   UserCog,
+  Wallet,
+  Calendar,
+  MapPin,
 } from "lucide-react";
 
 const activityIcons: { [key: string]: React.ReactNode } = {
@@ -36,6 +39,9 @@ const activityIcons: { [key: string]: React.ReactNode } = {
   SERVICE_ADDED: <Briefcase className="h-4 w-4" />,
   SERVICE_REMOVED: <Briefcase className="h-4 w-4" />,
   OWNERSHIP_TRANSFERRED: <UserCog className="h-4 w-4" />,
+  BUDGET_UPDATED: <Wallet className="h-4 w-4" />,
+  TIMELINE_UPDATED: <Calendar className="h-4 w-4" />,
+  VENUE_UPDATED: <MapPin className="h-4 w-4" />,
 };
 
 const renderActivityDescription = (description: string) => {
