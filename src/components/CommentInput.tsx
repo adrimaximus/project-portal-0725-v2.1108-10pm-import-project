@@ -20,12 +20,15 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
   const mentionUsers: MentionUser[] = useMemo(() => {
     const all = [project.created_by, ...project.assignedTo];
     const unique = Array.from(new Map(all.map(u => [u.id, u])).values());
-    return unique.map(u => ({
-      id: u.id,
-      display_name: u.name,
-      email: u.email,
-      handle: u.email ? u.email.split("@")[0] : undefined,
-    }));
+    return unique.map(u => {
+      const first = (u.first_name && u.first_name.trim()) || (u.name ? u.name.split(" ")[0] : (u.email ? u.email.split("@")[0] : "User"));
+      return {
+        id: u.id,
+        display_name: first,
+        email: u.email,
+        handle: first,
+      };
+    });
   }, [project]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,6 +59,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           users={mentionUsers}
           placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
           rows={4}
+          insertFormat="chip"
           inputClassName="bg-[#fafbfc] text-[#64758b] placeholder:text-[#64758b]/70 border-[#e5e7eb] focus:border-[#d1d5db]"
         />
       </div>
