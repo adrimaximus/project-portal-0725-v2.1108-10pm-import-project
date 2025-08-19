@@ -11,11 +11,12 @@ import {
   UserPlus,
   UserMinus,
   CreditCard,
-  Calendar,
   Pencil,
   FileUp,
   Ticket,
   Undo2,
+  Briefcase,
+  UserCog,
 } from "lucide-react";
 
 const activityIcons: { [key: string]: React.ReactNode } = {
@@ -32,6 +33,9 @@ const activityIcons: { [key: string]: React.ReactNode } = {
   FILE_UPLOADED: <FileUp className="h-4 w-4" />,
   TICKET_CREATED: <Ticket className="h-4 w-4" />,
   TASK_REOPENED: <Undo2 className="h-4 w-4" />,
+  SERVICE_ADDED: <Briefcase className="h-4 w-4" />,
+  SERVICE_REMOVED: <Briefcase className="h-4 w-4" />,
+  OWNERSHIP_TRANSFERRED: <UserCog className="h-4 w-4" />,
 };
 
 const renderActivityDescription = (description: string) => {
