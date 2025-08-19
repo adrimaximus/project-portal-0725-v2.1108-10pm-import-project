@@ -143,18 +143,15 @@ export const useChat = () => {
       setConversations(prev => {
         const idx = prev.findIndex(c => c.id === conversationId);
         if (idx === -1) {
-          // New conversation (not loaded yet) – just refresh list without wiping messages
           fetchConversations();
           return prev;
         }
 
         const updated = { ...prev[idx] };
-        // Update last message fields
         updated.lastMessage = newMessage.content || "Attachment";
         updated.lastMessageTimestamp = newMessage.created_at;
 
         if (conversationId === selectedConversationId) {
-          // Build mapped message
           const senderProfile = updated.members.find(m => m.id === newMessage.sender_id);
           const mapped: Message = {
             id: newMessage.id,
@@ -172,7 +169,6 @@ export const useChat = () => {
               : undefined,
           };
 
-          // Replace optimistic temp message from current user, otherwise append
           if (newMessage.sender_id === currentUser?.id) {
             let tempIndex = -1;
             for (let i = updated.messages.length - 1; i >= 0; i--) {
@@ -197,7 +193,30 @@ export const useChat = () => {
       });
     });
 
-    // IMPORTANT: Do NOT subscribe to conversations table changes; it was wiping messages by refetch.
+    // Handle conversation updates (e.g., group name change)
+    channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, (payload: any) => {
+        const updatedConv = payload.new;
+        setConversations(prev => {
+            const index = prev.findIndex(c => c.id === updatedConv.id);
+            if (index === -1) return prev;
+
+            const newConversations = [...prev];
+            const existingConv = newConversations[index];
+            
+            newConversations[index] = {
+                ...existingConv,
+                userName: updatedConv.is_group ? updatedConv.group_name : existingConv.userName,
+                userAvatar: updatedConv.avatar_url,
+            };
+            return newConversations;
+        });
+    });
+
+    // Handle participant changes (join/leave/removed)
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_participants' }, () => {
+        fetchConversations();
+    });
+
     channel
       .on('broadcast', { event: 'typing' }, (payload: any) => {
         if (payload?.userId && payload.userId !== currentUser?.id && payload.conversationId === selectedConversationId) {
