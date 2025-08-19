@@ -1,20 +1,21 @@
 import { useRef, useState } from "react";
 import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
 import { Paperclip, Send, X, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Attachment } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
+import MentionsInput, { MentionUser } from "@/components/MentionsInput";
 
 interface ChatInputProps {
   conversationId: string;
   onSendMessage: (text: string, attachment: Attachment | null) => void;
   onTyping?: () => void;
+  users?: MentionUser[]; // mention candidates passed from parent
 }
 
-const ChatInput = ({ conversationId, onSendMessage, onTyping }: ChatInputProps) => {
+const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [] }: ChatInputProps) => {
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -75,23 +76,13 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping }: ChatInputProps) 
   return (
     <div className="border-t p-4 flex-shrink-0">
       <div className="relative">
-        <Textarea
-          placeholder="Type a message..."
+        <MentionsInput
           value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            triggerTyping();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            } else {
-              triggerTyping();
-            }
-          }}
-          className="pr-24"
-          disabled={isUploading}
+          onChange={(v) => { setText(v); triggerTyping(); }}
+          users={users}
+          placeholder="Type a message..."
+          rows={3}
+          onEnter={handleSend}
         />
         <div className="absolute bottom-2 right-2 flex items-center gap-2">
           <Button variant="ghost" size="icon" asChild disabled={isUploading}>
@@ -106,7 +97,7 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping }: ChatInputProps) 
         </div>
       </div>
       {attachmentFile && (
-        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground bg-muted p-2 rounded-md">
+        <div className="mt-2 flex items-center gap-2 text-sm text-neutral-400 bg-neutral-900/50 p-2 rounded-md">
           <Paperclip className="h-4 w-4" />
           <span>{attachmentFile.name}</span>
           <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => setAttachmentFile(null)} disabled={isUploading}>

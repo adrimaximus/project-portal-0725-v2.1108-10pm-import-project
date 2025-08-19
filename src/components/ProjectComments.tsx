@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Paperclip, Send, Ticket, MessageSquare, CheckCircle2, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
-import { Mention, MentionsInput } from "react-mentions";
 import { Badge } from "./ui/badge";
 import CommentRenderer from "./CommentRenderer";
+import MentionsInput, { MentionUser } from "@/components/MentionsInput";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -23,25 +23,23 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTickets, setShowTickets] = useState(false);
 
-  const mentionableUsers = useMemo(() => {
-    if (!project) return [];
-    const users = [project.created_by, ...project.assignedTo];
-    const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
-    return uniqueUsers.map(u => {
-      let displayName = u.name;
-      if (displayName.includes("@") && !displayName.includes(" ")) {
-        displayName = displayName.split("@")[0];
-      }
-      return { id: u.id, display: displayName };
-    });
+  const mentionUsers: MentionUser[] = useMemo(() => {
+    const all = [project.created_by, ...project.assignedTo];
+    const unique = Array.from(new Map(all.map(u => [u.id, u])).values());
+    return unique.map(u => ({
+      id: u.id,
+      display_name: u.name,
+      email: u.email,
+      handle: u.email ? u.email.split("@")[0] : undefined,
+    }));
   }, [project]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) setAttachment(e.target.files[0]);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!newComment.trim() || !user) return;
     setIsSubmitting(true);
     try {
@@ -72,33 +70,11 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
         <div className="relative">
           <MentionsInput
             value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
+            onChange={setNewComment}
+            users={mentionUsers}
             placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
-            classNames={{
-              control: "relative w-full",
-              input:
-                "w-full min-h-[100px] p-2 text-sm text-muted-foreground rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-              suggestions: {
-                list:
-                  "bg-popover text-popover-foreground border rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto mt-2 z-50 p-1",
-                item:
-                  "px-4 py-3 text-sm leading-5 rounded-md border-b last:border-b-0 border-border cursor-pointer transition-colors text-foreground hover:bg-accent/60",
-                itemFocused: "bg-accent text-accent-foreground",
-              },
-              mention: "bg-primary/15 text-primary font-semibold rounded-full px-2 py-0.5",
-            }}
-          >
-            <Mention
-              trigger="@"
-              data={mentionableUsers}
-              appendSpaceOnAdd
-              renderSuggestion={(suggestion: any) => (
-                <div className="w-full">
-                  <span className="font-medium">{suggestion.display}</span>
-                </div>
-              )}
-            />
-          </MentionsInput>
+            rows={4}
+          />
         </div>
 
         <div className="flex justify-between items-center">

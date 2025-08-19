@@ -3,6 +3,7 @@ import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
 import { Conversation, Attachment } from "@/types";
 import ChatPlaceholder from "./ChatPlaceholder";
+import { MentionUser } from "@/components/MentionsInput";
 
 interface ChatWindowProps {
   selectedConversation: Conversation | null;
@@ -19,6 +20,13 @@ const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onLeaveG
   if (!selectedConversation) {
     return <ChatPlaceholder />;
   }
+
+  const mentionUsers: MentionUser[] = (selectedConversation.members || []).map((m) => ({
+    id: m.id,
+    display_name: m.name,
+    email: m.email,
+    handle: m.email ? m.email.split("@")[0] : undefined,
+  }));
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
@@ -38,6 +46,7 @@ const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onLeaveG
         conversationId={selectedConversation.id}
         onSendMessage={onSendMessage}
         onTyping={onTyping}
+        users={mentionUsers}
       />
     </div>
   );
