@@ -129,7 +129,7 @@ export const useChat = () => {
   useEffect(() => {
     if (!currentUser) return;
 
-    const channel = supabase.channel('chat-room', { config: { broadcast: { self: false } } });
+    const channel = supabase.channel('chat-room');
 
     channel
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
@@ -148,34 +148,22 @@ export const useChat = () => {
           updatedConvo.lastMessageTimestamp = newMessage.created_at;
 
           if (conversationId === selectedConversationId) {
-            const senderProfile = updatedConvo.members.find(m => m.id === newMessage.sender_id);
-            const mappedMessage: Message = {
-              id: newMessage.id, text: newMessage.content, timestamp: newMessage.created_at,
-              sender: {
-                id: senderProfile?.id || '', name: senderProfile?.name || 'Unknown',
-                avatar: senderProfile?.avatar, initials: senderProfile?.initials || '??',
-                email: senderProfile?.email,
-              },
-              attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
-            };
-            
-            if (newMessage.sender_id === currentUser?.id) {
-              let optimisticMessageIndex = -1;
-              for (let i = updatedConvo.messages.length - 1; i >= 0; i--) {
-                if (updatedConvo.messages[i].id.startsWith('temp-')) {
-                  optimisticMessageIndex = i;
-                  break;
-                }
-              }
-              if (optimisticMessageIndex > -1) {
-                const newMessages = [...updatedConvo.messages];
-                newMessages[optimisticMessageIndex] = mappedMessage;
-                updatedConvo.messages = newMessages;
-              } else {
-                updatedConvo.messages = [...updatedConvo.messages, mappedMessage];
-              }
-            } else {
-              updatedConvo.messages = [...updatedConvo.messages, mappedMessage];
+            const messageExists = updatedConvo.messages.some(m => m.id === newMessage.id);
+            if (!messageExists) {
+              const senderProfile = updatedConvo.members.find(m => m.id === newMessage.sender_id);
+              const mappedMessage: Message = {
+                id: newMessage.id, text: newMessage.content, timestamp: newMessage.created_at,
+                sender: {
+                  id: senderProfile?.id || '', name: senderProfile?.name || 'Unknown',
+                  avatar: senderProfile?.avatar, initials: senderProfile?.initials || '??',
+                  email: senderProfile?.email,
+                },
+                attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
+              };
+
+              // Remove the optimistic message if it exists and add the real one
+              const messagesWithoutOptimistic = updatedConvo.messages.filter(m => !m.id.startsWith('temp-'));
+              updatedConvo.messages = [...messagesWithoutOptimistic, mappedMessage];
             }
           }
 
@@ -214,8 +202,13 @@ export const useChat = () => {
     if (!selectedConversationId || !currentUser) return;
 
     const tempId = `temp-${Date.now()}`;
-    const optimistic: Message = { id: tempId, text, timestamp: new Date().toISOString(), sender: currentUser, attachment };
-    setConversations(prev => prev.map(c => c.id === selectedConversationId ? { ...c, messages: [...c.messages, optimistic], lastMessage: text || "Attachment", lastMessageTimestamp: new Date().toISOString() } : c));
+    const optimisticMessage: Message = { id: tempId, text, timestamp: new Date().toISOString(), sender: currentUser, attachment };
+    
+    setConversations(prev => prev.map(c => 
+      c.id === selectedConversationId 
+        ? { ...c, messages: [...c.messages, optimisticMessage], lastMessage: text || "Attachment", lastMessageTimestamp: new Date().toISOString() } 
+        : c
+    ));
 
     const { error } = await supabase.from('messages').insert({
       conversation_id: selectedConversationId, sender_id: currentUser.id, content: text,
@@ -224,7 +217,11 @@ export const useChat = () => {
 
     if (error) {
       toast.error("Failed to send message.", { description: error.message });
-      setConversations(prev => prev.map(c => c.id === selectedConversationId ? { ...c, messages: c.messages.filter(m => m.id !== tempId) } : c));
+      setConversations(prev => prev.map(c => 
+        c.id === selectedConversationId 
+          ? { ...c, messages: c.messages.filter(m => m.id !== tempId) } 
+          : c
+      ));
     }
   };
 
