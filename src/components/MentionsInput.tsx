@@ -60,7 +60,7 @@ const MentionsInput: React.FC<Props> = ({
   onSelectUser,
   insertFormat = "text",
   placeholder,
-  rows = 1, // default compact
+  rows = 1,
   onEnter,
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -133,7 +133,6 @@ const MentionsInput: React.FC<Props> = ({
   function insertUser(u: MentionUser) {
     if (!token || !inputRef.current) return;
     const el = inputRef.current;
-    // Re-validate token at current caret
     const currentCaret = el.selectionStart ?? 0;
     const currentToken = findActiveToken(value, currentCaret);
     const t = currentToken || token;
@@ -211,7 +210,6 @@ const MentionsInput: React.FC<Props> = ({
                 const isActive = i === activeIdx;
                 const itemId = `mentions-option-${i}`;
                 const name = u.display_name || "";
-                const sub = u.email || (u.handle ? `@${u.handle}` : "");
                 return (
                   <button
                     key={u.id}
@@ -227,11 +225,6 @@ const MentionsInput: React.FC<Props> = ({
                     <div className="text-sm font-medium">
                       {highlight(name, debouncedQuery)}
                     </div>
-                    {sub && (
-                      <div className="text-xs text-neutral-400">
-                        {highlight(sub, debouncedQuery)}
-                      </div>
-                    )}
                   </button>
                 );
               })
