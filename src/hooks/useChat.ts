@@ -139,7 +139,7 @@ export const useChat = () => {
         setConversations(prev => {
           const convoIndex = prev.findIndex(c => c.id === conversationId);
           if (convoIndex === -1) {
-            fetchConversations(); // New conversation, refetch list
+            fetchConversations();
             return prev;
           }
 
@@ -158,7 +158,25 @@ export const useChat = () => {
               },
               attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
             };
-            updatedConvo.messages = [...updatedConvo.messages, mappedMessage];
+            
+            if (newMessage.sender_id === currentUser?.id) {
+              let optimisticMessageIndex = -1;
+              for (let i = updatedConvo.messages.length - 1; i >= 0; i--) {
+                if (updatedConvo.messages[i].id.startsWith('temp-')) {
+                  optimisticMessageIndex = i;
+                  break;
+                }
+              }
+              if (optimisticMessageIndex > -1) {
+                const newMessages = [...updatedConvo.messages];
+                newMessages[optimisticMessageIndex] = mappedMessage;
+                updatedConvo.messages = newMessages;
+              } else {
+                updatedConvo.messages = [...updatedConvo.messages, mappedMessage];
+              }
+            } else {
+              updatedConvo.messages = [...updatedConvo.messages, mappedMessage];
+            }
           }
 
           const newConversations = [...prev];
