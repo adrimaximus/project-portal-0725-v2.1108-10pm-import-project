@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { MentionMeta } from "@/lib/mention-utils";
 
 export type MentionUser = {
   id: string;
@@ -11,9 +12,10 @@ export type MentionUser = {
 type Props = {
   value: string;
   onChange: (v: string) => void;
+  mentions: MentionMeta[];
+  onMentionsChange: (fn: (prev: MentionMeta[]) => MentionMeta[]) => void;
   users: MentionUser[];
   onSelectUser?: (u: MentionUser) => void;
-  insertFormat?: "text" | "chip";
   placeholder?: string;
   rows?: number;
   onEnter?: () => void;
@@ -58,9 +60,10 @@ function highlight(text: string, query: string) {
 const MentionsInput: React.FC<Props> = ({
   value,
   onChange,
+  mentions,
+  onMentionsChange,
   users,
   onSelectUser,
-  insertFormat = "text",
   placeholder,
   rows = 1,
   onEnter,
@@ -140,19 +143,36 @@ const MentionsInput: React.FC<Props> = ({
     const currentToken = findActiveToken(value, currentCaret);
     const t = currentToken || token;
 
-    const prefix = value.slice(0, t.start);
-    const suffix = value.slice(t.end);
-    const mentionText = `@\[${u.display_name}\](${u.id})`;
-    const next = `${prefix}${mentionText} ${suffix}`;
-    const newCaret = (prefix + mentionText + " ").length;
-    onChange(next);
+    const before = value.slice(0, t.start);
+    const after = value.slice(t.end);
+    const visible = `@${u.display_name}`;
+    const nextText = `${before}${visible} ${after}`;
+    const newCaret = (before + visible + " ").length;
+
+    const start = before.length;
+    const end = start + visible.length;
+
+    onMentionsChange(prev => [...prev, { id: u.id, name: u.display_name, start, end }]);
+    onChange(nextText);
     onSelectUser?.(u);
+
     requestAnimationFrame(() => {
       el.focus();
       el.setSelectionRange(newCaret, newCaret);
     });
     closeDropdown();
   }
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    onChange(newValue);
+    onMentionsChange(prev =>
+      prev.filter(m => {
+        const slice = newValue.slice(m.start, m.end);
+        return slice === `@${m.name}`;
+      })
+    );
+  };
 
   const ariaActiveId = open ? `mentions-option-${activeIdx}` : undefined;
 
@@ -162,7 +182,7 @@ const MentionsInput: React.FC<Props> = ({
         ref={inputRef}
         value={value}
         rows={rows}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={handleTextChange}
         onKeyDown={(e) => {
           if (open) {
             if (e.key === "ArrowDown") {

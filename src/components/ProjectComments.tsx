@@ -10,6 +10,7 @@ import { Badge } from "./ui/badge";
 import CommentRenderer from "./CommentRenderer";
 import MentionsInput, { MentionUser } from "@/components/MentionsInput";
 import { toTitleCase } from "@/lib/utils";
+import { MentionMeta, serializeMentions } from "@/lib/mention-utils";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -19,6 +20,7 @@ interface ProjectCommentsProps {
 const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps) => {
   const { user } = useAuth();
   const [newComment, setNewComment] = useState("");
+  const [mentions, setMentions] = useState<MentionMeta[]>([]);
   const [isTicket, setIsTicket] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,11 +47,13 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!newComment.trim() || !user) return;
+    const serializedText = serializeMentions(newComment, mentions);
+    if (!serializedText.trim() || !user) return;
     setIsSubmitting(true);
     try {
-      await onAddCommentOrTicket(newComment, isTicket, attachment);
+      await onAddCommentOrTicket(serializedText, isTicket, attachment);
       setNewComment("");
+      setMentions([]);
       setIsTicket(false);
       setAttachment(null);
     } finally {
@@ -76,10 +80,11 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
           <MentionsInput
             value={newComment}
             onChange={setNewComment}
+            mentions={mentions}
+            onMentionsChange={setMentions}
             users={mentionUsers}
             placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
             rows={4}
-            insertFormat="chip"
             inputClassName="bg-[#fafbfc] dark:bg-[#0d1525] text-foreground placeholder:text-muted-foreground border-border"
           />
         </div>

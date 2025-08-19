@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
+import CommentRenderer from "./CommentRenderer";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -96,7 +97,7 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
                 {!isCurrentUser && !isSameSenderAsPrevious && (
                   <p className="text-sm font-semibold mb-1">{sender.name}</p>
                 )}
-                {message.text && <p className="text-sm whitespace-pre-wrap">{message.text}</p>}
+                {message.text && <CommentRenderer text={message.text} members={members} />}
                 {message.attachment && (
                   <MessageAttachment attachment={message.attachment} />
                 )}

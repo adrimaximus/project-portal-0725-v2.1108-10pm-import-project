@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
 import MentionsInput, { MentionUser } from "@/components/MentionsInput";
+import { MentionMeta, serializeMentions } from "@/lib/mention-utils";
 
 interface ChatInputProps {
   conversationId: string;
@@ -17,6 +18,7 @@ interface ChatInputProps {
 
 const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [] }: ChatInputProps) => {
   const [text, setText] = useState("");
+  const [mentions, setMentions] = useState<MentionMeta[]>([]);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { user: currentUser } = useAuth();
@@ -31,7 +33,8 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [] }: Chat
   };
 
   const handleSend = async () => {
-    if ((!text.trim() && !attachmentFile) || !currentUser) return;
+    const serializedText = serializeMentions(text, mentions);
+    if ((!serializedText.trim() && !attachmentFile) || !currentUser) return;
 
     setIsUploading(true);
     let finalAttachment: Attachment | null = null;
@@ -60,8 +63,9 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [] }: Chat
       };
     }
 
-    onSendMessage(text, finalAttachment);
+    onSendMessage(serializedText, finalAttachment);
     setText("");
+    setMentions([]);
     setAttachmentFile(null);
     setIsUploading(false);
   };
@@ -79,6 +83,8 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [] }: Chat
         <MentionsInput
           value={text}
           onChange={(v) => { setText(v); triggerTyping(); }}
+          mentions={mentions}
+          onMentionsChange={setMentions}
           users={users}
           placeholder="Type a message..."
           onEnter={handleSend}

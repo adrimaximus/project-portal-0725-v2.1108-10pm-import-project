@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Paperclip, Send, Ticket, X } from "lucide-react";
 import MentionsInput, { MentionUser } from "@/components/MentionsInput";
+import { MentionMeta, serializeMentions } from "@/lib/mention-utils";
 
 interface CommentInputProps {
   project: Project;
@@ -12,7 +13,8 @@ interface CommentInputProps {
 
 const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
   const { user } = useAuth();
-  const [newComment, setNewComment] = useState("");
+  const [text, setText] = useState("");
+  const [mentions, setMentions] = useState<MentionMeta[]>([]);
   const [isTicket, setIsTicket] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,18 +33,16 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
     });
   }, [project]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) setAttachment(e.target.files[0]);
-  };
-
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!newComment.trim() || !user) return;
+    const serializedText = serializeMentions(text, mentions);
+    if (!serializedText.trim() || !user) return;
 
     setIsSubmitting(true);
     try {
-      await onAddCommentOrTicket(newComment, isTicket, attachment);
-      setNewComment("");
+      await onAddCommentOrTicket(serializedText, isTicket, attachment);
+      setText("");
+      setMentions([]);
       setIsTicket(false);
       setAttachment(null);
     } finally {
@@ -54,12 +54,13 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="relative">
         <MentionsInput
-          value={newComment}
-          onChange={setNewComment}
+          value={text}
+          onChange={setText}
+          mentions={mentions}
+          onMentionsChange={setMentions}
           users={mentionUsers}
           placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
           rows={4}
-          insertFormat="chip"
           inputClassName="bg-[#fafbfc] dark:bg-[#0d1525] text-foreground placeholder:text-muted-foreground border-border"
         />
       </div>
@@ -88,14 +89,14 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
             </label>
           </Button>
         </div>
-        <Button type="submit" disabled={isSubmitting || !newComment.trim()}>
+        <Button type="submit" disabled={isSubmitting || !text.trim()}>
           <Send className="mr-2 h-4 w-4" />
           {isSubmitting ? "Posting..." : "Post"}
         </Button>
       </div>
 
       {attachment && (
-        <div className="text-sm text-neutral-400 flex items-center gap-2">
+        <div className="text-sm text-muted-foreground flex items-center gap-2">
           <Paperclip className="h-4 w-4" />
           <span>{attachment.name}</span>
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAttachment(null)}>
