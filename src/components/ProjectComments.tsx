@@ -27,7 +27,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
   const mentionUsers: MentionUser[] = useMemo(() => {
     const all = [project.created_by, ...project.assignedTo];
     const unique = Array.from(new Map(all.map(u => [u.id, u])).values());
-    return unique.map(u => {
+    const filtered = unique.filter(u => u.id !== user?.id);
+    return filtered.map(u => {
       const fullName = u.name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'User';
       return {
         id: u.id,
@@ -36,7 +37,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
         handle: toTitleCase(fullName),
       };
     });
-  }, [project]);
+  }, [project, user]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) setAttachment(e.target.files[0]);

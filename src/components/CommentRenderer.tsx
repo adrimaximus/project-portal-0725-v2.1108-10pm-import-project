@@ -9,24 +9,48 @@ interface CommentRendererProps {
 
 const CommentRenderer = ({ text, members }: CommentRendererProps) => {
   const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-  const parts = text.split(mentionRegex);
+  
+  if (!text) return null;
+
+  const matches = Array.from(text.matchAll(mentionRegex));
+  
+  if (matches.length === 0) {
+    return <p className="text-sm text-muted-foreground whitespace-pre-wrap">{text}</p>;
+  }
+
+  const parts = [];
+  let lastIndex = 0;
+
+  matches.forEach((match, i) => {
+    const [fullMatch, displayName, userId] = match;
+    const startIndex = match.index!;
+
+    // Add text before the mention
+    if (startIndex > lastIndex) {
+      parts.push(text.substring(lastIndex, startIndex));
+    }
+
+    // Add the mention component
+    const user = members.find(m => m.id === userId);
+    parts.push(
+      user 
+        ? <UserMention key={`${userId}-${i}`} user={user} /> 
+        : <span key={`${userId}-${i}`} className="font-semibold text-mention">{`@${displayName}`}</span>
+    );
+
+    lastIndex = startIndex + fullMatch.length;
+  });
+
+  // Add any remaining text after the last mention
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
 
   return (
     <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-      {parts.map((part, index) => {
-        // The display name is captured at index 1, 4, 7, etc.
-        if (index % 3 === 1) {
-          const userId = parts[index + 1];
-          const user = members.find(m => m.id === userId);
-          return user ? <UserMention key={index} user={user} /> : `@${part}`;
-        }
-        // The user ID is captured at index 2, 5, 8, etc. We skip rendering it.
-        if (index % 3 === 2) {
-          return null;
-        }
-        // Plain text parts are at index 0, 3, 6, etc.
-        return part;
-      })}
+      {parts.map((part, index) => (
+        <React.Fragment key={index}>{part}</React.Fragment>
+      ))}
     </p>
   );
 };
