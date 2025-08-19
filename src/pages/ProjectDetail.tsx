@@ -15,7 +15,6 @@ import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
 import ProjectStatusCard from "@/components/project-detail/ProjectStatusCard";
 import ProjectPaymentStatusCard from "@/components/project-detail/ProjectPaymentStatusCard";
-import { mapProfileToUser } from "@/lib/utils";
 
 const fetchProject = async (slug: string): Promise<Project | null> => {
   const { data, error } = await supabase
@@ -75,89 +74,13 @@ const ProjectDetail = () => {
 
     const channel = supabase.channel(`project-detail-${project.id}`);
 
-    const resolveUser = async (userId: string) => {
-      const cached = queryClient.getQueryData<Project>(["project", slug]);
-      if (cached) {
-        if (cached.created_by?.id === userId) return cached.created_by;
-        const found = cached.assignedTo?.find(u => u.id === userId);
-        if (found) return found;
-        const fromComments = cached.comments?.find(c => c.author?.id === userId)?.author;
-        if (fromComments) return fromComments;
-        const fromActivities = cached.activities?.find(a => a.user?.id === userId)?.user;
-        if (fromActivities) return fromActivities;
-      }
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      return mapProfileToUser(profile);
-    };
-
-    const upsertCommentInCache = async (row: any) => {
-      const author = await resolveUser(row.author_id);
-      queryClient.setQueryData(["project", slug], (prev: any) => {
-        if (!prev) return prev;
-        const newComment = {
-          id: row.id,
-          text: row.text,
-          timestamp: row.created_at,
-          isTicket: row.is_ticket,
-          attachment_url: row.attachment_url,
-          attachment_name: row.attachment_name,
-          author,
-        };
-        const exists = (prev.comments || []).some((c: any) => c.id === row.id);
-        const comments = exists
-          ? prev.comments.map((c: any) => (c.id === row.id ? { ...c, ...newComment } : c))
-          : [newComment, ...(prev.comments || [])];
-        return { ...prev, comments };
-      });
-    };
-
-    const removeCommentInCache = (id: string) => {
-      queryClient.setQueryData(["project", slug], (prev: any) => {
-        if (!prev) return prev;
-        const comments = (prev.comments || []).filter((c: any) => c.id !== id);
-        return { ...prev, comments };
-      });
-    };
-
-    const upsertActivityInCache = async (row: any) => {
-      const user = await resolveUser(row.user_id);
-      if (!user) return;
-
-      queryClient.setQueryData(["project", slug], (prev: any) => {
-        if (!prev) return prev;
-        const newActivity = {
-          id: row.id,
-          type: row.type,
-          details: row.details,
-          timestamp: row.created_at,
-          user,
-        };
-        
-        const exists = (prev.activities || []).some((a: any) => a.id === row.id);
-        
-        const activities = exists
-          ? prev.activities.map((a: any) => (a.id === row.id ? { ...a, ...newActivity } : a))
-          : [newActivity, ...(prev.activities || [])];
-        
-        activities.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-        return { ...prev, activities };
-      });
+    const handleInvalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ["project", slug] });
     };
 
     channel
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, async (payload) => {
-        await upsertCommentInCache(payload.new);
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, async (payload) => {
-        await upsertCommentInCache(payload.new);
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, (payload) => {
-        removeCommentInCache(payload.old.id);
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'project_activities', filter: `project_id=eq.${project.id}` }, async (payload) => {
-        await upsertActivityInCache(payload.new);
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, handleInvalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_activities', filter: `project_id=eq.${project.id}` }, handleInvalidate)
       .subscribe();
 
     return () => {
