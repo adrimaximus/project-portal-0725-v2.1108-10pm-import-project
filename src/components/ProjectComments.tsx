@@ -77,11 +77,10 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             classNames={{
               control: "relative w-full",
               input:
-                "w-full min-h-[100px] p-2 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                "w-full min-h-[100px] p-2 text-sm text-muted-foreground rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
               suggestions: {
                 list:
                   "bg-popover text-popover-foreground border rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto mt-2 z-50 p-1",
-                // set to text-sm (14px)
                 item:
                   "px-4 py-3 text-sm leading-5 rounded-md border-b last:border-b-0 border-border cursor-pointer transition-colors text-foreground hover:bg-accent/60",
                 itemFocused: "bg-accent text-accent-foreground",
