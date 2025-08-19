@@ -15,6 +15,7 @@ import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
 import ProjectStatusCard from "@/components/project-detail/ProjectStatusCard";
 import ProjectPaymentStatusCard from "@/components/project-detail/ProjectPaymentStatusCard";
+import { mapProfileToUser } from "@/lib/utils";
 
 const fetchProject = async (slug: string): Promise<Project | null> => {
   const { data, error } = await supabase
@@ -67,6 +68,73 @@ const ProjectDetail = () => {
       setEditedProject(project);
     }
   }, [project]);
+
+  // Realtime: sinkron komentar proyek
+  useEffect(() => {
+    if (!project || !slug) return;
+
+    const channel = supabase.channel(`project-comments-${project.id}`);
+
+    const resolveAuthor = async (authorId: string) => {
+      const cached = queryClient.getQueryData<Project>(["project", slug]);
+      if (cached) {
+        if (cached.created_by?.id === authorId) return cached.created_by;
+        const found = cached.assignedTo?.find(u => u.id === authorId);
+        if (found) return found;
+        // Coba cari dari comments yang sudah ada
+        const fromComments = cached.comments?.find(c => c.author?.id === authorId)?.author;
+        if (fromComments) return fromComments;
+      }
+      // Fallback ambil profile
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', authorId).single();
+      return mapProfileToUser(profile);
+    };
+
+    const upsertCommentInCache = async (row: any) => {
+      const author = await resolveAuthor(row.author_id);
+      queryClient.setQueryData(["project", slug], (prev: any) => {
+        if (!prev) return prev;
+        const newComment = {
+          id: row.id,
+          text: row.text,
+          timestamp: row.created_at,
+          isTicket: row.is_ticket,
+          attachment_url: row.attachment_url,
+          attachment_name: row.attachment_name,
+          author,
+        };
+        const exists = (prev.comments || []).some((c: any) => c.id === row.id);
+        const comments = exists
+          ? prev.comments.map((c: any) => (c.id === row.id ? { ...c, ...newComment } : c))
+          : [newComment, ...(prev.comments || [])];
+        return { ...prev, comments };
+      });
+    };
+
+    const removeCommentInCache = (id: string) => {
+      queryClient.setQueryData(["project", slug], (prev: any) => {
+        if (!prev) return prev;
+        const comments = (prev.comments || []).filter((c: any) => c.id !== id);
+        return { ...prev, comments };
+      });
+    };
+
+    channel
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, async (payload) => {
+        await upsertCommentInCache(payload.new);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, async (payload) => {
+        await upsertCommentInCache(payload.new);
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, (payload) => {
+        removeCommentInCache(payload.old.id);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [project?.id, slug, queryClient]);
 
   const handleFieldChange = (field: keyof Project, value: any) => {
     setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
@@ -264,7 +332,7 @@ const ProjectDetail = () => {
     } else {
       toast.success("Comment posted.");
     }
-    queryClient.invalidateQueries({ queryKey: ["project", slug] });
+    // Tidak perlu invalidate; realtime INSERT akan menambahkan ke cache secara live
   };
 
   if (isLoading) return <ProjectDetailSkeleton />;
