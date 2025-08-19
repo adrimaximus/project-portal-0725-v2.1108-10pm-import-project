@@ -21,12 +21,12 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
     const all = [project.created_by, ...project.assignedTo];
     const unique = Array.from(new Map(all.map(u => [u.id, u])).values());
     return unique.map(u => {
-      const first = (u.first_name && u.first_name.trim()) || (u.name ? u.name.split(" ")[0] : (u.email ? u.email.split("@")[0] : "User"));
+      const fullName = u.name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'User';
       return {
         id: u.id,
-        display_name: first,
+        display_name: fullName,
         email: u.email,
-        handle: first,
+        handle: fullName,
       };
     });
   }, [project]);
