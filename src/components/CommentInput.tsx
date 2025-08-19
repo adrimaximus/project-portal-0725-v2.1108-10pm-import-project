@@ -16,9 +16,9 @@ const mentionInputClassNames = {
     "w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
   suggestions: {
     list:
-      "bg-popover text-popover-foreground border rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-1",
+      "bg-popover text-popover-foreground border rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto mt-2 z-50 p-1",
     item:
-      "px-3 py-2 text-sm rounded-md cursor-pointer transition-colors text-foreground hover:bg-accent/60",
+      "px-4 py-3 text-[0.95rem] leading-5 rounded-md border-b last:border-b-0 border-border cursor-pointer transition-colors text-foreground hover:bg-accent/60",
     itemFocused: "bg-accent text-accent-foreground",
   },
   mention: "bg-primary/15 text-primary font-semibold rounded-full px-2 py-0.5",
@@ -40,17 +40,12 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
       if (displayName.includes("@") && !displayName.includes(" ")) {
         displayName = displayName.split("@")[0];
       }
-      return {
-        id: u.id,
-        display: displayName,
-      };
+      return { id: u.id, display: displayName };
     });
   }, [project]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setAttachment(e.target.files[0]);
-    }
+    if (e.target.files) setAttachment(e.target.files[0]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,19 +76,15 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
             trigger="@"
             data={mentionableUsers}
             appendSpaceOnAdd
-            renderSuggestion={(suggestion: any, search, highlightedDisplay) => (
+            renderSuggestion={(suggestion: any) => (
               <div className="w-full">
-                <div className="flex items-center gap-3">
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-foreground">{highlightedDisplay}</span>
-                  </div>
-                </div>
+                <span className="font-medium">{suggestion.display}</span>
               </div>
             )}
           />
         </MentionsInput>
       </div>
+
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Button
@@ -123,6 +114,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           {isSubmitting ? "Posting..." : "Post"}
         </Button>
       </div>
+
       {attachment && (
         <div className="text-sm text-muted-foreground flex items-center gap-2">
           <Paperclip className="h-4 w-4" />

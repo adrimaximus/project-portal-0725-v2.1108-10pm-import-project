@@ -29,26 +29,20 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
     const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
     return uniqueUsers.map(u => {
       let displayName = u.name;
-      if (displayName.includes('@') && !displayName.includes(' ')) {
-        displayName = displayName.split('@')[0];
+      if (displayName.includes("@") && !displayName.includes(" ")) {
+        displayName = displayName.split("@")[0];
       }
-      return {
-        id: u.id,
-        display: displayName,
-      };
+      return { id: u.id, display: displayName };
     });
   }, [project]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setAttachment(e.target.files[0]);
-    }
+    if (e.target.files) setAttachment(e.target.files[0]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !user) return;
-
     setIsSubmitting(true);
     try {
       await onAddCommentOrTicket(newComment, isTicket, attachment);
@@ -65,12 +59,10 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
     [project.comments]
   );
 
-  const filteredItems = useMemo(() => {
-    if (showTickets) {
-      return sortedItems.filter(item => item.isTicket);
-    }
-    return sortedItems;
-  }, [sortedItems, showTickets]);
+  const filteredItems = useMemo(
+    () => (showTickets ? sortedItems.filter((i) => i.isTicket) : sortedItems),
+    [sortedItems, showTickets]
+  );
 
   const allProjectMembers = useMemo(() => [project.created_by, ...project.assignedTo], [project.created_by, project.assignedTo]);
 
@@ -87,15 +79,15 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               input:
                 "w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
               suggestions: {
+                // WhatsApp-like rounded sheet with strong shadow
                 list:
-                  // framed list (theme-aware)
-                  "bg-popover text-popover-foreground border rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-1",
+                  "bg-popover text-popover-foreground border rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto mt-2 z-50 p-1",
+                // Each item padded, with divider like WA (border-b), hover/selected accent
                 item:
-                  // item with rounded, padding, good contrast and hover/selected styles
-                  "px-3 py-2 text-sm rounded-md cursor-pointer transition-colors text-foreground hover:bg-accent/60",
+                  "px-4 py-3 text-[0.95rem] leading-5 rounded-md border-b last:border-b-0 border-border cursor-pointer transition-colors text-foreground hover:bg-accent/60",
                 itemFocused: "bg-accent text-accent-foreground",
               },
-              // in-text pill mention
+              // Mention chip inside text area
               mention: "bg-primary/15 text-primary font-semibold rounded-full px-2 py-0.5",
             }}
           >
@@ -103,20 +95,15 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               trigger="@"
               data={mentionableUsers}
               appendSpaceOnAdd
-              renderSuggestion={(suggestion: any, search, highlightedDisplay) => (
+              renderSuggestion={(suggestion: any) => (
                 <div className="w-full">
-                  <div className="flex items-center gap-3">
-                    {/* Left status dot to mimic the style; simple solid dot for presence-like cue */}
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-foreground">{highlightedDisplay}</span>
-                    </div>
-                  </div>
+                  <span className="font-medium">{suggestion.display}</span>
                 </div>
               )}
             />
           </MentionsInput>
         </div>
+
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Button
@@ -141,6 +128,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             {isSubmitting ? "Posting..." : "Post"}
           </Button>
         </div>
+
         {attachment && (
           <div className="text-sm text-muted-foreground flex items-center gap-2">
             <Paperclip className="h-4 w-4" />
