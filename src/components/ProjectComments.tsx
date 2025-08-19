@@ -83,31 +83,37 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             onChange={(e) => setNewComment(e.target.value)}
             placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
             classNames={{
-              control: 'relative w-full',
+              control: "relative w-full",
               input:
-                'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+                "w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
               suggestions: {
-                // Framed list with padding & rounded, theme-aware
                 list:
-                  'bg-popover text-popover-foreground border rounded-xl shadow-md overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-2',
-                // Each item is rounded, padded, high contrast; focused uses accent
+                  // framed list (theme-aware)
+                  "bg-popover text-popover-foreground border rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-1",
                 item:
-                  'px-3 py-2 text-sm rounded-md cursor-pointer transition-colors text-foreground hover:bg-accent/60',
-                itemFocused: 'bg-accent text-accent-foreground',
+                  // item with rounded, padding, good contrast and hover/selected styles
+                  "px-3 py-2 text-sm rounded-md cursor-pointer transition-colors text-foreground hover:bg-accent/60",
+                itemFocused: "bg-accent text-accent-foreground",
               },
-              // Mention chip inside text
-              mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-2 py-1',
+              // in-text pill mention
+              mention: "bg-primary/15 text-primary font-semibold rounded-full px-2 py-0.5",
             }}
           >
             <Mention
               trigger="@"
               data={mentionableUsers}
-              renderSuggestion={(suggestion: any) => (
+              appendSpaceOnAdd
+              renderSuggestion={(suggestion: any, search, highlightedDisplay) => (
                 <div className="w-full">
-                  <span className="font-medium">{suggestion.display}</span>
+                  <div className="flex items-center gap-3">
+                    {/* Left status dot to mimic the style; simple solid dot for presence-like cue */}
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-foreground">{highlightedDisplay}</span>
+                    </div>
+                  </div>
                 </div>
               )}
-              appendSpaceOnAdd
             />
           </MentionsInput>
         </div>
@@ -151,22 +157,22 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
           <Button
             variant="ghost"
             onClick={() => setShowTickets(false)}
-            className={`rounded-none ${!showTickets ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+            className={`rounded-none ${!showTickets ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
           >
             <MessageSquare className="mr-2 h-4 w-4" /> All Comments ({sortedItems.length})
           </Button>
           <Button
             variant="ghost"
             onClick={() => setShowTickets(true)}
-            className={`rounded-none ${showTickets ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+            className={`rounded-none ${showTickets ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
           >
-            <Ticket className="mr-2 h-4 w-4" /> Tickets ({sortedItems.filter(i => i.isTicket).length})
+            <Ticket className="mr-2 h-4 w-4" /> Tickets ({sortedItems.filter((i) => i.isTicket).length})
           </Button>
         </div>
 
         <div className="space-y-6">
-          {filteredItems.map(item => {
-            const isTicketCompleted = item.isTicket && project.tasks?.find(t => t.originTicketId === item.id)?.completed;
+          {filteredItems.map((item) => {
+            const isTicketCompleted = item.isTicket && project.tasks?.find((t) => t.originTicketId === item.id)?.completed;
             return (
               <div key={item.id} className="flex items-start space-x-4">
                 <Avatar>
@@ -193,7 +199,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
                     </p>
                   </div>
                   <div className="mt-1">
-                    <CommentRenderer text={item.text || ''} members={allProjectMembers} />
+                    <CommentRenderer text={item.text || ""} members={allProjectMembers} />
                   </div>
                   {item.attachment_url && (
                     <div className="mt-2">
@@ -204,13 +210,13 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
                         className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md"
                       >
                         <Paperclip className="h-4 w-4" />
-                        {item.attachment_name || 'View Attachment'}
+                        {item.attachment_name || "View Attachment"}
                       </a>
                     </div>
                   )}
                 </div>
               </div>
-            )
+            );
           })}
         </div>
       </div>

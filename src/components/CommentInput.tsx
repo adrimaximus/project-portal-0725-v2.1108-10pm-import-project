@@ -11,17 +11,17 @@ interface CommentInputProps {
 }
 
 const mentionInputClassNames = {
-  control: 'relative w-full',
+  control: "relative w-full",
   input:
-    'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+    "w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
   suggestions: {
     list:
-      'bg-popover text-popover-foreground border rounded-xl shadow-md overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-2',
+      "bg-popover text-popover-foreground border rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-1",
     item:
-      'px-3 py-2 text-sm rounded-md cursor-pointer transition-colors text-foreground hover:bg-accent/60',
-    itemFocused: 'bg-accent text-accent-foreground',
+      "px-3 py-2 text-sm rounded-md cursor-pointer transition-colors text-foreground hover:bg-accent/60",
+    itemFocused: "bg-accent text-accent-foreground",
   },
-  mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-2 py-1',
+  mention: "bg-primary/15 text-primary font-semibold rounded-full px-2 py-0.5",
 };
 
 const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
@@ -37,8 +37,8 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
     const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
     return uniqueUsers.map(u => {
       let displayName = u.name;
-      if (displayName.includes('@') && !displayName.includes(' ')) {
-        displayName = displayName.split('@')[0];
+      if (displayName.includes("@") && !displayName.includes(" ")) {
+        displayName = displayName.split("@")[0];
       }
       return {
         id: u.id,
@@ -80,12 +80,17 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           <Mention
             trigger="@"
             data={mentionableUsers}
-            renderSuggestion={(suggestion: any) => (
+            appendSpaceOnAdd
+            renderSuggestion={(suggestion: any, search, highlightedDisplay) => (
               <div className="w-full">
-                <span className="font-medium">{suggestion.display}</span>
+                <div className="flex items-center gap-3">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-foreground">{highlightedDisplay}</span>
+                  </div>
+                </div>
               </div>
             )}
-            appendSpaceOnAdd
           />
         </MentionsInput>
       </div>
@@ -104,7 +109,12 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
             <label htmlFor="file-upload" className="cursor-pointer">
               <Paperclip className="mr-2 h-4 w-4" />
               Attach File
-              <input id="file-upload" type="file" className="hidden" onChange={(e) => setAttachment(e.target.files?.[0] || null)} />
+              <input
+                id="file-upload"
+                type="file"
+                className="hidden"
+                onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+              />
             </label>
           </Button>
         </div>
