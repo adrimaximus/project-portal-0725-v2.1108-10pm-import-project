@@ -22,7 +22,8 @@ const UserMention = ({ user }: UserMentionProps) => {
     <a
       href={`/users/${user.id}`}
       onClick={handleMentionClick}
-      className="text-blue-600 font-semibold hover:underline"
+      className="font-semibold hover:underline"
+      style={{ color: '#2463eb' }}
     >
       @{user.name}
     </a>

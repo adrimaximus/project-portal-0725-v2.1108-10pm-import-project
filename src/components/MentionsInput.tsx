@@ -17,7 +17,7 @@ type Props = {
   placeholder?: string;
   rows?: number;
   onEnter?: () => void;
-  inputClassName?: string; // NEW: allow custom input styling
+  inputClassName?: string;
 };
 
 type ActiveToken = {
@@ -49,7 +49,7 @@ function highlight(text: string, query: string) {
   return (
     <>
       {before}
-      <span className="font-semibold text-white">{match}</span>
+      <span className="font-semibold text-[#64758b]">{match}</span>
       {after}
     </>
   );
@@ -201,16 +201,16 @@ const MentionsInput: React.FC<Props> = ({
 
       {panelVisible && (
         <div
-          className="absolute left-0 z-50 mt-2 w-full rounded-xl border border-neutral-800 bg-neutral-900/95 shadow-xl backdrop-blur supports-[backdrop-filter]:backdrop-blur-md"
+          className="absolute left-0 z-50 mt-2 w-full rounded-xl border border-[#e5e7eb] bg-white shadow-xl"
           role="listbox"
           style={{ top: "100%" }}
           onMouseDown={(e) => e.preventDefault()}
         >
           <div className="py-2 max-h-[280px] overflow-auto">
             {!token ? (
-              <div className="px-3 py-2 text-sm text-neutral-400">No matches</div>
+              <div className="px-3 py-2 text-sm text-[#64758b]">No matches</div>
             ) : filtered.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-neutral-400">No matches</div>
+              <div className="px-3 py-2 text-sm text-[#64758b]">No matches</div>
             ) : (
               filtered.map((u, i) => {
                 const isActive = i === activeIdx;
@@ -223,7 +223,7 @@ const MentionsInput: React.FC<Props> = ({
                     role="option"
                     aria-selected={isActive}
                     className={`w-full px-3 py-2 text-left cursor-pointer select-none rounded-lg ${
-                      isActive ? "bg-neutral-800 text-white" : "text-neutral-200 hover:bg-neutral-800"
+                      isActive ? "bg-[#eef2f7] text-[#64758b]" : "text-[#64758b] hover:bg-[#f5f7fa]"
                     }`}
                     onMouseEnter={() => setActiveIdx(i)}
                     onClick={() => insertUser(u)}
