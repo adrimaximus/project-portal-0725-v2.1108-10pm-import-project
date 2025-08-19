@@ -81,11 +81,9 @@ const ProjectDetail = () => {
         if (cached.created_by?.id === authorId) return cached.created_by;
         const found = cached.assignedTo?.find(u => u.id === authorId);
         if (found) return found;
-        // Coba cari dari comments yang sudah ada
         const fromComments = cached.comments?.find(c => c.author?.id === authorId)?.author;
         if (fromComments) return fromComments;
       }
-      // Fallback ambil profile
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', authorId).single();
       return mapProfileToUser(profile);
     };
@@ -317,6 +315,30 @@ const ProjectDetail = () => {
       return;
     }
 
+    // Optimistic update: tampilkan segera di UI penulis
+    if (commentData) {
+      const authorUser = {
+        id: user.id,
+        name: user.name,
+        avatar: user.avatar,
+        email: user.email,
+        initials: user.initials,
+      };
+      queryClient.setQueryData(["project", slug], (prev: any) => {
+        if (!prev) return prev;
+        const optimistic = {
+          id: commentData.id,
+          text,
+          timestamp: commentData.created_at,
+          isTicket,
+          attachment_url,
+          attachment_name,
+          author: authorUser,
+        };
+        return { ...prev, comments: [optimistic, ...(prev.comments || [])] };
+      });
+    }
+
     if (isTicket && commentData) {
       const { error: taskError } = await supabase.from('tasks').insert({
         project_id: project.id,
@@ -332,7 +354,7 @@ const ProjectDetail = () => {
     } else {
       toast.success("Comment posted.");
     }
-    // Tidak perlu invalidate; realtime INSERT akan menambahkan ke cache secara live
+    // Realtime akan menyamakan state di member lain
   };
 
   if (isLoading) return <ProjectDetailSkeleton />;
