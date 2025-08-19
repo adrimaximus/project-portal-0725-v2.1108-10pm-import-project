@@ -9,6 +9,7 @@ import { id } from "date-fns/locale";
 import { Badge } from "./ui/badge";
 import CommentRenderer from "./CommentRenderer";
 import MentionsInput, { MentionUser } from "@/components/MentionsInput";
+import { toTitleCase } from "@/lib/utils";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -30,9 +31,9 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
       const fullName = u.name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'User';
       return {
         id: u.id,
-        display_name: fullName,
+        display_name: toTitleCase(fullName),
         email: u.email,
-        handle: fullName,
+        handle: toTitleCase(fullName),
       };
     });
   }, [project]);
