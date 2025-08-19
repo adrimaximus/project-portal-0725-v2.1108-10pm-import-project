@@ -27,23 +27,35 @@ export const useChat = () => {
     if (error) {
       toast.error("Failed to fetch conversations.");
       console.error(error);
-    } else {
-      const mappedConversations: Conversation[] = data.map((c: any) => ({
-        id: c.conversation_id,
-        userName: c.is_group ? c.group_name : c.other_user_name,
-        userAvatar: c.is_group ? c.avatar_url : c.other_user_avatar,
-        lastMessage: c.last_message_content || "No messages yet.",
-        lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
-        unreadCount: 0,
-        messages: [],
-        isGroup: c.is_group,
-        members: (c.participants || []).map((p: any) => ({
-          id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
-        })),
-        created_by: c.created_by,
-      }));
-      setConversations(mappedConversations);
+      setIsLoading(false);
+      return;
     }
+
+    const mappedConversations: Conversation[] = (data || []).map((c: any) => ({
+      id: c.conversation_id,
+      userName: c.is_group ? c.group_name : c.other_user_name,
+      userAvatar: c.is_group ? c.avatar_url : c.other_user_avatar,
+      lastMessage: c.last_message_content || "No messages yet.",
+      lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
+      unreadCount: 0,
+      messages: [], // will be preserved from previous state below
+      isGroup: c.is_group,
+      members: (c.participants || []).map((p: any) => ({
+        id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
+      })),
+      created_by: c.created_by,
+    }));
+
+    // Merge to preserve existing messages for each conversation
+    setConversations(prev => {
+      const prevMap = new Map(prev.map(p => [p.id, p]));
+      const merged = mappedConversations.map(c => {
+        const existing = prevMap.get(c.id);
+        return existing ? { ...c, messages: existing.messages } : c;
+      });
+      return merged.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
+    });
+
     setIsLoading(false);
   }, [currentUser]);
 
@@ -58,7 +70,7 @@ export const useChat = () => {
         console.error("Message search error:", error);
         setMessageSearchResults([]);
       } else {
-        setMessageSearchResults(data.map((r: any) => r.conversation_id));
+        setMessageSearchResults((data || []).map((r: any) => r.conversation_id));
       }
     }, 300),
     []
@@ -73,27 +85,17 @@ export const useChat = () => {
   }, [searchTerm, debouncedSearchMessages]);
 
   const filteredConversations = useMemo(() => {
-    if (!searchTerm) {
-      return conversations;
-    }
+    if (!searchTerm) return conversations;
 
-    const lowercasedSearchTerm = searchTerm.toLowerCase();
-    
-    const nameMatches = conversations.filter(c =>
-      c.userName.toLowerCase().includes(lowercasedSearchTerm)
-    );
-
-    const messageMatches = conversations.filter(c =>
-      messageSearchResults.includes(c.id)
-    );
+    const lower = searchTerm.toLowerCase();
+    const nameMatches = conversations.filter(c => c.userName.toLowerCase().includes(lower));
+    const messageMatches = conversations.filter(c => messageSearchResults.includes(c.id));
 
     const combined = new Map<string, Conversation>();
     nameMatches.forEach(c => combined.set(c.id, c));
     messageMatches.forEach(c => combined.set(c.id, c));
 
-    return Array.from(combined.values()).sort((a, b) => 
-      new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()
-    );
+    return Array.from(combined.values()).sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
   }, [conversations, searchTerm, messageSearchResults]);
 
   const handleConversationSelect = useCallback(async (id: string | null) => {
@@ -112,7 +114,9 @@ export const useChat = () => {
     }
 
     const mappedMessages: Message[] = (data || []).map((m: any) => ({
-      id: m.id, text: m.content, timestamp: m.created_at,
+      id: m.id,
+      text: m.content,
+      timestamp: m.created_at,
       sender: {
         id: m.sender.id,
         name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim() || m.sender.email,
@@ -129,53 +133,72 @@ export const useChat = () => {
   useEffect(() => {
     if (!currentUser) return;
 
-    const channel = supabase.channel('chat-room');
+    const channel = supabase.channel('chat-room', { config: { broadcast: { self: false } } });
 
-    channel
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
-        const newMessage = payload.new;
-        const conversationId = newMessage.conversation_id;
+    // New message arrives
+    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
+      const newMessage = payload.new;
+      const conversationId = newMessage.conversation_id;
 
-        setConversations(prev => {
-          const convoIndex = prev.findIndex(c => c.id === conversationId);
-          if (convoIndex === -1) {
-            fetchConversations();
-            return prev;
-          }
+      setConversations(prev => {
+        const idx = prev.findIndex(c => c.id === conversationId);
+        if (idx === -1) {
+          // New conversation (not loaded yet) – just refresh list without wiping messages
+          fetchConversations();
+          return prev;
+        }
 
-          const updatedConvo = { ...prev[convoIndex] };
-          updatedConvo.lastMessage = newMessage.content || "Attachment";
-          updatedConvo.lastMessageTimestamp = newMessage.created_at;
+        const updated = { ...prev[idx] };
+        // Update last message fields
+        updated.lastMessage = newMessage.content || "Attachment";
+        updated.lastMessageTimestamp = newMessage.created_at;
 
-          if (conversationId === selectedConversationId) {
-            const messageExists = updatedConvo.messages.some(m => m.id === newMessage.id);
-            if (!messageExists) {
-              const senderProfile = updatedConvo.members.find(m => m.id === newMessage.sender_id);
-              const mappedMessage: Message = {
-                id: newMessage.id, text: newMessage.content, timestamp: newMessage.created_at,
-                sender: {
-                  id: senderProfile?.id || '', name: senderProfile?.name || 'Unknown',
-                  avatar: senderProfile?.avatar, initials: senderProfile?.initials || '??',
-                  email: senderProfile?.email,
-                },
-                attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
-              };
+        if (conversationId === selectedConversationId) {
+          // Build mapped message
+          const senderProfile = updated.members.find(m => m.id === newMessage.sender_id);
+          const mapped: Message = {
+            id: newMessage.id,
+            text: newMessage.content,
+            timestamp: newMessage.created_at,
+            sender: {
+              id: senderProfile?.id || '',
+              name: senderProfile?.name || 'Unknown',
+              avatar: senderProfile?.avatar,
+              initials: senderProfile?.initials || '??',
+              email: senderProfile?.email,
+            },
+            attachment: newMessage.attachment_url
+              ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type }
+              : undefined,
+          };
 
-              // Remove the optimistic message if it exists and add the real one
-              const messagesWithoutOptimistic = updatedConvo.messages.filter(m => !m.id.startsWith('temp-'));
-              updatedConvo.messages = [...messagesWithoutOptimistic, mappedMessage];
+          // Replace optimistic temp message from current user, otherwise append
+          if (newMessage.sender_id === currentUser?.id) {
+            let tempIndex = -1;
+            for (let i = updated.messages.length - 1; i >= 0; i--) {
+              if (updated.messages[i].id.startsWith('temp-')) { tempIndex = i; break; }
             }
+            if (tempIndex > -1) {
+              const copy = [...updated.messages];
+              copy[tempIndex] = mapped;
+              updated.messages = copy;
+            } else {
+              updated.messages = [...updated.messages, mapped];
+            }
+          } else {
+            updated.messages = [...updated.messages, mapped];
           }
+        }
 
-          const newConversations = [...prev];
-          newConversations.splice(convoIndex, 1);
-          newConversations.unshift(updatedConvo);
-          return newConversations;
-        });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
-        fetchConversations();
-      })
+        const newList = [...prev];
+        newList.splice(idx, 1);
+        newList.unshift(updated);
+        return newList;
+      });
+    });
+
+    // IMPORTANT: Do NOT subscribe to conversations table changes; it was wiping messages by refetch.
+    channel
       .on('broadcast', { event: 'typing' }, (payload: any) => {
         if (payload?.userId && payload.userId !== currentUser?.id && payload.conversationId === selectedConversationId) {
           setIsSomeoneTyping(true);
@@ -202,24 +225,28 @@ export const useChat = () => {
     if (!selectedConversationId || !currentUser) return;
 
     const tempId = `temp-${Date.now()}`;
-    const optimisticMessage: Message = { id: tempId, text, timestamp: new Date().toISOString(), sender: currentUser, attachment };
-    
-    setConversations(prev => prev.map(c => 
-      c.id === selectedConversationId 
-        ? { ...c, messages: [...c.messages, optimisticMessage], lastMessage: text || "Attachment", lastMessageTimestamp: new Date().toISOString() } 
+    const optimistic: Message = { id: tempId, text, timestamp: new Date().toISOString(), sender: currentUser, attachment };
+
+    setConversations(prev => prev.map(c =>
+      c.id === selectedConversationId
+        ? { ...c, messages: [...c.messages, optimistic], lastMessage: text || "Attachment", lastMessageTimestamp: new Date().toISOString() }
         : c
     ));
 
     const { error } = await supabase.from('messages').insert({
-      conversation_id: selectedConversationId, sender_id: currentUser.id, content: text,
-      attachment_url: attachment?.url, attachment_name: attachment?.name, attachment_type: attachment?.type,
+      conversation_id: selectedConversationId,
+      sender_id: currentUser.id,
+      content: text,
+      attachment_url: attachment?.url,
+      attachment_name: attachment?.name,
+      attachment_type: attachment?.type,
     });
 
     if (error) {
       toast.error("Failed to send message.", { description: error.message });
-      setConversations(prev => prev.map(c => 
-        c.id === selectedConversationId 
-          ? { ...c, messages: c.messages.filter(m => m.id !== tempId) } 
+      setConversations(prev => prev.map(c =>
+        c.id === selectedConversationId
+          ? { ...c, messages: c.messages.filter(m => m.id !== tempId) }
           : c
       ));
     }
