@@ -35,9 +35,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
       return {
         id: u.id,
         display: displayName,
-        avatar: u.avatar,
-        initials: u.initials,
-        email: u.email,
       };
     });
   }, [project]);
@@ -90,12 +87,15 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               input:
                 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               suggestions: {
+                // Framed list with padding & rounded, theme-aware
                 list:
-                  'bg-popover text-popover-foreground border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-1',
+                  'bg-popover text-popover-foreground border rounded-xl shadow-md overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-2',
+                // Each item is rounded, padded, high contrast; focused uses accent
                 item:
-                  'px-3 py-2 text-sm rounded-md cursor-pointer hover:bg-accent focus:bg-accent flex items-center gap-3',
+                  'px-3 py-2 text-sm rounded-md cursor-pointer transition-colors text-foreground hover:bg-accent/60',
                 itemFocused: 'bg-accent text-accent-foreground',
               },
+              // Mention chip inside text
               mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-2 py-1',
             }}
           >
@@ -103,17 +103,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               trigger="@"
               data={mentionableUsers}
               renderSuggestion={(suggestion: any) => (
-                <div className="flex items-center gap-3 w-full">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={suggestion.avatar} />
-                    <AvatarFallback>{suggestion.initials}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col leading-tight">
-                    <span className="font-medium">{suggestion.display}</span>
-                    {suggestion.email && (
-                      <span className="text-xs text-muted-foreground">{suggestion.email}</span>
-                    )}
-                  </div>
+                <div className="w-full">
+                  <span className="font-medium">{suggestion.display}</span>
                 </div>
               )}
               appendSpaceOnAdd

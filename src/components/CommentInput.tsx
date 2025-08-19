@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { Project } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Paperclip, Send, Ticket, X } from "lucide-react";
 import { Mention, MentionsInput } from "react-mentions";
@@ -17,9 +16,9 @@ const mentionInputClassNames = {
     'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
   suggestions: {
     list:
-      'bg-popover text-popover-foreground border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-1',
+      'bg-popover text-popover-foreground border rounded-xl shadow-md overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-2',
     item:
-      'px-3 py-2 text-sm rounded-md cursor-pointer hover:bg-accent focus:bg-accent flex items-center gap-3',
+      'px-3 py-2 text-sm rounded-md cursor-pointer transition-colors text-foreground hover:bg-accent/60',
     itemFocused: 'bg-accent text-accent-foreground',
   },
   mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-2 py-1',
@@ -44,9 +43,6 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
       return {
         id: u.id,
         display: displayName,
-        avatar: u.avatar,
-        initials: u.initials,
-        email: u.email,
       };
     });
   }, [project]);
@@ -85,17 +81,8 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
             trigger="@"
             data={mentionableUsers}
             renderSuggestion={(suggestion: any) => (
-              <div className="flex items-center gap-3 w-full">
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={suggestion.avatar} />
-                  <AvatarFallback>{suggestion.initials}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col leading-tight">
-                  <span className="font-medium">{suggestion.display}</span>
-                  {suggestion.email && (
-                    <span className="text-xs text-muted-foreground">{suggestion.email}</span>
-                  )}
-                </div>
+              <div className="w-full">
+                <span className="font-medium">{suggestion.display}</span>
               </div>
             )}
             appendSpaceOnAdd
@@ -117,7 +104,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
             <label htmlFor="file-upload" className="cursor-pointer">
               <Paperclip className="mr-2 h-4 w-4" />
               Attach File
-              <input id="file-upload" type="file" className="hidden" onChange={(e) => handleFileChange(e)} />
+              <input id="file-upload" type="file" className="hidden" onChange={(e) => setAttachment(e.target.files?.[0] || null)} />
             </label>
           </Button>
         </div>
