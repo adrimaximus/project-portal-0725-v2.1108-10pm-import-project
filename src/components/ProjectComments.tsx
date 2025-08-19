@@ -87,7 +87,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               suggestions: {
                 list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg overflow-hidden p-2 max-h-60 overflow-y-auto mt-2 z-10',
-                item: 'pl-2 pr-5 py-2 text-sm rounded-md cursor-pointer border-b border-border last:border-b-0',
+                item: 'pl-3 pr-4 py-2 text-sm rounded-md cursor-pointer border-b border-border last:border-b-0',
                 itemFocused: 'bg-accent text-accent-foreground',
               },
               mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-1 py-0.5',
