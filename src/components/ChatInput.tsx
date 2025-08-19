@@ -12,7 +12,7 @@ interface ChatInputProps {
   conversationId: string;
   onSendMessage: (text: string, attachment: Attachment | null) => void;
   onTyping?: () => void;
-  users?: MentionUser[]; // mention candidates passed from parent
+  users?: MentionUser[];
 }
 
 const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [] }: ChatInputProps) => {
@@ -81,7 +81,6 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [] }: Chat
           onChange={(v) => { setText(v); triggerTyping(); }}
           users={users}
           placeholder="Type a message..."
-          rows={3}
           onEnter={handleSend}
         />
         <div className="absolute bottom-2 right-2 flex items-center gap-2">

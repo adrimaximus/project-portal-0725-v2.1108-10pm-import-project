@@ -15,24 +15,22 @@ type Props = {
   insertFormat?: "text" | "chip";
   placeholder?: string;
   rows?: number;
-  onEnter?: () => void; // optional: parent can send message on Enter when dropdown closed
+  onEnter?: () => void;
 };
 
 type ActiveToken = {
-  start: number; // index of '@'
-  end: number;   // caret position
-  q: string;     // query without '@'
+  start: number;
+  end: number;
+  q: string;
 };
 
 function findActiveToken(value: string, caret: number): ActiveToken | null {
-  // take text up to caret
   const upto = value.slice(0, caret);
-  // Match last @token preceded by start/space/punctuation and ending at caret (no spaces)
   const m = upto.match(/(?:^|[\s.,!?])@([a-zA-Z0-9._-]{0,50})$/);
   if (!m) return null;
   const q = m[1] ?? "";
   const atIndex = upto.lastIndexOf("@");
-  const start = atIndex; // position of '@'
+  const start = atIndex;
   const end = caret;
   return { start, end, q };
 }
@@ -62,21 +60,19 @@ const MentionsInput: React.FC<Props> = ({
   onSelectUser,
   insertFormat = "text",
   placeholder,
-  rows = 4,
+  rows = 1, // default compact
   onEnter,
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const rafRef = useRef<number | null>(null);
   const [caretPos, setCaretPos] = useState(0);
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [panelVisible, setPanelVisible] = useState(false);
 
-  const token = useMemo(() => {
-    return findActiveToken(value, caretPos);
-  }, [value, caretPos]);
+  const token = useMemo(() => findActiveToken(value, caretPos), [value, caretPos]);
 
-  // Debounce query 150ms
   useEffect(() => {
     const q = token?.q ?? "";
     const t = setTimeout(() => setDebouncedQuery(q), 150);
@@ -90,14 +86,12 @@ const MentionsInput: React.FC<Props> = ({
       const n = (u.display_name || "").toLowerCase();
       const e = (u.email || "").toLowerCase();
       const h = (u.handle || "").toLowerCase();
-      // case-insensitive match
       return q.length === 0 || n.includes(q) || e.includes(q) || h.includes(q);
     });
     return list.slice(0, 50);
   }, [users, token, debouncedQuery]);
 
   useEffect(() => {
-    // open dropdown if token exists
     const shouldOpen = !!token;
     setOpen(shouldOpen);
     setActiveIdx(0);
@@ -112,26 +106,34 @@ const MentionsInput: React.FC<Props> = ({
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
-    // Update caretPos on selection changes
-    const updateCaret = () => setCaretPos(el.selectionStart ?? 0);
-    el.addEventListener("keyup", updateCaret);
-    el.addEventListener("click", updateCaret);
-    el.addEventListener("input", updateCaret);
+
+    const scheduleCaretUpdate = () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        const pos = el.selectionStart ?? 0;
+        setCaretPos((prev) => (prev !== pos ? pos : prev));
+      });
+    };
+
+    el.addEventListener("keyup", scheduleCaretUpdate);
+    el.addEventListener("click", scheduleCaretUpdate);
+    el.addEventListener("input", scheduleCaretUpdate);
     el.addEventListener("blur", () => {
-      // close after a tick to allow click selection in panel
-      setTimeout(() => closeDropdown(), 100);
+      setTimeout(() => closeDropdown(), 80);
     });
+
     return () => {
-      el.removeEventListener("keyup", updateCaret);
-      el.removeEventListener("click", updateCaret);
-      el.removeEventListener("input", updateCaret);
+      el.removeEventListener("keyup", scheduleCaretUpdate);
+      el.removeEventListener("click", scheduleCaretUpdate);
+      el.removeEventListener("input", scheduleCaretUpdate);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [closeDropdown]);
 
   function insertUser(u: MentionUser) {
     if (!token || !inputRef.current) return;
     const el = inputRef.current;
-    // Verify token still valid at current caret; if not, abort
+    // Re-validate token at current caret
     const currentCaret = el.selectionStart ?? 0;
     const currentToken = findActiveToken(value, currentCaret);
     const t = currentToken || token;
@@ -139,9 +141,7 @@ const MentionsInput: React.FC<Props> = ({
     const prefix = value.slice(0, t.start);
     const suffix = value.slice(t.end);
     const mentionText =
-      insertFormat === "text"
-        ? `@${u.handle ?? u.display_name}`
-        : `@${u.display_name}`;
+      insertFormat === "text" ? `@${u.handle ?? u.display_name}` : `@${u.display_name}`;
     const next = `${prefix}${mentionText} ${suffix}`;
     const newCaret = (prefix + mentionText + " ").length;
     onChange(next);
@@ -184,32 +184,24 @@ const MentionsInput: React.FC<Props> = ({
               closeDropdown();
               return;
             }
-          } else {
-            // Allow submit via Enter (chat)
-            if (e.key === "Enter" && !e.shiftKey && onEnter) {
-              e.preventDefault();
-              onEnter();
-            }
+          } else if (e.key === "Enter" && !e.shiftKey && onEnter) {
+            e.preventDefault();
+            onEnter();
           }
         }}
         placeholder={placeholder}
         aria-activedescendant={ariaActiveId}
-        className="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-100 outline-none focus:border-neutral-700 placeholder:text-neutral-400"
+        className="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-100 outline-none focus:border-neutral-700 placeholder:text-neutral-400 min-h-[56px]"
       />
 
       {panelVisible && (
         <div
           className="absolute left-0 z-50 mt-2 w-full rounded-xl border border-neutral-800 bg-neutral-900/95 shadow-xl backdrop-blur supports-[backdrop-filter]:backdrop-blur-md"
           role="listbox"
-          // position right under the textarea
           style={{ top: "100%" }}
-          onMouseDown={(e) => {
-            // prevent textarea blur
-            e.preventDefault();
-          }}
+          onMouseDown={(e) => e.preventDefault()}
         >
-          <div className="py-2 max-h-[280px] overflow-auto scroll-smooth">
-            {/* States */}
+          <div className="py-2 max-h-[280px] overflow-auto">
             {!token ? (
               <div className="px-3 py-2 text-sm text-neutral-400">No matches</div>
             ) : filtered.length === 0 ? (
