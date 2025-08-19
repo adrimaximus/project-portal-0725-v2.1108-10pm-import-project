@@ -81,6 +81,7 @@ const ProjectDetail = () => {
     channel
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, handleInvalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_activities', filter: `project_id=eq.${project.id}` }, handleInvalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_files', filter: `project_id=eq.${project.id}` }, handleInvalidate)
       .subscribe();
 
     return () => {
