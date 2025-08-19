@@ -42,19 +42,20 @@ const LoginPage = () => {
         </div>
 
         {/* Right Panel */}
-        <div className="bg-background p-8 sm:p-12 flex flex-col justify-center">
+        <div className="bg-black/50 backdrop-blur-md p-8 sm:p-12 flex flex-col justify-center text-white">
           <div className="w-full max-w-md mx-auto">
             <div className="flex items-center gap-2 mb-8">
-              <Package className="h-7 w-7 text-primary" />
+              <Package className="h-7 w-7 text-white" />
               <span className="text-xl font-bold">Client Portal</span>
             </div>
             <h1 className="text-3xl font-serif font-bold mb-2">
               Welcome Back{lastUserName ? `, ${lastUserName}` : ''}!👋
             </h1>
-            <p className="text-muted-foreground mb-8">Enter your credentials to access your account.</p>
+            <p className="text-white/80 mb-8">Enter your credentials to access your account.</p>
             
             <Auth
               supabaseClient={supabase}
+              theme="dark"
               appearance={{
                 theme: ThemeSupa,
                 variables: {
