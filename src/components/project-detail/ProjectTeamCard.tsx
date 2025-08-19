@@ -99,7 +99,6 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
               </Avatar>
               <div>
                 <p className="text-sm font-medium">{project.created_by.name}</p>
-                <p className="text-xs text-muted-foreground">{project.created_by.email}</p>
               </div>
             </div>
           </div>
@@ -126,7 +125,6 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
                       </Avatar>
                       <div>
                         <p className="text-sm font-medium">{member.name}</p>
-                        <p className="text-xs text-muted-foreground">{member.email}</p>
                       </div>
                     </div>
                   ))}
