@@ -59,6 +59,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           users={mentionUsers}
           placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
           rows={4}
+          insertFormat="chip"
           inputClassName="bg-[#fafbfc] dark:bg-[#0d1525] text-foreground placeholder:text-muted-foreground border-border"
         />
       </div>
