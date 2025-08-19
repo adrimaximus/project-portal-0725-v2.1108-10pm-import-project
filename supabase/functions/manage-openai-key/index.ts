@@ -22,17 +22,16 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated.");
 
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-    if (!profile || !['admin', 'master admin'].includes(profile.role)) {
-      throw new Error("You do not have permission to perform this action.");
-    }
-
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     if (req.method === 'POST') {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      if (!profile || !['admin', 'master admin'].includes(profile.role)) {
+        throw new Error("You do not have permission to perform this action.");
+      }
       const { apiKey } = await req.json();
       if (!apiKey) throw new Error("API key is required.");
 
@@ -42,6 +41,10 @@ serve(async (req) => {
     }
 
     if (req.method === 'DELETE') {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      if (!profile || !['admin', 'master admin'].includes(profile.role)) {
+        throw new Error("You do not have permission to perform this action.");
+      }
       const { error } = await supabaseAdmin.from('app_config').delete().eq('key', 'OPENAI_API_KEY');
       if (error) throw error;
       return new Response(JSON.stringify({ message: "API key deleted successfully." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
