@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
 export type MentionUser = {
   id: string;
@@ -16,6 +17,7 @@ type Props = {
   placeholder?: string;
   rows?: number;
   onEnter?: () => void;
+  inputClassName?: string; // NEW: allow custom input styling
 };
 
 type ActiveToken = {
@@ -62,6 +64,7 @@ const MentionsInput: React.FC<Props> = ({
   placeholder,
   rows = 1,
   onEnter,
+  inputClassName,
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const rafRef = useRef<number | null>(null);
@@ -190,7 +193,10 @@ const MentionsInput: React.FC<Props> = ({
         }}
         placeholder={placeholder}
         aria-activedescendant={ariaActiveId}
-        className="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-100 outline-none focus:border-neutral-700 placeholder:text-neutral-400 min-h-[56px]"
+        className={cn(
+          "w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-700 outline-none focus:border-neutral-400 placeholder:text-neutral-500 min-h-[56px]",
+          inputClassName
+        )}
       />
 
       {panelVisible && (

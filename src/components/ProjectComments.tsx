@@ -74,6 +74,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             users={mentionUsers}
             placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
             rows={4}
+            inputClassName="bg-[#fafbfc] text-[#64758b] placeholder:text-[#64758b]/70 border-[#e5e7eb] focus:border-[#d1d5db]"
           />
         </div>
 
