@@ -21,6 +21,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import RoleManagerDialog, { Role } from '@/components/settings/RoleManagerDialog';
+import AddUserDialog from '@/components/settings/AddUserDialog';
 
 type Invite = {
   id: number;
@@ -39,6 +40,7 @@ const TeamSettingsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
   const isMasterAdmin = currentUser?.role === 'master admin';
   const isAdmin = currentUser?.role === 'admin' || isMasterAdmin;
@@ -275,8 +277,16 @@ const TeamSettingsPage = () => {
         {isAdmin && (
           <Card>
             <CardHeader>
-              <CardTitle>Invite Team Members</CardTitle>
-              <CardDescription>Add your colleagues to collaborate and assign them a role.</CardDescription>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>Invite Team Members</CardTitle>
+                  <CardDescription>Add your colleagues to collaborate and assign them a role.</CardDescription>
+                </div>
+                <Button variant="outline" onClick={() => setIsAddUserDialogOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Manually
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -433,6 +443,12 @@ const TeamSettingsPage = () => {
         </AlertDialogContent>
       </AlertDialog>
       <RoleManagerDialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen} onSave={handleSaveRole} role={editingRole} />
+      <AddUserDialog
+        open={isAddUserDialogOpen}
+        onOpenChange={setIsAddUserDialogOpen}
+        onUserAdded={fetchData}
+        roles={validRoles.filter(r => isMasterAdmin || r.name !== 'master admin')}
+      />
     </PortalLayout>
   );
 };
