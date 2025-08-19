@@ -13,13 +13,16 @@ interface CommentInputProps {
 
 const mentionInputClassNames = {
   control: 'relative w-full',
-  input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+  input:
+    'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
   suggestions: {
-    list: 'bg-popover text-popover-foreground border rounded-md shadow-lg overflow-hidden p-1 max-h-60 overflow-y-auto mt-2 z-10',
-    item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer outline-none',
+    list:
+      'bg-popover text-popover-foreground border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-1',
+    item:
+      'px-3 py-2 text-sm rounded-md cursor-pointer hover:bg-accent focus:bg-accent flex items-center gap-3',
     itemFocused: 'bg-accent text-accent-foreground',
   },
-  mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-1 py-0.5',
+  mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-2 py-1',
 };
 
 const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
@@ -77,22 +80,23 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           onChange={(e) => setNewComment(e.target.value)}
           placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
           classNames={mentionInputClassNames}
-          disabled={isSubmitting}
         >
           <Mention
             trigger="@"
             data={mentionableUsers}
             renderSuggestion={(suggestion: any) => (
-              <>
-                <Avatar className="h-8 w-8">
+              <div className="flex items-center gap-3 w-full">
+                <Avatar className="h-6 w-6">
                   <AvatarImage src={suggestion.avatar} />
                   <AvatarFallback>{suggestion.initials}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <p className="font-medium text-sm">{suggestion.display}</p>
-                  <p className="text-xs text-muted-foreground">{suggestion.email}</p>
+                <div className="flex flex-col leading-tight">
+                  <span className="font-medium">{suggestion.display}</span>
+                  {suggestion.email && (
+                    <span className="text-xs text-muted-foreground">{suggestion.email}</span>
+                  )}
                 </div>
-              </>
+              </div>
             )}
             appendSpaceOnAdd
           />
@@ -100,7 +104,12 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
       </div>
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <Button type="button" variant={isTicket ? "default" : "outline"} size="sm" onClick={() => setIsTicket(!isTicket)}>
+          <Button
+            type="button"
+            variant={isTicket ? "default" : "outline"}
+            size="sm"
+            onClick={() => setIsTicket(!isTicket)}
+          >
             <Ticket className="mr-2 h-4 w-4" />
             {isTicket ? "This is a Ticket" : "Make a Ticket"}
           </Button>
@@ -108,7 +117,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
             <label htmlFor="file-upload" className="cursor-pointer">
               <Paperclip className="mr-2 h-4 w-4" />
               Attach File
-              <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} />
+              <input id="file-upload" type="file" className="hidden" onChange={(e) => handleFileChange(e)} />
             </label>
           </Button>
         </div>

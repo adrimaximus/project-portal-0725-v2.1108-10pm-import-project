@@ -35,6 +35,9 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
       return {
         id: u.id,
         display: displayName,
+        avatar: u.avatar,
+        initials: u.initials,
+        email: u.email,
       };
     });
   }, [project]);
@@ -60,8 +63,8 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
     }
   };
 
-  const sortedItems = useMemo(() => 
-    [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+  const sortedItems = useMemo(
+    () => [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
     [project.comments]
   );
 
@@ -84,10 +87,13 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
             classNames={{
               control: 'relative w-full',
-              input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+              input:
+                'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               suggestions: {
-                list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg overflow-hidden p-1 max-h-60 overflow-y-auto mt-2 z-10',
-                item: 'pl-3 pr-5 py-2 text-sm rounded-md cursor-pointer',
+                list:
+                  'bg-popover text-popover-foreground border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto mt-2 z-50 p-1',
+                item:
+                  'px-3 py-2 text-sm rounded-md cursor-pointer hover:bg-accent focus:bg-accent flex items-center gap-3',
                 itemFocused: 'bg-accent text-accent-foreground',
               },
               mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-2 py-1',
@@ -97,7 +103,18 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               trigger="@"
               data={mentionableUsers}
               renderSuggestion={(suggestion: any) => (
-                <div className="font-medium text-sm">{suggestion.display}</div>
+                <div className="flex items-center gap-3 w-full">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={suggestion.avatar} />
+                    <AvatarFallback>{suggestion.initials}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col leading-tight">
+                    <span className="font-medium">{suggestion.display}</span>
+                    {suggestion.email && (
+                      <span className="text-xs text-muted-foreground">{suggestion.email}</span>
+                    )}
+                  </div>
+                </div>
               )}
               appendSpaceOnAdd
             />
@@ -105,7 +122,12 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
         </div>
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Button type="button" variant={isTicket ? "default" : "outline"} size="sm" onClick={() => setIsTicket(!isTicket)}>
+            <Button
+              type="button"
+              variant={isTicket ? "default" : "outline"}
+              size="sm"
+              onClick={() => setIsTicket(!isTicket)}
+            >
               <Ticket className="mr-2 h-4 w-4" />
               {isTicket ? "This is a Ticket" : "Make a Ticket"}
             </Button>
@@ -135,10 +157,18 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
 
       <div>
         <div className="flex items-center gap-4 mb-4 border-b">
-          <Button variant="ghost" onClick={() => setShowTickets(false)} className={`rounded-none ${!showTickets ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}>
+          <Button
+            variant="ghost"
+            onClick={() => setShowTickets(false)}
+            className={`rounded-none ${!showTickets ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+          >
             <MessageSquare className="mr-2 h-4 w-4" /> All Comments ({sortedItems.length})
           </Button>
-          <Button variant="ghost" onClick={() => setShowTickets(true)} className={`rounded-none ${showTickets ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}>
+          <Button
+            variant="ghost"
+            onClick={() => setShowTickets(true)}
+            className={`rounded-none ${showTickets ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+          >
             <Ticket className="mr-2 h-4 w-4" /> Tickets ({sortedItems.filter(i => i.isTicket).length})
           </Button>
         </div>
@@ -157,7 +187,10 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
                     <p className="text-sm font-medium text-card-foreground flex items-center gap-2">
                       {item.author.name}
                       {item.isTicket && (
-                        <Badge variant={isTicketCompleted ? "default" : "secondary"} className={isTicketCompleted ? "bg-green-500 hover:bg-green-600" : ""}>
+                        <Badge
+                          variant={isTicketCompleted ? "default" : "secondary"}
+                          className={isTicketCompleted ? "bg-green-500 hover:bg-green-600" : ""}
+                        >
                           <Ticket className="mr-1.5 h-3 w-3" />
                           Ticket
                           {isTicketCompleted && <CheckCircle2 className="ml-1.5 h-3 w-3" />}
@@ -173,7 +206,12 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
                   </div>
                   {item.attachment_url && (
                     <div className="mt-2">
-                      <a href={item.attachment_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md">
+                      <a
+                        href={item.attachment_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md"
+                      >
                         <Paperclip className="h-4 w-4" />
                         {item.attachment_name || 'View Attachment'}
                       </a>
