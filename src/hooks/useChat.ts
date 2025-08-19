@@ -117,14 +117,15 @@ export const useChat = () => {
       id: m.id,
       text: m.content,
       timestamp: m.created_at,
-      sender: {
+      sender: m.sender ? {
         id: m.sender.id,
         name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim() || m.sender.email,
         avatar: m.sender.avatar_url,
         initials: `${m.sender.first_name?.[0] || ''}${m.sender.last_name?.[0] || ''}`.toUpperCase(),
         email: m.sender.email,
-      },
+      } : undefined,
       attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
+      message_type: m.message_type,
     }));
 
     setConversations(prev => prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c)));
@@ -152,21 +153,22 @@ export const useChat = () => {
         updated.lastMessageTimestamp = newMessage.created_at;
 
         if (conversationId === selectedConversationId) {
-          const senderProfile = updated.members.find(m => m.id === newMessage.sender_id);
+          const senderProfile = newMessage.sender_id ? updated.members.find(m => m.id === newMessage.sender_id) : undefined;
           const mapped: Message = {
             id: newMessage.id,
             text: newMessage.content,
             timestamp: newMessage.created_at,
-            sender: {
-              id: senderProfile?.id || '',
-              name: senderProfile?.name || 'Unknown',
-              avatar: senderProfile?.avatar,
-              initials: senderProfile?.initials || '??',
-              email: senderProfile?.email,
-            },
+            sender: senderProfile ? {
+              id: senderProfile.id,
+              name: senderProfile.name,
+              avatar: senderProfile.avatar,
+              initials: senderProfile.initials,
+              email: senderProfile.email,
+            } : undefined,
             attachment: newMessage.attachment_url
               ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type }
               : undefined,
+            message_type: newMessage.message_type,
           };
 
           if (newMessage.sender_id === currentUser?.id) {
@@ -244,7 +246,7 @@ export const useChat = () => {
     if (!selectedConversationId || !currentUser) return;
 
     const tempId = `temp-${Date.now()}`;
-    const optimistic: Message = { id: tempId, text, timestamp: new Date().toISOString(), sender: currentUser, attachment };
+    const optimistic: Message = { id: tempId, text, timestamp: new Date().toISOString(), sender: currentUser, attachment, message_type: 'user' };
 
     setConversations(prev => prev.map(c =>
       c.id === selectedConversationId
@@ -259,6 +261,7 @@ export const useChat = () => {
       attachment_url: attachment?.url,
       attachment_name: attachment?.name,
       attachment_type: attachment?.type,
+      message_type: 'user',
     });
 
     if (error) {

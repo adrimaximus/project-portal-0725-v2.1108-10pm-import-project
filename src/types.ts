@@ -132,8 +132,9 @@ export interface Message {
   id: string;
   text: string;
   timestamp: string;
-  sender: User;
+  sender?: User;
   attachment?: Attachment;
+  message_type?: 'user' | 'system_notification';
 }
 
 export interface Conversation {

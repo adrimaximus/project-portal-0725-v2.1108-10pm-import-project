@@ -50,13 +50,28 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-1">
       {messages.map((message, index) => {
-        const isCurrentUser = message.sender.id === currentUser.id;
-        const sender = members.find(m => m.id === message.sender.id) || message.sender;
-        
         const prevMessage = messages[index - 1];
-        const isSameSenderAsPrevious = prevMessage && prevMessage.sender.id === message.sender.id;
-        
         const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
+
+        if (message.message_type === 'system_notification') {
+          return (
+            <div key={message.id || index}>
+              {showDateSeparator && (
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">{formatDateSeparator(message.timestamp)}</span></div>
+                </div>
+              )}
+              <div className="text-center text-xs text-muted-foreground py-2 italic">
+                {message.text}
+              </div>
+            </div>
+          );
+        }
+
+        const isCurrentUser = message.sender?.id === currentUser.id;
+        const sender = members.find(m => m.id === message.sender?.id) || message.sender;
+        const isSameSenderAsPrevious = prevMessage && prevMessage.sender?.id === message.sender?.id && prevMessage.message_type !== 'system_notification';
 
         return (
           <div key={message.id || index}>
@@ -79,7 +94,7 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
                 isSameSenderAsPrevious ? "mt-1" : "mt-4"
               )}
             >
-              {!isCurrentUser && !isSameSenderAsPrevious && (
+              {!isCurrentUser && !isSameSenderAsPrevious && sender && (
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={sender.avatar} />
                   <AvatarFallback>{sender.initials}</AvatarFallback>
@@ -94,7 +109,7 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
                   !isCurrentUser && isSameSenderAsPrevious && "ml-10"
                 )}
               >
-                {!isCurrentUser && !isSameSenderAsPrevious && (
+                {!isCurrentUser && !isSameSenderAsPrevious && sender && (
                   <p className="text-sm font-semibold mb-1">{sender.name}</p>
                 )}
                 {message.text && <CommentRenderer text={message.text} members={members} />}
