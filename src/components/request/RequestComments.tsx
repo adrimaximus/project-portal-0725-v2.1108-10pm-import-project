@@ -16,8 +16,6 @@ type Comment = {
 };
 
 const RequestComments = () => {
-  return null;
-
   /*
   const [comments, setComments] = useState<Comment[]>([]);
   const [currentComment, setCurrentComment] = useState("");
@@ -151,6 +149,7 @@ const RequestComments = () => {
     </Card>
   );
   */
+ return null;
 };
 
 export default RequestComments;
