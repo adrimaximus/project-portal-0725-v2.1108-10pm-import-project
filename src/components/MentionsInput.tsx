@@ -204,7 +204,6 @@ const MentionsInput: React.FC<Props> = ({
           className="absolute left-0 z-50 mt-2 w-full rounded-xl border border-[#e5e7eb] bg-white shadow-xl"
           role="listbox"
           style={{ top: "100%" }}
-          onMouseDown={(e) => e.preventDefault()}
         >
           <div className="py-2 max-h-[280px] overflow-auto">
             {!token ? (
@@ -226,6 +225,10 @@ const MentionsInput: React.FC<Props> = ({
                       isActive ? "bg-[#eef2f7] text-[#64758b]" : "text-[#64758b] hover:bg-[#f5f7fa]"
                     }`}
                     onMouseEnter={() => setActiveIdx(i)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      insertUser(u);
+                    }}
                     onClick={() => insertUser(u)}
                   >
                     <div className="text-sm font-medium">
