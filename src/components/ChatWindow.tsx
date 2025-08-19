@@ -26,6 +26,7 @@ const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onLeaveG
     display_name: m.name,
     email: m.email,
     handle: m.email ? m.email.split("@")[0] : undefined,
+    avatar: m.avatar,
   }));
 
   return (

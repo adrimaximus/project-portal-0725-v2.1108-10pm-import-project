@@ -34,6 +34,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
         display_name: toTitleCase(fullName),
         email: u.email,
         handle: toTitleCase(fullName),
+        avatar: u.avatar,
       };
     });
   }, [project]);
@@ -78,7 +79,6 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             users={mentionUsers}
             placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
             rows={4}
-            insertFormat="chip"
             inputClassName="bg-[#fafbfc] dark:bg-[#0d1525] text-foreground placeholder:text-muted-foreground border-border"
           />
         </div>
