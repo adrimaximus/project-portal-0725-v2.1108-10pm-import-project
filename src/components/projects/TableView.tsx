@@ -20,6 +20,12 @@ import {
 import StatusBadge from "../StatusBadge";
 import { getStatusStyles, cn, formatInJakarta } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TableViewProps {
   projects: Project[];
@@ -90,7 +96,22 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
                 <TableCell>
                   {formatInJakarta(project.due_date, 'MMM d, yyyy')}
                 </TableCell>
-                <TableCell>{project.venue || '-'}</TableCell>
+                <TableCell>
+                  {project.venue ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <p className="truncate max-w-[160px]">{project.venue}</p>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{project.venue}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    '-'
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
                     {project.payment_status}
