@@ -23,7 +23,6 @@ import { useCreateProject } from "@/hooks/useCreateProject";
 
 import TableView from "./projects/TableView";
 import ListView from "./projects/ListView";
-import MonthView from "./projects/MonthView";
 import CalendarImportView from "./projects/CalendarImportView";
 import KanbanView from "./projects/KanbanView";
 
@@ -37,7 +36,7 @@ interface CalendarEvent {
     location?: string;
 }
 
-type ViewMode = 'table' | 'list' | 'month' | 'kanban' | 'calendar';
+type ViewMode = 'table' | 'list' | 'kanban' | 'calendar';
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -275,8 +274,6 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
         return <TableView projects={filteredProjects} isLoading={isLoading} onDeleteProject={handleDeleteProject} />;
       case 'list':
         return <ListView projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
-      case 'month':
-        return <MonthView projects={filteredProjects} gcalEvents={filteredCalendarEvents} />;
       case 'kanban':
         return <KanbanView projects={filteredProjects} />;
       case 'calendar':
@@ -340,9 +337,6 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
               <ToggleGroupItem value="kanban" aria-label="Kanban view">
                 <Kanban className="h-4 w-4" />
               </ToggleGroupItem>
-              <ToggleGroupItem value="month" aria-label="Month view">
-                <CalendarIcon className="h-4 w-4" />
-              </ToggleGroupItem>
               <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
                 <CalendarPlus className="h-4 w-4" />
               </ToggleGroupItem>
@@ -350,7 +344,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
           </div>
         </CardHeader>
         <CardContent>
-          {(view === 'table' || view === 'list' || view === 'calendar' || view === 'month' || view === 'kanban') && (
+          {(view === 'table' || view === 'list' || view === 'calendar' || view === 'kanban') && (
             <div className="py-4">
               <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             </div>
