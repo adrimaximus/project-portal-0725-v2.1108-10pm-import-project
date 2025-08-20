@@ -15,8 +15,8 @@ const fetchNotifications = async (userId: string): Promise<Notification[]> => {
         id,
         type,
         title,
-        description,
-        link,
+        body,
+        data,
         created_at
       )
     `)
@@ -29,7 +29,12 @@ const fetchNotifications = async (userId: string): Promise<Notification[]> => {
   }
   
   return data.map(item => ({
-    ...(item.notification as any),
+    id: (item.notification as any).id,
+    type: (item.notification as any).type,
+    title: (item.notification as any).title,
+    description: (item.notification as any).body,
+    link: (item.notification as any).data?.link,
+    created_at: (item.notification as any).created_at,
     read_at: item.read_at,
   }));
 };
@@ -67,8 +72,8 @@ export const useNotifications = () => {
             id: notif.id,
             type: notif.type,
             title: notif.title,
-            description: notif.description,
-            link: notif.link,
+            description: notif.body,
+            link: notif.data?.link,
             created_at: notif.created_at,
             read_at: payload.new.read_at,
           };
