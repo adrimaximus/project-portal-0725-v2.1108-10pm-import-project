@@ -7,27 +7,11 @@ import { useEffect } from 'react';
 
 const NOTIFICATIONS_PER_PAGE = 20;
 
-const fetchNotifications = async (userId: string, pageParam: number = 0): Promise<Notification[]> => {
+const fetchNotifications = async (pageParam: number = 0): Promise<Notification[]> => {
   const from = pageParam * NOTIFICATIONS_PER_PAGE;
-  const to = from + NOTIFICATIONS_PER_PAGE - 1;
 
   const { data, error } = await supabase
-    .from('notifications')
-    .select(`
-      id,
-      type,
-      title,
-      body,
-      created_at,
-      resource_type,
-      resource_id,
-      data,
-      actor:actor_id (id, first_name, last_name, avatar_url, email),
-      recipients:notification_recipients!inner (read_at)
-    `)
-    .eq('recipients.user_id', userId)
-    .order('created_at', { ascending: false })
-    .range(from, to);
+    .rpc('get_user_notifications', { p_limit: NOTIFICATIONS_PER_PAGE, p_offset: from });
 
   if (error) {
     console.error("Error fetching notifications:", error);
@@ -40,49 +24,15 @@ const fetchNotifications = async (userId: string, pageParam: number = 0): Promis
     title: n.title,
     description: n.body,
     timestamp: n.created_at,
-    read: n.recipients[0]?.read_at !== null,
+    read: n.read_at !== null,
     link: n.data?.link || '#',
     actor: {
       id: n.actor.id,
-      name: `${n.actor.first_name || ''} ${n.actor.last_name || ''}`.trim() || n.actor.email,
+      name: n.actor.name,
       avatar: n.actor.avatar_url,
     }
   }));
 };
-
-const fetchSingleNotification = async (notificationId: string, userId: string): Promise<Notification | null> => {
-    const { data, error } = await supabase
-    .from('notifications')
-    .select(`
-      id, type, title, body, created_at, data,
-      actor:actor_id (id, first_name, last_name, avatar_url, email),
-      recipients:notification_recipients!inner (read_at)
-    `)
-    .eq('id', notificationId)
-    .eq('recipients.user_id', userId)
-    .single();
-
-    if (error || !data) {
-        console.error("Error fetching single notification:", error);
-        return null;
-    }
-
-    const n = data as any;
-    return {
-        id: n.id,
-        type: n.type,
-        title: n.title,
-        description: n.body,
-        timestamp: n.created_at,
-        read: n.recipients[0]?.read_at !== null,
-        link: n.data?.link || '#',
-        actor: {
-            id: n.actor.id,
-            name: `${n.actor.first_name || ''} ${n.actor.last_name || ''}`.trim() || n.actor.email,
-            avatar: n.actor.avatar_url,
-        }
-    };
-}
 
 export const useNotifications = () => {
   const { user } = useAuth();
@@ -96,7 +46,7 @@ export const useNotifications = () => {
     isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey: ['notifications', user?.id],
-    queryFn: ({ pageParam }) => fetchNotifications(user!.id, pageParam),
+    queryFn: ({ pageParam }) => fetchNotifications(pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
       return lastPage.length === NOTIFICATIONS_PER_PAGE ? allPages.length : undefined;
@@ -119,30 +69,13 @@ export const useNotifications = () => {
         },
         async (payload) => {
           const newNotificationId = payload.new.notification_id;
-          const newNotification = await fetchSingleNotification(newNotificationId, user.id);
-
-          if (newNotification) {
-            toast.info(newNotification.title, {
-              description: newNotification.description,
+          const { data } = await supabase.from('notifications').select('title, body').eq('id', newNotificationId).single();
+          if (data) {
+            toast.info(data.title, {
+              description: data.body,
             });
-
-            queryClient.setQueryData(['notifications', user.id], (oldData: any) => {
-              if (!oldData) {
-                queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
-                return oldData;
-              }
-              
-              const newPages = [...oldData.pages];
-              newPages[0] = [newNotification, ...newPages[0]];
-              
-              return {
-                ...oldData,
-                pages: newPages,
-              };
-            });
-          } else {
-            queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
           }
+          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
         }
       )
       .subscribe();
