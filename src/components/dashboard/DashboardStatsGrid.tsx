@@ -148,7 +148,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
           title="Total Project Value"
           value={
             <span>
-              Rp <span className={cn(isDemoMode && 'blur-[2px]')}>
+              Rp <span className={cn(isDemoMode && 'blur-[5px]')}>
                 {stats.totalValue.toLocaleString('id-ID')}
               </span>
             </span>

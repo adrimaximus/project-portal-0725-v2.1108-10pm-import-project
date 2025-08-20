@@ -105,7 +105,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                 ) : (
                   <p className="text-muted-foreground">
                     <span>
-                      Rp <span className={cn(isDemoMode && 'blur-[2px]')}>
+                      Rp <span className={cn(isDemoMode && 'blur-sm')}>
                         {(project.budget || 0).toLocaleString('id-ID')}
                       </span>
                     </span>
