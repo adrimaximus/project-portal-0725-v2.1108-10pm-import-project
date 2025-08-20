@@ -166,6 +166,16 @@ export interface GoogleCalendarEvent {
   location?: string;
 }
 
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  link?: string;
+  created_at: string;
+  read_at: string | null;
+}
+
 export const PROJECT_STATUS_OPTIONS = [
   { value: 'Requested', label: 'Requested' },
   { value: 'In Progress', label: 'In Progress' },

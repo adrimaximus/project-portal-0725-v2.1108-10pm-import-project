@@ -1,30 +1,36 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Notification } from '@/data/notifications';
+import { Notification } from '@/types';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const fetchNotifications = async (userId: string): Promise<Notification[]> => {
   const { data, error } = await supabase
-    .from('notifications')
-    .select('*')
+    .from('notification_recipients')
+    .select(`
+      read_at,
+      notification:notifications (
+        id,
+        type,
+        title,
+        description,
+        link,
+        created_at
+      )
+    `)
     .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { foreignTable: 'notifications', ascending: false })
+    .limit(50);
 
   if (error) {
     throw new Error(error.message);
   }
   
-  return data.map(n => ({
-      id: n.id,
-      type: n.type,
-      title: n.title,
-      description: n.description,
-      timestamp: n.created_at,
-      read: n.read,
-      link: n.link,
+  return data.map(item => ({
+    ...(item.notification as any),
+    read_at: item.read_at,
   }));
 };
 
@@ -47,17 +53,24 @@ export const useNotifications = () => {
       .channel(`notifications:${user.id}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          const newNotificationRaw = payload.new;
+        { event: 'INSERT', schema: 'public', table: 'notification_recipients', filter: `user_id=eq.${user.id}` },
+        async (payload) => {
+          const { data: notif, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('id', payload.new.notification_id)
+            .single();
+
+          if (error || !notif) return;
+
           const newNotification: Notification = {
-              id: newNotificationRaw.id,
-              type: newNotificationRaw.type,
-              title: newNotificationRaw.title,
-              description: newNotificationRaw.description,
-              timestamp: newNotificationRaw.created_at,
-              read: newNotificationRaw.read,
-              link: newNotificationRaw.link,
+            id: notif.id,
+            type: notif.type,
+            title: notif.title,
+            description: notif.description,
+            link: notif.link,
+            created_at: notif.created_at,
+            read_at: payload.new.read_at,
           };
 
           if (location.pathname !== '/notifications') {
@@ -66,22 +79,14 @@ export const useNotifications = () => {
               action: {
                 label: 'View',
                 onClick: () => {
-                  if (newNotification.link) {
-                    navigate(newNotification.link);
-                  }
+                  if (newNotification.link) navigate(newNotification.link);
                 },
               },
             });
           }
           
           queryClient.setQueryData(['notifications', user.id], (oldData: Notification[] | undefined) => {
-            if (oldData) {
-              if (oldData.some(n => n.id === newNotification.id)) {
-                return oldData;
-              }
-              return [newNotification, ...oldData];
-            }
-            return [newNotification];
+            return [newNotification, ...(oldData || [])];
           });
         }
       )
@@ -92,18 +97,22 @@ export const useNotifications = () => {
     };
   }, [user, queryClient, navigate, location.pathname]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.read_at).length;
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
+      if (!user) return;
       const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', notificationId);
+        .from('notification_recipients')
+        .update({ read_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('notification_id', notificationId);
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+    onSuccess: (_, notificationId) => {
+      queryClient.setQueryData(['notifications', user?.id], (oldData: Notification[] | undefined) => 
+        oldData?.map(n => n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n)
+      );
     },
   });
 
@@ -111,14 +120,16 @@ export const useNotifications = () => {
     mutationFn: async () => {
       if (!user) return;
       const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
+        .from('notification_recipients')
+        .update({ read_at: new Date().toISOString() })
         .eq('user_id', user.id)
-        .eq('read', false);
+        .is('read_at', null);
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+      queryClient.setQueryData(['notifications', user?.id], (oldData: Notification[] | undefined) => 
+        oldData?.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
+      );
     },
   });
 

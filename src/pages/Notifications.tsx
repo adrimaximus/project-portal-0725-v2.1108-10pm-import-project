@@ -9,7 +9,7 @@ import { Bell, CheckCheck } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useRef } from "react";
-import { Notification } from "@/data/notifications";
+import { Notification } from "@/types";
 
 const NotificationsPage = () => {
   const { notifications, isLoading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
@@ -91,26 +91,26 @@ const NotificationsPage = () => {
                     key={notification.id}
                     className={cn(
                       "flex items-start gap-4 p-4 transition-colors duration-1000 ease-out",
-                      !notification.read && "bg-muted/50",
+                      !notification.read_at && "bg-muted/50",
                       highlightedId === notification.id && "bg-accent"
                     )}
                   >
                     <div className="relative">
                       <Icon className="h-6 w-6 text-muted-foreground mt-1" />
-                      {!notification.read && (
+                      {!notification.read_at && (
                         <span className="absolute -top-1 -right-1 block h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
                       )}
                     </div>
                     <div className="flex-1">
-                      <Link to={notification.link || "#"} className="hover:underline" onClick={() => !notification.read && markAsRead(notification.id)}>
+                      <Link to={notification.link || "#"} className="hover:underline" onClick={() => !notification.read_at && markAsRead(notification.id)}>
                         <p className="font-semibold">{notification.title}</p>
                       </Link>
                       <p className="text-sm text-muted-foreground">{notification.description}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                       </p>
                     </div>
-                    {!notification.read && (
+                    {!notification.read_at && (
                       <Button
                         variant="ghost"
                         size="sm"
