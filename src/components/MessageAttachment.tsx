@@ -1,15 +1,17 @@
-import { File as FileIcon } from 'lucide-react';
+import FileIcon from './FileIcon';
+import { cn } from '@/lib/utils';
 
 interface MessageAttachmentProps {
   attachment: {
     name: string;
     url: string;
-    type: 'image' | 'file';
+    type: string;
   };
 }
 
 const MessageAttachment = ({ attachment }: MessageAttachmentProps) => {
-  const isImage = attachment.type === 'image';
+  const isImage = attachment.type.startsWith('image/');
+  const isPdf = attachment.type === 'application/pdf';
 
   return (
     <a
@@ -27,11 +29,11 @@ const MessageAttachment = ({ attachment }: MessageAttachmentProps) => {
         />
       ) : (
         <div className="flex h-10 w-10 items-center justify-center rounded-md bg-background border">
-          <FileIcon className="h-5 w-5 text-muted-foreground" />
+          <FileIcon fileType={attachment.type} className={cn("h-5 w-5 text-muted-foreground", isPdf && "text-red-500")} />
         </div>
       )}
       <div className="flex-1 overflow-hidden">
-        <p className="font-medium text-sm truncate">{isImage ? 'Gambar' : 'Berkas'}</p>
+        <p className="font-medium text-sm truncate">{attachment.name}</p>
         <p className="text-xs text-muted-foreground">Klik untuk mengunduh</p>
       </div>
     </a>

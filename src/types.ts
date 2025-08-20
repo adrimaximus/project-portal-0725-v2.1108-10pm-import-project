@@ -125,7 +125,7 @@ export interface Goal {
 export interface Attachment {
   name: string;
   url: string;
-  type: 'image' | 'file';
+  type: string;
 }
 
 export interface Message {

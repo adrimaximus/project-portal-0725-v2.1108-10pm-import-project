@@ -58,7 +58,7 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [] }: Chat
       
       finalAttachment = {
         name: attachmentFile.name,
-        type: attachmentFile.type.startsWith("image/") ? "image" : "file",
+        type: attachmentFile.type,
         url: urlData.publicUrl,
       };
     }
