@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ReactNode } from "react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { GlobalSearch } from "./GlobalSearch";
+import { generateVibrantGradient } from "@/lib/utils";
 
 interface PortalHeaderProps {
     summary?: ReactNode;
@@ -76,7 +77,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
           <Button variant="secondary" size="icon" className="rounded-full">
             <Avatar className="h-8 w-8">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
             </Avatar>
             <span className="sr-only">Toggle user menu</span>
           </Button>

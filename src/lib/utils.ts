@@ -24,6 +24,27 @@ export const getInitials = (name: string = "", email?: string): string => {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 };
 
+export const generateVibrantGradient = (str: string): { background: string } => {
+  if (!str) {
+    return { background: 'linear-gradient(to bottom right, hsl(222, 47%, 11%), hsl(210, 40%, 98%))' };
+  }
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash;
+  }
+  
+  const h1 = hash % 360;
+  const h2 = (h1 + 45) % 360;
+  const s = 75;
+  const l = 50;
+
+  const color1 = `hsl(${h1}, ${s}%, ${l}%)`;
+  const color2 = `hsl(${h2}, ${s}%, ${l-10}%)`;
+
+  return { background: `linear-gradient(to bottom right, ${color1}, ${color2})` };
+};
+
 export const getStatusStyles = (status: string) => {
   switch (status) {
     case 'Completed':

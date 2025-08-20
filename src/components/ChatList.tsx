@@ -5,11 +5,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, MessageSquarePlus, MoreHorizontal, Trash2 } from "lucide-react";
 import { Conversation, Collaborator } from "@/types";
 import NewConversationDialog from "./NewConversationDialog";
-import { cn, getInitials } from "@/lib/utils";
+import { cn, getInitials, generateVibrantGradient } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ChatListProps {
   conversations: Conversation[];
@@ -33,6 +34,7 @@ const ChatList = ({
   onDeleteConversation,
 }: ChatListProps) => {
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
+  const { user: currentUser } = useAuth();
 
   const formatTimestamp = (timestamp: string) => {
     try {
@@ -71,63 +73,66 @@ const ChatList = ({
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {conversations.map((c) => (
-          <div
-            key={c.id}
-            className={cn(
-              "flex items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group",
-              selectedConversationId === c.id && "bg-muted border-l-primary"
-            )}
-          >
+        {conversations.map((c) => {
+          const otherUser = !c.isGroup ? c.members?.find(m => m.id !== currentUser?.id) : null;
+          return (
             <div
-              className="flex-1 flex items-center gap-3 overflow-hidden cursor-pointer"
-              onClick={() => onSelectConversation(c.id)}
+              key={c.id}
+              className={cn(
+                "flex items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group",
+                selectedConversationId === c.id && "bg-muted border-l-primary"
+              )}
             >
-              <Avatar>
-                <AvatarImage src={c.userAvatar} />
-                <AvatarFallback>{getInitials(c.userName)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 overflow-hidden">
-                <p className="font-semibold truncate">{c.userName}</p>
-                <p className="text-sm text-muted-foreground truncate">
-                  {c.lastMessage}
-                </p>
+              <div
+                className="flex-1 flex items-center gap-3 overflow-hidden cursor-pointer"
+                onClick={() => onSelectConversation(c.id)}
+              >
+                <Avatar>
+                  <AvatarImage src={c.userAvatar} />
+                  <AvatarFallback style={generateVibrantGradient(otherUser?.id || c.id)}>{getInitials(c.userName)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 overflow-hidden">
+                  <p className="font-semibold truncate">{c.userName}</p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {c.lastMessage}
+                  </p>
+                </div>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(c.lastMessageTimestamp)}</span>
               </div>
-              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(c.lastMessageTimestamp)}</span>
+              <AlertDialog>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Chat
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Chat?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will remove the chat from your list. You will not be able to see past messages. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onDeleteConversation(c.id)}>
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
-            <AlertDialog>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <AlertDialogTrigger asChild>
-                    <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Chat
-                    </DropdownMenuItem>
-                  </AlertDialogTrigger>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Chat?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will remove the chat from your list. You will not be able to see past messages. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDeleteConversation(c.id)}>
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        ))}
+          )
+        })}
       </div>
       <NewConversationDialog
         open={isNewConversationOpen}

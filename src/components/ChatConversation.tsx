@@ -2,7 +2,7 @@ import { Message, Collaborator } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn } from "@/lib/utils";
+import { cn, generateVibrantGradient } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 
@@ -81,7 +81,7 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
               {!isCurrentUser && !isSameSenderAsPrevious && (
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={sender.avatar} />
-                  <AvatarFallback>{sender.initials}</AvatarFallback>
+                  <AvatarFallback style={generateVibrantGradient(sender.id)}>{sender.initials}</AvatarFallback>
                 </Avatar>
               )}
               <div
