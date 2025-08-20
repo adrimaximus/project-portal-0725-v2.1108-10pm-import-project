@@ -36,6 +36,20 @@ export const getStatusStyles = (status: string) => {
   }
 };
 
+export const paymentStatusConfig: Record<string, { tw: string; hex: string }> = {
+  'Paid': { tw: 'bg-green-100 text-green-800 border-green-200', hex: '#16a34a' },
+  'Pending': { tw: 'bg-yellow-100 text-yellow-800 border-yellow-200', hex: '#ca8a04' },
+  'In Process': { tw: 'bg-purple-100 text-purple-800 border-purple-200', hex: '#9333ea' },
+  'Overdue': { tw: 'bg-red-100 text-red-800 border-red-200', hex: '#dc2626' },
+  'Proposed': { tw: 'bg-blue-100 text-blue-800 border-blue-200', hex: '#2563eb' },
+  'Cancelled': { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' },
+  'Unpaid': { tw: 'bg-orange-100 text-orange-800 border-orange-200', hex: '#f97316' },
+};
+
+export const getPaymentStatusStyles = (status: string) => {
+  return paymentStatusConfig[status] || { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' };
+};
+
 export const mapProfileToUser = (profile: any) => {
   if (!profile) return null;
   const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();

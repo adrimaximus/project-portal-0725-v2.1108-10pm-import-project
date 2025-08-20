@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus } from "@/types";
-import { cn } from "@/lib/utils";
+import { cn, getPaymentStatusStyles } from "@/lib/utils";
 import { format, addDays, isPast } from "date-fns";
 import { DollarSign, Clock, AlertTriangle, Download, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -16,35 +16,7 @@ type Invoice = {
   projectName: string;
   amount: number;
   dueDate: Date;
-  status: 'Paid' | 'Due' | 'Overdue';
-};
-
-const getInvoiceStatus = (status: PaymentStatus | string): Invoice['status'] | null => {
-  switch (status) {
-    case 'Paid':
-      return 'Paid';
-    case 'Unpaid':
-    case 'Pending':
-    case 'In Process':
-      return 'Due';
-    case 'Overdue':
-      return 'Overdue';
-    default:
-      return null;
-  }
-};
-
-const getStatusClass = (status: Invoice['status']) => {
-  switch (status) {
-    case 'Paid':
-      return 'bg-green-100 text-green-800';
-    case 'Due':
-      return 'bg-blue-100 text-blue-800';
-    case 'Overdue':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
+  status: PaymentStatus;
 };
 
 const Billing = () => {
@@ -52,15 +24,14 @@ const Billing = () => {
 
   const invoices: Invoice[] = projects
     .map(project => {
-      const status = getInvoiceStatus(project.payment_status);
-      if (!status || !project.budget || !project.due_date) {
+      if (!project.payment_status || !project.budget || !project.due_date) {
         return null;
       }
       
       const dueDate = addDays(new Date(project.due_date), 30);
 
-      let finalStatus = status;
-      if (status === 'Due' && isPast(dueDate)) {
+      let finalStatus = project.payment_status;
+      if (['Unpaid', 'Pending', 'In Process'].includes(finalStatus) && isPast(dueDate)) {
         finalStatus = 'Overdue';
       }
 
@@ -70,18 +41,18 @@ const Billing = () => {
         projectName: project.name,
         amount: project.budget,
         dueDate: dueDate,
-        status: finalStatus,
+        status: finalStatus as PaymentStatus,
       };
     })
     .filter((invoice): invoice is Invoice => invoice !== null)
     .sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
 
   const outstandingBalance = invoices
-    .filter(inv => inv.status === 'Due' || inv.status === 'Overdue')
+    .filter(inv => ['Due', 'Overdue', 'Unpaid', 'Pending', 'In Process'].includes(inv.status))
     .reduce((sum, inv) => sum + inv.amount, 0);
 
   const nextDueDate = invoices
-    .filter(inv => inv.status === 'Due')
+    .filter(inv => ['Due', 'Unpaid', 'Pending', 'In Process'].includes(inv.status))
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]?.dueDate;
 
   const overdueInvoicesCount = invoices.filter(inv => inv.status === 'Overdue').length;
@@ -176,7 +147,7 @@ const Billing = () => {
                       <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
                       <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={cn("border-transparent", getStatusClass(invoice.status))}>
+                        <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
                           {invoice.status}
                         </Badge>
                       </TableCell>

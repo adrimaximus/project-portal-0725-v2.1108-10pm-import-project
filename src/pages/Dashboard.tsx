@@ -7,6 +7,7 @@ import CollaboratorsList from "@/components/dashboard/CollaboratorsList";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -72,6 +73,7 @@ const Index = () => {
                 </div>
                 <DateRangePicker date={date} onDateChange={setDate} />
             </div>
+            <MonthlyProgressChart projects={filteredProjects} />
             <DashboardStatsGrid projects={filteredProjects} />
             <CollaboratorsList projects={filteredProjects} />
         </div>

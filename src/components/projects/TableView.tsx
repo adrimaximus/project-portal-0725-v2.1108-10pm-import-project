@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StatusBadge from "../StatusBadge";
-import { getStatusStyles, cn, formatInJakarta } from "@/lib/utils";
+import { getStatusStyles, cn, formatInJakarta, getPaymentStatusStyles } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 interface TableViewProps {
@@ -26,15 +26,6 @@ interface TableViewProps {
   isLoading: boolean;
   onDeleteProject: (projectId: string) => void;
 }
-
-const paymentStatusConfig: Record<string, { color: string; label: string }> = {
-  'Paid': { color: "bg-green-100 text-green-800", label: "Paid" },
-  'Pending': { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
-  'In Process': { color: "bg-purple-100 text-purple-800", label: "In Process" },
-  'Overdue': { color: "bg-red-100 text-red-800", label: "Overdue" },
-  'Proposed': { color: "bg-blue-100 text-blue-800", label: "Proposed" },
-  'Cancelled': { color: "bg-gray-100 text-gray-800", label: "Cancelled" },
-};
 
 const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => {
   return (
@@ -66,7 +57,7 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
           </TableRow>
         ) : (
           projects.map((project) => {
-            const paymentBadgeColor = paymentStatusConfig[project.payment_status]?.color || "bg-gray-100 text-gray-800";
+            const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
             return (
               <TableRow key={project.id}>
                 <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
