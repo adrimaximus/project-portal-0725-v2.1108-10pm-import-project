@@ -17,7 +17,14 @@ const GoalsPage = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
+    const savedView = localStorage.getItem('goals_view_mode') as 'card' | 'table';
+    return savedView || 'card';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('goals_view_mode', viewMode);
+  }, [viewMode]);
 
   const fetchGoals = useCallback(async () => {
     if (!user) return;
@@ -58,12 +65,18 @@ const GoalsPage = () => {
     fetchGoals();
   };
 
+  const handleViewChange = (value: 'card' | 'table' | null) => {
+    if (value) {
+      setViewMode(value);
+    }
+  };
+
   return (
     <PortalLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">My Goals</h1>
         <div className="flex items-center gap-2">
-          <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'card' | 'table')}}>
+          <ToggleGroup type="single" value={viewMode} onValueChange={handleViewChange}>
             <ToggleGroupItem value="card" aria-label="Card view">
               <LayoutGrid className="h-4 w-4" />
             </ToggleGroupItem>
