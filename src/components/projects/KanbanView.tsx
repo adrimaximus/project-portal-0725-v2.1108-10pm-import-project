@@ -1,10 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Project, PROJECT_STATUS_OPTIONS, ProjectStatus } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -12,19 +12,27 @@ import { useQueryClient } from '@tanstack/react-query';
 import { formatInJakarta } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 
-const KanbanCard = ({ project }: { project: Project }) => {
+const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened: React.MutableRefObject<boolean> }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
+  const navigate = useNavigate();
+  
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const handleClick = () => {
+    if (!dragHappened.current) {
+      navigate(`/projects/${project.slug}`);
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Card className="mb-3 hover:shadow-md transition-shadow">
+      <Card className="mb-3 hover:shadow-md transition-shadow cursor-pointer" onClick={handleClick}>
         <CardContent className="p-3">
-          <Link to={`/projects/${project.slug}`} className="space-y-2 block">
+          <div className="space-y-2 block">
             <h4 className="font-semibold text-sm leading-snug">{project.name}</h4>
             <p className="text-xs text-muted-foreground">{project.category}</p>
             <div className="flex justify-between items-center">
@@ -42,14 +50,14 @@ const KanbanCard = ({ project }: { project: Project }) => {
                 </Badge>
               )}
             </div>
-          </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 };
 
-const KanbanColumn = ({ status, projects }: { status: { value: string, label: string }, projects: Project[] }) => {
+const KanbanColumn = ({ status, projects, dragHappened }: { status: { value: string, label: string }, projects: Project[], dragHappened: React.MutableRefObject<boolean> }) => {
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
 
   return (
@@ -61,7 +69,7 @@ const KanbanColumn = ({ status, projects }: { status: { value: string, label: st
       <div className="bg-muted/50 rounded-lg p-2 min-h-[400px] h-full">
         <SortableContext id={status.value} items={projectIds} strategy={verticalListSortingStrategy}>
           {projects.map(project => (
-            <KanbanCard key={project.id} project={project} />
+            <KanbanCard key={project.id} project={project} dragHappened={dragHappened} />
           ))}
         </SortableContext>
       </div>
@@ -72,6 +80,7 @@ const KanbanColumn = ({ status, projects }: { status: { value: string, label: st
 const KanbanView = ({ projects }: { projects: Project[] }) => {
   const queryClient = useQueryClient();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const dragHappened = useRef(false);
 
   const projectGroups = useMemo(() => {
     const groups: Record<ProjectStatus, Project[]> = {} as any;
@@ -90,7 +99,16 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
     return groups;
   }, [projects]);
 
+  const handleDragStart = () => {
+    dragHappened.current = true;
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
+    // Reset the flag after a short delay to allow click events to be suppressed.
+    setTimeout(() => {
+      dragHappened.current = false;
+    }, 0);
+
     const { active, over } = event;
     if (!over) return;
 
@@ -190,7 +208,7 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
   const allProjectIds = useMemo(() => projects.map(p => p.id), [projects]);
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <SortableContext items={allProjectIds}>
         <div className="flex gap-4 overflow-x-auto pb-4">
           {PROJECT_STATUS_OPTIONS.map(statusOption => (
@@ -198,6 +216,7 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
               key={statusOption.value}
               status={statusOption}
               projects={projectGroups[statusOption.value as ProjectStatus]}
+              dragHappened={dragHappened}
             />
           ))}
         </div>
