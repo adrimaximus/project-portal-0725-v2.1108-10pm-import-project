@@ -6,6 +6,7 @@ import { Project, User } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { generateVibrantGradient } from '@/lib/utils';
 
 interface ChangeOwnerDialogProps {
   open: boolean;
@@ -88,7 +89,7 @@ const ChangeOwnerDialog = ({ open, onOpenChange, project, onOwnerChange }: Chang
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.avatar} />
-                      <AvatarFallback>{user.initials}</AvatarFallback>
+                      <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="font-medium">{user.name}</p>
