@@ -44,11 +44,17 @@ interface ProjectsTableProps {
 }
 
 const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => {
-  const [view, setView] = useState<ViewMode>('list');
+  const [view, setView] = useState<ViewMode>(() => {
+    return (localStorage.getItem('projectsViewMode') as ViewMode) || 'list';
+  });
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const createProjectMutation = useCreateProject();
+
+  useEffect(() => {
+    localStorage.setItem('projectsViewMode', view);
+  }, [view]);
 
   const refreshCalendarEvents = async () => {
     const token = localStorage.getItem('googleCalendarToken');
