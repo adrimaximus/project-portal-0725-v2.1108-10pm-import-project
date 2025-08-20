@@ -8,9 +8,24 @@ import { Link } from "react-router-dom";
 import { Bell, CheckCheck } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect, useRef } from "react";
+import { Notification } from "@/data/notifications";
 
 const NotificationsPage = () => {
   const { notifications, isLoading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const prevNotificationsRef = useRef<Notification[]>([]);
+
+  useEffect(() => {
+    if (notifications.length > 0 && prevNotificationsRef.current.length > 0 && notifications[0].id !== prevNotificationsRef.current[0].id) {
+      setHighlightedId(notifications[0].id);
+      const timer = setTimeout(() => {
+        setHighlightedId(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+    prevNotificationsRef.current = notifications;
+  }, [notifications]);
 
   if (isLoading) {
     return (
@@ -75,8 +90,9 @@ const NotificationsPage = () => {
                   <div
                     key={notification.id}
                     className={cn(
-                      "flex items-start gap-4 p-4 transition-colors",
-                      !notification.read && "bg-muted/50"
+                      "flex items-start gap-4 p-4 transition-colors duration-1000 ease-out",
+                      !notification.read && "bg-muted/50",
+                      highlightedId === notification.id && "bg-accent"
                     )}
                   >
                     <div className="relative">

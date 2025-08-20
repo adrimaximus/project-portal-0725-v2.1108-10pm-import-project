@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Notification } from '@/data/notifications';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const fetchNotifications = async (userId: string): Promise<Notification[]> => {
   const { data, error } = await supabase
@@ -32,6 +32,7 @@ export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { data: notifications = [], isLoading, error } = useQuery<Notification[]>({
     queryKey: ['notifications', user?.id],
@@ -59,19 +60,20 @@ export const useNotifications = () => {
               link: newNotificationRaw.link,
           };
 
-          toast.info(newNotification.title, {
-            description: newNotification.description,
-            action: {
-              label: 'View',
-              onClick: () => {
-                if (newNotification.link) {
-                  navigate(newNotification.link);
-                }
+          if (location.pathname !== '/notifications') {
+            toast.info(newNotification.title, {
+              description: newNotification.description,
+              action: {
+                label: 'View',
+                onClick: () => {
+                  if (newNotification.link) {
+                    navigate(newNotification.link);
+                  }
+                },
               },
-            },
-          });
+            });
+          }
           
-          // Langsung perbarui data di cache, tanpa perlu refetch
           queryClient.setQueryData(['notifications', user.id], (oldData: Notification[] | undefined) => {
             if (oldData) {
               if (oldData.some(n => n.id === newNotification.id)) {
@@ -88,7 +90,7 @@ export const useNotifications = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, queryClient, navigate]);
+  }, [user, queryClient, navigate, location.pathname]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
