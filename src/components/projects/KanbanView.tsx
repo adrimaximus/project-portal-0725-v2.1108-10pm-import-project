@@ -13,6 +13,7 @@ import { formatInJakarta, cn, generateVibrantGradient } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import type { DropAnimation } from '@dnd-kit/core';
 import { CheckCircle } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened: React.MutableRefObject<boolean> }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
@@ -126,6 +127,7 @@ const KanbanColumn = ({ status, projects, dragHappened, isHovered, isDragging }:
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
   const isEmpty = projects.length === 0;
   const [isExpandedByUser, setIsExpandedByUser] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (isHovered) {
@@ -136,24 +138,28 @@ const KanbanColumn = ({ status, projects, dragHappened, isHovered, isDragging }:
     }
   }, [isHovered, isDragging]);
 
-  const isExpanded = !isEmpty || isHovered || isExpandedByUser;
+  const isDesktopExpanded = !isEmpty || isHovered || isExpandedByUser;
+  const showContent = isMobile || isDesktopExpanded;
 
   return (
     <div 
       ref={setNodeRef} 
-      className={cn("flex-shrink-0 transition-all duration-300", isExpanded ? "w-72" : "w-14")}
-      onDoubleClick={() => setIsExpandedByUser(!isExpandedByUser)}
+      className={cn(
+        "flex-shrink-0 transition-all duration-300 w-full", 
+        isDesktopExpanded ? "md:w-72" : "md:w-14"
+      )}
+      onDoubleClick={() => !isMobile && setIsExpandedByUser(!isExpandedByUser)}
     >
-      <div className={cn("h-full flex flex-col", !isExpanded && "items-center")}>
+      <div className={cn("h-full flex flex-col", !isDesktopExpanded && "md:items-center")}>
         <h3 className={cn(
           "font-semibold mb-4 px-1 text-base flex items-center",
-          !isExpanded && "h-full flex items-center justify-center p-2 [writing-mode:vertical-rl] rotate-180 whitespace-nowrap"
+          !isDesktopExpanded && !isMobile && "md:h-full md:flex md:items-center md:justify-center md:p-2 md:[writing-mode:vertical-rl] md:rotate-180 md:whitespace-nowrap"
         )}>
           {status.label}
-          <Badge variant="secondary" className={cn("ml-2", !isExpanded && "hidden")}>{projects.length}</Badge>
+          <Badge variant="secondary" className={cn("ml-2", !isDesktopExpanded && !isMobile && "hidden")}>{projects.length}</Badge>
         </h3>
-        <div className={cn("bg-muted/50 rounded-lg p-2 min-h-[400px] h-full w-full", !isExpanded && "bg-transparent")}>
-          {isExpanded && (
+        <div className={cn("bg-muted/50 rounded-lg p-2 min-h-[400px] h-full w-full", !isDesktopExpanded && !isMobile && "bg-transparent")}>
+          {showContent && (
             <SortableContext id={status.value} items={projectIds} strategy={verticalListSortingStrategy}>
               {projects.map(project => (
                 <KanbanCard key={project.id} project={project} dragHappened={dragHappened} />
@@ -326,7 +332,7 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex flex-col md:flex-row gap-4 md:overflow-x-auto pb-4">
         {PROJECT_STATUS_OPTIONS.map(statusOption => (
           <KanbanColumn
             key={statusOption.value}
