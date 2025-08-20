@@ -172,7 +172,7 @@ CONTEXT:
                 break;
             }
 
-            const { data: newProject, error: projectInsertError } = await supabaseAdmin
+            const { data: newProject, error: projectInsertError } = await userSupabase
                 .from('projects')
                 .insert({
                     name: project_details.name,
@@ -200,7 +200,7 @@ CONTEXT:
                     project_id: newProjectId,
                     service_title: serviceTitle,
                 }));
-                const { error: servicesError } = await supabaseAdmin.from('project_services').insert(servicesToInsert);
+                const { error: servicesError } = await userSupabase.from('project_services').insert(servicesToInsert);
                 if (servicesError) followUpMessages.push("I couldn't add the services due to an error.");
                 else followUpMessages.push(`I've added ${project_details.services.length} services.`);
             }
@@ -216,7 +216,7 @@ CONTEXT:
                         user_id: userId,
                         role: 'member',
                     }));
-                    const { error: membersError } = await supabaseAdmin.from('project_members').insert(membersToInsert);
+                    const { error: membersError } = await userSupabase.from('project_members').insert(membersToInsert);
                     if (membersError) followUpMessages.push("I couldn't add the team members due to an error.");
                     else followUpMessages.push(`I've assigned ${project_details.members.join(', ')} to the project.`);
                 } else {
@@ -311,7 +311,7 @@ CONTEXT:
             rpcParams.p_existing_tags = Array.from(currentTagIds);
             rpcParams.p_custom_tags = newCustomTags;
 
-            const { error: updateError } = await supabaseAdmin.rpc('update_project_details', rpcParams);
+            const { error: updateError } = await userSupabase.rpc('update_project_details', rpcParams);
 
             if (updateError) {
                 responseData = { result: `I tried to update the project, but failed. The database said: ${updateError.message}` };
@@ -351,7 +351,7 @@ CONTEXT:
                 break;
             }
 
-            const { data: newTask, error: taskError } = await supabaseAdmin.from('tasks').insert({
+            const { data: newTask, error: taskError } = await userSupabase.from('tasks').insert({
                 project_id: project.id,
                 title: task_title,
                 created_by: user.id,
@@ -370,7 +370,7 @@ CONTEXT:
                 
                 if (userIdsToAssign.length > 0) {
                     const newAssignees = userIdsToAssign.map(uid => ({ task_id: newTask.id, user_id: uid }));
-                    const { error: assignError } = await supabaseAdmin.from('task_assignees').insert(newAssignees);
+                    const { error: assignError } = await userSupabase.from('task_assignees').insert(newAssignees);
                     if (assignError) {
                         assignmentMessage = ` I created the task, but couldn't assign it due to an error: ${assignError.message}`;
                     } else {
@@ -413,14 +413,14 @@ CONTEXT:
 
             if (actionData.action === 'ASSIGN_TASK') {
                 const newAssignees = userIdsToModify.map(uid => ({ task_id: task.id, user_id: uid }));
-                const { error: assignError } = await supabaseAdmin.from('task_assignees').insert(newAssignees);
+                const { error: assignError } = await userSupabase.from('task_assignees').insert(newAssignees);
                 if (assignError) {
                     responseData = { result: `I tried to assign the task, but failed: ${assignError.message}` };
                 } else {
                     responseData = { result: `Done! I've assigned ${assignees.join(', ')} to the task "${task.title}".` };
                 }
             } else { // UNASSIGN_TASK
-                const { error: unassignError } = await supabaseAdmin.from('task_assignees').delete().eq('task_id', task.id).in('user_id', userIdsToModify);
+                const { error: unassignError } = await userSupabase.from('task_assignees').delete().eq('task_id', task.id).in('user_id', userIdsToModify);
                 if (unassignError) {
                     responseData = { result: `I tried to unassign from the task, but failed: ${unassignError.message}` };
                 } else {
