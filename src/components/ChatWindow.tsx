@@ -6,6 +6,8 @@ import ChatPlaceholder from "./ChatPlaceholder";
 import { MentionUser } from "@/components/MentionsInput";
 import { useState } from "react";
 import ForwardMessageDialog from "./ForwardMessageDialog";
+import ChatSelectionBar from "./ChatSelectionBar";
+import { toast } from "sonner";
 
 interface ChatWindowProps {
   selectedConversation: Conversation | null;
@@ -24,6 +26,8 @@ interface ChatWindowProps {
 const ChatWindow = ({ selectedConversation, allConversations, onSendMessage, onForwardMessage, onClearChat, onLeaveGroup, onDeleteMessage, onUpdate, onBack, typing, onTyping }: ChatWindowProps) => {
   const [messageToForward, setMessageToForward] = useState<Message | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
 
   if (!selectedConversation) {
     return <ChatPlaceholder />;
@@ -42,6 +46,41 @@ const ChatWindow = ({ selectedConversation, allConversations, onSendMessage, onF
     }
   };
 
+  const handleEnterSelectionMode = (initialMessageId: string) => {
+    setSelectionMode(true);
+    setSelectedMessages(new Set([initialMessageId]));
+  };
+
+  const handleToggleMessageSelection = (messageId: string) => {
+    setSelectedMessages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      if (newSet.size === 0) {
+        setSelectionMode(false);
+      }
+      return newSet;
+    });
+  };
+
+  const handleCancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedMessages(new Set());
+  };
+
+  const handleDeleteSelected = () => {
+    selectedMessages.forEach(id => onDeleteMessage(id));
+    handleCancelSelection();
+  };
+
+  const handleForwardSelected = () => {
+    toast.info("Forwarding multiple messages is not yet implemented.");
+    handleCancelSelection();
+  };
+
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
       <ChatHeader
@@ -58,15 +97,28 @@ const ChatWindow = ({ selectedConversation, allConversations, onSendMessage, onF
         onForwardMessage={setMessageToForward}
         onSetReply={setReplyingTo}
         onDeleteMessage={onDeleteMessage}
+        selectionMode={selectionMode}
+        selectedMessages={selectedMessages}
+        onEnterSelectionMode={handleEnterSelectionMode}
+        onToggleMessageSelection={handleToggleMessageSelection}
       />
-      <ChatInput 
-        conversationId={selectedConversation.id}
-        onSendMessage={(text, attachment, replyToId) => onSendMessage(text, attachment, replyToId)}
-        onTyping={onTyping}
-        users={mentionUsers}
-        replyingTo={replyingTo}
-        onCancelReply={() => setReplyingTo(null)}
-      />
+      {selectionMode ? (
+        <ChatSelectionBar
+          selectedCount={selectedMessages.size}
+          onCancel={handleCancelSelection}
+          onDelete={handleDeleteSelected}
+          onForward={handleForwardSelected}
+        />
+      ) : (
+        <ChatInput 
+          conversationId={selectedConversation.id}
+          onSendMessage={(text, attachment, replyToId) => onSendMessage(text, attachment, replyToId)}
+          onTyping={onTyping}
+          users={mentionUsers}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
+        />
+      )}
       <ForwardMessageDialog
         open={!!messageToForward}
         onOpenChange={(isOpen) => !isOpen && setMessageToForward(null)}

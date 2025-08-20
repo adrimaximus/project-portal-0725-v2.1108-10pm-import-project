@@ -9,7 +9,8 @@ import CommentRenderer from "./CommentRenderer";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { ChevronDown, Reply, Star, Pin, Forward, Copy, Trash2 } from "lucide-react";
+import { ChevronDown, Reply, Star, Pin, Forward, Copy, Trash2, CheckSquare } from "lucide-react";
+import { Checkbox } from "./ui/checkbox";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -17,6 +18,10 @@ interface ChatConversationProps {
   onForwardMessage: (message: Message) => void;
   onSetReply: (message: Message) => void;
   onDeleteMessage: (messageId: string) => void;
+  selectionMode: boolean;
+  selectedMessages: Set<string>;
+  onEnterSelectionMode: (messageId: string) => void;
+  onToggleMessageSelection: (messageId: string) => void;
 }
 
 const formatTimestamp = (timestamp: string) => {
@@ -40,7 +45,7 @@ const formatDateSeparator = (timestamp: string) => {
   }
 };
 
-const ChatConversation = ({ messages, members, onForwardMessage, onSetReply, onDeleteMessage }: ChatConversationProps) => {
+const ChatConversation = ({ messages, members, onForwardMessage, onSetReply, onDeleteMessage, selectionMode, selectedMessages, onEnterSelectionMode, onToggleMessageSelection }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -117,102 +122,109 @@ const ChatConversation = ({ messages, members, onForwardMessage, onSetReply, onD
               </div>
             )}
             <div
+              onClick={() => selectionMode && onToggleMessageSelection(message.id)}
               className={cn(
-                "flex items-end gap-2 group",
+                "flex items-center gap-3 py-1 px-2 rounded-md transition-colors",
                 isCurrentUser ? "justify-end" : "justify-start",
-                isSameSenderAsPrevious ? "mt-1" : "mt-4"
+                selectionMode && "cursor-pointer hover:bg-muted/50",
+                selectedMessages.has(message.id) && "bg-muted"
               )}
             >
-              {!isCurrentUser && !isSameSenderAsPrevious && sender && (
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={sender.avatar} />
-                  <AvatarFallback>{sender.initials}</AvatarFallback>
-                </Avatar>
-              )}
+              {selectionMode && !isCurrentUser && <Checkbox checked={selectedMessages.has(message.id)} />}
               <div
                 className={cn(
-                  "max-w-xs md:max-w-md lg:max-w-lg rounded-lg relative",
-                  isCurrentUser
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-slate-900 text-slate-100 dark:bg-slate-800 dark:text-slate-200",
-                  !isCurrentUser && isSameSenderAsPrevious && "ml-10",
-                  !hasText && isImageAttachment ? "p-0 bg-transparent" : "px-3 py-2"
+                  "flex items-end gap-2 group",
+                  isCurrentUser ? "justify-end" : "justify-start",
+                  isSameSenderAsPrevious ? "mt-1" : "mt-4",
+                  !isCurrentUser && isSameSenderAsPrevious && "ml-10"
                 )}
               >
                 {!isCurrentUser && !isSameSenderAsPrevious && sender && (
-                  <p className="text-sm font-semibold mb-1">{sender.name}</p>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={sender.avatar} />
+                    <AvatarFallback>{sender.initials}</AvatarFallback>
+                  </Avatar>
                 )}
-                
-                {isForwarded && (
-                  <div className="flex items-center gap-1.5 text-xs opacity-80 mb-1.5">
-                    <Forward className="h-3 w-3" />
-                    <span>Forwarded</span>
-                  </div>
-                )}
-
-                {repliedToMessage && (
-                  <div className="p-2 rounded-md mb-2 bg-black/20 border-l-2 border-white/50">
-                    <p className="text-xs font-semibold">{repliedToMessage.sender?.name}</p>
-                    <p className="text-xs opacity-80 line-clamp-2">{repliedToMessage.text || "Attachment"}</p>
-                  </div>
-                )}
-
-                {hasText && <CommentRenderer text={message.text!} members={members} />}
-                
-                {isImageAttachment && (
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <div className={cn("relative cursor-pointer", hasText && "mt-2")}>
-                        <img 
-                          src={message.attachment!.url} 
-                          alt={message.attachment!.name} 
-                          className="rounded-md max-w-full h-auto max-h-80 object-cover" 
-                        />
-                        <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded-full flex items-center gap-1">
-                          <span>{formatTimestamp(message.timestamp)}</span>
-                        </div>
+                <div className="flex items-center gap-1" style={{ flexDirection: isCurrentUser ? 'row-reverse' : 'row' }}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align={isCurrentUser ? "end" : "start"}>
+                      <DropdownMenuItem onSelect={() => onSetReply(message)}><Reply className="mr-2 h-4 w-4" /><span>Reply</span></DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => onForwardMessage(message)}><Forward className="mr-2 h-4 w-4" /><span>Forward</span></DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => onEnterSelectionMode(message.id)}><CheckSquare className="mr-2 h-4 w-4" /><span>Select Messages</span></DropdownMenuItem>
+                      <DropdownMenuItem disabled><Star className="mr-2 h-4 w-4" /><span>Star</span></DropdownMenuItem>
+                      <DropdownMenuItem disabled><Pin className="mr-2 h-4 w-4" /><span>Pin</span></DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {hasText && <DropdownMenuItem onSelect={() => handleCopy(message.text!)}><Copy className="mr-2 h-4 w-4" /><span>Copy</span></DropdownMenuItem>}
+                      {isCurrentUser && <DropdownMenuItem className="text-red-500" onSelect={() => onDeleteMessage(message.id)}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <div
+                    className={cn(
+                      "max-w-xs md:max-w-md lg:max-w-lg rounded-lg relative flex flex-col",
+                      isCurrentUser
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-slate-900 text-slate-100 dark:bg-slate-800 dark:text-slate-200",
+                      !hasText && isImageAttachment ? "p-0 bg-transparent" : "px-3 py-2"
+                    )}
+                  >
+                    {!isCurrentUser && !isSameSenderAsPrevious && sender && (
+                      <p className="text-sm font-semibold mb-1">{sender.name}</p>
+                    )}
+                    
+                    {isForwarded && (
+                      <div className="flex items-center gap-1.5 text-xs opacity-80 mb-1.5">
+                        <Forward className="h-3 w-3" />
+                        <span>Forwarded</span>
                       </div>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl w-full h-[90vh] p-2 bg-transparent border-none">
-                      <img src={message.attachment!.url} alt={message.attachment!.name} className="max-h-full w-auto object-contain mx-auto" />
-                    </DialogContent>
-                  </Dialog>
-                )}
+                    )}
 
-                {isFileAttachment && (
-                  <MessageAttachment attachment={message.attachment!} />
-                )}
+                    {repliedToMessage && (
+                      <div className="p-2 rounded-md mb-2 bg-black/20 border-l-2 border-white/50">
+                        <p className="text-xs font-semibold">{repliedToMessage.sender?.name}</p>
+                        <p className="text-xs opacity-80 line-clamp-2">{repliedToMessage.text || "Attachment"}</p>
+                      </div>
+                    )}
 
-                {!isImageAttachment && hasText && (
-                  <div className="text-right text-xs mt-1 opacity-70 clear-both flex justify-end items-center gap-1">
-                    <span>{formatTimestamp(message.timestamp)}</span>
+                    {hasText && <CommentRenderer text={message.text!} members={members} />}
+                    
+                    {isImageAttachment && (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <div className={cn("relative cursor-pointer", hasText && "mt-2")}>
+                            <img 
+                              src={message.attachment!.url} 
+                              alt={message.attachment!.name} 
+                              className="rounded-md max-w-full h-auto max-h-80 object-cover" 
+                            />
+                            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                              <span>{formatTimestamp(message.timestamp)}</span>
+                            </div>
+                          </div>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl w-full h-[90vh] p-2 bg-transparent border-none">
+                          <img src={message.attachment!.url} alt={message.attachment!.name} className="max-h-full w-auto object-contain mx-auto" />
+                        </DialogContent>
+                      </Dialog>
+                    )}
+
+                    {isFileAttachment && (
+                      <MessageAttachment attachment={message.attachment!} />
+                    )}
+
+                    {!isImageAttachment && hasText && (
+                      <div className="text-right text-xs mt-1 opacity-70 clear-both flex justify-end items-center gap-1">
+                        <span>{formatTimestamp(message.timestamp)}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "absolute top-1 right-1 h-6 w-6 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0",
-                        isCurrentUser ? "bg-black/20 hover:bg-black/30" : "bg-white/20 hover:bg-white/30"
-                      )}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align={isCurrentUser ? "end" : "start"}>
-                    <DropdownMenuItem onSelect={() => onSetReply(message)}><Reply className="mr-2 h-4 w-4" /><span>Reply</span></DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onForwardMessage(message)}><Forward className="mr-2 h-4 w-4" /><span>Forward</span></DropdownMenuItem>
-                    <DropdownMenuItem disabled><Star className="mr-2 h-4 w-4" /><span>Star</span></DropdownMenuItem>
-                    <DropdownMenuItem disabled><Pin className="mr-2 h-4 w-4" /><span>Pin</span></DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {hasText && <DropdownMenuItem onSelect={() => handleCopy(message.text!)}><Copy className="mr-2 h-4 w-4" /><span>Copy</span></DropdownMenuItem>}
-                    {isCurrentUser && <DropdownMenuItem className="text-red-500" onSelect={() => onDeleteMessage(message.id)}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                </div>
               </div>
+              {selectionMode && isCurrentUser && <Checkbox checked={selectedMessages.has(message.id)} />}
             </div>
           </div>
         );
