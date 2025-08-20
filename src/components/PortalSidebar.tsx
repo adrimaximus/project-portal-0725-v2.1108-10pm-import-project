@@ -136,7 +136,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       { id: "goals", href: "/goals", label: "Goals", icon: Target },
       { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
       { id: "settings", href: "/settings", label: "Settings", icon: Settings, allowedRoles: ['admin', 'master admin'] },
-      { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined },
     ];
 
     const visibleDefaultItems = defaultItemsList.filter(item => {
