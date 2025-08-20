@@ -1,6 +1,6 @@
 import { Message, Collaborator } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { isSameDay, parseISO } from 'date-fns';
 import ChatMessageItem from "./ChatMessageItem";
 
@@ -26,6 +26,8 @@ const ChatConversation = ({ messages, members, selectionMode, selectedMessages, 
     }
   }, [messages, selectionMode]);
 
+  const messagesById = useMemo(() => new Map(messages.map(m => [m.id, m])), [messages]);
+
   if (!currentUser) {
     return <div>Loading...</div>;
   }
@@ -37,12 +39,13 @@ const ChatConversation = ({ messages, members, selectionMode, selectedMessages, 
         const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
         const isCurrentUser = message.sender?.id === currentUser.id;
         const isSameSenderAsPrevious = prevMessage && prevMessage.sender?.id === message.sender?.id && prevMessage.message_type !== 'system_notification';
+        const repliedToMessage = message.reply_to_message_id ? messagesById.get(message.reply_to_message_id) : null;
         
         return (
           <ChatMessageItem
             key={message.id || index}
             message={message}
-            allMessages={messages}
+            repliedToMessage={repliedToMessage}
             members={members}
             isCurrentUser={isCurrentUser}
             isSameSenderAsPrevious={isSameSenderAsPrevious}

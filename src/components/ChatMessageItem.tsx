@@ -13,7 +13,7 @@ import { Checkbox } from "./ui/checkbox";
 
 interface ChatMessageItemProps {
   message: Message;
-  allMessages: Message[];
+  repliedToMessage: Message | null | undefined;
   members: Collaborator[];
   isCurrentUser: boolean;
   isSameSenderAsPrevious: boolean;
@@ -50,7 +50,7 @@ const formatDateSeparator = (timestamp: string) => {
 
 const ChatMessageItem = ({
   message,
-  allMessages,
+  repliedToMessage,
   members,
   isCurrentUser,
   isSameSenderAsPrevious,
@@ -88,7 +88,6 @@ const ChatMessageItem = ({
   const isImageAttachment = message.attachment && message.attachment.type.startsWith('image/');
   const isFileAttachment = message.attachment && !message.attachment.type.startsWith('image/');
   const hasText = message.text && message.text.trim().length > 0;
-  const repliedToMessage = message.reply_to_message_id ? allMessages.find(m => m.id === message.reply_to_message_id) : null;
   const isForwarded = message.is_forwarded;
 
   if (message.is_deleted) {
@@ -229,7 +228,8 @@ const arePropsEqual = (prevProps: ChatMessageItemProps, nextProps: ChatMessageIt
     prevProps.message.id === nextProps.message.id &&
     prevProps.message.is_deleted === nextProps.message.is_deleted &&
     prevProps.isSelected === nextProps.isSelected &&
-    prevProps.selectionMode === nextProps.selectionMode
+    prevProps.selectionMode === nextProps.selectionMode &&
+    prevProps.repliedToMessage?.id === nextProps.repliedToMessage?.id
   );
 };
 
