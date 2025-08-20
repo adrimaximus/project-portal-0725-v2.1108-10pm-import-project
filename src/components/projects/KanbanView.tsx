@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Project, PROJECT_STATUS_OPTIONS, ProjectStatus } from '@/types';
 import KanbanColumn from './KanbanColumn';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -40,7 +40,13 @@ const KanbanView = ({ projects }: KanbanViewProps) => {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      // Require the user to press and hold for 250ms, or drag the item by 5px before a drag is initiated
+      // For mouse, activate after dragging a short distance
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      // For touch, activate after a delay to allow for scrolling
       activationConstraint: {
         delay: 250,
         tolerance: 5,
