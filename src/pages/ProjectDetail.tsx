@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Project, Tag, ProjectStatus } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { useProject } from "@/hooks/useProject";
+import { useProjectMutations } from "@/hooks/useProjectMutations";
 
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
@@ -23,18 +24,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-const fetchProject = async (slug: string): Promise<Project | null> => {
-  const { data, error } = await supabase
-    .rpc('get_project_by_slug', { p_slug: slug })
-    .single();
-
-  if (error) {
-    console.error("Error fetching project:", error);
-    throw new Error(error.message);
-  }
-  return data as Project | null;
-};
 
 const ProjectDetailSkeleton = () => (
   <PortalLayout>
@@ -58,263 +47,19 @@ const ProjectDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const { data: project, isLoading, error } = useQuery<Project | null>({
-    queryKey: ["project", slug],
-    queryFn: () => fetchProject(slug!),
-    enabled: !!slug && !!user,
-  });
+  const { data: project, isLoading, error } = useProject(slug!);
+  const mutations = useProjectMutations(slug!);
 
   useEffect(() => {
     if (project) {
       setEditedProject(project);
     }
   }, [project]);
-
-  const handleFieldChange = (field: keyof Project, value: any) => {
-    setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
-  };
-
-  const handleSave = async () => {
-    if (!editedProject || !project) return;
-    setIsSaving(true);
-
-    try {
-      const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo, venue, tags } = editedProject;
-      
-      const { data: updatedProjectRow, error } = await supabase
-        .rpc('update_project_details', {
-          p_project_id: id,
-          p_name: name,
-          p_description: description || null,
-          p_category: category || null,
-          p_status: status,
-          p_budget: budget || null,
-          p_start_date: start_date || null,
-          p_due_date: due_date || null,
-          p_payment_status: payment_status,
-          p_payment_due_date: payment_due_date || null,
-          p_member_ids: assignedTo.map(m => m.id),
-          p_service_titles: services || [],
-          p_venue: venue || null,
-          p_existing_tags: (tags || []).filter(t => !t.isNew).map(t => t.id),
-          p_custom_tags: (tags || []).filter(t => t.isNew).map(({ name, color }) => ({ name, color })),
-        })
-        .single();
-
-      if (error) throw error;
-
-      if (updatedProjectRow) {
-          const typedUpdatedProjectRow = updatedProjectRow as { slug: string };
-          
-          queryClient.invalidateQueries({ queryKey: ['projects'] });
-          
-          if (slug !== typedUpdatedProjectRow.slug) {
-              toast.success("Project updated successfully! Redirecting...");
-              navigate(`/projects/${typedUpdatedProjectRow.slug}`, { replace: true });
-          } else {
-              await queryClient.invalidateQueries({ queryKey: ["project", slug] });
-              toast.success("Project updated successfully!");
-              setIsEditing(false);
-          }
-      }
-    } catch (err: any) {
-      toast.error("Failed to save project", { description: err.message });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditedProject(project);
-    setIsEditing(false);
-  };
-
-  const handleFilesAdd = async (files: File[]) => {
-    if (!project || !user) return;
-    toast.info(`Uploading ${files.length} file(s)...`);
-
-    for (const file of files) {
-      const filePath = `${project.id}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
-
-      if (uploadError) {
-        toast.error(`Failed to upload ${file.name}`, { description: uploadError.message });
-        continue;
-      }
-
-      const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
-
-      const { error: dbError } = await supabase.from('project_files').insert({
-        project_id: project.id,
-        user_id: user.id,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: urlData.publicUrl,
-        storage_path: filePath,
-      });
-
-      if (dbError) {
-        toast.error(`Failed to save ${file.name} to database`, { description: dbError.message });
-      }
-    }
-    toast.success("File upload complete!");
-    queryClient.invalidateQueries({ queryKey: ["project", slug] });
-  };
-
-  const handleFileDelete = async (fileId: string) => {
-    if (!project) return;
-    const fileToDelete = project.briefFiles?.find(f => f.id === fileId);
-    if (!fileToDelete) return;
-
-    const { error: storageError } = await supabase.storage.from('project-files').remove([fileToDelete.storage_path]);
-    if (storageError) {
-      toast.error("Failed to delete file from storage", { description: storageError.message });
-      return;
-    }
-
-    const { error: dbError } = await supabase.from('project_files').delete().eq('id', fileId);
-    if (dbError) {
-      toast.error("Failed to delete file from database", { description: dbError.message });
-      return;
-    }
-
-    toast.success("File deleted successfully");
-    queryClient.invalidateQueries({ queryKey: ["project", slug] });
-  };
-
-  const handleTaskAdd = async (title: string) => {
-    if (!project || !user) return;
-    const { error } = await supabase.from('tasks').insert({ project_id: project.id, title, created_by: user.id });
-    if (error) toast.error("Failed to add task", { description: error.message });
-    else {
-      toast.success("Task added successfully.");
-      queryClient.invalidateQueries({ queryKey: ["project", slug] });
-    }
-  };
-
-  const handleTaskAssignUsers = async (taskId: string, userIds: string[]) => {
-    await supabase.from('task_assignees').delete().eq('task_id', taskId);
-    if (userIds.length > 0) {
-      const newAssignees = userIds.map(uid => ({ task_id: taskId, user_id: uid }));
-      const { error } = await supabase.from('task_assignees').insert(newAssignees);
-      if (error) toast.error("Failed to assign users", { description: error.message });
-      else toast.success("Task assignments updated.");
-    }
-    queryClient.invalidateQueries({ queryKey: ["project", slug] });
-  };
-
-  const handleTaskStatusChange = async (taskId: string, completed: boolean) => {
-    const { error } = await supabase.from('tasks').update({ completed }).eq('id', taskId);
-    if (error) toast.error("Failed to update task status", { description: error.message });
-    else {
-      toast.success(`Task marked as ${completed ? 'complete' : 'incomplete'}.`);
-      queryClient.invalidateQueries({ queryKey: ["project", slug] });
-    }
-  };
-
-  const handleTaskDelete = async (taskId: string) => {
-    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
-    if (error) toast.error("Failed to delete task", { description: error.message });
-    else {
-      toast.success("Task deleted.");
-      queryClient.invalidateQueries({ queryKey: ["project", slug] });
-    }
-  };
-
-  const handleAddCommentOrTicket = async (text: string, isTicket: boolean, attachment: File | null) => {
-    if (!project || !user) return;
-    let attachment_url = null;
-    let attachment_name = null;
-
-    if (attachment) {
-      const filePath = `${project.id}/comments/${Date.now()}-${attachment.name}`;
-      const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, attachment);
-      if (uploadError) {
-        toast.error("Failed to upload attachment.", { description: uploadError.message });
-        return;
-      }
-      const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
-      attachment_url = urlData.publicUrl;
-      attachment_name = attachment.name;
-    }
-
-    const { data: commentData, error: commentError } = await supabase.from('comments').insert({
-      project_id: project.id,
-      author_id: user.id,
-      text,
-      is_ticket: isTicket,
-      attachment_url,
-      attachment_name,
-    }).select().single();
-
-    if (commentError) {
-      toast.error("Failed to post comment.", { description: commentError.message });
-      return;
-    }
-
-    if (isTicket && commentData) {
-      const { error: taskError } = await supabase.from('tasks').insert({
-        project_id: project.id,
-        created_by: user.id,
-        title: text.substring(0, 100),
-        origin_ticket_id: commentData.id,
-      });
-      if (taskError) {
-        toast.warning("Ticket created, but failed to create a corresponding task.", { description: taskError.message });
-      } else {
-        toast.success("Ticket created and added to tasks.");
-      }
-    } else {
-      toast.success("Comment posted.");
-    }
-    queryClient.invalidateQueries({ queryKey: ["project", slug] });
-  };
-
-  const handleToggleComplete = async () => {
-    if (!project || !editedProject) return;
-    
-    const newStatus: ProjectStatus = project.status === 'Completed' ? 'In Progress' : 'Completed';
-    
-    const originalProject = { ...project };
-    const updatedProject = { ...editedProject, status: newStatus };
-    setEditedProject(updatedProject);
-    queryClient.setQueryData(['project', slug], updatedProject);
-
-    const { error } = await supabase
-      .from('projects')
-      .update({ status: newStatus })
-      .eq('id', project.id);
-
-    if (error) {
-      toast.error("Failed to update project status.");
-      setEditedProject(originalProject);
-      queryClient.setQueryData(['project', slug], originalProject);
-    } else {
-      toast.success(`Project marked as ${newStatus}.`);
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-    }
-  };
-
-  const handleDeleteProject = async () => {
-    if (!project) return;
-    const { error } = await supabase.from('projects').delete().eq('id', project.id);
-    if (error) {
-      toast.error("Failed to delete project.");
-    } else {
-      toast.success("Project deleted successfully.");
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      navigate('/projects');
-    }
-    setIsDeleteDialogOpen(false);
-  };
 
   if (isLoading) return <ProjectDetailSkeleton />;
   if (error) {
@@ -326,13 +71,40 @@ const ProjectDetail = () => {
 
   const canEdit = user && (user.id === project.created_by.id || user.role === 'admin' || user.role === 'master admin');
 
+  const handleFieldChange = (field: keyof Project, value: any) => {
+    setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
+  };
+
+  const handleSave = () => {
+    if (!editedProject) return;
+    mutations.updateProject.mutate(editedProject, {
+      onSuccess: () => setIsEditing(false),
+    });
+  };
+
+  const handleCancel = () => {
+    setEditedProject(project);
+    setIsEditing(false);
+  };
+
+  const handleToggleComplete = () => {
+    const newStatus: ProjectStatus = project.status === 'Completed' ? 'In Progress' : 'Completed';
+    mutations.updateProject.mutate({ ...editedProject, status: newStatus });
+  };
+
+  const handleDeleteProject = () => {
+    mutations.deleteProject.mutate(project.id, {
+      onSuccess: () => setIsDeleteDialogOpen(false),
+    });
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
         <ProjectHeader
           project={editedProject}
           isEditing={isEditing}
-          isSaving={isSaving}
+          isSaving={mutations.updateProject.isPending}
           onEditToggle={() => setIsEditing(true)}
           onSaveChanges={handleSave}
           onCancelChanges={handleCancel}
@@ -353,15 +125,18 @@ const ProjectDetail = () => {
               isEditing={isEditing}
               onDescriptionChange={(value) => handleFieldChange('description', value)}
               onTeamChange={(users) => handleFieldChange('assignedTo', users)}
-              onFilesAdd={handleFilesAdd}
-              onFileDelete={handleFileDelete}
+              onFilesAdd={(files) => mutations.addFiles.mutate({ files, project, user: user! })}
+              onFileDelete={(fileId) => {
+                const file = project.briefFiles?.find(f => f.id === fileId);
+                if (file) mutations.deleteFile.mutate(file);
+              }}
               onServicesChange={(services) => handleFieldChange('services', services)}
               onTagsChange={(tags: Tag[]) => handleFieldChange('tags', tags)}
-              onTaskAdd={handleTaskAdd}
-              onTaskAssignUsers={handleTaskAssignUsers}
-              onTaskStatusChange={handleTaskStatusChange}
-              onTaskDelete={handleTaskDelete}
-              onAddCommentOrTicket={handleAddCommentOrTicket}
+              onTaskAdd={(title) => mutations.addTask.mutate({ project, user: user!, title })}
+              onTaskAssignUsers={(taskId, userIds) => mutations.assignUsersToTask.mutate({ taskId, userIds })}
+              onTaskStatusChange={(taskId, completed) => mutations.updateTask.mutate({ taskId, updates: { completed } })}
+              onTaskDelete={(taskId) => mutations.deleteTask.mutate(taskId)}
+              onAddCommentOrTicket={(text, isTicket, attachment) => mutations.addComment.mutate({ project, user: user!, text, isTicket, attachment })}
             />
           </div>
           <div className="lg:col-span-1 space-y-6">
