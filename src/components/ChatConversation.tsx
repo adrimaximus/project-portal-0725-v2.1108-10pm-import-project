@@ -9,7 +9,7 @@ import CommentRenderer from "./CommentRenderer";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { MoreHorizontal, Reply, Star, Pin, Forward, Copy, Trash2 } from "lucide-react";
+import { ChevronDown, Reply, Star, Pin, Forward, Copy, Trash2 } from "lucide-react";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -132,7 +132,7 @@ const ChatConversation = ({ messages, members, onForwardMessage, onSetReply, onD
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                      <MoreHorizontal className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align={isCurrentUser ? "end" : "start"}>
