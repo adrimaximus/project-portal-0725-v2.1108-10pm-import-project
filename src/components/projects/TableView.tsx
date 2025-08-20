@@ -10,7 +10,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types";
 import { Link } from "react-router-dom";
-import { MoreHorizontal, Trash2, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -67,7 +67,6 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           Project
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => {
@@ -87,7 +86,6 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           Status
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
@@ -104,12 +102,20 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
     },
     {
       accessorKey: "start_date",
-      header: "Start Date",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Start Date
+        </Button>
+      ),
       cell: ({ row }) => formatInJakarta(row.original.start_date, 'MMM d, yyyy'),
     },
     {
       accessorKey: "due_date",
-      header: "Due Date",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Due Date
+        </Button>
+      ),
       cell: ({ row }) => formatInJakarta(row.original.due_date, 'MMM d, yyyy'),
     },
     {
@@ -135,7 +141,6 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           Payment
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => {
