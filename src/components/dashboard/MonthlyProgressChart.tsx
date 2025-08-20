@@ -12,6 +12,38 @@ interface MonthlyProgressChartProps {
   projects: Project[];
 }
 
+const CustomTooltip = ({ active, payload, label, chartType }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
+        <p className="font-bold mb-2">{label}</p>
+        {chartType === 'quantity' || chartType === 'value' ? (
+          <p className="text-foreground">
+            <span className="font-semibold capitalize" style={{ color: payload[0].fill }}>
+              {chartType}:
+            </span>{' '}
+            {chartType === 'value' ? `Rp ${new Intl.NumberFormat('id-ID').format(payload[0].value as number)}` : payload[0].value}
+          </p>
+        ) : (
+          <ul className="space-y-1">
+            {payload.slice().reverse().map((entry: any) => (
+              <li key={entry.dataKey} className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: entry.fill }}></span>
+                  <span>{entry.name}:</span>
+                </div>
+                <span className="font-bold ml-4">{entry.value}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+};
+
 const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   const [chartType, setChartType] = useState<ChartType>('quantity');
 
@@ -56,8 +88,8 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
             <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => chartType === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
             <Tooltip
+              content={<CustomTooltip chartType={chartType} />}
               cursor={{ fill: 'hsl(var(--muted))' }}
-              formatter={(value) => chartType === 'value' ? `Rp ${new Intl.NumberFormat('id-ID').format(value as number)}` : value}
             />
             <Bar dataKey={chartType} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
           </BarChart>
@@ -68,7 +100,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
-            <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
+            <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend wrapperStyle={{ fontSize: '10px' }} />
             {PROJECT_STATUS_OPTIONS.map(status => (
               <Bar key={status.value} dataKey={status.value} stackId="a" fill={getStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
@@ -81,7 +113,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
-            <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
+            <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend wrapperStyle={{ fontSize: '10px' }} />
             {PAYMENT_STATUS_OPTIONS.map(status => (
               <Bar key={status.value} dataKey={status.value} stackId="a" fill={getPaymentStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
