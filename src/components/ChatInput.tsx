@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, forwardRef } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Paperclip, Send, X, Loader2 } from "lucide-react";
@@ -14,7 +14,7 @@ interface ChatInputProps {
   onTyping?: () => void;
 }
 
-const ChatInput = ({ conversationId, onSendMessage, onTyping }: ChatInputProps) => {
+const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ conversationId, onSendMessage, onTyping }, ref) => {
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -76,6 +76,7 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping }: ChatInputProps) 
     <div className="border-t p-4 flex-shrink-0">
       <div className="relative">
         <Textarea
+          ref={ref}
           placeholder="Type a message..."
           value={text}
           onChange={(e) => {
@@ -116,6 +117,6 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping }: ChatInputProps) 
       )}
     </div>
   );
-};
+});
 
 export default ChatInput;
