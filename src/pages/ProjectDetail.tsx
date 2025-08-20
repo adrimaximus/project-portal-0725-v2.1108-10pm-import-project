@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Project, Tag } from "@/types";
+import { Project, Tag, ProjectStatus } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -13,6 +13,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
 import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const fetchProject = async (slug: string): Promise<Project | null> => {
   const { data, error } = await supabase
@@ -53,6 +63,7 @@ const ProjectDetail = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data: project, isLoading, error } = useQuery<Project | null>({
     queryKey: ["project", slug],
@@ -267,6 +278,44 @@ const ProjectDetail = () => {
     queryClient.invalidateQueries({ queryKey: ["project", slug] });
   };
 
+  const handleToggleComplete = async () => {
+    if (!project || !editedProject) return;
+    
+    const newStatus: ProjectStatus = project.status === 'Completed' ? 'In Progress' : 'Completed';
+    
+    const originalProject = { ...project };
+    const updatedProject = { ...editedProject, status: newStatus };
+    setEditedProject(updatedProject);
+    queryClient.setQueryData(['project', slug], updatedProject);
+
+    const { error } = await supabase
+      .from('projects')
+      .update({ status: newStatus })
+      .eq('id', project.id);
+
+    if (error) {
+      toast.error("Failed to update project status.");
+      setEditedProject(originalProject);
+      queryClient.setQueryData(['project', slug], originalProject);
+    } else {
+      toast.success(`Project marked as ${newStatus}.`);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!project) return;
+    const { error } = await supabase.from('projects').delete().eq('id', project.id);
+    if (error) {
+      toast.error("Failed to delete project.");
+    } else {
+      toast.success("Project deleted successfully.");
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      navigate('/projects');
+    }
+    setIsDeleteDialogOpen(false);
+  };
+
   if (isLoading) return <ProjectDetailSkeleton />;
   if (error) {
     toast.error("Failed to load project", { description: "Please check the URL or try again later." });
@@ -289,6 +338,8 @@ const ProjectDetail = () => {
           onCancelChanges={handleCancel}
           canEdit={canEdit}
           onFieldChange={handleFieldChange}
+          onToggleComplete={handleToggleComplete}
+          onDeleteProject={() => setIsDeleteDialogOpen(true)}
         />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
@@ -323,6 +374,20 @@ const ProjectDetail = () => {
           </div>
         </div>
       </div>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the project and all its associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteProject}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PortalLayout>
   );
 };

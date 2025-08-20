@@ -12,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { formatInJakarta, cn, generateVibrantGradient } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import type { DropAnimation } from '@dnd-kit/core';
+import { CheckCircle } from 'lucide-react';
 
 const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened: React.MutableRefObject<boolean> }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
@@ -73,7 +74,10 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
       <Card className="mb-3 hover:shadow-md transition-shadow cursor-pointer" onClick={handleClick}>
         <CardContent className="p-3">
           <div className="space-y-2 block">
-            <h4 className="font-semibold text-sm leading-snug">{project.name}</h4>
+            <h4 className="font-semibold text-sm leading-snug flex items-center gap-1.5">
+              {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+              {project.name}
+            </h4>
             
             {project.tags && project.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 pt-1">
@@ -339,7 +343,10 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
           <Card className="shadow-xl">
             <CardContent className="p-3">
               <div className="space-y-2 block">
-                <h4 className="font-semibold text-sm leading-snug">{activeProject.name}</h4>
+                <h4 className="font-semibold text-sm leading-snug flex items-center gap-1.5">
+                  {activeProject.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                  {activeProject.name}
+                </h4>
                 {activeProject.tags && activeProject.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 pt-1">
                     {activeProject.tags.slice(0, 2).map(tag => (

@@ -1,10 +1,16 @@
 import { Project } from "@/types";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil, Loader2 } from "lucide-react";
+import { ArrowLeft, Pencil, Loader2, MoreVertical, Trash2, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "../StatusBadge";
-import { getStatusStyles } from "@/lib/utils";
+import { getStatusStyles, cn } from "@/lib/utils";
 import { Input } from "../ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -15,6 +21,8 @@ interface ProjectHeaderProps {
   onCancelChanges: () => void;
   canEdit: boolean;
   onFieldChange: (field: keyof Project, value: any) => void;
+  onToggleComplete: () => void;
+  onDeleteProject: () => void;
 }
 
 const ProjectHeader = ({
@@ -26,9 +34,12 @@ const ProjectHeader = ({
   onCancelChanges,
   canEdit,
   onFieldChange,
+  onToggleComplete,
+  onDeleteProject,
 }: ProjectHeaderProps) => {
   const navigate = useNavigate();
   const statusStyles = getStatusStyles(project.status);
+  const isCompleted = project.status === 'Completed';
 
   return (
     <div className="space-y-4">
@@ -51,7 +62,7 @@ const ProjectHeader = ({
           {project.status && <StatusBadge status={project.status} />}
         </div>
         {canEdit && (
-          <div className="lg:col-span-1 flex justify-start lg:justify-end">
+          <div className="lg:col-span-1 flex justify-start lg:justify-end items-center gap-2">
             {isEditing ? (
               <div className="flex gap-2">
                 <Button onClick={onSaveChanges} disabled={isSaving}>
@@ -63,10 +74,33 @@ const ProjectHeader = ({
                 </Button>
               </div>
             ) : (
-              <Button variant="outline" onClick={onEditToggle}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit Project
-              </Button>
+              <>
+                <Button
+                  variant={isCompleted ? "default" : "outline"}
+                  onClick={onToggleComplete}
+                  className={cn(isCompleted && "bg-green-600 hover:bg-green-700")}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  {isCompleted ? "Completed" : "Mark Complete"}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={onEditToggle}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Project
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={onDeleteProject} className="text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Project
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             )}
           </div>
         )}
