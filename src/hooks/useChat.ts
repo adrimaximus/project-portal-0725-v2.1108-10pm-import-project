@@ -133,17 +133,22 @@ export const useChat = () => {
   useEffect(() => {
     if (!currentUser) return;
 
-    const channel = supabase.channel('chat-room', { config: { broadcast: { self: false } } });
+    const channel = supabase.channel('chat-room');
 
     channel
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
         const newMessage = payload.new;
+        
+        if (newMessage.sender_id === currentUser?.id) {
+            return;
+        }
+
         const conversationId = newMessage.conversation_id;
 
         setConversations(prev => {
           const convoIndex = prev.findIndex(c => c.id === conversationId);
           if (convoIndex === -1) {
-            fetchConversations(); // New conversation, refetch list
+            fetchConversations();
             return prev;
           }
 
@@ -172,8 +177,51 @@ export const useChat = () => {
           return newConversations;
         });
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
-        fetchConversations();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, async () => {
+        const { data, error } = await supabase.rpc('get_user_conversations');
+        if (error) {
+            console.error("Failed to refresh conversations on update:", error);
+            return;
+        }
+        if (data) {
+            const mappedConversations: Conversation[] = data.map((c: any) => ({
+                id: c.conversation_id,
+                userName: c.is_group ? c.group_name : c.other_user_name,
+                userAvatar: c.is_group ? c.avatar_url : c.other_user_avatar,
+                lastMessage: c.last_message_content || "No messages yet.",
+                lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
+                unreadCount: 0,
+                messages: [],
+                isGroup: c.is_group,
+                members: (c.participants || []).map((p: any) => ({
+                  id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
+                })),
+                created_by: c.created_by,
+            }));
+
+            setConversations(prev => {
+                const newConvosMap = new Map(mappedConversations.map(c => [c.id, c]));
+                
+                const updatedAndExisting = prev
+                    .map(oldConvo => {
+                        const newConvoData = newConvosMap.get(oldConvo.id);
+                        if (newConvoData) {
+                            newConvosMap.delete(oldConvo.id);
+                            return { ...newConvoData, messages: oldConvo.messages || [] };
+                        }
+                        return null;
+                    })
+                    .filter((c): c is Conversation => c !== null);
+
+                const brandNewConvos = Array.from(newConvosMap.values());
+                
+                const final = [...updatedAndExisting, ...brandNewConvos];
+                
+                final.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
+                
+                return final;
+            });
+        }
       })
       .on('broadcast', { event: 'typing' }, (payload: any) => {
         if (payload?.userId && payload.userId !== currentUser?.id && payload.conversationId === selectedConversationId) {
