@@ -65,129 +65,136 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
       <CardHeader>
         <CardTitle>Project Details</CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
-        <div className="flex items-start gap-4">
-          <ListTodo className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-          <div className="w-full">
-            <p className="font-medium">Status</p>
-            {isEditing ? (
-              <Select
-                value={project.status}
-                onValueChange={(value) => onFieldChange('status', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROJECT_STATUS_OPTIONS.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="pt-1">
-                <StatusBadge status={project.status} />
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
+          {/* Left Column */}
+          <div className="space-y-6">
+            <div className="flex items-start gap-4">
+              <Calendar className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div className="w-full">
+                <p className="font-medium">Timeline</p>
+                {isEditing ? (
+                  <DateRangePicker
+                    date={{
+                      from: project.start_date ? new Date(project.start_date) : undefined,
+                      to: project.due_date ? new Date(project.due_date) : undefined,
+                    }}
+                    onDateChange={handleDateChange}
+                  />
+                ) : (
+                  <p className="text-muted-foreground">
+                    {renderDateRange()}
+                  </p>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-start gap-4">
-          <CreditCard className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-          <div className="w-full">
-            <p className="font-medium">Payment Status</p>
-            {isEditing ? (
-              <Select
-                value={project.payment_status}
-                onValueChange={(value) => onFieldChange('payment_status', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a payment status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_STATUS_OPTIONS.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="pt-1">
-                <Badge variant="outline" className={cn("font-normal", paymentBadgeColor)}>
-                  {project.payment_status}
-                </Badge>
+            </div>
+            <div className="flex items-start gap-4">
+              <Wallet className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div className="w-full">
+                <p className="font-medium">Budget</p>
+                {isEditing ? (
+                  <CurrencyInput
+                    value={project.budget || 0}
+                    onChange={handleBudgetChange}
+                    placeholder="Enter budget"
+                    className="w-full"
+                  />
+                ) : (
+                  <p className="text-muted-foreground">
+                    {formatCurrency(project.budget || 0)}
+                  </p>
+                )}
               </div>
-            )}
+            </div>
+            <div className="flex items-start gap-4">
+              <MapPin className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div className="w-full">
+                <p className="font-medium">Venue</p>
+                {isEditing ? (
+                  <Input
+                    value={project.venue || ''}
+                    onChange={(e) => onFieldChange('venue', e.target.value)}
+                    placeholder="Enter project venue"
+                  />
+                ) : (
+                  <p className="text-muted-foreground">
+                    {project.venue || 'No venue specified'}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <Briefcase className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div className="w-full">
+                <p className="font-medium">Services</p>
+                <div className="mt-1">
+                  <ProjectServices
+                    selectedServices={project.services || []}
+                    isEditing={isEditing}
+                    onServicesChange={(services) => onFieldChange('services', services)}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-start gap-4 md:col-span-2">
-          <Calendar className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-          <div className="w-full">
-            <p className="font-medium">Timeline</p>
-            {isEditing ? (
-              <DateRangePicker
-                date={{
-                  from: project.start_date ? new Date(project.start_date) : undefined,
-                  to: project.due_date ? new Date(project.due_date) : undefined,
-                }}
-                onDateChange={handleDateChange}
-              />
-            ) : (
-              <p className="text-muted-foreground">
-                {renderDateRange()}
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-start gap-4">
-          <Wallet className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-          <div className="w-full">
-            <p className="font-medium">Budget</p>
-            {isEditing ? (
-              <CurrencyInput
-                value={project.budget || 0}
-                onChange={handleBudgetChange}
-                placeholder="Enter budget"
-                className="w-full"
-              />
-            ) : (
-              <p className="text-muted-foreground">
-                {formatCurrency(project.budget || 0)}
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-start gap-4">
-          <MapPin className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-          <div className="w-full">
-            <p className="font-medium">Venue</p>
-            {isEditing ? (
-              <Input
-                value={project.venue || ''}
-                onChange={(e) => onFieldChange('venue', e.target.value)}
-                placeholder="Enter project venue"
-              />
-            ) : (
-              <p className="text-muted-foreground">
-                {project.venue || 'No venue specified'}
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-start gap-4 md:col-span-2">
-          <Briefcase className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-          <div className="w-full">
-            <p className="font-medium">Services</p>
-            <div className="mt-1">
-              <ProjectServices
-                selectedServices={project.services || []}
-                isEditing={isEditing}
-                onServicesChange={(services) => onFieldChange('services', services)}
-              />
+          {/* Right Column */}
+          <div className="space-y-6">
+            <div className="flex items-start gap-4">
+              <ListTodo className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div className="w-full">
+                <p className="font-medium">Status</p>
+                {isEditing ? (
+                  <Select
+                    value={project.status}
+                    onValueChange={(value) => onFieldChange('status', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROJECT_STATUS_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="pt-1">
+                    <StatusBadge status={project.status} />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <CreditCard className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div className="w-full">
+                <p className="font-medium">Payment Status</p>
+                {isEditing ? (
+                  <Select
+                    value={project.payment_status}
+                    onValueChange={(value) => onFieldChange('payment_status', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a payment status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_STATUS_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="pt-1">
+                    <Badge variant="outline" className={cn("font-normal", paymentBadgeColor)}>
+                      {project.payment_status}
+                    </Badge>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
