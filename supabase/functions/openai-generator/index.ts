@@ -167,21 +167,22 @@ async function handleUpdateProjectAction({ projectName, updates, projects, users
     return `Done! I've updated the project "${project.name}": ${changes}.`;
 }
 
-async function handleBulkUpdateProjectsAction({ filters, updates, projects, userSupabase }) {
+async function handleBulkUpdateProjectsAction({ filters, updates, projects, userSupabase, supabaseAdmin }) {
     if (!filters || !updates) return "For a bulk update, I need both filters and the updates to apply.";
 
+    // First, find the projects the user is allowed to see
     let query = userSupabase.from('projects').select('id');
     for (const [key, value] of Object.entries(filters)) {
         query = value === null ? query.is(key, null) : query.eq(key, value);
     }
-    query = query.in('id', projects.map(p => p.id));
-
+    
     const { data: projectsToUpdate, error: filterError } = await query;
     if (filterError) return `I couldn't find projects to update: ${filterError.message}`;
     if (!projectsToUpdate || projectsToUpdate.length === 0) return "I couldn't find any projects matching your criteria.";
 
+    // Now, perform the update using the admin client to bypass RLS
     const projectIds = projectsToUpdate.map(p => p.id);
-    const { error: updateError } = await userSupabase.from('projects').update(updates).in('id', projectIds);
+    const { error: updateError } = await supabaseAdmin.from('projects').update(updates).in('id', projectIds);
     if (updateError) return `I tried to update the projects, but failed: ${updateError.message}`;
     
     return `Done! I've updated ${projectIds.length} project(s).`;
@@ -295,7 +296,7 @@ const actionHandlers = {
 
 // --- FEATURE HANDLERS ---
 
-async function handleAnalyzeProjects({ payload, openai, user, userSupabase }) {
+async function handleAnalyzeProjects({ payload, openai, user, userSupabase, supabaseAdmin }) {
   const { request, conversationHistory } = payload;
   if (!request) throw new Error("An analysis request type is required.");
 
@@ -321,7 +322,7 @@ async function handleAnalyzeProjects({ payload, openai, user, userSupabase }) {
     const actionData = JSON.parse(jsonMatch[1] || jsonMatch[2]);
     const handler = actionHandlers[actionData.action];
     if (handler) {
-      const result = await handler({ ...actionData, ...fullContext, userSupabase, user });
+      const result = await handler({ ...actionData, ...fullContext, userSupabase, user, supabaseAdmin });
       return { result };
     }
     return { result: "I understood the action, but I don't know how to perform it yet." };
@@ -396,17 +397,15 @@ serve(async (req) => {
 
     const userSupabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await userSupabase.auth.getUser(jwt);
-
+    const { data: { user }, error: userError } = await userSupabase.auth.getUser();
     if (userError || !user) {
       throw new Error(`User not authenticated: ${userError?.message || 'Auth session missing!'}`);
     }
     
-    await userSupabase.auth.setSession({ access_token: jwt, refresh_token: '' });
-
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -423,7 +422,7 @@ serve(async (req) => {
       throw new Error(`Unknown feature: ${feature}`);
     }
     
-    const data = await handler({ payload, openai, user, userSupabase });
+    const data = await handler({ payload, openai, user, userSupabase, supabaseAdmin });
 
     return new Response(JSON.stringify({ ok: true, ...data }), { headers, status: 200 });
 
