@@ -388,26 +388,25 @@ serve(async (req) => {
   const headers = { 'Content-Type': 'application/json', ...corsHeaders };
 
   try {
-    // 1. Authenticate user explicitly
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error("Missing Authorization header.");
+    if (!authHeader) {
+      throw new Error("Missing Authorization header.");
+    }
+    const jwt = authHeader.replace('Bearer ', '');
 
     const userSupabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    const jwt = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await userSupabase.auth.getUser(jwt);
 
     if (userError || !user) {
       throw new Error(`User not authenticated: ${userError?.message || 'Auth session missing!'}`);
     }
     
-    // Set the session for subsequent RLS queries
-    userSupabase.auth.setSession({ access_token: jwt, refresh_token: '' });
+    await userSupabase.auth.setSession({ access_token: jwt, refresh_token: '' });
 
-    // 2. Get OpenAI key using an admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -418,7 +417,6 @@ serve(async (req) => {
     }
     const openai = new OpenAI({ apiKey: config.value });
 
-    // 3. Route to the correct feature handler
     const { feature, payload } = await req.json();
     const handler = featureHandlers[feature];
     if (!handler) {
@@ -433,7 +431,7 @@ serve(async (req) => {
     console.error("Edge function error:", error);
     return new Response(JSON.stringify({ ok: false, error: error.message }), {
       headers,
-      status: 200, // Return 200 so client can parse the error message
+      status: 200,
     });
   }
 });

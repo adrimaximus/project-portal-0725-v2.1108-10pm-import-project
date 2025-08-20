@@ -13,14 +13,17 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) throw new Error("Missing Authorization header.");
+    const jwt = authHeader.replace('Bearer ', '');
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("User not authenticated.");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
+    if (userError || !user) throw new Error(`User not authenticated: ${userError?.message || 'Auth session missing!'}`);
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
