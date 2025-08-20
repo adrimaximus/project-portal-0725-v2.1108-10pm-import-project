@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Project, User } from '@/types';
+import { Project, User, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import StatCard from './StatCard';
 import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -152,14 +152,20 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
           icon={<ListChecks className="h-4 w-4 text-muted-foreground" />}
           value={
             <div className="space-y-1 text-sm pt-2">
-              {Object.entries(viewMode === 'quantity' ? stats.projectStatusCounts : stats.projectStatusValues).map(([status, val]) => (
-                <div key={status} className="flex justify-between">
-                  <span>{status}</span>
-                  <span className="font-semibold">
-                    {viewMode === 'quantity' ? val : `Rp ${val.toLocaleString('id-ID')}`}
-                  </span>
-                </div>
-              ))}
+              {PROJECT_STATUS_OPTIONS.map(option => {
+                const count = stats.projectStatusCounts[option.value] || 0;
+                const value = stats.projectStatusValues[option.value] || 0;
+                const metric = viewMode === 'quantity' ? count : value;
+                if (metric === 0) return null;
+                return (
+                  <div key={option.value} className="flex justify-between">
+                    <span>{option.label}</span>
+                    <span className="font-semibold">
+                      {viewMode === 'quantity' ? count : `Rp ${value.toLocaleString('id-ID')}`}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           }
         />
@@ -168,14 +174,20 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
           icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
           value={
             <div className="space-y-1 text-sm pt-2">
-              {Object.entries(viewMode === 'quantity' ? stats.paymentStatusCounts : stats.paymentStatusValues).map(([status, val]) => (
-                <div key={status} className="flex justify-between">
-                  <span>{status}</span>
-                  <span className="font-semibold">
-                    {viewMode === 'quantity' ? val : `Rp ${val.toLocaleString('id-ID')}`}
-                  </span>
-                </div>
-              ))}
+              {PAYMENT_STATUS_OPTIONS.map(option => {
+                const count = stats.paymentStatusCounts[option.value] || 0;
+                const value = stats.paymentStatusValues[option.value] || 0;
+                const metric = viewMode === 'quantity' ? count : value;
+                if (metric === 0) return null;
+                return (
+                  <div key={option.value} className="flex justify-between">
+                    <span>{option.label}</span>
+                    <span className="font-semibold">
+                      {viewMode === 'quantity' ? count : `Rp ${value.toLocaleString('id-ID')}`}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           }
         />
