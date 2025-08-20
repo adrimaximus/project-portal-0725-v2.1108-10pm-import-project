@@ -1,7 +1,7 @@
 import { Project } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, MessageSquare } from 'lucide-react';
+import { Calendar, MessageSquare, GripVertical } from 'lucide-react';
 import { formatInJakarta, getColorForTag } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useSortable } from '@dnd-kit/sortable';
@@ -33,55 +33,70 @@ const KanbanCard = ({ project }: KanbanCardProps) => {
   };
 
   return (
-    <Card 
-      ref={setNodeRef} 
-      style={style} 
-      {...attributes} 
-      {...listeners} 
-      onClick={handleClick}
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
       className={cn(
-        "mb-4 cursor-grab active:cursor-grabbing",
-        isDragging && "opacity-50 shadow-lg"
+        "mb-4",
+        isDragging && "opacity-50"
       )}
     >
-      <CardContent className="p-3 space-y-2">
-        <p className="font-semibold text-sm leading-snug">{project.name}</p>
-        <div className="flex items-center text-xs text-muted-foreground space-x-4">
-          {project.due_date && (
-            <div className="flex items-center">
-              <Calendar className="h-3 w-3 mr-1.5" />
-              <span>{formatInJakarta(project.due_date, 'd MMM')}</span>
+      <Card
+        onClick={handleClick}
+        className={cn(
+          "cursor-pointer",
+          isDragging && "shadow-lg"
+        )}
+      >
+        <CardContent className="p-3 flex items-start gap-2">
+          <div className="flex-1 space-y-2">
+            <p className="font-semibold text-sm leading-snug">{project.name}</p>
+            <div className="flex items-center text-xs text-muted-foreground space-x-4">
+              {project.due_date && (
+                <div className="flex items-center">
+                  <Calendar className="h-3 w-3 mr-1.5" />
+                  <span>{formatInJakarta(project.due_date, 'd MMM')}</span>
+                </div>
+              )}
+              {project.comments && (
+                <div className="flex items-center">
+                  <MessageSquare className="h-3 w-3 mr-1.5" />
+                  <span>{project.comments.length}</span>
+                </div>
+              )}
             </div>
-          )}
-          {project.comments && (
-            <div className="flex items-center">
-              <MessageSquare className="h-3 w-3 mr-1.5" />
-              <span>{project.comments.length}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex -space-x-2">
+                {project.assignedTo.slice(0, 3).map(user => (
+                  <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
+                    <AvatarImage src={user.avatar} />
+                    <AvatarFallback>{user.initials}</AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
+              <div className="flex gap-1 flex-wrap justify-end max-w-[50%]">
+                {project.category && (
+                  <Badge
+                    variant="outline"
+                    className={cn("text-xs", getColorForTag(project.category).bg, getColorForTag(project.category).text, getColorForTag(project.category).border)}
+                  >
+                    {project.category}
+                  </Badge>
+                )}
+              </div>
             </div>
-          )}
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex -space-x-2">
-            {project.assignedTo.slice(0, 3).map(user => (
-              <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
-                <AvatarImage src={user.avatar} />
-                <AvatarFallback>{user.initials}</AvatarFallback>
-              </Avatar>
-            ))}
           </div>
-          <div className="flex gap-1 flex-wrap justify-end max-w-[50%]">
-            {project.category && (
-              <Badge 
-                variant="outline" 
-                className={cn("text-xs", getColorForTag(project.category).bg, getColorForTag(project.category).text, getColorForTag(project.category).border)}
-              >
-                {project.category}
-              </Badge>
-            )}
+          <div
+            {...listeners}
+            className="p-1 cursor-grab active:cursor-grabbing touch-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-5 w-5 text-muted-foreground" />
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
