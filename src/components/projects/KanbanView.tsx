@@ -210,22 +210,18 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
     }
   };
 
-  const allProjectIds = useMemo(() => projects.map(p => p.id), [projects]);
-
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
-      <SortableContext items={allProjectIds}>
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {PROJECT_STATUS_OPTIONS.map(statusOption => (
-            <KanbanColumn
-              key={statusOption.value}
-              status={statusOption}
-              projects={projectGroups[statusOption.value as ProjectStatus]}
-              dragHappened={dragHappened}
-            />
-          ))}
-        </div>
-      </SortableContext>
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {PROJECT_STATUS_OPTIONS.map(statusOption => (
+          <KanbanColumn
+            key={statusOption.value}
+            status={statusOption}
+            projects={projectGroups[statusOption.value as ProjectStatus]}
+            dragHappened={dragHappened}
+          />
+        ))}
+      </div>
       <DragOverlay dropAnimation={dropAnimation}>
         {activeProject ? (
           <Card className="shadow-xl">
