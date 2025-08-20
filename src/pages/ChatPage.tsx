@@ -14,7 +14,6 @@ const ChatPage = () => {
     setSearchTerm,
     handleConversationSelect,
     handleSendMessage,
-    handleForwardMessage,
     handleClearChat,
     handleStartNewChat,
     handleStartNewGroupChat,
@@ -44,9 +43,7 @@ const ChatPage = () => {
           ) : (
             <ChatWindow
               selectedConversation={selectedConversation}
-              allConversations={conversations}
               onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
-              onForwardMessage={handleForwardMessage}
               onClearChat={handleClearChat}
               onLeaveGroup={handleLeaveGroup}
               onBack={() => handleConversationSelect(null)}
@@ -75,9 +72,7 @@ const ChatPage = () => {
         />
         <ChatWindow
           selectedConversation={selectedConversation}
-          allConversations={conversations}
           onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
-          onForwardMessage={handleForwardMessage}
           onClearChat={handleClearChat}
           onLeaveGroup={handleLeaveGroup}
           typing={isSomeoneTyping}
