@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Project } from "@/types";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, Table as TableIcon, CalendarPlus, RefreshCw } from "lucide-react";
+import { List, Table as TableIcon, CalendarPlus, RefreshCw, LayoutGrid } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import {
@@ -24,6 +23,7 @@ import { useCreateProject } from "@/hooks/useCreateProject";
 import TableView from "./projects/TableView";
 import ListView from "./projects/ListView";
 import CalendarImportView from "./projects/CalendarImportView";
+import KanbanView from "./projects/KanbanView";
 
 interface CalendarEvent {
     id: string;
@@ -35,7 +35,7 @@ interface CalendarEvent {
     location?: string;
 }
 
-type ViewMode = 'table' | 'list' | 'calendar';
+type ViewMode = 'table' | 'list' | 'calendar' | 'kanban';
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -276,6 +276,8 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
         return <ListView projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
       case 'calendar':
         return <CalendarImportView events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
+      case 'kanban':
+        return <KanbanView projects={filteredProjects} />;
       default:
         return null;
     }
@@ -331,6 +333,9 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
               </ToggleGroupItem>
               <ToggleGroupItem value="table" aria-label="Table view">
                 <TableIcon className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="kanban" aria-label="Kanban view">
+                <LayoutGrid className="h-4 w-4" />
               </ToggleGroupItem>
               <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
                 <CalendarPlus className="h-4 w-4" />
