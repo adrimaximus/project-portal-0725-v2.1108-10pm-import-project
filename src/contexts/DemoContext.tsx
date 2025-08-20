@@ -59,12 +59,16 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchDemoMode]);
 
   const setDemoMode = async (enabled: boolean) => {
+    const previousDemoMode = isDemoMode;
+    setIsDemoMode(enabled); // Optimistic update
+
     const { error } = await supabase
       .from('app_config')
       .upsert({ key: 'DEMO_MODE', value: String(enabled) }, { onConflict: 'key' });
 
     if (error) {
       toast.error("Failed to update demo mode setting.");
+      setIsDemoMode(previousDemoMode); // Revert on error
       throw error;
     }
   };
