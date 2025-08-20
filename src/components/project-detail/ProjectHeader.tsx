@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -40,6 +41,7 @@ const ProjectHeader = ({
   const navigate = useNavigate();
   const statusStyles = getStatusStyles(project.status);
   const isCompleted = project.status === 'Completed';
+  const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
   return (
     <div className="space-y-4">
@@ -75,14 +77,28 @@ const ProjectHeader = ({
               </div>
             ) : (
               <>
-                <Button
-                  variant={isCompleted ? "default" : "outline"}
-                  onClick={onToggleComplete}
-                  className={cn(isCompleted && "bg-green-600 hover:bg-green-700")}
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  {isCompleted ? "Completed" : "Mark Complete"}
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="inline-block">
+                        <Button
+                          variant={isCompleted ? "default" : "outline"}
+                          onClick={onToggleComplete}
+                          disabled={!isCompleted && hasOpenTasks}
+                          className={cn(isCompleted && "bg-green-600 hover:bg-green-700")}
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          {isCompleted ? "Completed" : "Mark Complete"}
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    {hasOpenTasks && !isCompleted && (
+                      <TooltipContent>
+                        <p>Complete all tasks before marking the project as complete.</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon">

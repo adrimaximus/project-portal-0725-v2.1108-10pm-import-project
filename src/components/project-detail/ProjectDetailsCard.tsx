@@ -59,6 +59,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   };
 
   const paymentBadgeColor = paymentStatusConfig[project.payment_status]?.color || "bg-gray-100 text-gray-800";
+  const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
   return (
     <Card>
@@ -153,7 +154,11 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                   </SelectTrigger>
                   <SelectContent>
                     {PROJECT_STATUS_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
+                      <SelectItem 
+                        key={option.value} 
+                        value={option.value}
+                        disabled={option.value === 'Completed' && hasOpenTasks}
+                      >
                         {option.label}
                       </SelectItem>
                     ))}
