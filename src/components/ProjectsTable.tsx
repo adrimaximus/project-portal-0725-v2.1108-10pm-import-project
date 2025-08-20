@@ -54,6 +54,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const createProjectMutation = useCreateProject();
 
   const handleViewChange = (newView: ViewMode | null) => {
@@ -297,7 +298,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
       case 'list':
         return <ListView projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
       case 'kanban':
-        return <KanbanView projects={filteredProjects} />;
+        return <KanbanView projects={filteredProjects} groupBy={kanbanGroupBy} />;
       case 'calendar':
         return <CalendarImportView events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
       default:
@@ -364,22 +365,29 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
           </div>
         </CardHeader>
         <CardContent>
-          {(view === 'table' || view === 'list' || view === 'calendar' || view === 'kanban') && (
-            <div className="py-4 flex flex-col sm:flex-row gap-4 items-center">
-              <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
-              {view === 'kanban' && (
-                <div className="relative w-full sm:w-auto sm:flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search projects..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              )}
+          <div className="py-4 flex flex-col sm:flex-row gap-4 items-center">
+            <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+            {view === 'kanban' && (
+              <ToggleGroup 
+                  type="single" 
+                  value={kanbanGroupBy} 
+                  onValueChange={(value) => { if (value) setKanbanGroupBy(value as 'status' | 'payment_status')}}
+                  className="h-10"
+              >
+                  <ToggleGroupItem value="status" className="text-sm px-3">By Project Status</ToggleGroupItem>
+                  <ToggleGroupItem value="payment_status" className="text-sm px-3">By Payment Status</ToggleGroupItem>
+              </ToggleGroup>
+            )}
+            <div className="relative w-full sm:w-auto sm:flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search projects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
             </div>
-          )}
+          </div>
           {renderContent()}
         </CardContent>
       </Card>
