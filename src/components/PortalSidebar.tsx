@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/tooltip";
 import OnlineCollaborators from "./OnlineCollaborators";
 import { useAuth } from "@/contexts/AuthContext";
-import { dummyNotifications } from "@/data/notifications";
 import { useFeatures } from "@/contexts/FeaturesContext";
 import {
   DndContext,
@@ -32,6 +31,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useNotifications } from "@/hooks/useNotifications";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -118,11 +118,11 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { user, refreshUser } = useAuth();
   const location = useLocation();
   const { isFeatureEnabled } = useFeatures();
+  const { unreadCount } = useNotifications();
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [customItemsTrigger, setCustomItemsTrigger] = useState(0);
 
   const totalUnreadChatCount = 0;
-  const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 
   useEffect(() => {
     if (!user) return;
@@ -136,7 +136,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       { id: "goals", href: "/goals", label: "Goals", icon: Target },
       { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
       { id: "settings", href: "/settings", label: "Settings", icon: Settings, allowedRoles: ['admin', 'master admin'] },
-      { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined },
+      { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, badge: unreadCount > 0 ? unreadCount : undefined },
     ];
 
     const visibleDefaultItems = defaultItemsList.filter(item => {
@@ -176,7 +176,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     
     setNavItems([...ordered, ...newItems]);
 
-  }, [user, isFeatureEnabled, customItemsTrigger, totalUnreadChatCount, unreadNotificationCount]);
+  }, [user, isFeatureEnabled, customItemsTrigger, totalUnreadChatCount, unreadCount]);
 
   useEffect(() => {
     const customNavItemsKey = user ? `customNavItems_${user.id}` : null;

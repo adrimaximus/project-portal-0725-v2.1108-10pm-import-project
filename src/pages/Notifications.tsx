@@ -1,27 +1,50 @@
-import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { dummyNotifications, notificationIcons, Notification } from "@/data/notifications";
+import { notificationIcons, Notification } from "@/data/notifications";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from "react-router-dom";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, Loader2 } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const NotificationsPage = () => {
-  const [notifications, setNotifications] = useState<Notification[]>(dummyNotifications);
+  const { notifications, isLoading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications(
-      notifications.map(n => (n.id === id ? { ...n, read: true } : n))
+  if (isLoading) {
+    return (
+      <PortalLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Bell className="h-8 w-8" />
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
+                <Skeleton className="h-5 w-48 mt-1" />
+              </div>
+            </div>
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-start gap-4 p-4">
+                    <Skeleton className="h-6 w-6 rounded-full mt-1" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-3 w-1/4" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </PortalLayout>
     );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-  };
+  }
 
   return (
     <PortalLayout>
@@ -37,7 +60,7 @@ const NotificationsPage = () => {
             </div>
           </div>
           {unreadCount > 0 && (
-            <Button onClick={markAllAsRead} variant="outline">
+            <Button onClick={() => markAllAsRead()} variant="outline">
               <CheckCheck className="mr-2 h-4 w-4" />
               Mark all as read
             </Button>
@@ -47,7 +70,7 @@ const NotificationsPage = () => {
           <CardContent className="p-0">
             <div className="divide-y">
               {notifications.map((notification) => {
-                const Icon = notificationIcons[notification.type];
+                const Icon = notificationIcons[notification.type as keyof typeof notificationIcons] || notificationIcons.system;
                 return (
                   <div
                     key={notification.id}
@@ -63,7 +86,7 @@ const NotificationsPage = () => {
                       )}
                     </div>
                     <div className="flex-1">
-                      <Link to={notification.link || "#"} className="hover:underline">
+                      <Link to={notification.link || "#"} className="hover:underline" onClick={() => !notification.read && markAsRead(notification.id)}>
                         <p className="font-semibold">{notification.title}</p>
                       </Link>
                       <p className="text-sm text-muted-foreground">{notification.description}</p>
