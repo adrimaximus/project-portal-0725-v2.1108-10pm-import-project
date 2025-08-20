@@ -56,6 +56,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   const [searchTerm, setSearchTerm] = useState("");
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const createProjectMutation = useCreateProject();
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: 'start_date', direction: 'descending' });
 
   const handleViewChange = (newView: ViewMode | null) => {
     if (newView) {
@@ -190,6 +191,44 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
     return filtered;
   }, [projects, dateRange, searchTerm]);
 
+  const sortedProjects = useMemo(() => {
+    let sortableItems = [...filteredProjects];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key!];
+        const bValue = b[sortConfig.key!];
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+        } else if (sortConfig.key === 'start_date' || sortConfig.key === 'due_date') {
+            const dateA = new Date(aValue as string).getTime();
+            const dateB = new Date(bValue as string).getTime();
+            if (dateA < dateB) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (dateA > dateB) return sortConfig.direction === 'ascending' ? 1 : -1;
+        } else {
+            const stringA = String(aValue).toLowerCase();
+            const stringB = String(bValue).toLowerCase();
+            if (stringA < stringB) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (stringA > stringB) return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredProjects, sortConfig]);
+
+  const requestSort = (key: keyof Project) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
   const filteredCalendarEvents = useMemo(() => {
     if (!dateRange || !dateRange.from) {
       return calendarEvents;
@@ -294,9 +333,9 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   const renderContent = () => {
     switch (view) {
       case 'table':
-        return <TableView projects={filteredProjects} isLoading={isLoading} onDeleteProject={handleDeleteProject} />;
+        return <TableView projects={sortedProjects} isLoading={isLoading} onDeleteProject={handleDeleteProject} sortConfig={sortConfig} requestSort={requestSort} />;
       case 'list':
-        return <ListView projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
+        return <ListView projects={sortedProjects} onDeleteProject={handleDeleteProject} />;
       case 'kanban':
         return <KanbanView projects={filteredProjects} groupBy={kanbanGroupBy} />;
       case 'calendar':
