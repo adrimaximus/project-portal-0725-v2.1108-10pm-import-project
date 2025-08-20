@@ -34,8 +34,32 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
         <CardContent className="p-3">
           <div className="space-y-2 block">
             <h4 className="font-semibold text-sm leading-snug">{project.name}</h4>
-            <p className="text-xs text-muted-foreground">{project.category}</p>
-            <div className="flex justify-between items-center">
+            
+            {project.tags && project.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {project.tags.slice(0, 2).map(tag => (
+                  <Badge
+                    key={tag.id}
+                    variant="outline"
+                    className="text-xs font-normal"
+                    style={{
+                      backgroundColor: `${tag.color}20`,
+                      borderColor: tag.color,
+                      color: tag.color,
+                    }}
+                  >
+                    {tag.name}
+                  </Badge>
+                ))}
+                {project.tags.length > 2 && (
+                  <Badge variant="outline" className="text-xs font-normal">
+                    +{project.tags.length - 2}
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-between items-center pt-1">
               <div className="flex -space-x-2">
                 {project.assignedTo.slice(0, 3).map(user => (
                   <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
@@ -267,8 +291,30 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
             <CardContent className="p-3">
               <div className="space-y-2 block">
                 <h4 className="font-semibold text-sm leading-snug">{activeProject.name}</h4>
-                <p className="text-xs text-muted-foreground">{activeProject.category}</p>
-                <div className="flex justify-between items-center">
+                {activeProject.tags && activeProject.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {activeProject.tags.slice(0, 2).map(tag => (
+                      <Badge
+                        key={tag.id}
+                        variant="outline"
+                        className="text-xs font-normal"
+                        style={{
+                          backgroundColor: `${tag.color}20`,
+                          borderColor: tag.color,
+                          color: tag.color,
+                        }}
+                      >
+                        {tag.name}
+                      </Badge>
+                    ))}
+                    {activeProject.tags.length > 2 && (
+                      <Badge variant="outline" className="text-xs font-normal">
+                        +{activeProject.tags.length - 2}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-1">
                   <div className="flex -space-x-2">
                     {activeProject.assignedTo.slice(0, 3).map(user => (
                       <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
