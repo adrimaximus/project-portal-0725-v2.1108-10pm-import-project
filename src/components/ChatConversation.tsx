@@ -204,30 +204,32 @@ const ChatConversation = ({ messages, members, onForwardMessage, onSetReply, onD
                   </div>
                 )}
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "absolute top-1 right-1 h-6 w-6 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0",
-                        isCurrentUser ? "bg-black/20 hover:bg-black/30" : "bg-white/20 hover:bg-white/30"
-                      )}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align={isCurrentUser ? "end" : "start"}>
-                    <DropdownMenuItem onSelect={() => onSetReply(message)}><Reply className="mr-2 h-4 w-4" /><span>Reply</span></DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onForwardMessage(message)}><Forward className="mr-2 h-4 w-4" /><span>Forward</span></DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onEnterSelectionMode(message.id)}><CheckSquare className="mr-2 h-4 w-4" /><span>Select Messages</span></DropdownMenuItem>
-                    <DropdownMenuItem disabled><Star className="mr-2 h-4 w-4" /><span>Star</span></DropdownMenuItem>
-                    <DropdownMenuItem disabled><Pin className="mr-2 h-4 w-4" /><span>Pin</span></DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {hasText && <DropdownMenuItem onSelect={() => handleCopy(message.text!)}><Copy className="mr-2 h-4 w-4" /><span>Copy</span></DropdownMenuItem>}
-                    {isCurrentUser && <DropdownMenuItem className="text-red-500" onSelect={() => onDeleteMessage(message.id)}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {!selectionMode && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          "absolute top-1 right-1 h-6 w-6 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0",
+                          isCurrentUser ? "bg-black/20 hover:bg-black/30" : "bg-white/20 hover:bg-white/30"
+                        )}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align={isCurrentUser ? "end" : "start"}>
+                      <DropdownMenuItem onSelect={() => onSetReply(message)}><Reply className="mr-2 h-4 w-4" /><span>Reply</span></DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => onForwardMessage(message)}><Forward className="mr-2 h-4 w-4" /><span>Forward</span></DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => onEnterSelectionMode(message.id)}><CheckSquare className="mr-2 h-4 w-4" /><span>Select Messages</span></DropdownMenuItem>
+                      <DropdownMenuItem disabled><Star className="mr-2 h-4 w-4" /><span>Star</span></DropdownMenuItem>
+                      <DropdownMenuItem disabled><Pin className="mr-2 h-4 w-4" /><span>Pin</span></DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {hasText && <DropdownMenuItem onSelect={() => handleCopy(message.text!)}><Copy className="mr-2 h-4 w-4" /><span>Copy</span></DropdownMenuItem>}
+                      {isCurrentUser && <DropdownMenuItem className="text-red-500" onSelect={() => onDeleteMessage(message.id)}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           </div>
