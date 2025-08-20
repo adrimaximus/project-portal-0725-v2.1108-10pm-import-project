@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatInJakarta, cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
+import type { DropAnimation } from '@dnd-kit/core';
 
 const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened: React.MutableRefObject<boolean> }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
@@ -18,7 +19,7 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
   
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: transition || 'transform 0.25s ease-in-out',
+    transition: null, // Menghapus animasi untuk perpindahan instan
   };
 
   const handleClick = () => {
