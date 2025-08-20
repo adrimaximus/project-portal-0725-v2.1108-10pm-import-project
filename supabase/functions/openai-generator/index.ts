@@ -97,10 +97,10 @@ CONTEXT:
 
 // --- ACTION HANDLERS ---
 
-async function handleCreateProjectAction({ details, supabaseAdmin, user, users }) {
+async function handleCreateProjectAction({ details, userSupabase, user, users }) {
   if (!details || !details.name) return "To create a project, I need at least a name.";
 
-  const { data: newProject, error } = await supabaseAdmin.from('projects').insert({
+  const { data: newProject, error } = await userSupabase.from('projects').insert({
     name: details.name, description: details.description, start_date: details.start_date,
     due_date: details.due_date, venue: details.venue, budget: details.budget,
     created_by: user.id, status: 'Requested',
@@ -110,13 +110,13 @@ async function handleCreateProjectAction({ details, supabaseAdmin, user, users }
 
   let followUp = [];
   if (details.services?.length > 0) {
-    const { error } = await supabaseAdmin.from('project_services').insert(details.services.map(s => ({ project_id: newProject.id, service_title: s })));
+    const { error } = await userSupabase.from('project_services').insert(details.services.map(s => ({ project_id: newProject.id, service_title: s })));
     if (error) followUp.push("I couldn't add the services."); else followUp.push(`I've added ${details.services.length} services.`);
   }
   if (details.members?.length > 0) {
     const memberIds = users.filter(u => details.members.some(name => u.name.toLowerCase() === name.toLowerCase())).map(u => u.id);
     if (memberIds.length > 0) {
-      const { error } = await supabaseAdmin.from('project_members').insert(memberIds.map(id => ({ project_id: newProject.id, user_id: id, role: 'member' })));
+      const { error } = await userSupabase.from('project_members').insert(memberIds.map(id => ({ project_id: newProject.id, user_id: id, role: 'member' })));
       if (error) followUp.push("I couldn't add the team members."); else followUp.push(`I've assigned ${details.members.join(', ')}.`);
     } else {
       followUp.push(`I couldn't find the users ${details.members.join(', ')}.`);
@@ -125,7 +125,7 @@ async function handleCreateProjectAction({ details, supabaseAdmin, user, users }
   return `Done! I've created the project "${newProject.name}". ${followUp.join(' ')}`.trim();
 }
 
-async function handleUpdateProjectAction({ projectName, updates, projects, users, supabaseAdmin }) {
+async function handleUpdateProjectAction({ projectName, updates, projects, users, userSupabase }) {
     const project = projects.find(p => p.name.toLowerCase() === projectName.toLowerCase());
     if (!project) return `I couldn't find a project named "${projectName}".`;
 
@@ -159,17 +159,17 @@ async function handleUpdateProjectAction({ projectName, updates, projects, users
     if (updates.remove_services) updates.remove_services.forEach(s => currentServices.delete(s));
     rpcParams.p_service_titles = Array.from(currentServices);
 
-    const { error } = await supabaseAdmin.rpc('update_project_details', rpcParams);
+    const { error } = await userSupabase.rpc('update_project_details', rpcParams);
     if (error) return `I tried to update the project, but failed: ${error.message}`;
     
     const changes = Object.keys(updates).map(key => `updated ${key.replace('_', ' ')}`).join(', ');
     return `Done! I've updated the project "${project.name}": ${changes}.`;
 }
 
-async function handleBulkUpdateProjectsAction({ filters, updates, projects, supabaseAdmin }) {
+async function handleBulkUpdateProjectsAction({ filters, updates, projects, userSupabase }) {
     if (!filters || !updates) return "For a bulk update, I need both filters and the updates to apply.";
 
-    let query = supabaseAdmin.from('projects').select('id');
+    let query = userSupabase.from('projects').select('id');
     for (const [key, value] of Object.entries(filters)) {
         query = value === null ? query.is(key, null) : query.eq(key, value);
     }
@@ -180,13 +180,13 @@ async function handleBulkUpdateProjectsAction({ filters, updates, projects, supa
     if (!projectsToUpdate || projectsToUpdate.length === 0) return "I couldn't find any projects matching your criteria.";
 
     const projectIds = projectsToUpdate.map(p => p.id);
-    const { error: updateError } = await supabaseAdmin.from('projects').update(updates).in('id', projectIds);
+    const { error: updateError } = await userSupabase.from('projects').update(updates).in('id', projectIds);
     if (updateError) return `I tried to update the projects, but failed: ${updateError.message}`;
     
     return `Done! I've updated ${projectIds.length} project(s).`;
 }
 
-async function handleCreateGoalAction({ details, supabaseAdmin }) {
+async function handleCreateGoalAction({ details, userSupabase }) {
   if (!details || !details.title) return "To create a goal, I need at least a title.";
 
   const { title, description, icon, color, type, frequency, specific_days, target_quantity, target_period, target_value, unit, tags } = details;
@@ -207,7 +207,7 @@ async function handleCreateGoalAction({ details, supabaseAdmin }) {
     p_custom_tags: tags || [],
   };
 
-  const { data: newGoal, error } = await supabaseAdmin
+  const { data: newGoal, error } = await userSupabase
     .rpc('create_goal_and_link_tags', rpcParams)
     .single();
 
@@ -227,22 +227,11 @@ const actionHandlers = {
 
 // --- FEATURE HANDLERS ---
 
-async function handleAnalyzeProjects({ req, payload, openai }) {
+async function handleAnalyzeProjects({ payload, openai, user, userSupabase }) {
   const { request, conversationHistory } = payload;
   if (!request) throw new Error("An analysis request type is required.");
 
-  const supabaseAdmin = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-  );
-
-  const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser();
-  if (userError || !user) {
-    throw new Error("User not authenticated.");
-  }
-
-  const fullContext = await getFullContext(supabaseAdmin);
+  const fullContext = await getFullContext(userSupabase);
   const summarizedContext = buildSummarizedContext(fullContext);
   const systemPrompt = getSystemPrompt(summarizedContext);
 
@@ -264,7 +253,7 @@ async function handleAnalyzeProjects({ req, payload, openai }) {
     const actionData = JSON.parse(jsonMatch[1] || jsonMatch[2]);
     const handler = actionHandlers[actionData.action];
     if (handler) {
-      const result = await handler({ ...actionData, supabaseAdmin, user, ...fullContext });
+      const result = await handler({ ...actionData, ...fullContext, userSupabase, user });
       return { result };
     }
     return { result: "I understood the action, but I don't know how to perform it yet." };
@@ -273,15 +262,7 @@ async function handleAnalyzeProjects({ req, payload, openai }) {
   }
 }
 
-async function handleGenerateInsight({ req, payload, openai }) {
-  const supabaseAdmin = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-  );
-  const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser();
-  if (userError || !user) throw new Error("User not authenticated.");
-
+async function handleGenerateInsight({ payload, openai }) {
   const { goal, context } = payload;
   if (!goal || !context) throw new Error("Goal and context are required.");
 
@@ -305,15 +286,7 @@ async function handleGenerateInsight({ req, payload, openai }) {
   return { result: response.choices[0].message.content };
 }
 
-async function handleGenerateMoodInsight({ req, payload, openai }) {
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser();
-    if (userError || !user) throw new Error("User not authenticated.");
-
+async function handleGenerateMoodInsight({ payload, openai }) {
     const { prompt, conversationHistory } = payload;
     if (!prompt) throw new Error("Prompt is required.");
 
@@ -347,25 +320,40 @@ serve(async (req) => {
   const headers = { 'Content-Type': 'application/json', ...corsHeaders };
 
   try {
+    // 1. Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) throw new Error("Missing Authorization header.");
+
+    const userSupabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: userError } = await userSupabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error(`User not authenticated: ${userError?.message}`);
+    }
+
+    // 2. Get OpenAI key using an admin client
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    const { data: config, error: configError } = await supabaseAdmin.from('app_config').select('value').eq('key', 'OPENAI_API_KEY').single();
+    if (configError || !config?.value) {
+      throw new Error("OpenAI API key is not configured by an administrator.");
+    }
+    const openai = new OpenAI({ apiKey: config.value });
+
+    // 3. Route to the correct feature handler
     const { feature, payload } = await req.json();
     const handler = featureHandlers[feature];
     if (!handler) {
       throw new Error(`Unknown feature: ${feature}`);
     }
-
-    const supabaseAdminForOpenAI = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const { data: config, error: configError } = await supabaseAdminForOpenAI.from('app_config').select('value').eq('key', 'OPENAI_API_KEY').single();
-    if (configError || !config?.value) {
-      throw new Error("OpenAI API key is not configured by an administrator.");
-    }
-
-    const openai = new OpenAI({ apiKey: config.value });
-
-    const data = await handler({ req, payload, openai });
+    
+    const data = await handler({ payload, openai, user, userSupabase });
 
     return new Response(JSON.stringify({ ok: true, data }), { headers, status: 200 });
 
