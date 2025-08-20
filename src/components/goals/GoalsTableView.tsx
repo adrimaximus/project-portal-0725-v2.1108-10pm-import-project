@@ -23,22 +23,22 @@ const GoalRow = ({ goal }: { goal: Goal }) => {
   const { percentage } = getProgress(goal);
   return (
     <TableRow key={goal.id}>
-      <TableCell className="py-2 px-2 sm:px-4">
+      <TableCell className="py-2 px-4">
         <Link to={`/goals/${goal.slug}`} className="flex items-center gap-3 group">
-          <GoalIcon goal={goal} className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0" />
+          <GoalIcon goal={goal} className="h-10 w-10 flex-shrink-0" />
           <div className="flex-grow overflow-hidden">
-            <p className="font-semibold truncate group-hover:underline text-sm sm:text-base">{goal.title}</p>
-            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1 sm:line-clamp-2 hidden sm:block">{goal.description}</p>
+            <p className="font-semibold truncate group-hover:underline">{goal.title}</p>
+            <p className="text-sm text-muted-foreground line-clamp-1">{goal.description}</p>
           </div>
         </Link>
       </TableCell>
-      <TableCell className="py-2 px-2 sm:px-4">
+      <TableCell className="py-2 px-4">
         <div className="flex items-center gap-2">
-          <Progress value={percentage} className="h-2 w-12 sm:w-24" indicatorStyle={{ backgroundColor: goal.color }} />
-          <span className="text-sm sm:text-sm font-medium">{percentage.toFixed(0)}%</span>
+          <Progress value={percentage} className="h-2 w-24" indicatorStyle={{ backgroundColor: goal.color }} />
+          <span className="text-sm font-medium">{percentage.toFixed(0)}%</span>
         </div>
       </TableCell>
-      <TableCell className="hidden md:table-cell py-2 px-2 sm:px-4">
+      <TableCell className="py-2 px-4">
         <div className="flex flex-wrap gap-1">
           {goal.tags.slice(0, 2).map(tag => (
             <Badge
@@ -59,7 +59,7 @@ const GoalRow = ({ goal }: { goal: Goal }) => {
           )}
         </div>
       </TableCell>
-      <TableCell className="hidden lg:table-cell py-2 px-2 sm:px-4">
+      <TableCell className="py-2 px-4">
         <div className="flex -space-x-2">
           <TooltipProvider delayDuration={100}>
             {goal.collaborators.map(user => (
@@ -78,7 +78,7 @@ const GoalRow = ({ goal }: { goal: Goal }) => {
           </TooltipProvider>
         </div>
       </TableCell>
-      <TableCell className="text-right py-2 px-2 sm:px-4">
+      <TableCell className="text-right py-2 px-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -123,19 +123,19 @@ const GoalsTableView = ({ goals, sortConfig, requestSort }: GoalsTableViewProps)
   }
 
   return (
-    <div className="border rounded-lg">
-      <Table>
+    <div className="border rounded-lg overflow-x-auto">
+      <Table className="min-w-[700px]">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[40%] px-2 sm:px-4">
+            <TableHead className="w-[40%] px-4">
               <Button variant="ghost" onClick={() => requestSort('title')} className="w-full justify-start px-2 group">
                 Goal
               </Button>
             </TableHead>
-            <TableHead className="px-2 sm:px-4">Progress</TableHead>
-            <TableHead className="hidden md:table-cell px-2 sm:px-4">Tags</TableHead>
-            <TableHead className="hidden lg:table-cell px-2 sm:px-4">Team</TableHead>
-            <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
+            <TableHead className="px-4">Progress</TableHead>
+            <TableHead className="px-4">Tags</TableHead>
+            <TableHead className="px-4">Team</TableHead>
+            <TableHead className="text-right px-4">Actions</TableHead>
           </TableRow>
         </TableHeader>
         {teamGoals.length > 0 && (
