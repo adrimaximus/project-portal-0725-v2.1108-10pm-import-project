@@ -4,7 +4,7 @@ import ChatInput from "./ChatInput";
 import { Conversation, Attachment, Message } from "@/types";
 import ChatPlaceholder from "./ChatPlaceholder";
 import { MentionUser } from "@/components/MentionsInput";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import ForwardMessageDialog from "./ForwardMessageDialog";
 import ChatSelectionBar from "./ChatSelectionBar";
 import { toast } from "sonner";
@@ -29,6 +29,41 @@ const ChatWindow = ({ selectedConversation, allConversations, onSendMessage, onF
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
 
+  const handleEnterSelectionMode = useCallback((initialMessageId: string) => {
+    setSelectionMode(true);
+    setSelectedMessages(new Set([initialMessageId]));
+  }, []);
+
+  const handleToggleMessageSelection = useCallback((messageId: string) => {
+    setSelectedMessages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      if (newSet.size === 0) {
+        setSelectionMode(false);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleCancelSelection = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedMessages(new Set());
+  }, []);
+
+  const handleDeleteSelected = useCallback(() => {
+    selectedMessages.forEach(id => onDeleteMessage(id));
+    handleCancelSelection();
+  }, [selectedMessages, onDeleteMessage, handleCancelSelection]);
+
+  const handleForwardSelected = useCallback(() => {
+    toast.info("Forwarding multiple messages is not yet implemented.");
+    handleCancelSelection();
+  }, [handleCancelSelection]);
+
   if (!selectedConversation) {
     return <ChatPlaceholder />;
   }
@@ -44,41 +79,6 @@ const ChatWindow = ({ selectedConversation, allConversations, onSendMessage, onF
     if (messageToForward) {
       onForwardMessage(destinationConversationId, messageToForward);
     }
-  };
-
-  const handleEnterSelectionMode = (initialMessageId: string) => {
-    setSelectionMode(true);
-    setSelectedMessages(new Set([initialMessageId]));
-  };
-
-  const handleToggleMessageSelection = (messageId: string) => {
-    setSelectedMessages(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(messageId)) {
-        newSet.delete(messageId);
-      } else {
-        newSet.add(messageId);
-      }
-      if (newSet.size === 0) {
-        setSelectionMode(false);
-      }
-      return newSet;
-    });
-  };
-
-  const handleCancelSelection = () => {
-    setSelectionMode(false);
-    setSelectedMessages(new Set());
-  };
-
-  const handleDeleteSelected = () => {
-    selectedMessages.forEach(id => onDeleteMessage(id));
-    handleCancelSelection();
-  };
-
-  const handleForwardSelected = () => {
-    toast.info("Forwarding multiple messages is not yet implemented.");
-    handleCancelSelection();
   };
 
   return (
