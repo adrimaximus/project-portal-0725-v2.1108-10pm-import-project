@@ -11,6 +11,12 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatInJakarta, cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
+import type { DropAnimation } from '@dnd-kit/core';
+
+const dropAnimation: DropAnimation = {
+  duration: 250,
+  easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+};
 
 const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened: React.MutableRefObject<boolean> }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
@@ -220,7 +226,7 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
           ))}
         </div>
       </SortableContext>
-      <DragOverlay>
+      <DragOverlay dropAnimation={dropAnimation}>
         {activeProject ? (
           <Card className="shadow-xl">
             <CardContent className="p-3">
