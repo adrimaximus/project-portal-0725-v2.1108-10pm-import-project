@@ -1,38 +1,40 @@
-import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
-import ProjectsTable from "@/components/ProjectsTable";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Sparkles } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { PlusCircle } from "lucide-react";
+import { Link } from "react-router-dom";
+import ProjectList from "@/components/projects/ProjectList";
 import { useProjects } from "@/hooks/useProjects";
-import { ProjectAiAssistant } from "@/components/ProjectAiAssistant";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Projects = () => {
-  const navigate = useNavigate();
-  const { data: projects = [], isLoading, refetch } = useProjects();
-  const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
+  const { data: projects = [], isLoading } = useProjects();
+
+  if (isLoading) {
+    return (
+      <PortalLayout>
+        <div className="flex items-center justify-between mb-6">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Skeleton className="h-96 w-full" />
+      </PortalLayout>
+    );
+  }
 
   return (
     <PortalLayout>
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">All Projects</h1>
-        <div className="flex items-center gap-2 self-start sm:self-center">
-          <Button variant="outline" onClick={() => setIsAiAssistantOpen(true)}>
-            <Sparkles className="mr-2 h-4 w-4" />
-            Ask AI
-          </Button>
-          <Button onClick={() => navigate('/request')}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Project
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Projects</h1>
+        <div className="flex items-center gap-2">
+          <Button asChild>
+            <Link to="/projects/new">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              New Project
+            </Link>
           </Button>
         </div>
       </div>
-      <ProjectsTable projects={projects} isLoading={isLoading} refetch={refetch} />
-      <ProjectAiAssistant 
-        open={isAiAssistantOpen} 
-        onOpenChange={setIsAiAssistantOpen} 
-        projects={projects}
-      />
+      <ProjectList projects={projects} />
     </PortalLayout>
   );
 };
