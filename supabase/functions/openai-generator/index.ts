@@ -289,14 +289,17 @@ const featureHandlers = {
 // --- MAIN SERVER ---
 
 serve(async (req) => {
+  const headers = { 'Content-Type': 'application/json', ...corsHeaders };
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers });
   }
 
   try {
     const { feature, payload } = await req.json();
     const handler = featureHandlers[feature];
-    if (!handler) throw new Error(`Unknown feature: ${feature}`);
+    if (!handler) {
+      throw new Error(`Unknown feature: ${feature}`);
+    }
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -304,22 +307,21 @@ serve(async (req) => {
     );
 
     const { data: config, error: configError } = await supabaseAdmin.from('app_config').select('value').eq('key', 'OPENAI_API_KEY').single();
-    if (configError || !config?.value) throw new Error("OpenAI API key is not configured by an administrator.");
+    if (configError || !config?.value) {
+      throw new Error("OpenAI API key is not configured by an administrator.");
+    }
 
     const openai = new OpenAI({ apiKey: config.value });
 
-    const responseData = await handler({ req, payload, supabaseAdmin, openai });
+    const data = await handler({ req, payload, supabaseAdmin, openai });
 
-    return new Response(JSON.stringify(responseData), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
+    return new Response(JSON.stringify({ ok: true, data }), { headers, status: 200 });
 
   } catch (error) {
     console.error("Edge function error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+    return new Response(JSON.stringify({ ok: false, error: error.message }), {
+      headers,
+      status: 200, // Always return 200 for agent compatibility
     });
   }
 });
