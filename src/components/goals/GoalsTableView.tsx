@@ -39,10 +39,10 @@ const GoalRow = ({ goal, onDeleteGoal }: { goal: Goal, onDeleteGoal: (goalId: st
         <Link to={`/goals/${goal.slug}`} className="flex items-center gap-3 group">
           <GoalIcon goal={goal} className="h-10 w-10 flex-shrink-0" />
           <div className="flex-grow overflow-hidden">
-            <p className="font-semibold truncate group-hover:underline">{goal.title}</p>
+            <p className="font-semibold group-hover:underline whitespace-normal">{goal.title}</p>
             <p className="text-sm text-muted-foreground line-clamp-1">{goal.description}</p>
             <div className="flex flex-wrap gap-1 mt-2">
-              {goal.tags.slice(0, 3).map(tag => (
+              {goal.tags.slice(0, 2).map(tag => (
                 <Badge
                   key={tag.id}
                   variant="outline"
@@ -56,8 +56,8 @@ const GoalRow = ({ goal, onDeleteGoal }: { goal: Goal, onDeleteGoal: (goalId: st
                   {tag.name}
                 </Badge>
               ))}
-              {goal.tags.length > 3 && (
-                <Badge variant="outline" className="text-xs">+{goal.tags.length - 3}</Badge>
+              {goal.tags.length > 2 && (
+                <Badge variant="outline" className="text-xs">+{goal.tags.length - 2}</Badge>
               )}
             </div>
           </div>
