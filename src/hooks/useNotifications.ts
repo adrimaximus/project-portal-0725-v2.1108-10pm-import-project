@@ -48,7 +48,17 @@ export const useNotifications = () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
         (payload) => {
-          const newNotification = payload.new;
+          const newNotificationRaw = payload.new;
+          const newNotification: Notification = {
+              id: newNotificationRaw.id,
+              type: newNotificationRaw.type,
+              title: newNotificationRaw.title,
+              description: newNotificationRaw.description,
+              timestamp: newNotificationRaw.created_at,
+              read: newNotificationRaw.read,
+              link: newNotificationRaw.link,
+          };
+
           toast.info(newNotification.title, {
             description: newNotification.description,
             action: {
@@ -60,7 +70,17 @@ export const useNotifications = () => {
               },
             },
           });
-          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+          
+          // Langsung perbarui data di cache, tanpa perlu refetch
+          queryClient.setQueryData(['notifications', user.id], (oldData: Notification[] | undefined) => {
+            if (oldData) {
+              if (oldData.some(n => n.id === newNotification.id)) {
+                return oldData;
+              }
+              return [newNotification, ...oldData];
+            }
+            return [newNotification];
+          });
         }
       )
       .subscribe();
