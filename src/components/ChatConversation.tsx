@@ -110,7 +110,7 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
                   "max-w-xs md:max-w-md lg:max-w-lg rounded-lg group relative flex flex-col",
                   isCurrentUser
                     ? "bg-primary text-primary-foreground"
-                    : "bg-slate-900 text-slate-50 dark:bg-muted dark:text-slate-200",
+                    : "bg-slate-900 text-slate-100 dark:bg-slate-800 dark:text-slate-200",
                   !isCurrentUser && isSameSenderAsPrevious && "ml-10",
                   !hasText && isImageAttachment ? "p-0 bg-transparent" : "px-3 py-2"
                 )}
