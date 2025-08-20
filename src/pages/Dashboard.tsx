@@ -7,9 +7,6 @@ import CollaboratorsList from "@/components/dashboard/CollaboratorsList";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Sparkles } from "lucide-react";
-import { ProjectAiAssistant } from "@/components/ProjectAiAssistant";
 import AiHealthSummaryCard from "@/components/dashboard/AiHealthSummaryCard";
 
 const Index = () => {
@@ -19,7 +16,6 @@ const Index = () => {
   });
   const { data: projects = [], isLoading } = useProjects();
   const { user } = useAuth();
-  const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
 
   const filteredProjects = projects.filter(project => {
     if (date?.from && project.start_date) {
@@ -74,10 +70,6 @@ const Index = () => {
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div className="flex items-center gap-4">
                     <h2 className="text-2xl font-bold">Insights</h2>
-                    <Button variant="outline" size="sm" onClick={() => setIsAiAssistantOpen(true)}>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        Ask AI
-                    </Button>
                 </div>
                 <DateRangePicker date={date} onDateChange={setDate} />
             </div>
@@ -88,11 +80,6 @@ const Index = () => {
             <CollaboratorsList projects={filteredProjects} />
         </div>
       </div>
-      <ProjectAiAssistant 
-        open={isAiAssistantOpen} 
-        onOpenChange={setIsAiAssistantOpen} 
-        projects={projects}
-      />
     </PortalLayout>
   );
 };
