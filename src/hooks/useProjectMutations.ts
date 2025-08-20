@@ -153,8 +153,9 @@ export const useProjectMutations = (slug: string) => {
             if (commentError) throw commentError;
 
             if (isTicket && commentData) {
+                const cleanText = text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
                 const { error: taskError } = await supabase.from('tasks').insert({
-                    project_id: project.id, created_by: user.id, title: text.substring(0, 100), origin_ticket_id: commentData.id,
+                    project_id: project.id, created_by: user.id, title: cleanText.substring(0, 100), origin_ticket_id: commentData.id,
                 });
                 if (taskError) throw new Error(`Ticket created, but failed to create task: ${taskError.message}`);
             }
