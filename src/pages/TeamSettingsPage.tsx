@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Search, X, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, X, Edit, Trash2, Send } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -202,6 +202,33 @@ const TeamSettingsPage = () => {
       fetchData();
     }
     setRoleToDelete(null);
+  };
+
+  const handleResendInvite = async (member: User) => {
+    if (!member.email || !member.role) {
+      toast.error("Cannot resend invite: email or role is missing.");
+      return;
+    }
+
+    const { error: deleteError } = await supabase.functions.invoke('delete-user', {
+      body: { user_id: member.id },
+    });
+
+    if (deleteError) {
+      toast.error(`Failed to remove previous invite for ${member.email}: ${deleteError.message}`);
+      return;
+    }
+
+    const { error: inviteError } = await supabase.functions.invoke('invite-user', {
+      body: { email: member.email, role: member.role },
+    });
+
+    if (inviteError) {
+      toast.error(`Failed to resend invite to ${member.email}: ${inviteError.message}`);
+    } else {
+      toast.success(`Invite resent to ${member.email}.`);
+      fetchData();
+    }
   };
 
   const getStatusBadgeVariant = (status: string): "destructive" | "secondary" | "outline" => {
@@ -414,13 +441,30 @@ const TeamSettingsPage = () => {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => handleToggleSuspend(member)} disabled={member.status === 'Pending invite' || (member.role === 'master admin' && !isMasterAdmin)}>
-                                {member.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-600" onSelect={() => openDeleteDialog(member)} disabled={(member.role === 'master admin' && !isMasterAdmin)}>
-                                Delete
-                              </DropdownMenuItem>
+                              {member.status === 'Pending invite' ? (
+                                <>
+                                  <DropdownMenuItem onSelect={() => handleResendInvite(member)}>
+                                    <Send className="mr-2 h-4 w-4" />
+                                    Resend Invite
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="text-red-600" onSelect={() => openDeleteDialog(member)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Cancel Invite
+                                  </DropdownMenuItem>
+                                </>
+                              ) : (
+                                <>
+                                  <DropdownMenuItem onSelect={() => handleToggleSuspend(member)} disabled={member.role === 'master admin' && !isMasterAdmin}>
+                                    {member.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="text-red-600" onSelect={() => openDeleteDialog(member)} disabled={(member.role === 'master admin' && !isMasterAdmin)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
@@ -436,8 +480,21 @@ const TeamSettingsPage = () => {
 
       <AlertDialog open={!!memberToDelete} onOpenChange={(open) => !open && setMemberToDelete(null)}>
         <AlertDialogContent>
-            <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete {memberToDelete?.name} from the team. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteMember}>Delete</AlertDialogAction></AlertDialogFooter>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {memberToDelete?.status === 'Pending invite'
+                  ? `This will cancel the invitation for ${memberToDelete?.email}. They will not be able to join the team with the current link.`
+                  : `This will permanently delete ${memberToDelete?.name} from the team. This action cannot be undone.`
+                }
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteMember}>
+                {memberToDelete?.status === 'Pending invite' ? 'Cancel Invite' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       <AlertDialog open={!!roleToDelete} onOpenChange={(open) => !open && setRoleToDelete(null)}>
