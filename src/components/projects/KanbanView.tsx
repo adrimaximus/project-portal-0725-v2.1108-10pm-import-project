@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent, useDroppable } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent, useDroppable, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Project, PROJECT_STATUS_OPTIONS, ProjectStatus } from '@/types';
@@ -57,22 +57,31 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
   );
 };
 
-const KanbanColumn = ({ status, projects, dragHappened }: { status: { value: string, label: string }, projects: Project[], dragHappened: React.MutableRefObject<boolean> }) => {
+const KanbanColumn = ({ status, projects, dragHappened, isHovered }: { status: { value: string, label: string }, projects: Project[], dragHappened: React.MutableRefObject<boolean>, isHovered: boolean }) => {
   const { setNodeRef } = useDroppable({ id: status.value });
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
+  const isEmpty = projects.length === 0;
+  const isExpanded = !isEmpty || isHovered;
 
   return (
-    <div className="w-72 flex-shrink-0">
-      <h3 className="font-semibold mb-4 px-1 text-base flex items-center">
-        {status.label}
-        <Badge variant="secondary" className="ml-2">{projects.length}</Badge>
-      </h3>
-      <div ref={setNodeRef} className="bg-muted/50 rounded-lg p-2 min-h-[400px] h-full">
-        <SortableContext id={status.value} items={projectIds} strategy={verticalListSortingStrategy}>
-          {projects.map(project => (
-            <KanbanCard key={project.id} project={project} dragHappened={dragHappened} />
-          ))}
-        </SortableContext>
+    <div ref={setNodeRef} className={cn("flex-shrink-0 transition-all duration-300", isExpanded ? "w-72" : "w-20")}>
+      <div className={cn("h-full flex flex-col", !isExpanded && "items-center")}>
+        <h3 className={cn(
+          "font-semibold mb-4 px-1 text-base flex items-center",
+          !isExpanded && "h-full flex items-center justify-center p-2 [writing-mode:vertical-rl] rotate-180 whitespace-nowrap"
+        )}>
+          {status.label}
+          <Badge variant="secondary" className={cn("ml-2", !isExpanded && "hidden")}>{projects.length}</Badge>
+        </h3>
+        <div className={cn("bg-muted/50 rounded-lg p-2 min-h-[400px] h-full w-full", !isExpanded && "bg-transparent")}>
+          {isExpanded && (
+            <SortableContext id={status.value} items={projectIds} strategy={verticalListSortingStrategy}>
+              {projects.map(project => (
+                <KanbanCard key={project.id} project={project} dragHappened={dragHappened} />
+              ))}
+            </SortableContext>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -83,6 +92,7 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const dragHappened = useRef(false);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [overContainerId, setOverContainerId] = useState<string | null>(null);
 
   const projectGroups = useMemo(() => {
     const groups: Record<ProjectStatus, Project[]> = {} as any;
@@ -106,8 +116,24 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
     setActiveProject(projects.find(p => p.id === active.id) || null);
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    if (over) {
+      const overId = over.id as string;
+      const isColumn = PROJECT_STATUS_OPTIONS.some(opt => opt.value === overId);
+      if (isColumn) {
+        setOverContainerId(overId);
+      } else {
+        setOverContainerId(over.data.current?.sortable.containerId || null);
+      }
+    } else {
+      setOverContainerId(null);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveProject(null);
+    setOverContainerId(null);
     setTimeout(() => {
       dragHappened.current = false;
     }, 0);
@@ -207,7 +233,7 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
   };
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
       <div className="flex gap-4 overflow-x-auto pb-4">
         {PROJECT_STATUS_OPTIONS.map(statusOption => (
           <KanbanColumn
@@ -215,6 +241,7 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
             status={statusOption}
             projects={projectGroups[statusOption.value as ProjectStatus]}
             dragHappened={dragHappened}
+            isHovered={statusOption.value === overContainerId}
           />
         ))}
       </div>
