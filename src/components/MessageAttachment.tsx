@@ -31,7 +31,7 @@ const MessageAttachment = ({ attachment }: MessageAttachmentProps) => {
         </div>
       )}
       <div className="flex-1 overflow-hidden">
-        <p className="font-medium text-sm truncate">{attachment.name}</p>
+        <p className="font-medium text-sm truncate">{isImage ? 'Gambar' : 'Berkas'}</p>
         <p className="text-xs text-muted-foreground">Klik untuk mengunduh</p>
       </div>
     </a>
