@@ -11,9 +11,14 @@ const DemoModeCard = () => {
 
   const handleToggle = async (checked: boolean) => {
     setIsUpdating(true);
-    await setDemoMode(checked);
-    // The toast notification will be handled by the context's realtime listener.
-    setIsUpdating(false);
+    try {
+      await setDemoMode(checked);
+    } catch (error) {
+      // The error toast is already shown in the context
+      console.error("Failed to toggle demo mode:", error);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const isDisabled = isContextLoading || isUpdating;

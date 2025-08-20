@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from './AuthContext';
 
 interface DemoContextType {
   isDemoMode: boolean;
@@ -13,8 +14,15 @@ const DemoContext = createContext<DemoContextType | undefined>(undefined);
 export const DemoProvider = ({ children }: { children: ReactNode }) => {
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   const fetchDemoMode = useCallback(async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+    
+    setIsLoading(true);
     const { data, error } = await supabase
       .from('app_config')
       .select('value')
@@ -27,7 +35,7 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
     
     setIsDemoMode(data?.value === 'true');
     setIsLoading(false);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchDemoMode();
@@ -59,7 +67,6 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
       toast.error("Failed to update demo mode setting.");
       throw error;
     }
-    // The realtime subscription will handle the state update for all clients, including this one.
   };
 
   return (
