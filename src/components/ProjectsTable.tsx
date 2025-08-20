@@ -3,7 +3,7 @@ import { Project } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import {
@@ -20,6 +20,7 @@ import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "./ui/date-picker-with-range";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateProject } from "@/hooks/useCreateProject";
+import { Input } from "./ui/input";
 
 import TableView from "./projects/TableView";
 import ListView from "./projects/ListView";
@@ -52,6 +53,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const createProjectMutation = useCreateProject();
 
   const handleViewChange = (newView: ViewMode | null) => {
@@ -145,37 +147,47 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   }, []);
 
   const filteredProjects = useMemo(() => {
-    if (!dateRange || !dateRange.from) {
-      return projects;
+    let filtered = projects;
+
+    if (dateRange?.from) {
+      const fromDate = new Date(dateRange.from);
+      fromDate.setHours(0, 0, 0, 0);
+
+      const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+      toDate.setHours(23, 59, 59, 999);
+
+      filtered = filtered.filter(project => {
+        if (!project.start_date && !project.due_date) {
+          return false;
+        }
+        
+        const projectStart = project.start_date ? new Date(project.start_date) : null;
+        const projectEnd = project.due_date ? new Date(project.due_date) : projectStart;
+
+        if (projectStart && projectEnd) {
+          return projectStart <= toDate && projectEnd >= fromDate;
+        }
+        if (projectStart) {
+          return projectStart >= fromDate && projectStart <= toDate;
+        }
+        if (projectEnd) {
+          return projectEnd >= fromDate && projectEnd <= toDate;
+        }
+
+        return false;
+      });
     }
 
-    const fromDate = new Date(dateRange.from);
-    fromDate.setHours(0, 0, 0, 0);
+    if (searchTerm.trim() !== "") {
+      const lowercasedFilter = searchTerm.toLowerCase();
+      filtered = filtered.filter(project =>
+        project.name.toLowerCase().includes(lowercasedFilter) ||
+        (project.description && project.description.toLowerCase().includes(lowercasedFilter))
+      );
+    }
 
-    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-    toDate.setHours(23, 59, 59, 999);
-
-    return projects.filter(project => {
-      if (!project.start_date && !project.due_date) {
-        return false;
-      }
-      
-      const projectStart = project.start_date ? new Date(project.start_date) : null;
-      const projectEnd = project.due_date ? new Date(project.due_date) : projectStart;
-
-      if (projectStart && projectEnd) {
-        return projectStart <= toDate && projectEnd >= fromDate;
-      }
-      if (projectStart) {
-        return projectStart >= fromDate && projectStart <= toDate;
-      }
-      if (projectEnd) {
-        return projectEnd >= fromDate && projectEnd <= toDate;
-      }
-
-      return false;
-    });
-  }, [projects, dateRange]);
+    return filtered;
+  }, [projects, dateRange, searchTerm]);
 
   const filteredCalendarEvents = useMemo(() => {
     if (!dateRange || !dateRange.from) {
@@ -353,8 +365,19 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
         </CardHeader>
         <CardContent>
           {(view === 'table' || view === 'list' || view === 'calendar' || view === 'kanban') && (
-            <div className="py-4">
+            <div className="py-4 flex flex-col sm:flex-row gap-4 items-center">
               <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+              {view === 'kanban' && (
+                <div className="relative w-full sm:w-auto sm:flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search projects..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              )}
             </div>
           )}
           {renderContent()}
