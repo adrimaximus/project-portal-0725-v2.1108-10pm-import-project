@@ -91,6 +91,22 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
+      accessorKey: "payment_status",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Payment
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const paymentBadgeColor = paymentStatusConfig[row.original.payment_status]?.color || "bg-gray-100 text-gray-800";
+        return (
+          <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
+            {row.original.payment_status}
+          </Badge>
+        );
+      },
+    },
+    {
       accessorKey: "progress",
       header: "Progress",
       cell: ({ row }) => (
@@ -135,22 +151,6 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
           </TooltipProvider>
         ) : ('-')
       ),
-    },
-    {
-      accessorKey: "payment_status",
-      header: ({ column }) => (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          Payment
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const paymentBadgeColor = paymentStatusConfig[row.original.payment_status]?.color || "bg-gray-100 text-gray-800";
-        return (
-          <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
-            {row.original.payment_status}
-          </Badge>
-        );
-      },
     },
     {
       id: "actions",
