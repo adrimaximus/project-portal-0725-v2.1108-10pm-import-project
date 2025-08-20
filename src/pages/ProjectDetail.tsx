@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Project } from "@/types";
+import { Project, Tag } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -75,7 +75,7 @@ const ProjectDetail = () => {
     setIsSaving(true);
 
     try {
-      const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo, venue } = editedProject;
+      const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo, venue, tags } = editedProject;
       
       const { data: updatedProjectRow, error } = await supabase
         .rpc('update_project_details', {
@@ -92,6 +92,8 @@ const ProjectDetail = () => {
           p_member_ids: assignedTo.map(m => m.id),
           p_service_titles: services || [],
           p_venue: venue || null,
+          p_existing_tags: tags.filter(t => !t.isNew).map(t => t.id),
+          p_custom_tags: tags.filter(t => t.isNew).map(({ name, color }) => ({ name, color })),
         })
         .single();
 
@@ -299,11 +301,11 @@ const ProjectDetail = () => {
               project={editedProject}
               isEditing={isEditing}
               onDescriptionChange={(value) => handleFieldChange('description', value)}
-              onCategoryChange={(value) => handleFieldChange('category', value)}
               onTeamChange={(users) => handleFieldChange('assignedTo', users)}
               onFilesAdd={handleFilesAdd}
               onFileDelete={handleFileDelete}
               onServicesChange={(services) => handleFieldChange('services', services)}
+              onTagsChange={(tags: Tag[]) => handleFieldChange('tags', tags)}
               onTaskAdd={handleTaskAdd}
               onTaskAssignUsers={handleTaskAssignUsers}
               onTaskStatusChange={handleTaskStatusChange}

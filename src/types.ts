@@ -79,6 +79,7 @@ export interface Project {
   activities?: Activity[];
   venue?: string;
   kanban_order?: number;
+  tags: Tag[];
 }
 
 export type GoalType = 'frequency' | 'quantity' | 'value';
