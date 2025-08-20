@@ -15,6 +15,8 @@ import { generateVibrantGradient } from '@/lib/utils';
 
 interface GoalsTableViewProps {
   goals: Goal[];
+  sortConfig: { key: keyof Goal | null; direction: 'ascending' | 'descending' };
+  requestSort: (key: keyof Goal) => void;
 }
 
 const GoalRow = ({ goal }: { goal: Goal }) => {
@@ -33,7 +35,7 @@ const GoalRow = ({ goal }: { goal: Goal }) => {
       <TableCell className="py-2 px-2 sm:px-4">
         <div className="flex items-center gap-2">
           <Progress value={percentage} className="h-2 w-12 sm:w-24" indicatorStyle={{ backgroundColor: goal.color }} />
-          <span className="text-xs sm:text-sm font-medium">{percentage.toFixed(0)}%</span>
+          <span className="text-sm sm:text-sm font-medium">{percentage.toFixed(0)}%</span>
         </div>
       </TableCell>
       <TableCell className="hidden md:table-cell py-2 px-2 sm:px-4">
@@ -94,7 +96,7 @@ const GoalRow = ({ goal }: { goal: Goal }) => {
   );
 };
 
-const GoalsTableView = ({ goals }: GoalsTableViewProps) => {
+const GoalsTableView = ({ goals, sortConfig, requestSort }: GoalsTableViewProps) => {
   const { teamGoals, personalGoals } = useMemo(() => {
     const specialTags = ['office', '7inked', 'betterworks.id'];
     const tGoals: Goal[] = [];
@@ -125,7 +127,11 @@ const GoalsTableView = ({ goals }: GoalsTableViewProps) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[40%] px-2 sm:px-4">Goal</TableHead>
+            <TableHead className="w-[40%] px-2 sm:px-4">
+              <Button variant="ghost" onClick={() => requestSort('title')} className="w-full justify-start px-2 group">
+                Goal
+              </Button>
+            </TableHead>
             <TableHead className="px-2 sm:px-4">Progress</TableHead>
             <TableHead className="hidden md:table-cell px-2 sm:px-4">Tags</TableHead>
             <TableHead className="hidden lg:table-cell px-2 sm:px-4">Team</TableHead>
