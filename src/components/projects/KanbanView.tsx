@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { formatInJakarta, cn } from '@/lib/utils';
+import { formatInJakarta, cn, generateVibrantGradient } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import type { DropAnimation } from '@dnd-kit/core';
 
@@ -40,7 +40,7 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
                 {project.assignedTo.slice(0, 3).map(user => (
                   <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
                     <AvatarImage src={user.avatar} />
-                    <AvatarFallback>{user.initials}</AvatarFallback>
+                    <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                   </Avatar>
                 ))}
               </div>
@@ -273,7 +273,7 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
                     {activeProject.assignedTo.slice(0, 3).map(user => (
                       <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
                         <AvatarImage src={user.avatar} />
-                        <AvatarFallback>{user.initials}</AvatarFallback>
+                        <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                       </Avatar>
                     ))}
                   </div>

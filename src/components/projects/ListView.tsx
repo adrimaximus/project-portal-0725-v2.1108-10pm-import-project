@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getStatusStyles, formatInJakarta } from '@/lib/utils';
+import { getStatusStyles, formatInJakarta, generateVibrantGradient } from '@/lib/utils';
 
 const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
   const navigate = useNavigate();
@@ -142,7 +142,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                           {project.assignedTo.slice(0, 3).map((user) => (
                             <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
                               <AvatarImage src={user.avatar} alt={user.name} />
-                              <AvatarFallback>{user.initials}</AvatarFallback>
+                              <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                             </Avatar>
                           ))}
                         </div>

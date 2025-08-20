@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronsUpDown } from "lucide-react";
+import { generateVibrantGradient } from '@/lib/utils';
 
 interface CollaboratorsListProps {
   projects: Project[];
@@ -71,7 +72,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                         <TooltipTrigger asChild>
                           <Avatar className="h-8 w-8 border-2 border-card">
                             <AvatarImage src={c.avatar} alt={c.name} />
-                            <AvatarFallback>{c.initials}</AvatarFallback>
+                            <AvatarFallback style={generateVibrantGradient(c.id)}>{c.initials}</AvatarFallback>
                           </Avatar>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -103,7 +104,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                       <div className="flex items-center gap-3">
                                           <Avatar className="h-8 w-8">
                                               <AvatarImage src={c.avatar} alt={c.name} />
-                                              <AvatarFallback>{c.initials}</AvatarFallback>
+                                              <AvatarFallback style={generateVibrantGradient(c.id)}>{c.initials}</AvatarFallback>
                                           </Avatar>
                                           <span className="font-medium whitespace-nowrap">{c.name}</span>
                                       </div>
