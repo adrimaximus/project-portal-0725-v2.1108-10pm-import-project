@@ -11,12 +11,14 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import GoalsTableView from '@/components/goals/GoalsTableView';
+import { useQueryClient } from '@tanstack/react-query';
 
 const GoalsPage = () => {
   const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
     const savedView = localStorage.getItem('goals_view_mode') as 'card' | 'table';
     return savedView || 'card';
@@ -41,6 +43,17 @@ const GoalsPage = () => {
   useEffect(() => {
     fetchGoals();
   }, [fetchGoals]);
+
+  const handleDeleteGoal = async (goalId: string) => {
+    const { error } = await supabase.from('goals').delete().eq('id', goalId);
+    if (error) {
+      toast.error("Failed to delete goal.");
+    } else {
+      toast.success("Goal deleted successfully.");
+      setGoals(prevGoals => prevGoals.filter(g => g.id !== goalId));
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+    }
+  };
 
   const requestSort = (key: keyof Goal) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -151,7 +164,7 @@ const GoalsPage = () => {
           )}
         </>
       ) : (
-        <GoalsTableView goals={sortedGoals} sortConfig={sortConfig} requestSort={requestSort} />
+        <GoalsTableView goals={sortedGoals} sortConfig={sortConfig} requestSort={requestSort} onDeleteGoal={handleDeleteGoal} />
       )}
 
       <GoalFormDialog
