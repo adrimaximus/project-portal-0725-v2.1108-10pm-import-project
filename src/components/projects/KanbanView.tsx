@@ -13,13 +13,18 @@ import { formatInJakarta, cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import type { DropAnimation } from '@dnd-kit/core';
 
+const dropAnimation: DropAnimation = {
+  duration: 250,
+  easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+};
+
 const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened: React.MutableRefObject<boolean> }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
   const navigate = useNavigate();
   
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: null, // Menghapus animasi untuk perpindahan instan
+    transition: transition || 'transform 0.25s ease-in-out',
   };
 
   const handleClick = () => {
@@ -217,7 +222,7 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
           />
         ))}
       </div>
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={dropAnimation}>
         {activeProject ? (
           <Card className="shadow-xl">
             <CardContent className="p-3">
