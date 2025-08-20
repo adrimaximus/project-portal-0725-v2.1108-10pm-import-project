@@ -70,6 +70,7 @@ serve(async (req) => {
         const summarizedProjects = projects.map(p => ({
             name: p.name,
             status: p.status,
+            category: p.category,
             tasks: (p.tasks || []).map(t => ({
                 title: t.title,
                 completed: t.completed,
@@ -102,16 +103,22 @@ You can perform several types of actions. When asked to perform an action, you M
 {"action": "UPDATE_PROJECT", "project_name": "<project name>", "updates": {"field": "value", "another_field": "value"}}
 - Valid fields for 'updates' are: name, description, status, payment_status, budget, start_date, due_date, venue, add_members, remove_members, add_services, remove_services.
 
-3. CREATE_TASK:
+3. BULK_UPDATE_PROJECTS:
+{"action": "BULK_UPDATE_PROJECTS", "filters": {"field": "value", "another_field": "value"}, "updates": {"field": "new_value"}}
+- Use this for updating multiple projects at once based on criteria.
+- For filters, you can use 'null' for fields that are empty. For example, to find projects with no status, use {"status": null}.
+- The projects updated will be limited to the ones the user has access to.
+
+4. CREATE_TASK:
 {"action": "CREATE_TASK", "project_name": "<project name>", "task_title": "<title of the new task>", "assignees": ["<optional user name>"]}
 
-4. ASSIGN_TASK:
+5. ASSIGN_TASK:
 {"action": "ASSIGN_TASK", "project_name": "<project name>", "task_title": "<title of the task>", "assignees": ["<user name 1>", "<user name 2>"]}
 
-5. UNASSIGN_TASK:
+6. UNASSIGN_TASK:
 {"action": "UNASSIGN_TASK", "project_name": "<project name>", "task_title": "<title of the task>", "assignees": ["<user name 1>"]}
 
-6. CREATE_GOAL:
+7. CREATE_GOAL:
 {"action": "CREATE_GOAL", "goal_details": {"title": "<goal title>", "description": "<desc>", "type": "<type>", "frequency": "<freq>", "specific_days": ["Mo", "We"], "target_quantity": 123, "target_period": "Weekly", "target_value": 123, "unit": "USD", "icon": "IconName", "color": "#RRGGBB", "tags": [{"name": "Tag1", "color": "#RRGGBB"}]}}
 - If a user provides only a title for a new goal, you MUST infer the other details.
 - Infer a suitable 'description'.
@@ -120,7 +127,7 @@ You can perform several types of actions. When asked to perform an action, you M
 - Create 2-3 relevant 'tags' as an array of objects like '[{"name": "Health", "color": "#FF6B6B"}, ...]'. These will be new tags.
 - Example: User says "create a goal to learn guitar". You might respond with: {"action": "CREATE_GOAL", "goal_details": {"title": "Learn Guitar", "description": "Practice guitar regularly to improve skills.", "type": "frequency", "frequency": "Weekly", "specific_days": ["Mo", "We", "Fr"], "icon": "Music", "color": "#4ECDC4", "tags": [{"name": "Music", "color": "#4ECDC4"}, {"name": "Hobby", "color": "#F7B801"}]}}
 
-7. UPDATE_GOAL:
+8. UPDATE_GOAL:
 {"action": "UPDATE_GOAL", "goal_title": "<title of the goal to update>", "updates": {"field": "value", "another_field": "value"}}
 - Valid fields for 'updates' are: title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, icon, color, add_tags, remove_tags.
 - For 'add_tags' and 'remove_tags', the value should be an array of tag names.
@@ -309,6 +316,50 @@ CONTEXT:
                 }
             }
 
+        } else if (actionData && actionData.action === 'BULK_UPDATE_PROJECTS') {
+            const { filters, updates } = actionData;
+            if (!filters || !updates) {
+                responseData = { result: "For a bulk update, I need both filters and the updates to apply." };
+                break;
+            }
+
+            let query = supabaseAdmin.from('projects').select('id');
+
+            // Apply filters
+            for (const [key, value] of Object.entries(filters)) {
+                if (value === null) {
+                    query = query.is(key, null);
+                } else {
+                    query = query.eq(key, value);
+                }
+            }
+            // Also ensure user has access by filtering against projects they can see
+            query = query.in('id', projects.map(p => p.id));
+
+            const { data: projectsToUpdate, error: filterError } = await query;
+
+            if (filterError) {
+                responseData = { result: `I couldn't find the projects to update due to an error: ${filterError.message}` };
+                break;
+            }
+
+            if (!projectsToUpdate || projectsToUpdate.length === 0) {
+                responseData = { result: "I couldn't find any projects that match your criteria." };
+                break;
+            }
+
+            const projectIds = projectsToUpdate.map(p => p.id);
+
+            const { error: updateError } = await supabaseAdmin
+                .from('projects')
+                .update(updates)
+                .in('id', projectIds);
+
+            if (updateError) {
+                responseData = { result: `I tried to update the projects, but failed: ${updateError.message}` };
+            } else {
+                responseData = { result: `Done! I've updated ${projectIds.length} project(s).` };
+            }
         } else if (actionData && actionData.action === 'CREATE_TASK') {
             const { project_name, task_title, assignees } = actionData;
             const project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
@@ -424,7 +475,7 @@ CONTEXT:
             if (rpcError) {
                 responseData = { result: `I tried to create the goal, but failed. The database said: ${rpcError.message}` };
             } else {
-                responseData = { result: `Done! I've created the new goal: "${newGoal.title}".` };
+                responseData = { result: `Done! I've created the new goal: "${(newGoal as Goal).title}".` };
             }
 
         } else if (actionData && actionData.action === 'UPDATE_GOAL') {
