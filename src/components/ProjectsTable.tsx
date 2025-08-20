@@ -254,6 +254,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
       dueDate: finalDueDate.toISOString(),
       origin_event_id: `cal-${event.id}`,
       venue: event.location,
+      status: 'Requested',
     };
 
     createProjectMutation.mutate(newProjectData, {
