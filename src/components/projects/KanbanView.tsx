@@ -75,7 +75,11 @@ const KanbanColumn = ({ status, projects, dragHappened, isHovered, isDragging }:
   const isExpanded = !isEmpty || isHovered || isExpandedByUser;
 
   return (
-    <div ref={setNodeRef} className={cn("flex-shrink-0 transition-all duration-300", isExpanded ? "w-72" : "w-14")}>
+    <div 
+      ref={setNodeRef} 
+      className={cn("flex-shrink-0 transition-all duration-300", isExpanded ? "w-72" : "w-14")}
+      onDoubleClick={() => setIsExpandedByUser(!isExpandedByUser)}
+    >
       <div className={cn("h-full flex flex-col", !isExpanded && "items-center")}>
         <h3 className={cn(
           "font-semibold mb-4 px-1 text-base flex items-center",
