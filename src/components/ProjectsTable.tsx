@@ -45,11 +45,21 @@ interface ProjectsTableProps {
 }
 
 const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => {
-  const [view, setView] = useState<ViewMode>('list');
+  const [view, setView] = useState<ViewMode>(() => {
+    const savedView = localStorage.getItem('project_view_mode') as ViewMode;
+    return savedView || 'list';
+  });
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const createProjectMutation = useCreateProject();
+
+  const handleViewChange = (newView: ViewMode | null) => {
+    if (newView) {
+      setView(newView);
+      localStorage.setItem('project_view_mode', newView);
+    }
+  };
 
   const refreshCalendarEvents = async () => {
     const token = localStorage.getItem('googleCalendarToken');
@@ -323,9 +333,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
             <ToggleGroup 
               type="single" 
               value={view} 
-              onValueChange={(value) => {
-                if (value) setView(value as ViewMode);
-              }}
+              onValueChange={handleViewChange}
               aria-label="View mode"
             >
               <ToggleGroupItem value="list" aria-label="List view">
