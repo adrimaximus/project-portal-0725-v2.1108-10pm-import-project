@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Project, PROJECT_STATUS_OPTIONS, ProjectStatus } from '@/types';
@@ -58,6 +58,7 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
 };
 
 const KanbanColumn = ({ status, projects, dragHappened }: { status: { value: string, label: string }, projects: Project[], dragHappened: React.MutableRefObject<boolean> }) => {
+  const { setNodeRef } = useDroppable({ id: status.value });
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
 
   return (
@@ -66,7 +67,7 @@ const KanbanColumn = ({ status, projects, dragHappened }: { status: { value: str
         {status.label}
         <Badge variant="secondary" className="ml-2">{projects.length}</Badge>
       </h3>
-      <div className="bg-muted/50 rounded-lg p-2 min-h-[400px] h-full">
+      <div ref={setNodeRef} className="bg-muted/50 rounded-lg p-2 min-h-[400px] h-full">
         <SortableContext id={status.value} items={projectIds} strategy={verticalListSortingStrategy}>
           {projects.map(project => (
             <KanbanCard key={project.id} project={project} dragHappened={dragHappened} />
