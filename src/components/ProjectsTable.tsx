@@ -3,7 +3,7 @@ import { Project } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import {
@@ -23,9 +23,9 @@ import { useCreateProject } from "@/hooks/useCreateProject";
 
 import TableView from "./projects/TableView";
 import ListView from "./projects/ListView";
-import YearView from "./projects/YearView";
 import MonthView from "./projects/MonthView";
 import CalendarImportView from "./projects/CalendarImportView";
+import KanbanView from "./projects/KanbanView";
 
 interface CalendarEvent {
     id: string;
@@ -37,7 +37,7 @@ interface CalendarEvent {
     location?: string;
 }
 
-type ViewMode = 'table' | 'list' | 'month' | 'year' | 'calendar';
+type ViewMode = 'table' | 'list' | 'month' | 'kanban' | 'calendar';
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -277,8 +277,8 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
         return <ListView projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
       case 'month':
         return <MonthView projects={filteredProjects} gcalEvents={filteredCalendarEvents} />;
-      case 'year':
-        return <YearView projects={filteredProjects} gcalEvents={filteredCalendarEvents} />;
+      case 'kanban':
+        return <KanbanView projects={filteredProjects} />;
       case 'calendar':
         return <CalendarImportView events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
       default:
@@ -337,11 +337,11 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
               <ToggleGroupItem value="table" aria-label="Table view">
                 <TableIcon className="h-4 w-4" />
               </ToggleGroupItem>
+              <ToggleGroupItem value="kanban" aria-label="Kanban view">
+                <Kanban className="h-4 w-4" />
+              </ToggleGroupItem>
               <ToggleGroupItem value="month" aria-label="Month view">
                 <CalendarIcon className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="year" aria-label="Year view">
-                <CalendarDays className="h-4 w-4" />
               </ToggleGroupItem>
               <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
                 <CalendarPlus className="h-4 w-4" />
@@ -350,7 +350,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
           </div>
         </CardHeader>
         <CardContent>
-          {(view === 'table' || view === 'list' || view === 'calendar' || view === 'month' || view === 'year') && (
+          {(view === 'table' || view === 'list' || view === 'calendar' || view === 'month' || view === 'kanban') && (
             <div className="py-4">
               <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             </div>
