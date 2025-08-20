@@ -59,7 +59,7 @@ const KanbanColumn = ({ status, projects }: { status: { value: string, label: st
         <Badge variant="secondary" className="ml-2">{projects.length}</Badge>
       </h3>
       <div className="bg-muted/50 rounded-lg p-2 min-h-[400px] h-full">
-        <SortableContext items={projectIds} strategy={verticalListSortingStrategy}>
+        <SortableContext id={status.value} items={projectIds} strategy={verticalListSortingStrategy}>
           {projects.map(project => (
             <KanbanCard key={project.id} project={project} />
           ))}
@@ -118,7 +118,8 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
             oldData ? oldData.map(p => p.id === active.id ? { ...p, status: originalStatus } : p) : []
           );
         } else {
-          toast.success(`Project "${activeProject.name}" moved to ${newStatus}.`);
+          const newStatusLabel = PROJECT_STATUS_OPTIONS.find(opt => opt.value === newStatus)?.label || newStatus;
+          toast.success(`Project "${activeProject.name}" moved to ${newStatusLabel}.`);
           queryClient.invalidateQueries({ queryKey: ['projects'] });
         }
       }
