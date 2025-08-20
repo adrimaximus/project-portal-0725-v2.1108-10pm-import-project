@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Notification } from '@/types';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const fetchNotifications = async (userId: string): Promise<Notification[]> => {
   const { data, error } = await supabase
@@ -43,7 +43,6 @@ export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const { data: notifications = [], isLoading, error } = useQuery<Notification[]>({
     queryKey: ['notifications', user?.id],
@@ -60,6 +59,10 @@ export const useNotifications = () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notification_recipients', filter: `user_id=eq.${user.id}` },
         async (payload) => {
+          // Invalidate query untuk memicu pengambilan ulang data. Ini lebih andal.
+          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+
+          // Ambil konten notifikasi untuk ditampilkan di toast
           const { data: notif, error } = await supabase
             .from('notifications')
             .select('*')
@@ -68,30 +71,15 @@ export const useNotifications = () => {
 
           if (error || !notif) return;
 
-          const newNotification: Notification = {
-            id: notif.id,
-            type: notif.type,
-            title: notif.title,
+          // Tampilkan toast untuk setiap notifikasi baru
+          toast.info(notif.title, {
             description: notif.body,
-            link: notif.data?.link,
-            created_at: notif.created_at,
-            read_at: payload.new.read_at,
-          };
-
-          if (location.pathname !== '/notifications') {
-            toast.info(newNotification.title, {
-              description: newNotification.description,
-              action: {
-                label: 'View',
-                onClick: () => {
-                  if (newNotification.link) navigate(newNotification.link);
-                },
+            action: {
+              label: 'View',
+              onClick: () => {
+                if (notif.data?.link) navigate(notif.data.link);
               },
-            });
-          }
-          
-          queryClient.setQueryData(['notifications', user.id], (oldData: Notification[] | undefined) => {
-            return [newNotification, ...(oldData || [])];
+            },
           });
         }
       )
@@ -100,7 +88,7 @@ export const useNotifications = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, queryClient, navigate, location.pathname]);
+  }, [user, queryClient, navigate]);
 
   const unreadCount = notifications.filter(n => !n.read_at).length;
 
