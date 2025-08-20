@@ -1,27 +1,16 @@
-import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { dummyNotifications, notificationIcons, Notification } from "@/data/notifications";
+import { notificationIcons } from "@/data/notifications";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from "react-router-dom";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, Loader2 } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
+import { id } from 'date-fns/locale';
 
 const NotificationsPage = () => {
-  const [notifications, setNotifications] = useState<Notification[]>(dummyNotifications);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications(
-      notifications.map(n => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-  };
+  const { notifications, isLoading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
   return (
     <PortalLayout>
@@ -37,7 +26,7 @@ const NotificationsPage = () => {
             </div>
           </div>
           {unreadCount > 0 && (
-            <Button onClick={markAllAsRead} variant="outline">
+            <Button onClick={() => markAllAsRead()} variant="outline">
               <CheckCheck className="mr-2 h-4 w-4" />
               Mark all as read
             </Button>
@@ -45,46 +34,52 @@ const NotificationsPage = () => {
         </div>
         <Card>
           <CardContent className="p-0">
-            <div className="divide-y">
-              {notifications.map((notification) => {
-                const Icon = notificationIcons[notification.type];
-                return (
-                  <div
-                    key={notification.id}
-                    className={cn(
-                      "flex items-start gap-4 p-4 transition-colors",
-                      !notification.read && "bg-muted/50"
-                    )}
-                  >
-                    <div className="relative">
-                      <Icon className="h-6 w-6 text-muted-foreground mt-1" />
+            {isLoading ? (
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="divide-y">
+                {notifications.map((notification) => {
+                  const Icon = notificationIcons[notification.type as keyof typeof notificationIcons] || notificationIcons.system;
+                  return (
+                    <div
+                      key={notification.id}
+                      className={cn(
+                        "flex items-start gap-4 p-4 transition-colors",
+                        !notification.read && "bg-muted/50"
+                      )}
+                    >
+                      <div className="relative">
+                        <Icon className="h-6 w-6 text-muted-foreground mt-1" />
+                        {!notification.read && (
+                          <span className="absolute -top-1 -right-1 block h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <Link to={notification.link || "#"} className="hover:underline">
+                          <p className="font-semibold">{notification.title}</p>
+                        </Link>
+                        <p className="text-sm text-muted-foreground">{notification.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: id })}
+                        </p>
+                      </div>
                       {!notification.read && (
-                        <span className="absolute -top-1 -right-1 block h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => markAsRead(notification.id)}
+                        >
+                          Mark as read
+                        </Button>
                       )}
                     </div>
-                    <div className="flex-1">
-                      <Link to={notification.link || "#"} className="hover:underline">
-                        <p className="font-semibold">{notification.title}</p>
-                      </Link>
-                      <p className="text-sm text-muted-foreground">{notification.description}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
-                      </p>
-                    </div>
-                    {!notification.read && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        Mark as read
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            {notifications.length === 0 && (
+                  );
+                })}
+              </div>
+            )}
+            {!isLoading && notifications.length === 0 && (
               <div className="text-center text-muted-foreground p-12">
                 <Bell className="mx-auto h-12 w-12" />
                 <p className="mt-4">You have no notifications.</p>
