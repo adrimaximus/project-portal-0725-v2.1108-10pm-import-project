@@ -8,6 +8,18 @@ import { Link } from "react-router-dom";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { id } from 'date-fns/locale';
+import { Skeleton } from "@/components/ui/skeleton";
+
+const NotificationSkeleton = () => (
+  <div className="flex items-start gap-4 p-4">
+    <Skeleton className="h-6 w-6 rounded-full mt-1" />
+    <div className="flex-1 space-y-2">
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-3 w-1/4" />
+    </div>
+  </div>
+);
 
 const NotificationsPage = () => {
   const { 
@@ -44,8 +56,10 @@ const NotificationsPage = () => {
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="flex items-center justify-center p-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div className="divide-y">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <NotificationSkeleton key={i} />
+                ))}
               </div>
             ) : (
               <div className="divide-y">
