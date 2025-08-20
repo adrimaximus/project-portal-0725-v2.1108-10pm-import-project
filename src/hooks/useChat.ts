@@ -196,17 +196,69 @@ export const useChat = () => {
     if (!selectedConversationId || !currentUser) return;
 
     const tempId = `temp-${Date.now()}`;
-    const optimistic: Message = { id: tempId, text, timestamp: new Date().toISOString(), sender: currentUser, attachment };
-    setConversations(prev => prev.map(c => c.id === selectedConversationId ? { ...c, messages: [...c.messages, optimistic], lastMessage: text || "Attachment", lastMessageTimestamp: new Date().toISOString() } : c));
+    const optimisticMessage: Message = {
+      id: tempId,
+      text,
+      timestamp: new Date().toISOString(),
+      sender: currentUser,
+      attachment,
+    };
 
-    const { error } = await supabase.from('messages').insert({
-      conversation_id: selectedConversationId, sender_id: currentUser.id, content: text,
-      attachment_url: attachment?.url, attachment_name: attachment?.name, attachment_type: attachment?.type,
-    });
+    // Optimistically update UI
+    setConversations(prev =>
+      prev.map(c =>
+        c.id === selectedConversationId
+          ? {
+              ...c,
+              messages: [...c.messages, optimisticMessage],
+              lastMessage: text || "Attachment",
+              lastMessageTimestamp: new Date().toISOString(),
+            }
+          : c
+      )
+    );
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: selectedConversationId,
+        sender_id: currentUser.id,
+        content: text,
+        attachment_url: attachment?.url,
+        attachment_name: attachment?.name,
+        attachment_type: attachment?.type,
+      })
+      .select()
+      .single();
 
     if (error) {
       toast.error("Failed to send message.", { description: error.message });
-      setConversations(prev => prev.map(c => c.id === selectedConversationId ? { ...c, messages: c.messages.filter(m => m.id !== tempId) } : c));
+      // Revert optimistic update on error
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === selectedConversationId
+            ? { ...c, messages: c.messages.filter(m => m.id !== tempId) }
+            : c
+        )
+      );
+    } else {
+      // Replace optimistic message with real message from DB on success
+      const realMessage: Message = {
+        id: data.id,
+        text: data.content,
+        timestamp: data.created_at,
+        sender: currentUser,
+        attachment: data.attachment_url
+          ? { name: data.attachment_name, url: data.attachment_url, type: data.attachment_type }
+          : undefined,
+      };
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === selectedConversationId
+            ? { ...c, messages: c.messages.map(m => (m.id === tempId ? realMessage : m)) }
+            : c
+        )
+      );
     }
   };
 
