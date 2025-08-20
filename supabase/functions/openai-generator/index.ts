@@ -103,7 +103,8 @@ async function handleCreateProjectAction({ details, userSupabase, user, users })
   const { data: newProject, error } = await userSupabase.from('projects').insert({
     name: details.name, description: details.description, start_date: details.start_date,
     due_date: details.due_date, venue: details.venue, budget: details.budget,
-    created_by: user.id, status: 'Requested',
+    // The 'created_by' field is now automatically set by the database using the authenticated user's ID.
+    status: 'Requested',
   }).select().single();
 
   if (error) return `I tried to create the project, but failed. The database said: ${error.message}`;
