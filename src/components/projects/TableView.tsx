@@ -186,9 +186,9 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
 
   return (
     <div>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-y-auto max-h-[calc(100vh-25rem)]">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-background z-10">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
