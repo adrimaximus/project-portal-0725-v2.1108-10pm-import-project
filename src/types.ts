@@ -141,6 +141,7 @@ export interface Message {
     sender_name: string;
   } | null;
   is_deleted?: boolean;
+  is_forwarded?: boolean;
 }
 
 export interface Conversation {

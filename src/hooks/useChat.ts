@@ -128,6 +128,7 @@ export const useChat = () => {
       message_type: m.message_type,
       reply_to_message_id: m.reply_to_message_id,
       is_deleted: m.is_deleted,
+      is_forwarded: m.is_forwarded,
     }));
 
     setConversations(prev => prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c)));
@@ -167,6 +168,7 @@ export const useChat = () => {
             message_type: newMessage.message_type,
             reply_to_message_id: newMessage.reply_to_message_id,
             is_deleted: newMessage.is_deleted,
+            is_forwarded: newMessage.is_forwarded,
           };
 
           if (newMessage.sender_id === currentUser?.id) {
@@ -276,15 +278,15 @@ export const useChat = () => {
 
   const handleForwardMessage = async (destinationConversationId: string, message: Message) => {
     if (!currentUser) return;
-    const forwardedText = `[Forwarded from ${message.sender?.name || 'Unknown'}]\n${message.text || ''}`;
     const { error } = await supabase.from('messages').insert({
       conversation_id: destinationConversationId,
       sender_id: currentUser.id,
-      content: forwardedText,
+      content: message.text,
       attachment_url: message.attachment?.url,
       attachment_name: message.attachment?.name,
       attachment_type: message.attachment?.type,
       message_type: 'user',
+      is_forwarded: true,
     });
     if (error) toast.error("Failed to forward message.", { description: error.message });
     else {

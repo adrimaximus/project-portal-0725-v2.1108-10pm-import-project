@@ -90,6 +90,7 @@ const ChatConversation = ({ messages, members, onForwardMessage, onSetReply, onD
         const hasText = message.text && message.text.trim().length > 0;
 
         const repliedToMessage = message.reply_to_message_id ? messages.find(m => m.id === message.reply_to_message_id) : null;
+        const isForwarded = message.is_forwarded;
 
         if (message.is_deleted) {
           return (
@@ -159,6 +160,13 @@ const ChatConversation = ({ messages, members, onForwardMessage, onSetReply, onD
                     <p className="text-sm font-semibold mb-1">{sender.name}</p>
                   )}
                   
+                  {isForwarded && (
+                    <div className="flex items-center gap-1.5 text-xs opacity-80 mb-1.5">
+                      <Forward className="h-3 w-3" />
+                      <span>Forwarded</span>
+                    </div>
+                  )}
+
                   {repliedToMessage && (
                     <div className="p-2 rounded-md mb-2 bg-black/20 border-l-2 border-white/50">
                       <p className="text-xs font-semibold">{repliedToMessage.sender?.name}</p>
