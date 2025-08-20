@@ -153,11 +153,35 @@ export const useProjectMutations = (slug: string) => {
             if (commentError) throw commentError;
 
             if (isTicket && commentData) {
-                const cleanText = text.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, '@$1');
-                const { error: taskError } = await supabase.from('tasks').insert({
-                    project_id: project.id, created_by: user.id, title: cleanText.substring(0, 100), origin_ticket_id: commentData.id,
-                });
+                const mentionRegex = /@\[[^\]]+\]\(([^)]+)\)/g;
+                const mentionedUserIds: string[] = [];
+                let match;
+                while ((match = mentionRegex.exec(text)) !== null) {
+                    mentionedUserIds.push(match[1]);
+                }
+
+                const cleanTextForTitle = text.replace(/@\[[^\]]+\]\([^)]+\)\s*/g, '').trim();
+
+                const { data: newTask, error: taskError } = await supabase.from('tasks').insert({
+                    project_id: project.id, 
+                    created_by: user.id, 
+                    title: cleanTextForTitle.substring(0, 100), 
+                    origin_ticket_id: commentData.id,
+                }).select().single();
+                
                 if (taskError) throw new Error(`Ticket created, but failed to create task: ${taskError.message}`);
+
+                if (newTask && mentionedUserIds.length > 0) {
+                    const assignments = mentionedUserIds.map(userId => ({
+                        task_id: newTask.id,
+                        user_id: userId,
+                    }));
+                    const { error: assignError } = await supabase.from('task_assignees').insert(assignments);
+                    if (assignError) {
+                        console.warn('Failed to assign mentioned users:', assignError);
+                        toast.warning("Ticket created, but couldn't assign mentioned users automatically.");
+                    }
+                }
             }
         },
         onSuccess: (_, variables) => {
