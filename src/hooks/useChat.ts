@@ -274,6 +274,29 @@ export const useChat = () => {
     }
   };
 
+  const handleForwardMessage = async (destinationConversationId: string, message: Message) => {
+    if (!currentUser) return;
+
+    const forwardedText = `[Forwarded from ${message.sender?.name || 'Unknown'}]\n${message.text || ''}`;
+
+    const { error } = await supabase.from('messages').insert({
+      conversation_id: destinationConversationId,
+      sender_id: currentUser.id,
+      content: forwardedText,
+      attachment_url: message.attachment?.url,
+      attachment_name: message.attachment?.name,
+      attachment_type: message.attachment?.type,
+      message_type: 'user',
+    });
+
+    if (error) {
+      toast.error("Failed to forward message.", { description: error.message });
+    } else {
+      toast.success("Message forwarded successfully.");
+      fetchConversations();
+    }
+  };
+
   const handleStartNewChat = async (collaborator: Collaborator) => {
     if (!currentUser) return;
     const { data, error } = await supabase.rpc('create_or_get_conversation', { p_other_user_id: collaborator.id, p_is_group: false });
@@ -341,6 +364,7 @@ export const useChat = () => {
     setSearchTerm,
     handleConversationSelect,
     handleSendMessage,
+    handleForwardMessage,
     handleClearChat,
     handleStartNewChat,
     handleStartNewGroupChat,
