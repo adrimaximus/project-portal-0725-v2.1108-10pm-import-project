@@ -40,8 +40,10 @@ const KanbanView = ({ projects }: KanbanViewProps) => {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
+      // Require the user to press and hold for 250ms, or drag the item by 5px before a drag is initiated
       activationConstraint: {
-        distance: 10,
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
