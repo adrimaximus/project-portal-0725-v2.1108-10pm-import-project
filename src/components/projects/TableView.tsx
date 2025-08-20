@@ -38,6 +38,7 @@ import {
   PaginationState,
 } from "@tanstack/react-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TableViewProps {
   projects: Project[];
@@ -55,6 +56,7 @@ const paymentStatusConfig: Record<string, { color: string; label: string }> = {
 };
 
 const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => {
+  const isMobile = useIsMobile();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -176,7 +178,17 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
   const table = useReactTable({
     data: projects,
     columns,
-    state: { sorting, pagination },
+    state: { 
+      sorting, 
+      pagination,
+      columnVisibility: isMobile ? {
+        payment_status: false,
+        progress: false,
+        start_date: false,
+        due_date: false,
+        venue: false,
+      } : {},
+    },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),

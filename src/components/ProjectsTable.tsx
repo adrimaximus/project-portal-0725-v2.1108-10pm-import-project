@@ -306,11 +306,11 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
         </AlertDialogContent>
       </AlertDialog>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4">
           <div className="flex items-center gap-2">
             <CardTitle>Projects</CardTitle>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-start sm:self-center">
             {view === 'table' && (
               <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => {
                   refetch();
