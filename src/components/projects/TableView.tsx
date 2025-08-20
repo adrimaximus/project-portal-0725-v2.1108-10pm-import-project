@@ -113,7 +113,7 @@ const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => 
                     <span className="text-sm text-muted-foreground">{project.progress}%</span>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   {formatProjectDateRange(project.start_date, project.due_date)}
                 </TableCell>
                 <TableCell>
