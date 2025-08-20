@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import React, { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { invokeSupabaseFunction } from "@/lib/supabase-utils";
 
 const OpenAiIntegrationPage = () => {
   const [apiKey, setApiKey] = useState("");
@@ -19,8 +19,7 @@ const OpenAiIntegrationPage = () => {
   const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('manage-openai-key', { method: 'GET' });
-      if (error) throw error;
+      const data = await invokeSupabaseFunction('manage-openai-key', { method: 'GET' });
       setIsConnected(data.connected);
     } catch (error: any) {
       // Don't show an error toast on initial check, as it might just not be configured yet.
@@ -42,11 +41,10 @@ const OpenAiIntegrationPage = () => {
     }
     setIsLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('manage-openai-key', {
+      await invokeSupabaseFunction('manage-openai-key', {
         method: 'POST',
         body: { apiKey },
       });
-      if (error) throw error;
       toast.success("Successfully connected to OpenAI!");
       setIsConnected(true);
       setApiKey("");
@@ -60,10 +58,9 @@ const OpenAiIntegrationPage = () => {
   const handleDisconnect = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('manage-openai-key', {
+      await invokeSupabaseFunction('manage-openai-key', {
         method: 'DELETE',
       });
-      if (error) throw error;
       toast.info("Disconnected from OpenAI.");
       setIsConnected(false);
     } catch (error: any) {

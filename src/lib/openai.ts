@@ -1,26 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Project } from "@/types";
 import { Goal } from "@/types";
+import { invokeSupabaseFunction } from "./supabase-utils";
 
 // Generic helper to invoke Supabase functions with an authentication check
 const invokeFunction = async (functionName: string, payload?: any) => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    throw new Error("User not authenticated. Please sign in again.");
-  }
-
-  const { data, error } = await supabase.functions.invoke(functionName, {
-    body: payload,
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-  // Edge functions might return a structured error within the data object
-  if (data && data.error) {
-    throw new Error(data.error);
-  }
-  return data;
+  return invokeSupabaseFunction(functionName, { body: payload });
 };
 
 // Specific helper for the openai-generator function that expects a `result` property

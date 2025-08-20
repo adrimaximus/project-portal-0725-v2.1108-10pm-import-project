@@ -5,7 +5,7 @@ import { Sparkles, Loader2 } from 'lucide-react';
 import { generateAiIcon } from '@/lib/openai';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { invokeSupabaseFunction } from '@/lib/supabase-utils';
 
 interface AiIconGeneratorProps {
   onIconGenerated: (url: string) => void;
@@ -31,11 +31,9 @@ const AiIconGenerator = ({ onIconGenerated }: AiIconGeneratorProps) => {
       const tempUrl = await generateAiIcon(prompt);
 
       // Langkah 2: Unggah gambar ini ke Supabase Storage kita
-      const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-image-from-url', {
+      const uploadData = await invokeSupabaseFunction('upload-image-from-url', {
         body: { imageUrl: tempUrl, userId: user.id },
       });
-
-      if (uploadError) throw uploadError;
 
       // Langkah 3: Gunakan URL Supabase yang permanen
       onIconGenerated(uploadData.secure_url);
