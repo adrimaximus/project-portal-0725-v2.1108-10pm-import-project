@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { getProgress } from '@/lib/progress';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { generateVibrantGradient } from '@/lib/utils';
 
 const GoalCard = ({ goal }: { goal: Goal }) => {
   const { percentage } = getProgress(goal);
@@ -58,7 +59,7 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
                     <TooltipTrigger asChild>
                       <Avatar className="h-7 w-7 border-2 border-background">
                         <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                       </Avatar>
                     </TooltipTrigger>
                     <TooltipContent>

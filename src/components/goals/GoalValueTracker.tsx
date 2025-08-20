@@ -9,6 +9,7 @@ import { formatValue, formatNumber } from '@/lib/formatting';
 import GoalLogTable from './GoalLogTable';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, differenceInDays } from 'date-fns';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { generateVibrantGradient } from '@/lib/utils';
 
 interface GoalValueTrackerProps {
   goal: Goal;
@@ -127,7 +128,7 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
                         <li key={achiever.id} className="flex items-center gap-3">
                             <Avatar className="w-9 h-9">
                                 <AvatarImage src={achiever.avatar} alt={achiever.name} />
-                                <AvatarFallback>{achiever.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                <AvatarFallback style={generateVibrantGradient(achiever.id)}>{achiever.initials}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
                                 <div className="flex justify-between items-baseline">

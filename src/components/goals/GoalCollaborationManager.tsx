@@ -36,7 +36,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
 import { Input } from '../ui/input';
-import { getInitials } from '@/lib/utils';
+import { getInitials, generateVibrantGradient } from '@/lib/utils';
 
 interface GoalCollaborationManagerProps {
   goal: Goal;
@@ -147,7 +147,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
                           <div className="flex items-center gap-3">
                             <Avatar>
                               <AvatarImage src={user.avatar} />
-                              <AvatarFallback>{user.initials}</AvatarFallback>
+                              <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="font-medium">{user.name}</p>
@@ -180,7 +180,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
               <div className="flex items-center gap-3">
                 <Avatar>
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.initials}</AvatarFallback>
+                  <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="font-medium">{user.name}</p>

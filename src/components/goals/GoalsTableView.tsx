@@ -11,6 +11,7 @@ import GoalIcon from './GoalIcon';
 import { MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '../ui/button';
+import { generateVibrantGradient } from '@/lib/utils';
 
 interface GoalsTableViewProps {
   goals: Goal[];
@@ -64,7 +65,7 @@ const GoalRow = ({ goal }: { goal: Goal }) => {
                 <TooltipTrigger asChild>
                   <Avatar className="h-8 w-8 border-2 border-background">
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent>
