@@ -8,27 +8,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// --- AI Context & Prompt Generation ---
+// --- UTILITIES & CONTEXT BUILDERS ---
 
-async function getAiContext(userSupabase) {
+async function getFullContext(userSupabase) {
   const { data: projects, error: rpcError } = await userSupabase.rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 });
-  if (rpcError) throw new Error(`Failed to fetch project data for analysis: ${rpcError.message}`);
+  if (rpcError) throw new Error(`Failed to fetch project data: ${rpcError.message}`);
 
   const { data: users, error: usersError } = await userSupabase.from('profiles').select('id, first_name, last_name, email');
-  if (usersError) throw new Error(`Failed to fetch users for context: ${usersError.message}`);
+  if (usersError) throw new Error(`Failed to fetch users: ${usersError.message}`);
 
   const { data: goals, error: goalsError } = await userSupabase.rpc('get_user_goals');
-  if (goalsError) throw new Error(`Failed to fetch goals for context: ${goalsError.message}`);
+  if (goalsError) throw new Error(`Failed to fetch goals: ${goalsError.message}`);
 
+  return { projects, users, goals };
+}
+
+function buildSummarizedContext(fullContext) {
   return {
-    projects: projects.map(p => ({
+    projects: fullContext.projects.map(p => ({
       name: p.name, status: p.status, category: p.category,
       tasks: (p.tasks || []).map(t => ({ title: t.title, completed: t.completed, assignedTo: (t.assignedTo || []).map(a => a.name) }))
     })),
-    goals: goals.map(g => ({
+    goals: fullContext.goals.map(g => ({
       title: g.title, type: g.type, progress: g.completions ? g.completions.length : 0, tags: g.tags ? g.tags.map(t => t.name) : []
     })),
-    users: users.map(u => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email })),
+    users: fullContext.users.map(u => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email })),
     services: [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ],
     icons: [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ],
   };
@@ -43,12 +47,12 @@ AVAILABLE ACTIONS:
 You can perform several types of actions. When asked to perform an action, you MUST respond ONLY with a JSON object in the specified format.
 
 1. CREATE_PROJECT:
-{"action": "CREATE_PROJECT", "project_details": {"name": "<project name>", "description": "<desc>", "start_date": "YYYY-MM-DD", "due_date": "YYYY-MM-DD", "venue": "<venue>", "budget": 12345, "services": ["Service 1"], "members": ["User Name"]}}
+{"action": "CREATE_PROJECT", "details": {"name": "<project name>", "description": "<desc>", "start_date": "YYYY-MM-DD", "due_date": "YYYY-MM-DD", "venue": "<venue>", "budget": 12345, "services": ["Service 1"], "members": ["User Name"]}}
 - The current user will be the project owner. 'members' are additional people to add to the project.
 - If the user does not explicitly list services, you MUST analyze the project name and description to infer a list of relevant services from the 'Available Services' context and include them in the 'services' array. For example, a 'gala dinner' project might need 'Venue', 'Food & Beverage', and 'Entertainment'.
 
 2. UPDATE_PROJECT:
-{"action": "UPDATE_PROJECT", "project_name": "<project name>", "updates": {"field": "value", "another_field": "value"}}
+{"action": "UPDATE_PROJECT", "projectName": "<project name>", "updates": {"field": "value", "another_field": "value"}}
 - Valid fields for 'updates' are: name, description, status, payment_status, budget, start_date, due_date, venue, add_members, remove_members, add_services, remove_services.
 
 3. BULK_UPDATE_PROJECTS:
@@ -58,25 +62,25 @@ You can perform several types of actions. When asked to perform an action, you M
 - The projects updated will be limited to the ones the user has access to.
 
 4. CREATE_TASK:
-{"action": "CREATE_TASK", "project_name": "<project name>", "task_title": "<title of the new task>", "assignees": ["<optional user name>"]}
+{"action": "CREATE_TASK", "projectName": "<project name>", "taskTitle": "<title of the new task>", "assignees": ["<optional user name>"]}
 
 5. ASSIGN_TASK:
-{"action": "ASSIGN_TASK", "project_name": "<project name>", "task_title": "<title of the task>", "assignees": ["<user name 1>", "<user name 2>"]}
+{"action": "ASSIGN_TASK", "projectName": "<project name>", "taskTitle": "<title of the task>", "assignees": ["<user name 1>", "<user name 2>"]}
 
 6. UNASSIGN_TASK:
-{"action": "UNASSIGN_TASK", "project_name": "<project name>", "task_title": "<title of the task>", "assignees": ["<user name 1>"]}
+{"action": "UNASSIGN_TASK", "projectName": "<project name>", "taskTitle": "<title of the task>", "assignees": ["<user name 1>"]}
 
 7. CREATE_GOAL:
-{"action": "CREATE_GOAL", "goal_details": {"title": "<goal title>", "description": "<desc>", "type": "<type>", "frequency": "<freq>", "specific_days": ["Mo", "We"], "target_quantity": 123, "target_period": "Weekly", "target_value": 123, "unit": "USD", "icon": "IconName", "color": "#RRGGBB", "tags": [{"name": "Tag1", "color": "#RRGGBB"}]}}
+{"action": "CREATE_GOAL", "details": {"title": "<goal title>", "description": "<desc>", "type": "<type>", "frequency": "<freq>", "specific_days": ["Mo", "We"], "target_quantity": 123, "target_period": "Weekly", "target_value": 123, "unit": "USD", "icon": "IconName", "color": "#RRGGBB", "tags": [{"name": "Tag1", "color": "#RRGGBB"}]}}
 - If a user provides only a title for a new goal, you MUST infer the other details.
 - Infer a suitable 'description'.
 - Choose an appropriate 'type' ('frequency', 'quantity', or 'value').
 - Suggest a relevant 'icon' from the 'Available Icons' list and a suitable 'color'.
 - Create 2-3 relevant 'tags' as an array of objects like '[{"name": "Health", "color": "#FF6B6B"}, ...]'. These will be new tags.
-- Example: User says "create a goal to learn guitar". You might respond with: {"action": "CREATE_GOAL", "goal_details": {"title": "Learn Guitar", "description": "Practice guitar regularly to improve skills.", "type": "frequency", "frequency": "Weekly", "specific_days": ["Mo", "We", "Fr"], "icon": "Music", "color": "#4ECDC4", "tags": [{"name": "Music", "color": "#4ECDC4"}, {"name": "Hobby", "color": "#F7B801"}]}}
+- Example: User says "create a goal to learn guitar". You might respond with: {"action": "CREATE_GOAL", "details": {"title": "Learn Guitar", "description": "Practice guitar regularly to improve skills.", "type": "frequency", "frequency": "Weekly", "specific_days": ["Mo", "We", "Fr"], "icon": "Music", "color": "#4ECDC4", "tags": [{"name": "Music", "color": "#4ECDC4"}, {"name": "Hobby", "color": "#F7B801"}]}}
 
 8. UPDATE_GOAL:
-{"action": "UPDATE_GOAL", "goal_title": "<title of the goal to update>", "updates": {"field": "value", "another_field": "value"}}
+{"action": "UPDATE_GOAL", "goalTitle": "<title of the goal to update>", "updates": {"field": "value", "another_field": "value"}}
 - Valid fields for 'updates' are: title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, icon, color, add_tags, remove_tags.
 - For 'add_tags' and 'remove_tags', the value should be an array of tag names.
 
@@ -91,9 +95,9 @@ CONTEXT:
 `;
 }
 
-// --- Action Handlers ---
+// --- ACTION HANDLERS ---
 
-async function handleCreateProjectAction({ details, supabaseAdmin, user, userList }) {
+async function handleCreateProjectAction({ details, supabaseAdmin, user, users }) {
   if (!details || !details.name) return "To create a project, I need at least a name.";
 
   const { data: newProject, error } = await supabaseAdmin.from('projects').insert({
@@ -110,7 +114,7 @@ async function handleCreateProjectAction({ details, supabaseAdmin, user, userLis
     if (error) followUp.push("I couldn't add the services."); else followUp.push(`I've added ${details.services.length} services.`);
   }
   if (details.members?.length > 0) {
-    const memberIds = userList.filter(u => details.members.some(name => u.name.toLowerCase() === name.toLowerCase())).map(u => u.id);
+    const memberIds = users.filter(u => details.members.some(name => u.name.toLowerCase() === name.toLowerCase())).map(u => u.id);
     if (memberIds.length > 0) {
       const { error } = await supabaseAdmin.from('project_members').insert(memberIds.map(id => ({ project_id: newProject.id, user_id: id, role: 'member' })));
       if (error) followUp.push("I couldn't add the team members."); else followUp.push(`I've assigned ${details.members.join(', ')}.`);
@@ -121,7 +125,7 @@ async function handleCreateProjectAction({ details, supabaseAdmin, user, userLis
   return `Done! I've created the project "${newProject.name}". ${followUp.join(' ')}`.trim();
 }
 
-async function handleUpdateProjectAction({ projectName, updates, projects, userList, supabaseAdmin }) {
+async function handleUpdateProjectAction({ projectName, updates, projects, users, supabaseAdmin }) {
     const project = projects.find(p => p.name.toLowerCase() === projectName.toLowerCase());
     if (!project) return `I couldn't find a project named "${projectName}".`;
 
@@ -141,11 +145,11 @@ async function handleUpdateProjectAction({ projectName, updates, projects, userL
 
     let currentMemberIds = new Set(project.assignedTo.map(m => m.id));
     if (updates.add_members) updates.add_members.forEach(name => {
-        const user = userList.find(u => u.name.toLowerCase() === name.toLowerCase());
+        const user = users.find(u => u.name.toLowerCase() === name.toLowerCase());
         if (user) currentMemberIds.add(user.id);
     });
     if (updates.remove_members) updates.remove_members.forEach(name => {
-        const user = userList.find(u => u.name.toLowerCase() === name.toLowerCase());
+        const user = users.find(u => u.name.toLowerCase() === name.toLowerCase());
         if (user) currentMemberIds.delete(user.id);
     });
     rpcParams.p_member_ids = Array.from(currentMemberIds);
@@ -184,7 +188,13 @@ async function handleBulkUpdateProjectsAction({ filters, updates, projects, supa
 
 // ... other action handlers for tasks, goals etc. can be added here in the same pattern
 
-// --- Feature Handlers ---
+const actionHandlers = {
+  'CREATE_PROJECT': handleCreateProjectAction,
+  'UPDATE_PROJECT': handleUpdateProjectAction,
+  'BULK_UPDATE_PROJECTS': handleBulkUpdateProjectsAction,
+};
+
+// --- FEATURE HANDLERS ---
 
 async function handleAnalyzeProjects({ req, payload, supabaseAdmin, openai }) {
   const { request, conversationHistory } = payload;
@@ -197,8 +207,9 @@ async function handleAnalyzeProjects({ req, payload, supabaseAdmin, openai }) {
   const { data: { user } } = await userSupabase.auth.getUser();
   if (!user) throw new Error("User not authenticated.");
 
-  const context = await getAiContext(userSupabase);
-  const systemPrompt = getSystemPrompt(context);
+  const fullContext = await getFullContext(userSupabase);
+  const summarizedContext = buildSummarizedContext(fullContext);
+  const systemPrompt = getSystemPrompt(summarizedContext);
 
   const messages = [
     { role: "system", content: systemPrompt },
@@ -216,17 +227,12 @@ async function handleAnalyzeProjects({ req, payload, supabaseAdmin, openai }) {
 
   try {
     const actionData = JSON.parse(jsonMatch[1] || jsonMatch[2]);
-    switch (actionData.action) {
-      case 'CREATE_PROJECT':
-        return { result: await handleCreateProjectAction({ details: actionData.project_details, supabaseAdmin, user, userList: context.users }) };
-      case 'UPDATE_PROJECT':
-        return { result: await handleUpdateProjectAction({ projectName: actionData.project_name, updates: actionData.updates, projects: context.projects, userList: context.users, supabaseAdmin }) };
-      case 'BULK_UPDATE_PROJECTS':
-        return { result: await handleBulkUpdateProjectsAction({ filters: actionData.filters, updates: actionData.updates, projects: context.projects, supabaseAdmin }) };
-      // ... other action cases
-      default:
-        return { result: "I understood the action, but I don't know how to perform it yet." };
+    const handler = actionHandlers[actionData.action];
+    if (handler) {
+      const result = await handler({ ...actionData, ...fullContext, supabaseAdmin, user });
+      return { result };
     }
+    return { result: "I understood the action, but I don't know how to perform it yet." };
   } catch (e) {
     return { result: responseText };
   }
@@ -280,7 +286,7 @@ const featureHandlers = {
   'generate-mood-insight': handleGenerateMoodInsight,
 };
 
-// --- Main Server ---
+// --- MAIN SERVER ---
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
