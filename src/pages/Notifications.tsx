@@ -10,7 +10,16 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { id } from 'date-fns/locale';
 
 const NotificationsPage = () => {
-  const { notifications, isLoading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { 
+    notifications, 
+    isLoading, 
+    unreadCount, 
+    markAsRead, 
+    markAllAsRead,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useNotifications();
 
   return (
     <PortalLayout>
@@ -83,6 +92,20 @@ const NotificationsPage = () => {
               <div className="text-center text-muted-foreground p-12">
                 <Bell className="mx-auto h-12 w-12" />
                 <p className="mt-4">You have no notifications.</p>
+              </div>
+            )}
+            {hasNextPage && (
+              <div className="p-4 text-center">
+                <Button
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  variant="outline"
+                >
+                  {isFetchingNextPage ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Load More
+                </Button>
               </div>
             )}
           </CardContent>

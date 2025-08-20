@@ -1,10 +1,16 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Notification } from '@/types';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
-const fetchNotifications = async (userId: string): Promise<Notification[]> => {
+const NOTIFICATIONS_PER_PAGE = 20;
+
+const fetchNotifications = async (userId: string, pageParam: number = 0): Promise<Notification[]> => {
+  const from = pageParam * NOTIFICATIONS_PER_PAGE;
+  const to = from + NOTIFICATIONS_PER_PAGE - 1;
+
   const { data, error } = await supabase
     .from('notifications')
     .select(`
@@ -17,10 +23,11 @@ const fetchNotifications = async (userId: string): Promise<Notification[]> => {
       resource_id,
       data,
       actor:actor_id (id, first_name, last_name, avatar_url, email),
-      recipients:notification_recipients (read_at)
+      recipients:notification_recipients!inner (read_at)
     `)
-    .eq('notification_recipients.user_id', userId)
-    .order('created_at', { ascending: false });
+    .eq('recipients.user_id', userId)
+    .order('created_at', { ascending: false })
+    .range(from, to);
 
   if (error) {
     console.error("Error fetching notifications:", error);
@@ -47,12 +54,58 @@ export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: notifications = [], isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['notifications', user?.id],
-    queryFn: () => fetchNotifications(user!.id),
+    queryFn: ({ pageParam }) => fetchNotifications(user!.id, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === NOTIFICATIONS_PER_PAGE ? allPages.length : undefined;
+    },
     enabled: !!user,
   });
 
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`notifications:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notification_recipients',
+          filter: `user_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          const { data: newNotification, error } = await supabase
+            .from('notifications')
+            .select('title, body')
+            .eq('id', payload.new.notification_id)
+            .single();
+          
+          if (!error && newNotification) {
+            toast.info(newNotification.title, {
+              description: newNotification.body,
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
+
+  const notifications = data?.pages.flatMap(page => page) ?? [];
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAsReadMutation = useMutation({
@@ -97,5 +150,8 @@ export const useNotifications = () => {
     unreadCount,
     markAsRead: markAsReadMutation.mutate,
     markAllAsRead: markAllAsReadMutation.mutate,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   };
 };
