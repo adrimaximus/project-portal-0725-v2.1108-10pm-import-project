@@ -7,7 +7,6 @@ import CollaboratorsList from "@/components/dashboard/CollaboratorsList";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import AiHealthSummaryCard from "@/components/dashboard/AiHealthSummaryCard";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -72,9 +71,6 @@ const Index = () => {
                     <h2 className="text-2xl font-bold">Insights</h2>
                 </div>
                 <DateRangePicker date={date} onDateChange={setDate} />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <AiHealthSummaryCard projects={filteredProjects} />
             </div>
             <DashboardStatsGrid projects={filteredProjects} />
             <CollaboratorsList projects={filteredProjects} />
