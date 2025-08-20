@@ -26,25 +26,6 @@ const LoginPage = () => {
     }
   }, [session, authContextLoading, navigate]);
 
-  // Menambahkan event listener untuk tombol 'S' untuk sign in
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      // Mencegah sign-in saat mengetik di input field
-      if (event.key.toLowerCase() === 's' && !(event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)) {
-        event.preventDefault();
-        // Mencari tombol submit di dalam form Auth UI dan menekannya
-        const signInButton = document.querySelector('.supabase-auth-ui_ui-button[type="submit"]') as HTMLButtonElement | null;
-        signInButton?.click();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress);
-    };
-  }, []);
-
   return (
     <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1554147090-e1221a04a025?q=80&w=2940&auto=format&fit=crop')"}}>
       <div className="w-full max-w-4xl grid lg:grid-cols-2 rounded-2xl overflow-hidden shadow-2xl">
@@ -82,15 +63,7 @@ const LoginPage = () => {
                     colors: {
                       brand: 'hsl(var(--primary))',
                       brandAccent: 'hsl(var(--primary))',
-                      brandButtonText: 'hsl(var(--primary-foreground))',
                     },
-                  },
-                },
-              }}
-              localization={{
-                variables: {
-                  sign_in: {
-                    button_label: 'Press S to Sign In',
                   },
                 },
               }}

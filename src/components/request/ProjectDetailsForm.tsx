@@ -141,8 +141,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         if (files.length > 0) {
           toast.info(`Uploading ${files.length} file(s)...`);
           for (const file of files) {
-            const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-            const filePath = `${newProjectId}/${Date.now()}-${sanitizedFileName}`;
+            const filePath = `${newProjectId}/${Date.now()}-${file.name}`;
             const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
             
             if (uploadError) {

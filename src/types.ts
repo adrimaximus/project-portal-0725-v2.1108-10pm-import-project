@@ -125,23 +125,15 @@ export interface Goal {
 export interface Attachment {
   name: string;
   url: string;
-  type: string;
+  type: 'image' | 'file';
 }
 
 export interface Message {
   id: string;
-  text: string | null;
+  text: string;
   timestamp: string;
-  sender?: User;
-  attachment?: Attachment | null;
-  message_type?: 'user' | 'system_notification';
-  reply_to_message_id?: string | null;
-  reply_to_message?: {
-    text: string | null;
-    sender_name: string;
-  } | null;
-  is_deleted?: boolean;
-  is_forwarded?: boolean;
+  sender: User;
+  attachment?: Attachment;
 }
 
 export interface Conversation {
@@ -155,8 +147,6 @@ export interface Conversation {
   isGroup: boolean;
   members: Collaborator[];
   created_by?: string;
-  pinned_message_id?: string | null;
-  pinned_message?: Message | null;
 }
 
 export interface GoogleCalendarEvent {
@@ -173,16 +163,6 @@ export interface GoogleCalendarEvent {
   htmlLink: string;
   status: string;
   location?: string;
-}
-
-export interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  link?: string;
-  created_at: string;
-  read_at: string | null;
 }
 
 export const PROJECT_STATUS_OPTIONS = [

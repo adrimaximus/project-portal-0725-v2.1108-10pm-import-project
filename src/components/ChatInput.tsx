@@ -1,26 +1,21 @@
 import { useRef, useState } from "react";
 import { Button } from "./ui/button";
-import { Paperclip, Send, X, Loader2, Reply } from "lucide-react";
+import { Textarea } from "./ui/textarea";
+import { Paperclip, Send, X, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Attachment, Message } from "@/types";
+import { Attachment } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
-import MentionsInput, { MentionUser } from "@/components/MentionsInput";
-import { MentionMeta, serializeMentions } from "@/lib/mention-utils";
 
 interface ChatInputProps {
   conversationId: string;
-  onSendMessage: (text: string, attachment: Attachment | null, replyToId: string | null) => void;
+  onSendMessage: (text: string, attachment: Attachment | null) => void;
   onTyping?: () => void;
-  users?: MentionUser[];
-  replyingTo: Message | null;
-  onCancelReply: () => void;
 }
 
-const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [], replyingTo, onCancelReply }: ChatInputProps) => {
+const ChatInput = ({ conversationId, onSendMessage, onTyping }: ChatInputProps) => {
   const [text, setText] = useState("");
-  const [mentions, setMentions] = useState<MentionMeta[]>([]);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { user: currentUser } = useAuth();
@@ -35,8 +30,7 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [], replyi
   };
 
   const handleSend = async () => {
-    const serializedText = serializeMentions(text, mentions);
-    if ((!serializedText.trim() && !attachmentFile) || !currentUser) return;
+    if ((!text.trim() && !attachmentFile) || !currentUser) return;
 
     setIsUploading(true);
     let finalAttachment: Attachment | null = null;
@@ -60,17 +54,15 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [], replyi
       
       finalAttachment = {
         name: attachmentFile.name,
-        type: attachmentFile.type,
+        type: attachmentFile.type.startsWith("image/") ? "image" : "file",
         url: urlData.publicUrl,
       };
     }
 
-    onSendMessage(serializedText, finalAttachment, replyingTo?.id || null);
+    onSendMessage(text, finalAttachment);
     setText("");
-    setMentions([]);
     setAttachmentFile(null);
     setIsUploading(false);
-    onCancelReply();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,29 +74,24 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [], replyi
 
   return (
     <div className="border-t p-4 flex-shrink-0">
-      {replyingTo && (
-        <div className="p-2 mb-2 rounded-md bg-muted/50 flex items-start justify-between">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <Reply className="h-4 w-4 flex-shrink-0" />
-            <div className="overflow-hidden">
-              <p className="text-sm font-semibold">Replying to {replyingTo.sender?.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{replyingTo.text || "Attachment"}</p>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onCancelReply}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
       <div className="relative">
-        <MentionsInput
-          value={text}
-          onChange={(v) => { setText(v); triggerTyping(); }}
-          mentions={mentions}
-          onMentionsChange={setMentions}
-          users={users}
+        <Textarea
           placeholder="Type a message..."
-          onEnter={handleSend}
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            triggerTyping();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            } else {
+              triggerTyping();
+            }
+          }}
+          className="pr-24"
+          disabled={isUploading}
         />
         <div className="absolute bottom-2 right-2 flex items-center gap-2">
           <Button variant="ghost" size="icon" asChild disabled={isUploading}>
@@ -119,7 +106,7 @@ const ChatInput = ({ conversationId, onSendMessage, onTyping, users = [], replyi
         </div>
       </div>
       {attachmentFile && (
-        <div className="mt-2 flex items-center gap-2 text-sm text-neutral-400 bg-neutral-900/50 p-2 rounded-md">
+        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground bg-muted p-2 rounded-md">
           <Paperclip className="h-4 w-4" />
           <span>{attachmentFile.name}</span>
           <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => setAttachmentFile(null)} disabled={isUploading}>

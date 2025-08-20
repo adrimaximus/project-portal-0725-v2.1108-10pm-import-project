@@ -139,11 +139,9 @@ export function GlobalSearch() {
       
       const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made'];
       if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
-        toast.info("Action successful. Refreshing data...");
+        toast.info("Action successful. Refreshing project data...");
         await queryClient.invalidateQueries({ queryKey: ['projects'] });
         await queryClient.invalidateQueries({ queryKey: ['project'] });
-        await queryClient.invalidateQueries({ queryKey: ['goals'] });
-        await queryClient.invalidateQueries({ queryKey: ['goal'] });
       }
   
       setConversation(prev => [...prev, { sender: 'ai', content: result }]);

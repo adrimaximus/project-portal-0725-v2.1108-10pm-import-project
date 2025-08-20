@@ -22,7 +22,6 @@ import { id } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import RoleManagerDialog, { Role } from '@/components/settings/RoleManagerDialog';
 import AddUserDialog from '@/components/settings/AddUserDialog';
-import { invokeSupabaseFunction } from '@/lib/supabase-utils';
 
 type Invite = {
   id: number;
@@ -116,13 +115,14 @@ const TeamSettingsPage = () => {
     toast.info(`Sending ${validInvites.length} invite(s)...`);
 
     for (const invite of validInvites) {
-      try {
-        await invokeSupabaseFunction('invite-user', {
-          body: { email: invite.email, role: invite.role },
-        });
-        successCount++;
-      } catch (error: any) {
+      const { error } = await supabase.functions.invoke('invite-user', {
+        body: { email: invite.email, role: invite.role },
+      });
+
+      if (error) {
         toast.error(`Failed to send invite to ${invite.email}: ${error.message}`);
+      } else {
+        successCount++;
       }
     }
 
@@ -159,14 +159,14 @@ const TeamSettingsPage = () => {
 
   const confirmDeleteMember = async () => {
     if (!memberToDelete) return;
-    try {
-      await invokeSupabaseFunction('delete-user', {
-        body: { user_id: memberToDelete.id },
-      });
+    const { error } = await supabase.functions.invoke('delete-user', {
+      body: { user_id: memberToDelete.id },
+    });
+    if (error) {
+      toast.error(`Failed to delete member: ${error.message}`);
+    } else {
       toast.success(`Member ${memberToDelete.name} has been deleted.`);
       fetchData();
-    } catch (error: any) {
-      toast.error(`Failed to delete member: ${error.message}`);
     }
     setMemberToDelete(null);
   };

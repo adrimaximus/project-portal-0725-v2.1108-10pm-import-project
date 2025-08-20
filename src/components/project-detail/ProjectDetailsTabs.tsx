@@ -7,10 +7,9 @@ interface ProjectDetailsTabsProps {
   project: Project;
   isEditing: boolean;
   onTasksUpdate: (tasks: Task[]) => void;
-  canUpload: boolean;
 }
 
-const ProjectDetailsTabs = ({ project, isEditing, canUpload }: ProjectDetailsTabsProps) => {
+const ProjectDetailsTabs = ({ project, isEditing }: ProjectDetailsTabsProps) => {
   // Dummy handler, as file management logic is not fully specified here.
   const handleFilesAdd = (files: File[]) => {
     console.log("Files added:", files);
@@ -32,7 +31,6 @@ const ProjectDetailsTabs = ({ project, isEditing, canUpload }: ProjectDetailsTab
           isEditing={isEditing}
           onFilesAdd={handleFilesAdd}
           onFileDelete={handleFileDelete}
-          canUpload={canUpload}
         />
       </TabsContent>
       <TabsContent value="comments">

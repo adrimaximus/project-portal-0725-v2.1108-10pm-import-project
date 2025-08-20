@@ -1,40 +1,38 @@
+import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
+import ProjectsTable from "@/components/ProjectsTable";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import { Link } from "react-router-dom";
-import ProjectList from "@/components/projects/ProjectList";
+import { PlusCircle, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/hooks/useProjects";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ProjectAiAssistant } from "@/components/ProjectAiAssistant";
 
 const Projects = () => {
-  const { data: projects = [], isLoading } = useProjects();
-
-  if (isLoading) {
-    return (
-      <PortalLayout>
-        <div className="flex items-center justify-between mb-6">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <Skeleton className="h-96 w-full" />
-      </PortalLayout>
-    );
-  }
+  const navigate = useNavigate();
+  const { data: projects = [], isLoading, refetch } = useProjects();
+  const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
 
   return (
     <PortalLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Projects</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">All Projects</h1>
         <div className="flex items-center gap-2">
-          <Button asChild>
-            <Link to="/projects/new">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              New Project
-            </Link>
+          <Button variant="outline" onClick={() => setIsAiAssistantOpen(true)}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Ask AI
+          </Button>
+          <Button onClick={() => navigate('/request')}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            New Project
           </Button>
         </div>
       </div>
-      <ProjectList projects={projects} />
+      <ProjectsTable projects={projects} isLoading={isLoading} refetch={refetch} />
+      <ProjectAiAssistant 
+        open={isAiAssistantOpen} 
+        onOpenChange={setIsAiAssistantOpen} 
+        projects={projects}
+      />
     </PortalLayout>
   );
 };

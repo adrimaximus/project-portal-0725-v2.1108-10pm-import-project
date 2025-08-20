@@ -2,7 +2,47 @@ import { Activity } from "@/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
-import { getActivityIcon } from "@/data/activityIcons";
+import {
+  FileText,
+  MessageSquare,
+  ListChecks,
+  CheckCircle,
+  Trash2,
+  UserPlus,
+  UserMinus,
+  CreditCard,
+  Pencil,
+  FileUp,
+  Ticket,
+  Undo2,
+  Briefcase,
+  UserCog,
+  Wallet,
+  Calendar,
+  MapPin,
+} from "lucide-react";
+
+const activityIcons: { [key: string]: React.ReactNode } = {
+  PROJECT_CREATED: <FileText className="h-4 w-4" />,
+  COMMENT_ADDED: <MessageSquare className="h-4 w-4" />,
+  TASK_CREATED: <ListChecks className="h-4 w-4" />,
+  TASK_COMPLETED: <CheckCircle className="h-4 w-4" />,
+  TASK_DELETED: <Trash2 className="h-4 w-4" />,
+  TEAM_MEMBER_ADDED: <UserPlus className="h-4 w-4" />,
+  TEAM_MEMBER_REMOVED: <UserMinus className="h-4 w-4" />,
+  PAYMENT_STATUS_UPDATED: <CreditCard className="h-4 w-4" />,
+  PROJECT_STATUS_UPDATED: <Pencil className="h-4 w-4" />,
+  PROJECT_DETAILS_UPDATED: <Pencil className="h-4 w-4" />,
+  FILE_UPLOADED: <FileUp className="h-4 w-4" />,
+  TICKET_CREATED: <Ticket className="h-4 w-4" />,
+  TASK_REOPENED: <Undo2 className="h-4 w-4" />,
+  SERVICE_ADDED: <Briefcase className="h-4 w-4" />,
+  SERVICE_REMOVED: <Briefcase className="h-4 w-4" />,
+  OWNERSHIP_TRANSFERRED: <UserCog className="h-4 w-4" />,
+  BUDGET_UPDATED: <Wallet className="h-4 w-4" />,
+  TIMELINE_UPDATED: <Calendar className="h-4 w-4" />,
+  VENUE_UPDATED: <MapPin className="h-4 w-4" />,
+};
 
 const renderActivityDescription = (description: string) => {
   const mentionRegex = /(\/\[[^\]]+\]\([^)]+\)|@\[[^\]]+\]\([^)]+\))/g;
@@ -65,14 +105,14 @@ const ProjectActivityFeed = ({ activities }: { activities: Activity[] }) => {
               ) : null}
               <div className="relative flex items-start space-x-4">
                 <div className="relative">
-                  <span className="h-10 w-10 min-h-10 min-w-10 rounded-full bg-muted flex items-center justify-center ring-8 ring-background">
-                    {getActivityIcon(activity.type, "h-4 w-4 text-muted-foreground")}
+                  <span className="h-10 w-10 rounded-full bg-muted flex items-center justify-center ring-8 ring-background">
+                    {activityIcons[activity.type] || <FileText className="h-4 w-4" />}
                   </span>
                 </div>
                 <div className="min-w-0 flex-1 pt-2">
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-primary">{activity.user.name}</span>{" "}
-                    {renderActivityDescription(activity.details?.description || "")}
+                    <span className="font-semibold text-primary">{activity.user.name}</span>{' '}
+                    {renderActivityDescription(activity.details?.description || '')}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {formatDistanceToNow(new Date(activity.timestamp), {

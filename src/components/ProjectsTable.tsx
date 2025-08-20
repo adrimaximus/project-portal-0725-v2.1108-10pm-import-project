@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { Project } from "@/types";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, Table as TableIcon, CalendarPlus, RefreshCw, LayoutGrid } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import {
@@ -22,8 +23,9 @@ import { useCreateProject } from "@/hooks/useCreateProject";
 
 import TableView from "./projects/TableView";
 import ListView from "./projects/ListView";
+import YearView from "./projects/YearView";
+import MonthView from "./projects/MonthView";
 import CalendarImportView from "./projects/CalendarImportView";
-import KanbanView from "./projects/KanbanView";
 
 interface CalendarEvent {
     id: string;
@@ -35,7 +37,7 @@ interface CalendarEvent {
     location?: string;
 }
 
-type ViewMode = 'table' | 'list' | 'calendar' | 'kanban';
+type ViewMode = 'table' | 'list' | 'month' | 'year' | 'calendar';
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -44,17 +46,11 @@ interface ProjectsTableProps {
 }
 
 const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => {
-  const [view, setView] = useState<ViewMode>(() => {
-    return (localStorage.getItem('projectsViewMode') as ViewMode) || 'list';
-  });
+  const [view, setView] = useState<ViewMode>('list');
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const createProjectMutation = useCreateProject();
-
-  useEffect(() => {
-    localStorage.setItem('projectsViewMode', view);
-  }, [view]);
 
   const refreshCalendarEvents = async () => {
     const token = localStorage.getItem('googleCalendarToken');
@@ -258,7 +254,6 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
       dueDate: finalDueDate.toISOString(),
       origin_event_id: `cal-${event.id}`,
       venue: event.location,
-      status: 'Requested',
     };
 
     createProjectMutation.mutate(newProjectData, {
@@ -280,10 +275,12 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
         return <TableView projects={filteredProjects} isLoading={isLoading} onDeleteProject={handleDeleteProject} />;
       case 'list':
         return <ListView projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
+      case 'month':
+        return <MonthView projects={filteredProjects} gcalEvents={filteredCalendarEvents} />;
+      case 'year':
+        return <YearView projects={filteredProjects} gcalEvents={filteredCalendarEvents} />;
       case 'calendar':
         return <CalendarImportView events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
-      case 'kanban':
-        return <KanbanView projects={filteredProjects} />;
       default:
         return null;
     }
@@ -306,11 +303,11 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
         </AlertDialogContent>
       </AlertDialog>
       <Card>
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4">
+        <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4">
           <div className="flex items-center gap-2">
             <CardTitle>Projects</CardTitle>
           </div>
-          <div className="flex items-center gap-2 self-start sm:self-center">
+          <div className="flex items-center gap-2">
             {view === 'table' && (
               <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => {
                   refetch();
@@ -340,8 +337,11 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
               <ToggleGroupItem value="table" aria-label="Table view">
                 <TableIcon className="h-4 w-4" />
               </ToggleGroupItem>
-              <ToggleGroupItem value="kanban" aria-label="Kanban view">
-                <LayoutGrid className="h-4 w-4" />
+              <ToggleGroupItem value="month" aria-label="Month view">
+                <CalendarIcon className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="year" aria-label="Year view">
+                <CalendarDays className="h-4 w-4" />
               </ToggleGroupItem>
               <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
                 <CalendarPlus className="h-4 w-4" />
@@ -350,7 +350,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
           </div>
         </CardHeader>
         <CardContent>
-          {(view === 'table' || view === 'list' || view === 'calendar') && (
+          {(view === 'table' || view === 'list' || view === 'calendar' || view === 'month' || view === 'year') && (
             <div className="py-4">
               <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             </div>

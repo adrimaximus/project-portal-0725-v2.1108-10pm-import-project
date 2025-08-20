@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import PortalLayout from "@/components/PortalLayout";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Loader2, RefreshCw } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const Profile = () => {
@@ -25,7 +25,6 @@ const Profile = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -34,21 +33,6 @@ const Profile = () => {
       setAvatarPreview(user.avatar || null);
     }
   }, [user]);
-
-  const handleSyncProfile = async () => {
-    setIsSyncing(true);
-    toast.info("Mengarahkan ke Google untuk menyinkronkan profil Anda...");
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/profile`,
-      },
-    });
-    if (error) {
-      toast.error("Gagal menyinkronkan dengan Google.", { description: error.message });
-      setIsSyncing(false);
-    }
-  };
 
   if (!user) {
     return <PortalLayout><div>Loading...</div></PortalLayout>;
@@ -152,17 +136,11 @@ const Profile = () => {
                 <CardTitle>Personal Information</CardTitle>
                 <CardDescription>Update your personal details here.</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                {user.role && (
-                  <Badge variant="outline" className="capitalize text-sm">
-                    {user.role}
-                  </Badge>
-                )}
-                <Button variant="outline" size="sm" onClick={handleSyncProfile} disabled={isSyncing}>
-                  {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                  Sinkronkan dengan Google
-                </Button>
-              </div>
+              {user.role && (
+                <Badge variant="outline" className="capitalize text-sm">
+                  {user.role}
+                </Badge>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">

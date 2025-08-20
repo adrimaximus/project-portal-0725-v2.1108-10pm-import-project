@@ -55,23 +55,23 @@ const CalendarEventsList = ({ events, onImportEvent }: CalendarEventsListProps) 
       {events.map(event => {
         const isAllDay = !event.start.dateTime;
         return (
-            <li key={event.id} className="flex items-center space-x-3 sm:space-x-4 p-3 rounded-lg border bg-background hover:bg-muted transition-colors">
+            <li key={event.id} className="flex items-center space-x-4 p-3 rounded-lg border bg-background hover:bg-muted transition-colors">
               <div className="flex-shrink-0 pt-1 self-start">
                   <Calendar className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="flex-1 min-w-0">
-                  <a href={event.htmlLink} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline break-words">
+              <div className="flex-1">
+                  <a href={event.htmlLink} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">
                   {event.summary || "No Title"}
                   </a>
                   <div className="text-sm text-muted-foreground flex items-center space-x-2 mt-1">
-                  <Clock className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">{formatDate(event.start.dateTime || event.start.date, isAllDay)}</span>
+                  <Clock className="h-4 w-4" />
+                  <span>{formatDate(event.start.dateTime || event.start.date, isAllDay)}</span>
                   </div>
               </div>
               {onImportEvent && (
-                <Button variant="ghost" size="sm" onClick={() => onImportEvent(event)} className="shrink-0 px-2 sm:px-3">
-                  <Import className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Import</span>
+                <Button variant="ghost" size="sm" onClick={() => onImportEvent(event)}>
+                  <Import className="mr-2 h-4 w-4" />
+                  Import
                 </Button>
               )}
             </li>

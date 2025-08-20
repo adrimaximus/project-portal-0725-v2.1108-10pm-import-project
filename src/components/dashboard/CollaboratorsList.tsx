@@ -44,7 +44,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
             acc[user.id].projectCount++;
             if (p.tasks) {
               p.tasks.forEach(task => {
-                if (task.assignedTo?.some(assignee => assignee.id === user.id) && !task.completed) {
+                if (task.assignedTo?.some(assignee => assignee.id === user.id)) {
                   acc[user.id].taskCount++;
                 }
               });

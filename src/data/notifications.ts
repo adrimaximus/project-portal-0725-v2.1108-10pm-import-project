@@ -3,7 +3,7 @@ import { MessageSquare, AtSign, FolderKanban, Info, Target } from "lucide-react"
 export const notificationIcons = {
   comment: MessageSquare,
   mention: AtSign,
-  project_update: FolderKanban,
+  project: FolderKanban,
   system: Info,
   goal: Target,
 };
@@ -30,7 +30,7 @@ export const dummyNotifications: Notification[] = [
   },
   {
     id: "2",
-    type: "project_update",
+    type: "project",
     title: "Project Update",
     description: "The status of 'Mobile App Redesign' was changed to 'Completed'.",
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
@@ -57,7 +57,7 @@ export const dummyNotifications: Notification[] = [
   },
   {
     id: "5",
-    type: "project_update",
+    type: "project",
     title: "New Project Assigned",
     description: "You have been assigned to the new 'Data Analytics Dashboard' project.",
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),

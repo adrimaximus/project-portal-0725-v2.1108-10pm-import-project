@@ -13,6 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
 import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
 import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
+import ProjectStatusCard from "@/components/project-detail/ProjectStatusCard";
+import ProjectPaymentStatusCard from "@/components/project-detail/ProjectPaymentStatusCard";
 
 const fetchProject = async (slug: string): Promise<Project | null> => {
   const { data, error } = await supabase
@@ -65,27 +67,6 @@ const ProjectDetail = () => {
       setEditedProject(project);
     }
   }, [project]);
-
-  // Realtime: sinkron komentar & aktivitas proyek
-  useEffect(() => {
-    if (!project || !slug) return;
-
-    const channel = supabase.channel(`project-detail-${project.id}`);
-
-    const handleInvalidate = () => {
-      queryClient.invalidateQueries({ queryKey: ["project", slug] });
-    };
-
-    channel
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, handleInvalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_activities', filter: `project_id=eq.${project.id}` }, handleInvalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_files', filter: `project_id=eq.${project.id}` }, handleInvalidate)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [project?.id, slug, queryClient]);
 
   const handleFieldChange = (field: keyof Project, value: any) => {
     setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
@@ -147,17 +128,13 @@ const ProjectDetail = () => {
   const handleFilesAdd = async (files: File[]) => {
     if (!project || !user) return;
     toast.info(`Uploading ${files.length} file(s)...`);
-    const failedUploads: string[] = [];
 
     for (const file of files) {
-      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-      const filePath = `${project.id}/${Date.now()}-${sanitizedFileName}`;
-      
+      const filePath = `${project.id}/${Date.now()}-${file.name}`;
       const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
 
       if (uploadError) {
         toast.error(`Failed to upload ${file.name}`, { description: uploadError.message });
-        failedUploads.push(file.name);
         continue;
       }
 
@@ -175,22 +152,10 @@ const ProjectDetail = () => {
 
       if (dbError) {
         toast.error(`Failed to save ${file.name} to database`, { description: dbError.message });
-        failedUploads.push(file.name);
-        await supabase.storage.from('project-files').remove([filePath]);
       }
     }
-
-    if (failedUploads.length === files.length) {
-      // All failed
-    } else if (failedUploads.length > 0) {
-      toast.warning(`${files.length - failedUploads.length} file(s) uploaded, but ${failedUploads.length} failed.`);
-    } else {
-      toast.success("All files uploaded successfully!");
-    }
-
-    if (failedUploads.length < files.length) {
-      queryClient.invalidateQueries({ queryKey: ["project", slug] });
-    }
+    toast.success("File upload complete!");
+    queryClient.invalidateQueries({ queryKey: ["project", slug] });
   };
 
   const handleFileDelete = async (fileId: string) => {
@@ -257,11 +222,9 @@ const ProjectDetail = () => {
     if (!project || !user) return;
     let attachment_url = null;
     let attachment_name = null;
-    let filePath = null;
 
     if (attachment) {
-      const sanitizedFileName = attachment.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-      filePath = `${project.id}/comments/${Date.now()}-${sanitizedFileName}`;
+      const filePath = `${project.id}/comments/${Date.now()}-${attachment.name}`;
       const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, attachment);
       if (uploadError) {
         toast.error("Failed to upload attachment.", { description: uploadError.message });
@@ -286,44 +249,6 @@ const ProjectDetail = () => {
       return;
     }
 
-    if (attachment && filePath && attachment_url) {
-      const { error: projectFileError } = await supabase.from('project_files').insert({
-        project_id: project.id,
-        user_id: user.id,
-        name: `comment_files_${attachment.name}`,
-        size: attachment.size,
-        type: attachment.type,
-        url: attachment_url,
-        storage_path: filePath,
-      });
-      if (projectFileError) {
-        toast.warning("Comment posted, but failed to add attachment to Shared Files.", { description: projectFileError.message });
-      }
-    }
-
-    if (commentData) {
-      const authorUser = {
-        id: user.id,
-        name: user.name,
-        avatar: user.avatar,
-        email: user.email,
-        initials: user.initials,
-      };
-      queryClient.setQueryData(["project", slug], (prev: any) => {
-        if (!prev) return prev;
-        const optimistic = {
-          id: commentData.id,
-          text,
-          timestamp: commentData.created_at,
-          isTicket,
-          attachment_url,
-          attachment_name,
-          author: authorUser,
-        };
-        return { ...prev, comments: [optimistic, ...(prev.comments || [])] };
-      });
-    }
-
     if (isTicket && commentData) {
       const { error: taskError } = await supabase.from('tasks').insert({
         project_id: project.id,
@@ -339,18 +264,8 @@ const ProjectDetail = () => {
     } else {
       toast.success("Comment posted.");
     }
+    queryClient.invalidateQueries({ queryKey: ["project", slug] });
   };
-
-  const canEdit = useMemo(() => {
-    if (!project || !user) return false;
-    return user.id === project.created_by.id || user.role === 'admin' || user.role === 'master admin';
-  }, [project, user]);
-
-  const isMember = useMemo(() => {
-    if (!project || !user) return false;
-    if (project.created_by.id === user.id) return true;
-    return project.assignedTo.some(member => member.id === user.id);
-  }, [project, user]);
 
   if (isLoading) return <ProjectDetailSkeleton />;
   if (error) {
@@ -359,6 +274,8 @@ const ProjectDetail = () => {
     return null;
   }
   if (!project || !editedProject) return null;
+
+  const canEdit = user && (user.id === project.created_by.id || user.role === 'admin' || user.role === 'master admin');
 
   return (
     <PortalLayout>
@@ -383,7 +300,6 @@ const ProjectDetail = () => {
             <ProjectMainContent
               project={editedProject}
               isEditing={isEditing}
-              canUpload={isMember}
               onDescriptionChange={(value) => handleFieldChange('description', value)}
               onCategoryChange={(value) => handleFieldChange('category', value)}
               onTeamChange={(users) => handleFieldChange('assignedTo', users)}
@@ -399,6 +315,16 @@ const ProjectDetail = () => {
           </div>
           <div className="lg:col-span-1 space-y-6">
             <ProjectProgressCard project={editedProject} />
+            <ProjectStatusCard
+              project={editedProject}
+              isEditing={isEditing}
+              onFieldChange={handleFieldChange}
+            />
+            <ProjectPaymentStatusCard
+              project={editedProject}
+              isEditing={isEditing}
+              onFieldChange={handleFieldChange}
+            />
             <ProjectTeamCard
               project={editedProject}
               isEditing={isEditing}

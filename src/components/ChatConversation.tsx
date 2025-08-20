@@ -1,32 +1,46 @@
 import { Message, Collaborator } from "@/types";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useRef, useMemo } from "react";
-import { isSameDay, parseISO } from 'date-fns';
-import ChatMessageItem from "./ChatMessageItem";
+import { cn } from "@/lib/utils";
+import { useEffect, useRef } from "react";
+import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 
 interface ChatConversationProps {
   messages: Message[];
   members: Collaborator[];
-  onForwardMessage: (message: Message) => void;
-  onSetReply: (message: Message) => void;
-  onDeleteMessage: (messageId: string) => void;
-  selectionMode: boolean;
-  selectedMessages: Set<string>;
-  onEnterSelectionMode: (messageId: string) => void;
-  onToggleMessageSelection: (messageId: string) => void;
 }
 
-const ChatConversation = ({ messages, members, selectionMode, selectedMessages, ...props }: ChatConversationProps) => {
+const formatTimestamp = (timestamp: string) => {
+  try {
+    const date = parseISO(timestamp);
+    if (isNaN(date.getTime())) return "";
+    return format(date, 'p');
+  } catch (e) {
+    return "";
+  }
+};
+
+const formatDateSeparator = (timestamp: string) => {
+  try {
+    const date = parseISO(timestamp);
+    if (isToday(date)) return "Today";
+    if (isYesterday(date)) return "Yesterday";
+    return format(date, 'MMMM d, yyyy');
+  } catch (e) {
+    return "";
+  }
+};
+
+const ChatConversation = ({ messages, members }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current && !selectionMode) {
+    if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "auto", block: "end" });
     }
-  }, [messages, selectionMode]);
-
-  const messagesById = useMemo(() => new Map(messages.map(m => [m.id, m])), [messages]);
+  }, [messages]);
 
   if (!currentUser) {
     return <div>Loading...</div>;
@@ -35,25 +49,63 @@ const ChatConversation = ({ messages, members, selectionMode, selectedMessages, 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-1">
       {messages.map((message, index) => {
-        const prevMessage = messages[index - 1];
-        const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
-        const isCurrentUser = message.sender?.id === currentUser.id;
-        const isSameSenderAsPrevious = prevMessage && prevMessage.sender?.id === message.sender?.id && prevMessage.message_type !== 'system_notification';
-        const repliedToMessage = message.reply_to_message_id ? messagesById.get(message.reply_to_message_id) : null;
+        const isCurrentUser = message.sender.id === currentUser.id;
+        const sender = members.find(m => m.id === message.sender.id) || message.sender;
         
+        const prevMessage = messages[index - 1];
+        const isSameSenderAsPrevious = prevMessage && prevMessage.sender.id === message.sender.id;
+        
+        const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
+
         return (
-          <ChatMessageItem
-            key={message.id || index}
-            message={message}
-            repliedToMessage={repliedToMessage}
-            members={members}
-            isCurrentUser={isCurrentUser}
-            isSameSenderAsPrevious={isSameSenderAsPrevious}
-            showDateSeparator={showDateSeparator}
-            selectionMode={selectionMode}
-            isSelected={selectedMessages.has(message.id)}
-            {...props}
-          />
+          <div key={message.id || index}>
+            {showDateSeparator && (
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    {formatDateSeparator(message.timestamp)}
+                  </span>
+                </div>
+              </div>
+            )}
+            <div
+              className={cn(
+                "flex items-end gap-2",
+                isCurrentUser ? "justify-end" : "justify-start",
+                isSameSenderAsPrevious ? "mt-1" : "mt-4"
+              )}
+            >
+              {!isCurrentUser && !isSameSenderAsPrevious && (
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={sender.avatar} />
+                  <AvatarFallback>{sender.initials}</AvatarFallback>
+                </Avatar>
+              )}
+              <div
+                className={cn(
+                  "max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 group relative",
+                  isCurrentUser
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted",
+                  !isCurrentUser && isSameSenderAsPrevious && "ml-10"
+                )}
+              >
+                {!isCurrentUser && !isSameSenderAsPrevious && (
+                  <p className="text-sm font-semibold mb-1">{sender.name}</p>
+                )}
+                {message.text && <p className="text-sm whitespace-pre-wrap">{message.text}</p>}
+                {message.attachment && (
+                  <MessageAttachment attachment={message.attachment} />
+                )}
+                <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-5 right-2 text-muted-foreground">
+                  {formatTimestamp(message.timestamp)}
+                </span>
+              </div>
+            </div>
+          </div>
         );
       })}
       <div ref={scrollRef} />

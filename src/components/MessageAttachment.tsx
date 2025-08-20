@@ -1,17 +1,15 @@
-import FileIcon from './FileIcon';
-import { cn } from '@/lib/utils';
+import { File as FileIcon } from 'lucide-react';
 
 interface MessageAttachmentProps {
   attachment: {
     name: string;
     url: string;
-    type: string;
+    type: 'image' | 'file';
   };
 }
 
 const MessageAttachment = ({ attachment }: MessageAttachmentProps) => {
-  const isImage = attachment.type.startsWith('image/');
-  const isPdf = attachment.type === 'application/pdf';
+  const isImage = attachment.type === 'image';
 
   return (
     <a
@@ -29,7 +27,7 @@ const MessageAttachment = ({ attachment }: MessageAttachmentProps) => {
         />
       ) : (
         <div className="flex h-10 w-10 items-center justify-center rounded-md bg-background border">
-          <FileIcon fileType={attachment.type} className={cn("h-5 w-5 text-muted-foreground", isPdf && "text-red-500")} />
+          <FileIcon className="h-5 w-5 text-muted-foreground" />
         </div>
       )}
       <div className="flex-1 overflow-hidden">

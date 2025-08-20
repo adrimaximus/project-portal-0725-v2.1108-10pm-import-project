@@ -9,7 +9,6 @@ import { Toaster } from "@/components/ui/sonner"
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from './contexts/ThemeProvider'
-import { DemoProvider } from './contexts/DemoContext'
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -26,12 +25,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <FeaturesProvider>
-              <DemoProvider>
-                <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-                  <App />
-                  <Toaster />
-                </ThemeProvider>
-              </DemoProvider>
+              <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+                <App />
+                <Toaster />
+              </ThemeProvider>
             </FeaturesProvider>
           </AuthProvider>
         </QueryClientProvider>

@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { v4 } from 'https://deno.land/std@0.208.0/uuid/mod.ts';
+import { v2 as cloudinary } from 'https://esm.sh/cloudinary@1.32.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,54 +8,50 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Menangani permintaan preflight CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    const cloudName = Deno.env.get('CLOUDINARY_CLOUD_NAME');
+    const apiKey = Deno.env.get('CLOUDINARY_API_KEY');
+    const apiSecret = Deno.env.get('CLOUDINARY_API_SECRET');
 
-    const { imageUrl, userId } = await req.json();
-    if (!imageUrl || !userId) {
-      throw new Error('imageUrl and userId are required in the request body.');
+    // Pemeriksaan eksplisit untuk environment variables
+    if (!cloudName || !apiKey || !apiSecret) {
+      console.error("Cloudinary environment variables are not set.");
+      return new Response(JSON.stringify({ error: "Konfigurasi Cloudinary tidak lengkap di server." }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
     }
 
-    // Ambil gambar dari URL yang diberikan
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to fetch image from URL: ${imageResponse.statusText}`);
-    }
-    const imageBody = await imageResponse.arrayBuffer();
-    const contentType = imageResponse.headers.get('content-type') || 'image/png';
-
-    // Buat path file yang unik
-    const fileName = `${userId}/${v4.generate()}.png`;
-    const bucketName = 'goal-icons';
-
-    // Unggah ke Supabase Storage
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from(bucketName)
-      .upload(fileName, imageBody, { contentType, upsert: false });
-
-    if (uploadError) {
-      throw uploadError;
+    // Konfigurasi Cloudinary di dalam handler
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+      secure: true,
+    });
+    
+    const { imageUrl } = await req.json();
+    if (!imageUrl) {
+      throw new Error('imageUrl diperlukan dalam body permintaan');
     }
 
-    // Dapatkan URL publik dari file yang diunggah
-    const { data: urlData } = supabaseAdmin.storage
-      .from(bucketName)
-      .getPublicUrl(fileName);
+    // Mengunggah gambar ke Cloudinary menggunakan upload preset dan folder yang benar
+    const result = await cloudinary.uploader.upload(imageUrl, {
+      folder: 'portalclient',
+      upload_preset: 'Portalclient',
+    });
 
-    return new Response(JSON.stringify({ secure_url: urlData.publicUrl }), {
+    return new Response(JSON.stringify({ secure_url: result.secure_url }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
   } catch (error) {
-    console.error('Error in Supabase upload function:', error);
+    console.error('Error dalam fungsi unggah Cloudinary:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,

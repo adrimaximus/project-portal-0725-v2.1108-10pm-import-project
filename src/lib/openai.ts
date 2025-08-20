@@ -1,16 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Project } from "@/types";
 import { Goal } from "@/types";
-import { invokeSupabaseFunction } from "./supabase-utils";
 
-// Generic helper to invoke Supabase functions with an authentication check
-const invokeFunction = async (functionName: string, payload?: any) => {
-  return invokeSupabaseFunction(functionName, { body: payload });
-};
-
-// Specific helper for the openai-generator function that expects a `result` property
 const invokeOpenAiGenerator = async (feature: string, payload: any) => {
-  const data = await invokeFunction('openai-generator', { feature, payload });
+  const { data, error } = await supabase.functions.invoke('openai-generator', {
+    body: { feature, payload },
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (data.error) {
+    throw new Error(data.error);
+  }
   return data.result;
 };
 
@@ -20,6 +22,7 @@ export const generateProjectBrief = async (project: Project): Promise<string> =>
 
 export const generateTaskSuggestions = async (project: Project, existingTasks: { title: string }[]): Promise<string[]> => {
   const result = await invokeOpenAiGenerator('generate-tasks', { project, existingTasks });
+  // The result might be inside a key if the model doesn't return a root array
   if (typeof result === 'object' && result !== null && !Array.isArray(result)) {
     const key = Object.keys(result)[0];
     if (key && Array.isArray(result[key])) {
@@ -30,10 +33,11 @@ export const generateTaskSuggestions = async (project: Project, existingTasks: {
 };
 
 export const generateAiInsight = async (goal: Goal, context: any): Promise<string> => {
+  // Create a summary of the goal without the full completions list to avoid large payloads.
   const { completions, ...goalSummary } = goal;
   const summarizedGoal = {
     ...goalSummary,
-    completionCount: completions.length,
+    completionCount: completions.length, // Send a count instead of the full array
   };
   return invokeOpenAiGenerator('generate-insight', { goal: summarizedGoal, context });
 };
@@ -47,6 +51,8 @@ export const analyzeProjects = async (request: string, conversationHistory?: { s
 };
 
 export const diagnoseProjectVisibility = async (): Promise<string> => {
-  const data = await invokeFunction('diagnose-projects');
+  const { data, error } = await supabase.functions.invoke('diagnose-projects');
+  if (error) throw new Error(error.message);
+  if (data.error) throw new Error(data.error);
   return data.result;
 };

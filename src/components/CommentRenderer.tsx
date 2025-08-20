@@ -1,7 +1,6 @@
 import React from 'react';
 import UserMention from './UserMention';
 import { User } from '@/types';
-import { MENTION_RE } from '@/lib/mention-utils';
 
 interface CommentRendererProps {
   text: string;
@@ -9,24 +8,24 @@ interface CommentRendererProps {
 }
 
 const CommentRenderer = ({ text, members }: CommentRendererProps) => {
-  if (!text) return null;
-
-  const parts = text.split(MENTION_RE);
+  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts = text.split(mentionRegex);
 
   return (
     <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-      {parts.map((part, i) => {
-        if (i % 3 === 1) { // This is the name
-          const id = parts[i + 1];
-          const user = members.find(m => m.id === id);
-          return user 
-            ? <UserMention key={`${id}-${i}`} user={user} /> 
-            : <span key={`${id}-${i}`} className="font-semibold text-mention">@{part}</span>;
+      {parts.map((part, index) => {
+        // The display name is captured at index 1, 4, 7, etc.
+        if (index % 3 === 1) {
+          const userId = parts[index + 1];
+          const user = members.find(m => m.id === userId);
+          return user ? <UserMention key={index} user={user} /> : `@${part}`;
         }
-        if (i % 3 === 2) { // This is the id, we skip it
+        // The user ID is captured at index 2, 5, 8, etc. We skip rendering it.
+        if (index % 3 === 2) {
           return null;
         }
-        return <React.Fragment key={i}>{part}</React.Fragment>;
+        // Plain text parts are at index 0, 3, 6, etc.
+        return part;
       })}
     </p>
   );

@@ -15,19 +15,13 @@ serve(async (req) => {
 
   try {
     // 1. Authenticate user and create clients
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error("Missing Authorization header.");
-    const jwt = authHeader.replace('Bearer ', '');
-
     const userSupabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
-    
-    const { data: { user }, error: userError } = await userSupabase.auth.getUser(jwt);
-    if (userError || !user) throw new Error(`User not authenticated: ${userError?.message || 'Auth session missing!'}`);
-    
-    await userSupabase.auth.setSession({ access_token: jwt, refresh_token: '' });
+    const { data: { user } } = await userSupabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated.");
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
