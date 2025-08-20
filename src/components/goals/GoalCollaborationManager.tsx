@@ -36,6 +36,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
 import { Input } from '../ui/input';
+import { getInitials } from '@/lib/utils';
 
 interface GoalCollaborationManagerProps {
   goal: Goal;
@@ -61,13 +62,16 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
       const fetchUsers = async () => {
         const { data, error } = await supabase.from('profiles').select('*');
         if (data) {
-          const users = data.map(profile => ({
-            id: profile.id,
-            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
-            avatar: profile.avatar_url,
-            email: profile.email,
-            initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-          }));
+          const users = data.map(profile => {
+            const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+            return {
+              id: profile.id,
+              name: fullName || profile.email || 'No name',
+              avatar: profile.avatar_url,
+              email: profile.email,
+              initials: getInitials(fullName, profile.email) || 'NN',
+            }
+          });
           setAvailableUsers(users);
         }
       };

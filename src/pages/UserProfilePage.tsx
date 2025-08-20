@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { User } from '@/types';
+import { getInitials } from '@/lib/utils';
 
 const fetchUserProfile = async (userId: string): Promise<User | null> => {
   const { data, error } = await supabase
@@ -20,12 +21,13 @@ const fetchUserProfile = async (userId: string): Promise<User | null> => {
     console.error('Error fetching user profile:', error);
     return null;
   }
+  const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
   return {
     id: data.id,
-    name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || data.email,
+    name: fullName || data.email,
     email: data.email,
     avatar: data.avatar_url,
-    initials: `${data.first_name?.[0] || ''}${data.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+    initials: getInitials(fullName, data.email) || 'NN',
     role: data.role,
   };
 };

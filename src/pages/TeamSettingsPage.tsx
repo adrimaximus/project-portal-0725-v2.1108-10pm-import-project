@@ -22,6 +22,7 @@ import { id } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import RoleManagerDialog, { Role } from '@/components/settings/RoleManagerDialog';
 import AddUserDialog from '@/components/settings/AddUserDialog';
+import { getInitials } from '@/lib/utils';
 
 type Invite = {
   id: number;
@@ -52,16 +53,19 @@ const TeamSettingsPage = () => {
       toast.error("Failed to fetch team members.");
       console.error(membersError);
     } else {
-      const mappedUsers: User[] = membersData.map(profile => ({
-        id: profile.id,
-        name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
-        email: profile.email,
-        avatar: profile.avatar_url,
-        role: profile.role,
-        status: profile.status,
-        initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-        updated_at: profile.updated_at,
-      }));
+      const mappedUsers: User[] = membersData.map(profile => {
+        const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+        return {
+          id: profile.id,
+          name: fullName || profile.email || 'No name',
+          email: profile.email,
+          avatar: profile.avatar_url,
+          role: profile.role,
+          status: profile.status,
+          initials: getInitials(fullName, profile.email) || 'NN',
+          updated_at: profile.updated_at,
+        };
+      });
       setMembers(mappedUsers);
     }
 

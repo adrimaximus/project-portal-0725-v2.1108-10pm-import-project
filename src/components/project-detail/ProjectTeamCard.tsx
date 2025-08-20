@@ -10,6 +10,7 @@ import { Button } from "../ui/button";
 import ChangeOwnerDialog from "./ChangeOwnerDialog";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { getInitials } from "@/lib/utils";
 
 interface ProjectTeamCardProps {
   project: Project;
@@ -27,15 +28,18 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
     const fetchUsers = async () => {
       const { data, error } = await supabase.from('profiles').select('*');
       if (data) {
-        const users = data.map(profile => ({
-          id: profile.id,
-          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
-          avatar: profile.avatar_url,
-          email: profile.email,
-          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-        }));
+        const users = data.map(profile => {
+          const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+          return {
+            id: profile.id,
+            name: fullName || profile.email || 'No name',
+            avatar: profile.avatar_url,
+            email: profile.email,
+            initials: getInitials(fullName, profile.email) || 'NN',
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+          }
+        });
         setAllUsers(users);
       }
     };

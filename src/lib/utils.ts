@@ -7,9 +7,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const getInitials = (name: string = ""): string => {
+export const getInitials = (name: string = "", email?: string): string => {
   const names = name.trim().split(' ').filter(Boolean);
-  if (names.length === 0) return "";
+  
+  if (names.length === 0) {
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return "";
+  }
+
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
   
   const firstName = names[0];

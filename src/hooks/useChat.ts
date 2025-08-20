@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import debounce from 'lodash.debounce';
+import { getInitials } from "@/lib/utils";
 
 export const useChat = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -111,17 +112,20 @@ export const useChat = () => {
       return;
     }
 
-    const mappedMessages: Message[] = (data || []).map((m: any) => ({
-      id: m.id, text: m.content, timestamp: m.created_at,
-      sender: {
-        id: m.sender.id,
-        name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim() || m.sender.email,
-        avatar: m.sender.avatar_url,
-        initials: `${m.sender.first_name?.[0] || ''}${m.sender.last_name?.[0] || ''}`.toUpperCase(),
-        email: m.sender.email,
-      },
-      attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
-    }));
+    const mappedMessages: Message[] = (data || []).map((m: any) => {
+      const senderName = `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim();
+      return {
+        id: m.id, text: m.content, timestamp: m.created_at,
+        sender: {
+          id: m.sender.id,
+          name: senderName || m.sender.email,
+          avatar: m.sender.avatar_url,
+          initials: getInitials(senderName, m.sender.email) || 'NN',
+          email: m.sender.email,
+        },
+        attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
+      }
+    });
 
     setConversations(prev => prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c)));
   }, []);
@@ -149,11 +153,12 @@ export const useChat = () => {
 
           if (conversationId === selectedConversationId) {
             const senderProfile = updatedConvo.members.find(m => m.id === newMessage.sender_id);
+            const senderName = senderProfile ? `${senderProfile.name}` : 'Unknown';
             const mappedMessage: Message = {
               id: newMessage.id, text: newMessage.content, timestamp: newMessage.created_at,
               sender: {
-                id: senderProfile?.id || '', name: senderProfile?.name || 'Unknown',
-                avatar: senderProfile?.avatar, initials: senderProfile?.initials || '??',
+                id: senderProfile?.id || '', name: senderName,
+                avatar: senderProfile?.avatar, initials: getInitials(senderName, senderProfile?.email) || '??',
                 email: senderProfile?.email,
               },
               attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
