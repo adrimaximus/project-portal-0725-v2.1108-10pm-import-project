@@ -21,13 +21,13 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
     );
   }
   return (
-    <div className="flex items-center gap-4 pt-2">
-      <Avatar>
+    <div className="flex items-center gap-2 sm:gap-4 pt-2">
+      <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
         <AvatarImage src={user.avatar} alt={user.name} />
         <AvatarFallback>{user.initials}</AvatarFallback>
       </Avatar>
       <div>
-        <div className="text-lg font-bold">{user.name}</div>
+        <div className="text-base sm:text-lg font-bold leading-tight">{user.name}</div>
         <p className="text-xs text-muted-foreground">
           {metricType === 'quantity'
             ? `${metric} project${metric === 1 ? '' : 's'}`
@@ -135,7 +135,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
           <ToggleGroupItem value="value" className="text-xs px-3">By Value</ToggleGroupItem>
         </ToggleGroup>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           title="Total Projects"
           value={stats.totalProjects}

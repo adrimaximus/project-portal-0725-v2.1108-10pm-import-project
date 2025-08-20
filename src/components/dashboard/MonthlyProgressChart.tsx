@@ -53,8 +53,8 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         return (
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} />
-            <YAxis tickLine={false} axisLine={false} fontSize={12} tickFormatter={(value) => chartType === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
+            <YAxis tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => chartType === 'value' ? `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}` : value} />
             <Tooltip
               cursor={{ fill: 'hsl(var(--muted))' }}
               formatter={(value) => chartType === 'value' ? `Rp ${new Intl.NumberFormat('id-ID').format(value as number)}` : value}
@@ -66,10 +66,10 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         return (
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} />
-            <YAxis tickLine={false} axisLine={false} fontSize={12} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
+            <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} />
             {PROJECT_STATUS_OPTIONS.map(status => (
               <Bar key={status.value} dataKey={status.value} stackId="a" fill={getStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
             ))}
@@ -79,10 +79,10 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         return (
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} />
-            <YAxis tickLine={false} axisLine={false} fontSize={12} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
+            <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} />
             {PAYMENT_STATUS_OPTIONS.map(status => (
               <Bar key={status.value} dataKey={status.value} stackId="a" fill={getPaymentStatusStyles(status.value).hex} name={status.label} radius={[4, 4, 0, 0]} />
             ))}
