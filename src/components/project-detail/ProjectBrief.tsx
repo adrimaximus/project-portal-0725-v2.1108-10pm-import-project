@@ -7,11 +7,12 @@ import { ProjectFile } from "@/types";
 interface ProjectBriefProps {
   files: ProjectFile[];
   isEditing: boolean;
+  canUpload: boolean;
   onFilesAdd: (files: File[]) => void;
   onFileDelete: (fileId: string) => void;
 }
 
-const ProjectBrief = ({ files, isEditing, onFilesAdd, onFileDelete }: ProjectBriefProps) => {
+const ProjectBrief = ({ files, isEditing, canUpload, onFilesAdd, onFileDelete }: ProjectBriefProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,7 +63,7 @@ const ProjectBrief = ({ files, isEditing, onFilesAdd, onFileDelete }: ProjectBri
         <p className="text-sm text-muted-foreground text-center py-4">No files attached.</p>
       )}
 
-      {isEditing && (
+      {canUpload && (
         <>
           <input
             type="file"

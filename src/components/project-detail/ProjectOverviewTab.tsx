@@ -10,6 +10,7 @@ import { Input } from '../ui/input';
 interface ProjectOverviewTabProps {
   project: Project;
   isEditing: boolean;
+  canUpload: boolean;
   onDescriptionChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
   onTeamChange: (users: AssignedUser[]) => void;
@@ -18,7 +19,7 @@ interface ProjectOverviewTabProps {
   onServicesChange: (services: string[]) => void;
 }
 
-const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategoryChange, onFilesAdd, onFileDelete }: ProjectOverviewTabProps) => {
+const ProjectOverviewTab = ({ project, isEditing, canUpload, onDescriptionChange, onCategoryChange, onFilesAdd, onFileDelete }: ProjectOverviewTabProps) => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   useEffect(() => {
@@ -78,6 +79,7 @@ const ProjectOverviewTab = ({ project, isEditing, onDescriptionChange, onCategor
           <ProjectBrief
             files={project.briefFiles || []}
             isEditing={isEditing}
+            canUpload={canUpload}
             onFilesAdd={onFilesAdd}
             onFileDelete={onFileDelete}
           />

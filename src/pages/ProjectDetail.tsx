@@ -328,6 +328,17 @@ const ProjectDetail = () => {
     // Realtime akan menyamakan state di member lain
   };
 
+  const canEdit = useMemo(() => {
+    if (!project || !user) return false;
+    return user.id === project.created_by.id || user.role === 'admin' || user.role === 'master admin';
+  }, [project, user]);
+
+  const isMember = useMemo(() => {
+    if (!project || !user) return false;
+    if (project.created_by.id === user.id) return true;
+    return project.assignedTo.some(member => member.id === user.id);
+  }, [project, user]);
+
   if (isLoading) return <ProjectDetailSkeleton />;
   if (error) {
     toast.error("Failed to load project", { description: "Please check the URL or try again later." });
@@ -335,8 +346,6 @@ const ProjectDetail = () => {
     return null;
   }
   if (!project || !editedProject) return null;
-
-  const canEdit = user && (user.id === project.created_by.id || user.role === 'admin' || user.role === 'master admin');
 
   return (
     <PortalLayout>
@@ -361,6 +370,7 @@ const ProjectDetail = () => {
             <ProjectMainContent
               project={editedProject}
               isEditing={isEditing}
+              canUpload={isMember}
               onDescriptionChange={(value) => handleFieldChange('description', value)}
               onCategoryChange={(value) => handleFieldChange('category', value)}
               onTeamChange={(users) => handleFieldChange('assignedTo', users)}

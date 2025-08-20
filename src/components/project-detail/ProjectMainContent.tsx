@@ -11,6 +11,7 @@ import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-reac
 interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
+  canUpload: boolean;
   onTaskAdd: (title: string) => void;
   onTaskAssignUsers: (taskId: string, userIds: string[]) => void;
   onTaskStatusChange: (taskId: string, completed: boolean) => void;
@@ -27,6 +28,7 @@ interface ProjectMainContentProps {
 const ProjectMainContent = ({
   project,
   isEditing,
+  canUpload,
   onTaskAdd,
   onTaskAssignUsers,
   onTaskStatusChange,
@@ -68,6 +70,7 @@ const ProjectMainContent = ({
             <ProjectOverviewTab
               project={project}
               isEditing={isEditing}
+              canUpload={canUpload}
               onDescriptionChange={onDescriptionChange}
               onCategoryChange={onCategoryChange}
               onTeamChange={onTeamChange}
