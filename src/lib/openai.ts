@@ -3,6 +3,11 @@ import { Project } from "@/types";
 import { Goal } from "@/types";
 
 const invokeOpenAiGenerator = async (feature: string, payload: any) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error("User not authenticated. Please sign in again.");
+  }
+
   const { data, error } = await supabase.functions.invoke('openai-generator', {
     body: { feature, payload },
   });
