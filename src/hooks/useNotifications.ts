@@ -50,6 +50,40 @@ const fetchNotifications = async (userId: string, pageParam: number = 0): Promis
   }));
 };
 
+const fetchSingleNotification = async (notificationId: string, userId: string): Promise<Notification | null> => {
+    const { data, error } = await supabase
+    .from('notifications')
+    .select(`
+      id, type, title, body, created_at, data,
+      actor:actor_id (id, first_name, last_name, avatar_url, email),
+      recipients:notification_recipients!inner (read_at)
+    `)
+    .eq('id', notificationId)
+    .eq('recipients.user_id', userId)
+    .single();
+
+    if (error || !data) {
+        console.error("Error fetching single notification:", error);
+        return null;
+    }
+
+    const n = data as any;
+    return {
+        id: n.id,
+        type: n.type,
+        title: n.title,
+        description: n.body,
+        timestamp: n.created_at,
+        read: n.recipients[0]?.read_at !== null,
+        link: n.data?.link || '#',
+        actor: {
+            id: n.actor.id,
+            name: `${n.actor.first_name || ''} ${n.actor.last_name || ''}`.trim() || n.actor.email,
+            avatar: n.actor.avatar_url,
+        }
+    };
+}
+
 export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -84,18 +118,31 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
-          const { data: newNotification, error } = await supabase
-            .from('notifications')
-            .select('title, body')
-            .eq('id', payload.new.notification_id)
-            .single();
-          
-          if (!error && newNotification) {
+          const newNotificationId = payload.new.notification_id;
+          const newNotification = await fetchSingleNotification(newNotificationId, user.id);
+
+          if (newNotification) {
             toast.info(newNotification.title, {
-              description: newNotification.body,
+              description: newNotification.description,
             });
+
+            queryClient.setQueryData(['notifications', user.id], (oldData: any) => {
+              if (!oldData) {
+                queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+                return oldData;
+              }
+              
+              const newPages = [...oldData.pages];
+              newPages[0] = [newNotification, ...newPages[0]];
+              
+              return {
+                ...oldData,
+                pages: newPages,
+              };
+            });
+          } else {
+            queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
           }
-          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
         }
       )
       .subscribe();
