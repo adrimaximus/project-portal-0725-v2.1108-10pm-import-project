@@ -126,6 +126,8 @@ export const useChat = () => {
       } : undefined,
       attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
       message_type: m.message_type,
+      reply_to_message_id: m.reply_to_message_id,
+      is_deleted: m.is_deleted,
     }));
 
     setConversations(prev => prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c)));
@@ -136,8 +138,7 @@ export const useChat = () => {
 
     const channel = supabase.channel('chat-room', { config: { broadcast: { self: false } } });
 
-    // New message arrives
-    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
+    const handleNewMessage = (payload: any) => {
       const newMessage = payload.new;
       const conversationId = newMessage.conversation_id;
 
@@ -149,7 +150,7 @@ export const useChat = () => {
         }
 
         const updated = { ...prev[idx] };
-        updated.lastMessage = newMessage.content || "Attachment";
+        updated.lastMessage = newMessage.is_deleted ? "Message deleted" : (newMessage.content || "Attachment");
         updated.lastMessageTimestamp = newMessage.created_at;
 
         if (conversationId === selectedConversationId) {
@@ -159,16 +160,13 @@ export const useChat = () => {
             text: newMessage.content,
             timestamp: newMessage.created_at,
             sender: senderProfile ? {
-              id: senderProfile.id,
-              name: senderProfile.name,
-              avatar: senderProfile.avatar,
-              initials: senderProfile.initials,
-              email: senderProfile.email,
+              id: senderProfile.id, name: senderProfile.name, avatar: senderProfile.avatar,
+              initials: senderProfile.initials, email: senderProfile.email,
             } : undefined,
-            attachment: newMessage.attachment_url
-              ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type }
-              : undefined,
+            attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
             message_type: newMessage.message_type,
+            reply_to_message_id: newMessage.reply_to_message_id,
+            is_deleted: newMessage.is_deleted,
           };
 
           if (newMessage.sender_id === currentUser?.id) {
@@ -193,45 +191,46 @@ export const useChat = () => {
         newList.unshift(updated);
         return newList;
       });
-    });
+    };
 
-    // Handle conversation updates (e.g., group name change)
+    const handleUpdatedMessage = (payload: any) => {
+      const updatedMessage = payload.new;
+      const conversationId = updatedMessage.conversation_id;
+      if (conversationId !== selectedConversationId) return;
+
+      setConversations(prev => prev.map(c => {
+        if (c.id !== conversationId) return c;
+        const newMessages = c.messages.map(m => m.id === updatedMessage.id ? { ...m, ...updatedMessage, text: updatedMessage.content } : m);
+        return { ...c, messages: newMessages };
+      }));
+    };
+
+    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, handleNewMessage);
+    channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, handleUpdatedMessage);
+    
     channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, (payload: any) => {
         const updatedConv = payload.new;
         setConversations(prev => {
             const index = prev.findIndex(c => c.id === updatedConv.id);
             if (index === -1) return prev;
-
             const newConversations = [...prev];
             const existingConv = newConversations[index];
-            
-            newConversations[index] = {
-                ...existingConv,
-                userName: updatedConv.is_group ? updatedConv.group_name : existingConv.userName,
-                userAvatar: updatedConv.avatar_url,
-            };
+            newConversations[index] = { ...existingConv, userName: updatedConv.is_group ? updatedConv.group_name : existingConv.userName, userAvatar: updatedConv.avatar_url };
             return newConversations;
         });
     });
 
-    // Handle participant changes (join/leave/removed)
-    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_participants' }, () => {
-        fetchConversations();
-    });
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_participants' }, () => { fetchConversations(); });
 
-    channel
-      .on('broadcast', { event: 'typing' }, (payload: any) => {
+    channel.on('broadcast', { event: 'typing' }, (payload: any) => {
         if (payload?.userId && payload.userId !== currentUser?.id && payload.conversationId === selectedConversationId) {
           setIsSomeoneTyping(true);
           if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
           typingTimerRef.current = window.setTimeout(() => setIsSomeoneTyping(false), 1500);
         }
-      })
-      .subscribe();
+      }).subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [currentUser, selectedConversationId, fetchConversations]);
 
   useEffect(() => {
@@ -242,11 +241,11 @@ export const useChat = () => {
     }
   }, [location.state, currentUser, navigate]);
 
-  const handleSendMessage = async (text: string, attachment: Attachment | null) => {
+  const handleSendMessage = async (text: string, attachment: Attachment | null, replyToId: string | null) => {
     if (!selectedConversationId || !currentUser) return;
 
     const tempId = `temp-${Date.now()}`;
-    const optimistic: Message = { id: tempId, text, timestamp: new Date().toISOString(), sender: currentUser, attachment, message_type: 'user' };
+    const optimistic: Message = { id: tempId, text, timestamp: new Date().toISOString(), sender: currentUser, attachment, message_type: 'user', reply_to_message_id: replyToId };
 
     setConversations(prev => prev.map(c =>
       c.id === selectedConversationId
@@ -262,6 +261,7 @@ export const useChat = () => {
       attachment_name: attachment?.name,
       attachment_type: attachment?.type,
       message_type: 'user',
+      reply_to_message_id: replyToId,
     });
 
     if (error) {
@@ -271,6 +271,40 @@ export const useChat = () => {
           ? { ...c, messages: c.messages.filter(m => m.id !== tempId) }
           : c
       ));
+    }
+  };
+
+  const handleForwardMessage = async (destinationConversationId: string, message: Message) => {
+    if (!currentUser) return;
+    const forwardedText = `[Forwarded from ${message.sender?.name || 'Unknown'}]\n${message.text || ''}`;
+    const { error } = await supabase.from('messages').insert({
+      conversation_id: destinationConversationId,
+      sender_id: currentUser.id,
+      content: forwardedText,
+      attachment_url: message.attachment?.url,
+      attachment_name: message.attachment?.name,
+      attachment_type: message.attachment?.type,
+      message_type: 'user',
+    });
+    if (error) toast.error("Failed to forward message.", { description: error.message });
+    else {
+      toast.success("Message forwarded successfully.");
+      fetchConversations();
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    const { error } = await supabase.rpc('soft_delete_message', { p_message_id: messageId });
+    if (error) {
+      toast.error("Failed to delete message.", { description: error.message });
+    } else {
+      toast.success("Message deleted.");
+      // Optimistic update
+      setConversations(prev => prev.map(c => {
+        if (c.id !== selectedConversationId) return c;
+        const newMessages = c.messages.map(m => m.id === messageId ? { ...m, is_deleted: true, text: null, attachment: null } : m);
+        return { ...c, messages: newMessages };
+      }));
     }
   };
 
@@ -303,26 +337,20 @@ export const useChat = () => {
 
   const handleLeaveGroup = async (conversationId: string) => {
     const { error } = await supabase.rpc('leave_group', { p_conversation_id: conversationId });
-    if (error) {
-      toast.error("Failed to leave group.", { description: error.message });
-    } else {
+    if (error) toast.error("Failed to leave group.", { description: error.message });
+    else {
       toast.success("You have left the group.");
-      if (selectedConversationId === conversationId) {
-        setSelectedConversationId(null);
-      }
+      if (selectedConversationId === conversationId) setSelectedConversationId(null);
       fetchConversations();
     }
   };
 
   const handleDeleteConversation = async (conversationId: string) => {
     const { error } = await supabase.rpc('hide_conversation', { p_conversation_id: conversationId });
-    if (error) {
-      toast.error("Failed to delete chat.", { description: error.message });
-    } else {
+    if (error) toast.error("Failed to delete chat.", { description: error.message });
+    else {
       toast.success("Chat has been removed from your list.");
-      if (selectedConversationId === conversationId) {
-        setSelectedConversationId(null);
-      }
+      if (selectedConversationId === conversationId) setSelectedConversationId(null);
       setConversations(prev => prev.filter(c => c.id !== conversationId));
     }
   };
@@ -341,6 +369,8 @@ export const useChat = () => {
     setSearchTerm,
     handleConversationSelect,
     handleSendMessage,
+    handleForwardMessage,
+    handleDeleteMessage,
     handleClearChat,
     handleStartNewChat,
     handleStartNewGroupChat,

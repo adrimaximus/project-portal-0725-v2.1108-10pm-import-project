@@ -14,6 +14,8 @@ const ChatPage = () => {
     setSearchTerm,
     handleConversationSelect,
     handleSendMessage,
+    handleForwardMessage,
+    handleDeleteMessage,
     handleClearChat,
     handleStartNewChat,
     handleStartNewGroupChat,
@@ -43,9 +45,12 @@ const ChatPage = () => {
           ) : (
             <ChatWindow
               selectedConversation={selectedConversation}
-              onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
+              allConversations={conversations}
+              onSendMessage={(text, attachment, replyToId) => handleSendMessage(text, attachment, replyToId)}
+              onForwardMessage={handleForwardMessage}
               onClearChat={handleClearChat}
               onLeaveGroup={handleLeaveGroup}
+              onDeleteMessage={handleDeleteMessage}
               onBack={() => handleConversationSelect(null)}
               typing={isSomeoneTyping}
               onTyping={sendTyping}
@@ -72,9 +77,12 @@ const ChatPage = () => {
         />
         <ChatWindow
           selectedConversation={selectedConversation}
-          onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
+          allConversations={conversations}
+          onSendMessage={(text, attachment, replyToId) => handleSendMessage(text, attachment, replyToId)}
+          onForwardMessage={handleForwardMessage}
           onClearChat={handleClearChat}
           onLeaveGroup={handleLeaveGroup}
+          onDeleteMessage={handleDeleteMessage}
           typing={isSomeoneTyping}
           onTyping={sendTyping}
           onUpdate={fetchConversations}

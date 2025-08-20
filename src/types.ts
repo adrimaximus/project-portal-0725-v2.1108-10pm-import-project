@@ -130,11 +130,17 @@ export interface Attachment {
 
 export interface Message {
   id: string;
-  text: string;
+  text: string | null;
   timestamp: string;
   sender?: User;
-  attachment?: Attachment;
+  attachment?: Attachment | null;
   message_type?: 'user' | 'system_notification';
+  reply_to_message_id?: string | null;
+  reply_to_message?: {
+    text: string | null;
+    sender_name: string;
+  } | null;
+  is_deleted?: boolean;
 }
 
 export interface Conversation {
@@ -148,6 +154,8 @@ export interface Conversation {
   isGroup: boolean;
   members: Collaborator[];
   created_by?: string;
+  pinned_message_id?: string | null;
+  pinned_message?: Message | null;
 }
 
 export interface GoogleCalendarEvent {
