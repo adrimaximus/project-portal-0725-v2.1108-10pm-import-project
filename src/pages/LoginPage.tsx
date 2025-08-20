@@ -82,6 +82,7 @@ const LoginPage = () => {
                     colors: {
                       brand: 'hsl(var(--primary))',
                       brandAccent: 'hsl(var(--primary))',
+                      brandButtonText: 'hsl(var(--primary-foreground))',
                     },
                   },
                 },
