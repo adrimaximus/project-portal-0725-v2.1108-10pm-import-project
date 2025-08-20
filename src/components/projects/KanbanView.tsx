@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent, useDroppable, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -57,14 +57,25 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
   );
 };
 
-const KanbanColumn = ({ status, projects, dragHappened, isHovered }: { status: { value: string, label: string }, projects: Project[], dragHappened: React.MutableRefObject<boolean>, isHovered: boolean }) => {
+const KanbanColumn = ({ status, projects, dragHappened, isHovered, isDragging }: { status: { value: string, label: string }, projects: Project[], dragHappened: React.MutableRefObject<boolean>, isHovered: boolean, isDragging: boolean }) => {
   const { setNodeRef } = useDroppable({ id: status.value });
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
   const isEmpty = projects.length === 0;
-  const isExpanded = !isEmpty || isHovered;
+  const [isExpandedByUser, setIsExpandedByUser] = useState(false);
+
+  useEffect(() => {
+    if (isHovered) {
+      setIsExpandedByUser(true);
+    }
+    if (!isDragging) {
+      setIsExpandedByUser(false);
+    }
+  }, [isHovered, isDragging]);
+
+  const isExpanded = !isEmpty || isHovered || isExpandedByUser;
 
   return (
-    <div ref={setNodeRef} className={cn("flex-shrink-0 transition-all duration-300", isExpanded ? "w-72" : "w-20")}>
+    <div ref={setNodeRef} className={cn("flex-shrink-0 transition-all duration-300", isExpanded ? "w-72" : "w-14")}>
       <div className={cn("h-full flex flex-col", !isExpanded && "items-center")}>
         <h3 className={cn(
           "font-semibold mb-4 px-1 text-base flex items-center",
@@ -242,6 +253,7 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
             projects={projectGroups[statusOption.value as ProjectStatus]}
             dragHappened={dragHappened}
             isHovered={statusOption.value === overContainerId}
+            isDragging={!!activeProject}
           />
         ))}
       </div>
