@@ -1,10 +1,22 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useDemo } from "@/contexts/DemoContext";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 const DemoModeCard = () => {
-  const { isDemoMode, toggleDemoMode } = useDemo();
+  const { isDemoMode, setDemoMode, isLoading: isContextLoading } = useDemo();
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleToggle = async (checked: boolean) => {
+    setIsUpdating(true);
+    await setDemoMode(checked);
+    // The toast notification will be handled by the context's realtime listener.
+    setIsUpdating(false);
+  };
+
+  const isDisabled = isContextLoading || isUpdating;
 
   return (
     <Card>
@@ -19,11 +31,15 @@ const DemoModeCard = () => {
               Hide or blur sensitive financial data for presentations.
             </span>
           </Label>
-          <Switch
-            id="demo-mode-switch"
-            checked={isDemoMode}
-            onCheckedChange={toggleDemoMode}
-          />
+          <div className="flex items-center gap-2">
+            {isDisabled && <Loader2 className="h-4 w-4 animate-spin" />}
+            <Switch
+              id="demo-mode-switch"
+              checked={isDemoMode}
+              onCheckedChange={handleToggle}
+              disabled={isDisabled}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
