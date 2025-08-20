@@ -9,7 +9,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types";
 import { Link } from "react-router-dom";
-import { MoreHorizontal, Trash2, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -64,13 +64,6 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
 };
 
 const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort }: TableViewProps) => {
-  const getSortIcon = (key: keyof Project) => {
-    if (sortConfig.key !== key) {
-      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-20 group-hover:opacity-50" />;
-    }
-    return <ArrowUpDown className="ml-2 h-4 w-4" />;
-  };
-
   return (
     <Table>
       <TableHeader>
@@ -78,37 +71,31 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
           <TableHead className="w-[300px] p-2">
             <Button variant="ghost" onClick={() => requestSort('name')} className="w-full justify-start px-2 group">
               Project
-              {getSortIcon('name')}
             </Button>
           </TableHead>
           <TableHead className="p-2">
             <Button variant="ghost" onClick={() => requestSort('status')} className="w-full justify-start px-2 group">
               Status
-              {getSortIcon('status')}
             </Button>
           </TableHead>
           <TableHead className="p-2">
             <Button variant="ghost" onClick={() => requestSort('payment_status')} className="w-full justify-start px-2 group">
               Payment
-              {getSortIcon('payment_status')}
             </Button>
           </TableHead>
           <TableHead className="p-2">
             <Button variant="ghost" onClick={() => requestSort('progress')} className="w-full justify-start px-2 group">
               Progress
-              {getSortIcon('progress')}
             </Button>
           </TableHead>
           <TableHead className="p-2">
             <Button variant="ghost" onClick={() => requestSort('start_date')} className="w-full justify-start px-2 group">
               Date
-              {getSortIcon('start_date')}
             </Button>
           </TableHead>
           <TableHead className="p-2">
             <Button variant="ghost" onClick={() => requestSort('venue')} className="w-full justify-start px-2 group">
               Venue
-              {getSortIcon('venue')}
             </Button>
           </TableHead>
           <TableHead className="w-[50px]"></TableHead>
