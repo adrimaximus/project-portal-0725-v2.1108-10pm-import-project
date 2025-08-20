@@ -18,7 +18,7 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
   
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: transition || 'transform 0.25s ease-in-out',
   };
 
   const handleClick = () => {
