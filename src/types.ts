@@ -78,6 +78,7 @@ export interface Project {
   briefFiles: ProjectFile[];
   activities?: Activity[];
   venue?: string;
+  kanban_order?: number;
 }
 
 export type GoalType = 'frequency' | 'quantity' | 'value';
