@@ -276,21 +276,28 @@ export const useChat = () => {
     }
   };
 
-  const handleForwardMessage = async (destinationConversationId: string, message: Message) => {
-    if (!currentUser) return;
-    const { error } = await supabase.from('messages').insert({
-      conversation_id: destinationConversationId,
-      sender_id: currentUser.id,
-      content: message.text,
-      attachment_url: message.attachment?.url,
-      attachment_name: message.attachment?.name,
-      attachment_type: message.attachment?.type,
-      message_type: 'user',
-      is_forwarded: true,
-    });
-    if (error) toast.error("Failed to forward message.", { description: error.message });
-    else {
-      toast.success("Message forwarded successfully.");
+  const handleForwardMessages = async (destinationConversationId: string, messages: Message[]) => {
+    if (!currentUser || messages.length === 0) return;
+
+    const messagesToInsert = messages
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .map(message => ({
+        conversation_id: destinationConversationId,
+        sender_id: currentUser.id,
+        content: message.text,
+        attachment_url: message.attachment?.url,
+        attachment_name: message.attachment?.name,
+        attachment_type: message.attachment?.type,
+        message_type: 'user' as const,
+        is_forwarded: true,
+      }));
+
+    const { error } = await supabase.from('messages').insert(messagesToInsert);
+
+    if (error) {
+      toast.error("Failed to forward messages.", { description: error.message });
+    } else {
+      toast.success(`${messages.length} message(s) forwarded successfully.`);
       fetchConversations();
     }
   };
@@ -371,7 +378,7 @@ export const useChat = () => {
     setSearchTerm,
     handleConversationSelect,
     handleSendMessage,
-    handleForwardMessage,
+    handleForwardMessages,
     handleDeleteMessage,
     handleClearChat,
     handleStartNewChat,

@@ -13,7 +13,7 @@ interface ChatWindowProps {
   selectedConversation: Conversation | null;
   allConversations: Conversation[];
   onSendMessage: (text: string, attachment: Attachment | null, replyToId: string | null) => void;
-  onForwardMessage: (destinationConversationId: string, message: Message) => void;
+  onForwardMessages: (destinationConversationId: string, messages: Message[]) => void;
   onClearChat: (conversationId: string) => void;
   onLeaveGroup: (conversationId: string) => void;
   onDeleteMessage: (messageId: string) => void;
@@ -23,8 +23,8 @@ interface ChatWindowProps {
   onTyping?: () => void;
 }
 
-const ChatWindow = ({ selectedConversation, allConversations, onSendMessage, onForwardMessage, onClearChat, onLeaveGroup, onDeleteMessage, onUpdate, onBack, typing, onTyping }: ChatWindowProps) => {
-  const [messageToForward, setMessageToForward] = useState<Message | null>(null);
+const ChatWindow = ({ selectedConversation, allConversations, onSendMessage, onForwardMessages, onClearChat, onLeaveGroup, onDeleteMessage, onUpdate, onBack, typing, onTyping }: ChatWindowProps) => {
+  const [messagesToForward, setMessagesToForward] = useState<Message[]>([]);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
@@ -60,9 +60,15 @@ const ChatWindow = ({ selectedConversation, allConversations, onSendMessage, onF
   }, [selectedMessages, onDeleteMessage, handleCancelSelection]);
 
   const handleForwardSelected = useCallback(() => {
-    toast.info("Forwarding multiple messages is not yet implemented.");
+    if (!selectedConversation) return;
+    const selected = selectedConversation.messages.filter(m => selectedMessages.has(m.id));
+    if (selected.length > 0) {
+      setMessagesToForward(selected);
+    } else {
+      toast.info("No messages selected to forward.");
+    }
     handleCancelSelection();
-  }, [handleCancelSelection]);
+  }, [selectedMessages, selectedConversation, handleCancelSelection]);
 
   if (!selectedConversation) {
     return <ChatPlaceholder />;
@@ -76,8 +82,8 @@ const ChatWindow = ({ selectedConversation, allConversations, onSendMessage, onF
   }));
 
   const handleForward = (destinationConversationId: string) => {
-    if (messageToForward) {
-      onForwardMessage(destinationConversationId, messageToForward);
+    if (messagesToForward.length > 0) {
+      onForwardMessages(destinationConversationId, messagesToForward);
     }
   };
 
@@ -94,7 +100,7 @@ const ChatWindow = ({ selectedConversation, allConversations, onSendMessage, onF
       <ChatConversation
         messages={selectedConversation.messages}
         members={selectedConversation.members || []}
-        onForwardMessage={setMessageToForward}
+        onForwardMessage={(message) => setMessagesToForward([message])}
         onSetReply={setReplyingTo}
         onDeleteMessage={onDeleteMessage}
         selectionMode={selectionMode}
@@ -120,9 +126,9 @@ const ChatWindow = ({ selectedConversation, allConversations, onSendMessage, onF
         />
       )}
       <ForwardMessageDialog
-        open={!!messageToForward}
-        onOpenChange={(isOpen) => !isOpen && setMessageToForward(null)}
-        message={messageToForward}
+        open={messagesToForward.length > 0}
+        onOpenChange={(isOpen) => !isOpen && setMessagesToForward([])}
+        messages={messagesToForward}
         conversations={allConversations.filter(c => c.id !== selectedConversation.id)}
         onForward={handleForward}
       />

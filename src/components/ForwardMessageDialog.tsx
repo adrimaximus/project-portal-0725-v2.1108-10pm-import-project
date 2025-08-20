@@ -12,7 +12,7 @@ import CommentRenderer from "./CommentRenderer";
 interface ForwardMessageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  message: Message | null;
+  messages: Message[];
   conversations: Conversation[];
   onForward: (destinationConversationId: string) => void;
 }
@@ -20,7 +20,7 @@ interface ForwardMessageDialogProps {
 const ForwardMessageDialog = ({
   open,
   onOpenChange,
-  message,
+  messages,
   conversations,
   onForward,
 }: ForwardMessageDialogProps) => {
@@ -48,13 +48,17 @@ const ForwardMessageDialog = ({
           <DialogTitle>Forward Message</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          {message && (
+          {messages.length > 0 && (
             <div className="p-3 border rounded-md bg-muted/50 max-h-40 overflow-y-auto">
               <p className="text-xs text-muted-foreground mb-2">
-                Forwarding message from <span className="font-semibold">{message.sender?.name || 'Unknown'}</span>
+                Forwarding {messages.length} message{messages.length > 1 ? 's' : ''}
               </p>
-              {message.text && <CommentRenderer text={message.text} members={[]} />}
-              {message.attachment && <MessageAttachment attachment={message.attachment} />}
+              {messages.length === 1 && (
+                <>
+                  {messages[0].text && <CommentRenderer text={messages[0].text} members={[]} />}
+                  {messages[0].attachment && <MessageAttachment attachment={messages[0].attachment} />}
+                </>
+              )}
             </div>
           )}
           <Command>
