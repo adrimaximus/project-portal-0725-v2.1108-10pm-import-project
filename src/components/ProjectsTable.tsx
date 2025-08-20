@@ -365,7 +365,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
           </div>
         </CardHeader>
         <CardContent>
-          <div className="py-4 flex flex-col sm:flex-row gap-4 items-center">
+          <div className="py-4 flex flex-col md:flex-row md:flex-wrap gap-4 items-center">
             <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             {view === 'kanban' && (
               <ToggleGroup 
@@ -378,7 +378,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
                   <ToggleGroupItem value="payment_status" className="text-sm px-3">By Payment Status</ToggleGroupItem>
               </ToggleGroup>
             )}
-            <div className="relative w-full sm:w-auto sm:flex-1">
+            <div className="relative w-full md:w-auto md:flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search projects..."
