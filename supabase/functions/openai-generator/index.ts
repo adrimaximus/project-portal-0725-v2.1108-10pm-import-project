@@ -219,11 +219,78 @@ async function handleCreateGoalAction({ details, userSupabase }) {
   return `Done! I've created the goal "${newGoal.title}". You can view it in your goals list.`;
 }
 
+async function handleCreateTaskAction({ projectName, taskTitle, assignees, projects, users, userSupabase, user }) {
+    if (!projectName || !taskTitle) return "To create a task, I need a project name and a task title.";
+    
+    const project = projects.find(p => p.name.toLowerCase() === projectName.toLowerCase());
+    if (!project) return `I couldn't find a project named "${projectName}".`;
+
+    const { data: newTask, error: taskError } = await userSupabase.from('tasks').insert({
+        project_id: project.id,
+        title: taskTitle,
+        created_by: user.id,
+    }).select().single();
+
+    if (taskError) return `I tried to create the task, but failed: ${taskError.message}`;
+
+    let followUp = "";
+    if (assignees?.length > 0) {
+        const assigneeIds = users.filter(u => assignees.some(name => u.name.toLowerCase() === name.toLowerCase())).map(u => u.id);
+        if (assigneeIds.length > 0) {
+            const { error: assignError } = await userSupabase.from('task_assignees').insert(assigneeIds.map(id => ({ task_id: newTask.id, user_id: id })));
+            if (assignError) followUp = " but I couldn't assign it."; else followUp = ` and assigned it to ${assignees.join(', ')}.`;
+        } else {
+            followUp = ` but I couldn't find the users to assign.`;
+        }
+    }
+    
+    return `Done! I've created the task "${taskTitle}" in the "${projectName}" project${followUp}`;
+}
+
+async function handleAssignTaskAction({ projectName, taskTitle, assignees, projects, users, userSupabase }) {
+    if (!projectName || !taskTitle || !assignees?.length) return "I need a project, a task, and at least one person to assign.";
+
+    const project = projects.find(p => p.name.toLowerCase() === projectName.toLowerCase());
+    if (!project) return `I couldn't find a project named "${projectName}".`;
+
+    const task = project.tasks.find(t => t.title.toLowerCase() === taskTitle.toLowerCase());
+    if (!task) return `I couldn't find a task named "${taskTitle}" in that project.`;
+
+    const assigneeIds = users.filter(u => assignees.some(name => u.name.toLowerCase() === name.toLowerCase())).map(u => u.id);
+    if (assigneeIds.length === 0) return `I couldn't find any of the users you mentioned.`;
+
+    const { error } = await userSupabase.from('task_assignees').upsert(assigneeIds.map(id => ({ task_id: task.id, user_id: id })));
+    if (error) return `I tried to assign the task, but failed: ${error.message}`;
+
+    return `Done! I've assigned ${assignees.join(', ')} to the task "${taskTitle}".`;
+}
+
+async function handleUnassignTaskAction({ projectName, taskTitle, assignees, projects, users, userSupabase }) {
+    if (!projectName || !taskTitle || !assignees?.length) return "I need a project, a task, and at least one person to unassign.";
+
+    const project = projects.find(p => p.name.toLowerCase() === projectName.toLowerCase());
+    if (!project) return `I couldn't find a project named "${projectName}".`;
+
+    const task = project.tasks.find(t => t.title.toLowerCase() === taskTitle.toLowerCase());
+    if (!task) return `I couldn't find a task named "${taskTitle}" in that project.`;
+
+    const assigneeIds = users.filter(u => assignees.some(name => u.name.toLowerCase() === name.toLowerCase())).map(u => u.id);
+    if (assigneeIds.length === 0) return `I couldn't find any of the users you mentioned.`;
+
+    const { error } = await userSupabase.from('task_assignees').delete().eq('task_id', task.id).in('user_id', assigneeIds);
+    if (error) return `I tried to unassign the task, but failed: ${error.message}`;
+
+    return `Done! I've unassigned ${assignees.join(', ')} from the task "${taskTitle}".`;
+}
+
 const actionHandlers = {
   'CREATE_PROJECT': handleCreateProjectAction,
   'UPDATE_PROJECT': handleUpdateProjectAction,
   'BULK_UPDATE_PROJECTS': handleBulkUpdateProjectsAction,
   'CREATE_GOAL': handleCreateGoalAction,
+  'CREATE_TASK': handleCreateTaskAction,
+  'ASSIGN_TASK': handleAssignTaskAction,
+  'UNASSIGN_TASK': handleUnassignTaskAction,
 };
 
 // --- FEATURE HANDLERS ---
@@ -267,7 +334,7 @@ async function handleGenerateInsight({ payload, openai }) {
   const { goal, context } = payload;
   if (!goal || !context) throw new Error("Goal and context are required.");
 
-  const systemPrompt = `Anda adalah seorang pelatih AI yang suportif dan berwawasan luas. Tujuan Anda adalah memberikan saran yang memotivasi dan dapat ditindaklanjuti kepada pengguna berdasarkan kemajuan mereka. Analisis detail tujuan berikut: judul, deskripsi, tipe, tag, pemilik (owner), kolaborator lain (collaborators), dan kemajuan terbaru. Berdasarkan analisis holistik ini, berikan wawasan singkat yang bermanfaat dalam format markdown.
+  const systemPrompt = `Anda adalah seorang pelatih AI yang suportif dan berwawasan luas. Tujuan Anda adalah memberikan saran yang memotivasi dan dapat ditindaklanuti kepada pengguna berdasarkan kemajuan mereka. Analisis detail tujuan berikut: judul, deskripsi, tipe, tag, pemilik (owner), kolaborator lain (collaborators), dan kemajuan terbaru. Berdasarkan analisis holistik ini, berikan wawasan singkat yang bermanfaat dalam format markdown.
 
 - Pertahankan nada yang positif dan memotivasi.
 - Sapa pengguna secara langsung. Jika ada pemilik (owner), sapa mereka sebagai pemilik tujuan.
