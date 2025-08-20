@@ -4,6 +4,7 @@ import IntegrationCard from "@/components/settings/IntegrationCard";
 import NavigationCard from "@/components/settings/NavigationCard";
 import TeamCard from "@/components/settings/TeamCard";
 import { useFeatures } from "@/contexts/FeaturesContext";
+import DemoModeCard from "@/components/settings/DemoModeCard";
 
 const SettingsPage = () => {
   const { features } = useFeatures();
@@ -27,6 +28,7 @@ const SettingsPage = () => {
           <TeamCard />
           <IntegrationCard />
           <NavigationCard />
+          <DemoModeCard />
         </div>
       </div>
     </PortalLayout>

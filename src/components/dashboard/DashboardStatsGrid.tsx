@@ -4,6 +4,8 @@ import StatCard from './StatCard';
 import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useDemo } from '@/contexts/DemoContext';
+import { cn } from '@/lib/utils';
 
 interface DashboardStatsGridProps {
   projects: Project[];
@@ -40,6 +42,7 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
 
 const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
   const [viewMode, setViewMode] = useState<'quantity' | 'value'>('quantity');
+  const { isDemoMode } = useDemo();
 
   const stats = useMemo(() => {
     const totalProjects = projects.length;
@@ -132,7 +135,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
           className="h-8"
         >
           <ToggleGroupItem value="quantity" className="text-xs px-3">By Quantity</ToggleGroupItem>
-          <ToggleGroupItem value="value" className="text-xs px-3">By Value</ToggleGroupItem>
+          {!isDemoMode && <ToggleGroupItem value="value" className="text-xs px-3">By Value</ToggleGroupItem>}
         </ToggleGroup>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -143,7 +146,13 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
         />
         <StatCard
           title="Total Project Value"
-          value={'Rp ' + stats.totalValue.toLocaleString('id-ID')}
+          value={
+            <span>
+              Rp <span className={cn(isDemoMode && 'blur-sm')}>
+                {stats.totalValue.toLocaleString('id-ID')}
+              </span>
+            </span>
+          }
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard

@@ -11,6 +11,7 @@ import { Input } from "../ui/input";
 import StatusBadge from "../StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { useDemo } from "@/contexts/DemoContext";
 
 interface ProjectDetailsCardProps {
   project: Project;
@@ -28,6 +29,8 @@ const paymentStatusConfig: Record<string, { color: string; label: string }> = {
 };
 
 const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
+  const { isDemoMode } = useDemo();
+
   const handleDateChange = (range: DateRange | undefined) => {
     const startDate = range?.from ? range.from.toISOString() : undefined;
     const endDateValue = range?.to || range?.from;
@@ -101,7 +104,11 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                   />
                 ) : (
                   <p className="text-muted-foreground">
-                    {formatCurrency(project.budget || 0)}
+                    <span>
+                      Rp <span className={cn(isDemoMode && 'blur-sm')}>
+                        {(project.budget || 0).toLocaleString('id-ID')}
+                      </span>
+                    </span>
                   </p>
                 )}
               </div>

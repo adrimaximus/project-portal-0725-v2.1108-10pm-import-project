@@ -1,0 +1,33 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useDemo } from "@/contexts/DemoContext";
+
+const DemoModeCard = () => {
+  const { isDemoMode, toggleDemoMode } = useDemo();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base font-medium">Demo Mode</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between space-x-2">
+          <Label htmlFor="demo-mode-switch" className="flex flex-col space-y-1">
+            <span className="font-medium">Activate Demo Mode</span>
+            <span className="text-xs font-normal leading-snug text-muted-foreground">
+              Hide or blur sensitive financial data for presentations.
+            </span>
+          </Label>
+          <Switch
+            id="demo-mode-switch"
+            checked={isDemoMode}
+            onCheckedChange={toggleDemoMode}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default DemoModeCard;
