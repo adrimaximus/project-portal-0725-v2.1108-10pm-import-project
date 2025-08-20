@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import OpenAI from 'https://esm.sh/openai@4.29.2';
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
+import OpenAI from 'https://esm.sh/openai@4.47.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -289,10 +289,11 @@ const featureHandlers = {
 // --- MAIN SERVER ---
 
 serve(async (req) => {
-  const headers = { 'Content-Type': 'application/json', ...corsHeaders };
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers });
+    return new Response('ok', { headers: corsHeaders });
   }
+
+  const headers = { 'Content-Type': 'application/json', ...corsHeaders };
 
   try {
     const { feature, payload } = await req.json();
