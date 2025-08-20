@@ -149,13 +149,17 @@ const ProjectDetail = () => {
   const handleFilesAdd = async (files: File[]) => {
     if (!project || !user) return;
     toast.info(`Uploading ${files.length} file(s)...`);
+    const failedUploads: string[] = [];
 
     for (const file of files) {
-      const filePath = `${project.id}/${Date.now()}-${file.name}`;
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const filePath = `${project.id}/${Date.now()}-${sanitizedFileName}`;
+      
       const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
 
       if (uploadError) {
         toast.error(`Failed to upload ${file.name}`, { description: uploadError.message });
+        failedUploads.push(file.name);
         continue;
       }
 
@@ -173,10 +177,22 @@ const ProjectDetail = () => {
 
       if (dbError) {
         toast.error(`Failed to save ${file.name} to database`, { description: dbError.message });
+        failedUploads.push(file.name);
+        await supabase.storage.from('project-files').remove([filePath]);
       }
     }
-    toast.success("File upload complete!");
-    queryClient.invalidateQueries({ queryKey: ["project", slug] });
+
+    if (failedUploads.length === files.length) {
+      // All failed
+    } else if (failedUploads.length > 0) {
+      toast.warning(`${files.length - failedUploads.length} file(s) uploaded, but ${failedUploads.length} failed.`);
+    } else {
+      toast.success("All files uploaded successfully!");
+    }
+
+    if (failedUploads.length < files.length) {
+      queryClient.invalidateQueries({ queryKey: ["project", slug] });
+    }
   };
 
   const handleFileDelete = async (fileId: string) => {
