@@ -92,8 +92,8 @@ const ProjectDetail = () => {
           p_member_ids: assignedTo.map(m => m.id),
           p_service_titles: services || [],
           p_venue: venue || null,
-          p_existing_tags: tags.filter(t => !t.isNew).map(t => t.id),
-          p_custom_tags: tags.filter(t => t.isNew).map(({ name, color }) => ({ name, color })),
+          p_existing_tags: (tags || []).filter(t => !t.isNew).map(t => t.id),
+          p_custom_tags: (tags || []).filter(t => t.isNew).map(({ name, color }) => ({ name, color })),
         })
         .single();
 
