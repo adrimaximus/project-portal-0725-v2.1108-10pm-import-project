@@ -28,6 +28,46 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
     }
   };
 
+  const renderDateBadge = () => {
+    const { start_date, due_date } = project;
+
+    if (!start_date) {
+      return null;
+    }
+
+    const startDate = new Date(start_date);
+    const dueDate = due_date ? new Date(due_date) : startDate;
+
+    const isSameDay = startDate.getFullYear() === dueDate.getFullYear() &&
+                      startDate.getMonth() === dueDate.getMonth() &&
+                      startDate.getDate() === dueDate.getDate();
+
+    if (isSameDay) {
+      return (
+        <Badge variant="outline" className="text-xs font-normal">
+          {formatInJakarta(start_date, 'd MMM')}
+        </Badge>
+      );
+    }
+
+    const startMonth = formatInJakarta(start_date, 'MMM');
+    const endMonth = formatInJakarta(due_date, 'MMM');
+
+    if (startMonth === endMonth) {
+      return (
+        <Badge variant="outline" className="text-xs font-normal">
+          {`${formatInJakarta(start_date, 'd')}-${formatInJakarta(due_date, 'd')} ${startMonth}`}
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge variant="outline" className="text-xs font-normal">
+        {`${formatInJakarta(start_date, 'd MMM')} - ${formatInJakarta(due_date, 'd MMM')}`}
+      </Badge>
+    );
+  };
+
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn(isDragging && "opacity-30")}>
       <Card className="mb-3 hover:shadow-md transition-shadow cursor-pointer" onClick={handleClick}>
@@ -68,11 +108,7 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
                   </Avatar>
                 ))}
               </div>
-              {project.due_date && (
-                <Badge variant="outline" className="text-xs font-normal">
-                  {formatInJakarta(project.due_date, 'd MMM')}
-                </Badge>
-              )}
+              {renderDateBadge()}
             </div>
           </div>
         </CardContent>
@@ -271,6 +307,19 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
     }
   };
 
+  const renderDateBadgeForOverlay = (project: Project) => {
+    const { start_date, due_date } = project;
+    if (!start_date) return null;
+    const startDate = new Date(start_date);
+    const dueDate = due_date ? new Date(due_date) : startDate;
+    const isSameDay = startDate.getFullYear() === dueDate.getFullYear() && startDate.getMonth() === dueDate.getMonth() && startDate.getDate() === dueDate.getDate();
+    if (isSameDay) return <Badge variant="outline" className="text-xs font-normal">{formatInJakarta(start_date, 'd MMM')}</Badge>;
+    const startMonth = formatInJakarta(start_date, 'MMM');
+    const endMonth = formatInJakarta(due_date, 'MMM');
+    if (startMonth === endMonth) return <Badge variant="outline" className="text-xs font-normal">{`${formatInJakarta(start_date, 'd')}-${formatInJakarta(due_date, 'd')} ${startMonth}`}</Badge>;
+    return <Badge variant="outline" className="text-xs font-normal">{`${formatInJakarta(start_date, 'd MMM')} - ${formatInJakarta(due_date, 'd MMM')}`}</Badge>;
+  };
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
       <div className="flex gap-4 overflow-x-auto pb-4">
@@ -323,11 +372,7 @@ const KanbanView = ({ projects }: { projects: Project[] }) => {
                       </Avatar>
                     ))}
                   </div>
-                  {activeProject.due_date && (
-                    <Badge variant="outline" className="text-xs font-normal">
-                      {formatInJakarta(activeProject.due_date, 'd MMM')}
-                    </Badge>
-                  )}
+                  {renderDateBadgeForOverlay(activeProject)}
                 </div>
               </div>
             </CardContent>
