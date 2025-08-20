@@ -7,12 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 interface KanbanCardProps {
   project: Project;
 }
 
 const KanbanCard = ({ project }: KanbanCardProps) => {
+  const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
     data: {
@@ -26,12 +28,17 @@ const KanbanCard = ({ project }: KanbanCardProps) => {
     transform: CSS.Transform.toString(transform),
   };
 
+  const handleClick = () => {
+    navigate(`/projects/${project.slug}`);
+  };
+
   return (
     <Card 
       ref={setNodeRef} 
       style={style} 
       {...attributes} 
       {...listeners} 
+      onClick={handleClick}
       className={cn(
         "mb-4 cursor-grab active:cursor-grabbing",
         isDragging && "opacity-50 shadow-lg"
