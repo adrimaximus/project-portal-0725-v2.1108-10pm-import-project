@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import CommentRenderer from "./CommentRenderer";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -72,6 +73,10 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
         const isCurrentUser = message.sender?.id === currentUser.id;
         const sender = members.find(m => m.id === message.sender?.id) || message.sender;
         const isSameSenderAsPrevious = prevMessage && prevMessage.sender?.id === message.sender?.id && prevMessage.message_type !== 'system_notification';
+        
+        const isImageAttachment = message.attachment && message.attachment.type.startsWith('image/');
+        const isFileAttachment = message.attachment && !message.attachment.type.startsWith('image/');
+        const hasText = message.text && message.text.trim().length > 0;
 
         return (
           <div key={message.id || index}>
@@ -102,23 +107,49 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
               )}
               <div
                 className={cn(
-                  "max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 group relative",
+                  "max-w-xs md:max-w-md lg:max-w-lg rounded-lg group relative flex flex-col",
                   isCurrentUser
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted",
-                  !isCurrentUser && isSameSenderAsPrevious && "ml-10"
+                  !isCurrentUser && isSameSenderAsPrevious && "ml-10",
+                  !hasText && isImageAttachment ? "p-0 bg-transparent" : "px-3 py-2"
                 )}
               >
                 {!isCurrentUser && !isSameSenderAsPrevious && sender && (
                   <p className="text-sm font-semibold mb-1">{sender.name}</p>
                 )}
-                {message.text && <CommentRenderer text={message.text} members={members} />}
-                {message.attachment && (
-                  <MessageAttachment attachment={message.attachment} />
+                
+                {hasText && <CommentRenderer text={message.text!} members={members} />}
+                
+                {isImageAttachment && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <div className={cn("relative cursor-pointer", hasText && "mt-2")}>
+                        <img 
+                          src={message.attachment!.url} 
+                          alt={message.attachment!.name} 
+                          className="rounded-md max-w-full h-auto max-h-80 object-cover" 
+                        />
+                        <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                          <span>{formatTimestamp(message.timestamp)}</span>
+                        </div>
+                      </div>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl w-full h-[90vh] p-2 bg-transparent border-none">
+                      <img src={message.attachment!.url} alt={message.attachment!.name} className="max-h-full w-auto object-contain mx-auto" />
+                    </DialogContent>
+                  </Dialog>
                 )}
-                <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-5 right-2 text-muted-foreground">
-                  {formatTimestamp(message.timestamp)}
-                </span>
+
+                {isFileAttachment && (
+                  <MessageAttachment attachment={message.attachment!} />
+                )}
+
+                {!isImageAttachment && hasText && (
+                  <div className="text-right text-xs mt-1 opacity-70 clear-both flex justify-end items-center gap-1">
+                    <span>{formatTimestamp(message.timestamp)}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
