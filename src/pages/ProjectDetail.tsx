@@ -257,9 +257,10 @@ const ProjectDetail = () => {
     if (!project || !user) return;
     let attachment_url = null;
     let attachment_name = null;
+    let filePath = null;
 
     if (attachment) {
-      const filePath = `${project.id}/comments/${Date.now()}-${attachment.name}`;
+      filePath = `${project.id}/comments/${Date.now()}-${attachment.name}`;
       const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, attachment);
       if (uploadError) {
         toast.error("Failed to upload attachment.", { description: uploadError.message });
@@ -284,7 +285,21 @@ const ProjectDetail = () => {
       return;
     }
 
-    // Optimistic update: tampilkan segera di UI penulis
+    if (attachment && filePath && attachment_url) {
+      const { error: projectFileError } = await supabase.from('project_files').insert({
+        project_id: project.id,
+        user_id: user.id,
+        name: `comment_files_${attachment.name}`,
+        size: attachment.size,
+        type: attachment.type,
+        url: attachment_url,
+        storage_path: filePath,
+      });
+      if (projectFileError) {
+        toast.warning("Comment posted, but failed to add attachment to Shared Files.", { description: projectFileError.message });
+      }
+    }
+
     if (commentData) {
       const authorUser = {
         id: user.id,
@@ -323,7 +338,6 @@ const ProjectDetail = () => {
     } else {
       toast.success("Comment posted.");
     }
-    // Realtime akan menyamakan state di member lain
   };
 
   const canEdit = useMemo(() => {
