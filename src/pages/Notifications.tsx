@@ -1,11 +1,11 @@
 import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { notificationIcons, Notification } from "@/data/notifications";
+import { notificationIcons } from "@/data/notifications";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from "react-router-dom";
-import { Bell, CheckCheck, Loader2 } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Skeleton } from "@/components/ui/skeleton";
 
