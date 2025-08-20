@@ -186,28 +186,63 @@ async function handleBulkUpdateProjectsAction({ filters, updates, projects, supa
     return `Done! I've updated ${projectIds.length} project(s).`;
 }
 
-// ... other action handlers for tasks, goals etc. can be added here in the same pattern
+async function handleCreateGoalAction({ details, supabaseAdmin }) {
+  if (!details || !details.title) return "To create a goal, I need at least a title.";
+
+  const { title, description, icon, color, type, frequency, specific_days, target_quantity, target_period, target_value, unit, tags } = details;
+
+  const rpcParams = {
+    p_title: title,
+    p_description: description || null,
+    p_icon: icon,
+    p_color: color,
+    p_type: type,
+    p_frequency: frequency || null,
+    p_specific_days: specific_days || null,
+    p_target_quantity: target_quantity || null,
+    p_target_period: target_period || null,
+    p_target_value: target_value || null,
+    p_unit: unit || null,
+    p_existing_tags: [],
+    p_custom_tags: tags || [],
+  };
+
+  const { data: newGoal, error } = await supabaseAdmin
+    .rpc('create_goal_and_link_tags', rpcParams)
+    .single();
+
+  if (error) {
+    return `I tried to create the goal, but failed. The database said: ${error.message}`;
+  }
+
+  return `Done! I've created the goal "${newGoal.title}". You can view it in your goals list.`;
+}
 
 const actionHandlers = {
   'CREATE_PROJECT': handleCreateProjectAction,
   'UPDATE_PROJECT': handleUpdateProjectAction,
   'BULK_UPDATE_PROJECTS': handleBulkUpdateProjectsAction,
+  'CREATE_GOAL': handleCreateGoalAction,
 };
 
 // --- FEATURE HANDLERS ---
 
-async function handleAnalyzeProjects({ req, payload, supabaseAdmin, openai }) {
+async function handleAnalyzeProjects({ req, payload, openai }) {
   const { request, conversationHistory } = payload;
   if (!request) throw new Error("An analysis request type is required.");
 
-  const userSupabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
   );
-  const { data: { user } } = await userSupabase.auth.getUser();
-  if (!user) throw new Error("User not authenticated.");
 
-  const fullContext = await getFullContext(userSupabase);
+  const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser();
+  if (userError || !user) {
+    throw new Error("User not authenticated.");
+  }
+
+  const fullContext = await getFullContext(supabaseAdmin);
   const summarizedContext = buildSummarizedContext(fullContext);
   const systemPrompt = getSystemPrompt(summarizedContext);
 
@@ -229,7 +264,7 @@ async function handleAnalyzeProjects({ req, payload, supabaseAdmin, openai }) {
     const actionData = JSON.parse(jsonMatch[1] || jsonMatch[2]);
     const handler = actionHandlers[actionData.action];
     if (handler) {
-      const result = await handler({ ...actionData, ...fullContext, supabaseAdmin, user });
+      const result = await handler({ ...actionData, supabaseAdmin, user, ...fullContext });
       return { result };
     }
     return { result: "I understood the action, but I don't know how to perform it yet." };
@@ -238,7 +273,15 @@ async function handleAnalyzeProjects({ req, payload, supabaseAdmin, openai }) {
   }
 }
 
-async function handleGenerateInsight({ payload, openai }) {
+async function handleGenerateInsight({ req, payload, openai }) {
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+  );
+  const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser();
+  if (userError || !user) throw new Error("User not authenticated.");
+
   const { goal, context } = payload;
   if (!goal || !context) throw new Error("Goal and context are required.");
 
@@ -262,7 +305,15 @@ async function handleGenerateInsight({ payload, openai }) {
   return { result: response.choices[0].message.content };
 }
 
-async function handleGenerateMoodInsight({ payload, openai }) {
+async function handleGenerateMoodInsight({ req, payload, openai }) {
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser();
+    if (userError || !user) throw new Error("User not authenticated.");
+
     const { prompt, conversationHistory } = payload;
     if (!prompt) throw new Error("Prompt is required.");
 
@@ -302,19 +353,19 @@ serve(async (req) => {
       throw new Error(`Unknown feature: ${feature}`);
     }
 
-    const supabaseAdmin = createClient(
+    const supabaseAdminForOpenAI = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: config, error: configError } = await supabaseAdmin.from('app_config').select('value').eq('key', 'OPENAI_API_KEY').single();
+    const { data: config, error: configError } = await supabaseAdminForOpenAI.from('app_config').select('value').eq('key', 'OPENAI_API_KEY').single();
     if (configError || !config?.value) {
       throw new Error("OpenAI API key is not configured by an administrator.");
     }
 
     const openai = new OpenAI({ apiKey: config.value });
 
-    const data = await handler({ req, payload, supabaseAdmin, openai });
+    const data = await handler({ req, payload, openai });
 
     return new Response(JSON.stringify({ ok: true, data }), { headers, status: 200 });
 
@@ -322,7 +373,7 @@ serve(async (req) => {
     console.error("Edge function error:", error);
     return new Response(JSON.stringify({ ok: false, error: error.message }), {
       headers,
-      status: 200, // Always return 200 for agent compatibility
+      status: 200,
     });
   }
 });
