@@ -260,7 +260,8 @@ const ProjectDetail = () => {
     let filePath = null;
 
     if (attachment) {
-      filePath = `${project.id}/comments/${Date.now()}-${attachment.name}`;
+      const sanitizedFileName = attachment.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      filePath = `${project.id}/comments/${Date.now()}-${sanitizedFileName}`;
       const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, attachment);
       if (uploadError) {
         toast.error("Failed to upload attachment.", { description: uploadError.message });
