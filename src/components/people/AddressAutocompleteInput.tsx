@@ -1,6 +1,8 @@
 import React from 'react';
 import GooglePlacesAutocomplete, { geocodeByAddress, getLatLng } from 'react-google-places-autocomplete';
 import { toast } from 'sonner';
+import useGoogleMapsScript from '@/hooks/useGoogleMapsScript';
+import { Skeleton } from '../ui/skeleton';
 
 interface AddressAutocompleteInputProps {
   value: any;
@@ -10,13 +12,18 @@ interface AddressAutocompleteInputProps {
 
 const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocompleteInputProps) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const { isLoaded, error } = useGoogleMapsScript(apiKey);
 
-  if (!apiKey) {
+  if (error) {
     return (
       <div className="p-4 text-center text-red-500 bg-red-100 border border-red-200 rounded-md">
-        Google Maps API Key is not configured. Please set VITE_GOOGLE_MAPS_API_KEY in your environment variables.
+        {error.message}
       </div>
     );
+  }
+
+  if (!isLoaded) {
+    return <Skeleton className="h-10 w-full" />;
   }
 
   const handleSelect = async (place: any) => {
@@ -54,7 +61,6 @@ const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocomp
 
   return (
     <GooglePlacesAutocomplete
-      apiKey={apiKey}
       selectProps={{
         value: formattedValue,
         onChange: handleSelect,
