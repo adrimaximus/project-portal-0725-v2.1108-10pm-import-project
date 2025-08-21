@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Search, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -18,13 +17,13 @@ const ArticleCard = ({ article }: { article: any }) => (
   <Link to={`/knowledge-base/${article.slug}`}>
     <Card className="h-full flex flex-col hover:shadow-lg transition-shadow">
       {article.cover_image_url && (
-        <img src={article.cover_image_url} alt={article.title} className="w-full h-40 object-cover rounded-t-lg" />
+        <img src={article.cover_image_url} alt={article.title} className="w-full h-28 object-cover rounded-t-lg" />
       )}
-      <CardHeader>
-        <CardTitle>{article.title}</CardTitle>
+      <CardHeader className="p-4">
+        <CardTitle className="text-base font-semibold">{article.title}</CardTitle>
       </CardHeader>
-      <CardContent className="flex-grow">
-        <div className="flex flex-wrap gap-2">
+      <CardContent className="flex-grow p-4 pt-0">
+        <div className="flex flex-wrap gap-1">
           {article.kb_article_tags.map((tag: any) => (
             <Badge key={tag.tags.id} variant="secondary" style={{ backgroundColor: `${tag.tags.color}20`, borderColor: tag.tags.color, color: tag.tags.color }}>
               {tag.tags.name}
@@ -32,40 +31,18 @@ const ArticleCard = ({ article }: { article: any }) => (
           ))}
         </div>
       </CardContent>
-      <CardFooter className="flex items-center gap-3 text-sm text-muted-foreground">
+      <CardFooter className="flex items-center gap-3 text-sm text-muted-foreground p-4">
         <Avatar className="h-8 w-8">
           <AvatarImage src={article.profiles?.avatar_url} />
           <AvatarFallback>{article.profiles?.first_name?.[0]}</AvatarFallback>
         </Avatar>
         <div>
-          <p className="font-medium">{article.profiles?.first_name} {article.profiles?.last_name}</p>
-          <p>{formatDistanceToNow(new Date(article.created_at), { addSuffix: true, locale: id })}</p>
+          <p className="font-medium text-xs">{article.profiles?.first_name} {article.profiles?.last_name}</p>
+          <p className="text-xs">{formatDistanceToNow(new Date(article.created_at), { addSuffix: true, locale: id })}</p>
         </div>
       </CardFooter>
     </Card>
   </Link>
-);
-
-const ArticleCardSkeleton = () => (
-  <Card className="h-full flex flex-col">
-    <Skeleton className="w-full h-40 rounded-t-lg rounded-b-none" />
-    <CardHeader>
-      <Skeleton className="h-6 w-3/4" />
-    </CardHeader>
-    <CardContent className="flex-grow">
-      <div className="flex flex-wrap gap-2">
-        <Skeleton className="h-5 w-16 rounded-full" />
-        <Skeleton className="h-5 w-20 rounded-full" />
-      </div>
-    </CardContent>
-    <CardFooter className="flex items-center gap-3">
-      <Skeleton className="h-8 w-8 rounded-full" />
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-3 w-16" />
-      </div>
-    </CardFooter>
-  </Card>
 );
 
 const KnowledgeBasePage = () => {
@@ -108,7 +85,7 @@ const KnowledgeBasePage = () => {
 
     const timeoutId = setTimeout(fetchArticles, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+  }, [searchTerm, isLoading]);
 
   return (
     <PortalLayout>
@@ -140,15 +117,11 @@ const KnowledgeBasePage = () => {
           />
         </div>
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => <ArticleCardSkeleton key={i} />)}
-          </div>
-        ) : isSearching ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 3 }).map((_, i) => <ArticleCardSkeleton key={i} />)}
+          <div className="flex justify-center items-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : articles.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {articles.map(article => <ArticleCard key={article.id} article={article} />)}
           </div>
         ) : (
