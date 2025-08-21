@@ -49,11 +49,16 @@ const PeoplePage = () => {
   });
 
   const filteredPeople = useMemo(() => {
-    return people.filter(person =>
-      person.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (person.company && person.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (person.job_title && person.job_title.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) {
+      return people;
+    }
+    return people.filter(person => {
+      const fullName = person.full_name?.toLowerCase() || '';
+      const company = person.company?.toLowerCase() || '';
+      const jobTitle = person.job_title?.toLowerCase() || '';
+      return fullName.includes(term) || company.includes(term) || jobTitle.includes(term);
+    });
   }, [people, searchTerm]);
 
   const handleAddNew = () => {
