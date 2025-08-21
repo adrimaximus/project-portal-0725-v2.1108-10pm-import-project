@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -57,7 +57,7 @@ const NavLink = ({ item, isCollapsed, location }: { item: NavItem, isCollapsed: 
             to={item.href}
             className={cn(
               "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative",
-              location.pathname === item.href && "bg-muted text-primary"
+              location.pathname.startsWith(item.href) && item.href !== '/' || location.pathname === item.href ? "bg-muted text-primary" : ""
             )}
           >
             <item.icon className="h-5 w-5" />
@@ -79,7 +79,7 @@ const NavLink = ({ item, isCollapsed, location }: { item: NavItem, isCollapsed: 
       to={item.href}
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary group",
-        location.pathname === item.href && "bg-muted text-primary"
+        location.pathname.startsWith(item.href) && item.href !== '/' || location.pathname === item.href ? "bg-muted text-primary" : ""
       )}
     >
       <item.icon className="h-4 w-4" />
@@ -128,7 +128,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     if (!user) return;
 
     const defaultItemsList: NavItem[] = [
-      { id: "dashboard", href: "/", label: "Dashboard", icon: Home },
+      { id: "dashboard", href: "/dashboard", label: "Dashboard", icon: Home },
       { id: "projects", href: "/projects", label: "Projects", icon: Package },
       { id: "request", href: "/request", label: "Request", icon: LayoutGrid },
       { id: "chat", href: "/chat", label: "Chat", icon: MessageSquare, badge: totalUnreadChatCount > 0 ? totalUnreadChatCount : undefined },
@@ -136,6 +136,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       { id: "goals", href: "/goals", label: "Goals", icon: Target },
       { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
       { id: "people", href: "/people", label: "People", icon: Users, allowedRoles: ['admin', 'master admin'] },
+      { id: "knowledge-base", href: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
       { id: "settings", href: "/settings", label: "Settings", icon: Settings, allowedRoles: ['admin', 'master admin'] },
     ];
 

@@ -37,6 +37,9 @@ import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 import LoadingScreen from "./components/LoadingScreen";
 import PeoplePage from "./pages/PeoplePage";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
+import ArticleDetailPage from "./pages/ArticleDetailPage";
+import ArticleEditorPage from "./pages/ArticleEditorPage";
 
 const AccessDenied = () => {
   const navigate = useNavigate();
@@ -103,6 +106,11 @@ function App() {
         <Route path="/users" element={<ProtectedRoute featureId="user-management" allowedRoles={ADMIN_ROLES}><UserManagementPage /></ProtectedRoute>} />
         <Route path="/users/:id" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
         
+        <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
+        <Route path="/knowledge-base/new" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ArticleEditorPage /></ProtectedRoute>} />
+        <Route path="/knowledge-base/:slug" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
+        <Route path="/knowledge-base/:slug/edit" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ArticleEditorPage /></ProtectedRoute>} />
+
         <Route path="/settings" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><SettingsPage /></ProtectedRoute>} />
         <Route path="/settings/team" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><TeamSettingsPage /></ProtectedRoute>} />
         <Route path="/settings/integrations" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><IntegrationsPage /></ProtectedRoute>} />
