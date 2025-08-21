@@ -70,7 +70,6 @@ serve(async (req) => {
         const summarizedProjects = projects.map(p => ({
             name: p.name,
             status: p.status,
-            tags: (p.tags || []).map(t => t.name),
             tasks: (p.tasks || []).map(t => ({
                 title: t.title,
                 completed: t.completed,
@@ -101,8 +100,7 @@ You can perform several types of actions. When asked to perform an action, you M
 
 2. UPDATE_PROJECT:
 {"action": "UPDATE_PROJECT", "project_name": "<project name>", "updates": {"field": "value", "another_field": "value"}}
-- Valid fields for 'updates' are: name, description, status, payment_status, budget, start_date, due_date, venue, add_members, remove_members, add_services, remove_services, add_tags, remove_tags.
-- For 'add_tags' and 'remove_tags', the value should be an array of tag names. If a tag doesn't exist, it will be created with a default color.
+- Valid fields for 'updates' are: name, description, status, payment_status, budget, start_date, due_date, venue, add_members, remove_members, add_services, remove_services.
 
 3. CREATE_TASK:
 {"action": "CREATE_TASK", "project_name": "<project name>", "task_title": "<title of the new task>", "assignees": ["<optional user name>"]}
@@ -130,7 +128,7 @@ You can perform several types of actions. When asked to perform an action, you M
 If the user's request is a question and not an action, answer it based on the provided data.
 
 CONTEXT:
-- Available Projects (with their tasks and tags): ${JSON.stringify(summarizedProjects, null, 2)}
+- Available Projects (with their tasks): ${JSON.stringify(summarizedProjects, null, 2)}
 - Available Goals: ${JSON.stringify(summarizedGoals, null, 2)}
 - Available Users: ${JSON.stringify(userList, null, 2)}
 - Available Services: ${JSON.stringify(serviceList, null, 2)}
@@ -172,7 +170,7 @@ CONTEXT:
                 break;
             }
 
-            const { data: newProject, error: projectInsertError } = await userSupabase
+            const { data: newProject, error: projectInsertError } = await supabaseAdmin
                 .from('projects')
                 .insert({
                     name: project_details.name,
@@ -200,7 +198,7 @@ CONTEXT:
                     project_id: newProjectId,
                     service_title: serviceTitle,
                 }));
-                const { error: servicesError } = await userSupabase.from('project_services').insert(servicesToInsert);
+                const { error: servicesError } = await supabaseAdmin.from('project_services').insert(servicesToInsert);
                 if (servicesError) followUpMessages.push("I couldn't add the services due to an error.");
                 else followUpMessages.push(`I've added ${project_details.services.length} services.`);
             }
@@ -216,7 +214,7 @@ CONTEXT:
                         user_id: userId,
                         role: 'member',
                     }));
-                    const { error: membersError } = await userSupabase.from('project_members').insert(membersToInsert);
+                    const { error: membersError } = await supabaseAdmin.from('project_members').insert(membersToInsert);
                     if (membersError) followUpMessages.push("I couldn't add the team members due to an error.");
                     else followUpMessages.push(`I've assigned ${project_details.members.join(', ')} to the project.`);
                 } else {
@@ -253,8 +251,6 @@ CONTEXT:
                 p_venue: updates.venue !== undefined ? updates.venue : (project.venue || null),
                 p_member_ids: project.assignedTo.map(m => m.id),
                 p_service_titles: project.services || [],
-                p_existing_tags: (project.tags || []).map(t => t.id),
-                p_custom_tags: [],
             };
 
             // Handle members
@@ -283,35 +279,7 @@ CONTEXT:
             }
             rpcParams.p_service_titles = Array.from(currentServices);
 
-            // Handle tags
-            const { data: existingTags } = await supabaseAdmin.from('tags').select('id, name').or(`user_id.eq.${user.id},user_id.is.null`);
-            const existingTagMap = new Map((existingTags || []).map(t => [t.name.toLowerCase(), t.id]));
-
-            let currentTagIds = new Set((project.tags || []).map(t => t.id));
-            let newCustomTags = [];
-
-            if (updates.add_tags) {
-                updates.add_tags.forEach(tagName => {
-                    const existingId = existingTagMap.get(tagName.toLowerCase());
-                    if (existingId) {
-                        currentTagIds.add(existingId);
-                    } else {
-                        newCustomTags.push({ name: tagName, color: '#CCCCCC' }); 
-                    }
-                });
-            }
-            if (updates.remove_tags) {
-                updates.remove_tags.forEach(tagName => {
-                    const tagToRemove = (project.tags || []).find(t => t.name.toLowerCase() === tagName.toLowerCase());
-                    if (tagToRemove) {
-                        currentTagIds.delete(tagToRemove.id);
-                    }
-                });
-            }
-            rpcParams.p_existing_tags = Array.from(currentTagIds);
-            rpcParams.p_custom_tags = newCustomTags;
-
-            const { error: updateError } = await userSupabase.rpc('update_project_details', rpcParams);
+            const { error: updateError } = await supabaseAdmin.rpc('update_project_details', rpcParams);
 
             if (updateError) {
                 responseData = { result: `I tried to update the project, but failed. The database said: ${updateError.message}` };
@@ -331,8 +299,6 @@ CONTEXT:
                         case 'remove_members': changes.push(`removed ${value.join(', ')} from the team`); break;
                         case 'add_services': changes.push(`added the services: ${value.join(', ')}`); break;
                         case 'remove_services': changes.push(`removed the services: ${value.join(', ')}`); break;
-                        case 'add_tags': changes.push(`added the tag(s): ${value.join(', ')}`); break;
-                        case 'remove_tags': changes.push(`removed the tag(s): ${value.join(', ')}`); break;
                     }
                 }
                 if (changes.length > 0) {
@@ -351,7 +317,7 @@ CONTEXT:
                 break;
             }
 
-            const { data: newTask, error: taskError } = await userSupabase.from('tasks').insert({
+            const { data: newTask, error: taskError } = await supabaseAdmin.from('tasks').insert({
                 project_id: project.id,
                 title: task_title,
                 created_by: user.id,
@@ -370,7 +336,7 @@ CONTEXT:
                 
                 if (userIdsToAssign.length > 0) {
                     const newAssignees = userIdsToAssign.map(uid => ({ task_id: newTask.id, user_id: uid }));
-                    const { error: assignError } = await userSupabase.from('task_assignees').insert(newAssignees);
+                    const { error: assignError } = await supabaseAdmin.from('task_assignees').insert(newAssignees);
                     if (assignError) {
                         assignmentMessage = ` I created the task, but couldn't assign it due to an error: ${assignError.message}`;
                     } else {
@@ -413,14 +379,14 @@ CONTEXT:
 
             if (actionData.action === 'ASSIGN_TASK') {
                 const newAssignees = userIdsToModify.map(uid => ({ task_id: task.id, user_id: uid }));
-                const { error: assignError } = await userSupabase.from('task_assignees').insert(newAssignees);
+                const { error: assignError } = await supabaseAdmin.from('task_assignees').insert(newAssignees);
                 if (assignError) {
                     responseData = { result: `I tried to assign the task, but failed: ${assignError.message}` };
                 } else {
                     responseData = { result: `Done! I've assigned ${assignees.join(', ')} to the task "${task.title}".` };
                 }
             } else { // UNASSIGN_TASK
-                const { error: unassignError } = await userSupabase.from('task_assignees').delete().eq('task_id', task.id).in('user_id', userIdsToModify);
+                const { error: unassignError } = await supabaseAdmin.from('task_assignees').delete().eq('task_id', task.id).in('user_id', userIdsToModify);
                 if (unassignError) {
                     responseData = { result: `I tried to unassign from the task, but failed: ${unassignError.message}` };
                 } else {

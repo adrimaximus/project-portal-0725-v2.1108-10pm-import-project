@@ -1,4 +1,4 @@
-import { Project, AssignedUser, Task, Tag } from "@/types";
+import { Project, AssignedUser } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectComments from "@/components/ProjectComments";
 import { Badge } from "@/components/ui/badge";
@@ -17,11 +17,11 @@ interface ProjectMainContentProps {
   onTaskDelete: (taskId: string) => void;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
   onDescriptionChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
   onTeamChange: (users: AssignedUser[]) => void;
   onFilesAdd: (files: File[]) => void;
   onFileDelete: (fileId: string) => void;
   onServicesChange: (services: string[]) => void;
-  onTagsChange: (tags: Tag[]) => void;
 }
 
 const ProjectMainContent = ({
@@ -33,11 +33,11 @@ const ProjectMainContent = ({
   onTaskDelete,
   onAddCommentOrTicket,
   onDescriptionChange,
+  onCategoryChange,
   onTeamChange,
   onFilesAdd,
   onFileDelete,
   onServicesChange,
-  onTagsChange,
 }: ProjectMainContentProps) => {
   const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
 
@@ -69,11 +69,11 @@ const ProjectMainContent = ({
               project={project}
               isEditing={isEditing}
               onDescriptionChange={onDescriptionChange}
+              onCategoryChange={onCategoryChange}
               onTeamChange={onTeamChange}
               onFilesAdd={onFilesAdd}
               onFileDelete={onFileDelete}
               onServicesChange={onServicesChange}
-              onTagsChange={onTagsChange}
             />
           </TabsContent>
           <TabsContent value="tasks">

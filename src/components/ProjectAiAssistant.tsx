@@ -1,0 +1,104 @@
+import { useState } from 'react';
+import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Project } from '@/types';
+import { analyzeProjects, diagnoseProjectVisibility } from '@/lib/openai';
+import { toast } from 'sonner';
+import { Activity, AlertTriangle, Loader2, ShieldQuestion, Sparkles } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+
+interface ProjectAiAssistantProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  projects: Project[];
+}
+
+const aiActions = [
+  { id: 'summarize_health', label: 'Summarize project health', icon: Activity },
+  { id: 'find_overdue', label: 'Find overdue projects', icon: AlertTriangle },
+  { id: 'diagnose_visibility', label: "Diagnose why projects aren't showing", icon: ShieldQuestion },
+];
+
+export function ProjectAiAssistant({ open, onOpenChange, projects }: ProjectAiAssistantProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+
+  const handleQuery = async (query: string) => {
+    if (!query) return;
+
+    setIsLoading(true);
+    const toastId = toast.loading("AI is analyzing...", {
+      icon: <Loader2 className="h-4 w-4 animate-spin" />,
+    });
+
+    try {
+      let result;
+      if (query === 'diagnose_visibility') {
+        result = await diagnoseProjectVisibility();
+      } else {
+        result = await analyzeProjects(query);
+      }
+      
+      toast.success("AI Analysis Complete", {
+        id: toastId,
+        description: (
+          <div className="max-h-64 overflow-y-auto pr-4">
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown>{result}</ReactMarkdown>
+            </div>
+          </div>
+        ),
+        duration: Infinity,
+        closeButton: true,
+      });
+    } catch (error: any) {
+      toast.error("AI analysis failed", {
+        id: toastId,
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+      setInputValue('');
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <CommandDialog open={open} onOpenChange={onOpenChange}>
+      <CommandInput 
+        placeholder="Ask about your projects..." 
+        value={inputValue}
+        onValueChange={setInputValue}
+      />
+      <CommandList>
+        <CommandEmpty>No results found.</CommandEmpty>
+        
+        {inputValue && (
+          <CommandGroup heading="Custom Query">
+            <CommandItem
+              onSelect={() => handleQuery(inputValue)}
+              disabled={isLoading}
+              className="cursor-pointer"
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              <span>Ask: "{inputValue}"</span>
+            </CommandItem>
+          </CommandGroup>
+        )}
+
+        <CommandGroup heading="AI Actions">
+          {aiActions.map(action => (
+            <CommandItem
+              key={action.id}
+              onSelect={() => handleQuery(action.id)}
+              disabled={isLoading}
+              className="cursor-pointer"
+            >
+              <action.icon className="mr-2 h-4 w-4" />
+              <span>{action.label}</span>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </CommandDialog>
+  );
+}

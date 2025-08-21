@@ -20,7 +20,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@/types";
 import { toast } from "sonner";
 import { useCreateProject } from "@/hooks/useCreateProject";
-import { getInitials } from "@/lib/utils";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -54,18 +53,15 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         toast.error("Failed to fetch users.");
         console.error('Error fetching users:', error);
       } else {
-        const users = data.map(profile => {
-          const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-          return {
-            id: profile.id,
-            name: fullName || profile.email || 'No name',
-            avatar: profile.avatar_url,
-            email: profile.email,
-            initials: getInitials(fullName, profile.email) || 'NN',
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-          }
-        });
+        const users = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }));
         setAllUsers(users);
       }
     };

@@ -9,7 +9,6 @@ import { id } from "date-fns/locale";
 import { Mention, MentionsInput } from "react-mentions";
 import { Badge } from "./ui/badge";
 import CommentRenderer from "./CommentRenderer";
-import { generateVibrantGradient } from "@/lib/utils";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -151,7 +150,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               <div key={item.id} className="flex items-start space-x-4">
                 <Avatar>
                   <AvatarImage src={item.author.avatar} />
-                  <AvatarFallback style={generateVibrantGradient(item.author.id)}>{item.author.initials}</AvatarFallback>
+                  <AvatarFallback>{item.author.initials || item.author.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">

@@ -10,7 +10,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Collaborator } from "@/types";
 import { toast } from "sonner";
 import { Label } from "./ui/label";
-import { getInitials } from "@/lib/utils";
 
 interface NewConversationDialogProps {
   open: boolean;
@@ -46,17 +45,14 @@ const NewConversationDialog = ({
         return;
       }
 
-      const mappedCollaborators: Collaborator[] = data.map(p => {
-        const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim();
-        return {
-          id: p.id,
-          name: fullName || p.email || 'Unnamed User',
-          avatar: p.avatar_url,
-          initials: getInitials(fullName, p.email) || 'NN',
-          email: p.email || '',
-          online: false,
-        }
-      });
+      const mappedCollaborators: Collaborator[] = data.map(p => ({
+        id: p.id,
+        name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email || 'Unnamed User',
+        avatar: p.avatar_url,
+        initials: `${p.first_name?.[0] || ''}${p.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+        email: p.email || '',
+        online: false, // Fix: Added missing 'online' property
+      }));
       setCollaborators(mappedCollaborators);
     };
 

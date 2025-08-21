@@ -11,23 +11,13 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import GoalsTableView from '@/components/goals/GoalsTableView';
-import { useQueryClient } from '@tanstack/react-query';
 
 const GoalsPage = () => {
   const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
   const { user } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
-    const savedView = localStorage.getItem('goals_view_mode') as 'card' | 'table';
-    return savedView || 'card';
-  });
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Goal | null; direction: 'ascending' | 'descending' }>({ key: 'title', direction: 'ascending' });
-
-  useEffect(() => {
-    localStorage.setItem('goals_view_mode', viewMode);
-  }, [viewMode]);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
 
   const fetchGoals = useCallback(async () => {
     if (!user) return;
@@ -44,54 +34,13 @@ const GoalsPage = () => {
     fetchGoals();
   }, [fetchGoals]);
 
-  const handleDeleteGoal = async (goalId: string) => {
-    const { error } = await supabase.from('goals').delete().eq('id', goalId);
-    if (error) {
-      toast.error("Failed to delete goal.");
-    } else {
-      toast.success("Goal deleted successfully.");
-      setGoals(prevGoals => prevGoals.filter(g => g.id !== goalId));
-      queryClient.invalidateQueries({ queryKey: ['goals'] });
-    }
-  };
-
-  const requestSort = (key: keyof Goal) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const sortedGoals = useMemo(() => {
-    let sortableItems = [...goals];
-    if (sortConfig.key !== null) {
-      sortableItems.sort((a, b) => {
-        const aValue = a[sortConfig.key!];
-        const bValue = b[sortConfig.key!];
-
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-
-        if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [goals, sortConfig]);
-
   const { specialGoals, otherGoals } = useMemo(() => {
     const specialTags = ['office', '7inked', 'betterworks.id'];
     const sGoals: Goal[] = [];
     const oGoals: Goal[] = [];
 
-    if (sortedGoals) {
-      sortedGoals.forEach(goal => {
+    if (goals) {
+      goals.forEach(goal => {
         const hasSpecialTag = goal.tags && goal.tags.some(tag => specialTags.includes(tag.name.toLowerCase()));
         if (hasSpecialTag) {
           sGoals.push(goal);
@@ -101,7 +50,7 @@ const GoalsPage = () => {
       });
     }
     return { specialGoals: sGoals, otherGoals: oGoals };
-  }, [sortedGoals]);
+  }, [goals]);
 
   const handleSuccess = (newGoal: Goal) => {
     setIsNewGoalDialogOpen(false);
@@ -109,18 +58,12 @@ const GoalsPage = () => {
     fetchGoals();
   };
 
-  const handleViewChange = (value: 'card' | 'table' | null) => {
-    if (value) {
-      setViewMode(value);
-    }
-  };
-
   return (
     <PortalLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">My Goals</h1>
         <div className="flex items-center gap-2">
-          <ToggleGroup type="single" value={viewMode} onValueChange={handleViewChange}>
+          <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'card' | 'table')}}>
             <ToggleGroupItem value="card" aria-label="Card view">
               <LayoutGrid className="h-4 w-4" />
             </ToggleGroupItem>
@@ -164,7 +107,7 @@ const GoalsPage = () => {
           )}
         </>
       ) : (
-        <GoalsTableView goals={sortedGoals} sortConfig={sortConfig} requestSort={requestSort} onDeleteGoal={handleDeleteGoal} />
+        <GoalsTableView goals={goals} />
       )}
 
       <GoalFormDialog

@@ -1,4 +1,3 @@
-import { useRef, useEffect } from "react";
 import ChatList from "@/components/ChatList";
 import ChatWindow from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
@@ -23,17 +22,8 @@ const ChatPage = () => {
     handleLeaveGroup,
     handleDeleteConversation,
   } = useChat();
-  const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
-
-  useEffect(() => {
-    if (selectedConversationId && chatInputRef.current) {
-      setTimeout(() => {
-        chatInputRef.current?.focus();
-      }, 100);
-    }
-  }, [selectedConversationId]);
 
   if (isMobile) {
     return (
@@ -52,7 +42,6 @@ const ChatPage = () => {
             />
           ) : (
             <ChatWindow
-              ref={chatInputRef}
               selectedConversation={selectedConversation}
               onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
               onClearChat={handleClearChat}
@@ -82,7 +71,6 @@ const ChatPage = () => {
           onDeleteConversation={handleDeleteConversation}
         />
         <ChatWindow
-          ref={chatInputRef}
           selectedConversation={selectedConversation}
           onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
           onClearChat={handleClearChat}

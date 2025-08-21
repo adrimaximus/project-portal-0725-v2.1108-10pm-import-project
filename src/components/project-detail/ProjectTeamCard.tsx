@@ -10,7 +10,6 @@ import { Button } from "../ui/button";
 import ChangeOwnerDialog from "./ChangeOwnerDialog";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { getInitials, generateVibrantGradient } from "@/lib/utils";
 
 interface ProjectTeamCardProps {
   project: Project;
@@ -28,18 +27,15 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
     const fetchUsers = async () => {
       const { data, error } = await supabase.from('profiles').select('*');
       if (data) {
-        const users = data.map(profile => {
-          const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-          return {
-            id: profile.id,
-            name: fullName || profile.email || 'No name',
-            avatar: profile.avatar_url,
-            email: profile.email,
-            initials: getInitials(fullName, profile.email) || 'NN',
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-          }
-        });
+        const users = data.map(profile => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
+          avatar: profile.avatar_url,
+          email: profile.email,
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }));
         setAllUsers(users);
       }
     };
@@ -99,7 +95,7 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
                 <AvatarImage src={project.created_by.avatar} />
-                <AvatarFallback style={generateVibrantGradient(project.created_by.id)}>{project.created_by.initials}</AvatarFallback>
+                <AvatarFallback>{project.created_by.initials}</AvatarFallback>
               </Avatar>
               <div>
                 <p className="text-sm font-medium">{project.created_by.name}</p>
@@ -126,7 +122,7 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
                     <div key={member.id} className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={member.avatar} />
-                        <AvatarFallback style={generateVibrantGradient(member.id)}>{member.initials}</AvatarFallback>
+                        <AvatarFallback>{member.initials}</AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="text-sm font-medium">{member.name}</p>

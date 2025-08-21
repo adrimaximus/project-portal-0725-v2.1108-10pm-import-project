@@ -19,7 +19,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { generateVibrantGradient } from "@/lib/utils";
 
 interface ProjectTasksProps {
   project: Project;
@@ -79,7 +78,7 @@ const ProjectTasks = ({
               {(task.assignedTo || []).map((user) => (
                 <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
                   <AvatarImage src={user.avatar} />
-                  <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
+                  <AvatarFallback>{user.initials || user.name.slice(0,2)}</AvatarFallback>
                 </Avatar>
               ))}
             </div>

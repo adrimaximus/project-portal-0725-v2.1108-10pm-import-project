@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import OnlineCollaborators from "./OnlineCollaborators";
 import { useAuth } from "@/contexts/AuthContext";
+import { dummyNotifications } from "@/data/notifications";
 import { useFeatures } from "@/contexts/FeaturesContext";
 import {
   DndContext,
@@ -31,7 +32,6 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useNotifications } from "@/hooks/useNotifications";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
@@ -120,9 +120,9 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { isFeatureEnabled } = useFeatures();
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [customItemsTrigger, setCustomItemsTrigger] = useState(0);
-  const { unreadCount: unreadNotificationCount } = useNotifications();
 
   const totalUnreadChatCount = 0;
+  const unreadNotificationCount = dummyNotifications.filter(n => !n.read).length;
 
   useEffect(() => {
     if (!user) return;
@@ -136,6 +136,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       { id: "goals", href: "/goals", label: "Goals", icon: Target },
       { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
       { id: "settings", href: "/settings", label: "Settings", icon: Settings, allowedRoles: ['admin', 'master admin'] },
+      { id: "notifications", href: "/notifications", label: "Notifications", icon: Bell, badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined },
     ];
 
     const visibleDefaultItems = defaultItemsList.filter(item => {

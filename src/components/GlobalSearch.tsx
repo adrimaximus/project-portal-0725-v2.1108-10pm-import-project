@@ -180,8 +180,8 @@ export function GlobalSearch() {
               {conversation.map((msg, index) => (
                 <div key={index} className={`flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
                   {msg.sender === 'ai' && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary text-primary-foreground"><Sparkles className="h-4 w-4" /></AvatarFallback>
+                    <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
+                      <AvatarFallback><Sparkles className="h-4 w-4" /></AvatarFallback>
                     </Avatar>
                   )}
                   <div className={`max-w-sm rounded-lg px-3 py-2 ${msg.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'} prose prose-sm dark:prose-invert max-w-none`}>
@@ -193,8 +193,8 @@ export function GlobalSearch() {
               ))}
               {isAiLoading && (
                 <div className="flex items-start gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground"><Sparkles className="h-4 w-4" /></AvatarFallback>
+                  <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
+                    <AvatarFallback><Sparkles className="h-4 w-4" /></AvatarFallback>
                   </Avatar>
                   <div className="max-w-sm rounded-lg px-3 py-2 bg-muted flex items-center">
                     <Loader2 className="h-4 w-4 animate-spin" />

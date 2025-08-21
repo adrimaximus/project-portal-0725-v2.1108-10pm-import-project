@@ -22,7 +22,7 @@ import {
 import { Conversation } from "@/types";
 import { ArrowLeft, MoreVertical, Trash2, UserX, Users, Settings } from "lucide-react";
 import StackedAvatar from "./StackedAvatar";
-import { getInitials, generateVibrantGradient } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import GroupSettingsDialog from "./GroupSettingsDialog";
@@ -83,7 +83,7 @@ const ChatHeader = ({ selectedConversation, onClearChat, onLeaveGroup, onUpdate,
         ) : (
           <Avatar className="h-10 w-10 border">
             <AvatarImage src={userAvatar} alt={userName} />
-            <AvatarFallback style={generateVibrantGradient(otherUser?.id || selectedConversation.id)}>{getInitials(userName)}</AvatarFallback>
+            <AvatarFallback>{getInitials(userName)}</AvatarFallback>
           </Avatar>
         )}
         <div className="ml-4 flex-1">

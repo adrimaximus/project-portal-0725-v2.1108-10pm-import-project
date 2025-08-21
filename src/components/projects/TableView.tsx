@@ -18,105 +18,55 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StatusBadge from "../StatusBadge";
-import { getStatusStyles, cn, formatInJakarta, getPaymentStatusStyles } from "@/lib/utils";
+import { getStatusStyles, cn, formatInJakarta } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { isSameDay, getMonth, getYear } from 'date-fns';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface TableViewProps {
   projects: Project[];
   isLoading: boolean;
   onDeleteProject: (projectId: string) => void;
-  sortConfig: { key: keyof Project | null; direction: 'ascending' | 'descending' };
-  requestSort: (key: keyof Project) => void;
 }
 
-const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
-  if (!startDateStr) return '-';
-
-  const startDate = new Date(startDateStr);
-  const dueDate = dueDateStr ? new Date(dueDateStr) : startDate;
-
-  if (isSameDay(startDate, dueDate)) {
-    return formatInJakarta(startDate, 'd MMM');
-  }
-
-  const startMonth = getMonth(startDate);
-  const endMonth = getMonth(dueDate);
-  const startYear = getYear(startDate);
-  const endYear = getYear(dueDate);
-
-  if (startYear !== endYear) {
-    return `${formatInJakarta(startDate, 'd MMM yyyy')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
-  }
-
-  if (startMonth !== endMonth) {
-    return `${formatInJakarta(startDate, 'd MMM')} - ${formatInJakarta(dueDate, 'd MMM')}`;
-  }
-
-  // Same month, same year
-  return `${formatInJakarta(startDate, 'd')} - ${formatInJakarta(dueDate, 'd MMM')}`;
+const paymentStatusConfig: Record<string, { color: string; label: string }> = {
+  'Paid': { color: "bg-green-100 text-green-800", label: "Paid" },
+  'Pending': { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
+  'In Process': { color: "bg-purple-100 text-purple-800", label: "In Process" },
+  'Overdue': { color: "bg-red-100 text-red-800", label: "Overdue" },
+  'Proposed': { color: "bg-blue-100 text-blue-800", label: "Proposed" },
+  'Cancelled': { color: "bg-gray-100 text-gray-800", label: "Cancelled" },
 };
 
-const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort }: TableViewProps) => {
+const TableView = ({ projects, isLoading, onDeleteProject }: TableViewProps) => {
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[300px] p-2">
-            <Button variant="ghost" onClick={() => requestSort('name')} className="w-full justify-start px-2 group">
-              Project
-            </Button>
-          </TableHead>
-          <TableHead className="p-2">
-            <Button variant="ghost" onClick={() => requestSort('status')} className="w-full justify-start px-2 group">
-              Status
-            </Button>
-          </TableHead>
-          <TableHead className="p-2">
-            <Button variant="ghost" onClick={() => requestSort('payment_status')} className="w-full justify-start px-2 group">
-              Payment
-            </Button>
-          </TableHead>
-          <TableHead className="p-2">
-            <Button variant="ghost" onClick={() => requestSort('progress')} className="w-full justify-start px-2 group">
-              Progress
-            </Button>
-          </TableHead>
-          <TableHead className="p-2">
-            <Button variant="ghost" onClick={() => requestSort('start_date')} className="w-full justify-start px-2 group">
-              Date
-            </Button>
-          </TableHead>
-          <TableHead className="p-2">
-            <Button variant="ghost" onClick={() => requestSort('venue')} className="w-full justify-start px-2 group">
-              Venue
-            </Button>
-          </TableHead>
+          <TableHead className="w-[300px]">Project</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Progress</TableHead>
+          <TableHead>Start Date</TableHead>
+          <TableHead>Due Date</TableHead>
+          <TableHead>Venue</TableHead>
+          <TableHead>Payment</TableHead>
           <TableHead className="w-[50px]"></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {isLoading ? (
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
+            <TableCell colSpan={8} className="h-24 text-center">
               Loading projects...
             </TableCell>
           </TableRow>
         ) : projects.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
+            <TableCell colSpan={8} className="h-24 text-center">
               No projects found.
             </TableCell>
           </TableRow>
         ) : (
           projects.map((project) => {
-            const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
+            const paymentBadgeColor = paymentStatusConfig[project.payment_status]?.color || "bg-gray-100 text-gray-800";
             return (
               <TableRow key={project.id}>
                 <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
@@ -129,32 +79,22 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
                   <StatusBadge status={project.status} />
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
-                    {project.payment_status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
                   <div className="flex items-center gap-2">
                     <Progress value={project.progress} className="h-2" />
                     <span className="text-sm text-muted-foreground">{project.progress}%</span>
                   </div>
                 </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatProjectDateRange(project.start_date, project.due_date)}
+                <TableCell>
+                  {formatInJakarta(project.start_date, 'MMM d, yyyy')}
                 </TableCell>
                 <TableCell>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <p className="truncate max-w-[15ch]">{project.venue || '-'}</p>
-                      </TooltipTrigger>
-                      {project.venue && project.venue.length > 15 && (
-                        <TooltipContent>
-                          <p>{project.venue}</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
+                  {formatInJakarta(project.due_date, 'MMM d, yyyy')}
+                </TableCell>
+                <TableCell>{project.venue || '-'}</TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={cn("border-transparent font-normal", paymentBadgeColor)}>
+                    {project.payment_status}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User, SupabaseSession, SupabaseUser } from '@/types';
 import { toast } from 'sonner';
-import { getInitials } from '@/lib/utils';
 
 interface AuthContextType {
   session: SupabaseSession | null;
@@ -36,7 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: supabaseUser.email,
           name: fullName || supabaseUser.email || 'No name',
           avatar: profile.avatar_url,
-          initials: getInitials(fullName, supabaseUser.email) || 'NN',
+          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
           first_name: profile.first_name,
           last_name: profile.last_name,
           role: profile.role,
@@ -65,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: supabaseUser.email,
       name: supabaseUser.email || 'New User',
       avatar: undefined,
-      initials: getInitials('', supabaseUser.email) || 'NN',
+      initials: supabaseUser.email?.substring(0, 2).toUpperCase() || 'NN',
     };
     setUser(fallbackUser);
     localStorage.setItem('lastUserName', fallbackUser.name); // Store fallback name

@@ -3,7 +3,6 @@ import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
 import { Conversation, Attachment } from "@/types";
 import ChatPlaceholder from "./ChatPlaceholder";
-import { forwardRef } from "react";
 
 interface ChatWindowProps {
   selectedConversation: Conversation | null;
@@ -16,7 +15,7 @@ interface ChatWindowProps {
   onTyping?: () => void;
 }
 
-const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ selectedConversation, onSendMessage, onClearChat, onLeaveGroup, onUpdate, onBack, typing, onTyping }, ref) => {
+const ChatWindow = ({ selectedConversation, onSendMessage, onClearChat, onLeaveGroup, onUpdate, onBack, typing, onTyping }: ChatWindowProps) => {
   if (!selectedConversation) {
     return <ChatPlaceholder />;
   }
@@ -36,13 +35,12 @@ const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ selectedC
         members={selectedConversation.members || []}
       />
       <ChatInput 
-        ref={ref}
         conversationId={selectedConversation.id}
         onSendMessage={onSendMessage}
         onTyping={onTyping}
       />
     </div>
   );
-});
+};
 
 export default ChatWindow;
