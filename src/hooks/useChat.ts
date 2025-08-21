@@ -39,14 +39,24 @@ export const useChat = () => {
         lastMessage: c.last_message_content || "No messages yet.",
         lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
         unreadCount: 0,
-        messages: messagesCache.get(c.conversation_id) || [], // Use cached messages if available
+        messages: [], // Start with empty messages, will be populated from cache/state
         isGroup: c.is_group,
         members: (c.participants || []).map((p: any) => ({
           id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
         })),
         created_by: c.created_by,
       }));
-      setConversations(mappedConversations);
+      
+      setConversations(prevConversations => {
+        const prevMap = new Map(prevConversations.map(c => [c.id, c]));
+        return mappedConversations.map(newConvo => {
+            const existingConvo = prevMap.get(newConvo.id);
+            return {
+                ...newConvo,
+                messages: existingConvo?.messages?.length ? existingConvo.messages : (messagesCache.get(newConvo.id) || []),
+            };
+        });
+      });
     }
     setIsLoading(false);
   }, [currentUser]);
@@ -104,10 +114,8 @@ export const useChat = () => {
     setSelectedConversationId(id);
     if (!id) return;
 
-    // Check if we already have messages for this conversation
     const existingConversation = conversations.find(c => c.id === id);
     if (existingConversation && existingConversation.messages.length > 0) {
-      // Messages already loaded, no need to fetch again unless we want to refresh
       return;
     }
 
