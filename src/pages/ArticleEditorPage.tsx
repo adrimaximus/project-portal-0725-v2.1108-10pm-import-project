@@ -13,11 +13,16 @@ import RichTextEditor from '@/components/RichTextEditor';
 import { toast } from 'sonner';
 import { Loader2, ArrowLeft, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Tag } from '@/types';
+import { TagInput } from '@/components/goals/TagInput';
+import { v4 as uuidv4 } from 'uuid';
+import { colors } from '@/data/colors';
 
 const articleSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters long."),
   content: z.string().min(10, "Content is too short."),
   cover_image_url: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
+  tags: z.array(z.any()).optional(),
 });
 
 type ArticleFormValues = z.infer<typeof articleSchema>;
@@ -31,6 +36,7 @@ const ArticleEditorPage = () => {
   const [articleId, setArticleId] = useState<string | null>(null);
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -38,13 +44,20 @@ const ArticleEditorPage = () => {
       title: '',
       content: '',
       cover_image_url: '',
+      tags: [],
     },
   });
+
+  const fetchTags = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from('tags').select('*').or(`user_id.eq.${user.id},user_id.is.null`);
+    if (data) setAllTags(data);
+  }, [user]);
 
   const fetchArticle = useCallback(async (slugToFetch: string) => {
     const { data, error } = await supabase
       .from('kb_articles')
-      .select('id, title, content, cover_image_url')
+      .select('id, title, content, cover_image_url, kb_article_tags(tags(*))')
       .eq('slug', slugToFetch)
       .single();
 
@@ -52,10 +65,12 @@ const ArticleEditorPage = () => {
       toast.error("Article not found.");
       navigate('/knowledge-base');
     } else {
+      const fetchedTags = data.kb_article_tags.map((t: any) => t.tags);
       form.reset({
         title: data.title,
         content: data.content || '',
         cover_image_url: data.cover_image_url || '',
+        tags: fetchedTags,
       });
       setArticleId(data.id);
       setCoverImagePreview(data.cover_image_url || null);
@@ -64,10 +79,18 @@ const ArticleEditorPage = () => {
   }, [navigate, form]);
 
   useEffect(() => {
+    fetchTags();
     if (slug) {
       fetchArticle(slug);
     }
-  }, [slug, fetchArticle]);
+  }, [slug, fetchArticle, fetchTags]);
+
+  const handleTagCreate = (tagName: string): Tag => {
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const newTag: Tag = { id: uuidv4(), name: tagName, color: randomColor, isNew: true };
+    setAllTags(prev => [...prev, newTag]);
+    return newTag;
+  };
 
   const onSubmit = async (values: ArticleFormValues) => {
     if (!user) {
@@ -100,29 +123,18 @@ const ArticleEditorPage = () => {
       finalCoverImageUrl = '';
     }
 
-    const articleData = {
-      ...values,
-      cover_image_url: finalCoverImageUrl,
-      author_id: user.id,
-    };
+    const existingTagIds = (values.tags || []).filter(t => !t.isNew).map(t => t.id);
+    const newCustomTags = (values.tags || []).filter(t => t.isNew).map(({ name, color }) => ({ name, color }));
 
-    let response;
-    if (articleId) {
-      response = await supabase
-        .from('kb_articles')
-        .update(articleData)
-        .eq('id', articleId)
-        .select('slug')
-        .single();
-    } else {
-      response = await supabase
-        .from('kb_articles')
-        .insert(articleData)
-        .select('slug')
-        .single();
-    }
-
-    const { data, error } = response;
+    const { data, error } = await supabase.rpc('upsert_article_with_tags', {
+      p_id: articleId,
+      p_title: values.title,
+      p_content: values.content,
+      p_cover_image_url: finalCoverImageUrl,
+      p_author_id: user.id,
+      p_existing_tag_ids: existingTagIds,
+      p_custom_tags: newCustomTags,
+    });
 
     if (error) {
       toast.error("Failed to save article.", { description: error.message });
@@ -134,7 +146,7 @@ const ArticleEditorPage = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && slug) {
     return <PortalLayout><div>Loading editor...</div></PortalLayout>;
   }
 
@@ -158,6 +170,26 @@ const ArticleEditorPage = () => {
                   <FormLabel>Title</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter a title for your article" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="tags"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tags</FormLabel>
+                  <FormControl>
+                    <TagInput
+                      allTags={allTags}
+                      selectedTags={field.value || []}
+                      onTagsChange={field.onChange}
+                      onTagCreate={handleTagCreate}
+                      user={user}
+                      onTagsUpdated={fetchTags}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
