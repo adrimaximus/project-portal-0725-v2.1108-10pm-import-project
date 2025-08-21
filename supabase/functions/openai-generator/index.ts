@@ -180,7 +180,7 @@ serve(async (req) => {
 
         const { data: kbArticles, error: kbError } = await userSupabase
             .from('kb_articles')
-            .select('id, title, slug, kb_article_tags(tags(name))');
+            .select('id, title, slug, content, kb_article_tags(tags(name))');
         if (kbError) {
             throw new Error(`Failed to fetch knowledge base for context: ${kbError.message}`);
         }
@@ -213,6 +213,7 @@ serve(async (req) => {
         const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
         const summarizedKbArticles = kbArticles.map(a => ({
             title: a.title,
+            content: a.content,
             tags: a.kb_article_tags.map(t => t.tags.name)
         }));
 
@@ -276,6 +277,9 @@ You can perform several types of actions. When you decide to perform an action, 
 
 9. UPDATE_KB_ARTICLE:
 {"action": "UPDATE_KB_ARTICLE", "article_title": "<title of article to update>", "updates": {"title": "<new title>", "content": "<new HTML content>", "add_tags": ["<tag to add>"], "remove_tags": ["<tag to remove>"]}}
+- When asked to update an article's content (e.g., "add a paragraph about X to article Y"), you MUST use the existing content provided in the 'Available Knowledge Base Articles' context.
+- Modify this existing HTML content with the user's requested changes.
+- Provide the FULL, MODIFIED HTML content in the 'updates.content' field. Do not just provide the fragment to be added or a description of the change.
 
 CONTEXT:
 - Available Projects (with their tasks and tags): ${JSON.stringify(summarizedProjects, null, 2)}
