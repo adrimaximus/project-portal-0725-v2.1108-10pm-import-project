@@ -83,6 +83,18 @@ const PeoplePage = () => {
     setPersonToDelete(null);
   };
 
+  const formatSocialLink = (platform: 'linkedin' | 'twitter' | 'instagram', value: string) => {
+    if (!value) return null;
+    if (value.startsWith('http')) return value;
+    const username = value.startsWith('@') ? value.substring(1) : value;
+    switch (platform) {
+      case 'instagram': return `https://instagram.com/${username}`;
+      case 'twitter': return `https://twitter.com/${username}`;
+      case 'linkedin': return `https://linkedin.com/in/${username}`;
+      default: return null;
+    }
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -155,83 +167,88 @@ const PeoplePage = () => {
               ) : filteredPeople.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center h-24">No people found.</TableCell></TableRow>
               ) : (
-                filteredPeople.map(person => (
-                  <TableRow key={person.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback style={generateVibrantGradient(person.id)}>
-                            <UserIcon className="h-5 w-5 text-white" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{person.full_name}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <p className="font-medium">{person.job_title || '-'}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {person.department}{person.department && person.company ? ' at ' : ''}{person.company}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {person.contact?.email && (
-                          <div className="flex items-center gap-1.5">
-                            <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <a href={`mailto:${person.contact.email}`} className="text-sm text-muted-foreground hover:text-primary truncate">{person.contact.email}</a>
+                filteredPeople.map(person => {
+                  const linkedinUrl = formatSocialLink('linkedin', person.social_media?.linkedin || '');
+                  const twitterUrl = formatSocialLink('twitter', person.social_media?.twitter || '');
+                  const instagramUrl = formatSocialLink('instagram', person.social_media?.instagram || '');
+                  return (
+                    <TableRow key={person.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback style={generateVibrantGradient(person.id)}>
+                              <UserIcon className="h-5 w-5 text-white" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{person.full_name}</p>
                           </div>
-                        )}
-                        {person.contact?.phone && (
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-sm text-muted-foreground">{person.contact.phone}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 pt-1">
-                          {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer"><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                          {person.social_media?.twitter && <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer"><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                          {person.social_media?.instagram && <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(person.tags || []).map(tag => (
-                          <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
-                            {tag.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(person.projects || []).map(project => (
-                          <Button key={project.id} variant="link" asChild className="p-0 h-auto text-xs">
-                            <Link to={`/projects/${project.slug}`} className="truncate max-w-[20ch]" title={project.name}>
-                              {project.name}
-                            </Link>
-                          </Button>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => handleEdit(person)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => setPersonToDelete(person)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-medium">{person.job_title || '-'}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {person.department}{person.department && person.company ? ' at ' : ''}{person.company}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {person.contact?.email && (
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <a href={`mailto:${person.contact.email}`} className="text-sm text-muted-foreground hover:text-primary truncate">{person.contact.email}</a>
+                            </div>
+                          )}
+                          {person.contact?.phone && (
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="text-sm text-muted-foreground">{person.contact.phone}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 pt-1">
+                            {linkedinUrl && <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                            {twitterUrl && <a href={twitterUrl} target="_blank" rel="noopener noreferrer"><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                            {instagramUrl && <a href={instagramUrl} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {(person.tags || []).map(tag => (
+                            <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
+                              {tag.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {(person.projects || []).map(project => (
+                            <Button key={project.id} variant="link" asChild className="p-0 h-auto text-xs">
+                              <Link to={`/projects/${project.slug}`} className="truncate max-w-[20ch]" title={project.name}>
+                                {project.name}
+                              </Link>
+                            </Button>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => handleEdit(person)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setPersonToDelete(person)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>

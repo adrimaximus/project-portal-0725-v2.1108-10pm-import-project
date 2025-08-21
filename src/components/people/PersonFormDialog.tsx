@@ -32,9 +32,9 @@ const personSchema = z.object({
   company: z.string().optional(),
   job_title: z.string().optional(),
   department: z.string().optional(),
-  linkedin: z.string().url("Invalid URL").optional().or(z.literal('')),
-  twitter: z.string().url("Invalid URL").optional().or(z.literal('')),
-  instagram: z.string().url("Invalid URL").optional().or(z.literal('')),
+  linkedin: z.string().optional(),
+  twitter: z.string().optional(),
+  instagram: z.string().optional(),
   birthday: z.date().optional().nullable(),
   notes: z.string().optional(),
   project_ids: z.array(z.string()).optional(),
@@ -155,14 +155,14 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
             )} />
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="linkedin" render={({ field }) => (
-                <FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>LinkedIn</FormLabel><FormControl><Input {...field} placeholder="username or full URL" /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="twitter" render={({ field }) => (
-                <FormItem><FormLabel>Twitter URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Twitter</FormLabel><FormControl><Input {...field} placeholder="@username or full URL" /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
             <FormField control={form.control} name="instagram" render={({ field }) => (
-              <FormItem><FormLabel>Instagram URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Instagram</FormLabel><FormControl><Input {...field} placeholder="@username or full URL" /></FormControl><FormMessage /></FormItem>
             )} />
             <FormField control={form.control} name="tag_ids" render={({ field }) => (
               <FormItem><FormLabel>Tags</FormLabel>
