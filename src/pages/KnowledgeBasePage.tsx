@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search } from 'lucide-react';
+import { PlusCircle, Search, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -51,11 +51,15 @@ const KnowledgeBasePage = () => {
   const [articles, setArticles] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const isAdmin = user?.role === 'admin' || user?.role === 'master admin';
 
   useEffect(() => {
     const fetchArticles = async () => {
-      setIsLoading(true);
+      if (!isLoading) {
+        setIsSearching(true);
+      }
+      
       let query = supabase
         .from('kb_articles')
         .select(`
@@ -77,6 +81,7 @@ const KnowledgeBasePage = () => {
         setArticles(data);
       }
       setIsLoading(false);
+      setIsSearching(false);
     };
 
     const timeoutId = setTimeout(fetchArticles, 300);
@@ -100,7 +105,11 @@ const KnowledgeBasePage = () => {
           )}
         </div>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          {isSearching ? (
+            <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+          ) : (
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          )}
           <Input
             placeholder="Search articles..."
             value={searchTerm}
