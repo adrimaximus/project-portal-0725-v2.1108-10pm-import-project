@@ -94,4 +94,11 @@ export const initialFeatures: Feature[] = [
     status: 'enabled',
     path: '/settings',
   },
+  {
+    id: 'map',
+    name: 'Map',
+    description: 'View and search locations on an interactive map.',
+    status: 'enabled',
+    path: '/map',
+  },
 ];

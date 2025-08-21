@@ -37,6 +37,7 @@ import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 import LoadingScreen from "./components/LoadingScreen";
 import PeoplePage from "./pages/PeoplePage";
+import MapPage from "./pages/MapPage";
 
 const AccessDenied = () => {
   const navigate = useNavigate();
@@ -114,6 +115,7 @@ function App() {
         <Route path="/settings/navigation" element={<ProtectedRoute featureId="settings" allowedRoles={ADMIN_ROLES}><NavigationSettingsPage /></ProtectedRoute>} />
 
         <Route path="/custom" element={<ProtectedRoute><EmbedPage /></ProtectedRoute>} />
+        <Route path="/map" element={<ProtectedRoute featureId="map"><MapPage /></ProtectedRoute>} />
         
         <Route path="*" element={<NotFound />} />
       </Routes>
