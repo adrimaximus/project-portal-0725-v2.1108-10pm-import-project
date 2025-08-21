@@ -7,39 +7,14 @@ import ProjectOverviewTab from "./ProjectOverviewTab";
 import ProjectActivityFeed from "./ProjectActivityFeed";
 import ProjectTasks from "./ProjectTasks";
 import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-react";
+import { useProjectContext } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface ProjectMainContentProps {
-  project: Project;
-  isEditing: boolean;
-  onTaskAdd: (title: string) => void;
-  onTaskAssignUsers: (taskId: string, userIds: string[]) => void;
-  onTaskStatusChange: (taskId: string, completed: boolean) => void;
-  onTaskDelete: (taskId: string) => void;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
-  onDescriptionChange: (value: string) => void;
-  onTeamChange: (users: AssignedUser[]) => void;
-  onFilesAdd: (files: File[]) => void;
-  onFileDelete: (fileId: string) => void;
-  onServicesChange: (services: string[]) => void;
-  onTagsChange: (tags: Tag[]) => void;
-}
+const ProjectMainContent = () => {
+  const { editedProject, isEditing, handleFieldChange, mutations } = useProjectContext();
+  const { user } = useAuth();
 
-const ProjectMainContent = ({
-  project,
-  isEditing,
-  onTaskAdd,
-  onTaskAssignUsers,
-  onTaskStatusChange,
-  onTaskDelete,
-  onAddCommentOrTicket,
-  onDescriptionChange,
-  onTeamChange,
-  onFilesAdd,
-  onFileDelete,
-  onServicesChange,
-  onTagsChange,
-}: ProjectMainContentProps) => {
-  const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
+  const openTasksCount = editedProject.tasks?.filter(task => !task.completed).length || 0;
 
   return (
     <Card>
@@ -66,33 +41,36 @@ const ProjectMainContent = ({
           </TabsList>
           <TabsContent value="overview">
             <ProjectOverviewTab
-              project={project}
+              project={editedProject}
               isEditing={isEditing}
-              onDescriptionChange={onDescriptionChange}
-              onTeamChange={onTeamChange}
-              onFilesAdd={onFilesAdd}
-              onFileDelete={onFileDelete}
-              onServicesChange={onServicesChange}
-              onTagsChange={onTagsChange}
+              onDescriptionChange={(value) => handleFieldChange('description', value)}
+              onTeamChange={(users) => handleFieldChange('assignedTo', users)}
+              onFilesAdd={(files) => mutations.addFiles.mutate({ files, project: editedProject, user: user! })}
+              onFileDelete={(fileId) => {
+                const file = editedProject.briefFiles?.find(f => f.id === fileId);
+                if (file) mutations.deleteFile.mutate(file);
+              }}
+              onServicesChange={(services) => handleFieldChange('services', services)}
+              onTagsChange={(tags: Tag[]) => handleFieldChange('tags', tags)}
             />
           </TabsContent>
           <TabsContent value="tasks">
             <ProjectTasks
-              project={project}
-              onTaskAdd={onTaskAdd}
-              onTaskAssignUsers={onTaskAssignUsers}
-              onTaskStatusChange={onTaskStatusChange}
-              onTaskDelete={onTaskDelete}
+              project={editedProject}
+              onTaskAdd={(title) => mutations.addTask.mutate({ project: editedProject, user: user!, title })}
+              onTaskAssignUsers={(taskId, userIds) => mutations.assignUsersToTask.mutate({ taskId, userIds })}
+              onTaskStatusChange={(taskId, completed) => mutations.updateTask.mutate({ taskId, updates: { completed } })}
+              onTaskDelete={(taskId) => mutations.deleteTask.mutate(taskId)}
             />
           </TabsContent>
           <TabsContent value="discussion">
             <ProjectComments
-              project={project}
-              onAddCommentOrTicket={onAddCommentOrTicket}
+              project={editedProject}
+              onAddCommentOrTicket={(text, isTicket, attachment) => mutations.addComment.mutate({ project: editedProject, user: user!, text, isTicket, attachment })}
             />
           </TabsContent>
           <TabsContent value="activity">
-            <ProjectActivityFeed activities={project.activities || []} />
+            <ProjectActivityFeed activities={editedProject.activities || []} />
           </TabsContent>
         </Tabs>
       </CardContent>

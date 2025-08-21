@@ -2,12 +2,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types";
 import { ListChecks } from "lucide-react";
+import { useProjectContext } from "@/contexts/ProjectContext";
 
-interface ProjectProgressCardProps {
-  project: Project;
-}
+const ProjectProgressCard = () => {
+  const { editedProject: project } = useProjectContext();
 
-const ProjectProgressCard = ({ project }: ProjectProgressCardProps) => {
   const tasks = project.tasks || [];
   const completedTasks = tasks.filter(task => task.completed).length;
   const totalTasks = tasks.length;

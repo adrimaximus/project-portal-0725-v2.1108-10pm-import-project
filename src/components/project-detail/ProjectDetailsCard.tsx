@@ -12,12 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import AddressAutocompleteInput from '../people/AddressAutocompleteInput';
-
-interface ProjectDetailsCardProps {
-  project: Project;
-  isEditing: boolean;
-  onFieldChange: (field: keyof Project, value: any) => void;
-}
+import { useProjectContext } from "@/contexts/ProjectContext";
 
 const paymentStatusConfig: Record<string, { color: string; label: string }> = {
   'Paid': { color: "bg-green-100 text-green-800", label: "Paid" },
@@ -28,18 +23,20 @@ const paymentStatusConfig: Record<string, { color: string; label: string }> = {
   'Cancelled': { color: "bg-gray-100 text-gray-800", label: "Cancelled" },
 };
 
-const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
+const ProjectDetailsCard = () => {
+  const { editedProject: project, isEditing, handleFieldChange } = useProjectContext();
+
   const handleDateChange = (range: DateRange | undefined) => {
     const startDate = range?.from ? range.from.toISOString() : undefined;
     const endDateValue = range?.to || range?.from;
     const endDate = endDateValue ? endDateValue.toISOString() : undefined;
 
-    onFieldChange('start_date', startDate);
-    onFieldChange('due_date', endDate);
+    handleFieldChange('start_date', startDate);
+    handleFieldChange('due_date', endDate);
   };
 
   const handleBudgetChange = (value: number | null) => {
-    onFieldChange('budget', value || 0);
+    handleFieldChange('budget', value || 0);
   };
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
@@ -114,7 +111,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
               {isEditing ? (
                 <AddressAutocompleteInput
                   value={project.venue}
-                  onChange={(address) => onFieldChange('venue', address?.formatted_address || address?.label || '')}
+                  onChange={(address) => handleFieldChange('venue', address?.formatted_address || address?.label || '')}
                 />
               ) : (
                 <p className="text-muted-foreground">
@@ -131,7 +128,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                 <ProjectServices
                   selectedServices={project.services || []}
                   isEditing={isEditing}
-                  onServicesChange={(services) => onFieldChange('services', services)}
+                  onServicesChange={(services) => handleFieldChange('services', services)}
                 />
               </div>
             </div>
@@ -147,7 +144,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
               {isEditing ? (
                 <Select
                   value={project.status}
-                  onValueChange={(value) => onFieldChange('status', value)}
+                  onValueChange={(value) => handleFieldChange('status', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a status" />
@@ -178,7 +175,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
               {isEditing ? (
                 <Select
                   value={project.payment_status}
-                  onValueChange={(value) => onFieldChange('payment_status', value)}
+                  onValueChange={(value) => handleFieldChange('payment_status', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a payment status" />

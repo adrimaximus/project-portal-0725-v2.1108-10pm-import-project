@@ -12,36 +12,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { useProjectContext } from "@/contexts/ProjectContext";
 
 interface ProjectHeaderProps {
-  project: Project;
-  isEditing: boolean;
-  isSaving: boolean;
-  onEditToggle: () => void;
-  onSaveChanges: () => void;
-  onCancelChanges: () => void;
-  canEdit: boolean;
-  onFieldChange: (field: keyof Project, value: any) => void;
-  onToggleComplete: () => void;
   onDeleteProject: () => void;
 }
 
-const ProjectHeader = ({
-  project,
-  isEditing,
-  isSaving,
-  onEditToggle,
-  onSaveChanges,
-  onCancelChanges,
-  canEdit,
-  onFieldChange,
-  onToggleComplete,
-  onDeleteProject,
-}: ProjectHeaderProps) => {
+const ProjectHeader = ({ onDeleteProject }: ProjectHeaderProps) => {
   const navigate = useNavigate();
-  const statusStyles = getStatusStyles(project.status);
-  const isCompleted = project.status === 'Completed';
-  const hasOpenTasks = project.tasks?.some(task => !task.completed);
+  const {
+    editedProject,
+    isEditing,
+    isSaving,
+    handleEditToggle,
+    handleSaveChanges,
+    handleCancelChanges,
+    canEdit,
+    handleFieldChange,
+    handleToggleComplete,
+  } = useProjectContext();
+
+  const statusStyles = getStatusStyles(editedProject.status);
+  const isCompleted = editedProject.status === 'Completed';
+  const hasOpenTasks = editedProject.tasks?.some(task => !task.completed);
 
   return (
     <div className="space-y-4">
@@ -54,24 +47,24 @@ const ProjectHeader = ({
           <div className="w-1 h-8" style={{ backgroundColor: statusStyles.hex }} />
           {isEditing ? (
             <Input
-              value={project.name || ''}
-              onChange={(e) => onFieldChange('name', e.target.value)}
+              value={editedProject.name || ''}
+              onChange={(e) => handleFieldChange('name', e.target.value)}
               className="text-3xl font-bold tracking-tight h-auto p-0 border-0 shadow-none focus-visible:ring-0"
             />
           ) : (
-            <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{editedProject.name}</h1>
           )}
-          {project.status && <StatusBadge status={project.status} />}
+          {editedProject.status && <StatusBadge status={editedProject.status} />}
         </div>
         {canEdit && (
           <div className="lg:col-span-1 flex justify-start lg:justify-end items-center gap-2">
             {isEditing ? (
               <div className="flex gap-2">
-                <Button onClick={onSaveChanges} disabled={isSaving}>
+                <Button onClick={handleSaveChanges} disabled={isSaving}>
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
                 </Button>
-                <Button variant="outline" onClick={onCancelChanges} disabled={isSaving}>
+                <Button variant="outline" onClick={handleCancelChanges} disabled={isSaving}>
                   Cancel
                 </Button>
               </div>
@@ -83,7 +76,7 @@ const ProjectHeader = ({
                       <div className="inline-block">
                         <Button
                           variant={isCompleted ? "default" : "outline"}
-                          onClick={onToggleComplete}
+                          onClick={handleToggleComplete}
                           disabled={!isCompleted && hasOpenTasks}
                           className={cn(isCompleted && "bg-green-600 hover:bg-green-700")}
                         >
@@ -106,7 +99,7 @@ const ProjectHeader = ({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={onEditToggle}>
+                    <DropdownMenuItem onSelect={handleEditToggle}>
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit Project
                     </DropdownMenuItem>
