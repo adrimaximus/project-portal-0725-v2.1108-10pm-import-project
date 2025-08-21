@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, Mail, Briefcase, Contact, FolderKanban, History, Tag as TagIcon } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Briefcase, Contact, History, Tag as TagIcon, Mail, Instagram } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -41,6 +41,7 @@ const PeoplePage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [personToEdit, setPersonToEdit] = useState<Person | null>(null);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'full_name', direction: 'ascending' });
   const queryClient = useQueryClient();
 
   const { data: people = [], isLoading } = useQuery({
@@ -90,6 +91,39 @@ const PeoplePage = () => {
       return fullName.includes(term) || company.includes(term) || jobTitle.includes(term) || emails.includes(term);
     });
   }, [people, searchTerm]);
+
+  const sortedPeople = useMemo(() => {
+    let sortableItems = [...filteredPeople];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key!];
+        const bValue = b[sortConfig.key!];
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        
+        const stringA = String(aValue).toLowerCase();
+        const stringB = String(bValue).toLowerCase();
+
+        if (stringA < stringB) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (stringA > stringB) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredPeople, sortConfig]);
+
+  const requestSort = (key: keyof Person) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const handleAddNew = () => {
     setPersonToEdit(null);
@@ -177,16 +211,20 @@ const PeoplePage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[250px]">
-                  <div className="flex items-center gap-2">
-                    <UserIcon className="h-4 w-4" />
-                    Name
-                  </div>
+                  <Button variant="ghost" onClick={() => requestSort('full_name')} className="w-full justify-start px-0 hover:bg-transparent">
+                    <div className="flex items-center gap-2">
+                      <UserIcon className="h-4 w-4" />
+                      Name
+                    </div>
+                  </Button>
                 </TableHead>
                 <TableHead>
-                  <div className="flex items-center gap-2">
-                    <Briefcase className="h-4 w-4" />
-                    Work
-                  </div>
+                  <Button variant="ghost" onClick={() => requestSort('job_title')} className="w-full justify-start px-0 hover:bg-transparent">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Work
+                    </div>
+                  </Button>
                 </TableHead>
                 <TableHead>
                   <div className="flex items-center gap-2">
@@ -201,10 +239,12 @@ const PeoplePage = () => {
                   </div>
                 </TableHead>
                 <TableHead>
-                  <div className="flex items-center gap-2">
-                    <History className="h-4 w-4" />
-                    Last Activity
-                  </div>
+                  <Button variant="ghost" onClick={() => requestSort('updated_at')} className="w-full justify-start px-0 hover:bg-transparent">
+                    <div className="flex items-center gap-2">
+                      <History className="h-4 w-4" />
+                      Last Activity
+                    </div>
+                  </Button>
                 </TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -212,10 +252,10 @@ const PeoplePage = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={6} className="text-center h-24">Loading...</TableCell></TableRow>
-              ) : filteredPeople.length === 0 ? (
+              ) : sortedPeople.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center h-24">No people found.</TableCell></TableRow>
               ) : (
-                filteredPeople.map(person => {
+                sortedPeople.map(person => {
                   const linkedinUrl = formatSocialLink('linkedin', person.social_media?.linkedin || '');
                   const twitterUrl = formatSocialLink('twitter', person.social_media?.twitter || '');
                   const instagramUrl = formatSocialLink('instagram', person.social_media?.instagram || '');
