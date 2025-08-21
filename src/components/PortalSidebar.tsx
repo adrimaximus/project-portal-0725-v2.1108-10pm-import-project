@@ -166,7 +166,19 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
     const allAvailableItems = [...visibleDefaultItems, ...customItems];
     const itemsById = new Map(allAvailableItems.map(item => [item.id, item]));
-    const savedOrder: string[] = user.sidebar_order || [];
+    
+    let savedOrder: string[] = [];
+    try {
+        const localOrder = localStorage.getItem(`sidebar_order_${user.id}`);
+        if (localOrder) {
+            savedOrder = JSON.parse(localOrder);
+        } else {
+            savedOrder = user.sidebar_order || [];
+        }
+    } catch (e) {
+        console.error("Failed to parse sidebar order from local storage", e);
+        savedOrder = user.sidebar_order || [];
+    }
     
     const ordered = savedOrder
       .map(id => itemsById.get(id))
@@ -200,23 +212,35 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const newArray = arrayMove(navItems, navItems.findIndex(i => i.id === active.id), navItems.findIndex(i => i.id === over.id));
+      const oldNavItems = [...navItems];
+      const activeIndex = navItems.findIndex(i => i.id === active.id);
+      const overIndex = navItems.findIndex(i => i.id === over.id);
+      
+      if (activeIndex === -1 || overIndex === -1) return;
+
+      const newArray = arrayMove(navItems, activeIndex, overIndex);
       setNavItems(newArray);
       
       if (user) {
         const newOrder = newArray.map(item => item.id);
+        
+        try {
+            localStorage.setItem(`sidebar_order_${user.id}`, JSON.stringify(newOrder));
+        } catch (e) {
+            toast.error("Could not save sidebar order locally.");
+            setNavItems(oldNavItems);
+            return;
+        }
+
         const { error } = await supabase
           .from('profiles')
           .update({ sidebar_order: newOrder })
           .eq('id', user.id);
         
         if (error) {
-          toast.error("Could not save sidebar order.");
-          // Optionally revert UI change
-          setNavItems(navItems);
+          toast.warning("Sidebar order saved locally, but failed to sync with the server.", { description: error.message });
         } else {
-          // Refresh user context to have the latest order
-          refreshUser();
+          await refreshUser();
         }
       }
     }
