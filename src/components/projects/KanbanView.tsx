@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
@@ -17,6 +17,22 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const dragHappened = useRef(false);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [collapsedColumns, setCollapsedColumns] = useState<string[]>([]);
+
+  useEffect(() => {
+    const savedState = localStorage.getItem('projectKanbanCollapsedColumns');
+    if (savedState) {
+      setCollapsedColumns(JSON.parse(savedState));
+    }
+  }, []);
+
+  const toggleColumnCollapse = (columnId: string) => {
+    const newCollapsedColumns = collapsedColumns.includes(columnId)
+      ? collapsedColumns.filter(id => id !== columnId)
+      : [...collapsedColumns, columnId];
+    setCollapsedColumns(newCollapsedColumns);
+    localStorage.setItem('projectKanbanCollapsedColumns', JSON.stringify(newCollapsedColumns));
+  };
 
   const columns = useMemo(() => {
     return groupBy === 'status' ? PROJECT_STATUS_OPTIONS : PAYMENT_STATUS_OPTIONS;
@@ -161,14 +177,20 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
       <div className="flex flex-row gap-4 overflow-x-auto pb-4">
-        {columns.map(statusOption => (
-          <KanbanColumn
-            key={statusOption.value}
-            status={statusOption}
-            projects={projectGroups[statusOption.value]}
-            dragHappened={dragHappened}
-          />
-        ))}
+        {columns.map(statusOption => {
+          const projectsInColumn = projectGroups[statusOption.value];
+          const isColumnCollapsed = projectsInColumn.length === 0 && collapsedColumns.includes(statusOption.value);
+          return (
+            <KanbanColumn
+              key={statusOption.value}
+              status={statusOption}
+              projects={projectsInColumn}
+              dragHappened={dragHappened}
+              isCollapsed={isColumnCollapsed}
+              onToggleCollapse={toggleColumnCollapse}
+            />
+          );
+        })}
       </div>
       <DragOverlay dropAnimation={null}>
         {activeProject ? (
