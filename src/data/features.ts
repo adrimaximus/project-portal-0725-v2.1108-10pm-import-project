@@ -53,6 +53,13 @@ export const initialFeatures: Feature[] = [
     path: '/billing',
   },
   {
+    id: 'people',
+    name: 'People',
+    description: 'Manage your contacts and connections.',
+    status: 'enabled',
+    path: '/people',
+  },
+  {
     id: 'notifications',
     name: 'Notifications',
     description: 'Stay updated with important events and alerts.',
