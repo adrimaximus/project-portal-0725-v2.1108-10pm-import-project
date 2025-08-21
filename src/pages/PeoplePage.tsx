@@ -210,6 +210,7 @@ const PeoplePage = () => {
                             {twitterUrl && <a href={twitterUrl} target="_blank" rel="noopener noreferrer"><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
                             {instagramUrl && <a href={instagramUrl} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
                           </div>
+                          <div className="text-xs text-gray-400 pt-1 font-mono">{JSON.stringify(person.social_media)}</div>
                         </div>
                       </TableCell>
                       <TableCell>
