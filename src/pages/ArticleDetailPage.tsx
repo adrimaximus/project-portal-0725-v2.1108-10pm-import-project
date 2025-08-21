@@ -12,6 +12,8 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import ArticleVotes from '@/components/kb/ArticleVotes';
+import ArticleComments from '@/components/kb/ArticleComments';
 
 const fetchArticle = async (slug: string) => {
   const { data, error } = await supabase
@@ -121,6 +123,15 @@ const ArticleDetailPage = () => {
             dangerouslySetInnerHTML={{ __html: article.content || '' }}
           />
         </article>
+
+        <div className="mt-12 border-t pt-8">
+          <h2 className="text-lg font-semibold mb-4">Was this article helpful?</h2>
+          <ArticleVotes articleId={article.id} />
+        </div>
+
+        <div className="mt-12 border-t pt-8">
+          <ArticleComments articleId={article.id} />
+        </div>
       </main>
     </PortalLayout>
   );
