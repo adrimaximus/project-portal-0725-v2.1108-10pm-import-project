@@ -90,13 +90,13 @@ const KnowledgeBasePage = () => {
   return (
     <PortalLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">Knowledge Base</h1>
             <p className="text-muted-foreground">Find guides, tutorials, and important information.</p>
           </div>
           {isAdmin && (
-            <Button asChild>
+            <Button asChild className="w-full sm:w-auto">
               <Link to="/knowledge-base/new">
                 <PlusCircle className="mr-2 h-4 w-4" /> New Article
               </Link>

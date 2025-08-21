@@ -177,34 +177,35 @@ const PeoplePage = () => {
   return (
     <PortalLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">People</h1>
             <p className="text-muted-foreground">Manage your contacts and connections.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => findDuplicates()} disabled={isFindingDuplicates}>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button variant="outline" size="icon" onClick={() => findDuplicates()} disabled={isFindingDuplicates} className="flex-shrink-0">
               {isFindingDuplicates ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitMerge className="h-4 w-4" />}
             </Button>
-            <Button size="icon" onClick={handleAddNew}>
-              <PlusCircle className="h-4 w-4" />
+            <Button onClick={handleAddNew} className="w-full">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Person
             </Button>
           </div>
         </div>
 
         <DuplicateContactsCard duplicates={duplicates} />
 
-        <div className="flex justify-between items-center">
-            <div className="relative flex-1 max-w-md">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="relative w-full sm:flex-1 sm:max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                     placeholder="Search by name, company, or title..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
+                    className="pl-9 w-full"
                 />
             </div>
-            <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban' | 'grid')}}>
+            <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban' | 'grid')}} className="w-full sm:w-auto justify-center sm:justify-end">
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -236,15 +237,15 @@ const PeoplePage = () => {
                   <TableHead className="w-[250px]">
                     <Button variant="ghost" onClick={() => requestSort('full_name')} className="px-2">Name</Button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="hidden sm:table-cell">
                     <Button variant="ghost" onClick={() => requestSort('job_title')} className="px-2">Work</Button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="hidden lg:table-cell">
                     <Button variant="ghost" onClick={() => requestSort('address')} className="px-2">Address</Button>
                   </TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>
+                  <TableHead className="hidden md:table-cell">Contact</TableHead>
+                  <TableHead className="hidden sm:table-cell">Tags</TableHead>
+                  <TableHead className="hidden lg:table-cell">
                     <Button variant="ghost" onClick={() => requestSort('updated_at')} className="px-2">Last Activity</Button>
                   </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -272,16 +273,16 @@ const PeoplePage = () => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <p className="font-medium">{person.job_title || '-'}</p>
                         <p className="text-sm text-muted-foreground">
                           {person.department}{person.department && person.company ? ' at ' : ''}{person.company}
                         </p>
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                      <TableCell className="hidden lg:table-cell max-w-[200px] truncate text-sm text-muted-foreground">
                         {person.address?.formatted_address || '-'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="flex items-center gap-3">
                           {person.contact?.phones?.[0] && (
                             <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.contact.phones[0])}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
@@ -299,7 +300,7 @@ const PeoplePage = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <div className="flex flex-wrap gap-1">
                           {(person.tags || []).map(tag => (
                             <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
@@ -308,7 +309,7 @@ const PeoplePage = () => {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                         {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true })}
                       </TableCell>
                       <TableCell className="text-right">
