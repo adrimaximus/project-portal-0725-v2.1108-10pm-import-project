@@ -35,19 +35,22 @@ const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocomp
     try {
       const results = await geocodeByAddress(place.label);
       const latLng = await getLatLng(results[0]);
+      const components = results[0].address_components;
 
-      const addressComponents = results[0].address_components.reduce((acc, component) => {
-        const type = component.types[0];
-        acc[type] = component.long_name;
-        return acc;
-      }, {} as Record<string, string>);
+      const get = (type: string) => components.find((c: any) => c.types.includes(type))?.long_name || '';
 
       const structuredAddress = {
         label: place.label,
+        place_id: results[0].place_id,
         formatted_address: results[0].formatted_address,
         lat: latLng.lat,
         lng: latLng.lng,
-        ...addressComponents,
+        street: [get('route'), get('street_number')].filter(Boolean).join(' '),
+        suburb: get('sublocality') || get('sublocality_level_1'),
+        city: get('locality') || get('administrative_area_level_2'),
+        province: get('administrative_area_level_1'),
+        postal_code: get('postal_code'),
+        country: get('country'),
       };
       onChange(structuredAddress);
     } catch (error) {
