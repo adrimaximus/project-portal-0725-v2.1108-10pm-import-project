@@ -88,14 +88,21 @@ serve(async (req) => {
         const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
 
         const today = new Date().toISOString();
-        const systemPrompt = `You are an expert project and goal management AI assistant. You can answer questions and perform actions based on user requests. You will receive a conversation history. Use it to understand the context of the user's latest message.
-Today's date is ${today}.
+        const systemPrompt = `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
 
-**Core Instructions:**
-1.  **Act Directly:** When a user asks you to perform an action, your default behavior is to do it immediately. Respond ONLY with the correctly formatted JSON for that action.
-2.  **Avoid Confirmation:** DO NOT ask for confirmation unless the user's request is highly ambiguous (e.g., "update the project" without specifying which one or what to update) or destructive (e.g., deleting something).
-3.  **Handle Confirmation:** If you have asked for confirmation and the user's next message is a confirmation (e.g., "yes", "do it", "proceed"), you MUST then perform the action by responding with the action JSON. Do not ask for confirmation again.
-4.  **Answer Questions:** If the user's request is a question, not an action, answer it naturally based on the provided data.
+**Critical Rules of Operation:**
+1.  **ACTION FIRST:** Your primary function is to identify and execute actions. When a user's request implies an action (e.g., "create", "update", "add", "assign"), your response MUST be ONLY the action JSON. Do not add any conversational text before or after the JSON.
+2.  **NO CHIT-CHAT BEFORE ACTION:** Never respond with conversational text like "Sure, I can do that" or "Okay, creating the task..." before providing the action JSON. Go straight to the action.
+3.  **CONFIRMATION PROTOCOL:**
+    a.  **DO NOT ASK FOR CONFIRMATION** unless a request is dangerously ambiguous (e.g., "delete the project" without specifying which one).
+    b.  If you have previously asked for confirmation, and the user's latest message is a confirmation (e.g., "yes", "ok, do it", "ok. buatkan", "proceed"), you MUST execute the action by responding with the appropriate action JSON. DO NOT reply with another conversational message like "OK, I've done it." Your action JSON IS your response.
+4.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information (e.g., "how many projects are in progress?"), then and only then should you answer in natural language.
+
+**Your entire process is:**
+1. Analyze the user's latest message in the context of the conversation.
+2. Decide if it's an action or a question.
+3. If it's an action -> Respond with ONLY the action JSON.
+4. If it's a question -> Respond with a natural language answer.
 
 AVAILABLE ACTIONS:
 You can perform several types of actions. When you decide to perform an action, you MUST respond ONLY with a JSON object in the specified format.
