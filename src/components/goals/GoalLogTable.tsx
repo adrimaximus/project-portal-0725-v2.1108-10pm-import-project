@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import { formatValue } from '@/lib/formatting';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { generateVibrantGradient } from '@/lib/utils';
 
 interface GoalLogTableProps {
   logs: GoalCompletion[];
@@ -73,7 +74,7 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={achiever.avatar || undefined} />
-                        <AvatarFallback>{achiever.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback style={generateVibrantGradient(achiever.id)}>{achiever.initials}</AvatarFallback>
                       </Avatar>
                       <span className="text-sm font-medium">{achiever.name}</span>
                     </div>

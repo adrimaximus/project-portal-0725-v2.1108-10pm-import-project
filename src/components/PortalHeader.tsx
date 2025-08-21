@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router-dom";
-import { Menu, Sun, Moon, Laptop } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Menu, Sun, Moon, Laptop, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,6 +16,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ReactNode } from "react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { GlobalSearch } from "./GlobalSearch";
+import { generateVibrantGradient } from "@/lib/utils";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Badge } from "./ui/badge";
 
 interface PortalHeaderProps {
     summary?: ReactNode;
@@ -25,6 +28,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { unreadCount } = useNotifications();
 
   if (!user) {
     return null;
@@ -65,6 +69,17 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
         {summary}
       </div>
       <GlobalSearch />
+      <Button variant="outline" size="icon" asChild>
+        <Link to="/notifications" className="relative">
+          <Bell className="h-[1.2rem] w-[1.2rem]" />
+          {unreadCount > 0 && (
+            <Badge variant="destructive" className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full p-0 text-xs">
+              {unreadCount}
+            </Badge>
+          )}
+          <span className="sr-only">View notifications</span>
+        </Link>
+      </Button>
       <Button variant="outline" size="icon" onClick={toggleTheme}>
         {theme === 'light' && <Sun className="h-[1.2rem] w-[1.2rem]" />}
         {theme === 'dark' && <Moon className="h-[1.2rem] w-[1.2rem]" />}
@@ -76,7 +91,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
           <Button variant="secondary" size="icon" className="rounded-full">
             <Avatar className="h-8 w-8">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
             </Avatar>
             <span className="sr-only">Toggle user menu</span>
           </Button>

@@ -7,14 +7,42 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const getInitials = (name: string = ""): string => {
+export const getInitials = (name: string = "", email?: string): string => {
   const names = name.trim().split(' ').filter(Boolean);
-  if (names.length === 0) return "";
+  
+  if (names.length === 0) {
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return "";
+  }
+
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
   
   const firstName = names[0];
   const lastName = names[names.length - 1];
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+};
+
+export const generateVibrantGradient = (str: string): { background: string } => {
+  if (!str) {
+    return { background: 'linear-gradient(to bottom right, hsl(222, 47%, 11%), hsl(210, 40%, 98%))' };
+  }
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash;
+  }
+  
+  const h1 = hash % 360;
+  const h2 = (h1 + 45) % 360;
+  const s = 75;
+  const l = 50;
+
+  const color1 = `hsl(${h1}, ${s}%, ${l}%)`;
+  const color2 = `hsl(${h2}, ${s}%, ${l-10}%)`;
+
+  return { background: `linear-gradient(to bottom right, ${color1}, ${color2})` };
 };
 
 export const getStatusStyles = (status: string) => {
@@ -34,6 +62,20 @@ export const getStatusStyles = (status: string) => {
     default:
       return { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' };
   }
+};
+
+export const paymentStatusConfig: Record<string, { tw: string; hex: string }> = {
+  'Paid': { tw: 'bg-green-100 text-green-800 border-green-200', hex: '#16a34a' },
+  'Pending': { tw: 'bg-yellow-100 text-yellow-800 border-yellow-200', hex: '#ca8a04' },
+  'In Process': { tw: 'bg-purple-100 text-purple-800 border-purple-200', hex: '#9333ea' },
+  'Overdue': { tw: 'bg-red-100 text-red-800 border-red-200', hex: '#dc2626' },
+  'Proposed': { tw: 'bg-blue-100 text-blue-800 border-blue-200', hex: '#2563eb' },
+  'Cancelled': { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' },
+  'Unpaid': { tw: 'bg-orange-100 text-orange-800 border-orange-200', hex: '#f97316' },
+};
+
+export const getPaymentStatusStyles = (status: string) => {
+  return paymentStatusConfig[status] || { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' };
 };
 
 export const mapProfileToUser = (profile: any) => {

@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import debounce from 'lodash.debounce';
+import { getInitials } from "@/lib/utils";
 
 export const useChat = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -111,17 +112,20 @@ export const useChat = () => {
       return;
     }
 
-    const mappedMessages: Message[] = (data || []).map((m: any) => ({
-      id: m.id, text: m.content, timestamp: m.created_at,
-      sender: {
-        id: m.sender.id,
-        name: `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim() || m.sender.email,
-        avatar: m.sender.avatar_url,
-        initials: `${m.sender.first_name?.[0] || ''}${m.sender.last_name?.[0] || ''}`.toUpperCase(),
-        email: m.sender.email,
-      },
-      attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
-    }));
+    const mappedMessages: Message[] = (data || []).map((m: any) => {
+      const senderName = `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim();
+      return {
+        id: m.id, text: m.content, timestamp: m.created_at,
+        sender: {
+          id: m.sender.id,
+          name: senderName || m.sender.email,
+          avatar: m.sender.avatar_url,
+          initials: getInitials(senderName, m.sender.email) || 'NN',
+          email: m.sender.email,
+        },
+        attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
+      }
+    });
 
     setConversations(prev => prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c)));
   }, []);
@@ -129,17 +133,22 @@ export const useChat = () => {
   useEffect(() => {
     if (!currentUser) return;
 
-    const channel = supabase.channel('chat-room', { config: { broadcast: { self: false } } });
+    const channel = supabase.channel('chat-room');
 
     channel
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
         const newMessage = payload.new;
+        
+        if (newMessage.sender_id === currentUser?.id) {
+            return;
+        }
+
         const conversationId = newMessage.conversation_id;
 
         setConversations(prev => {
           const convoIndex = prev.findIndex(c => c.id === conversationId);
           if (convoIndex === -1) {
-            fetchConversations(); // New conversation, refetch list
+            fetchConversations();
             return prev;
           }
 
@@ -149,11 +158,12 @@ export const useChat = () => {
 
           if (conversationId === selectedConversationId) {
             const senderProfile = updatedConvo.members.find(m => m.id === newMessage.sender_id);
+            const senderName = senderProfile ? `${senderProfile.name}` : 'Unknown';
             const mappedMessage: Message = {
               id: newMessage.id, text: newMessage.content, timestamp: newMessage.created_at,
               sender: {
-                id: senderProfile?.id || '', name: senderProfile?.name || 'Unknown',
-                avatar: senderProfile?.avatar, initials: senderProfile?.initials || '??',
+                id: senderProfile?.id || '', name: senderName,
+                avatar: senderProfile?.avatar, initials: getInitials(senderName, senderProfile?.email) || '??',
                 email: senderProfile?.email,
               },
               attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
@@ -167,8 +177,51 @@ export const useChat = () => {
           return newConversations;
         });
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
-        fetchConversations();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, async () => {
+        const { data, error } = await supabase.rpc('get_user_conversations');
+        if (error) {
+            console.error("Failed to refresh conversations on update:", error);
+            return;
+        }
+        if (data) {
+            const mappedConversations: Conversation[] = data.map((c: any) => ({
+                id: c.conversation_id,
+                userName: c.is_group ? c.group_name : c.other_user_name,
+                userAvatar: c.is_group ? c.avatar_url : c.other_user_avatar,
+                lastMessage: c.last_message_content || "No messages yet.",
+                lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
+                unreadCount: 0,
+                messages: [],
+                isGroup: c.is_group,
+                members: (c.participants || []).map((p: any) => ({
+                  id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
+                })),
+                created_by: c.created_by,
+            }));
+
+            setConversations(prev => {
+                const newConvosMap = new Map(mappedConversations.map(c => [c.id, c]));
+                
+                const updatedAndExisting = prev
+                    .map(oldConvo => {
+                        const newConvoData = newConvosMap.get(oldConvo.id);
+                        if (newConvoData) {
+                            newConvosMap.delete(oldConvo.id);
+                            return { ...newConvoData, messages: oldConvo.messages || [] };
+                        }
+                        return null;
+                    })
+                    .filter((c): c is Conversation => c !== null);
+
+                const brandNewConvos = Array.from(newConvosMap.values());
+                
+                const final = [...updatedAndExisting, ...brandNewConvos];
+                
+                final.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
+                
+                return final;
+            });
+        }
       })
       .on('broadcast', { event: 'typing' }, (payload: any) => {
         if (payload?.userId && payload.userId !== currentUser?.id && payload.conversationId === selectedConversationId) {
@@ -196,17 +249,69 @@ export const useChat = () => {
     if (!selectedConversationId || !currentUser) return;
 
     const tempId = `temp-${Date.now()}`;
-    const optimistic: Message = { id: tempId, text, timestamp: new Date().toISOString(), sender: currentUser, attachment };
-    setConversations(prev => prev.map(c => c.id === selectedConversationId ? { ...c, messages: [...c.messages, optimistic], lastMessage: text || "Attachment", lastMessageTimestamp: new Date().toISOString() } : c));
+    const optimisticMessage: Message = {
+      id: tempId,
+      text,
+      timestamp: new Date().toISOString(),
+      sender: currentUser,
+      attachment,
+    };
 
-    const { error } = await supabase.from('messages').insert({
-      conversation_id: selectedConversationId, sender_id: currentUser.id, content: text,
-      attachment_url: attachment?.url, attachment_name: attachment?.name, attachment_type: attachment?.type,
-    });
+    // Optimistically update UI
+    setConversations(prev =>
+      prev.map(c =>
+        c.id === selectedConversationId
+          ? {
+              ...c,
+              messages: [...c.messages, optimisticMessage],
+              lastMessage: text || "Attachment",
+              lastMessageTimestamp: new Date().toISOString(),
+            }
+          : c
+      )
+    );
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: selectedConversationId,
+        sender_id: currentUser.id,
+        content: text,
+        attachment_url: attachment?.url,
+        attachment_name: attachment?.name,
+        attachment_type: attachment?.type,
+      })
+      .select()
+      .single();
 
     if (error) {
       toast.error("Failed to send message.", { description: error.message });
-      setConversations(prev => prev.map(c => c.id === selectedConversationId ? { ...c, messages: c.messages.filter(m => m.id !== tempId) } : c));
+      // Revert optimistic update on error
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === selectedConversationId
+            ? { ...c, messages: c.messages.filter(m => m.id !== tempId) }
+            : c
+        )
+      );
+    } else {
+      // Replace optimistic message with real message from DB on success
+      const realMessage: Message = {
+        id: data.id,
+        text: data.content,
+        timestamp: data.created_at,
+        sender: currentUser,
+        attachment: data.attachment_url
+          ? { name: data.attachment_name, url: data.attachment_url, type: data.attachment_type }
+          : undefined,
+      };
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === selectedConversationId
+            ? { ...c, messages: c.messages.map(m => (m.id === tempId ? realMessage : m)) }
+            : c
+        )
+      );
     }
   };
 

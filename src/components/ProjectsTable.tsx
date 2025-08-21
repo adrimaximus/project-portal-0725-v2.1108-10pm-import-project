@@ -3,7 +3,7 @@ import { Project } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import {
@@ -20,12 +20,12 @@ import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "./ui/date-picker-with-range";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateProject } from "@/hooks/useCreateProject";
+import { Input } from "./ui/input";
 
 import TableView from "./projects/TableView";
 import ListView from "./projects/ListView";
-import YearView from "./projects/YearView";
-import MonthView from "./projects/MonthView";
 import CalendarImportView from "./projects/CalendarImportView";
+import KanbanView from "./projects/KanbanView";
 
 interface CalendarEvent {
     id: string;
@@ -37,7 +37,7 @@ interface CalendarEvent {
     location?: string;
 }
 
-type ViewMode = 'table' | 'list' | 'month' | 'year' | 'calendar';
+type ViewMode = 'table' | 'list' | 'kanban' | 'calendar';
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -46,11 +46,24 @@ interface ProjectsTableProps {
 }
 
 const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => {
-  const [view, setView] = useState<ViewMode>('list');
+  const [view, setView] = useState<ViewMode>(() => {
+    const savedView = localStorage.getItem('project_view_mode') as ViewMode;
+    return savedView || 'list';
+  });
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const createProjectMutation = useCreateProject();
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: 'start_date', direction: 'descending' });
+
+  const handleViewChange = (newView: ViewMode | null) => {
+    if (newView) {
+      setView(newView);
+      localStorage.setItem('project_view_mode', newView);
+    }
+  };
 
   const refreshCalendarEvents = async () => {
     const token = localStorage.getItem('googleCalendarToken');
@@ -136,37 +149,85 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   }, []);
 
   const filteredProjects = useMemo(() => {
-    if (!dateRange || !dateRange.from) {
-      return projects;
+    let filtered = projects;
+
+    if (dateRange?.from) {
+      const fromDate = new Date(dateRange.from);
+      fromDate.setHours(0, 0, 0, 0);
+
+      const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+      toDate.setHours(23, 59, 59, 999);
+
+      filtered = filtered.filter(project => {
+        if (!project.start_date && !project.due_date) {
+          return false;
+        }
+        
+        const projectStart = project.start_date ? new Date(project.start_date) : null;
+        const projectEnd = project.due_date ? new Date(project.due_date) : projectStart;
+
+        if (projectStart && projectEnd) {
+          return projectStart <= toDate && projectEnd >= fromDate;
+        }
+        if (projectStart) {
+          return projectStart >= fromDate && projectStart <= toDate;
+        }
+        if (projectEnd) {
+          return projectEnd >= fromDate && projectEnd <= toDate;
+        }
+
+        return false;
+      });
     }
 
-    const fromDate = new Date(dateRange.from);
-    fromDate.setHours(0, 0, 0, 0);
+    if (searchTerm.trim() !== "") {
+      const lowercasedFilter = searchTerm.toLowerCase();
+      filtered = filtered.filter(project =>
+        project.name.toLowerCase().includes(lowercasedFilter) ||
+        (project.description && project.description.toLowerCase().includes(lowercasedFilter))
+      );
+    }
 
-    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-    toDate.setHours(23, 59, 59, 999);
+    return filtered;
+  }, [projects, dateRange, searchTerm]);
 
-    return projects.filter(project => {
-      if (!project.start_date && !project.due_date) {
-        return false;
-      }
-      
-      const projectStart = project.start_date ? new Date(project.start_date) : null;
-      const projectEnd = project.due_date ? new Date(project.due_date) : projectStart;
+  const sortedProjects = useMemo(() => {
+    let sortableItems = [...filteredProjects];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key!];
+        const bValue = b[sortConfig.key!];
 
-      if (projectStart && projectEnd) {
-        return projectStart <= toDate && projectEnd >= fromDate;
-      }
-      if (projectStart) {
-        return projectStart >= fromDate && projectStart <= toDate;
-      }
-      if (projectEnd) {
-        return projectEnd >= fromDate && projectEnd <= toDate;
-      }
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
 
-      return false;
-    });
-  }, [projects, dateRange]);
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+        } else if (sortConfig.key === 'start_date' || sortConfig.key === 'due_date') {
+            const dateA = new Date(aValue as string).getTime();
+            const dateB = new Date(bValue as string).getTime();
+            if (dateA < dateB) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (dateA > dateB) return sortConfig.direction === 'ascending' ? 1 : -1;
+        } else {
+            const stringA = String(aValue).toLowerCase();
+            const stringB = String(bValue).toLowerCase();
+            if (stringA < stringB) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (stringA > stringB) return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredProjects, sortConfig]);
+
+  const requestSort = (key: keyof Project) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const filteredCalendarEvents = useMemo(() => {
     if (!dateRange || !dateRange.from) {
@@ -272,13 +333,11 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   const renderContent = () => {
     switch (view) {
       case 'table':
-        return <TableView projects={filteredProjects} isLoading={isLoading} onDeleteProject={handleDeleteProject} />;
+        return <TableView projects={sortedProjects} isLoading={isLoading} onDeleteProject={handleDeleteProject} sortConfig={sortConfig} requestSort={requestSort} />;
       case 'list':
-        return <ListView projects={filteredProjects} onDeleteProject={handleDeleteProject} />;
-      case 'month':
-        return <MonthView projects={filteredProjects} gcalEvents={filteredCalendarEvents} />;
-      case 'year':
-        return <YearView projects={filteredProjects} gcalEvents={filteredCalendarEvents} />;
+        return <ListView projects={sortedProjects} onDeleteProject={handleDeleteProject} />;
+      case 'kanban':
+        return <KanbanView projects={filteredProjects} groupBy={kanbanGroupBy} />;
       case 'calendar':
         return <CalendarImportView events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
       default:
@@ -326,9 +385,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
             <ToggleGroup 
               type="single" 
               value={view} 
-              onValueChange={(value) => {
-                if (value) setView(value as ViewMode);
-              }}
+              onValueChange={handleViewChange}
               aria-label="View mode"
             >
               <ToggleGroupItem value="list" aria-label="List view">
@@ -337,11 +394,8 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
               <ToggleGroupItem value="table" aria-label="Table view">
                 <TableIcon className="h-4 w-4" />
               </ToggleGroupItem>
-              <ToggleGroupItem value="month" aria-label="Month view">
-                <CalendarIcon className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="year" aria-label="Year view">
-                <CalendarDays className="h-4 w-4" />
+              <ToggleGroupItem value="kanban" aria-label="Kanban view">
+                <Kanban className="h-4 w-4" />
               </ToggleGroupItem>
               <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
                 <CalendarPlus className="h-4 w-4" />
@@ -350,11 +404,29 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
           </div>
         </CardHeader>
         <CardContent>
-          {(view === 'table' || view === 'list' || view === 'calendar' || view === 'month' || view === 'year') && (
-            <div className="py-4">
-              <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+          <div className="py-4 flex flex-col md:flex-row md:flex-wrap gap-4 items-center">
+            <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+            {view === 'kanban' && (
+              <ToggleGroup 
+                  type="single" 
+                  value={kanbanGroupBy} 
+                  onValueChange={(value) => { if (value) setKanbanGroupBy(value as 'status' | 'payment_status')}}
+                  className="h-10"
+              >
+                  <ToggleGroupItem value="status" className="text-sm px-3">By Project Status</ToggleGroupItem>
+                  <ToggleGroupItem value="payment_status" className="text-sm px-3">By Payment Status</ToggleGroupItem>
+              </ToggleGroup>
+            )}
+            <div className="relative w-full md:w-auto md:flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search projects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
             </div>
-          )}
+          </div>
           {renderContent()}
         </CardContent>
       </Card>

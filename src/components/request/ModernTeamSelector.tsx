@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AssignedUser } from "@/types";
+import { generateVibrantGradient } from "@/lib/utils";
 
 interface ModernTeamSelectorProps {
   users: AssignedUser[];
@@ -93,7 +94,7 @@ const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernT
                   <div className="flex items-center gap-2">
                      <Avatar className="h-6 w-6">
                        <AvatarImage src={(user as any).avatar} alt={user.name} />
-                       <AvatarFallback>{user.initials}</AvatarFallback>
+                       <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                      </Avatar>
                      <span>{user.name}</span>
                   </div>

@@ -78,6 +78,8 @@ export interface Project {
   briefFiles: ProjectFile[];
   activities?: Activity[];
   venue?: string;
+  kanban_order?: number;
+  tags: Tag[];
 }
 
 export type GoalType = 'frequency' | 'quantity' | 'value';
@@ -163,6 +165,21 @@ export interface GoogleCalendarEvent {
   htmlLink: string;
   status: string;
   location?: string;
+}
+
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  read: boolean;
+  link?: string;
+  actor: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
 }
 
 export const PROJECT_STATUS_OPTIONS = [

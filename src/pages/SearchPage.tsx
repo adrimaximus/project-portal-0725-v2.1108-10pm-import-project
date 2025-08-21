@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Building, User as UserIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import HighlightMatch from '@/components/HighlightMatch';
+import { getInitials } from '@/lib/utils';
 
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -38,15 +39,18 @@ const SearchPage = () => {
         .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%`);
       
       if (data) {
-        const foundUsers = data.map(profile => ({
-          id: profile.id,
-          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
-          avatar: profile.avatar_url,
-          email: profile.email,
-          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-        }));
+        const foundUsers = data.map(profile => {
+          const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+          return {
+            id: profile.id,
+            name: fullName || profile.email || 'No name',
+            avatar: profile.avatar_url,
+            email: profile.email,
+            initials: getInitials(fullName, profile.email) || 'NN',
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+          }
+        });
         setUsers(foundUsers);
       }
     };

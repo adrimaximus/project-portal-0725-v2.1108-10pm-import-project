@@ -9,9 +9,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2, MapPin } from 'lucide-react';
+import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2, MapPin, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getStatusStyles, formatInJakarta } from '@/lib/utils';
+import { getStatusStyles, formatInJakarta, generateVibrantGradient } from '@/lib/utils';
 
 const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
   const navigate = useNavigate();
@@ -91,7 +91,10 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate" title={project.name}>{project.name}</p>
+                          <p className="font-medium truncate flex items-center gap-2" title={project.name}>
+                            {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                            {project.name}
+                          </p>
                           {project.venue && (
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
                               <MapPin size={12} />
@@ -142,7 +145,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                           {project.assignedTo.slice(0, 3).map((user) => (
                             <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
                               <AvatarImage src={user.avatar} alt={user.name} />
-                              <AvatarFallback>{user.initials}</AvatarFallback>
+                              <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                             </Avatar>
                           ))}
                         </div>
