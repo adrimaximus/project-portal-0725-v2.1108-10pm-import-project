@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, Map as MapIcon } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -136,7 +136,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       { id: "goals", href: "/goals", label: "Goals", icon: Target },
       { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
       { id: "people", href: "/people", label: "People", icon: Users, allowedRoles: ['admin', 'master admin'] },
-      { id: "map", href: "/map", label: "Map", icon: MapIcon },
       { id: "settings", href: "/settings", label: "Settings", icon: Settings, allowedRoles: ['admin', 'master admin'] },
     ];
 
