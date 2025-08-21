@@ -43,10 +43,19 @@ export const useChat = () => {
         })),
         created_by: c.created_by,
       }));
-      setConversations(mappedConversations);
+      
+      setConversations(prevConversations => {
+        return mappedConversations.map(newConvo => {
+          const oldConvo = prevConversations.find(p => p.id === newConvo.id);
+          if (oldConvo && newConvo.id === selectedConversationId) {
+            return { ...newConvo, messages: oldConvo.messages };
+          }
+          return newConvo;
+        });
+      });
     }
     setIsLoading(false);
-  }, [currentUser]);
+  }, [currentUser, selectedConversationId]);
 
   useEffect(() => {
     fetchConversations();
@@ -149,53 +158,33 @@ export const useChat = () => {
         
         if (newMessage.sender_id === currentUser?.id) return;
 
-        const conversationId = newMessage.conversation_id;
-        const currentConvo = conversations.find(c => c.id === conversationId);
-
-        if (!currentConvo) {
-          fetchConversations();
-          return;
-        }
-
-        let senderProfile = currentConvo.members.find(m => m.id === newMessage.sender_id);
-        if (!senderProfile) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('id, first_name, last_name, avatar_url, email')
-            .eq('id', newMessage.sender_id)
-            .single();
-          
-          if (profileData) {
-            const fullName = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim();
-            senderProfile = {
-              id: profileData.id, name: fullName || profileData.email,
-              avatar: profileData.avatar_url, initials: getInitials(fullName, profileData.email),
-              email: profileData.email,
-            };
-          }
-        }
-
-        const finalSender = senderProfile || { id: newMessage.sender_id, name: 'Unknown User', avatar: '', initials: '??', email: '' };
-        const mappedMessage: Message = {
-          id: newMessage.id, text: newMessage.content, timestamp: newMessage.created_at,
-          sender: finalSender,
-          attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
-        };
-
         setConversations(prev => {
+          const conversationId = newMessage.conversation_id;
           const convoIndex = prev.findIndex(c => c.id === conversationId);
-          if (convoIndex === -1) return prev;
 
-          const updatedConvo = { ...prev[convoIndex] };
+          if (convoIndex === -1) {
+            fetchConversations();
+            return prev;
+          }
+
+          const currentConvo = prev[convoIndex];
+          const senderProfile = currentConvo.members.find(m => m.id === newMessage.sender_id);
+          const finalSender = senderProfile || { id: newMessage.sender_id, name: 'Unknown User', avatar: '', initials: '??', email: '' };
+          
+          const mappedMessage: Message = {
+            id: newMessage.id, text: newMessage.content, timestamp: newMessage.created_at,
+            sender: finalSender,
+            attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
+          };
+
+          const updatedConvo = { ...currentConvo };
           updatedConvo.lastMessage = newMessage.content || "Attachment";
           updatedConvo.lastMessageTimestamp = newMessage.created_at;
 
-          if (senderProfile && !updatedConvo.members.some(m => m.id === senderProfile.id)) {
-            updatedConvo.members = [...updatedConvo.members, senderProfile];
-          }
-
           if (conversationId === selectedConversationId) {
-            updatedConvo.messages = [...updatedConvo.messages, mappedMessage];
+              if (!updatedConvo.messages.some(m => m.id === mappedMessage.id)) {
+                  updatedConvo.messages = [...updatedConvo.messages, mappedMessage];
+              }
           }
 
           const newConversations = [...prev];
@@ -219,7 +208,7 @@ export const useChat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, selectedConversationId, fetchConversations, conversations]);
+  }, [currentUser, selectedConversationId, fetchConversations]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
