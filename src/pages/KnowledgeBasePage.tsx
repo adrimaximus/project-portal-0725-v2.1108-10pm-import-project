@@ -77,7 +77,7 @@ const KnowledgeBasePage = () => {
       if (error) {
         toast.error("Failed to fetch articles.");
       } else {
-        setArticles(data);
+        setArticles(data || []);
       }
       setIsLoading(false);
       setIsSearching(false);
