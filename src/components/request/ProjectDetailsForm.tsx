@@ -21,6 +21,7 @@ import { User } from "@/types";
 import { toast } from "sonner";
 import { useCreateProject } from "@/hooks/useCreateProject";
 import { getInitials } from "@/lib/utils";
+import AddressAutocompleteInput from '../people/AddressAutocompleteInput';
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -36,7 +37,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
   const [description, setDescription] = useState("");
   const [team, setTeam] = useState<User[]>([]);
   const [files, setFiles] = useState<File[]>([]);
-  const [venue, setVenue] = useState("");
+  const [venue, setVenue] = useState<any>(null);
   const navigate = useNavigate();
   const createProjectMutation = useCreateProject();
 
@@ -111,7 +112,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
       budget: numericBudget,
       startDate: date?.from?.toISOString(),
       dueDate: date?.to?.toISOString(),
-      venue: venue,
+      venue: venue?.formatted_address || venue?.label || '',
     }, {
       onSuccess: async (newProject) => {
         const newProjectId = newProject.id;
@@ -260,11 +261,9 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </div>
           <div className="space-y-2">
             <Label htmlFor="venue">Venue</Label>
-            <Input
-              id="venue"
-              placeholder="e.g., Jakarta Convention Center"
+            <AddressAutocompleteInput
               value={venue}
-              onChange={(e) => setVenue(e.target.value)}
+              onChange={setVenue}
             />
           </div>
           <div className="space-y-2">
