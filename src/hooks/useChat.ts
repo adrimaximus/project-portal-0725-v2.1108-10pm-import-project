@@ -7,6 +7,9 @@ import { toast } from "sonner";
 import debounce from 'lodash.debounce';
 import { getInitials } from "@/lib/utils";
 
+// Module-level cache to persist messages across component mounts/unmounts
+const messagesCache = new Map<string, Message[]>();
+
 export const useChat = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -36,21 +39,14 @@ export const useChat = () => {
         lastMessage: c.last_message_content || "No messages yet.",
         lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
         unreadCount: 0,
-        messages: [],
+        messages: messagesCache.get(c.conversation_id) || [], // Use cached messages if available
         isGroup: c.is_group,
         members: (c.participants || []).map((p: any) => ({
           id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
         })),
         created_by: c.created_by,
       }));
-      
-      setConversations(prevConversations => {
-        return mappedConversations.map(newConvo => {
-          const oldConvo = prevConversations.find(p => p.id === newConvo.id);
-          // Preserve messages if they exist, otherwise use the new (likely empty) messages array
-          return { ...newConvo, messages: oldConvo?.messages || newConvo.messages };
-        });
-      });
+      setConversations(mappedConversations);
     }
     setIsLoading(false);
   }, [currentUser]);
@@ -108,6 +104,13 @@ export const useChat = () => {
     setSelectedConversationId(id);
     if (!id) return;
 
+    // Check if we already have messages for this conversation
+    const existingConversation = conversations.find(c => c.id === id);
+    if (existingConversation && existingConversation.messages.length > 0) {
+      // Messages already loaded, no need to fetch again unless we want to refresh
+      return;
+    }
+
     const { data, error } = await supabase
       .from('messages')
       .select('*, sender:profiles(id, first_name, last_name, avatar_url, email)')
@@ -142,8 +145,9 @@ export const useChat = () => {
       }
     });
 
+    messagesCache.set(id, mappedMessages);
     setConversations(prev => prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c)));
-  }, []);
+  }, [conversations]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -179,10 +183,13 @@ export const useChat = () => {
           updatedConvo.lastMessage = newMessage.content || "Attachment";
           updatedConvo.lastMessageTimestamp = newMessage.created_at;
 
-          if (conversationId === selectedConversationId) {
-              if (!updatedConvo.messages.some(m => m.id === mappedMessage.id)) {
-                  updatedConvo.messages = [...updatedConvo.messages, mappedMessage];
-              }
+          const cachedMessages = messagesCache.get(conversationId) || [];
+          if (!cachedMessages.some(m => m.id === mappedMessage.id)) {
+            const newCachedMessages = [...cachedMessages, mappedMessage];
+            messagesCache.set(conversationId, newCachedMessages);
+            if (conversationId === selectedConversationId) {
+              updatedConvo.messages = newCachedMessages;
+            }
           }
 
           const newConversations = [...prev];
@@ -228,6 +235,9 @@ export const useChat = () => {
       attachment,
     };
 
+    const cachedMessages = messagesCache.get(selectedConversationId) || [];
+    messagesCache.set(selectedConversationId, [...cachedMessages, optimisticMessage]);
+
     setConversations(prev =>
       prev.map(c =>
         c.id === selectedConversationId
@@ -256,6 +266,8 @@ export const useChat = () => {
 
     if (error) {
       toast.error("Failed to send message.", { description: error.message });
+      const currentCached = messagesCache.get(selectedConversationId) || [];
+      messagesCache.set(selectedConversationId, currentCached.filter(m => m.id !== tempId));
       setConversations(prev =>
         prev.map(c =>
           c.id === selectedConversationId
@@ -273,6 +285,8 @@ export const useChat = () => {
           ? { name: data.attachment_name, url: data.attachment_url, type: data.attachment_type }
           : undefined,
       };
+      const currentCached = messagesCache.get(selectedConversationId) || [];
+      messagesCache.set(selectedConversationId, currentCached.map(m => m.id === tempId ? realMessage : m));
       setConversations(prev =>
         prev.map(c =>
           c.id === selectedConversationId
@@ -306,6 +320,7 @@ export const useChat = () => {
     if (error) toast.error("Failed to clear chat history.");
     else {
       toast.success("Chat history has been cleared.");
+      messagesCache.set(conversationId, []);
       setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages: [], lastMessage: "Chat cleared", lastMessageTimestamp: new Date().toISOString() } : c));
     }
   };
@@ -319,6 +334,7 @@ export const useChat = () => {
       if (selectedConversationId === conversationId) {
         setSelectedConversationId(null);
       }
+      messagesCache.delete(conversationId);
       fetchConversations();
     }
   };
@@ -332,6 +348,7 @@ export const useChat = () => {
       if (selectedConversationId === conversationId) {
         setSelectedConversationId(null);
       }
+      messagesCache.delete(conversationId);
       setConversations(prev => prev.filter(c => c.id !== conversationId));
     }
   };
