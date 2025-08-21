@@ -141,7 +141,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     ];
 
     const visibleDefaultItems = defaultItemsList.filter(item => {
-      const featureEnabled = item.id === 'chat' || isFeatureEnabled(item.id);
+      const featureEnabled = isFeatureEnabled(item.id);
       if (!featureEnabled) return false;
       if (item.allowedRoles && !item.allowedRoles.includes(user.role || '')) return false;
       return true;
