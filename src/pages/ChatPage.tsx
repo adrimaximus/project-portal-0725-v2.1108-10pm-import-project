@@ -4,16 +4,17 @@ import ChatWindow from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useChat } from "@/hooks/useChat";
+import { useConversationMessages } from "@/hooks/useConversationMessages";
 
 const ChatPage = () => {
   const isMobile = useIsMobile();
   const {
     conversations,
     selectedConversationId,
+    setSelectedConversationId,
     isSomeoneTyping,
     searchTerm,
     setSearchTerm,
-    handleConversationSelect,
     handleSendMessage,
     handleClearChat,
     handleStartNewChat,
@@ -23,9 +24,17 @@ const ChatPage = () => {
     handleLeaveGroup,
     handleDeleteConversation,
   } = useChat();
+  
+  const { data: messages = [] } = useConversationMessages(selectedConversationId);
+
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
+  
+  const conversationWithMessages = selectedConversation ? {
+    ...selectedConversation,
+    messages: messages,
+  } : null;
 
   useEffect(() => {
     if (selectedConversationId && chatInputRef.current) {
@@ -45,7 +54,7 @@ const ChatPage = () => {
               selectedConversationId={selectedConversationId}
               searchTerm={searchTerm}
               onSearchTermChange={setSearchTerm}
-              onSelectConversation={handleConversationSelect}
+              onSelectConversation={setSelectedConversationId}
               onStartNewChat={handleStartNewChat}
               onStartNewGroupChat={handleStartNewGroupChat}
               onDeleteConversation={handleDeleteConversation}
@@ -53,11 +62,11 @@ const ChatPage = () => {
           ) : (
             <ChatWindow
               ref={chatInputRef}
-              selectedConversation={selectedConversation}
+              selectedConversation={conversationWithMessages}
               onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
               onClearChat={handleClearChat}
               onLeaveGroup={handleLeaveGroup}
-              onBack={() => handleConversationSelect(null)}
+              onBack={() => setSelectedConversationId(null)}
               typing={isSomeoneTyping}
               onTyping={sendTyping}
               onUpdate={fetchConversations}
@@ -76,14 +85,14 @@ const ChatPage = () => {
           selectedConversationId={selectedConversationId}
           searchTerm={searchTerm}
           onSearchTermChange={setSearchTerm}
-          onSelectConversation={handleConversationSelect}
+          onSelectConversation={setSelectedConversationId}
           onStartNewChat={handleStartNewChat}
           onStartNewGroupChat={handleStartNewGroupChat}
           onDeleteConversation={handleDeleteConversation}
         />
         <ChatWindow
           ref={chatInputRef}
-          selectedConversation={selectedConversation}
+          selectedConversation={conversationWithMessages}
           onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
           onClearChat={handleClearChat}
           onLeaveGroup={handleLeaveGroup}
