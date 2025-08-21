@@ -1,86 +1,92 @@
-import { useLoadScript, Autocomplete } from '@react-google-maps/api';
-import { Input } from '@/components/ui/input';
-import { useState, useRef, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
-
-const libraries: ("places")[] = ['places'];
+import React from 'react';
+import GooglePlacesAutocomplete, { geocodeByAddress, getLatLng } from 'react-google-places-autocomplete';
+import { toast } from 'sonner';
 
 interface AddressAutocompleteInputProps {
-  value: any; // Can be a string (initial) or the address object
+  value: any;
   onChange: (address: any) => void;
+  disabled?: boolean;
 }
 
-const AddressAutocompleteInput = ({ value, onChange }: AddressAutocompleteInputProps) => {
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocompleteInputProps) => {
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: googleMapsApiKey,
-    libraries,
-  });
-
-  const [inputValue, setInputValue] = useState('');
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-
-  useEffect(() => {
-    if (value) {
-      setInputValue(value.formatted_address || value || '');
-    } else {
-      setInputValue('');
-    }
-  }, [value]);
-
-  const handlePlaceChanged = () => {
-    if (autocompleteRef.current) {
-      const place = autocompleteRef.current.getPlace();
-      if (place.formatted_address) {
-        const addressComponents = place.address_components?.reduce((acc, component) => {
-          const type = component.types[0];
-          acc[type] = component.long_name;
-          return acc;
-        }, {} as Record<string, string>);
-
-        const structuredAddress = {
-          formatted_address: place.formatted_address,
-          lat: place.geometry?.location?.lat(),
-          lng: place.geometry?.location?.lng(),
-          ...addressComponents,
-        };
-        onChange(structuredAddress);
-      }
-    }
-  };
-
-  if (!googleMapsApiKey) {
-    return <div className="text-destructive text-sm p-2 bg-destructive/10 rounded-md">Google Maps API Key is not configured. Please set VITE_GOOGLE_MAPS_API_KEY.</div>;
-  }
-
-  if (loadError) {
-    return <div className="text-destructive text-sm">Error loading Google Maps. Please check your API key and configuration.</div>;
-  }
-
-  if (!isLoaded) {
+  if (!apiKey) {
     return (
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Loading map...</span>
+      <div className="p-4 text-center text-red-500 bg-red-100 border border-red-200 rounded-md">
+        Google Maps API Key is not configured. Please set VITE_GOOGLE_MAPS_API_KEY in your environment variables.
       </div>
     );
   }
 
+  const handleSelect = async (place: any) => {
+    if (!place) {
+      onChange(null);
+      return;
+    }
+
+    try {
+      const results = await geocodeByAddress(place.label);
+      const latLng = await getLatLng(results[0]);
+
+      const addressComponents = results[0].address_components.reduce((acc, component) => {
+        const type = component.types[0];
+        acc[type] = component.long_name;
+        return acc;
+      }, {} as Record<string, string>);
+
+      const structuredAddress = {
+        label: place.label,
+        formatted_address: results[0].formatted_address,
+        lat: latLng.lat,
+        lng: latLng.lng,
+        ...addressComponents,
+      };
+      onChange(structuredAddress);
+    } catch (error) {
+      console.error("Error getting address details:", error);
+      toast.error("Could not fetch address details.");
+      onChange({ label: place.label, formatted_address: place.label });
+    }
+  };
+
+  const formattedValue = value && value.label ? value : value ? { label: value.formatted_address || value } : null;
+
   return (
-    <Autocomplete
-      onLoad={(autocomplete) => {
-        autocompleteRef.current = autocomplete;
+    <GooglePlacesAutocomplete
+      apiKey={apiKey}
+      selectProps={{
+        value: formattedValue,
+        onChange: handleSelect,
+        isDisabled: disabled,
+        placeholder: 'Start typing an address...',
+        styles: {
+          control: (provided) => ({
+            ...provided,
+            borderColor: 'hsl(var(--border))',
+            backgroundColor: 'hsl(var(--background))',
+            minHeight: '40px',
+          }),
+          input: (provided) => ({
+            ...provided,
+            color: 'hsl(var(--foreground))',
+          }),
+          option: (provided, state) => ({
+            ...provided,
+            backgroundColor: state.isFocused ? 'hsl(var(--accent))' : 'hsl(var(--background))',
+            color: 'hsl(var(--foreground))',
+          }),
+          singleValue: (provided) => ({
+            ...provided,
+            color: 'hsl(var(--foreground))',
+          }),
+          menu: (provided) => ({
+            ...provided,
+            zIndex: 50,
+          }),
+        },
       }}
-      onPlaceChanged={handlePlaceChanged}
-      fields={['address_components', 'geometry', 'formatted_address']}
-    >
-      <Input
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        placeholder="Start typing an address..."
-      />
-    </Autocomplete>
+    />
   );
 };
 
