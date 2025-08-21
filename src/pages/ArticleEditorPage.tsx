@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import RichTextEditor from '@/components/RichTextEditor';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
 const articleSchema = z.object({
@@ -29,6 +29,8 @@ const ArticleEditorPage = () => {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(!!slug);
   const [articleId, setArticleId] = useState<string | null>(null);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -56,6 +58,7 @@ const ArticleEditorPage = () => {
         cover_image_url: data.cover_image_url || '',
       });
       setArticleId(data.id);
+      setCoverImagePreview(data.cover_image_url || null);
     }
     setIsLoading(false);
   }, [navigate, form]);
@@ -72,14 +75,39 @@ const ArticleEditorPage = () => {
       return;
     }
 
+    let finalCoverImageUrl = values.cover_image_url;
+
+    if (coverImageFile) {
+      const fileExt = coverImageFile.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `public/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('kb-cover-images')
+        .upload(filePath, coverImageFile);
+
+      if (uploadError) {
+        toast.error("Failed to upload cover image.", { description: uploadError.message });
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('kb-cover-images')
+        .getPublicUrl(filePath);
+      
+      finalCoverImageUrl = urlData.publicUrl;
+    } else if (!coverImagePreview) {
+      finalCoverImageUrl = '';
+    }
+
     const articleData = {
       ...values,
+      cover_image_url: finalCoverImageUrl,
       author_id: user.id,
     };
 
     let response;
     if (articleId) {
-      // Update existing article
       response = await supabase
         .from('kb_articles')
         .update(articleData)
@@ -87,7 +115,6 @@ const ArticleEditorPage = () => {
         .select('slug')
         .single();
     } else {
-      // Create new article
       response = await supabase
         .from('kb_articles')
         .insert(articleData)
@@ -141,9 +168,40 @@ const ArticleEditorPage = () => {
               name="cover_image_url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Cover Image URL (Optional)</FormLabel>
+                  <FormLabel>Cover Image (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://example.com/image.png" {...field} />
+                    <div>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setCoverImageFile(file);
+                            setCoverImagePreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        className="max-w-sm"
+                      />
+                      {coverImagePreview && (
+                        <div className="mt-4 relative w-full max-w-md">
+                          <img src={coverImagePreview} alt="Cover preview" className="w-full h-auto object-cover rounded-lg border" />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2 h-8 w-8"
+                            onClick={() => {
+                              setCoverImageFile(null);
+                              setCoverImagePreview(null);
+                              field.onChange('');
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
