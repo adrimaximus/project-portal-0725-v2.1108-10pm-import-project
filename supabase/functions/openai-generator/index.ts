@@ -233,7 +233,17 @@ CONTEXT:
         } else if (actionData && actionData.action === 'UPDATE_PROJECT') {
             const { project_name, updates } = actionData;
             
-            const project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
+            let project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
+            if (!project) {
+                const possibleMatches = projects.filter(p => p.name.toLowerCase().includes(project_name.toLowerCase()));
+                if (possibleMatches.length === 1) {
+                    project = possibleMatches[0];
+                } else if (possibleMatches.length > 1) {
+                    responseData = { result: `I found multiple projects matching "${project_name}": ${possibleMatches.map(p => `"${p.name}"`).join(', ')}. Please be more specific.` };
+                    break;
+                }
+            }
+
             if (!project) {
                 responseData = { result: `I couldn't find a project named "${project_name}". Please be more specific.` };
                 break;
@@ -345,7 +355,18 @@ CONTEXT:
 
         } else if (actionData && actionData.action === 'CREATE_TASK') {
             const { project_name, task_title, assignees } = actionData;
-            const project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
+            
+            let project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
+            if (!project) {
+                const possibleMatches = projects.filter(p => p.name.toLowerCase().includes(project_name.toLowerCase()));
+                if (possibleMatches.length === 1) {
+                    project = possibleMatches[0];
+                } else if (possibleMatches.length > 1) {
+                    responseData = { result: `I found multiple projects matching "${project_name}": ${possibleMatches.map(p => `"${p.name}"`).join(', ')}. Please be more specific.` };
+                    break;
+                }
+            }
+
             if (!project) {
                 responseData = { result: `I couldn't find a project named "${project_name}" to add the task to.` };
                 break;
@@ -390,7 +411,17 @@ CONTEXT:
                 break;
             }
 
-            const project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
+            let project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
+            if (!project) {
+                const possibleMatches = projects.filter(p => p.name.toLowerCase().includes(project_name.toLowerCase()));
+                if (possibleMatches.length === 1) {
+                    project = possibleMatches[0];
+                } else if (possibleMatches.length > 1) {
+                    responseData = { result: `I found multiple projects matching "${project_name}": ${possibleMatches.map(p => `"${p.name}"`).join(', ')}. Please be more specific.` };
+                    break;
+                }
+            }
+
             if (!project) {
                 responseData = { result: `I couldn't find a project named "${project_name}".` };
                 break;
