@@ -36,6 +36,7 @@ import SlackPage from "./pages/integrations/SlackPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 import LoadingScreen from "./components/LoadingScreen";
+import PeoplePage from "./pages/PeoplePage";
 
 const AccessDenied = () => {
   const navigate = useNavigate();
@@ -95,6 +96,7 @@ function App() {
         <Route path="/goals" element={<ProtectedRoute featureId="goals"><GoalsPage /></ProtectedRoute>} />
         <Route path="/goals/:slug" element={<ProtectedRoute featureId="goals"><GoalDetailPage /></ProtectedRoute>} />
         <Route path="/billing" element={<ProtectedRoute featureId="billing"><Billing /></ProtectedRoute>} />
+        <Route path="/people" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><PeoplePage /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute featureId="notifications"><NotificationsPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute featureId="profile"><Profile /></ProtectedRoute>} />
         <Route path="/search" element={<ProtectedRoute featureId="search"><SearchPage /></ProtectedRoute>} />
