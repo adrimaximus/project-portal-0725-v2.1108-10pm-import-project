@@ -5,6 +5,7 @@ import { Person } from '@/pages/PeoplePage';
 import { Tag } from '@/types';
 import PeopleKanbanCard from './PeopleKanbanCard';
 import { Badge } from '../ui/badge';
+import { cn } from '@/lib/utils';
 
 const PeopleKanbanColumn = ({ tag, people, dragHappened, onEditPerson }: { tag: Tag | { id: string, name: string, color: string }, people: Person[], dragHappened: React.MutableRefObject<boolean>, onEditPerson: (person: Person) => void }) => {
   const { setNodeRef } = useDroppable({ id: tag.id });
@@ -18,12 +19,20 @@ const PeopleKanbanColumn = ({ tag, people, dragHappened, onEditPerson }: { tag: 
           {tag.name}
           <Badge variant="secondary" className="ml-2">{people.length}</Badge>
         </h3>
-        <div className="bg-muted/50 rounded-lg p-2 min-h-[400px] h-full w-full">
+        <div className={cn(
+          "bg-muted/50 rounded-lg p-2 h-full w-full",
+          people.length > 0 && "min-h-[400px]"
+        )}>
           <SortableContext id={tag.id} items={personIds} strategy={verticalListSortingStrategy}>
             {people.map(person => (
               <PeopleKanbanCard key={person.id} person={person} dragHappened={dragHappened} onEdit={onEditPerson} />
             ))}
           </SortableContext>
+          {people.length === 0 && (
+             <div className="flex items-center justify-center h-20 border-2 border-dashed border-border rounded-lg">
+              <p className="text-sm text-muted-foreground">Drop here</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
