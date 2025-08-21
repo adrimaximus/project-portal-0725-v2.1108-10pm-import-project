@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import GooglePlacesAutocomplete, { geocodeByAddress, getLatLng } from 'react-google-places-autocomplete';
 import { toast } from 'sonner';
 import { useJsApiLoader } from '@react-google-maps/api';
@@ -13,6 +13,12 @@ interface AddressAutocompleteInputProps {
 const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocompleteInputProps) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
+  useEffect(() => {
+    if (!apiKey) {
+      console.error("AddressAutocomplete: VITE_GOOGLE_MAPS_API_KEY is not set in the environment variables.");
+    }
+  }, [apiKey]);
+
   if (!apiKey) {
     return (
       <div className="p-3 text-center text-sm text-red-700 bg-red-100 border border-red-200 rounded-md">
@@ -25,6 +31,15 @@ const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocomp
     googleMapsApiKey: apiKey,
     libraries: ['places'],
   });
+
+  useEffect(() => {
+    if (loadError) {
+      console.error("Google Maps API Load Error:", loadError);
+      toast.error("Gagal memuat Google Maps API.", {
+        description: "Silakan periksa konsol developer untuk detail kesalahan.",
+      });
+    }
+  }, [loadError]);
 
   if (loadError) {
     return (
