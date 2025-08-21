@@ -103,7 +103,7 @@ export const useChat = () => {
 
     const { data, error } = await supabase
       .from('messages')
-      .select('*, sender:profiles(id, first_name, last_name, avatar_url, email)')
+      .select('*, sender:sender_id(id, first_name, last_name, avatar_url, email)')
       .eq('conversation_id', id)
       .order('created_at', { ascending: true });
 
