@@ -203,6 +203,7 @@ const PeoplePage = () => {
                   const twitterUrl = formatSocialLink('twitter', person.social_media?.twitter || '');
                   const instagramUrl = formatSocialLink('instagram', person.social_media?.instagram || '');
                   const firstPhone = person.contact?.phones?.[0];
+                  const firstEmail = person.contact?.emails?.[0];
                   const whatsappUrl = formatWhatsappLink(firstPhone);
                   return (
                     <TableRow key={person.id}>
@@ -227,10 +228,10 @@ const PeoplePage = () => {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          {person.contact?.emails?.[0] && (
+                          {firstEmail && (
                             <div className="flex items-center gap-1.5">
                               <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <a href={`mailto:${person.contact.emails[0]}`} className="text-sm text-muted-foreground hover:text-primary truncate">{person.contact.emails[0]}</a>
+                              <a href={`mailto:${firstEmail}`} className="text-sm text-muted-foreground hover:text-primary truncate">{firstEmail}</a>
                             </div>
                           )}
                           {firstPhone && (
