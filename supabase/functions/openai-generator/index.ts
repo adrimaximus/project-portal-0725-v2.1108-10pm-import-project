@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 async function executeAction(actionData, context) {
-    const { userSupabase, user, projects, users, goals } = context;
+    const { userSupabase, user, projects, users, goals, kbArticles, allTags } = context;
 
     switch (actionData.action) {
         case 'CREATE_TASK': {
@@ -47,6 +47,72 @@ async function executeAction(actionData, context) {
                 }
             }
             return `Done! I've added the task "${task_title}" to "${project.name}"${assignmentMessage}.`;
+        }
+        case 'CREATE_KB_ARTICLE': {
+            const { title, content, tags } = actionData.article_details;
+            if (!title || !content) return "I need a title and content to create a knowledge base article.";
+
+            const tagNames = tags || [];
+            const existingTagIds = allTags.filter(t => tagNames.includes(t.name)).map(t => t.id);
+            const newTags = tagNames
+                .filter(name => !allTags.some(t => t.name.toLowerCase() === name.toLowerCase()))
+                .map(name => ({ name, color: '#cccccc' })); // Default color for new tags
+
+            const { data: newArticle, error } = await userSupabase.rpc('upsert_article_with_tags', {
+                p_id: null,
+                p_title: title,
+                p_content: content,
+                p_cover_image_url: null,
+                p_author_id: user.id,
+                p_existing_tag_ids: existingTagIds,
+                p_custom_tags: newTags,
+            }).single();
+
+            if (error) return `I failed to create the article. The database said: ${error.message}`;
+            return `Done! I've created the knowledge base article "${newArticle.title}". You can view it at /knowledge-base/${newArticle.slug}`;
+        }
+        case 'UPDATE_KB_ARTICLE': {
+            const { article_title, updates } = actionData;
+            if (!article_title || !updates) return "I need the title of the article and the updates to apply.";
+
+            const article = kbArticles.find(a => a.title.toLowerCase() === article_title.toLowerCase());
+            if (!article) return `I couldn't find an article named "${article_title}".`;
+
+            const { data: fullArticle, error: fetchError } = await userSupabase
+                .from('kb_articles')
+                .select('*, kb_article_tags(tags(*))')
+                .eq('id', article.id)
+                .single();
+            
+            if (fetchError) return `I found the article, but couldn't fetch its details to update it. Error: ${fetchError.message}`;
+
+            const currentTagNames = new Set(fullArticle.kb_article_tags.map(t => t.tags.name));
+            
+            if (updates.add_tags) {
+                updates.add_tags.forEach(tagName => currentTagNames.add(tagName));
+            }
+            if (updates.remove_tags) {
+                updates.remove_tags.forEach(tagName => currentTagNames.delete(tagName));
+            }
+
+            const finalTagNames = Array.from(currentTagNames);
+            const existingTagIds = allTags.filter(t => finalTagNames.includes(t.name)).map(t => t.id);
+            const newTags = finalTagNames
+                .filter(name => !allTags.some(t => t.name.toLowerCase() === name.toLowerCase()))
+                .map(name => ({ name, color: '#cccccc' }));
+
+            const { data: updatedArticle, error: updateError } = await userSupabase.rpc('upsert_article_with_tags', {
+                p_id: article.id,
+                p_title: updates.title || fullArticle.title,
+                p_content: updates.content || fullArticle.content,
+                p_cover_image_url: updates.cover_image_url || fullArticle.cover_image_url,
+                p_author_id: user.id,
+                p_existing_tag_ids: existingTagIds,
+                p_custom_tags: newTags,
+            }).single();
+
+            if (updateError) return `I failed to update the article. The database said: ${updateError.message}`;
+            return `Done! I've updated the article "${updatedArticle.title}". You can view it at /knowledge-base/${updatedArticle.slug}`;
         }
         default:
             return "I'm not sure how to perform that action. Can you clarify?";
@@ -112,6 +178,20 @@ serve(async (req) => {
           throw new Error(`Failed to fetch goals for context: ${goalsError.message}`);
         }
 
+        const { data: kbArticles, error: kbError } = await userSupabase
+            .from('kb_articles')
+            .select('id, title, slug, kb_article_tags(tags(name))');
+        if (kbError) {
+            throw new Error(`Failed to fetch knowledge base for context: ${kbError.message}`);
+        }
+
+        const { data: allTags, error: allTagsError } = await userSupabase
+            .from('tags')
+            .select('id, name');
+        if (allTagsError) {
+            throw new Error(`Failed to fetch tags for context: ${allTagsError.message}`);
+        }
+
         const summarizedProjects = projects.map(p => ({
             name: p.name,
             status: p.status,
@@ -131,6 +211,10 @@ serve(async (req) => {
         const userList = users.map(u => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
         const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
         const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
+        const summarizedKbArticles = kbArticles.map(a => ({
+            title: a.title,
+            tags: a.kb_article_tags.map(t => t.tags.name)
+        }));
 
         const systemPrompt = `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
 
@@ -186,12 +270,20 @@ You can perform several types of actions. When you decide to perform an action, 
 - Valid fields for 'updates' are: title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, icon, color, add_tags, remove_tags.
 - For 'add_tags' and 'remove_tags', the value should be an array of tag names.
 
+8. CREATE_KB_ARTICLE:
+{"action": "CREATE_KB_ARTICLE", "article_details": {"title": "<article title>", "content": "<HTML content>", "tags": ["<tag name 1>", "<tag name 2>"]}}
+- 'content' must be valid HTML.
+
+9. UPDATE_KB_ARTICLE:
+{"action": "UPDATE_KB_ARTICLE", "article_title": "<title of article to update>", "updates": {"title": "<new title>", "content": "<new HTML content>", "add_tags": ["<tag to add>"], "remove_tags": ["<tag to remove>"]}}
+
 CONTEXT:
 - Available Projects (with their tasks and tags): ${JSON.stringify(summarizedProjects, null, 2)}
 - Available Goals: ${JSON.stringify(summarizedGoals, null, 2)}
 - Available Users: ${JSON.stringify(userList, null, 2)}
 - Available Services: ${JSON.stringify(serviceList, null, 2)}
 - Available Icons: ${JSON.stringify(iconList, null, 2)}
+- Available Knowledge Base Articles: ${JSON.stringify(summarizedKbArticles, null, 2)}
 `;
 
         const messages = [
@@ -218,7 +310,7 @@ CONTEXT:
             const jsonString = jsonMatch[1] || jsonMatch[2];
             const actionData = JSON.parse(jsonString);
 
-            const actionResult = await executeAction(actionData, { userSupabase, supabaseAdmin, user, projects, users, goals });
+            const actionResult = await executeAction(actionData, { userSupabase, user, projects, users, goals, kbArticles, allTags });
             responseData = { result: actionResult };
 
         } catch (e) {
