@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, Phone, Mail, Briefcase, Contact, FolderKanban, History, Tag as TagIcon } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, Mail, Briefcase, Contact, FolderKanban, History, Tag as TagIcon } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import PersonFormDialog from "@/components/people/PersonFormDialog";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import WhatsappIcon from "@/components/icons/WhatsappIcon";
 
 export interface Person {
   id: string;
@@ -214,8 +215,8 @@ const PeoplePage = () => {
                           )}
                           {person.contact?.phone && (
                             <div className="flex items-center gap-1.5">
-                              <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span className="text-sm text-muted-foreground">{person.contact.phone}</span>
+                              <WhatsappIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <a href={`tel:${person.contact.phone}`} className="text-sm text-muted-foreground hover:text-primary">{person.contact.phone}</a>
                             </div>
                           )}
                           {instagramUrl && (
