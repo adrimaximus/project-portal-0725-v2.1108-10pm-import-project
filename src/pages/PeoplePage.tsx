@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, Mail, Briefcase, Contact, History, Tag as TagIcon } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, Mail, Briefcase, Contact, FolderKanban, History, Tag as TagIcon } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,7 +14,9 @@ import { generateVibrantGradient } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import PersonFormDialog from "@/components/people/PersonFormDialog";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 import WhatsappIcon from "../components/icons/WhatsappIcon";
+import DuplicateContactsCard, { DuplicatePair } from "@/components/people/DuplicateContactsCard";
 
 export interface Person {
   id: string;
@@ -47,6 +49,15 @@ const PeoplePage = () => {
       const { data, error } = await supabase.rpc('get_people_with_details');
       if (error) throw error;
       return data as Person[];
+    }
+  });
+
+  const { data: duplicates = [] } = useQuery({
+    queryKey: ['duplicates'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('find_duplicate_people');
+      if (error) throw error;
+      return data as DuplicatePair[];
     }
   });
 
@@ -131,6 +142,8 @@ const PeoplePage = () => {
             <PlusCircle className="mr-2 h-4 w-4" /> Add Person
           </Button>
         </div>
+
+        <DuplicateContactsCard duplicates={duplicates} />
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
