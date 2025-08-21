@@ -36,5 +36,6 @@ export const useConversationMessages = (conversationId: string | null) => {
     queryKey: ['messages', conversationId],
     queryFn: () => fetchMessages(conversationId!),
     enabled: !!conversationId,
+    gcTime: 0, // Disable caching to ensure fresh data on every fetch
   });
 };
