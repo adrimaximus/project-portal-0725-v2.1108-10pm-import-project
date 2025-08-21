@@ -36,6 +36,5 @@ export const useConversationMessages = (conversationId: string | null) => {
     queryKey: ['messages', conversationId],
     queryFn: () => fetchMessages(conversationId!),
     enabled: !!conversationId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
