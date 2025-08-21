@@ -23,6 +23,8 @@ import { TagInput } from '../goals/TagInput';
 import { colors } from '@/data/colors';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/contexts/AuthContext';
+import AddressAutocomplete from './AddressAutocomplete';
+import { geocodeByAddress, getLatLng } from 'react-google-places-autocomplete';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -44,6 +46,7 @@ const personSchema = z.object({
   notes: z.string().optional(),
   project_ids: z.array(z.string()).optional(),
   tags: z.array(z.any()).optional(),
+  address: z.any().optional(),
 });
 
 type PersonFormValues = z.infer<typeof personSchema>;
@@ -63,7 +66,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     defaultValues: {
       full_name: '', emails: [{ value: '' }], phones: [{ value: '' }], company: '', job_title: '',
       department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-      notes: '', project_ids: [], tags: [],
+      notes: '', project_ids: [], tags: [], address: null,
     }
   });
 
@@ -98,6 +101,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         notes: person.notes || '',
         project_ids: person.projects?.map(p => p.id) || [],
         tags: person.tags || [],
+        address: person.address ? { label: person.address.description, value: person.address } : null,
       });
       setAvatarPreview(person.avatar_url || null);
       setAvatarFile(null);
@@ -105,7 +109,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       form.reset({
         full_name: '', emails: [{ value: '' }], phones: [{ value: '' }], company: '', job_title: '',
         department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-        notes: '', project_ids: [], tags: [],
+        notes: '', project_ids: [], tags: [], address: null,
       });
       setAvatarPreview(null);
       setAvatarFile(null);
@@ -130,6 +134,34 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
   const onSubmit = async (values: PersonFormValues) => {
     setIsSaving(true);
     let avatar_url = person?.avatar_url || null;
+    let addressData = null;
+    let latitude = null;
+    let longitude = null;
+
+    if (values.address && values.address.label) {
+      try {
+        const results = await geocodeByAddress(values.address.label);
+        const latLng = await getLatLng(results[0]);
+        latitude = latLng.lat;
+        longitude = latLng.lng;
+
+        const addressComponents = results[0].address_components;
+        addressData = {
+          description: values.address.label,
+          street_number: addressComponents.find(c => c.types.includes('street_number'))?.long_name,
+          route: addressComponents.find(c => c.types.includes('route'))?.long_name,
+          locality: addressComponents.find(c => c.types.includes('locality'))?.long_name,
+          administrative_area_level_1: addressComponents.find(c => c.types.includes('administrative_area_level_1'))?.long_name,
+          country: addressComponents.find(c => c.types.includes('country'))?.long_name,
+          postal_code: addressComponents.find(c => c.types.includes('postal_code'))?.long_name,
+        };
+      } catch (error) {
+        console.error("Error geocoding address:", error);
+        toast.error("Could not process address. Please try again.");
+        setIsSaving(false);
+        return;
+      }
+    }
 
     if (avatarFile) {
       const filePath = `people-avatars/${person?.id || uuidv4()}/${Date.now()}-${avatarFile.name}`;
@@ -160,6 +192,9 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       p_existing_tag_ids: (values.tags || []).filter(t => !t.isNew).map(t => t.id),
       p_custom_tags: (values.tags || []).filter(t => t.isNew).map(({ name, color }) => ({ name, color })),
       p_avatar_url: avatar_url,
+      p_address: addressData,
+      p_latitude: latitude,
+      p_longitude: longitude,
     });
     setIsSaving(false);
 
@@ -203,6 +238,19 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                 <FormItem><FormLabel>Phone</FormLabel><DynamicInputList control={form.control} name="phones" placeholder="e.g., +62 812..." inputType="tel" /><FormMessage /></FormItem>
               )} />
             </div>
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <AddressAutocomplete {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="job_title" render={({ field }) => (
                 <FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>

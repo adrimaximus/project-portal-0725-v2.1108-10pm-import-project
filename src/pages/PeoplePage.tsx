@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Briefcase, Contact, History, Tag as TagIcon, Mail, Instagram } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Briefcase, Contact, History, Tag as TagIcon, Mail, Instagram, MapPin } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -34,6 +34,17 @@ export interface Person {
   updated_at: string;
   projects?: { id: string; name: string, slug: string }[];
   tags?: { id: string; name: string; color: string }[];
+  address?: {
+    description: string;
+    street_number?: string;
+    route?: string;
+    locality?: string;
+    administrative_area_level_1?: string;
+    country?: string;
+    postal_code?: string;
+  };
+  latitude?: number;
+  longitude?: number;
 }
 
 const PeoplePage = () => {
@@ -88,7 +99,8 @@ const PeoplePage = () => {
       const company = person.company?.toLowerCase() || '';
       const jobTitle = person.job_title?.toLowerCase() || '';
       const emails = person.contact?.emails?.join(' ').toLowerCase() || '';
-      return fullName.includes(term) || company.includes(term) || jobTitle.includes(term) || emails.includes(term);
+      const address = person.address?.description?.toLowerCase() || '';
+      return fullName.includes(term) || company.includes(term) || jobTitle.includes(term) || emails.includes(term) || address.includes(term);
     });
   }, [people, searchTerm]);
 
@@ -228,6 +240,12 @@ const PeoplePage = () => {
                 </TableHead>
                 <TableHead>
                   <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Address
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
                     <Contact className="h-4 w-4" />
                     Contact
                   </div>
@@ -251,13 +269,11 @@ const PeoplePage = () => {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center h-24">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24">Loading...</TableCell></TableRow>
               ) : sortedPeople.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center h-24">No people found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24">No people found.</TableCell></TableRow>
               ) : (
                 sortedPeople.map(person => {
-                  const linkedinUrl = formatSocialLink('linkedin', person.social_media?.linkedin || '');
-                  const twitterUrl = formatSocialLink('twitter', person.social_media?.twitter || '');
                   const instagramUrl = formatSocialLink('instagram', person.social_media?.instagram || '');
                   const firstPhone = person.contact?.phones?.[0];
                   const firstEmail = person.contact?.emails?.[0];
@@ -282,6 +298,9 @@ const PeoplePage = () => {
                         <p className="text-sm text-muted-foreground">
                           {person.department}{person.department && person.company ? ' at ' : ''}{person.company}
                         </p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="truncate max-w-[20ch] text-sm text-muted-foreground" title={person.address?.description}>{person.address?.description || '-'}</p>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
