@@ -119,11 +119,9 @@ export const useChat = () => {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*, sender:profiles(id, first_name, last_name, avatar_url, email)')
-      .eq('conversation_id', id)
-      .order('created_at', { ascending: true });
+    const { data, error } = await supabase.functions.invoke('get-messages', {
+      body: { conversation_id: id },
+    });
 
     if (error) {
       toast.error("Failed to fetch messages.");
