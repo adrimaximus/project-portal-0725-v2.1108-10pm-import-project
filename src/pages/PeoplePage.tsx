@@ -205,7 +205,9 @@ const PeoplePage = () => {
                       <div className="flex flex-wrap gap-1">
                         {(person.projects || []).map(project => (
                           <Button key={project.id} variant="link" asChild className="p-0 h-auto text-xs">
-                            <Link to={`/projects/${project.slug}`}>{project.name}</Link>
+                            <Link to={`/projects/${project.slug}`} className="truncate max-w-[20ch]" title={project.name}>
+                              {project.name}
+                            </Link>
                           </Button>
                         ))}
                       </div>
