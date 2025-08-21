@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, GitMerge, Loader2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import PersonFormDialog from "@/components/people/PersonFormDialog";
 import { Badge } from "@/components/ui/badge";
 import WhatsappIcon from "@/components/icons/WhatsappIcon";
+import DuplicateContactsCard, { DuplicatePair } from "@/components/people/DuplicateContactsCard";
 
 export interface Person {
   id: string;
@@ -49,6 +50,24 @@ const PeoplePage = () => {
       if (error) throw error;
       return data as Person[];
     }
+  });
+
+  const { data: duplicates = [], refetch: findDuplicates, isLoading: isFindingDuplicates } = useQuery({
+    queryKey: ['duplicates'],
+    queryFn: async () => {
+        const { data, error } = await supabase.rpc('find_duplicate_people');
+        if (error) {
+            toast.error("Failed to check for duplicates.", { description: error.message });
+            return [];
+        }
+        if (data && data.length > 0) {
+            toast.success(`Found ${data.length} potential duplicate(s).`);
+        } else {
+            toast.info("No potential duplicates found.");
+        }
+        return data as DuplicatePair[];
+    },
+    enabled: false,
   });
 
   const requestSort = (key: keyof Person) => {
@@ -141,10 +160,17 @@ const PeoplePage = () => {
             <h1 className="text-3xl font-bold">People</h1>
             <p className="text-muted-foreground">Manage your contacts and connections.</p>
           </div>
-          <Button onClick={handleAddNew}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Person
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => findDuplicates()} disabled={isFindingDuplicates}>
+              {isFindingDuplicates ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitMerge className="h-4 w-4" />}
+            </Button>
+            <Button size="icon" onClick={handleAddNew}>
+              <PlusCircle className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
+
+        <DuplicateContactsCard duplicates={duplicates} />
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
