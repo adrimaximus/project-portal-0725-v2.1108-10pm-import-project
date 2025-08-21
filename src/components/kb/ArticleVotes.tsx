@@ -65,10 +65,17 @@ const ArticleVotes = ({ articleId }: ArticleVotesProps) => {
   });
 
   const handleVote = (type: 1 | -1) => {
-    if (voteData?.userVote === type) {
-      voteMutation.mutate(0); // Unvote
+    const currentVote = voteData?.userVote;
+
+    if (currentVote === type) {
+      // User clicks the same button again, so unvote.
+      voteMutation.mutate(0); 
     } else {
-      voteMutation.mutate(type);
+      // User clicks a different button or is voting for the first time.
+      // If they already have a vote (e.g., upvoted and now clicks downvote), it becomes neutral first.
+      // If they have no vote, it becomes the new vote type.
+      const newVote = currentVote === null ? type : 0;
+      voteMutation.mutate(newVote);
     }
   };
 
