@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 
+const SCRIPT_ID = 'google-maps-places-script';
+const CALLBACK_NAME = 'initGoogleMapsApi';
+
 const useGoogleMapsScript = (apiKey: string | undefined) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -10,49 +13,47 @@ const useGoogleMapsScript = (apiKey: string | undefined) => {
       return;
     }
 
+    // Check if the API is already loaded
     if ((window as any).google && (window as any).google.maps) {
       setIsLoaded(true);
       return;
     }
 
-    const scriptId = 'google-maps-places-script';
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+    const handleLoad = () => setIsLoaded(true);
 
-    const handleLoad = () => {
-      setIsLoaded(true);
+    // If script is already loading, just listen for our custom event
+    if (document.getElementById(SCRIPT_ID)) {
+      window.addEventListener(CALLBACK_NAME, handleLoad);
+      return () => window.removeEventListener(CALLBACK_NAME, handleLoad);
+    }
+
+    // Define the callback function on the window object
+    (window as any)[CALLBACK_NAME] = () => {
+      // Dispatch a custom event for other instances of the hook
+      window.dispatchEvent(new Event(CALLBACK_NAME));
+      // Clean up the callback function from the window object
+      delete (window as any)[CALLBACK_NAME];
     };
+    
+    // Add the listener for the component that initiated the load
+    window.addEventListener(CALLBACK_NAME, handleLoad);
 
-    const handleError = () => {
+    const script = document.createElement('script');
+    script.id = SCRIPT_ID;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=${CALLBACK_NAME}`;
+    script.async = true;
+    script.defer = true;
+    script.onerror = () => {
       const err = new Error('Google Maps script failed to load.');
       setError(err);
       console.error(err);
+      delete (window as any)[CALLBACK_NAME];
     };
 
-    if (!script) {
-      script = document.createElement('script');
-      script.id = scriptId;
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.addEventListener('load', handleLoad);
-      script.addEventListener('error', handleError);
-      document.head.appendChild(script);
-    } else {
-      // If script exists, it might be loading or loaded.
-      // Add listeners, but also check if it's already loaded.
-      if ((window as any).google && (window as any).google.maps) {
-        setIsLoaded(true);
-      } else {
-        script.addEventListener('load', handleLoad);
-        script.addEventListener('error', handleError);
-      }
-    }
+    document.head.appendChild(script);
 
     return () => {
-      if (script) {
-        script.removeEventListener('load', handleLoad);
-        script.removeEventListener('error', handleError);
-      }
+      window.removeEventListener(CALLBACK_NAME, handleLoad);
     };
   }, [apiKey]);
 
