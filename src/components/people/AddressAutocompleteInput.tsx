@@ -1,7 +1,7 @@
 import React from 'react';
 import GooglePlacesAutocomplete, { geocodeByAddress, getLatLng } from 'react-google-places-autocomplete';
 import { toast } from 'sonner';
-import useGoogleMapsScript from '@/hooks/useGoogleMapsScript';
+import { useJsApiLoader } from '@react-google-maps/api';
 import { Skeleton } from '../ui/skeleton';
 
 interface AddressAutocompleteInputProps {
@@ -12,12 +12,16 @@ interface AddressAutocompleteInputProps {
 
 const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocompleteInputProps) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const { isLoaded, error } = useGoogleMapsScript(apiKey);
+  
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: apiKey || "",
+    libraries: ['places'],
+  });
 
-  if (error) {
+  if (loadError) {
     return (
       <div className="p-4 text-center text-red-500 bg-red-100 border border-red-200 rounded-md">
-        {error.message}
+        Google Maps script failed to load. Please check your API key and internet connection.
       </div>
     );
   }
