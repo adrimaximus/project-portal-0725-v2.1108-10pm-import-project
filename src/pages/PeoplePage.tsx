@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, Mail, Briefcase, Contact, FolderKanban, History, Tag as TagIcon } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,7 @@ import WhatsappIcon from "../components/icons/WhatsappIcon";
 export interface Person {
   id: string;
   full_name: string;
+  avatar_url?: string;
   contact?: { email?: string; phone?: string };
   company?: string;
   job_title?: string;
@@ -200,6 +201,7 @@ const PeoplePage = () => {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
+                            <AvatarImage src={person.avatar_url} />
                             <AvatarFallback style={generateVibrantGradient(person.id)}>
                               <UserIcon className="h-5 w-5 text-white" />
                             </AvatarFallback>

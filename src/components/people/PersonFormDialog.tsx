@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Camera, User as UserIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Person } from '@/pages/PeoplePage';
 import { Project, Tag } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -48,6 +49,9 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
   const [isSaving, setIsSaving] = useState(false);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<PersonFormValues>({
     resolver: zodResolver(personSchema),
@@ -88,17 +92,43 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         project_ids: person.projects?.map(p => p.id) || [],
         tag_ids: person.tags?.map(t => t.id) || [],
       });
+      setAvatarPreview(person.avatar_url || null);
+      setAvatarFile(null);
     } else {
       form.reset({
         full_name: '', email: '', phone: '', company: '', job_title: '',
         department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
         notes: '', project_ids: [], tag_ids: [],
       });
+      setAvatarPreview(null);
+      setAvatarFile(null);
     }
   }, [person, form, open]);
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
   const onSubmit = async (values: PersonFormValues) => {
     setIsSaving(true);
+    let avatar_url = person?.avatar_url || null;
+
+    if (avatarFile) {
+      const filePath = `people-avatars/${person?.id || 'new'}/${Date.now()}-${avatarFile.name}`;
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, avatarFile);
+      if (uploadError) {
+        toast.error("Failed to upload avatar.");
+        setIsSaving(false);
+        return;
+      }
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      avatar_url = data.publicUrl;
+    }
+
     const { error } = await supabase.rpc('upsert_person_with_details', {
       p_id: person?.id || null,
       p_full_name: values.full_name,
@@ -111,6 +141,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       p_notes: values.notes,
       p_project_ids: values.project_ids,
       p_tag_ids: values.tag_ids,
+      p_avatar_url: avatar_url,
     });
     setIsSaving(false);
 
@@ -131,6 +162,25 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={avatarPreview || undefined} />
+                <AvatarFallback>
+                  <UserIcon className="h-10 w-10 text-muted-foreground" />
+                </AvatarFallback>
+              </Avatar>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="image/*"
+              />
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Camera className="mr-2 h-4 w-4" />
+                Upload Photo
+              </Button>
+            </div>
             <FormField control={form.control} name="full_name" render={({ field }) => (
               <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
