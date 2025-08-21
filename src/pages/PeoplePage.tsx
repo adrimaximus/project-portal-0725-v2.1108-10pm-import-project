@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, GitMerge, Loader2, Kanban } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, GitMerge, Loader2, Kanban, LayoutGrid, Table as TableIcon } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,9 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import WhatsappIcon from "@/components/icons/WhatsappIcon";
 import DuplicateContactsCard, { DuplicatePair } from "@/components/people/DuplicateContactsCard";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Table as TableIcon } from "lucide-react";
 import PeopleKanbanView from "@/components/people/PeopleKanbanView";
 import { Tag } from "@/types";
+import PeopleGridView from "@/components/people/PeopleGridView";
 
 export interface Person {
   id: string;
@@ -46,9 +46,9 @@ const PeoplePage = () => {
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const queryClient = useQueryClient();
   const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
-  const [viewMode, setViewMode] = useState<'table' | 'kanban'>(() => {
-    const savedView = localStorage.getItem('people_view_mode') as 'table' | 'kanban';
-    return savedView || 'table';
+  const [viewMode, setViewMode] = useState<'table' | 'kanban' | 'grid'>(() => {
+    const savedView = localStorage.getItem('people_view_mode') as 'table' | 'kanban' | 'grid';
+    return savedView || 'grid';
   });
 
   useEffect(() => {
@@ -203,7 +203,8 @@ const PeoplePage = () => {
                     className="pl-9"
                 />
             </div>
-            <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban')}}>
+            <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban' | 'grid')}}>
+                <ToggleGroupItem value="grid" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
                 <ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem>
                 <ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem>
             </ToggleGroup>
@@ -309,8 +310,10 @@ const PeoplePage = () => {
               </TableBody>
             </Table>
           </div>
-        ) : (
+        ) : viewMode === 'kanban' ? (
           <PeopleKanbanView people={filteredPeople} tags={tags} onEditPerson={handleEdit} />
+        ) : (
+          <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
         )}
       </div>
 
