@@ -4,23 +4,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, Phone } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Briefcase, Contact, History, Tag as TagIcon, Mail, Instagram, MapPin } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { id } from "date-fns/locale";
 import { generateVibrantGradient } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import PersonFormDialog from "@/components/people/PersonFormDialog";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import WhatsappIcon from "../components/icons/WhatsappIcon";
+import DuplicateContactsCard, { DuplicatePair } from "@/components/people/DuplicateContactsCard";
 
 export interface Person {
   id: string;
   full_name: string;
-  contact?: { email?: string; phone?: string };
+  avatar_url?: string;
+  user_id?: string;
+  contact?: { emails?: string[]; phones?: string[] };
   company?: string;
   job_title?: string;
   department?: string;
@@ -31,6 +34,17 @@ export interface Person {
   updated_at: string;
   projects?: { id: string; name: string, slug: string }[];
   tags?: { id: string; name: string; color: string }[];
+  address?: {
+    description: string;
+    street_number?: string;
+    route?: string;
+    locality?: string;
+    administrative_area_level_1?: string;
+    country?: string;
+    postal_code?: string;
+  };
+  latitude?: number;
+  longitude?: number;
 }
 
 const PeoplePage = () => {
@@ -38,6 +52,7 @@ const PeoplePage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [personToEdit, setPersonToEdit] = useState<Person | null>(null);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'full_name', direction: 'ascending' });
   const queryClient = useQueryClient();
 
   const { data: people = [], isLoading } = useQuery({
@@ -49,13 +64,78 @@ const PeoplePage = () => {
     }
   });
 
+  const { data: rawDuplicates = [] } = useQuery({
+    queryKey: ['duplicates'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('find_duplicate_people');
+      if (error) throw error;
+      return data as DuplicatePair[];
+    }
+  });
+
+  const duplicates = useMemo(() => {
+    const pairs = new Map<string, DuplicatePair>();
+    rawDuplicates.forEach(dup => {
+        const key = [dup.person1.id, dup.person2.id].sort().join('-');
+        if (pairs.has(key)) {
+            const existing = pairs.get(key)!;
+            if (!existing.reason.toLowerCase().includes(dup.reason.toLowerCase())) {
+                existing.reason += `, ${dup.reason}`;
+            }
+        } else {
+            pairs.set(key, { ...dup });
+        }
+    });
+    return Array.from(pairs.values());
+  }, [rawDuplicates]);
+
   const filteredPeople = useMemo(() => {
-    return people.filter(person =>
-      person.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (person.company && person.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (person.job_title && person.job_title.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) {
+      return people;
+    }
+    return people.filter(person => {
+      const fullName = person.full_name?.toLowerCase() || '';
+      const company = person.company?.toLowerCase() || '';
+      const jobTitle = person.job_title?.toLowerCase() || '';
+      const emails = person.contact?.emails?.join(' ').toLowerCase() || '';
+      const address = person.address?.description?.toLowerCase() || '';
+      return fullName.includes(term) || company.includes(term) || jobTitle.includes(term) || emails.includes(term) || address.includes(term);
+    });
   }, [people, searchTerm]);
+
+  const sortedPeople = useMemo(() => {
+    let sortableItems = [...filteredPeople];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key!];
+        const bValue = b[sortConfig.key!];
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        
+        const stringA = String(aValue).toLowerCase();
+        const stringB = String(bValue).toLowerCase();
+
+        if (stringA < stringB) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (stringA > stringB) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredPeople, sortConfig]);
+
+  const requestSort = (key: keyof Person) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const handleAddNew = () => {
     setPersonToEdit(null);
@@ -79,6 +159,40 @@ const PeoplePage = () => {
     setPersonToDelete(null);
   };
 
+  const formatSocialLink = (platform: 'linkedin' | 'twitter' | 'instagram', value: string) => {
+    if (!value) return null;
+    if (value.startsWith('http')) return value;
+    const username = value.startsWith('@') ? value.substring(1) : value;
+    switch (platform) {
+      case 'instagram': return `https://instagram.com/${username}`;
+      case 'twitter': return `https://twitter.com/${username}`;
+      case 'linkedin': return `https://linkedin.com/in/${username}`;
+      default: return null;
+    }
+  };
+
+  const getSocialDisplay = (value: string) => {
+    if (!value) return '';
+    if (value.startsWith('@')) return value;
+    try {
+      const url = new URL(value);
+      const pathParts = url.pathname.split('/').filter(Boolean);
+      const handle = pathParts[pathParts.length - 1];
+      return handle ? `@${handle}` : value;
+    } catch (e) {
+      return `@${value}`;
+    }
+  };
+
+  const formatWhatsappLink = (phone: string | undefined): string | null => {
+    if (!phone) return null;
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '62' + cleaned.substring(1);
+    }
+    return `https://wa.me/${cleaned}`;
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -91,6 +205,8 @@ const PeoplePage = () => {
             <PlusCircle className="mr-2 h-4 w-4" /> Add Person
           </Button>
         </div>
+
+        <DuplicateContactsCard duplicates={duplicates} />
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -106,84 +222,138 @@ const PeoplePage = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[250px]">Name</TableHead>
-                <TableHead>Work</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Tags</TableHead>
-                <TableHead>Projects</TableHead>
-                <TableHead>Last Activity</TableHead>
+                <TableHead className="w-[250px]">
+                  <Button variant="ghost" onClick={() => requestSort('full_name')} className="w-full justify-start px-0 hover:bg-transparent">
+                    <div className="flex items-center gap-2">
+                      <UserIcon className="h-4 w-4" />
+                      Name
+                    </div>
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button variant="ghost" onClick={() => requestSort('job_title')} className="w-full justify-start px-0 hover:bg-transparent">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Work
+                    </div>
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Address
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    <Contact className="h-4 w-4" />
+                    Contact
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    <TagIcon className="h-4 w-4" />
+                    Tags
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <Button variant="ghost" onClick={() => requestSort('updated_at')} className="w-full justify-start px-0 hover:bg-transparent">
+                    <div className="flex items-center gap-2">
+                      <History className="h-4 w-4" />
+                      Last Activity
+                    </div>
+                  </Button>
+                </TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={7} className="text-center h-24">Loading...</TableCell></TableRow>
-              ) : filteredPeople.length === 0 ? (
+              ) : sortedPeople.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center h-24">No people found.</TableCell></TableRow>
               ) : (
-                filteredPeople.map(person => (
-                  <TableRow key={person.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback style={generateVibrantGradient(person.id)}>
-                            <UserIcon className="h-5 w-5 text-white" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{person.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{person.contact?.email}</p>
+                sortedPeople.map(person => {
+                  const instagramUrl = formatSocialLink('instagram', person.social_media?.instagram || '');
+                  const firstPhone = person.contact?.phones?.[0];
+                  const firstEmail = person.contact?.emails?.[0];
+                  const whatsappUrl = formatWhatsappLink(firstPhone);
+                  return (
+                    <TableRow key={person.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={person.avatar_url} />
+                            <AvatarFallback style={generateVibrantGradient(person.id)}>
+                              <UserIcon className="h-5 w-5 text-white" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{person.full_name}</p>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <p className="font-medium">{person.job_title || '-'}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {person.department}{person.department && person.company ? ' at ' : ''}{person.company}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {person.contact?.phone && <Phone className="h-4 w-4 text-muted-foreground" />}
-                        {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer"><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                        {person.social_media?.twitter && <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer"><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                        {person.social_media?.instagram && <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(person.tags || []).map(tag => (
-                          <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
-                            {tag.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(person.projects || []).map(project => (
-                          <Button key={project.id} variant="link" asChild className="p-0 h-auto text-xs">
-                            <Link to={`/projects/${project.slug}`}>{project.name}</Link>
-                          </Button>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true, locale: id })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => handleEdit(person)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => setPersonToDelete(person)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-medium">{person.job_title || '-'}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {person.department}{person.department && person.company ? ' at ' : ''}{person.company}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="truncate max-w-[20ch] text-sm text-muted-foreground" title={person.address?.description}>{person.address?.description || '-'}</p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {firstEmail && (
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <a href={`mailto:${firstEmail}`} className="text-sm text-muted-foreground hover:text-primary truncate">{firstEmail}</a>
+                            </div>
+                          )}
+                          {firstPhone && (
+                            <div className="flex items-center gap-1.5">
+                              <WhatsappIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              {whatsappUrl ? (
+                                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">{firstPhone}</a>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">{firstPhone}</span>
+                              )}
+                            </div>
+                          )}
+                          {instagramUrl && (
+                            <div className="flex items-center gap-1.5">
+                              <Instagram className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary truncate">{getSocialDisplay(person.social_media?.instagram || '')}</a>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {(person.tags || []).map(tag => (
+                            <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
+                              {tag.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => handleEdit(person)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setPersonToDelete(person)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>
