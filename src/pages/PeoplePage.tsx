@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,14 @@ const PeoplePage = () => {
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const queryClient = useQueryClient();
   const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
-  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>(() => {
+    const savedView = localStorage.getItem('people_view_mode') as 'table' | 'kanban';
+    return savedView || 'table';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('people_view_mode', viewMode);
+  }, [viewMode]);
 
   const { data: people = [], isLoading } = useQuery({
     queryKey: ['people'],
