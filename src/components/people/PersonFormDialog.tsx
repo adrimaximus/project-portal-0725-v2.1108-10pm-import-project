@@ -34,6 +34,7 @@ const personSchema = z.object({
   department: z.string().optional(),
   linkedin: z.string().url("Invalid URL").optional().or(z.literal('')),
   twitter: z.string().url("Invalid URL").optional().or(z.literal('')),
+  instagram: z.string().url("Invalid URL").optional().or(z.literal('')),
   birthday: z.date().optional().nullable(),
   notes: z.string().optional(),
   project_ids: z.array(z.string()).optional(),
@@ -52,7 +53,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     resolver: zodResolver(personSchema),
     defaultValues: {
       full_name: '', email: '', phone: '', company: '', job_title: '',
-      department: '', linkedin: '', twitter: '', birthday: null,
+      department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
       notes: '', project_ids: [], tag_ids: [],
     }
   });
@@ -81,6 +82,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         department: person.department || '',
         linkedin: person.social_media?.linkedin || '',
         twitter: person.social_media?.twitter || '',
+        instagram: person.social_media?.instagram || '',
         birthday: person.birthday ? new Date(person.birthday) : null,
         notes: person.notes || '',
         project_ids: person.projects?.map(p => p.id) || [],
@@ -89,7 +91,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     } else {
       form.reset({
         full_name: '', email: '', phone: '', company: '', job_title: '',
-        department: '', linkedin: '', twitter: '', birthday: null,
+        department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
         notes: '', project_ids: [], tag_ids: [],
       });
     }
@@ -104,7 +106,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       p_company: values.company,
       p_job_title: values.job_title,
       p_department: values.department,
-      p_social_media: { linkedin: values.linkedin, twitter: values.twitter },
+      p_social_media: { linkedin: values.linkedin, twitter: values.twitter, instagram: values.instagram },
       p_birthday: values.birthday ? format(values.birthday, 'yyyy-MM-dd') : null,
       p_notes: values.notes,
       p_project_ids: values.project_ids,
@@ -141,13 +143,27 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
               )} />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="company" render={({ field }) => (
-                <FormItem><FormLabel>Company</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
               <FormField control={form.control} name="job_title" render={({ field }) => (
                 <FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
+              <FormField control={form.control} name="department" render={({ field }) => (
+                <FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
             </div>
+            <FormField control={form.control} name="company" render={({ field }) => (
+              <FormItem><FormLabel>Company</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="linkedin" render={({ field }) => (
+                <FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="twitter" render={({ field }) => (
+                <FormItem><FormLabel>Twitter URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+            </div>
+            <FormField control={form.control} name="instagram" render={({ field }) => (
+              <FormItem><FormLabel>Instagram URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
             <FormField control={form.control} name="tag_ids" render={({ field }) => (
               <FormItem><FormLabel>Tags</FormLabel>
                 <MultiSelect

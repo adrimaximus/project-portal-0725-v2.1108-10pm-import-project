@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Link as LinkIcon } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, Phone } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -24,7 +24,7 @@ export interface Person {
   company?: string;
   job_title?: string;
   department?: string;
-  social_media?: { linkedin?: string; twitter?: string };
+  social_media?: { linkedin?: string; twitter?: string; instagram?: string };
   birthday?: string;
   notes?: string;
   created_at: string;
@@ -106,19 +106,20 @@ const PeoplePage = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[250px]">Full Name</TableHead>
+                <TableHead className="w-[250px]">Name</TableHead>
                 <TableHead>Work</TableHead>
+                <TableHead>Contact</TableHead>
                 <TableHead>Tags</TableHead>
-                <TableHead>Related Projects</TableHead>
+                <TableHead>Projects</TableHead>
                 <TableHead>Last Activity</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center h-24">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24">Loading...</TableCell></TableRow>
               ) : filteredPeople.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center h-24">No people found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24">No people found.</TableCell></TableRow>
               ) : (
                 filteredPeople.map(person => (
                   <TableRow key={person.id}>
@@ -137,7 +138,17 @@ const PeoplePage = () => {
                     </TableCell>
                     <TableCell>
                       <p className="font-medium">{person.job_title || '-'}</p>
-                      <p className="text-sm text-muted-foreground">{person.company || '-'}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {person.department}{person.department && person.company ? ' at ' : ''}{person.company}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {person.contact?.phone && <Phone className="h-4 w-4 text-muted-foreground" />}
+                        {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer"><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                        {person.social_media?.twitter && <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer"><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                        {person.social_media?.instagram && <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
