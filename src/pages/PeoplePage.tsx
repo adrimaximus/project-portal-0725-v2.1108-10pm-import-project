@@ -20,6 +20,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import PeopleKanbanView from "@/components/people/PeopleKanbanView";
 import { Tag } from "@/types";
 import PeopleGridView from "@/components/people/PeopleGridView";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface Person {
   id: string;
@@ -204,9 +205,26 @@ const PeoplePage = () => {
                 />
             </div>
             <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban' | 'grid')}}>
-                <ToggleGroupItem value="grid" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-                <ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem>
-                <ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <ToggleGroupItem value="grid" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Grid View</p></TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Table View</p></TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Kanban View</p></TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
             </ToggleGroup>
         </div>
 
