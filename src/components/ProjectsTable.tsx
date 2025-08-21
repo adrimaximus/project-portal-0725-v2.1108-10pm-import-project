@@ -21,6 +21,7 @@ import { DatePickerWithRange } from "./ui/date-picker-with-range";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateProject } from "@/hooks/useCreateProject";
 import { Input } from "./ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import TableView from "./projects/TableView";
 import ListView from "./projects/ListView";
@@ -382,25 +383,47 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
                 <RefreshCw className="h-4 w-4" />
               </Button>
             )}
-            <ToggleGroup 
-              type="single" 
-              value={view} 
-              onValueChange={handleViewChange}
-              aria-label="View mode"
-            >
-              <ToggleGroupItem value="list" aria-label="List view">
-                <List className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="table" aria-label="Table view">
-                <TableIcon className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="kanban" aria-label="Kanban view">
-                <Kanban className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
-                <CalendarPlus className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
+            <TooltipProvider>
+              <ToggleGroup 
+                type="single" 
+                value={view} 
+                onValueChange={handleViewChange}
+                aria-label="View mode"
+              >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ToggleGroupItem value="list" aria-label="List view">
+                      <List className="h-4 w-4" />
+                    </ToggleGroupItem>
+                  </TooltipTrigger>
+                  <TooltipContent><p>List View</p></TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ToggleGroupItem value="table" aria-label="Table view">
+                      <TableIcon className="h-4 w-4" />
+                    </ToggleGroupItem>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Table View</p></TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ToggleGroupItem value="kanban" aria-label="Kanban view">
+                      <Kanban className="h-4 w-4" />
+                    </ToggleGroupItem>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Kanban View</p></TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
+                      <CalendarPlus className="h-4 w-4" />
+                    </ToggleGroupItem>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Calendar Import</p></TooltipContent>
+                </Tooltip>
+              </ToggleGroup>
+            </TooltipProvider>
           </div>
         </CardHeader>
         <CardContent>
