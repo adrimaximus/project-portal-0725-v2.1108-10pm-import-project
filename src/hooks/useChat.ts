@@ -47,15 +47,13 @@ export const useChat = () => {
       setConversations(prevConversations => {
         return mappedConversations.map(newConvo => {
           const oldConvo = prevConversations.find(p => p.id === newConvo.id);
-          if (oldConvo && newConvo.id === selectedConversationId) {
-            return { ...newConvo, messages: oldConvo.messages };
-          }
-          return newConvo;
+          // Preserve messages if they exist, otherwise use the new (likely empty) messages array
+          return { ...newConvo, messages: oldConvo?.messages || newConvo.messages };
         });
       });
     }
     setIsLoading(false);
-  }, [currentUser, selectedConversationId]);
+  }, [currentUser]);
 
   useEffect(() => {
     fetchConversations();
