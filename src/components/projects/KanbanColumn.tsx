@@ -36,11 +36,13 @@ const KanbanColumn = ({ status, projects, dragHappened, isCollapsed, onToggleCol
       <div className="h-full flex flex-col">
         <div className="font-semibold mb-4 px-1 text-base flex items-center justify-between flex-shrink-0">
           {!isCollapsed && (
-            <h3 className="flex items-center truncate">
-              <span className="truncate">{status.label}</span>
-            </h3>
+            <>
+              <h3 className="flex items-center truncate">
+                <span className="truncate">{status.label}</span>
+              </h3>
+              <Badge variant="secondary" className="ml-2">{projects.length}</Badge>
+            </>
           )}
-          {!isCollapsed && <Badge variant="secondary" className="ml-2">{projects.length}</Badge>}
         </div>
         
         <div className="flex-grow min-h-0">
