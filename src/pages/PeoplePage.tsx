@@ -21,7 +21,7 @@ export interface Person {
   full_name: string;
   avatar_url?: string;
   user_id?: string;
-  contact?: { email?: string; phone?: string };
+  contact?: { emails?: string[]; phones?: string[] };
   company?: string;
   job_title?: string;
   department?: string;
@@ -189,7 +189,8 @@ const PeoplePage = () => {
                   const linkedinUrl = formatSocialLink('linkedin', person.social_media?.linkedin || '');
                   const twitterUrl = formatSocialLink('twitter', person.social_media?.twitter || '');
                   const instagramUrl = formatSocialLink('instagram', person.social_media?.instagram || '');
-                  const whatsappUrl = formatWhatsappLink(person.contact?.phone);
+                  const firstPhone = person.contact?.phones?.[0];
+                  const whatsappUrl = formatWhatsappLink(firstPhone);
                   return (
                     <TableRow key={person.id}>
                       <TableCell>
@@ -213,19 +214,19 @@ const PeoplePage = () => {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          {person.contact?.email && (
+                          {person.contact?.emails?.[0] && (
                             <div className="flex items-center gap-1.5">
                               <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <a href={`mailto:${person.contact.email}`} className="text-sm text-muted-foreground hover:text-primary truncate">{person.contact.email}</a>
+                              <a href={`mailto:${person.contact.emails[0]}`} className="text-sm text-muted-foreground hover:text-primary truncate">{person.contact.emails[0]}</a>
                             </div>
                           )}
-                          {person.contact?.phone && (
+                          {firstPhone && (
                             <div className="flex items-center gap-1.5">
                               <WhatsappIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               {whatsappUrl ? (
-                                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">{person.contact.phone}</a>
+                                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">{firstPhone}</a>
                               ) : (
-                                <span className="text-sm text-muted-foreground">{person.contact.phone}</span>
+                                <span className="text-sm text-muted-foreground">{firstPhone}</span>
                               )}
                             </div>
                           )}
@@ -233,18 +234,6 @@ const PeoplePage = () => {
                             <div className="flex items-center gap-1.5">
                               <Instagram className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary truncate">{getSocialDisplay(person.social_media?.instagram || '')}</a>
-                            </div>
-                          )}
-                          {linkedinUrl && (
-                            <div className="flex items-center gap-1.5">
-                              <Linkedin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary truncate">{getSocialDisplay(person.social_media?.linkedin || '')}</a>
-                            </div>
-                          )}
-                          {twitterUrl && (
-                            <div className="flex items-center gap-1.5">
-                              <Twitter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <a href={twitterUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary truncate">{getSocialDisplay(person.social_media?.twitter || '')}</a>
                             </div>
                           )}
                         </div>

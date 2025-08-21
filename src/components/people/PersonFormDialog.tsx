@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -16,9 +16,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Person } from '@/pages/PeoplePage';
-import { Project, Tag } from '@/types';
-import { MultiSelect } from '../ui/multi-select';
+import { Project, Tag, User } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import DynamicInputList from './DynamicInputList';
+import { TagInput } from '../goals/TagInput';
+import { colors } from '@/data/colors';
+import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -28,8 +32,8 @@ interface PersonFormDialogProps {
 
 const personSchema = z.object({
   full_name: z.string().min(1, "Full name is required"),
-  email: z.string().email("Invalid email address").optional().or(z.literal('')),
-  phone: z.string().optional(),
+  emails: z.array(z.object({ value: z.string().email("Invalid email address").or(z.literal('')) })).optional(),
+  phones: z.array(z.object({ value: z.string() })).optional(),
   company: z.string().optional(),
   job_title: z.string().optional(),
   department: z.string().optional(),
@@ -39,12 +43,13 @@ const personSchema = z.object({
   birthday: z.date().optional().nullable(),
   notes: z.string().optional(),
   project_ids: z.array(z.string()).optional(),
-  tag_ids: z.array(z.string()).optional(),
+  tags: z.array(z.any()).optional(),
 });
 
 type PersonFormValues = z.infer<typeof personSchema>;
 
 const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps) => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -56,31 +61,33 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
   const form = useForm<PersonFormValues>({
     resolver: zodResolver(personSchema),
     defaultValues: {
-      full_name: '', email: '', phone: '', company: '', job_title: '',
+      full_name: '', emails: [{ value: '' }], phones: [{ value: '' }], company: '', job_title: '',
       department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-      notes: '', project_ids: [], tag_ids: [],
+      notes: '', project_ids: [], tags: [],
     }
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data: projectsData } = await supabase.from('projects').select('id, name');
-      if (projectsData) setAllProjects(projectsData as any);
+  const fetchDropdownData = useCallback(async () => {
+    if (!user) return;
+    const { data: projectsData } = await supabase.from('projects').select('id, name');
+    if (projectsData) setAllProjects(projectsData as any);
 
-      const { data: tagsData } = await supabase.from('tags').select('id, name, color');
-      if (tagsData) setAllTags(tagsData);
-    };
+    const { data: tagsData } = await supabase.from('tags').select('*').or(`user_id.eq.${user.id},user_id.is.null`);
+    if (tagsData) setAllTags(tagsData);
+  }, [user]);
+
+  useEffect(() => {
     if (open) {
-      fetchData();
+      fetchDropdownData();
     }
-  }, [open]);
+  }, [open, fetchDropdownData]);
 
   useEffect(() => {
     if (person) {
       form.reset({
         full_name: person.full_name,
-        email: person.contact?.email || '',
-        phone: person.contact?.phone || '',
+        emails: person.contact?.emails?.map(e => ({ value: e })) || [{ value: '' }],
+        phones: person.contact?.phones?.map(p => ({ value: p })) || [{ value: '' }],
         company: person.company || '',
         job_title: person.job_title || '',
         department: person.department || '',
@@ -90,15 +97,15 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         birthday: person.birthday ? new Date(person.birthday) : null,
         notes: person.notes || '',
         project_ids: person.projects?.map(p => p.id) || [],
-        tag_ids: person.tags?.map(t => t.id) || [],
+        tags: person.tags || [],
       });
       setAvatarPreview(person.avatar_url || null);
       setAvatarFile(null);
     } else {
       form.reset({
-        full_name: '', email: '', phone: '', company: '', job_title: '',
+        full_name: '', emails: [{ value: '' }], phones: [{ value: '' }], company: '', job_title: '',
         department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-        notes: '', project_ids: [], tag_ids: [],
+        notes: '', project_ids: [], tags: [],
       });
       setAvatarPreview(null);
       setAvatarFile(null);
@@ -113,12 +120,19 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     }
   };
 
+  const handleTagCreate = (tagName: string): Tag => {
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const newTag: Tag = { id: uuidv4(), name: tagName, color: randomColor, isNew: true };
+    setAllTags(prev => [...prev, newTag]);
+    return newTag;
+  };
+
   const onSubmit = async (values: PersonFormValues) => {
     setIsSaving(true);
     let avatar_url = person?.avatar_url || null;
 
     if (avatarFile) {
-      const filePath = `people-avatars/${person?.id || 'new'}/${Date.now()}-${avatarFile.name}`;
+      const filePath = `people-avatars/${person?.id || uuidv4()}/${Date.now()}-${avatarFile.name}`;
       const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, avatarFile);
       if (uploadError) {
         toast.error("Failed to upload avatar.");
@@ -132,7 +146,10 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     const { error } = await supabase.rpc('upsert_person_with_details', {
       p_id: person?.id || null,
       p_full_name: values.full_name,
-      p_contact: { email: values.email, phone: values.phone },
+      p_contact: {
+        emails: values.emails?.map(e => e.value).filter(Boolean),
+        phones: values.phones?.map(p => p.value).filter(Boolean),
+      },
       p_company: values.company,
       p_job_title: values.job_title,
       p_department: values.department,
@@ -140,7 +157,8 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       p_birthday: values.birthday ? format(values.birthday, 'yyyy-MM-dd') : null,
       p_notes: values.notes,
       p_project_ids: values.project_ids,
-      p_tag_ids: values.tag_ids,
+      p_existing_tag_ids: (values.tags || []).filter(t => !t.isNew).map(t => t.id),
+      p_custom_tags: (values.tags || []).filter(t => t.isNew).map(({ name, color }) => ({ name, color })),
       p_avatar_url: avatar_url,
     });
     setIsSaving(false);
@@ -169,27 +187,20 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                   <UserIcon className="h-10 w-10 text-muted-foreground" />
                 </AvatarFallback>
               </Avatar>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept="image/*"
-              />
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
               <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                <Camera className="mr-2 h-4 w-4" />
-                Upload Photo
+                <Camera className="mr-2 h-4 w-4" /> Upload Photo
               </Button>
             </div>
             <FormField control={form.control} name="full_name" render={({ field }) => (
               <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} disabled={!!person?.user_id} /></FormControl><FormMessage /></FormItem>
             )} />
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="email" render={({ field }) => (
-                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} disabled={!!person?.user_id} /></FormControl><FormMessage /></FormItem>
+              <FormField control={form.control} name="emails" render={() => (
+                <FormItem><FormLabel>Email</FormLabel><DynamicInputList control={form.control} name="emails" placeholder="name@example.com" inputType="email" disabled={!!person?.user_id} /><FormMessage /></FormItem>
               )} />
-              <FormField control={form.control} name="phone" render={({ field }) => (
-                <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              <FormField control={form.control} name="phones" render={() => (
+                <FormItem><FormLabel>Phone</FormLabel><DynamicInputList control={form.control} name="phones" placeholder="e.g., +62 812..." inputType="tel" /><FormMessage /></FormItem>
               )} />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -203,58 +214,18 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
             <FormField control={form.control} name="company" render={({ field }) => (
               <FormItem><FormLabel>Company</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="linkedin" render={({ field }) => (
-                <FormItem><FormLabel>LinkedIn</FormLabel><FormControl><Input {...field} placeholder="username or full URL" /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="twitter" render={({ field }) => (
-                <FormItem><FormLabel>Twitter</FormLabel><FormControl><Input {...field} placeholder="@username or full URL" /></FormControl><FormMessage /></FormItem>
-              )} />
-            </div>
-            <FormField control={form.control} name="instagram" render={({ field }) => (
-              <FormItem><FormLabel>Instagram</FormLabel><FormControl><Input {...field} placeholder="@username or full URL" /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="tag_ids" render={({ field }) => (
+            <FormField control={form.control} name="tags" render={({ field }) => (
               <FormItem><FormLabel>Tags</FormLabel>
-                <MultiSelect
-                  options={allTags.map(t => ({ value: t.id, label: t.name }))}
-                  value={field.value || []}
-                  onChange={field.onChange}
-                  placeholder="Select tags..."
+                <TagInput
+                  allTags={allTags}
+                  selectedTags={field.value || []}
+                  onTagsChange={field.onChange}
+                  onTagCreate={handleTagCreate}
+                  user={user}
+                  onTagsUpdated={fetchDropdownData}
                 />
                 <FormMessage />
               </FormItem>
-            )} />
-            <FormField control={form.control} name="project_ids" render={({ field }) => (
-              <FormItem><FormLabel>Related Projects</FormLabel>
-                <MultiSelect
-                  options={allProjects.map(p => ({ value: p.id, label: p.name }))}
-                  value={field.value || []}
-                  onChange={field.onChange}
-                  placeholder="Select projects..."
-                />
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="birthday" render={({ field }) => (
-              <FormItem className="flex flex-col"><FormLabel>Birthday</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
-                  </PopoverContent>
-                </Popover><FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="notes" render={({ field }) => (
-              <FormItem><FormLabel>Notes</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <DialogFooter className="pt-4 sticky bottom-0 bg-background">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
