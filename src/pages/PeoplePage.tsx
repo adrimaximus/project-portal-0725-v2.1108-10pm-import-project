@@ -4,18 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, Phone } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { id } from "date-fns/locale";
 import { generateVibrantGradient } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import PersonFormDialog from "@/components/people/PersonFormDialog";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
+import WhatsappIcon from "@/components/icons/WhatsappIcon";
 
 export interface Person {
   id: string;
@@ -41,6 +40,7 @@ const PeoplePage = () => {
   const [personToEdit, setPersonToEdit] = useState<Person | null>(null);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const queryClient = useQueryClient();
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
 
   const { data: people = [], isLoading } = useQuery({
     queryKey: ['people'],
@@ -51,13 +51,43 @@ const PeoplePage = () => {
     }
   });
 
+  const requestSort = (key: keyof Person) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedPeople = useMemo(() => {
+    let sortableItems = [...people];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key!];
+        const bValue = b[sortConfig.key!];
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        
+        if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [people, sortConfig]);
+
   const filteredPeople = useMemo(() => {
-    return people.filter(person =>
+    return sortedPeople.filter(person =>
       person.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (person.company && person.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (person.job_title && person.job_title.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [people, searchTerm]);
+  }, [sortedPeople, searchTerm]);
 
   const handleAddNew = () => {
     setPersonToEdit(null);
@@ -79,6 +109,28 @@ const PeoplePage = () => {
       queryClient.invalidateQueries({ queryKey: ['people'] });
     }
     setPersonToDelete(null);
+  };
+
+  const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
+    if (!phone) return '';
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '62' + cleaned.substring(1);
+    } else if (!cleaned.startsWith('62')) {
+      cleaned = '62' + cleaned;
+    }
+    return cleaned;
+  };
+
+  const getInstagramUsername = (url: string | undefined) => {
+    if (!url) return null;
+    try {
+      const path = new URL(url).pathname;
+      const parts = path.split('/').filter(p => p);
+      return parts[0] ? `@${parts[0]}` : null;
+    } catch (e) {
+      return null;
+    }
   };
 
   return (
@@ -108,27 +160,35 @@ const PeoplePage = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[250px]">Name</TableHead>
-                <TableHead>Work</TableHead>
-                <TableHead>Address</TableHead>
+                <TableHead className="w-[250px]">
+                  <Button variant="ghost" onClick={() => requestSort('full_name')} className="px-2">Name</Button>
+                </TableHead>
+                <TableHead>
+                  <Button variant="ghost" onClick={() => requestSort('job_title')} className="px-2">Work</Button>
+                </TableHead>
+                <TableHead>
+                  <Button variant="ghost" onClick={() => requestSort('address')} className="px-2">Address</Button>
+                </TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Tags</TableHead>
-                <TableHead>Projects</TableHead>
-                <TableHead>Last Activity</TableHead>
+                <TableHead>
+                  <Button variant="ghost" onClick={() => requestSort('updated_at')} className="px-2">Last Activity</Button>
+                </TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center h-24">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24">Loading...</TableCell></TableRow>
               ) : filteredPeople.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center h-24">No people found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24">No people found.</TableCell></TableRow>
               ) : (
                 filteredPeople.map(person => (
                   <TableRow key={person.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
+                          <AvatarImage src={person.avatar_url} />
                           <AvatarFallback style={generateVibrantGradient(person.id)}>
                             <UserIcon className="h-5 w-5 text-white" />
                           </AvatarFallback>
@@ -149,11 +209,21 @@ const PeoplePage = () => {
                       {person.address?.formatted_address || '-'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {person.contact?.phones?.[0] && <Phone className="h-4 w-4 text-muted-foreground" />}
+                      <div className="flex items-center gap-3">
+                        {person.contact?.phones?.[0] && (
+                          <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.contact.phones[0])}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+                            <WhatsappIcon className="h-4 w-4" />
+                            <span className="text-sm">{person.contact.phones[0]}</span>
+                          </a>
+                        )}
                         {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer"><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
                         {person.social_media?.twitter && <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer"><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                        {person.social_media?.instagram && <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                        {person.social_media?.instagram && (
+                          <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+                            <Instagram className="h-4 w-4" />
+                            <span className="text-sm">{getInstagramUsername(person.social_media.instagram)}</span>
+                          </a>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -165,17 +235,8 @@ const PeoplePage = () => {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(person.projects || []).map(project => (
-                          <Button key={project.id} variant="link" asChild className="p-0 h-auto text-xs">
-                            <Link to={`/projects/${project.slug}`}>{project.name}</Link>
-                          </Button>
-                        ))}
-                      </div>
-                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true, locale: id })}
+                      {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true })}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
