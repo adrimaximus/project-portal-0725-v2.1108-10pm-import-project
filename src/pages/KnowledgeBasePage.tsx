@@ -46,6 +46,28 @@ const ArticleCard = ({ article }: { article: any }) => (
   </Link>
 );
 
+const ArticleCardSkeleton = () => (
+  <Card className="h-full flex flex-col">
+    <Skeleton className="w-full h-40 rounded-t-lg rounded-b-none" />
+    <CardHeader>
+      <Skeleton className="h-6 w-3/4" />
+    </CardHeader>
+    <CardContent className="flex-grow">
+      <div className="flex flex-wrap gap-2">
+        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="h-5 w-20 rounded-full" />
+      </div>
+    </CardContent>
+    <CardFooter className="flex items-center gap-3">
+      <Skeleton className="h-8 w-8 rounded-full" />
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-3 w-16" />
+      </div>
+    </CardFooter>
+  </Card>
+);
+
 const KnowledgeBasePage = () => {
   const { user } = useAuth();
   const [articles, setArticles] = useState<any[]>([]);
@@ -119,7 +141,11 @@ const KnowledgeBasePage = () => {
         </div>
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-64" />)}
+            {Array.from({ length: 6 }).map((_, i) => <ArticleCardSkeleton key={i} />)}
+          </div>
+        ) : isSearching ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => <ArticleCardSkeleton key={i} />)}
           </div>
         ) : articles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
