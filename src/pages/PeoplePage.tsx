@@ -52,7 +52,7 @@ const PeoplePage = () => {
     }
   });
 
-  const { data: duplicates = [] } = useQuery({
+  const { data: rawDuplicates = [] } = useQuery({
     queryKey: ['duplicates'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('find_duplicate_people');
@@ -60,6 +60,22 @@ const PeoplePage = () => {
       return data as DuplicatePair[];
     }
   });
+
+  const duplicates = useMemo(() => {
+    const pairs = new Map<string, DuplicatePair>();
+    rawDuplicates.forEach(dup => {
+        const key = [dup.person1.id, dup.person2.id].sort().join('-');
+        if (pairs.has(key)) {
+            const existing = pairs.get(key)!;
+            if (!existing.reason.toLowerCase().includes(dup.reason.toLowerCase())) {
+                existing.reason += `, ${dup.reason}`;
+            }
+        } else {
+            pairs.set(key, { ...dup });
+        }
+    });
+    return Array.from(pairs.values());
+  }, [rawDuplicates]);
 
   const filteredPeople = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -70,7 +86,8 @@ const PeoplePage = () => {
       const fullName = person.full_name?.toLowerCase() || '';
       const company = person.company?.toLowerCase() || '';
       const jobTitle = person.job_title?.toLowerCase() || '';
-      return fullName.includes(term) || company.includes(term) || jobTitle.includes(term);
+      const emails = person.contact?.emails?.join(' ').toLowerCase() || '';
+      return fullName.includes(term) || company.includes(term) || jobTitle.includes(term) || emails.includes(term);
     });
   }, [people, searchTerm]);
 
