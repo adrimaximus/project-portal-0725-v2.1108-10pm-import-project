@@ -12,16 +12,24 @@ interface AddressAutocompleteInputProps {
 
 const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocompleteInputProps) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+  if (!apiKey) {
+    return (
+      <div className="p-3 text-center text-sm text-red-700 bg-red-100 border border-red-200 rounded-md">
+        Kunci API Google Maps tidak dikonfigurasi. Silakan tambahkan VITE_GOOGLE_MAPS_API_KEY ke file .env Anda dan <strong>Rebuild</strong> aplikasi.
+      </div>
+    );
+  }
   
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey || "",
+    googleMapsApiKey: apiKey,
     libraries: ['places'],
   });
 
   if (loadError) {
     return (
-      <div className="p-4 text-center text-red-500 bg-red-100 border border-red-200 rounded-md">
-        Google Maps script failed to load. Please check your API key and internet connection.
+      <div className="p-3 text-center text-sm text-red-700 bg-red-100 border border-red-200 rounded-md">
+        Gagal memuat skrip Google Maps. Silakan periksa kunci API Anda dan koneksi internet. Pastikan API yang diperlukan diaktifkan di Google Cloud Console.
       </div>
     );
   }
