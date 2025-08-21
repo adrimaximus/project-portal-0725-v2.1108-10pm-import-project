@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, User as UserIcon, Copy, Edit, Trash2 } from 'lucide-react';
 import { generateVibrantGradient } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 interface PersonCardProps {
   person: Person;
@@ -39,13 +40,43 @@ const PersonCard = ({ person, onEdit, onDelete }: PersonCardProps) => {
         </div>
       </CardHeader>
       <CardContent className="flex-grow">
-        {firstEmail && (
-          <div className="flex items-center justify-between p-2 bg-muted rounded-md">
-            <span className="text-sm text-muted-foreground truncate">{firstEmail}</span>
-            <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={handleCopyEmail}>
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="space-y-3">
+          {person.tags && person.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {person.tags.slice(0, 2).map(tag => (
+                <Badge
+                  key={tag.id}
+                  variant="outline"
+                  className="text-xs"
+                  style={{
+                    backgroundColor: `${tag.color}20`,
+                    borderColor: tag.color,
+                    color: tag.color,
+                  }}
+                >
+                  {tag.name}
+                </Badge>
+              ))}
+              {person.tags.length > 2 && (
+                <Badge variant="outline" className="text-xs">
+                  +{person.tags.length - 2}
+                </Badge>
+              )}
+            </div>
+          )}
+          {firstEmail && (
+            <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+              <span className="text-sm text-muted-foreground truncate">{firstEmail}</span>
+              <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={handleCopyEmail}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+        {!firstEmail && (!person.tags || person.tags.length === 0) && (
+            <div className="h-full flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">No contact info or tags.</p>
+            </div>
         )}
       </CardContent>
       <CardFooter className="flex justify-between">
