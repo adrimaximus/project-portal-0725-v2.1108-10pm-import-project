@@ -95,6 +95,19 @@ const PeoplePage = () => {
     }
   };
 
+  const getSocialDisplay = (value: string) => {
+    if (!value) return '';
+    if (value.startsWith('@')) return value;
+    try {
+      const url = new URL(value);
+      const pathParts = url.pathname.split('/').filter(Boolean);
+      const handle = pathParts[pathParts.length - 1];
+      return handle ? `@${handle}` : value;
+    } catch (e) {
+      return `@${value}`;
+    }
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -205,12 +218,24 @@ const PeoplePage = () => {
                               <span className="text-sm text-muted-foreground">{person.contact.phone}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 pt-1">
-                            {linkedinUrl && <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                            {twitterUrl && <a href={twitterUrl} target="_blank" rel="noopener noreferrer"><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                            {instagramUrl && <a href={instagramUrl} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                          </div>
-                          <div className="text-xs text-gray-400 pt-1 font-mono">{JSON.stringify(person.social_media)}</div>
+                          {instagramUrl && (
+                            <div className="flex items-center gap-1.5">
+                              <Instagram className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary truncate">{getSocialDisplay(person.social_media?.instagram || '')}</a>
+                            </div>
+                          )}
+                          {linkedinUrl && (
+                            <div className="flex items-center gap-1.5">
+                              <Linkedin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary truncate">{getSocialDisplay(person.social_media?.linkedin || '')}</a>
+                            </div>
+                          )}
+                          {twitterUrl && (
+                            <div className="flex items-center gap-1.5">
+                              <Twitter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <a href={twitterUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary truncate">{getSocialDisplay(person.social_media?.twitter || '')}</a>
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
