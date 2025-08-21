@@ -103,16 +103,24 @@ export const useChat = () => {
 
     const { data, error } = await supabase
       .from('messages')
-      .select('*, sender:sender_id(id, first_name, last_name, avatar_url, email)')
+      .select('*, sender:profiles!sender_id(id, first_name, last_name, avatar_url, email)')
       .eq('conversation_id', id)
       .order('created_at', { ascending: true });
 
     if (error) {
       toast.error("Failed to fetch messages.");
+      console.error("Message fetch error:", error);
       return;
     }
 
     const mappedMessages: Message[] = (data || []).map((m: any) => {
+      if (!m.sender) {
+        return {
+          id: m.id, text: m.content, timestamp: m.created_at,
+          sender: { id: m.sender_id, name: 'Deleted User', avatar: undefined, initials: 'DU', email: '' },
+          attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
+        };
+      }
       const senderName = `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim();
       return {
         id: m.id, text: m.content, timestamp: m.created_at,
@@ -136,38 +144,57 @@ export const useChat = () => {
     const channel = supabase.channel('chat-room');
 
     channel
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload: any) => {
         const newMessage = payload.new;
         
-        if (newMessage.sender_id === currentUser?.id) {
-            return;
-        }
+        if (newMessage.sender_id === currentUser?.id) return;
 
         const conversationId = newMessage.conversation_id;
+        const currentConvo = conversations.find(c => c.id === conversationId);
+
+        if (!currentConvo) {
+          fetchConversations();
+          return;
+        }
+
+        let senderProfile = currentConvo.members.find(m => m.id === newMessage.sender_id);
+        if (!senderProfile) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, avatar_url, email')
+            .eq('id', newMessage.sender_id)
+            .single();
+          
+          if (profileData) {
+            const fullName = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim();
+            senderProfile = {
+              id: profileData.id, name: fullName || profileData.email,
+              avatar: profileData.avatar_url, initials: getInitials(fullName, profileData.email),
+              email: profileData.email,
+            };
+          }
+        }
+
+        const finalSender = senderProfile || { id: newMessage.sender_id, name: 'Unknown User', avatar: '', initials: '??', email: '' };
+        const mappedMessage: Message = {
+          id: newMessage.id, text: newMessage.content, timestamp: newMessage.created_at,
+          sender: finalSender,
+          attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
+        };
 
         setConversations(prev => {
           const convoIndex = prev.findIndex(c => c.id === conversationId);
-          if (convoIndex === -1) {
-            fetchConversations();
-            return prev;
-          }
+          if (convoIndex === -1) return prev;
 
           const updatedConvo = { ...prev[convoIndex] };
           updatedConvo.lastMessage = newMessage.content || "Attachment";
           updatedConvo.lastMessageTimestamp = newMessage.created_at;
 
+          if (senderProfile && !updatedConvo.members.some(m => m.id === senderProfile.id)) {
+            updatedConvo.members = [...updatedConvo.members, senderProfile];
+          }
+
           if (conversationId === selectedConversationId) {
-            const senderProfile = updatedConvo.members.find(m => m.id === newMessage.sender_id);
-            const senderName = senderProfile ? `${senderProfile.name}` : 'Unknown';
-            const mappedMessage: Message = {
-              id: newMessage.id, text: newMessage.content, timestamp: newMessage.created_at,
-              sender: {
-                id: senderProfile?.id || '', name: senderName,
-                avatar: senderProfile?.avatar, initials: getInitials(senderName, senderProfile?.email) || '??',
-                email: senderProfile?.email,
-              },
-              attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
-            };
             updatedConvo.messages = [...updatedConvo.messages, mappedMessage];
           }
 
@@ -178,50 +205,7 @@ export const useChat = () => {
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, async () => {
-        const { data, error } = await supabase.rpc('get_user_conversations');
-        if (error) {
-            console.error("Failed to refresh conversations on update:", error);
-            return;
-        }
-        if (data) {
-            const mappedConversations: Conversation[] = data.map((c: any) => ({
-                id: c.conversation_id,
-                userName: c.is_group ? c.group_name : c.other_user_name,
-                userAvatar: c.is_group ? c.avatar_url : c.other_user_avatar,
-                lastMessage: c.last_message_content || "No messages yet.",
-                lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
-                unreadCount: 0,
-                messages: [],
-                isGroup: c.is_group,
-                members: (c.participants || []).map((p: any) => ({
-                  id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
-                })),
-                created_by: c.created_by,
-            }));
-
-            setConversations(prev => {
-                const newConvosMap = new Map(mappedConversations.map(c => [c.id, c]));
-                
-                const updatedAndExisting = prev
-                    .map(oldConvo => {
-                        const newConvoData = newConvosMap.get(oldConvo.id);
-                        if (newConvoData) {
-                            newConvosMap.delete(oldConvo.id);
-                            return { ...newConvoData, messages: oldConvo.messages || [] };
-                        }
-                        return null;
-                    })
-                    .filter((c): c is Conversation => c !== null);
-
-                const brandNewConvos = Array.from(newConvosMap.values());
-                
-                const final = [...updatedAndExisting, ...brandNewConvos];
-                
-                final.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
-                
-                return final;
-            });
-        }
+        fetchConversations();
       })
       .on('broadcast', { event: 'typing' }, (payload: any) => {
         if (payload?.userId && payload.userId !== currentUser?.id && payload.conversationId === selectedConversationId) {
@@ -235,7 +219,7 @@ export const useChat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, selectedConversationId, fetchConversations]);
+  }, [currentUser, selectedConversationId, fetchConversations, conversations]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
@@ -257,7 +241,6 @@ export const useChat = () => {
       attachment,
     };
 
-    // Optimistically update UI
     setConversations(prev =>
       prev.map(c =>
         c.id === selectedConversationId
@@ -286,7 +269,6 @@ export const useChat = () => {
 
     if (error) {
       toast.error("Failed to send message.", { description: error.message });
-      // Revert optimistic update on error
       setConversations(prev =>
         prev.map(c =>
           c.id === selectedConversationId
@@ -295,7 +277,6 @@ export const useChat = () => {
         )
       );
     } else {
-      // Replace optimistic message with real message from DB on success
       const realMessage: Message = {
         id: data.id,
         text: data.content,
