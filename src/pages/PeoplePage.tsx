@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, Mail, Briefcase, Contact, FolderKanban, History, Tag as TagIcon } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, Mail, Briefcase, Contact, History, Tag as TagIcon } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,7 +14,6 @@ import { generateVibrantGradient } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import PersonFormDialog from "@/components/people/PersonFormDialog";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
 import WhatsappIcon from "../components/icons/WhatsappIcon";
 
 export interface Person {
@@ -173,12 +172,6 @@ const PeoplePage = () => {
                 </TableHead>
                 <TableHead>
                   <div className="flex items-center gap-2">
-                    <FolderKanban className="h-4 w-4" />
-                    Projects
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center gap-2">
                     <History className="h-4 w-4" />
                     Last Activity
                   </div>
@@ -188,9 +181,9 @@ const PeoplePage = () => {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center h-24">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center h-24">Loading...</TableCell></TableRow>
               ) : filteredPeople.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center h-24">No people found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center h-24">No people found.</TableCell></TableRow>
               ) : (
                 filteredPeople.map(person => {
                   const linkedinUrl = formatSocialLink('linkedin', person.social_media?.linkedin || '');
@@ -262,17 +255,6 @@ const PeoplePage = () => {
                             <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
                               {tag.name}
                             </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {(person.projects || []).map(project => (
-                            <Button key={project.id} variant="link" asChild className="p-0 h-auto text-xs">
-                              <Link to={`/projects/${project.slug}`} className="truncate max-w-[20ch]" title={project.name}>
-                                {project.name}
-                              </Link>
-                            </Button>
                           ))}
                         </div>
                       </TableCell>
