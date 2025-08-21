@@ -77,8 +77,8 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     if (person) {
       form.reset({
         full_name: person.full_name,
-        email: person.contact?.email || '',
-        phone: person.contact?.phone || '',
+        email: person.contact?.emails?.[0] || '',
+        phone: person.contact?.phones?.[0] || '',
         company: person.company || '',
         job_title: person.job_title || '',
         department: person.department || '',
@@ -105,7 +105,10 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     const { error } = await supabase.rpc('upsert_person_with_details', {
       p_id: person?.id || null,
       p_full_name: values.full_name,
-      p_contact: { email: values.email, phone: values.phone },
+      p_contact: { 
+        emails: values.email ? [values.email] : [],
+        phones: values.phone ? [values.phone] : []
+      },
       p_company: values.company,
       p_job_title: values.job_title,
       p_department: values.department,

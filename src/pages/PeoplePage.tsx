@@ -20,7 +20,7 @@ import { Link } from "react-router-dom";
 export interface Person {
   id: string;
   full_name: string;
-  contact?: { email?: string; phone?: string };
+  contact?: { emails?: string[]; phones?: string[] };
   company?: string;
   job_title?: string;
   department?: string;
@@ -135,7 +135,7 @@ const PeoplePage = () => {
                         </Avatar>
                         <div>
                           <p className="font-medium">{person.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{person.contact?.email}</p>
+                          <p className="text-sm text-muted-foreground">{person.contact?.emails?.[0]}</p>
                         </div>
                       </div>
                     </TableCell>
@@ -150,7 +150,7 @@ const PeoplePage = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {person.contact?.phone && <Phone className="h-4 w-4 text-muted-foreground" />}
+                        {person.contact?.phones?.[0] && <Phone className="h-4 w-4 text-muted-foreground" />}
                         {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer"><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
                         {person.social_media?.twitter && <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer"><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
                         {person.social_media?.instagram && <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
