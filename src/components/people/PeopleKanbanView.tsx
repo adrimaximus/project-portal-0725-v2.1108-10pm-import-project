@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { Person } from '@/pages/PeoplePage';
 import { Tag } from '@/types';
@@ -13,6 +13,22 @@ const PeopleKanbanView = ({ people, tags, onEditPerson }: { people: Person[], ta
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const dragHappened = useRef(false);
   const [activePerson, setActivePerson] = useState<Person | null>(null);
+  const [collapsedColumns, setCollapsedColumns] = useState<string[]>([]);
+
+  useEffect(() => {
+    const savedState = localStorage.getItem('peopleKanbanCollapsedColumns');
+    if (savedState) {
+      setCollapsedColumns(JSON.parse(savedState));
+    }
+  }, []);
+
+  const toggleColumnCollapse = (columnId: string) => {
+    const newCollapsedColumns = collapsedColumns.includes(columnId)
+      ? collapsedColumns.filter(id => id !== columnId)
+      : [...collapsedColumns, columnId];
+    setCollapsedColumns(newCollapsedColumns);
+    localStorage.setItem('peopleKanbanCollapsedColumns', JSON.stringify(newCollapsedColumns));
+  };
 
   const columns = useMemo(() => {
     return [{ id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' }, ...tags];
@@ -96,7 +112,7 @@ const PeopleKanbanView = ({ people, tags, onEditPerson }: { people: Person[], ta
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
-      <div className="flex flex-row gap-4 overflow-x-auto pb-4">
+      <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4">
         {columns.map(tag => (
           <PeopleKanbanColumn
             key={tag.id}
@@ -104,6 +120,8 @@ const PeopleKanbanView = ({ people, tags, onEditPerson }: { people: Person[], ta
             people={personGroups[tag.id] || []}
             dragHappened={dragHappened}
             onEditPerson={onEditPerson}
+            isCollapsed={collapsedColumns.includes(tag.id)}
+            onToggleCollapse={toggleColumnCollapse}
           />
         ))}
       </div>
