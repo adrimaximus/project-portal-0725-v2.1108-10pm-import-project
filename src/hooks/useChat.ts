@@ -93,24 +93,8 @@ export const useChat = () => {
         
         queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
 
-        queryClient.setQueryData(['messages', conversationId], (oldData: Message[] | undefined) => {
-          const currentConvo = conversations.find(c => c.id === conversationId);
-          const senderProfile = currentConvo?.members.find(m => m.id === newMessage.sender_id);
-          
-          const senderName = senderProfile ? senderProfile.name : 'Unknown User';
-          const mappedMessage: Message = {
-            id: newMessage.id,
-            text: newMessage.content,
-            timestamp: newMessage.created_at,
-            sender: senderProfile || { id: newMessage.sender_id, name: 'Unknown User', avatar: '', initials: '??', email: '' },
-            attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
-          };
-
-          if (oldData && !oldData.some(m => m.id === mappedMessage.id)) {
-            return [...oldData, mappedMessage];
-          }
-          return oldData;
-        });
+        // Invalidate the messages query for the specific conversation to trigger a refetch
+        queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
         queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
@@ -127,7 +111,7 @@ export const useChat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, selectedConversationId, queryClient, conversations]);
+  }, [currentUser, selectedConversationId, queryClient]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
