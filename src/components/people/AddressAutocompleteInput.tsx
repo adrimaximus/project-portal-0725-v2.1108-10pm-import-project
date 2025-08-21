@@ -87,7 +87,18 @@ const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocomp
     }
   };
 
-  const formattedValue = value && value.label ? value : value ? { label: value.formatted_address || value } : null;
+  // This logic is now safer. It handles string or object values and ensures the label is always a string.
+  const getDisplayLabel = (val: any): string | undefined => {
+    if (!val) return undefined;
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object' && val !== null) {
+      return val.label || val.formatted_address;
+    }
+    return undefined;
+  };
+
+  const displayLabel = getDisplayLabel(value);
+  const formattedValue = displayLabel ? { label: displayLabel, value: displayLabel } : null;
 
   return (
     <GooglePlacesAutocomplete
