@@ -21,6 +21,7 @@ export interface Person {
   id: string;
   full_name: string;
   avatar_url?: string;
+  user_id?: string;
   contact?: { email?: string; phone?: string };
   company?: string;
   job_title?: string;
