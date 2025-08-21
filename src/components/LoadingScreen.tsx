@@ -1,15 +1,13 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
 
 const LoadingScreen = () => {
-  const { user } = useAuth();
   const [messageIndex, setMessageIndex] = useState(0);
   const [progress, setProgress] = useState(10);
 
   const messages = [
-    `Welcome back, ${user?.name || 'friend'}! Authenticating...`,
+    "Progressing..",
     "Fetching your projects and goals...",
     "Preparing your workspace...",
     "Almost ready! Have a great day :)",
