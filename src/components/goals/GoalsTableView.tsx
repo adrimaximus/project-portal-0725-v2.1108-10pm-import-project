@@ -69,7 +69,7 @@ const GoalRow = ({ goal, onDeleteGoal }: { goal: Goal, onDeleteGoal: (goalId: st
           <span className="text-sm font-medium">{percentage.toFixed(0)}%</span>
         </div>
       </TableCell>
-      <TableCell className="hidden lg:table-cell py-2 px-4">
+      <TableCell className="py-2 px-4">
         <div className="flex -space-x-2">
           <TooltipProvider delayDuration={100}>
             {goal.collaborators.map(user => (
@@ -163,7 +163,7 @@ const GoalsTableView = ({ goals, sortConfig, requestSort, onDeleteGoal }: GoalsT
               </Button>
             </TableHead>
             <TableHead className="px-4">Progress</TableHead>
-            <TableHead className="hidden lg:table-cell px-4">Team</TableHead>
+            <TableHead className="px-4">Team</TableHead>
             <TableHead className="text-right px-4">Actions</TableHead>
           </TableRow>
         </TableHeader>
