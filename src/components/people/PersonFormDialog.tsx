@@ -16,6 +16,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Person } from '@/pages/PeoplePage';
+import { Project, Tag } from '@/types';
+import { MultiSelect } from '../ui/multi-select';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -32,8 +34,10 @@ const personSchema = z.object({
   department: z.string().optional(),
   linkedin: z.string().url("Invalid URL").optional().or(z.literal('')),
   twitter: z.string().url("Invalid URL").optional().or(z.literal('')),
-  birthday: z.date().optional(),
+  birthday: z.date().optional().nullable(),
   notes: z.string().optional(),
+  project_ids: z.array(z.string()).optional(),
+  tag_ids: z.array(z.string()).optional(),
 });
 
 type PersonFormValues = z.infer<typeof personSchema>;
@@ -41,22 +45,30 @@ type PersonFormValues = z.infer<typeof personSchema>;
 const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps) => {
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
 
   const form = useForm<PersonFormValues>({
     resolver: zodResolver(personSchema),
     defaultValues: {
-      full_name: '',
-      email: '',
-      phone: '',
-      company: '',
-      job_title: '',
-      department: '',
-      linkedin: '',
-      twitter: '',
-      birthday: undefined,
-      notes: '',
+      full_name: '', email: '', phone: '', company: '', job_title: '',
+      department: '', linkedin: '', twitter: '', birthday: null,
+      notes: '', project_ids: [], tag_ids: [],
     }
   });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: projectsData } = await supabase.from('projects').select('id, name');
+      if (projectsData) setAllProjects(projectsData as any);
+
+      const { data: tagsData } = await supabase.from('tags').select('id, name, color');
+      if (tagsData) setAllTags(tagsData);
+    };
+    if (open) {
+      fetchData();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (person) {
@@ -69,39 +81,35 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         department: person.department || '',
         linkedin: person.social_media?.linkedin || '',
         twitter: person.social_media?.twitter || '',
-        birthday: person.birthday ? new Date(person.birthday) : undefined,
+        birthday: person.birthday ? new Date(person.birthday) : null,
         notes: person.notes || '',
+        project_ids: person.projects?.map(p => p.id) || [],
+        tag_ids: person.tags?.map(t => t.id) || [],
       });
     } else {
-      form.reset();
+      form.reset({
+        full_name: '', email: '', phone: '', company: '', job_title: '',
+        department: '', linkedin: '', twitter: '', birthday: null,
+        notes: '', project_ids: [], tag_ids: [],
+      });
     }
-  }, [person, form]);
+  }, [person, form, open]);
 
   const onSubmit = async (values: PersonFormValues) => {
     setIsSaving(true);
-    const dataToUpsert = {
-      full_name: values.full_name,
-      company: values.company,
-      job_title: values.job_title,
-      department: values.department,
-      birthday: values.birthday ? format(values.birthday, 'yyyy-MM-dd') : null,
-      notes: values.notes,
-      contact: {
-        email: values.email,
-        phone: values.phone,
-      },
-      social_media: {
-        linkedin: values.linkedin,
-        twitter: values.twitter,
-      },
-      updated_at: new Date().toISOString(),
-    };
-
-    const promise = person
-      ? supabase.from('people').update(dataToUpsert).eq('id', person.id)
-      : supabase.from('people').insert(dataToUpsert);
-
-    const { error } = await promise;
+    const { error } = await supabase.rpc('upsert_person_with_details', {
+      p_id: person?.id || null,
+      p_full_name: values.full_name,
+      p_contact: { email: values.email, phone: values.phone },
+      p_company: values.company,
+      p_job_title: values.job_title,
+      p_department: values.department,
+      p_social_media: { linkedin: values.linkedin, twitter: values.twitter },
+      p_birthday: values.birthday ? format(values.birthday, 'yyyy-MM-dd') : null,
+      p_notes: values.notes,
+      p_project_ids: values.project_ids,
+      p_tag_ids: values.tag_ids,
+    });
     setIsSaving(false);
 
     if (error) {
@@ -140,14 +148,28 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                 <FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="linkedin" render={({ field }) => (
-                <FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="twitter" render={({ field }) => (
-                <FormItem><FormLabel>Twitter URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-            </div>
+            <FormField control={form.control} name="tag_ids" render={({ field }) => (
+              <FormItem><FormLabel>Tags</FormLabel>
+                <MultiSelect
+                  options={allTags.map(t => ({ value: t.id, label: t.name }))}
+                  value={field.value || []}
+                  onChange={field.onChange}
+                  placeholder="Select tags..."
+                />
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="project_ids" render={({ field }) => (
+              <FormItem><FormLabel>Related Projects</FormLabel>
+                <MultiSelect
+                  options={allProjects.map(p => ({ value: p.id, label: p.name }))}
+                  value={field.value || []}
+                  onChange={field.onChange}
+                  placeholder="Select projects..."
+                />
+                <FormMessage />
+              </FormItem>
+            )} />
             <FormField control={form.control} name="birthday" render={({ field }) => (
               <FormItem className="flex flex-col"><FormLabel>Birthday</FormLabel>
                 <Popover>
@@ -160,7 +182,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                    <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
                   </PopoverContent>
                 </Popover><FormMessage />
               </FormItem>
@@ -168,7 +190,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
             <FormField control={form.control} name="notes" render={({ field }) => (
               <FormItem><FormLabel>Notes</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-4 sticky bottom-0 bg-background">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

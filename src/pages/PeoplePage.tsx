@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Link as LinkIcon } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,6 +14,8 @@ import { id } from "date-fns/locale";
 import { generateVibrantGradient } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import PersonFormDialog from "@/components/people/PersonFormDialog";
+import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 
 export interface Person {
   id: string;
@@ -27,7 +29,7 @@ export interface Person {
   notes?: string;
   created_at: string;
   updated_at: string;
-  projects?: { id: string; name: string }[];
+  projects?: { id: string; name: string, slug: string }[];
   tags?: { id: string; name: string; color: string }[];
 }
 
@@ -41,7 +43,7 @@ const PeoplePage = () => {
   const { data: people = [], isLoading } = useQuery({
     queryKey: ['people'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('people').select('*').order('full_name');
+      const { data, error } = await supabase.rpc('get_people_with_details');
       if (error) throw error;
       return data as Person[];
     }
@@ -100,21 +102,23 @@ const PeoplePage = () => {
           />
         </div>
 
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[250px]">Full Name</TableHead>
-                <TableHead>Company & Title</TableHead>
+                <TableHead>Work</TableHead>
+                <TableHead>Tags</TableHead>
+                <TableHead>Related Projects</TableHead>
                 <TableHead>Last Activity</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center h-24">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center h-24">Loading...</TableCell></TableRow>
               ) : filteredPeople.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center h-24">No people found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center h-24">No people found.</TableCell></TableRow>
               ) : (
                 filteredPeople.map(person => (
                   <TableRow key={person.id}>
@@ -132,8 +136,26 @@ const PeoplePage = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <p className="font-medium">{person.company || '-'}</p>
-                      <p className="text-sm text-muted-foreground">{person.job_title || '-'}</p>
+                      <p className="font-medium">{person.job_title || '-'}</p>
+                      <p className="text-sm text-muted-foreground">{person.company || '-'}</p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {(person.tags || []).map(tag => (
+                          <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
+                            {tag.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {(person.projects || []).map(project => (
+                          <Button key={project.id} variant="link" asChild className="p-0 h-auto text-xs">
+                            <Link to={`/projects/${project.slug}`}>{project.name}</Link>
+                          </Button>
+                        ))}
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true, locale: id })}
