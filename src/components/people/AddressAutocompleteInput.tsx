@@ -1,8 +1,6 @@
 import React from 'react';
-import GooglePlacesAutocomplete, { geocodeByAddress, getLatLng } from 'react-google-places-autocomplete';
-import { toast } from 'sonner';
-import { useJsApiLoader } from '@react-google-maps/api';
-import { Skeleton } from '../ui/skeleton';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 
 interface AddressAutocompleteInputProps {
   value: any;
@@ -11,103 +9,21 @@ interface AddressAutocompleteInputProps {
 }
 
 const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocompleteInputProps) => {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-  if (!apiKey) {
-    return (
-      <div className="p-3 text-center text-sm text-red-700 bg-red-100 border border-red-200 rounded-md">
-        Kunci API Google Maps tidak dikonfigurasi. Silakan tambahkan VITE_GOOGLE_MAPS_API_KEY ke file .env Anda dan <strong>Rebuild</strong> aplikasi.
-      </div>
-    );
-  }
-  
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey,
-    libraries: ['places'],
-  });
-
-  if (loadError) {
-    return (
-      <div className="p-3 text-center text-sm text-red-700 bg-red-100 border border-red-200 rounded-md">
-        Gagal memuat skrip Google Maps. Silakan periksa kunci API Anda dan koneksi internet. Pastikan API yang diperlukan diaktifkan di Google Cloud Console.
-      </div>
-    );
-  }
-
-  if (!isLoaded) {
-    return <Skeleton className="h-10 w-full" />;
-  }
-
-  const handleSelect = async (place: any) => {
-    if (!place) {
-      onChange(null);
-      return;
-    }
-
-    try {
-      const results = await geocodeByAddress(place.label);
-      const latLng = await getLatLng(results[0]);
-      const components = results[0].address_components;
-
-      const get = (type: string) => components.find((c: any) => c.types.includes(type))?.long_name || '';
-
-      const structuredAddress = {
-        label: place.label,
-        place_id: results[0].place_id,
-        formatted_address: results[0].formatted_address,
-        lat: latLng.lat,
-        lng: latLng.lng,
-        street: [get('route'), get('street_number')].filter(Boolean).join(' '),
-        suburb: get('sublocality') || get('sublocality_level_1'),
-        city: get('locality') || get('administrative_area_level_2'),
-        province: get('administrative_area_level_1'),
-        postal_code: get('postal_code'),
-        country: get('country'),
-      };
-      onChange(structuredAddress);
-    } catch (error) {
-      console.error("Error getting address details:", error);
-      toast.error("Could not fetch address details.");
-      onChange({ label: place.label, formatted_address: place.label });
-    }
-  };
-
-  const formattedValue = value && value.label ? value : value ? { label: value.formatted_address || value } : null;
+  const displayValue = value?.formatted_address || value?.label || '';
 
   return (
-    <GooglePlacesAutocomplete
-      selectProps={{
-        value: formattedValue,
-        onChange: handleSelect,
-        isDisabled: disabled,
-        placeholder: 'Start typing an address...',
-        styles: {
-          control: (provided) => ({
-            ...provided,
-            borderColor: 'hsl(var(--border))',
-            backgroundColor: 'hsl(var(--background))',
-            minHeight: '40px',
-          }),
-          input: (provided) => ({
-            ...provided,
-            color: 'hsl(var(--foreground))',
-          }),
-          option: (provided, state) => ({
-            ...provided,
-            backgroundColor: state.isFocused ? 'hsl(var(--accent))' : 'hsl(var(--background))',
-            color: 'hsl(var(--foreground))',
-          }),
-          singleValue: (provided) => ({
-            ...provided,
-            color: 'hsl(var(--foreground))',
-          }),
-          menu: (provided) => ({
-            ...provided,
-            zIndex: 50,
-          }),
-        },
-      }}
-    />
+    <div className="space-y-2">
+        <Label>Alamat (Debugging)</Label>
+        <Input
+            value={displayValue}
+            onChange={(e) => onChange({ formatted_address: e.target.value, label: e.target.value })}
+            placeholder="Masukkan alamat secara manual..."
+            disabled={disabled}
+        />
+        <p className="text-xs text-muted-foreground">
+            Pelengkapan otomatis dinonaktifkan sementara untuk pengujian.
+        </p>
+    </div>
   );
 };
 
