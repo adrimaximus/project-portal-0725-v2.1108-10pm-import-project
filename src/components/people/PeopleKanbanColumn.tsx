@@ -6,8 +6,6 @@ import { Tag } from '@/types';
 import PeopleKanbanCard from './PeopleKanbanCard';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
-import { Button } from '../ui/button';
-import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 const PeopleKanbanColumn = ({ tag, people, dragHappened, onEditPerson, isCollapsed, onToggleCollapse }: { 
   tag: Tag | { id: string, name: string, color: string }, 
@@ -20,11 +18,17 @@ const PeopleKanbanColumn = ({ tag, people, dragHappened, onEditPerson, isCollaps
   const { setNodeRef } = useDroppable({ id: tag.id });
   const personIds = useMemo(() => people.map(p => p.id), [people]);
 
+  const handleToggle = () => {
+    if (people.length === 0) {
+      onToggleCollapse(tag.id);
+    }
+  };
+
   return (
     <div ref={setNodeRef} className={cn(
       "flex-shrink-0 transition-all duration-300",
       isCollapsed ? "w-16" : "w-72"
-    )}>
+    )} onDoubleClick={handleToggle}>
       <div className="h-full flex flex-col">
         {/* Header */}
         <div className="font-semibold mb-4 px-1 text-base flex items-center justify-between flex-shrink-0">
@@ -34,21 +38,13 @@ const PeopleKanbanColumn = ({ tag, people, dragHappened, onEditPerson, isCollaps
               <span className="truncate">{tag.name}</span>
             </div>
           )}
-          <div className="flex items-center ml-auto">
-            {!isCollapsed && <Badge variant="secondary">{people.length}</Badge>}
-            <Button variant="ghost" size="icon" className="h-6 w-6 ml-1" onClick={() => onToggleCollapse(tag.id)}>
-              {isCollapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
-            </Button>
-          </div>
+          {!isCollapsed && <Badge variant="secondary">{people.length}</Badge>}
         </div>
 
         {/* Content */}
         <div className="flex-grow min-h-0">
           {isCollapsed ? (
-            <div 
-              className="flex items-center justify-center h-full cursor-pointer" 
-              onClick={() => onToggleCollapse(tag.id)}
-            >
+            <div className="flex items-center justify-center h-full cursor-pointer">
               <div className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap flex items-center gap-2">
                 <span className="font-semibold">{tag.name}</span>
                 <Badge variant="secondary">{people.length}</Badge>

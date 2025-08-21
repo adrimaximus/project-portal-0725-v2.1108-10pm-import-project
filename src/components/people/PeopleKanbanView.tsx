@@ -113,17 +113,22 @@ const PeopleKanbanView = ({ people, tags, onEditPerson }: { people: Person[], ta
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
       <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4">
-        {columns.map(tag => (
-          <PeopleKanbanColumn
-            key={tag.id}
-            tag={tag}
-            people={personGroups[tag.id] || []}
-            dragHappened={dragHappened}
-            onEditPerson={onEditPerson}
-            isCollapsed={collapsedColumns.includes(tag.id)}
-            onToggleCollapse={toggleColumnCollapse}
-          />
-        ))}
+        {columns.map(tag => {
+          const peopleInColumn = personGroups[tag.id] || [];
+          const isColumnCollapsed = peopleInColumn.length === 0 && collapsedColumns.includes(tag.id);
+
+          return (
+            <PeopleKanbanColumn
+              key={tag.id}
+              tag={tag}
+              people={peopleInColumn}
+              dragHappened={dragHappened}
+              onEditPerson={onEditPerson}
+              isCollapsed={isColumnCollapsed}
+              onToggleCollapse={toggleColumnCollapse}
+            />
+          );
+        })}
       </div>
       <DragOverlay dropAnimation={null}>
         {activePerson ? (
