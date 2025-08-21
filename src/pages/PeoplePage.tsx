@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import PersonFormDialog from "@/components/people/PersonFormDialog";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import WhatsappIcon from "@/components/icons/WhatsappIcon";
+import WhatsappIcon from "../components/icons/WhatsappIcon";
 
 export interface Person {
   id: string;
@@ -109,6 +109,15 @@ const PeoplePage = () => {
     }
   };
 
+  const formatWhatsappLink = (phone: string | undefined): string | null => {
+    if (!phone) return null;
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '62' + cleaned.substring(1);
+    }
+    return `https://wa.me/${cleaned}`;
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -185,6 +194,7 @@ const PeoplePage = () => {
                   const linkedinUrl = formatSocialLink('linkedin', person.social_media?.linkedin || '');
                   const twitterUrl = formatSocialLink('twitter', person.social_media?.twitter || '');
                   const instagramUrl = formatSocialLink('instagram', person.social_media?.instagram || '');
+                  const whatsappUrl = formatWhatsappLink(person.contact?.phone);
                   return (
                     <TableRow key={person.id}>
                       <TableCell>
@@ -216,7 +226,11 @@ const PeoplePage = () => {
                           {person.contact?.phone && (
                             <div className="flex items-center gap-1.5">
                               <WhatsappIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <a href={`tel:${person.contact.phone}`} className="text-sm text-muted-foreground hover:text-primary">{person.contact.phone}</a>
+                              {whatsappUrl ? (
+                                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">{person.contact.phone}</a>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">{person.contact.phone}</span>
+                              )}
                             </div>
                           )}
                           {instagramUrl && (
