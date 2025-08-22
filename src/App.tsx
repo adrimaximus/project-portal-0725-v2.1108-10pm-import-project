@@ -40,6 +40,7 @@ import PeoplePage from "./pages/PeoplePage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import ArticleDetailPage from "./pages/ArticleDetailPage";
 import ArticleEditorPage from "./pages/ArticleEditorPage";
+import FolderDetailPage from "./pages/FolderDetailPage";
 
 const AccessDenied = () => {
   const navigate = useNavigate();
@@ -108,6 +109,7 @@ function App() {
         
         <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
         <Route path="/knowledge-base/new" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ArticleEditorPage /></ProtectedRoute>} />
+        <Route path="/knowledge-base/folders/:folderId" element={<ProtectedRoute><FolderDetailPage /></ProtectedRoute>} />
         <Route path="/knowledge-base/:slug" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
         <Route path="/knowledge-base/:slug/edit" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ArticleEditorPage /></ProtectedRoute>} />
 
