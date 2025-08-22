@@ -116,7 +116,7 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
       const toAdd = collaboratorIds.filter(id => !existingIds.has(id));
       const toRemove = Array.from(existingIds).filter(id => !collaboratorIds.includes(id));
 
-      if (toAdd.length > 0) await supabase.from('kb_folder_collaborators').insert(toAdd.map(uid => ({ folder_id: folder.id, user_id: uid })));
+      if (toAdd.length > 0) await supabase.from('kb_folder_collaborators').insert(toAdd.map(uid => ({ folder_id: folder.id, user_id: uid, role: 'editor' })));
       if (toRemove.length > 0) await supabase.from('kb_folder_collaborators').delete().eq('folder_id', folder.id).in('user_id', toRemove);
 
     } else {
@@ -131,7 +131,7 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
       }
 
       if (collaboratorIds.length > 0) {
-        const collaboratorsToInsert = collaboratorIds.map(uid => ({ folder_id: newFolder.id, user_id: uid }));
+        const collaboratorsToInsert = collaboratorIds.map(uid => ({ folder_id: newFolder.id, user_id: uid, role: 'editor' }));
         const { error: collabError } = await supabase.from('kb_folder_collaborators').insert(collaboratorsToInsert);
         if (collabError) toast.warning("Folder created, but failed to add collaborators.", { description: collabError.message });
       }
