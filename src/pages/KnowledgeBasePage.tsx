@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import PortalLayout from '@/components/PortalLayout';
 import { Button } from '@/components/ui/button';
-import { FolderPlus, Search, GitMerge, Loader2, LayoutGrid, List } from 'lucide-react';
+import { FolderPlus, Search, GitMerge, Loader2, LayoutGrid, List, FilePlus } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { KbFolder } from '@/types';
@@ -13,9 +13,11 @@ import FolderFormDialog from '@/components/kb/FolderFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import FolderListView from '@/components/kb/FolderListView';
+import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
 
 const KnowledgeBasePage = () => {
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isFolderFormOpen, setIsFolderFormOpen] = useState(false);
+  const [isArticleEditorOpen, setIsArticleEditorOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<KbFolder | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<KbFolder | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,17 +82,17 @@ const KnowledgeBasePage = () => {
     return sortableItems;
   }, [filteredFolders, sortConfig]);
 
-  const handleAddNew = () => {
+  const handleAddNewFolder = () => {
     setEditingFolder(null);
-    setIsFormOpen(true);
+    setIsFolderFormOpen(true);
   };
 
-  const handleEdit = (folder: KbFolder) => {
+  const handleEditFolder = (folder: KbFolder) => {
     setEditingFolder(folder);
-    setIsFormOpen(true);
+    setIsFolderFormOpen(true);
   };
 
-  const handleDelete = async () => {
+  const handleDeleteFolder = async () => {
     if (!folderToDelete) return;
     const { error } = await supabase.from('kb_folders').delete().eq('id', folderToDelete.id);
     if (error) {
@@ -110,10 +112,16 @@ const KnowledgeBasePage = () => {
             <h1 className="text-3xl font-bold">Knowledge Base</h1>
             <p className="text-muted-foreground">Find and manage your team's articles and documentation.</p>
           </div>
-          <Button onClick={handleAddNew} className="w-full sm:w-auto">
-            <FolderPlus className="mr-2 h-4 w-4" />
-            New Folder
-          </Button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button onClick={() => setIsArticleEditorOpen(true)} variant="outline" className="w-full">
+              <FilePlus className="mr-2 h-4 w-4" />
+              New Article
+            </Button>
+            <Button onClick={handleAddNewFolder} className="w-full">
+              <FolderPlus className="mr-2 h-4 w-4" />
+              New Folder
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -142,11 +150,11 @@ const KnowledgeBasePage = () => {
             viewMode === 'grid' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {sortedFolders.map(folder => (
-                  <FolderCard key={folder.id} folder={folder} onEdit={handleEdit} onDelete={setFolderToDelete} />
+                  <FolderCard key={folder.id} folder={folder} onEdit={handleEditFolder} onDelete={setFolderToDelete} />
                 ))}
               </div>
             ) : (
-              <FolderListView folders={sortedFolders} onEdit={handleEdit} onDelete={setFolderToDelete} requestSort={requestSort} />
+              <FolderListView folders={sortedFolders} onEdit={handleEditFolder} onDelete={setFolderToDelete} requestSort={requestSort} />
             )
           ) : (
             <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
@@ -157,8 +165,8 @@ const KnowledgeBasePage = () => {
         </div>
       </div>
       <FolderFormDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
+        open={isFolderFormOpen}
+        onOpenChange={setIsFolderFormOpen}
         folder={editingFolder}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
@@ -166,6 +174,12 @@ const KnowledgeBasePage = () => {
             queryClient.invalidateQueries({ queryKey: ['kb_folder', editingFolder.slug] });
           }
         }}
+      />
+      <ArticleEditorDialog
+        open={isArticleEditorOpen}
+        onOpenChange={setIsArticleEditorOpen}
+        folders={folders}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['kb_articles'] })}
       />
       <AlertDialog open={!!folderToDelete} onOpenChange={(open) => !open && setFolderToDelete(null)}>
         <AlertDialogContent>
@@ -177,7 +191,7 @@ const KnowledgeBasePage = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteFolder}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

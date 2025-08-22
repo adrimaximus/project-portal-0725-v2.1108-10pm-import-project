@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
 import { KbFolder } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ArticleValues {
   id?: string;
@@ -22,7 +23,8 @@ interface ArticleValues {
 interface ArticleEditorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  folder: KbFolder;
+  folders: KbFolder[];
+  folder?: KbFolder | null;
   article?: ArticleValues | null;
   onSuccess: () => void;
 }
@@ -30,11 +32,12 @@ interface ArticleEditorDialogProps {
 const articleSchema = z.object({
   title: z.string().min(1, "Title is required."),
   content: z.string().min(10, "Content is too short.").optional().or(z.literal('')),
+  folder_id: z.string().min(1, "Please select a folder."),
 });
 
 type ArticleFormValues = z.infer<typeof articleSchema>;
 
-const ArticleEditorDialog = ({ open, onOpenChange, folder, article, onSuccess }: ArticleEditorDialogProps) => {
+const ArticleEditorDialog = ({ open, onOpenChange, folders, folder, article, onSuccess }: ArticleEditorDialogProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const isEditMode = !!article;
 
@@ -43,30 +46,34 @@ const ArticleEditorDialog = ({ open, onOpenChange, folder, article, onSuccess }:
     defaultValues: {
       title: '',
       content: '',
+      folder_id: '',
     }
   });
 
   useEffect(() => {
-    if (article) {
-      form.reset({
-        title: article.title,
-        content: article.content || '',
-      });
-    } else {
-      form.reset({
-        title: '',
-        content: '',
-      });
+    if (open) {
+      if (article) {
+        form.reset({
+          title: article.title,
+          content: article.content || '',
+          folder_id: article.folder_id,
+        });
+      } else {
+        form.reset({
+          title: '',
+          content: '',
+          folder_id: folder?.id || '',
+        });
+      }
     }
-  }, [article, form]);
+  }, [article, folder, open, form]);
 
   const onSubmit = async (values: ArticleFormValues) => {
     setIsSaving(true);
     
     const articleData = {
       ...values,
-      folder_id: folder.id,
-      content: values.content ? JSON.parse(JSON.stringify(values.content)) : null, // Ensure content is valid JSONB
+      content: values.content ? JSON.parse(JSON.stringify(values.content)) : null,
     };
 
     const promise = isEditMode && article?.id
@@ -91,7 +98,10 @@ const ArticleEditorDialog = ({ open, onOpenChange, folder, article, onSuccess }:
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Article' : 'Create New Article'}</DialogTitle>
           <DialogDescription>
-            Fill in the details for your article. It will be saved in the "{folder.name}" folder.
+            {folder 
+              ? `This article will be saved in the "${folder.name}" folder.`
+              : 'Fill in the details for your article and select a folder to save it in.'
+            }
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -103,6 +113,28 @@ const ArticleEditorDialog = ({ open, onOpenChange, folder, article, onSuccess }:
                 <FormMessage />
               </FormItem>
             )} />
+            <FormField
+              control={form.control}
+              name="folder_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Folder</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!folder || isEditMode}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a folder to save this article in..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {folders.map(f => (
+                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField control={form.control} name="content" render={({ field }) => (
               <FormItem>
                 <FormLabel>Content</FormLabel>
