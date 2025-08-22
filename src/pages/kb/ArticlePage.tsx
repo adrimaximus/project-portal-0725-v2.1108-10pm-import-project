@@ -1,12 +1,15 @@
-import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import PortalLayout from '@/components/PortalLayout';
 import { KbFolder } from '@/types';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Folder, FileText } from 'lucide-react';
+import { Folder, FileText, Edit } from 'lucide-react';
+import { useState } from 'react';
+import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
+import { Button } from '@/components/ui/button';
 
 type Article = {
   id: string;
@@ -43,11 +46,23 @@ const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
 
 const ArticlePage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   const { data: article, isLoading } = useQuery({
     queryKey: ['kb_article', slug],
     queryFn: () => fetchArticleBySlug(slug!),
     enabled: !!slug,
+  });
+
+  const { data: allFolders = [] } = useQuery({
+    queryKey: ['kb_folders'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('kb_folders').select('*');
+      if (error) throw error;
+      return data as KbFolder[];
+    }
   });
 
   if (isLoading) {
@@ -106,8 +121,12 @@ const ArticlePage = () => {
           </BreadcrumbList>
         </Breadcrumb>
 
-        <div>
+        <div className="flex justify-between items-start">
           <h1 className="text-4xl font-bold tracking-tight">{article.title}</h1>
+          <Button variant="outline" onClick={() => setIsEditorOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
         </div>
 
         <div
@@ -115,6 +134,17 @@ const ArticlePage = () => {
           dangerouslySetInnerHTML={{ __html: article.content || "" }}
         />
       </div>
+      <ArticleEditorDialog
+        open={isEditorOpen}
+        onOpenChange={setIsEditorOpen}
+        folders={allFolders}
+        article={article}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['kb_article', slug] });
+          queryClient.invalidateQueries({ queryKey: ['kb_articles', article.folder_id] });
+          queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
+        }}
+      />
     </PortalLayout>
   );
 };

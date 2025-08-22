@@ -119,7 +119,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders, folder, article, onS
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Folder</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!folder || isEditMode}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!folder && !isEditMode}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a folder to save this article in..." />
