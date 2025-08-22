@@ -17,7 +17,7 @@ const FolderCard = ({ folder, onEdit, onDelete }: FolderCardProps) => {
 
   return (
     <Link to={`/knowledge-base/folders/${folder.slug}`} className="block group">
-      <Card className="hover:bg-muted/50 transition-colors">
+      <Card className="hover:bg-muted/50 transition-colors" style={{ borderTop: `3px solid ${folder.color || '#6b7280'}` }}>
         <CardContent className="p-3 flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" style={{ color: folder.color }} />

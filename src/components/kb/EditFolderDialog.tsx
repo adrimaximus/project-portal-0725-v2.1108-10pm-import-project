@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Loader2, Globe, Lock, Users, Copy } from 'lucide-react';
+import { Loader2, Globe, Lock, Users, Copy, Pencil } from 'lucide-react';
 import { KbFolder, FolderAccessLevel, User } from '@/types';
 import IconPicker from '../goals/IconPicker';
 import ColorPicker from '../goals/ColorPicker';
@@ -152,6 +152,7 @@ const EditFolderDialog = ({ open, onOpenChange, folder, onSuccess }: EditFolderD
                 <FormItem><RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="space-y-2">
                   <div className="flex items-center gap-3"><Lock className="h-4 w-4" /><FormControl><RadioGroupItem value="private" id="private" /></FormControl><Label htmlFor="private">Private (only collaborators)</Label></div>
                   <div className="flex items-center gap-3"><Globe className="h-4 w-4" /><FormControl><RadioGroupItem value="public_view" id="public_view" /></FormControl><Label htmlFor="public_view">Anyone with the link can view</Label></div>
+                  <div className="flex items-center gap-3"><Pencil className="h-4 w-4" /><FormControl><RadioGroupItem value="public_edit" id="public_edit" /></FormControl><Label htmlFor="public_edit">Anyone with the link can edit</Label></div>
                 </RadioGroup></FormItem>
               )} />
               {form.watch('access_level') !== 'private' && (
