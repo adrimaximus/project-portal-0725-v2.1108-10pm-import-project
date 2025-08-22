@@ -258,6 +258,28 @@ serve(async (req) => {
     let responseData;
 
     switch (feature) {
+      case 'suggest-icon': {
+        const { title, icons } = payload;
+        if (!title || !icons || !Array.isArray(icons)) {
+          throw new Error("Title and a list of icons are required.");
+        }
+
+        const systemPrompt = `You are an AI assistant that suggests the best icon for a given title from a list. Your response must be ONLY the name of the icon from the list provided, with no extra text, explanation, or punctuation.`;
+        const userPrompt = `Title: "${title}"\n\nIcons: [${icons.join(', ')}]`;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4-turbo",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0,
+          max_tokens: 20,
+        });
+
+        responseData = { result: response.choices[0].message.content?.trim() };
+        break;
+      }
       case 'analyze-projects': {
         const { request, conversationHistory } = payload;
         if (!request) {

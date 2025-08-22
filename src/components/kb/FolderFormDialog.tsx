@@ -18,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { MultiSelect } from '../ui/multi-select';
 import { getInitials } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
+import { allIcons } from '@/data/icons';
 
 interface FolderFormDialogProps {
   open: boolean;
@@ -42,12 +43,42 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
   const [isSaving, setIsSaving] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [collaboratorIds, setCollaboratorIds] = useState<string[]>([]);
+  const [isSuggestingIcon, setIsSuggestingIcon] = useState(false);
+  const [hasManuallySelectedIcon, setHasManuallySelectedIcon] = useState(false);
 
   const isEditMode = !!folder;
 
   const form = useForm<FolderFormValues>({
     resolver: zodResolver(folderSchema),
   });
+
+  const titleValue = form.watch('name');
+
+  useEffect(() => {
+    if (!isEditMode && !hasManuallySelectedIcon && titleValue && titleValue.length > 3) {
+      const handler = setTimeout(async () => {
+        setIsSuggestingIcon(true);
+        try {
+          const { data, error } = await supabase.functions.invoke('openai-generator', {
+            body: {
+              feature: 'suggest-icon',
+              payload: { title: titleValue, icons: allIcons }
+            }
+          });
+          if (error) throw error;
+          if (data.result && allIcons.includes(data.result)) {
+            form.setValue('icon', data.result);
+          }
+        } catch (err) {
+          console.error("Icon suggestion failed:", err);
+        } finally {
+          setIsSuggestingIcon(false);
+        }
+      }, 500);
+
+      return () => clearTimeout(handler);
+    }
+  }, [titleValue, isEditMode, hasManuallySelectedIcon, form]);
 
   const fetchCollaborators = useCallback(async () => {
     if (!folder) return;
@@ -80,6 +111,7 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
           category: folder.category || '',
           access_level: folder.access_level || 'private',
         });
+        setHasManuallySelectedIcon(true);
         fetchCollaborators();
       } else {
         form.reset({
@@ -90,6 +122,7 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
           category: '',
           access_level: 'private',
         });
+        setHasManuallySelectedIcon(false);
         setCollaboratorIds([]);
       }
     }
@@ -144,7 +177,23 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
               <FormItem><FormLabel>Category</FormLabel><FormControl><Input placeholder="e.g., Internal Docs" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <FormField control={form.control} name="icon" render={({ field }) => (
-              <FormItem><FormLabel>Icon</FormLabel><FormControl><IconPicker value={field.value} onChange={field.onChange} color={form.watch('color')} /></FormControl><FormMessage /></FormItem>
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  Icon
+                  {isSuggestingIcon && <Loader2 className="h-4 w-4 animate-spin" />}
+                </FormLabel>
+                <FormControl>
+                  <IconPicker
+                    value={field.value}
+                    onChange={(value) => {
+                      field.onChange(value);
+                      setHasManuallySelectedIcon(true);
+                    }}
+                    color={form.watch('color')}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )} />
             <FormField control={form.control} name="color" render={({ field }) => (
               <FormItem><FormLabel>Color</FormLabel><FormControl><ColorPicker color={field.value} setColor={field.onChange} /></FormControl><FormMessage /></FormItem>
