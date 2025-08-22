@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Person } from '@/pages/PeoplePage';
 import { Project, Tag } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
+import AddressAutocompleteInput from './AddressAutocompleteInput';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ const personSchema = z.object({
   notes: z.string().optional(),
   project_ids: z.array(z.string()).optional(),
   tag_ids: z.array(z.string()).optional(),
+  address: z.any().optional(),
 });
 
 type PersonFormValues = z.infer<typeof personSchema>;
@@ -54,7 +56,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     defaultValues: {
       full_name: '', email: '', phone: '', company: '', job_title: '',
       department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-      notes: '', project_ids: [], tag_ids: [],
+      notes: '', project_ids: [], tag_ids: [], address: null,
     }
   });
 
@@ -75,8 +77,8 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     if (person) {
       form.reset({
         full_name: person.full_name,
-        email: person.contact?.email || '',
-        phone: person.contact?.phone || '',
+        email: person.contact?.emails?.[0] || '',
+        phone: person.contact?.phones?.[0] || '',
         company: person.company || '',
         job_title: person.job_title || '',
         department: person.department || '',
@@ -87,12 +89,13 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         notes: person.notes || '',
         project_ids: person.projects?.map(p => p.id) || [],
         tag_ids: person.tags?.map(t => t.id) || [],
+        address: person.address || null,
       });
     } else {
       form.reset({
         full_name: '', email: '', phone: '', company: '', job_title: '',
         department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-        notes: '', project_ids: [], tag_ids: [],
+        notes: '', project_ids: [], tag_ids: [], address: null,
       });
     }
   }, [person, form, open]);
@@ -102,7 +105,10 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     const { error } = await supabase.rpc('upsert_person_with_details', {
       p_id: person?.id || null,
       p_full_name: values.full_name,
-      p_contact: { email: values.email, phone: values.phone },
+      p_contact: { 
+        emails: values.email ? [values.email] : [],
+        phones: values.phone ? [values.phone] : []
+      },
       p_company: values.company,
       p_job_title: values.job_title,
       p_department: values.department,
@@ -110,7 +116,10 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       p_birthday: values.birthday ? format(values.birthday, 'yyyy-MM-dd') : null,
       p_notes: values.notes,
       p_project_ids: values.project_ids,
-      p_tag_ids: values.tag_ids,
+      p_existing_tag_ids: values.tag_ids,
+      p_custom_tags: [], // Assuming no custom tags from this simplified form for now
+      p_avatar_url: person?.avatar_url, // Assuming avatar is handled elsewhere
+      p_address: values.address || null,
     });
     setIsSaving(false);
 
@@ -142,6 +151,18 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                 <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
+            <FormField control={form.control} name="address" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address</FormLabel>
+                <FormControl>
+                  <AddressAutocompleteInput
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="job_title" render={({ field }) => (
                 <FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>

@@ -7,10 +7,10 @@ import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
 import { formatInJakarta, cn } from "@/lib/utils";
-import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
+import AddressAutocompleteInput from '../people/AddressAutocompleteInput';
 
 interface ProjectDetailsCardProps {
   project: Project;
@@ -111,10 +111,9 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
             <div className="w-full">
               <p className="font-medium">Venue</p>
               {isEditing ? (
-                <Input
-                  value={project.venue || ''}
-                  onChange={(e) => onFieldChange('venue', e.target.value)}
-                  placeholder="Enter project venue"
+                <AddressAutocompleteInput
+                  value={project.venue}
+                  onChange={(address) => onFieldChange('venue', address?.formatted_address || address?.label || '')}
                 />
               ) : (
                 <p className="text-muted-foreground">

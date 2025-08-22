@@ -10,7 +10,7 @@ interface FeatureCardProps {
 
 const FeatureCard = ({ feature }: FeatureCardProps) => {
   const { toggleFeatureStatus } = useFeatures();
-  const isSettingsFeature = feature.id === 'settings';
+  const isCoreFeature = feature.id === 'settings' || feature.id === 'dashboard';
   const isEnabled = feature.status === 'enabled';
 
   return (
@@ -20,13 +20,13 @@ const FeatureCard = ({ feature }: FeatureCardProps) => {
         <div className="flex items-center gap-2">
           <Button
             onClick={() => toggleFeatureStatus(feature.id)}
-            disabled={isSettingsFeature}
+            disabled={isCoreFeature}
             variant={isEnabled ? "outline" : "default"}
             size="sm"
             className={cn(
               "capitalize w-[80px]",
               isEnabled && "border-green-500 text-green-500 hover:bg-green-50/50 hover:text-green-600",
-              isSettingsFeature && "cursor-not-allowed opacity-50"
+              isCoreFeature && "cursor-not-allowed opacity-50"
             )}
           >
             {feature.status}

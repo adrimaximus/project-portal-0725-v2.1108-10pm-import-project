@@ -14,6 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { id } from 'date-fns/locale';
+import AddressAutocompleteInput from '@/components/people/AddressAutocompleteInput';
 
 const projectFormSchema = z.object({
     name: z.string().min(3, { message: 'Nama proyek minimal 3 karakter.' }),
@@ -22,6 +23,7 @@ const projectFormSchema = z.object({
     startDate: z.date().optional(),
     dueDate: z.date().optional(),
     budget: z.coerce.number().positive().optional(),
+    venue: z.any().optional(),
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -50,6 +52,7 @@ export function CreateProjectForm({ onFinished }: CreateProjectFormProps) {
             budget: values.budget,
             startDate: values.startDate ? values.startDate.toISOString() : undefined,
             dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
+            venue: values.venue?.formatted_address || values.venue || undefined,
         }, {
             onSuccess: () => {
                 form.reset();
@@ -95,6 +98,22 @@ export function CreateProjectForm({ onFinished }: CreateProjectFormProps) {
                             <FormLabel>Kategori</FormLabel>
                             <FormControl>
                                 <Input placeholder="e.g. Web Development" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="venue"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Venue</FormLabel>
+                            <FormControl>
+                                <AddressAutocompleteInput
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

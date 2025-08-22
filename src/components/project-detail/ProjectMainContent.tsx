@@ -1,4 +1,4 @@
-import { Project, AssignedUser, Task, Tag } from "@/types";
+import { Project, Tag } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectComments from "@/components/ProjectComments";
 import { Badge } from "@/components/ui/badge";
@@ -7,38 +7,19 @@ import ProjectOverviewTab from "./ProjectOverviewTab";
 import ProjectActivityFeed from "./ProjectActivityFeed";
 import ProjectTasks from "./ProjectTasks";
 import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProjectMutations } from "@/hooks/useProjectMutations";
 
 interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
-  onTaskAdd: (title: string) => void;
-  onTaskAssignUsers: (taskId: string, userIds: string[]) => void;
-  onTaskStatusChange: (taskId: string, completed: boolean) => void;
-  onTaskDelete: (taskId: string) => void;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
-  onDescriptionChange: (value: string) => void;
-  onTeamChange: (users: AssignedUser[]) => void;
-  onFilesAdd: (files: File[]) => void;
-  onFileDelete: (fileId: string) => void;
-  onServicesChange: (services: string[]) => void;
-  onTagsChange: (tags: Tag[]) => void;
+  onFieldChange: (field: keyof Project, value: any) => void;
+  mutations: ReturnType<typeof useProjectMutations>;
 }
 
-const ProjectMainContent = ({
-  project,
-  isEditing,
-  onTaskAdd,
-  onTaskAssignUsers,
-  onTaskStatusChange,
-  onTaskDelete,
-  onAddCommentOrTicket,
-  onDescriptionChange,
-  onTeamChange,
-  onFilesAdd,
-  onFileDelete,
-  onServicesChange,
-  onTagsChange,
-}: ProjectMainContentProps) => {
+const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations }: ProjectMainContentProps) => {
+  const { user } = useAuth();
+
   const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
 
   return (
@@ -68,27 +49,30 @@ const ProjectMainContent = ({
             <ProjectOverviewTab
               project={project}
               isEditing={isEditing}
-              onDescriptionChange={onDescriptionChange}
-              onTeamChange={onTeamChange}
-              onFilesAdd={onFilesAdd}
-              onFileDelete={onFileDelete}
-              onServicesChange={onServicesChange}
-              onTagsChange={onTagsChange}
+              onDescriptionChange={(value) => onFieldChange('description', value)}
+              onTeamChange={(users) => onFieldChange('assignedTo', users)}
+              onFilesAdd={(files) => mutations.addFiles.mutate({ files, project: project, user: user! })}
+              onFileDelete={(fileId) => {
+                const file = project.briefFiles?.find(f => f.id === fileId);
+                if (file) mutations.deleteFile.mutate(file);
+              }}
+              onServicesChange={(services) => onFieldChange('services', services)}
+              onTagsChange={(tags: Tag[]) => onFieldChange('tags', tags)}
             />
           </TabsContent>
           <TabsContent value="tasks">
             <ProjectTasks
               project={project}
-              onTaskAdd={onTaskAdd}
-              onTaskAssignUsers={onTaskAssignUsers}
-              onTaskStatusChange={onTaskStatusChange}
-              onTaskDelete={onTaskDelete}
+              onTaskAdd={(title) => mutations.addTask.mutate({ project: project, user: user!, title })}
+              onTaskAssignUsers={(taskId, userIds) => mutations.assignUsersToTask.mutate({ taskId, userIds })}
+              onTaskStatusChange={(taskId, completed) => mutations.updateTask.mutate({ taskId, updates: { completed } })}
+              onTaskDelete={(taskId) => mutations.deleteTask.mutate(taskId)}
             />
           </TabsContent>
           <TabsContent value="discussion">
             <ProjectComments
               project={project}
-              onAddCommentOrTicket={onAddCommentOrTicket}
+              onAddCommentOrTicket={(text, isTicket, attachment) => mutations.addComment.mutate({ project: project, user: user!, text, isTicket, attachment })}
             />
           </TabsContent>
           <TabsContent value="activity">

@@ -11,6 +11,13 @@ export interface Feature {
 // Berdasarkan rute di App.tsx dan fitur aplikasi umum.
 export const initialFeatures: Feature[] = [
   {
+    id: 'dashboard',
+    name: 'Dashboard',
+    description: 'The main overview of your projects and activities.',
+    status: 'enabled',
+    path: '/dashboard',
+  },
+  {
     id: 'projects',
     name: 'Projects',
     description: 'Manage your projects and track their progress.',
@@ -58,6 +65,13 @@ export const initialFeatures: Feature[] = [
     description: 'Manage your contacts and connections.',
     status: 'enabled',
     path: '/people',
+  },
+  {
+    id: 'knowledge-base',
+    name: 'Knowledge Base',
+    description: 'Create and manage articles and documentation.',
+    status: 'enabled',
+    path: '/knowledge-base',
   },
   {
     id: 'notifications',
