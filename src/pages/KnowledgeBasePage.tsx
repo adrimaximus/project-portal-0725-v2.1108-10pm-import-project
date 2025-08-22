@@ -24,6 +24,7 @@ const KnowledgeBasePage = () => {
     const savedView = localStorage.getItem('kb_view_mode') as 'grid' | 'list';
     return savedView || 'grid';
   });
+  const [sortConfig, setSortConfig] = useState<{ key: keyof KbFolder | null; direction: 'ascending' | 'descending' }>({ key: 'name', direction: 'ascending' });
 
   useEffect(() => {
     localStorage.setItem('kb_view_mode', viewMode);
@@ -48,6 +49,36 @@ const KnowledgeBasePage = () => {
       (folder.category && folder.category.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [folders, searchTerm]);
+
+  const requestSort = (key: keyof KbFolder) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+        direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedFolders = useMemo(() => {
+    let sortableItems = [...filteredFolders];
+    if (sortConfig.key !== null) {
+        sortableItems.sort((a, b) => {
+            const aValue = a[sortConfig.key!];
+            const bValue = b[sortConfig.key!];
+
+            if (aValue === null || aValue === undefined) return 1;
+            if (bValue === null || bValue === undefined) return -1;
+            
+            if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
+                return sortConfig.direction === 'ascending' ? -1 : 1;
+            }
+            if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
+                return sortConfig.direction === 'ascending' ? 1 : -1;
+            }
+            return 0;
+        });
+    }
+    return sortableItems;
+  }, [filteredFolders, sortConfig]);
 
   const handleAddNew = () => {
     setEditingFolder(null);
@@ -107,15 +138,15 @@ const KnowledgeBasePage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48" />)}
             </div>
-          ) : filteredFolders.length > 0 ? (
+          ) : sortedFolders.length > 0 ? (
             viewMode === 'grid' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {filteredFolders.map(folder => (
+                {sortedFolders.map(folder => (
                   <FolderCard key={folder.id} folder={folder} onEdit={handleEdit} onDelete={setFolderToDelete} />
                 ))}
               </div>
             ) : (
-              <FolderListView folders={filteredFolders} onEdit={handleEdit} onDelete={setFolderToDelete} />
+              <FolderListView folders={sortedFolders} onEdit={handleEdit} onDelete={setFolderToDelete} requestSort={requestSort} />
             )
           ) : (
             <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">

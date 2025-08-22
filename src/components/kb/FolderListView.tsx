@@ -12,17 +12,24 @@ interface FolderListViewProps {
   folders: KbFolder[];
   onEdit: (folder: KbFolder) => void;
   onDelete: (folder: KbFolder) => void;
+  requestSort: (key: keyof KbFolder) => void;
 }
 
-const FolderListView = ({ folders, onEdit, onDelete }: FolderListViewProps) => {
+const FolderListView = ({ folders, onEdit, onDelete, requestSort }: FolderListViewProps) => {
   return (
     <div className="border rounded-lg">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Last Modified</TableHead>
+            <TableHead>
+              <Button variant="ghost" onClick={() => requestSort('name')} className="px-2">Name</Button>
+            </TableHead>
+            <TableHead>
+              <Button variant="ghost" onClick={() => requestSort('category')} className="px-2">Category</Button>
+            </TableHead>
+            <TableHead>
+              <Button variant="ghost" onClick={() => requestSort('updated_at')} className="px-2">Last Modified</Button>
+            </TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
