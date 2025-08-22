@@ -99,48 +99,26 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
     if (!user) return;
     setIsSaving(true);
 
-    if (isEditMode && folder) {
-      const { error: updateError } = await supabase.from('kb_folders').update({
-        name: values.name, description: values.description, icon: values.icon,
-        color: values.color, category: values.category, access_level: values.access_level,
-      }).eq('id', folder.id);
-
-      if (updateError) {
-        toast.error("Failed to update folder.", { description: updateError.message });
-        setIsSaving(false);
-        return;
-      }
-
-      const { data: existingCollaborators } = await supabase.from('kb_folder_collaborators').select('user_id').eq('folder_id', folder.id);
-      const existingIds = new Set((existingCollaborators || []).map(c => c.user_id));
-      const toAdd = collaboratorIds.filter(id => !existingIds.has(id));
-      const toRemove = Array.from(existingIds).filter(id => !collaboratorIds.includes(id));
-
-      if (toAdd.length > 0) await supabase.from('kb_folder_collaborators').insert(toAdd.map(uid => ({ folder_id: folder.id, user_id: uid, role: 'editor' })));
-      if (toRemove.length > 0) await supabase.from('kb_folder_collaborators').delete().eq('folder_id', folder.id).in('user_id', toRemove);
-
-    } else {
-      const { data: newFolder, error } = await supabase.from('kb_folders').insert({
-        ...values,
-      }).select().single();
-
-      if (error) {
-        toast.error("Failed to create folder.", { description: error.message });
-        setIsSaving(false);
-        return;
-      }
-
-      if (collaboratorIds.length > 0) {
-        const collaboratorsToInsert = collaboratorIds.map(uid => ({ folder_id: newFolder.id, user_id: uid, role: 'editor' }));
-        const { error: collabError } = await supabase.from('kb_folder_collaborators').insert(collaboratorsToInsert);
-        if (collabError) toast.warning("Folder created, but failed to add collaborators.", { description: collabError.message });
-      }
-    }
+    const { error } = await supabase.rpc('upsert_folder_with_collaborators', {
+      p_id: folder?.id || null,
+      p_name: values.name,
+      p_description: values.description,
+      p_icon: values.icon,
+      p_color: values.color,
+      p_category: values.category,
+      p_access_level: values.access_level,
+      p_collaborator_ids: collaboratorIds,
+    });
 
     setIsSaving(false);
-    toast.success(isEditMode ? "Folder updated successfully." : "Folder created successfully.");
-    onSuccess();
-    onOpenChange(false);
+
+    if (error) {
+      toast.error(`Failed to save folder: ${error.message}`);
+    } else {
+      toast.success(isEditMode ? "Folder updated successfully." : "Folder created successfully.");
+      onSuccess();
+      onOpenChange(false);
+    }
   };
 
   const shareLink = folder ? `${window.location.origin}/knowledge-base/folders/${folder.slug}` : '';
