@@ -139,13 +139,9 @@ export function GlobalSearch() {
       
       const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made'];
       if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
-        toast.info("Action successful. Refreshing data...");
-        await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['projects'] }),
-            queryClient.invalidateQueries({ queryKey: ['project'] }),
-            queryClient.invalidateQueries({ queryKey: ['articles'] }),
-            queryClient.invalidateQueries({ queryKey: ['article'] }),
-        ]);
+        toast.info("Action successful. Refreshing project data...");
+        await queryClient.invalidateQueries({ queryKey: ['projects'] });
+        await queryClient.invalidateQueries({ queryKey: ['project'] });
       }
   
       setConversation(prev => [...prev, { sender: 'ai', content: result }]);

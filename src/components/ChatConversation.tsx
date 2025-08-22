@@ -86,7 +86,7 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
               )}
               <div
                 className={cn(
-                  "max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2",
+                  "max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 group relative",
                   isCurrentUser
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted",
@@ -96,20 +96,13 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
                 {!isCurrentUser && !isSameSenderAsPrevious && (
                   <p className="text-sm font-semibold mb-1">{sender.name}</p>
                 )}
-                <div className="flex items-end gap-2">
-                  <div className="min-w-0">
-                    {message.text && <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>}
-                    {message.attachment && (
-                      <MessageAttachment attachment={message.attachment} />
-                    )}
-                  </div>
-                  <span className={cn(
-                      "text-xs self-end flex-shrink-0",
-                      isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
-                  )}>
-                      {formatTimestamp(message.timestamp)}
-                  </span>
-                </div>
+                {message.text && <p className="text-sm whitespace-pre-wrap">{message.text}</p>}
+                {message.attachment && (
+                  <MessageAttachment attachment={message.attachment} />
+                )}
+                <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-5 right-2 text-muted-foreground">
+                  {formatTimestamp(message.timestamp)}
+                </span>
               </div>
             </div>
           </div>

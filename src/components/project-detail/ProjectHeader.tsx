@@ -17,29 +17,28 @@ interface ProjectHeaderProps {
   project: Project;
   isEditing: boolean;
   isSaving: boolean;
-  canEdit: boolean;
   onEditToggle: () => void;
   onSaveChanges: () => void;
   onCancelChanges: () => void;
+  canEdit: boolean;
+  onFieldChange: (field: keyof Project, value: any) => void;
   onToggleComplete: () => void;
   onDeleteProject: () => void;
-  onFieldChange: (field: keyof Project, value: any) => void;
 }
 
 const ProjectHeader = ({
   project,
   isEditing,
   isSaving,
-  canEdit,
   onEditToggle,
   onSaveChanges,
   onCancelChanges,
+  canEdit,
+  onFieldChange,
   onToggleComplete,
   onDeleteProject,
-  onFieldChange,
 }: ProjectHeaderProps) => {
   const navigate = useNavigate();
-
   const statusStyles = getStatusStyles(project.status);
   const isCompleted = project.status === 'Completed';
   const hasOpenTasks = project.tasks?.some(task => !task.completed);

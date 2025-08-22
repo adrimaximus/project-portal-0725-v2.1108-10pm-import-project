@@ -12,7 +12,6 @@ import { useNavigate } from 'react-router-dom';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import GoalsTableView from '@/components/goals/GoalsTableView';
 import { useQueryClient } from '@tanstack/react-query';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const GoalsPage = () => {
   const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
@@ -121,26 +120,14 @@ const GoalsPage = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">My Goals</h1>
         <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <ToggleGroup type="single" value={viewMode} onValueChange={handleViewChange}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="card" aria-label="Card view">
-                    <LayoutGrid className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Card View</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="table" aria-label="Table view">
-                    <TableIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Table View</p></TooltipContent>
-              </Tooltip>
-            </ToggleGroup>
-          </TooltipProvider>
+          <ToggleGroup type="single" value={viewMode} onValueChange={handleViewChange}>
+            <ToggleGroupItem value="card" aria-label="Card view">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="table" aria-label="Table view">
+              <TableIcon className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
           <Button onClick={() => setIsNewGoalDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> New Goal
           </Button>

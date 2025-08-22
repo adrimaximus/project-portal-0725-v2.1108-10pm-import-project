@@ -5,50 +5,52 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import debounce from 'lodash.debounce';
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getInitials } from "@/lib/utils";
 
-// Helper function to map conversation data
-const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
-  id: c.conversation_id,
-  userName: c.is_group ? c.group_name : c.other_user_name,
-  userAvatar: c.is_group ? c.avatar_url : c.other_user_avatar,
-  lastMessage: c.last_message_content || "No messages yet.",
-  lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
-  unreadCount: 0,
-  isGroup: c.is_group,
-  members: (c.participants || []).map((p: any) => ({
-    id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
-  })),
-  created_by: c.created_by,
-});
-
 export const useChat = () => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isSomeoneTyping, setIsSomeoneTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [messageSearchResults, setMessageSearchResults] = useState<string[]>([]);
 
   const location = useLocation();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const queryClient = useQueryClient();
+
   const typingTimerRef = useRef<number | null>(null);
 
-  const { data: conversations = [], isLoading: isLoadingConversations, refetch: fetchConversations } = useQuery({
-    queryKey: ['conversations', currentUser?.id],
-    queryFn: async () => {
-      if (!currentUser) return [];
-      const { data, error } = await supabase.rpc('get_user_conversations');
-      if (error) {
-        toast.error("Failed to fetch conversations.");
-        console.error(error);
-        return [];
-      }
-      return data.map(mapConversationData);
-    },
-    enabled: !!currentUser,
-  });
+  const fetchConversations = useCallback(async () => {
+    if (!currentUser) return;
+    setIsLoading(true);
+    const { data, error } = await supabase.rpc('get_user_conversations');
+    if (error) {
+      toast.error("Failed to fetch conversations.");
+      console.error(error);
+    } else {
+      const mappedConversations: Conversation[] = data.map((c: any) => ({
+        id: c.conversation_id,
+        userName: c.is_group ? c.group_name : c.other_user_name,
+        userAvatar: c.is_group ? c.avatar_url : c.other_user_avatar,
+        lastMessage: c.last_message_content || "No messages yet.",
+        lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
+        unreadCount: 0,
+        messages: [],
+        isGroup: c.is_group,
+        members: (c.participants || []).map((p: any) => ({
+          id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
+        })),
+        created_by: c.created_by,
+      }));
+      setConversations(mappedConversations);
+    }
+    setIsLoading(false);
+  }, [currentUser]);
+
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
 
   const debouncedSearchMessages = useCallback(
     debounce(async (term: string) => {
@@ -72,32 +74,138 @@ export const useChat = () => {
   }, [searchTerm, debouncedSearchMessages]);
 
   const filteredConversations = useMemo(() => {
-    if (!searchTerm) return conversations;
+    if (!searchTerm) {
+      return conversations;
+    }
+
     const lowercasedSearchTerm = searchTerm.toLowerCase();
-    const nameMatches = conversations.filter(c => c.userName.toLowerCase().includes(lowercasedSearchTerm));
-    const messageMatches = conversations.filter(c => messageSearchResults.includes(c.id));
-    const combined = new Map<string, Omit<Conversation, 'messages'>>();
+    
+    const nameMatches = conversations.filter(c =>
+      c.userName.toLowerCase().includes(lowercasedSearchTerm)
+    );
+
+    const messageMatches = conversations.filter(c =>
+      messageSearchResults.includes(c.id)
+    );
+
+    const combined = new Map<string, Conversation>();
     nameMatches.forEach(c => combined.set(c.id, c));
     messageMatches.forEach(c => combined.set(c.id, c));
-    return Array.from(combined.values()).sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
+
+    return Array.from(combined.values()).sort((a, b) => 
+      new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()
+    );
   }, [conversations, searchTerm, messageSearchResults]);
+
+  const handleConversationSelect = useCallback(async (id: string | null) => {
+    setSelectedConversationId(id);
+    if (!id) return;
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*, sender:profiles!sender_id(id, first_name, last_name, avatar_url, email)')
+      .eq('conversation_id', id)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      toast.error("Failed to fetch messages.");
+      console.error("Message fetch error:", error);
+      return;
+    }
+
+    const mappedMessages: Message[] = (data || []).map((m: any) => {
+      if (!m.sender) {
+        return {
+          id: m.id, text: m.content, timestamp: m.created_at,
+          sender: { id: m.sender_id, name: 'Deleted User', avatar: undefined, initials: 'DU', email: '' },
+          attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
+        };
+      }
+      const senderName = `${m.sender.first_name || ''} ${m.sender.last_name || ''}`.trim();
+      return {
+        id: m.id, text: m.content, timestamp: m.created_at,
+        sender: {
+          id: m.sender.id,
+          name: senderName || m.sender.email,
+          avatar: m.sender.avatar_url,
+          initials: getInitials(senderName, m.sender.email) || 'NN',
+          email: m.sender.email,
+        },
+        attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
+      }
+    });
+
+    setConversations(prev => prev.map(c => (c.id === id ? { ...c, messages: mappedMessages } : c)));
+  }, []);
 
   useEffect(() => {
     if (!currentUser) return;
 
     const channel = supabase.channel('chat-room');
-    channel
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
-        const newMessage = payload.new;
-        const conversationId = newMessage.conversation_id;
-        
-        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
 
-        // Invalidate the messages query for the specific conversation to trigger a refetch
-        queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+    channel
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload: any) => {
+        const newMessage = payload.new;
+        
+        if (newMessage.sender_id === currentUser?.id) return;
+
+        const conversationId = newMessage.conversation_id;
+        const currentConvo = conversations.find(c => c.id === conversationId);
+
+        if (!currentConvo) {
+          fetchConversations();
+          return;
+        }
+
+        let senderProfile = currentConvo.members.find(m => m.id === newMessage.sender_id);
+        if (!senderProfile) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, avatar_url, email')
+            .eq('id', newMessage.sender_id)
+            .single();
+          
+          if (profileData) {
+            const fullName = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim();
+            senderProfile = {
+              id: profileData.id, name: fullName || profileData.email,
+              avatar: profileData.avatar_url, initials: getInitials(fullName, profileData.email),
+              email: profileData.email,
+            };
+          }
+        }
+
+        const finalSender = senderProfile || { id: newMessage.sender_id, name: 'Unknown User', avatar: '', initials: '??', email: '' };
+        const mappedMessage: Message = {
+          id: newMessage.id, text: newMessage.content, timestamp: newMessage.created_at,
+          sender: finalSender,
+          attachment: newMessage.attachment_url ? { name: newMessage.attachment_name, url: newMessage.attachment_url, type: newMessage.attachment_type } : undefined,
+        };
+
+        setConversations(prev => {
+          const convoIndex = prev.findIndex(c => c.id === conversationId);
+          if (convoIndex === -1) return prev;
+
+          const updatedConvo = { ...prev[convoIndex] };
+          updatedConvo.lastMessage = newMessage.content || "Attachment";
+          updatedConvo.lastMessageTimestamp = newMessage.created_at;
+
+          if (senderProfile && !updatedConvo.members.some(m => m.id === senderProfile.id)) {
+            updatedConvo.members = [...updatedConvo.members, senderProfile];
+          }
+
+          if (conversationId === selectedConversationId) {
+            updatedConvo.messages = [...updatedConvo.messages, mappedMessage];
+          }
+
+          const newConversations = [...prev];
+          newConversations.splice(convoIndex, 1);
+          newConversations.unshift(updatedConvo);
+          return newConversations;
+        });
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, async () => {
+        fetchConversations();
       })
       .on('broadcast', { event: 'typing' }, (payload: any) => {
         if (payload?.userId && payload.userId !== currentUser?.id && payload.conversationId === selectedConversationId) {
@@ -111,7 +219,7 @@ export const useChat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, selectedConversationId, queryClient]);
+  }, [currentUser, selectedConversationId, fetchConversations, conversations]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
@@ -124,7 +232,29 @@ export const useChat = () => {
   const handleSendMessage = async (text: string, attachment: Attachment | null) => {
     if (!selectedConversationId || !currentUser) return;
 
-    const { error } = await supabase
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      text,
+      timestamp: new Date().toISOString(),
+      sender: currentUser,
+      attachment,
+    };
+
+    setConversations(prev =>
+      prev.map(c =>
+        c.id === selectedConversationId
+          ? {
+              ...c,
+              messages: [...c.messages, optimisticMessage],
+              lastMessage: text || "Attachment",
+              lastMessageTimestamp: new Date().toISOString(),
+            }
+          : c
+      )
+    );
+
+    const { data, error } = await supabase
       .from('messages')
       .insert({
         conversation_id: selectedConversationId,
@@ -133,10 +263,36 @@ export const useChat = () => {
         attachment_url: attachment?.url,
         attachment_name: attachment?.name,
         attachment_type: attachment?.type,
-      });
+      })
+      .select()
+      .single();
 
     if (error) {
       toast.error("Failed to send message.", { description: error.message });
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === selectedConversationId
+            ? { ...c, messages: c.messages.filter(m => m.id !== tempId) }
+            : c
+        )
+      );
+    } else {
+      const realMessage: Message = {
+        id: data.id,
+        text: data.content,
+        timestamp: data.created_at,
+        sender: currentUser,
+        attachment: data.attachment_url
+          ? { name: data.attachment_name, url: data.attachment_url, type: data.attachment_type }
+          : undefined,
+      };
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === selectedConversationId
+            ? { ...c, messages: c.messages.map(m => (m.id === tempId ? realMessage : m)) }
+            : c
+        )
+      );
     }
   };
 
@@ -145,7 +301,7 @@ export const useChat = () => {
     const { data, error } = await supabase.rpc('create_or_get_conversation', { p_other_user_id: collaborator.id, p_is_group: false });
     if (!error && data) {
       await fetchConversations();
-      setSelectedConversationId(data as string);
+      handleConversationSelect(data as string);
     }
   };
 
@@ -154,7 +310,7 @@ export const useChat = () => {
     const { data, error } = await supabase.rpc('create_group_conversation', { p_group_name: groupName, p_participant_ids: members.map(m => m.id) });
     if (!error && data) {
       await fetchConversations();
-      setSelectedConversationId(data as string);
+      handleConversationSelect(data as string);
     }
   };
 
@@ -163,8 +319,7 @@ export const useChat = () => {
     if (error) toast.error("Failed to clear chat history.");
     else {
       toast.success("Chat history has been cleared.");
-      queryClient.setQueryData(['messages', conversationId], []);
-      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
+      setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages: [], lastMessage: "Chat cleared", lastMessageTimestamp: new Date().toISOString() } : c));
     }
   };
 
@@ -177,7 +332,7 @@ export const useChat = () => {
       if (selectedConversationId === conversationId) {
         setSelectedConversationId(null);
       }
-      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
+      fetchConversations();
     }
   };
 
@@ -190,7 +345,7 @@ export const useChat = () => {
       if (selectedConversationId === conversationId) {
         setSelectedConversationId(null);
       }
-      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
+      setConversations(prev => prev.filter(c => c.id !== conversationId));
     }
   };
 
@@ -202,11 +357,11 @@ export const useChat = () => {
   return {
     conversations: filteredConversations,
     selectedConversationId,
-    setSelectedConversationId,
     isSomeoneTyping,
-    isLoadingConversations,
+    isLoading,
     searchTerm,
     setSearchTerm,
+    handleConversationSelect,
     handleSendMessage,
     handleClearChat,
     handleStartNewChat,
