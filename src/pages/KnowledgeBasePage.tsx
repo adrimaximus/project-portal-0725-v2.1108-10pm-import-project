@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import PortalLayout from '@/components/PortalLayout';
 import { Button } from '@/components/ui/button';
-import { FolderPlus, Search, GitMerge, Loader2 } from 'lucide-react';
+import { FolderPlus, Search, GitMerge, Loader2, LayoutGrid, List } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { KbFolder } from '@/types';
@@ -12,6 +12,8 @@ import FolderCard from '@/components/kb/FolderCard';
 import { Input } from '@/components/ui/input';
 import EditFolderDialog from '@/components/kb/EditFolderDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import FolderListView from '@/components/kb/FolderListView';
 
 const KnowledgeBasePage = () => {
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
@@ -20,6 +22,14 @@ const KnowledgeBasePage = () => {
   const [folderToDelete, setFolderToDelete] = useState<KbFolder | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    const savedView = localStorage.getItem('kb_view_mode') as 'grid' | 'list';
+    return savedView || 'grid';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('kb_view_mode', viewMode);
+  }, [viewMode]);
 
   const { data: folders = [], isLoading } = useQuery({
     queryKey: ['kb_folders'],
@@ -72,14 +82,20 @@ const KnowledgeBasePage = () => {
           </Button>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search folders..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="relative w-full sm:flex-1 sm:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search folders..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 w-full"
+            />
+          </div>
+          <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'grid' | 'list')}}>
+            <ToggleGroupItem value="grid" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
         <div>
@@ -89,11 +105,15 @@ const KnowledgeBasePage = () => {
               {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48" />)}
             </div>
           ) : filteredFolders.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filteredFolders.map(folder => (
-                <FolderCard key={folder.id} folder={folder} onEdit={handleEdit} onDelete={setFolderToDelete} />
-              ))}
-            </div>
+            viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {filteredFolders.map(folder => (
+                  <FolderCard key={folder.id} folder={folder} onEdit={handleEdit} onDelete={setFolderToDelete} />
+                ))}
+              </div>
+            ) : (
+              <FolderListView folders={filteredFolders} onEdit={handleEdit} onDelete={setFolderToDelete} />
+            )
           ) : (
             <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
               <p>No folders found.</p>
