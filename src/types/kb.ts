@@ -21,4 +21,6 @@ export interface KbFolder {
   category?: string;
   access_level?: FolderAccessLevel;
   collaborators?: KbFolderCollaborator[];
+  last_modified_by: string;
+  last_modifier?: Pick<User, 'id' | 'name' | 'avatar' | 'initials'> | null;
 }
