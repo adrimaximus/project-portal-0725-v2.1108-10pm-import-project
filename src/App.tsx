@@ -34,6 +34,7 @@ import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 import PeoplePage from "./pages/PeoplePage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
+import FolderDetailPage from "./pages/kb/FolderDetailPage";
 
 const ADMIN_ROLES = ['admin', 'master admin'];
 
@@ -65,6 +66,7 @@ function App() {
           <Route path="/users/:id" element={<UserProfilePage />} />
           <Route path="/custom" element={<EmbedPage />} />
           <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+          <Route path="/knowledge-base/folders/:slug" element={<FolderDetailPage />} />
         </Route>
 
         {/* Admin Protected Routes */}
