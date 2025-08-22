@@ -33,10 +33,6 @@ import SlackPage from "./pages/integrations/SlackPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 import PeoplePage from "./pages/PeoplePage";
-import KnowledgeBasePage from "./pages/KnowledgeBasePage";
-import ArticleDetailPage from "./pages/ArticleDetailPage";
-import ArticleEditorPage from "./pages/ArticleEditorPage";
-import FolderDetailPage from "./pages/FolderDetailPage";
 
 const ADMIN_ROLES = ['admin', 'master admin'];
 
@@ -66,9 +62,6 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/users/:id" element={<UserProfilePage />} />
-          <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
-          <Route path="/knowledge-base/:slug" element={<ArticleDetailPage />} />
-          <Route path="/knowledge-base/folders/:folderId" element={<FolderDetailPage />} />
           <Route path="/custom" element={<EmbedPage />} />
         </Route>
 
@@ -76,8 +69,6 @@ function App() {
         <Route element={<ProtectedRouteLayout allowedRoles={ADMIN_ROLES} />}>
           <Route path="/people" element={<PeoplePage />} />
           <Route path="/users" element={<UserManagementPage />} />
-          <Route path="/knowledge-base/new" element={<ArticleEditorPage />} />
-          <Route path="/knowledge-base/:slug/edit" element={<ArticleEditorPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/team" element={<TeamSettingsPage />} />
           <Route path="/settings/integrations" element={<IntegrationsPage />} />

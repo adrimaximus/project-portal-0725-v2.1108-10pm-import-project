@@ -67,13 +67,6 @@ export const initialFeatures: Feature[] = [
     path: '/people',
   },
   {
-    id: 'knowledge-base',
-    name: 'Knowledge Base',
-    description: 'Find guides, tutorials, and important information.',
-    status: 'enabled',
-    path: '/knowledge-base',
-  },
-  {
     id: 'notifications',
     name: 'Notifications',
     description: 'Stay updated with important events and alerts.',
