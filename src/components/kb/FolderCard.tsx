@@ -6,17 +6,7 @@ import { id } from 'date-fns/locale';
 import { getIconComponent } from '@/data/icons';
 import { Folder } from 'lucide-react';
 import { generateVibrantGradient } from '@/lib/utils';
-
-export type KbFolder = {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  color: string;
-  updated_at: string;
-  article_count: number;
-  collaborators: { id: string; name: string; avatar_url: string, initials: string }[];
-};
+import { KbFolder } from '@/types';
 
 const FolderCard = ({ folder }: { folder: KbFolder }) => {
   const Icon = getIconComponent(folder.icon) || Folder;

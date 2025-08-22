@@ -13,12 +13,11 @@ import RichTextEditor from '@/components/RichTextEditor';
 import { toast } from 'sonner';
 import { Loader2, ArrowLeft, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Tag } from '@/types';
+import { Tag, KbFolder } from '@/types';
 import { TagInput } from '@/components/goals/TagInput';
 import { v4 as uuidv4 } from 'uuid';
 import { colors } from '@/data/colors';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { KbFolder } from '@/components/kb/FolderCard';
 
 const articleSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters long."),

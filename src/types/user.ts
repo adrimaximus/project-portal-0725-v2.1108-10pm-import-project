@@ -1,0 +1,16 @@
+export interface User {
+  id: string;
+  email?: string;
+  name: string;
+  avatar?: string;
+  initials: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  role?: string;
+  status?: string;
+  sidebar_order?: string[];
+  updated_at?: string;
+}
+
+export type Collaborator = User & { online?: boolean };
+export type AssignedUser = User;

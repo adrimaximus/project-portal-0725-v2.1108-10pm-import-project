@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { getIconComponent } from '@/data/icons';
 import { Folder as FolderIcon } from 'lucide-react';
-import { KbFolder } from '@/components/kb/FolderCard';
+import { KbFolder } from '@/types';
 import FolderFormDialog from '@/components/kb/FolderFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';

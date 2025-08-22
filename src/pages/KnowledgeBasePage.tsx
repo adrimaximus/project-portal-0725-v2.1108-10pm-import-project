@@ -12,8 +12,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { toast } from 'sonner';
-import FolderCard, { KbFolder } from '@/components/kb/FolderCard';
+import FolderCard from '@/components/kb/FolderCard';
 import FolderFormDialog from '@/components/kb/FolderFormDialog';
+import { KbFolder } from '@/types';
 
 const ArticleCard = ({ article }: { article: any }) => (
   <Link to={`/knowledge-base/${article.slug}`}>
