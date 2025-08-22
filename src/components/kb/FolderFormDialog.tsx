@@ -213,3 +213,6 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
       </DialogContent>
     </Dialog>
   );
+};
+
+export default FolderFormDialog;
