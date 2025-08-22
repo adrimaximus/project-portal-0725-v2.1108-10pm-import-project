@@ -19,10 +19,10 @@ import { MultiSelect } from '../ui/multi-select';
 import { getInitials } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 
-interface EditFolderDialogProps {
+interface FolderFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  folder: KbFolder;
+  folder?: KbFolder | null;
   onSuccess: () => void;
 }
 
@@ -37,28 +37,23 @@ const folderSchema = z.object({
 
 type FolderFormValues = z.infer<typeof folderSchema>;
 
-const EditFolderDialog = ({ open, onOpenChange, folder, onSuccess }: EditFolderDialogProps) => {
+const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormDialogProps) => {
   const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [collaboratorIds, setCollaboratorIds] = useState<string[]>([]);
 
+  const isEditMode = !!folder;
+
   const form = useForm<FolderFormValues>({
     resolver: zodResolver(folderSchema),
-    defaultValues: {
-      name: folder.name,
-      description: folder.description || '',
-      icon: folder.icon || 'Folder',
-      color: folder.color || '#6b7280',
-      category: folder.category || '',
-      access_level: folder.access_level || 'private',
-    },
   });
 
   const fetchCollaborators = useCallback(async () => {
+    if (!folder) return;
     const { data } = await supabase.from('kb_folder_collaborators').select('user_id').eq('folder_id', folder.id);
     if (data) setCollaboratorIds(data.map(c => c.user_id));
-  }, [folder.id]);
+  }, [folder]);
 
   useEffect(() => {
     if (open) {
@@ -75,58 +70,89 @@ const EditFolderDialog = ({ open, onOpenChange, folder, onSuccess }: EditFolderD
         }
       };
       fetchUsers();
-      fetchCollaborators();
+
+      if (isEditMode && folder) {
+        form.reset({
+          name: folder.name,
+          description: folder.description || '',
+          icon: folder.icon || 'Folder',
+          color: folder.color || '#6b7280',
+          category: folder.category || '',
+          access_level: folder.access_level || 'private',
+        });
+        fetchCollaborators();
+      } else {
+        form.reset({
+          name: '',
+          description: '',
+          icon: 'Folder',
+          color: '#6b7280',
+          category: '',
+          access_level: 'private',
+        });
+        setCollaboratorIds([]);
+      }
     }
-  }, [open, fetchCollaborators]);
+  }, [open, folder, isEditMode, form, fetchCollaborators]);
 
   const onSubmit = async (values: FolderFormValues) => {
     if (!user) return;
     setIsSaving(true);
 
-    const { error: updateError } = await supabase.from('kb_folders').update({
-      name: values.name,
-      description: values.description,
-      icon: values.icon,
-      color: values.color,
-      category: values.category,
-      access_level: values.access_level,
-    }).eq('id', folder.id);
+    if (isEditMode && folder) {
+      const { error: updateError } = await supabase.from('kb_folders').update({
+        name: values.name, description: values.description, icon: values.icon,
+        color: values.color, category: values.category, access_level: values.access_level,
+      }).eq('id', folder.id);
 
-    if (updateError) {
-      toast.error("Failed to update folder.", { description: updateError.message });
-      setIsSaving(false);
-      return;
-    }
+      if (updateError) {
+        toast.error("Failed to update folder.", { description: updateError.message });
+        setIsSaving(false);
+        return;
+      }
 
-    // Manage collaborators
-    const currentIds = new Set(collaboratorIds);
-    const { data: existingCollaborators } = await supabase.from('kb_folder_collaborators').select('user_id').eq('folder_id', folder.id);
-    const existingIds = new Set((existingCollaborators || []).map(c => c.user_id));
-    
-    const toAdd = collaboratorIds.filter(id => !existingIds.has(id));
-    const toRemove = Array.from(existingIds).filter(id => !currentIds.has(id));
+      const { data: existingCollaborators } = await supabase.from('kb_folder_collaborators').select('user_id').eq('folder_id', folder.id);
+      const existingIds = new Set((existingCollaborators || []).map(c => c.user_id));
+      const toAdd = collaboratorIds.filter(id => !existingIds.has(id));
+      const toRemove = Array.from(existingIds).filter(id => !collaboratorIds.includes(id));
 
-    if (toAdd.length > 0) {
-      await supabase.from('kb_folder_collaborators').insert(toAdd.map(uid => ({ folder_id: folder.id, user_id: uid })));
-    }
-    if (toRemove.length > 0) {
-      await supabase.from('kb_folder_collaborators').delete().eq('folder_id', folder.id).in('user_id', toRemove);
+      if (toAdd.length > 0) await supabase.from('kb_folder_collaborators').insert(toAdd.map(uid => ({ folder_id: folder.id, user_id: uid })));
+      if (toRemove.length > 0) await supabase.from('kb_folder_collaborators').delete().eq('folder_id', folder.id).in('user_id', toRemove);
+
+    } else {
+      const { data: newFolder, error } = await supabase.from('kb_folders').insert({
+        ...values, user_id: user.id,
+      }).select().single();
+
+      if (error) {
+        toast.error("Failed to create folder.", { description: error.message });
+        setIsSaving(false);
+        return;
+      }
+
+      if (collaboratorIds.length > 0) {
+        const collaboratorsToInsert = collaboratorIds.map(uid => ({ folder_id: newFolder.id, user_id: uid }));
+        const { error: collabError } = await supabase.from('kb_folder_collaborators').insert(collaboratorsToInsert);
+        if (collabError) toast.warning("Folder created, but failed to add collaborators.", { description: collabError.message });
+      }
     }
 
     setIsSaving(false);
-    toast.success("Folder updated successfully.");
+    toast.success(isEditMode ? "Folder updated successfully." : "Folder created successfully.");
     onSuccess();
     onOpenChange(false);
   };
 
-  const shareLink = `${window.location.origin}/knowledge-base/folders/${folder.slug}`;
+  const shareLink = folder ? `${window.location.origin}/knowledge-base/folders/${folder.slug}` : '';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Edit Folder</DialogTitle>
-          <DialogDescription>Update details and manage access for this folder.</DialogDescription>
+          <DialogTitle>{isEditMode ? 'Edit Folder' : 'Create New Folder'}</DialogTitle>
+          <DialogDescription>
+            {isEditMode ? 'Update details and manage access for this folder.' : 'Organize your articles by creating a new folder.'}
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
@@ -155,7 +181,7 @@ const EditFolderDialog = ({ open, onOpenChange, folder, onSuccess }: EditFolderD
                   <div className="flex items-center gap-3"><Pencil className="h-4 w-4" /><FormControl><RadioGroupItem value="public_edit" id="public_edit" /></FormControl><Label htmlFor="public_edit">Anyone with the link can edit</Label></div>
                 </RadioGroup></FormItem>
               )} />
-              {form.watch('access_level') !== 'private' && (
+              {isEditMode && form.watch('access_level') !== 'private' && (
                 <div className="flex items-center gap-2 pl-7">
                   <Input value={shareLink} readOnly />
                   <Button type="button" size="icon" onClick={() => { navigator.clipboard.writeText(shareLink); toast.success("Link copied!"); }}>
@@ -179,7 +205,7 @@ const EditFolderDialog = ({ open, onOpenChange, folder, onSuccess }: EditFolderD
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
+                {isEditMode ? 'Save Changes' : 'Create Folder'}
               </Button>
             </DialogFooter>
           </form>
@@ -189,4 +215,4 @@ const EditFolderDialog = ({ open, onOpenChange, folder, onSuccess }: EditFolderD
   );
 };
 
-export default EditFolderDialog;
+export default FolderFormDialog;

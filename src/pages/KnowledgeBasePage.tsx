@@ -7,18 +7,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { KbFolder } from '@/types';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
-import CreateFolderDialog from '@/components/kb/CreateFolderDialog';
 import FolderCard from '@/components/kb/FolderCard';
 import { Input } from '@/components/ui/input';
-import EditFolderDialog from '@/components/kb/EditFolderDialog';
+import FolderFormDialog from '@/components/kb/FolderFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import FolderListView from '@/components/kb/FolderListView';
 
 const KnowledgeBasePage = () => {
-  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
-  const [isEditFolderOpen, setIsEditFolderOpen] = useState(false);
-  const [folderToEdit, setFolderToEdit] = useState<KbFolder | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<KbFolder | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<KbFolder | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
@@ -51,9 +49,14 @@ const KnowledgeBasePage = () => {
     );
   }, [folders, searchTerm]);
 
+  const handleAddNew = () => {
+    setEditingFolder(null);
+    setIsFormOpen(true);
+  };
+
   const handleEdit = (folder: KbFolder) => {
-    setFolderToEdit(folder);
-    setIsEditFolderOpen(true);
+    setEditingFolder(folder);
+    setIsFormOpen(true);
   };
 
   const handleDelete = async () => {
@@ -76,7 +79,7 @@ const KnowledgeBasePage = () => {
             <h1 className="text-3xl font-bold">Knowledge Base</h1>
             <p className="text-muted-foreground">Find and manage your team's articles and documentation.</p>
           </div>
-          <Button onClick={() => setIsCreateFolderOpen(true)} className="w-full sm:w-auto">
+          <Button onClick={handleAddNew} className="w-full sm:w-auto">
             <FolderPlus className="mr-2 h-4 w-4" />
             New Folder
           </Button>
@@ -122,22 +125,17 @@ const KnowledgeBasePage = () => {
           )}
         </div>
       </div>
-      <CreateFolderDialog
-        open={isCreateFolderOpen}
-        onOpenChange={setIsCreateFolderOpen}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['kb_folders'] })}
+      <FolderFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        folder={editingFolder}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
+          if (editingFolder) {
+            queryClient.invalidateQueries({ queryKey: ['kb_folder', editingFolder.slug] });
+          }
+        }}
       />
-      {folderToEdit && (
-        <EditFolderDialog
-          open={isEditFolderOpen}
-          onOpenChange={setIsEditFolderOpen}
-          folder={folderToEdit}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
-            queryClient.invalidateQueries({ queryKey: ['kb_folder', folderToEdit.slug] });
-          }}
-        />
-      )}
       <AlertDialog open={!!folderToDelete} onOpenChange={(open) => !open && setFolderToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
