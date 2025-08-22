@@ -121,7 +121,7 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
 
     } else {
       const { data: newFolder, error } = await supabase.from('kb_folders').insert({
-        ...values, user_id: user.id,
+        ...values,
       }).select().single();
 
       if (error) {
@@ -213,6 +213,3 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
       </DialogContent>
     </Dialog>
   );
-};
-
-export default FolderFormDialog;
