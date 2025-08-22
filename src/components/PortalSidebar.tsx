@@ -136,6 +136,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       { id: "goals", href: "/goals", label: "Goals", icon: Target },
       { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
       { id: "people", href: "/people", label: "People", icon: Users, allowedRoles: ['admin', 'master admin'] },
+      { id: "knowledge-base", href: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
       { id: "settings", href: "/settings", label: "Settings", icon: Settings, allowedRoles: ['admin', 'master admin'] },
     ];
 

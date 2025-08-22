@@ -5,3 +5,4 @@ export * from './goal';
 export * from './chat';
 export * from './gcal';
 export * from './notifications';
+export * from './kb';

@@ -33,6 +33,7 @@ import SlackPage from "./pages/integrations/SlackPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 import PeoplePage from "./pages/PeoplePage";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 
 const ADMIN_ROLES = ['admin', 'master admin'];
 
@@ -63,6 +64,7 @@ function App() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/users/:id" element={<UserProfilePage />} />
           <Route path="/custom" element={<EmbedPage />} />
+          <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
         </Route>
 
         {/* Admin Protected Routes */}
