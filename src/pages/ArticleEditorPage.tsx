@@ -17,12 +17,15 @@ import { Tag } from '@/types';
 import { TagInput } from '@/components/goals/TagInput';
 import { v4 as uuidv4 } from 'uuid';
 import { colors } from '@/data/colors';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { KbFolder } from '@/components/kb/FolderCard';
 
 const articleSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters long."),
   content: z.string().min(10, "Content is too short."),
   cover_image_url: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
   tags: z.array(z.any()).optional(),
+  folder_id: z.string().optional().nullable(),
 });
 
 type ArticleFormValues = z.infer<typeof articleSchema>;
@@ -37,6 +40,7 @@ const ArticleEditorPage = () => {
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
   const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [folders, setFolders] = useState<KbFolder[]>([]);
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -45,6 +49,7 @@ const ArticleEditorPage = () => {
       content: '',
       cover_image_url: '',
       tags: [],
+      folder_id: null,
     },
   });
 
@@ -54,10 +59,19 @@ const ArticleEditorPage = () => {
     if (data) setAllTags(data);
   }, [user]);
 
+  const fetchFolders = useCallback(async () => {
+    const { data, error } = await supabase.rpc('get_kb_folders_for_user');
+    if (error) {
+      toast.error("Could not load your folders.");
+    } else {
+      setFolders(data || []);
+    }
+  }, []);
+
   const fetchArticle = useCallback(async (slugToFetch: string) => {
     const { data, error } = await supabase
       .from('kb_articles')
-      .select('id, title, content, cover_image_url, kb_article_tags(tags(*))')
+      .select('id, title, content, cover_image_url, folder_id, kb_article_tags(tags(*))')
       .eq('slug', slugToFetch)
       .single();
 
@@ -71,6 +85,7 @@ const ArticleEditorPage = () => {
         content: data.content || '',
         cover_image_url: data.cover_image_url || '',
         tags: fetchedTags,
+        folder_id: data.folder_id,
       });
       setArticleId(data.id);
       setCoverImagePreview(data.cover_image_url || null);
@@ -80,10 +95,11 @@ const ArticleEditorPage = () => {
 
   useEffect(() => {
     fetchTags();
+    fetchFolders();
     if (slug) {
       fetchArticle(slug);
     }
-  }, [slug, fetchArticle, fetchTags]);
+  }, [slug, fetchArticle, fetchTags, fetchFolders]);
 
   const handleTagCreate = (tagName: string): Tag => {
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
@@ -132,6 +148,7 @@ const ArticleEditorPage = () => {
       p_content: values.content,
       p_cover_image_url: finalCoverImageUrl,
       p_author_id: user.id,
+      p_folder_id: values.folder_id === 'null' ? null : values.folder_id,
       p_existing_tag_ids: existingTagIds,
       p_custom_tags: newCustomTags,
     });
@@ -171,6 +188,29 @@ const ArticleEditorPage = () => {
                   <FormControl>
                     <Input placeholder="Enter a title for your article" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="folder_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Folder (Optional)</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || 'null'}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a folder to assign this article to" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="null">No Folder (Private Draft)</SelectItem>
+                      {folders.map(folder => (
+                        <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
