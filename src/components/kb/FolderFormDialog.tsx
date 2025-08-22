@@ -56,7 +56,6 @@ const FolderFormDialog = ({ open, onOpenChange, onSuccess, folder }: FolderFormD
       description,
       icon,
       color,
-      created_by: user.id,
     };
 
     const promise = folder
