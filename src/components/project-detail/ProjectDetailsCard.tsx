@@ -7,12 +7,16 @@ import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
 import { formatInJakarta, cn } from "@/lib/utils";
-import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import AddressAutocompleteInput from '../people/AddressAutocompleteInput';
-import { useProjectContext } from "@/contexts/ProjectContext";
+
+interface ProjectDetailsCardProps {
+  project: Project;
+  isEditing: boolean;
+  onFieldChange: (field: keyof Project, value: any) => void;
+}
 
 const paymentStatusConfig: Record<string, { color: string; label: string }> = {
   'Paid': { color: "bg-green-100 text-green-800", label: "Paid" },
@@ -23,20 +27,18 @@ const paymentStatusConfig: Record<string, { color: string; label: string }> = {
   'Cancelled': { color: "bg-gray-100 text-gray-800", label: "Cancelled" },
 };
 
-const ProjectDetailsCard = () => {
-  const { editedProject: project, isEditing, handleFieldChange } = useProjectContext();
-
+const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
   const handleDateChange = (range: DateRange | undefined) => {
     const startDate = range?.from ? range.from.toISOString() : undefined;
     const endDateValue = range?.to || range?.from;
     const endDate = endDateValue ? endDateValue.toISOString() : undefined;
 
-    handleFieldChange('start_date', startDate);
-    handleFieldChange('due_date', endDate);
+    onFieldChange('start_date', startDate);
+    onFieldChange('due_date', endDate);
   };
 
   const handleBudgetChange = (value: number | null) => {
-    handleFieldChange('budget', value || 0);
+    onFieldChange('budget', value || 0);
   };
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
@@ -111,7 +113,7 @@ const ProjectDetailsCard = () => {
               {isEditing ? (
                 <AddressAutocompleteInput
                   value={project.venue}
-                  onChange={(address) => handleFieldChange('venue', address?.formatted_address || address?.label || '')}
+                  onChange={(address) => onFieldChange('venue', address?.formatted_address || address?.label || '')}
                 />
               ) : (
                 <p className="text-muted-foreground">
@@ -128,7 +130,7 @@ const ProjectDetailsCard = () => {
                 <ProjectServices
                   selectedServices={project.services || []}
                   isEditing={isEditing}
-                  onServicesChange={(services) => handleFieldChange('services', services)}
+                  onServicesChange={(services) => onFieldChange('services', services)}
                 />
               </div>
             </div>
@@ -144,7 +146,7 @@ const ProjectDetailsCard = () => {
               {isEditing ? (
                 <Select
                   value={project.status}
-                  onValueChange={(value) => handleFieldChange('status', value)}
+                  onValueChange={(value) => onFieldChange('status', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a status" />
@@ -175,7 +177,7 @@ const ProjectDetailsCard = () => {
               {isEditing ? (
                 <Select
                   value={project.payment_status}
-                  onValueChange={(value) => handleFieldChange('payment_status', value)}
+                  onValueChange={(value) => onFieldChange('payment_status', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a payment status" />

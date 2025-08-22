@@ -11,10 +11,14 @@ import ChangeOwnerDialog from "./ChangeOwnerDialog";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getInitials, generateVibrantGradient } from "@/lib/utils";
-import { useProjectContext } from "@/contexts/ProjectContext";
 
-const ProjectTeamCard = () => {
-  const { editedProject: project, isEditing, handleFieldChange } = useProjectContext();
+interface ProjectTeamCardProps {
+  project: Project;
+  isEditing: boolean;
+  onFieldChange: (field: keyof Project, value: any) => void;
+}
+
+const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardProps) => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const { user: currentUser } = useAuth();
   const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
@@ -47,7 +51,7 @@ const ProjectTeamCard = () => {
     const newTeam = isSelected
       ? project.assignedTo.filter(u => u.id !== userToToggle.id)
       : [...project.assignedTo, userToToggle];
-    handleFieldChange('assignedTo', newTeam);
+    onFieldChange('assignedTo', newTeam);
   };
 
   const handleOwnerChange = async (newOwnerId: string) => {

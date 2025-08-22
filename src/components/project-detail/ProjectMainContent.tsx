@@ -1,4 +1,4 @@
-import { Project, AssignedUser, Task, Tag } from "@/types";
+import { Project, Tag } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectComments from "@/components/ProjectComments";
 import { Badge } from "@/components/ui/badge";
@@ -7,14 +7,20 @@ import ProjectOverviewTab from "./ProjectOverviewTab";
 import ProjectActivityFeed from "./ProjectActivityFeed";
 import ProjectTasks from "./ProjectTasks";
 import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-react";
-import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProjectMutations } from "@/hooks/useProjectMutations";
 
-const ProjectMainContent = () => {
-  const { editedProject, isEditing, handleFieldChange, mutations } = useProjectContext();
+interface ProjectMainContentProps {
+  project: Project;
+  isEditing: boolean;
+  onFieldChange: (field: keyof Project, value: any) => void;
+  mutations: ReturnType<typeof useProjectMutations>;
+}
+
+const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations }: ProjectMainContentProps) => {
   const { user } = useAuth();
 
-  const openTasksCount = editedProject.tasks?.filter(task => !task.completed).length || 0;
+  const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
 
   return (
     <Card>
@@ -41,23 +47,23 @@ const ProjectMainContent = () => {
           </TabsList>
           <TabsContent value="overview">
             <ProjectOverviewTab
-              project={editedProject}
+              project={project}
               isEditing={isEditing}
-              onDescriptionChange={(value) => handleFieldChange('description', value)}
-              onTeamChange={(users) => handleFieldChange('assignedTo', users)}
-              onFilesAdd={(files) => mutations.addFiles.mutate({ files, project: editedProject, user: user! })}
+              onDescriptionChange={(value) => onFieldChange('description', value)}
+              onTeamChange={(users) => onFieldChange('assignedTo', users)}
+              onFilesAdd={(files) => mutations.addFiles.mutate({ files, project: project, user: user! })}
               onFileDelete={(fileId) => {
-                const file = editedProject.briefFiles?.find(f => f.id === fileId);
+                const file = project.briefFiles?.find(f => f.id === fileId);
                 if (file) mutations.deleteFile.mutate(file);
               }}
-              onServicesChange={(services) => handleFieldChange('services', services)}
-              onTagsChange={(tags: Tag[]) => handleFieldChange('tags', tags)}
+              onServicesChange={(services) => onFieldChange('services', services)}
+              onTagsChange={(tags: Tag[]) => onFieldChange('tags', tags)}
             />
           </TabsContent>
           <TabsContent value="tasks">
             <ProjectTasks
-              project={editedProject}
-              onTaskAdd={(title) => mutations.addTask.mutate({ project: editedProject, user: user!, title })}
+              project={project}
+              onTaskAdd={(title) => mutations.addTask.mutate({ project: project, user: user!, title })}
               onTaskAssignUsers={(taskId, userIds) => mutations.assignUsersToTask.mutate({ taskId, userIds })}
               onTaskStatusChange={(taskId, completed) => mutations.updateTask.mutate({ taskId, updates: { completed } })}
               onTaskDelete={(taskId) => mutations.deleteTask.mutate(taskId)}
@@ -65,12 +71,12 @@ const ProjectMainContent = () => {
           </TabsContent>
           <TabsContent value="discussion">
             <ProjectComments
-              project={editedProject}
-              onAddCommentOrTicket={(text, isTicket, attachment) => mutations.addComment.mutate({ project: editedProject, user: user!, text, isTicket, attachment })}
+              project={project}
+              onAddCommentOrTicket={(text, isTicket, attachment) => mutations.addComment.mutate({ project: project, user: user!, text, isTicket, attachment })}
             />
           </TabsContent>
           <TabsContent value="activity">
-            <ProjectActivityFeed activities={editedProject.activities || []} />
+            <ProjectActivityFeed activities={project.activities || []} />
           </TabsContent>
         </Tabs>
       </CardContent>
