@@ -7,9 +7,6 @@ import { Badge } from '../ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
 import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { generateVibrantGradient } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface FolderListViewProps {
   folders: KbFolder[];
@@ -50,29 +47,8 @@ const FolderListView = ({ folders, onEdit, onDelete, requestSort }: FolderListVi
                 <TableCell>
                   {folder.category ? <Badge variant="secondary">{folder.category}</Badge> : '-'}
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {folder.last_modifier && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={folder.last_modifier.avatar} />
-                              <AvatarFallback style={generateVibrantGradient(folder.last_modifier.id)}>
-                                {folder.last_modifier.initials}
-                              </AvatarFallback>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{folder.last_modifier.name}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                    <span className="text-muted-foreground text-sm">
-                      {formatDistanceToNow(new Date(folder.updated_at), { addSuffix: true })}
-                    </span>
-                  </div>
+                <TableCell className="text-muted-foreground">
+                  {formatDistanceToNow(new Date(folder.updated_at), { addSuffix: true })}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>

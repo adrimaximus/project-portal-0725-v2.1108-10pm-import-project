@@ -13,7 +13,6 @@ import FolderFormDialog from '@/components/kb/FolderFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import FolderListView from '@/components/kb/FolderListView';
-import { getInitials } from '@/lib/utils';
 
 const KnowledgeBasePage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -34,38 +33,12 @@ const KnowledgeBasePage = () => {
   const { data: folders = [], isLoading } = useQuery({
     queryKey: ['kb_folders'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('kb_folders')
-        .select(`
-          *,
-          last_modifier:profiles!last_modified_by (
-            id,
-            first_name,
-            last_name,
-            email,
-            avatar_url
-          )
-        `)
-        .order('name', { ascending: true });
-        
+      const { data, error } = await supabase.from('kb_folders').select('*').order('name', { ascending: true });
       if (error) {
         toast.error("Failed to fetch folders.");
         throw error;
       }
-      
-      return data.map(folder => {
-        const modifier = folder.last_modifier;
-        const modifierName = modifier ? `${modifier.first_name || ''} ${modifier.last_name || ''}`.trim() || modifier.email : null;
-        return {
-          ...folder,
-          last_modifier: modifier ? {
-            id: modifier.id,
-            name: modifierName,
-            avatar: modifier.avatar_url,
-            initials: getInitials(modifierName, modifier.email)
-          } : null
-        }
-      }) as KbFolder[];
+      return data as KbFolder[];
     }
   });
 
