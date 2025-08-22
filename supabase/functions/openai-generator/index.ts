@@ -80,13 +80,13 @@ async function executeAction(actionData, context) {
 
             const { data: fullArticle, error: fetchError } = await userSupabase
                 .from('kb_articles')
-                .select('*, kb_article_tags(tags(*))')
+                .select('*, tags(name)')
                 .eq('id', article.id)
                 .single();
             
             if (fetchError) return `I found the article, but couldn't fetch its details to update it. Error: ${fetchError.message}`;
 
-            const currentTagNames = new Set(fullArticle.kb_article_tags.map(t => t.tags.name));
+            const currentTagNames = new Set(fullArticle.tags.map(t => t.name));
             
             if (updates.add_tags) {
                 updates.add_tags.forEach(tagName => currentTagNames.add(tagName));
@@ -180,7 +180,7 @@ serve(async (req) => {
 
         const { data: kbArticles, error: kbError } = await userSupabase
             .from('kb_articles')
-            .select('id, title, slug, content, kb_article_tags(tags(name))');
+            .select('id, title, slug, content, tags(name)');
         if (kbError) {
             throw new Error(`Failed to fetch knowledge base for context: ${kbError.message}`);
         }
@@ -214,7 +214,7 @@ serve(async (req) => {
         const summarizedKbArticles = kbArticles.map(a => ({
             title: a.title,
             content: a.content,
-            tags: a.kb_article_tags.map(t => t.tags.name)
+            tags: a.tags.map(t => t.name)
         }));
 
         const systemPrompt = `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
