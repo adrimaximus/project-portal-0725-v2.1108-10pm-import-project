@@ -12,6 +12,7 @@ import KnowledgeBaseHeader from '@/components/kb/KnowledgeBaseHeader';
 import FolderGridView from '@/components/kb/FolderGridView';
 import FolderListView from '@/components/kb/FolderListView';
 import PageGridView from '@/components/kb/PageGridView';
+import KBCardsDemo from '@/components/kb/KBCardsDemo';
 
 type DialogState = 
   | { type: 'edit-folder', data: KbFolder }
@@ -161,6 +162,11 @@ const KnowledgeBasePage = () => {
           onAddNewArticle={() => setDialog({ type: 'create-page' })}
         />
         {renderContent()}
+
+        <div className="mt-12">
+          <h2 className="text-2xl font-semibold mb-4 border-b pb-2">Component Demo</h2>
+          <KBCardsDemo />
+        </div>
       </div>
 
       <FolderFormDialog
