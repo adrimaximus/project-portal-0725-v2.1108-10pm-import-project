@@ -4,7 +4,6 @@ import ChatWindow from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatProvider, useChatContext } from "@/contexts/ChatContext";
-import AiChat from "@/components/AiChat";
 
 const ChatPageContent = () => {
   const isMobile = useIsMobile();
@@ -12,7 +11,7 @@ const ChatPageContent = () => {
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (selectedConversation && selectedConversation.id !== 'ai-assistant' && chatInputRef.current) {
+    if (selectedConversation && chatInputRef.current) {
       setTimeout(() => {
         chatInputRef.current?.focus();
       }, 100);
@@ -24,8 +23,6 @@ const ChatPageContent = () => {
       <div className="h-full">
         {!selectedConversation ? (
           <ChatList />
-        ) : selectedConversation.id === 'ai-assistant' ? (
-          <AiChat isMobile={isMobile} onBack={() => selectConversation(null)} />
         ) : (
           <ChatWindow ref={chatInputRef} onBack={() => selectConversation(null)} />
         )}
@@ -36,11 +33,7 @@ const ChatPageContent = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full">
       <ChatList />
-      {selectedConversation?.id === 'ai-assistant' ? (
-        <AiChat />
-      ) : (
-        <ChatWindow ref={chatInputRef} />
-      )}
+      <ChatWindow ref={chatInputRef} />
     </div>
   );
 };

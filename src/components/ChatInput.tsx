@@ -16,10 +16,11 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) =
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { user: currentUser } = useAuth();
-  const { selectedConversation, sendMessage, sendTyping } = useChatContext();
+  const { selectedConversation, sendMessage, sendTyping, isSendingMessage } = useChatContext();
   const lastTypingSentAtRef = useRef<number>(0);
 
   const triggerTyping = () => {
+    if (selectedConversation?.id === 'ai-assistant') return;
     const now = Date.now();
     if (now - lastTypingSentAtRef.current > 800) {
       lastTypingSentAtRef.current = now;
@@ -30,10 +31,10 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) =
   const handleSend = async () => {
     if ((!text.trim() && !attachmentFile) || !currentUser || !selectedConversation) return;
 
-    setIsUploading(true);
     let finalAttachment: Attachment | null = null;
 
     if (attachmentFile) {
+      setIsUploading(true);
       const fileExt = attachmentFile.name.split('.').pop();
       const fileName = `${uuidv4()}.${fileExt}`;
       const filePath = `${currentUser.id}/${selectedConversation.id}/${fileName}`;
@@ -55,12 +56,12 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) =
         type: attachmentFile.type.startsWith("image/") ? "image" : "file",
         url: urlData.publicUrl,
       };
+      setIsUploading(false);
     }
 
     sendMessage(text, finalAttachment);
     setText("");
     setAttachmentFile(null);
-    setIsUploading(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,6 +72,8 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) =
   };
 
   if (!selectedConversation) return null;
+
+  const isSending = isUploading || isSendingMessage;
 
   return (
     <div className="border-t p-4 flex-shrink-0">
@@ -92,17 +95,17 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) =
             }
           }}
           className="pr-24"
-          disabled={isUploading}
+          disabled={isSending}
         />
         <div className="absolute bottom-2 right-2 flex items-center gap-2">
-          <Button variant="ghost" size="icon" asChild disabled={isUploading}>
+          <Button variant="ghost" size="icon" asChild disabled={isSending}>
             <label htmlFor="file-upload" className="cursor-pointer">
               <Paperclip className="h-5 w-5" />
               <input id="file-upload" type="file" className="sr-only" onChange={handleFileChange} />
             </label>
           </Button>
-          <Button size="icon" onClick={handleSend} disabled={isUploading || (!text.trim() && !attachmentFile)}>
-            {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+          <Button size="icon" onClick={handleSend} disabled={isSending || (!text.trim() && !attachmentFile)}>
+            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
           </Button>
         </div>
       </div>
@@ -110,7 +113,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) =
         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground bg-muted p-2 rounded-md">
           <Paperclip className="h-4 w-4" />
           <span>{attachmentFile.name}</span>
-          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => setAttachmentFile(null)} disabled={isUploading}>
+          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => setAttachmentFile(null)} disabled={isSending}>
             <X className="h-4 w-4" />
           </Button>
         </div>
