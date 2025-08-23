@@ -41,7 +41,7 @@ const AiChat = () => {
     try {
       const result = await analyzeProjects(message, conversation);
       
-      const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made'];
+      const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made', 'deleted'];
       if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
         toast.info("Action successful. Refreshing data...");
         await Promise.all([
