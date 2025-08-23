@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { HandlerContext } from '../../_shared/types.ts';
+import { HandlerContext } from '../lib/types.ts';
 import { articleWriterFeaturePrompts } from '../lib/prompts.ts';
 
 export default async function articleWriter(payload: any, context: HandlerContext) {
