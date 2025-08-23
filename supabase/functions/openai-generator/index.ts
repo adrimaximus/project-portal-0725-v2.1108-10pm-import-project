@@ -439,6 +439,28 @@ serve(async (req) => {
         responseData = { result: response.choices[0].message.content?.trim() };
         break;
       }
+      case 'summarize-article-content': {
+        const { content } = payload;
+        if (!content) {
+            throw new Error("Content is required to summarize.");
+        }
+
+        const systemPrompt = `You are an expert editor. Your task is to summarize the following article content. The summary should be concise, capture the main points, and be presented in well-structured HTML format (paragraphs, lists). Respond ONLY with the summarized HTML content.`;
+        const userPrompt = `Summarize this content:\n\n${content}`;
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4-turbo",
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            temperature: 0.5,
+            max_tokens: 1024,
+        });
+
+        responseData = { result: response.choices[0].message.content?.trim() };
+        break;
+      }
       case 'suggest-icon': {
         const { title, icons } = payload;
         if (!title || !icons || !Array.isArray(icons)) {

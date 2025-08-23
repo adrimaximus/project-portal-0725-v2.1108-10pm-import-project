@@ -5,10 +5,11 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Image as ImageIcon, X, Sparkles } from 'lucide-react';
+import { Loader2, Image as ImageIcon, X, Sparkles, ListCollapse } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
 import { KbFolder } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PexelsImagePicker from './PexelsImagePicker';
 import ReactQuill from 'react-quill';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface ArticleValues {
   id?: string;
@@ -51,6 +53,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
   const [isRemovingImage, setIsRemovingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImproving, setIsImproving] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   const editorRef = useRef<ReactQuill>(null);
 
   const form = useForm<ArticleFormValues>({
@@ -160,6 +163,35 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
       toast.error("Failed to update content.", { description: error.message });
     } finally {
       setIsImproving(false);
+    }
+  };
+
+  const handleSummarizeContent = async () => {
+    const editor = editorRef.current?.getEditor();
+    if (!editor) {
+      toast.error("Editor is not ready.");
+      return;
+    }
+
+    const content = form.getValues('content');
+    if (!content || content.trim() === '<p><br></p>' || content.trim().length < 50) {
+      toast.error("There is not enough content to summarize.");
+      return;
+    }
+    
+    setIsSummarizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('openai-generator', {
+        body: { feature: 'summarize-article-content', payload: { content } }
+      });
+      if (error) throw error;
+
+      form.setValue('content', data.result, { shouldDirty: true });
+      toast.success("Content summarized by AI!");
+    } catch (error: any) {
+      toast.error("Failed to summarize content.", { description: error.message });
+    } finally {
+      setIsSummarizing(false);
     }
   };
 
@@ -330,10 +362,26 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
               <FormItem>
                 <div className="flex justify-between items-center">
                   <FormLabel>Content</FormLabel>
-                  <Button type="button" variant="outline" size="sm" onClick={handleImproveContent} disabled={isImproving}>
-                    {isImproving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                    Improve with AI
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button type="button" variant="outline" size="icon" onClick={handleImproveContent} disabled={isImproving || isSummarizing}>
+                            {isImproving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Improve or Expand</p></TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button type="button" variant="outline" size="icon" onClick={handleSummarizeContent} disabled={isImproving || isSummarizing}>
+                            {isSummarizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListCollapse className="h-4 w-4" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Summarize</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </div>
                 <FormControl>
                   <RichTextEditor ref={editorRef} value={field.value || ''} onChange={field.onChange} />
