@@ -10,7 +10,7 @@ interface RichTextEditorProps {
   placeholder?: string;
 }
 
-const RichTextEditor = ({ value, onChange, placeholder }: RichTextEditorProps) => {
+const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(({ value, onChange, placeholder }, ref) => {
   const modules = {
     toolbar: [
       [{ 'header': [1, 2, false] }],
@@ -24,6 +24,7 @@ const RichTextEditor = ({ value, onChange, placeholder }: RichTextEditorProps) =
   return (
     <div className="bg-background rounded-md border">
         <ReactQuill
+            ref={ref}
             theme="snow"
             value={value}
             onChange={onChange}
@@ -33,6 +34,6 @@ const RichTextEditor = ({ value, onChange, placeholder }: RichTextEditorProps) =
         />
     </div>
   );
-};
+});
 
 export default RichTextEditor;

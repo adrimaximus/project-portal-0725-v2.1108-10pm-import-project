@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PexelsImagePicker from './PexelsImagePicker';
+import ReactQuill from 'react-quill';
 
 interface ArticleValues {
   id?: string;
@@ -50,6 +51,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
   const [isRemovingImage, setIsRemovingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImproving, setIsImproving] = useState(false);
+  const editorRef = useRef<ReactQuill>(null);
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -107,24 +109,55 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
   };
 
   const handleImproveContent = async () => {
-    const currentContent = form.getValues('content');
-    if (!currentContent || currentContent.trim().length < 20) {
-      toast.error("Please provide more content for the AI to improve.");
+    const editor = editorRef.current?.getEditor();
+    if (!editor) {
+      toast.error("Editor is not ready.");
       return;
     }
+
+    const title = form.getValues('title');
+    const fullContent = form.getValues('content');
+    const selection = editor.getSelection();
+    const selectedText = selection ? editor.getText(selection.index, selection.length) : '';
+
+    let feature: string;
+    let payload: any;
+
+    if (!fullContent || fullContent.trim() === '<p><br></p>' || fullContent.trim().length < 15) {
+      if (!title.trim()) {
+        toast.error("Please provide a title to generate an article.");
+        return;
+      }
+      feature = 'generate-article-from-title';
+      payload = { title };
+      toast.info("Generating article from title...");
+    } else if (selection && selection.length > 0 && selectedText.trim()) {
+      feature = 'expand-article-text';
+      payload = { title, fullContent, selectedText };
+      toast.info("Expanding on your selected text...");
+    } else {
+      feature = 'improve-article-content';
+      payload = { content: fullContent };
+      toast.info("Improving the entire article...");
+    }
+    
     setIsImproving(true);
     try {
       const { data, error } = await supabase.functions.invoke('openai-generator', {
-        body: {
-          feature: 'improve-article-content',
-          payload: { content: currentContent }
-        }
+        body: { feature, payload }
       });
       if (error) throw error;
-      form.setValue('content', data.result, { shouldDirty: true });
-      toast.success("Content improved by AI!");
+
+      if (feature === 'expand-article-text' && selection) {
+        editor.deleteText(selection.index, selection.length);
+        editor.clipboard.dangerouslyPasteHTML(selection.index, data.result);
+        form.setValue('content', editor.root.innerHTML, { shouldDirty: true });
+      } else {
+        form.setValue('content', data.result, { shouldDirty: true });
+      }
+      toast.success("Content updated by AI!");
     } catch (error: any) {
-      toast.error("Failed to improve content.", { description: error.message });
+      toast.error("Failed to update content.", { description: error.message });
     } finally {
       setIsImproving(false);
     }
@@ -303,7 +336,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
                   </Button>
                 </div>
                 <FormControl>
-                  <RichTextEditor value={field.value || ''} onChange={field.onChange} />
+                  <RichTextEditor ref={editorRef} value={field.value || ''} onChange={field.onChange} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
