@@ -112,7 +112,7 @@ const PeopleKanbanView = ({ people, tags, onEditPerson }: { people: Person[], ta
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
-      <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4">
+      <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4 h-full">
         {columns.map(tag => {
           const peopleInColumn = personGroups[tag.id] || [];
           const isColumnCollapsed = peopleInColumn.length === 0 && collapsedColumns.includes(tag.id);

@@ -176,7 +176,7 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
-      <div className="flex flex-row gap-4 overflow-x-auto pb-4">
+      <div className="flex flex-row gap-4 overflow-x-auto pb-4 h-full">
         {columns.map(statusOption => {
           const projectsInColumn = projectGroups[statusOption.value];
           const isColumnCollapsed = collapsedColumns.includes(statusOption.value);

@@ -362,8 +362,8 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4">
+      <Card className="h-full flex flex-col">
+        <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4 flex-shrink-0">
           <div className="flex items-center gap-2">
             <CardTitle>Projects</CardTitle>
           </div>
@@ -426,32 +426,38 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
             </TooltipProvider>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="py-4 flex flex-col md:flex-row md:flex-wrap gap-4 items-center">
-            <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
-            {view === 'kanban' && (
-              <ToggleGroup 
-                  type="single" 
-                  value={kanbanGroupBy} 
-                  onValueChange={(value) => { if (value) setKanbanGroupBy(value as 'status' | 'payment_status')}}
-                  className="h-10"
-              >
-                  <ToggleGroupItem value="status" className="text-sm px-3">By Project Status</ToggleGroupItem>
-                  <ToggleGroupItem value="payment_status" className="text-sm px-3">By Payment Status</ToggleGroupItem>
-              </ToggleGroup>
-            )}
-            <div className="relative w-full md:w-auto md:flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search projects..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+        <div className="px-6 py-4 flex flex-col md:flex-row md:flex-wrap gap-4 items-center flex-shrink-0 border-b">
+          <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+          {view === 'kanban' && (
+            <ToggleGroup 
+                type="single" 
+                value={kanbanGroupBy} 
+                onValueChange={(value) => { if (value) setKanbanGroupBy(value as 'status' | 'payment_status')}}
+                className="h-10"
+            >
+                <ToggleGroupItem value="status" className="text-sm px-3">By Project Status</ToggleGroupItem>
+                <ToggleGroupItem value="payment_status" className="text-sm px-3">By Payment Status</ToggleGroupItem>
+            </ToggleGroup>
+          )}
+          <div className="relative w-full md:w-auto md:flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search projects..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
           </div>
-          {renderContent()}
-        </CardContent>
+        </div>
+        {view === 'kanban' ? (
+          <CardContent className="flex-grow min-h-0 p-4 md:p-6">
+            {renderContent()}
+          </CardContent>
+        ) : (
+          <CardContent className="flex-grow min-h-0 overflow-y-auto p-0">
+            {renderContent()}
+          </CardContent>
+        )}
       </Card>
     </>
   );

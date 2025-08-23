@@ -11,16 +11,20 @@ const Projects = () => {
 
   return (
     <PortalLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">All Projects</h1>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => navigate('/request')}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Project
-          </Button>
+      <div className="flex flex-col h-full">
+        <div className="flex justify-between items-center mb-6 flex-shrink-0">
+          <h1 className="text-3xl font-bold tracking-tight">All Projects</h1>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => navigate('/request')}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              New Project
+            </Button>
+          </div>
+        </div>
+        <div className="flex-grow min-h-0">
+          <ProjectsTable projects={projects} isLoading={isLoading} refetch={refetch} />
         </div>
       </div>
-      <ProjectsTable projects={projects} isLoading={isLoading} refetch={refetch} />
     </PortalLayout>
   );
 };
