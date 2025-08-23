@@ -17,6 +17,7 @@ import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
 import { KBCard } from '@/components/kb/KBCard';
 import { formatDistanceToNow } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import ArticleListView from '@/components/kb/ArticleListView';
 
 const KnowledgeBasePage = () => {
   const [isFolderFormOpen, setIsFolderFormOpen] = useState(false);
@@ -119,6 +120,11 @@ const KnowledgeBasePage = () => {
     setIsArticleEditorOpen(true);
   };
 
+  const handleEditArticle = (article: KbArticle) => {
+    setEditingArticle(article);
+    setIsArticleEditorOpen(true);
+  };
+
   const handleDeleteArticle = async () => {
     if (!articleToDelete) return;
     const { error } = await supabase.from('kb_articles').delete().eq('id', articleToDelete.id);
@@ -142,44 +148,81 @@ const KnowledgeBasePage = () => {
       );
     }
 
-    if (viewMode === 'articles') {
-      return filteredArticles.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {filteredArticles.map((article, index) => (
-            <KBCard
-              key={article.id}
-              to={`/knowledge-base/articles/${article.slug}`}
-              title={article.title}
-              editedLabel={formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
-              variant={cardVariants[index % cardVariants.length]}
-              Icon={FileText}
-              header_image_url={article.header_image_url}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-          <p>No articles found.</p>
-        </div>
-      );
+    switch (viewMode) {
+      case 'grid':
+        return (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Folders</h2>
+              {sortedFolders.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {sortedFolders.map(folder => (
+                    <FolderCard key={folder.id} folder={folder} onEdit={handleEditFolder} onDelete={setFolderToDelete} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <p>No folders found.</p>
+                </div>
+              )}
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold mb-4">All Articles</h2>
+              {filteredArticles.length > 0 ? (
+                <ArticleListView 
+                  articles={filteredArticles} 
+                  onEdit={handleEditArticle} 
+                  onDelete={setArticleToDelete} 
+                />
+              ) : (
+                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <p>No articles found.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      case 'list':
+        return (
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Folders</h2>
+            {sortedFolders.length > 0 ? (
+              <FolderListView folders={sortedFolders} onEdit={handleEditFolder} onDelete={setFolderToDelete} requestSort={requestSort} />
+            ) : (
+              <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                <p>No folders found.</p>
+              </div>
+            )}
+          </div>
+        );
+      case 'articles':
+        return (
+          <div>
+            <h2 className="text-xl font-semibold mb-4">All Articles</h2>
+            {filteredArticles.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {filteredArticles.map((article, index) => (
+                  <KBCard
+                    key={article.id}
+                    to={`/knowledge-base/articles/${article.slug}`}
+                    title={article.title}
+                    editedLabel={formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
+                    variant={cardVariants[index % cardVariants.length]}
+                    Icon={FileText}
+                    header_image_url={article.header_image_url}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                <p>No articles found.</p>
+              </div>
+            )}
+          </div>
+        );
+      default:
+        return null;
     }
-
-    // Grid or List view for folders
-    return sortedFolders.length > 0 ? (
-      viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {sortedFolders.map(folder => (
-            <FolderCard key={folder.id} folder={folder} onEdit={handleEditFolder} onDelete={setFolderToDelete} />
-          ))}
-        </div>
-      ) : (
-        <FolderListView folders={sortedFolders} onEdit={handleEditFolder} onDelete={setFolderToDelete} requestSort={requestSort} />
-      )
-    ) : (
-      <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-        <p>No folders found.</p>
-      </div>
-    );
   };
 
   return (
@@ -234,14 +277,7 @@ const KnowledgeBasePage = () => {
           </ToggleGroup>
         </div>
 
-        <div className="space-y-8">
-          <div>
-            <h2 className="text-xl font-semibold mb-4">
-              {viewMode === 'articles' ? 'All Articles' : 'Folders'}
-            </h2>
-            {renderContent()}
-          </div>
-        </div>
+        {renderContent()}
       </div>
 
       <FolderFormDialog
