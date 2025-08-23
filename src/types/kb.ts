@@ -35,4 +35,7 @@ export interface KbArticle {
     name: string;
     slug: string;
   };
+  description?: string;
+  tags?: { id: string; name: string; color: string }[];
+  creator?: { id: string; name: string; avatar_url?: string; initials: string };
 }

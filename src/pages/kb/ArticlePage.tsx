@@ -2,7 +2,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import PortalLayout from '@/components/PortalLayout';
-import { KbFolder } from '@/types';
+import { KbFolder, KbArticle as Article } from '@/types';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
@@ -10,18 +10,6 @@ import { Folder, FileText, Edit } from 'lucide-react';
 import { useState } from 'react';
 import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
 import { Button } from '@/components/ui/button';
-
-type Article = {
-  id: string;
-  title: string;
-  content: any;
-  folder_id: string;
-  header_image_url?: string;
-  kb_folders: {
-    name: string;
-    slug: string;
-  }
-};
 
 const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
   const { data, error } = await supabase

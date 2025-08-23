@@ -1,63 +1,81 @@
 import React from "react";
-import { FileText } from "lucide-react";
 import { Link } from "react-router-dom";
-import { cn } from "@/lib/utils";
-
-type Variant = "blue" | "purple" | "green";
-
-const VARIANTS: Record<Variant, { bg: string; border: string; tab: string; accent: string; ring: string }> = {
-  blue: { bg: "bg-blue-50", border: "border-blue-200", tab: "bg-blue-100", accent: "text-blue-600", ring: "ring-blue-200" },
-  purple: { bg: "bg-violet-50", border: "border-violet-200", tab: "bg-violet-100", accent: "text-violet-600", ring: "ring-violet-200" },
-  green: { bg: "bg-emerald-50", border: "border-emerald-200", tab: "bg-emerald-100", accent: "text-emerald-600", ring: "ring-emerald-200" },
-};
+import { cn, getInitials } from "@/lib/utils";
+import { KbArticle } from "@/types";
+import { FileText, ArrowUpRight } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Badge } from "../ui/badge";
 
 interface KBCardProps {
-  to: string;
-  title: string;
-  editedLabel?: string;
-  variant?: Variant;
-  Icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  header_image_url?: string;
+  article: KbArticle;
 }
 
-export function KBCard({ title, editedLabel, variant = "blue", Icon = FileText, to, header_image_url }: KBCardProps) {
-  const v = VARIANTS[variant];
+export function KBCard({ article }: KBCardProps) {
+  // Placeholder data as discussed
+  const description = article.description || "No description available. This is a placeholder text to show how it looks.";
+  const tags = article.tags || [{ id: '1', name: 'Placeholder', color: '#3b82f6' }, { id: '2', name: 'Tag', color: '#8b5cf6' }];
+  const creator = article.creator || { id: '1', name: 'Admin User', avatar_url: '', initials: 'AU' };
+
   return (
     <Link
-      to={to}
-      className={cn(
-        "relative block overflow-hidden rounded-2xl p-4 pb-16 border shadow-md hover:shadow-xl transition-shadow duration-150",
-        !header_image_url && v.bg, 
-        !header_image_url && v.border
-      )}
+      to={`/knowledge-base/articles/${article.slug}`}
+      className="group relative flex items-center gap-4 h-full overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-lg transition-shadow duration-200 p-4"
     >
-      {header_image_url ? (
-        <div className="absolute inset-0">
-          <img src={header_image_url} alt={title} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        </div>
-      ) : (
-        <Icon className={cn("absolute right-6 top-1/2 -translate-y-1/2 w-24 h-24 opacity-10 drop-shadow", v.accent)} strokeWidth={1.5} />
-      )}
+      {/* Image or Icon Section */}
+      <div className="flex-shrink-0 w-24 h-full relative rounded-md overflow-hidden flex items-center justify-center">
+        {article.header_image_url ? (
+          <img src={article.header_image_url} alt={article.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-muted flex items-center justify-center">
+            <FileText className="w-10 h-10 text-muted-foreground/30" />
+          </div>
+        )}
+      </div>
 
-      <div className="relative">
-        {/* Tab */}
-        <div className={cn(
-          "inline-flex items-center gap-2 px-3 py-2 rounded-xl rounded-bl-sm",
-          header_image_url ? "bg-black/30 backdrop-blur-sm" : cn(v.tab, "shadow-inner shadow-black/5")
-        )}>
-          <span className={cn("text-lg", header_image_url && "text-white/80")}>{variant === "blue" ? "📄" : variant === "purple" ? "📝" : "💡"}</span>
-          <span className={cn("font-semibold truncate", header_image_url ? "text-white" : "text-slate-900")}>{title}</span>
-        </div>
+      {/* Content Section */}
+      <div className="flex flex-col flex-grow min-w-0 justify-center">
+        <h3 className="font-semibold text-base leading-snug group-hover:text-primary transition-colors truncate">{article.title}</h3>
+        
+        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+          {description}
+        </p>
 
-        {/* Body */}
-        <div className="mt-5 grid gap-4">
-          {editedLabel && (
-            <div className={cn("text-xs", header_image_url ? "text-white/80" : "text-slate-600")}>
-              Last edited <span className={cn("font-semibold", header_image_url ? "text-white" : "text-slate-900")}>{editedLabel}</span>
-            </div>
+        {/* Tags */}
+        <div className="mt-2 flex flex-wrap gap-1">
+          {tags.slice(0, 2).map(tag => (
+            <Badge
+              key={tag.id}
+              variant="outline"
+              className="text-xs"
+              style={{
+                backgroundColor: `${tag.color}20`,
+                borderColor: tag.color,
+                color: tag.color,
+              }}
+            >
+              {tag.name}
+            </Badge>
+          ))}
+          {tags.length > 2 && (
+            <Badge variant="outline" className="text-xs">
+              +{tags.length - 2}
+            </Badge>
           )}
         </div>
+
+        {/* Footer */}
+        <div className="mt-3 flex items-center gap-2">
+          <Avatar className="h-6 w-6">
+            <AvatarImage src={creator.avatar_url} />
+            <AvatarFallback>{creator.initials}</AvatarFallback>
+          </Avatar>
+          <span className="text-xs text-muted-foreground">{creator.name}</span>
+        </div>
+      </div>
+
+      {/* Link Icon */}
+      <div className="absolute top-3 right-3 h-8 w-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <ArrowUpRight className="h-4 w-4 text-foreground" />
       </div>
     </Link>
   );
