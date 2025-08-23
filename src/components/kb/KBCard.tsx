@@ -24,7 +24,7 @@ export function KBCard({ article }: KBCardProps) {
     <Link to={`/knowledge-base/articles/${article.slug}`} className="group block h-full">
       <Card className="h-full overflow-hidden rounded-2xl transition-shadow duration-200 group-hover:shadow-lg flex flex-col">
         {/* Image Section */}
-        <div className="aspect-[4/3] w-full overflow-hidden">
+        <div className="aspect-video w-full overflow-hidden">
           {article.header_image_url ? (
             <img
               src={article.header_image_url}
@@ -33,23 +33,23 @@ export function KBCard({ article }: KBCardProps) {
             />
           ) : (
             <div className="w-full h-full bg-muted flex items-center justify-center">
-              <FileText className="w-12 h-12 text-muted-foreground/30" />
+              <FileText className="w-10 h-10 text-muted-foreground/30" />
             </div>
           )}
         </div>
 
         {/* Content Section */}
-        <div className="p-4 flex flex-col flex-grow">
+        <div className="p-3 flex flex-col flex-grow">
           <div className="flex justify-between items-start">
-            <h3 className="font-bold text-base leading-snug">{article.title}</h3>
+            <h3 className="font-bold text-sm leading-snug line-clamp-2">{article.title}</h3>
           </div>
           
-          <p className="mt-2 text-sm text-muted-foreground line-clamp-3 flex-grow">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2 flex-grow">
             {description}
           </p>
 
-          <div className="mt-4 flex justify-end">
-            <Button size="sm" variant="secondary" className="rounded-full" asChild>
+          <div className="mt-3 flex justify-end">
+            <Button size="sm" variant="secondary" className="rounded-full h-7 px-3 text-xs" asChild>
               {/* The button is part of the link, but styled to look interactive */}
               <span className="cursor-pointer">View</span>
             </Button>
