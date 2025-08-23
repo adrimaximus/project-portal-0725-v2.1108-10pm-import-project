@@ -143,8 +143,11 @@ export function GlobalSearch() {
         await Promise.all([
             queryClient.invalidateQueries({ queryKey: ['projects'] }),
             queryClient.invalidateQueries({ queryKey: ['project'] }),
-            queryClient.invalidateQueries({ queryKey: ['articles'] }),
-            queryClient.invalidateQueries({ queryKey: ['article'] }),
+            queryClient.invalidateQueries({ queryKey: ['kb_articles'] }),
+            queryClient.invalidateQueries({ queryKey: ['kb_article'] }),
+            queryClient.invalidateQueries({ queryKey: ['kb_folders'] }),
+            queryClient.invalidateQueries({ queryKey: ['goals'] }),
+            queryClient.invalidateQueries({ queryKey: ['goal'] }),
         ]);
       }
   
