@@ -140,17 +140,11 @@ const KnowledgeBasePage = () => {
             </div>
             <div>
               <h2 className="text-xl font-semibold mb-4">All Pages</h2>
-              {filteredArticles.length > 0 ? (
-                <PageListView 
-                  articles={filteredArticles} 
-                  onEdit={(article) => setDialog({ type: 'edit-page', data: article })} 
-                  onDelete={(article) => setDialog({ type: 'delete-page', data: article })} 
-                />
-              ) : (
-                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                  <p>No pages found.</p>
-                </div>
-              )}
+              <PageGridView 
+                articles={filteredArticles} 
+                onEdit={(article) => setDialog({ type: 'edit-page', data: article })} 
+                onDelete={(article) => setDialog({ type: 'delete-page', data: article })} 
+              />
             </div>
           </div>
         );
@@ -162,7 +156,11 @@ const KnowledgeBasePage = () => {
                   requestSort={requestSort} 
                 />;
       case 'articles':
-        return <PageGridView articles={filteredArticles} />;
+        return <PageGridView 
+                  articles={filteredArticles} 
+                  onEdit={(article) => setDialog({ type: 'edit-page', data: article })} 
+                  onDelete={(article) => setDialog({ type: 'delete-page', data: article })} 
+                />;
       default:
         return null;
     }
