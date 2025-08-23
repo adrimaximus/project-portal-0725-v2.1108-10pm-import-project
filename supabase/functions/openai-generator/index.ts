@@ -1,16 +1,16 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createSupabaseAdmin } from './_lib/supabase.ts';
-import { getOpenAIClient } from './_lib/openai.ts';
+import { createSupabaseAdmin } from './lib.supabase.ts';
+import { getOpenAIClient } from './lib.openai.ts';
 
 // Import feature handlers
-import analyzeDuplicates from './_features/analyze-duplicates.ts';
-import articleWriter from './_features/article-writer.ts';
-import generateCaption from './_features/generate-caption.ts';
-import generateMoodInsight from './_features/generate-mood-insight.ts';
-import suggestIcon from './_features/suggest-icon.ts';
-import analyzeProjects from './_features/analyze-projects.ts';
-import generateInsight from './_features/generate-insight.ts';
+import analyzeDuplicates from './feature.analyze-duplicates.ts';
+import articleWriter from './feature.article-writer.ts';
+import generateCaption from './feature.generate-caption.ts';
+import generateMoodInsight from './feature.generate-mood-insight.ts';
+import suggestIcon from './feature.suggest-icon.ts';
+import analyzeProjects from './feature.analyze-projects.ts';
+import generateInsight from './feature.generate-insight.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

@@ -1,8 +1,8 @@
 // @ts-nocheck
-import { createSupabaseUserClient } from '../_lib/supabase.ts';
-import { buildContext } from '../_lib/context.ts';
-import { getAnalyzeProjectsSystemPrompt } from '../_lib/prompts.ts';
-import { executeAction } from '../_lib/actions.ts';
+import { createSupabaseUserClient } from './lib.supabase.ts';
+import { buildContext } from './lib.context.ts';
+import { getAnalyzeProjectsSystemPrompt } from './lib.prompts.ts';
+import { executeAction } from './lib.actions.ts';
 
 export default async function analyzeProjects(payload, context) {
   const { req, openai } = context;
