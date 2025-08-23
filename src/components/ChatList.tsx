@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ChatListProps {
-  conversations: Conversation[];
+  conversations: Omit<Conversation, "messages">[];
   selectedConversationId: string | null;
   searchTerm: string;
   onSearchTermChange: (term: string) => void;

@@ -35,7 +35,7 @@ export const useChat = () => {
   const queryClient = useQueryClient();
   const typingTimerRef = useRef<number | null>(null);
 
-  const { data: conversations = [], isLoading: isLoadingConversations, refetch: fetchConversations } = useQuery({
+  const { data: conversationsData, isLoading: isLoadingConversations, refetch: fetchConversations } = useQuery({
     queryKey: ['conversations', currentUser?.id],
     queryFn: async () => {
       if (!currentUser) return [];
@@ -49,6 +49,13 @@ export const useChat = () => {
     },
     enabled: !!currentUser,
   });
+
+  const [conversations, setConversations] = useState<Omit<Conversation, 'messages'>[]>([]);
+  useEffect(() => {
+    if (conversationsData) {
+      setConversations(conversationsData);
+    }
+  }, [conversationsData]);
 
   const debouncedSearchMessages = useCallback(
     debounce(async (term: string) => {
