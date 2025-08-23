@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { HandlerContext } from '../lib/types.ts';
+import { HandlerContext } from '../_shared/types.ts';
 import { createSupabaseUserClient } from '../lib/clients.ts';
 import { buildContext } from '../lib/context.ts';
 import { getAnalyzeProjectsSystemPrompt } from '../lib/prompts.ts';

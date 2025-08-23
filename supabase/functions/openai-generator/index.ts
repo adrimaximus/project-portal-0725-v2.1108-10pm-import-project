@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createSupabaseAdmin, getOpenAIClient } from './lib/clients.ts';
-import { HandlerContext } from './lib/types.ts';
+import { HandlerContext } from './_shared/types.ts';
 
 // Import feature handlers
 import analyzeDuplicates from './features/analyzeDuplicates.ts';

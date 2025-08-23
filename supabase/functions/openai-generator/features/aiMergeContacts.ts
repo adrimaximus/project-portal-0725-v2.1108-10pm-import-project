@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { HandlerContext } from '../lib/types.ts';
+import { HandlerContext } from '../_shared/types.ts';
 
 export default async function aiMergeContacts(payload: any, context: HandlerContext) {
   const { supabaseAdmin, openai } = context;
