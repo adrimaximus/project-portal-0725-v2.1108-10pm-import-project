@@ -1,9 +1,11 @@
 // @ts-nocheck
-export async function analyzeDuplicates(payload, context) {
+import { HandlerContext } from '../../_shared/types.ts';
+
+export default async function analyzeDuplicates(payload: any, context: HandlerContext) {
   const { openai } = context;
   const { duplicates } = payload;
   if (!duplicates) {
-    throw new Error("Duplicates data is required for analysis.");
+    throw new Error("400: Duplicates data is required for analysis.");
   }
 
   const systemPrompt = `You are a data quality assistant. Here is a list of potential duplicate contacts. Summarize the findings in a friendly, concise paragraph in markdown format. Mention the total number of pairs found and the common reasons (e.g., 'similar names or shared emails'). Then, recommend that the user review and merge them to keep their contact list clean.`;

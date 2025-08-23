@@ -1,23 +1,23 @@
 // @ts-nocheck
-export async function aiMergeContacts(payload, context) {
+import { HandlerContext } from '../../_shared/types.ts';
+
+export default async function aiMergeContacts(payload: any, context: HandlerContext) {
   const { supabaseAdmin, openai } = context;
   const { primary_person_id, secondary_person_id } = payload;
   if (!primary_person_id || !secondary_person_id) {
-    throw new Error("Primary and secondary person IDs are required.");
+    throw new Error("400: Primary and secondary person IDs are required.");
   }
 
-  // Fetch both person records with their relations
   const { data: peopleData, error: peopleError } = await supabaseAdmin
     .rpc('get_people_with_details')
     .in('id', [primary_person_id, secondary_person_id]);
 
   if (peopleError) throw peopleError;
-  if (!peopleData || peopleData.length < 2) throw new Error("Could not find both contacts to merge.");
+  if (!peopleData || peopleData.length < 2) throw new Error("404: Could not find both contacts to merge.");
 
   const primaryPerson = peopleData.find(p => p.id === primary_person_id);
   const secondaryPerson = peopleData.find(p => p.id === secondary_person_id);
 
-  // Ask AI to merge
   const systemPrompt = `You are an intelligent contact merging assistant. Your task is to merge two JSON objects representing two people into a single, consolidated JSON object. Follow these rules carefully:
 
 1.  **Primary Record**: The user will designate one record as "primary". You should prioritize data from this record but intelligently incorporate data from the "secondary" record.
@@ -42,16 +42,13 @@ export async function aiMergeContacts(payload, context) {
 
   const mergedPersonJSON = response.choices[0].message.content;
   if (!mergedPersonJSON) {
-      throw new Error("AI failed to return a merged contact.");
+      throw new Error("503: AI failed to return a merged contact.");
   }
   const mergedPerson = JSON.parse(mergedPersonJSON);
 
-  // --- Database Operations ---
-  // Combine unique project and tag IDs from both original records
   const allProjectIds = [...new Set([...(primaryPerson.projects || []).map(p => p.id), ...(secondaryPerson.projects || []).map(p => p.id)])];
   const allTagIds = [...new Set([...(primaryPerson.tags || []).map(t => t.id), ...(secondaryPerson.tags || []).map(t => t.id)])];
 
-  // Use the upsert RPC to update the primary person and their relations
   const { error: upsertError } = await supabaseAdmin.rpc('upsert_person_with_details', {
       p_id: primary_person_id,
       p_full_name: mergedPerson.full_name,
@@ -66,17 +63,15 @@ export async function aiMergeContacts(payload, context) {
       p_address: mergedPerson.address,
       p_project_ids: allProjectIds,
       p_existing_tag_ids: allTagIds,
-      p_custom_tags: [], // We are not creating new tags here
+      p_custom_tags: [],
   });
 
   if (upsertError) {
-      throw new Error(`Failed to update primary contact: ${upsertError.message}`);
+      throw new Error(`500: Failed to update primary contact: ${upsertError.message}`);
   }
 
-  // Delete the secondary person
   const { error: deleteError } = await supabaseAdmin.from('people').delete().eq('id', secondary_person_id);
   if (deleteError) {
-      // This is not ideal, but we should log it. The primary contact is updated.
       console.error(`Failed to delete secondary contact ${secondary_person_id}: ${deleteError.message}`);
   }
 

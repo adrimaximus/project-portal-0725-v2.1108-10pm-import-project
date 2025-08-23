@@ -1,9 +1,11 @@
 // @ts-nocheck
-export async function generateInsight(payload, context) {
+import { HandlerContext } from '../../_shared/types.ts';
+
+export default async function generateInsight(payload: any, context: HandlerContext) {
   const { openai } = context;
   const { goal, context: progressContext } = payload;
   if (!goal || !progressContext) {
-    throw new Error("Goal and context are required for generating insights.");
+    throw new Error("400: Goal and context are required for generating insights.");
   }
 
   const owner = goal.collaborators.find(c => c.id === goal.user_id);

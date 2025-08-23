@@ -16,12 +16,12 @@ export const buildContext = async (userSupabase, user) => {
     userSupabase.from('kb_folders').select('id, name')
   ]);
 
-  if (projectsRes.error) throw new Error(`Failed to fetch project data for analysis: ${projectsRes.error.message}`);
-  if (usersRes.error) throw new Error(`Failed to fetch users for context: ${usersRes.error.message}`);
-  if (goalsRes.error) throw new Error(`Failed to fetch goals for context: ${goalsRes.error.message}`);
-  if (allTagsRes.error) throw new Error(`Failed to fetch tags for context: ${allTagsRes.error.message}`);
-  if (articlesRes.error) throw new Error(`Failed to fetch articles for context: ${articlesRes.error.message}`);
-  if (foldersRes.error) throw new Error(`Failed to fetch folders for context: ${foldersRes.error.message}`);
+  if (projectsRes.error) throw new Error(`500: Failed to fetch project data for analysis: ${projectsRes.error.message}`);
+  if (usersRes.error) throw new Error(`500: Failed to fetch users for context: ${usersRes.error.message}`);
+  if (goalsRes.error) throw new Error(`500: Failed to fetch goals for context: ${goalsRes.error.message}`);
+  if (allTagsRes.error) throw new Error(`500: Failed to fetch tags for context: ${allTagsRes.error.message}`);
+  if (articlesRes.error) throw new Error(`500: Failed to fetch articles for context: ${articlesRes.error.message}`);
+  if (foldersRes.error) throw new Error(`500: Failed to fetch folders for context: ${foldersRes.error.message}`);
 
   const summarizedProjects = projectsRes.data.map(p => ({
       name: p.name,
@@ -39,7 +39,7 @@ export const buildContext = async (userSupabase, user) => {
       progress: g.completions ? g.completions.length : 0,
       tags: g.tags ? g.tags.map(t => t.name) : []
   }));
-  const userList = usersRes.data.map(u => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
+  const userList = usersRes.data.map(u => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email, email: u.email }));
   const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
   const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
   const summarizedArticles = articlesRes.data.map(a => ({ title: a.title, folder: foldersRes.data.find(f => f.id === a.folder_id)?.name }));

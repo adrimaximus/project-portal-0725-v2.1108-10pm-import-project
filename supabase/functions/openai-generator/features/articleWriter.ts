@@ -1,12 +1,13 @@
 // @ts-nocheck
-import { articleWriterFeaturePrompts } from '../prompts/articleWriter.ts';
+import { HandlerContext } from '../../_shared/types.ts';
+import { articleWriterFeaturePrompts } from '../lib/prompts.ts';
 
-export async function articleWriter(payload, context) {
+export default async function articleWriter(payload: any, context: HandlerContext) {
   const { openai, feature } = context;
   const promptConfig = articleWriterFeaturePrompts[feature];
 
   if (!promptConfig) {
-    throw new Error(`Unknown article writer feature: ${feature}`);
+    throw new Error(`400: Unknown article writer feature: ${feature}`);
   }
 
   const response = await openai.chat.completions.create({

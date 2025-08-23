@@ -1,9 +1,11 @@
 // @ts-nocheck
-export async function suggestIcon(payload, context) {
+import { HandlerContext } from '../../_shared/types.ts';
+
+export default async function suggestIcon(payload: any, context: HandlerContext) {
   const { openai } = context;
   const { title, icons } = payload;
   if (!title || !icons || !Array.isArray(icons)) {
-    throw new Error("Title and a list of icons are required.");
+    throw new Error("400: Title and a list of icons are required.");
   }
 
   const systemPrompt = `You are an AI assistant that suggests the best icon for a given title from a list. Your response must be ONLY the name of the icon from the list provided, with no extra text, explanation, or punctuation.`;
