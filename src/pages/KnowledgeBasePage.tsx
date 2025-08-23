@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import PortalLayout from '@/components/PortalLayout';
 import { Button } from '@/components/ui/button';
-import { FolderPlus, Search, LayoutGrid, List, FilePlus } from 'lucide-react';
+import { FolderPlus, Search, LayoutGrid, List, FilePlus, FileText } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { KbFolder, KbArticle } from '@/types';
@@ -15,6 +15,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import FolderListView from '@/components/kb/FolderListView';
 import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
 import ArticleListView from '@/components/kb/ArticleListView';
+import { KBCard } from '@/components/kb/KBCard';
+import { formatDistanceToNow } from 'date-fns';
 
 const KnowledgeBasePage = () => {
   const [isFolderFormOpen, setIsFolderFormOpen] = useState(false);
@@ -53,17 +55,26 @@ const KnowledgeBasePage = () => {
     }
   });
 
+  const uncategorizedArticles = useMemo(() => {
+    return articles.filter(article => article.kb_folders.name === 'Uncategorized');
+  }, [articles]);
+
+  const categorizedFolders = useMemo(() => {
+    return folders.filter(folder => folder.name !== 'Uncategorized');
+  }, [folders]);
+
   const filteredFolders = useMemo(() => {
-    return folders.filter(folder =>
+    return categorizedFolders.filter(folder =>
       folder.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (folder.description && folder.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (folder.category && folder.category.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [folders, searchTerm]);
+  }, [categorizedFolders, searchTerm]);
 
   const filteredArticles = useMemo(() => {
     return articles.filter(article =>
-      article.title.toLowerCase().includes(searchTerm.toLowerCase())
+      article.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      article.kb_folders.name !== 'Uncategorized'
     );
   }, [articles, searchTerm]);
 
@@ -134,6 +145,7 @@ const KnowledgeBasePage = () => {
   };
 
   const isLoading = isLoadingFolders || isLoadingArticles;
+  const cardVariants: ('blue' | 'purple' | 'green')[] = ['blue', 'purple', 'green'];
 
   return (
     <PortalLayout>
@@ -170,6 +182,24 @@ const KnowledgeBasePage = () => {
         </div>
 
         <div className="space-y-8">
+          {uncategorizedArticles.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Uncategorized Articles</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {uncategorizedArticles.map((article, index) => (
+                  <KBCard
+                    key={article.id}
+                    to={`/knowledge-base/articles/${article.slug}`}
+                    title={article.title}
+                    editedLabel={formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
+                    variant={cardVariants[index % cardVariants.length]}
+                    Icon={FileText}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <h2 className="text-xl font-semibold mb-4">Folders</h2>
             {isLoading ? (
@@ -194,7 +224,7 @@ const KnowledgeBasePage = () => {
           </div>
 
           <div>
-            <h2 className="text-xl font-semibold mb-4">Articles</h2>
+            <h2 className="text-xl font-semibold mb-4">All Articles</h2>
             {isLoading ? (
               <div className="space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
             ) : filteredArticles.length > 0 ? (
@@ -218,6 +248,7 @@ const KnowledgeBasePage = () => {
         open={isArticleEditorOpen}
         onOpenChange={setIsArticleEditorOpen}
         article={editingArticle}
+        folders={folders}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
           queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
