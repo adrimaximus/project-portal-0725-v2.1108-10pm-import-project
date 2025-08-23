@@ -21,7 +21,7 @@ const createSupabaseAdmin = () => {
 const createSupabaseUserClient = (req: Request) => {
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
-    throw new Error("Missing Authorization header.");
+    throw new Error("401: Missing Authorization header.");
   }
   return createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -38,7 +38,7 @@ const getOpenAIClient = async (supabaseAdmin) => {
     .single();
 
   if (configError || !config?.value) {
-    throw new Error("OpenAI API key is not configured by an administrator.");
+    throw new Error("400: OpenAI API key is not configured. Please ask an administrator to set it up in the integration settings.");
   }
 
   return new OpenAI({ apiKey: config.value });
@@ -62,12 +62,12 @@ const buildContext = async (userSupabase, user) => {
     userSupabase.from('kb_folders').select('id, name')
   ]);
 
-  if (projectsRes.error) throw new Error(`Failed to fetch project data for analysis: ${projectsRes.error.message}`);
-  if (usersRes.error) throw new Error(`Failed to fetch users for context: ${usersRes.error.message}`);
-  if (goalsRes.error) throw new Error(`Failed to fetch goals for context: ${goalsRes.error.message}`);
-  if (allTagsRes.error) throw new Error(`Failed to fetch tags for context: ${allTagsRes.error.message}`);
-  if (articlesRes.error) throw new Error(`Failed to fetch articles for context: ${articlesRes.error.message}`);
-  if (foldersRes.error) throw new Error(`Failed to fetch folders for context: ${foldersRes.error.message}`);
+  if (projectsRes.error) throw new Error(`500: Failed to fetch project data for analysis: ${projectsRes.error.message}`);
+  if (usersRes.error) throw new Error(`500: Failed to fetch users for context: ${usersRes.error.message}`);
+  if (goalsRes.error) throw new Error(`500: Failed to fetch goals for context: ${goalsRes.error.message}`);
+  if (allTagsRes.error) throw new Error(`500: Failed to fetch tags for context: ${allTagsRes.error.message}`);
+  if (articlesRes.error) throw new Error(`500: Failed to fetch articles for context: ${articlesRes.error.message}`);
+  if (foldersRes.error) throw new Error(`500: Failed to fetch folders for context: ${foldersRes.error.message}`);
 
   const summarizedProjects = projectsRes.data.map(p => ({
       name: p.name,
@@ -223,7 +223,7 @@ async function analyzeDuplicates(payload, context) {
   const { openai } = context;
   const { duplicates } = payload;
   if (!duplicates) {
-    throw new Error("Duplicates data is required for analysis.");
+    throw new Error("400: Duplicates data is required for analysis.");
   }
 
   const systemPrompt = `You are a data quality assistant. Here is a list of potential duplicate contacts. Summarize the findings in a friendly, concise paragraph in markdown format. Mention the total number of pairs found and the common reasons (e.g., 'similar names or shared emails'). Then, recommend that the user review and merge them to keep their contact list clean.`;
@@ -246,7 +246,7 @@ async function aiMergeContacts(payload, context) {
   const { supabaseAdmin, openai } = context;
   const { primary_person_id, secondary_person_id } = payload;
   if (!primary_person_id || !secondary_person_id) {
-    throw new Error("Primary and secondary person IDs are required.");
+    throw new Error("400: Primary and secondary person IDs are required.");
   }
 
   // Fetch both person records with their relations
@@ -255,7 +255,7 @@ async function aiMergeContacts(payload, context) {
     .in('id', [primary_person_id, secondary_person_id]);
 
   if (peopleError) throw peopleError;
-  if (!peopleData || peopleData.length < 2) throw new Error("Could not find both contacts to merge.");
+  if (!peopleData || peopleData.length < 2) throw new Error("404: Could not find both contacts to merge.");
 
   const primaryPerson = peopleData.find(p => p.id === primary_person_id);
   const secondaryPerson = peopleData.find(p => p.id === secondary_person_id);
@@ -285,7 +285,7 @@ async function aiMergeContacts(payload, context) {
 
   const mergedPersonJSON = response.choices[0].message.content;
   if (!mergedPersonJSON) {
-      throw new Error("AI failed to return a merged contact.");
+      throw new Error("503: AI failed to return a merged contact.");
   }
   const mergedPerson = JSON.parse(mergedPersonJSON);
 
@@ -313,7 +313,7 @@ async function aiMergeContacts(payload, context) {
   });
 
   if (upsertError) {
-      throw new Error(`Failed to update primary contact: ${upsertError.message}`);
+      throw new Error(`500: Failed to update primary contact: ${upsertError.message}`);
   }
 
   // Delete the secondary person
@@ -331,7 +331,7 @@ async function articleWriter(payload, context) {
   const promptConfig = articleWriterFeaturePrompts[feature];
 
   if (!promptConfig) {
-    throw new Error(`Unknown article writer feature: ${feature}`);
+    throw new Error(`400: Unknown article writer feature: ${feature}`);
   }
 
   const response = await openai.chat.completions.create({
@@ -351,7 +351,7 @@ async function generateCaption(payload, context) {
   const { openai } = context;
   const { altText } = payload;
   if (!altText) {
-    throw new Error("altText is required for generating a caption.");
+    throw new Error("400: altText is required for generating a caption.");
   }
 
   const systemPrompt = `You are an AI that generates a short, inspiring, one-line caption for an image. The caption should be suitable for a professional dashboard related to events, marketing, and project management. Respond with ONLY the caption, no extra text or quotes. Keep it under 12 words.`;
@@ -375,7 +375,7 @@ async function generateMoodInsight(payload, context) {
   const { openai } = context;
   const { prompt, userName, conversationHistory } = payload;
   if (!prompt) {
-    throw new Error("Prompt is required for generating mood insights.");
+    throw new Error("400: Prompt is required for generating mood insights.");
   }
 
   const systemPrompt = `Anda adalah seorang teman AI yang suportif, empatik, dan berwawasan luas. Tujuan Anda adalah untuk terlibat dalam percakapan yang mendukung dengan pengguna tentang suasana hati dan perasaan mereka. Anda akan menerima riwayat percakapan. Tugas Anda adalah memberikan respons berikutnya dalam percakapan tersebut. Pertahankan nada yang positif dan memotivasi. Sapa pengguna dengan nama mereka jika ini adalah awal percakapan. Jaga agar respons tetap sangat ringkas, maksimal 2 kalimat, dan terasa seperti percakapan alami. Jangan mengulangi diri sendiri. Fokus percakapan ini adalah murni pada kesejahteraan emosional. Jangan membahas topik lain seperti proyek, tugas, atau tujuan kerja kecuali jika pengguna secara eksplisit mengungkitnya terlebih dahulu dalam konteks perasaan mereka. Selalu berikan respons dalam Bahasa Indonesia.`;
@@ -407,7 +407,7 @@ async function suggestIcon(payload, context) {
   const { openai } = context;
   const { title, icons } = payload;
   if (!title || !icons || !Array.isArray(icons)) {
-    throw new Error("Title and a list of icons are required.");
+    throw new Error("400: Title and a list of icons are required.");
   }
 
   const systemPrompt = `You are an AI assistant that suggests the best icon for a given title from a list. Your response must be ONLY the name of the icon from the list provided, with no extra text, explanation, or punctuation.`;
@@ -430,12 +430,12 @@ async function analyzeProjects(payload, context) {
   const { req, openai } = context;
   const { request, conversationHistory } = payload;
   if (!request) {
-    throw new Error("An analysis request type is required.");
+    throw new Error("400: An analysis request type is required.");
   }
 
   const userSupabase = createSupabaseUserClient(req);
   const { data: { user } } = await userSupabase.auth.getUser();
-  if (!user) throw new Error("User not authenticated.");
+  if (!user) throw new Error("401: User not authenticated.");
 
   const actionContext = await buildContext(userSupabase, user);
   const systemPrompt = getAnalyzeProjectsSystemPrompt(actionContext);
@@ -475,7 +475,7 @@ async function generateInsight(payload, context) {
   const { openai } = context;
   const { goal, context: progressContext } = payload;
   if (!goal || !progressContext) {
-    throw new Error("Goal and context are required for generating insights.");
+    throw new Error("400: Goal and context are required for generating insights.");
   }
 
   const owner = goal.collaborators.find(c => c.id === goal.user_id);
@@ -539,10 +539,13 @@ serve(async (req) => {
 
   try {
     const { feature, payload } = await req.json();
+    if (!feature || !payload) {
+      throw new Error("400: 'feature' and 'payload' are required in the request body.");
+    }
+    
     const handler = featureHandlers[feature];
-
     if (!handler) {
-      throw new Error(`Unknown feature: ${feature}`);
+      throw new Error(`404: Unknown feature: ${feature}`);
     }
 
     const supabaseAdmin = createSupabaseAdmin();
@@ -563,10 +566,15 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("Edge function error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Edge function error:", error.message);
+    const message = error.message;
+    const statusCodeMatch = message.match(/^(\d{3}):/);
+    const statusCode = statusCodeMatch ? parseInt(statusCodeMatch[1], 10) : 500;
+    const cleanMessage = message.replace(/^\d{3}:\s*/, '');
+
+    return new Response(JSON.stringify({ error: cleanMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: statusCode,
     });
   }
 });
