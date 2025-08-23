@@ -143,10 +143,8 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
           <DialogTitle>{isEditMode ? 'Edit Article' : 'Create New Article'}</DialogTitle>
           <DialogDescription>
             {isEditMode 
-              ? `Editing "${article?.title}".`
-              : folder 
-                ? `This article will be saved in the "${folder.name}" folder.`
-                : 'This article will be saved in your "Uncategorized" folder.'
+              ? `Editing "${article?.title}". You can also move it to a different folder.`
+              : 'Create a new article and assign it to a folder.'
             }
           </DialogDescription>
         </DialogHeader>
@@ -159,30 +157,28 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
                 <FormMessage />
               </FormItem>
             )} />
-            {isEditMode && (
-              <FormField
-                control={form.control}
-                name="folder_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Folder</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a folder..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {folders.map(f => (
-                          <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            <FormField
+              control={form.control}
+              name="folder_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Folder</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a folder..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {folders.map(f => (
+                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField control={form.control} name="content" render={({ field }) => (
               <FormItem>
                 <FormLabel>Content</FormLabel>

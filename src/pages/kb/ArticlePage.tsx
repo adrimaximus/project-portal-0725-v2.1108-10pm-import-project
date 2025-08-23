@@ -56,6 +56,18 @@ const ArticlePage = () => {
     enabled: !!slug,
   });
 
+  const { data: allFolders = [] } = useQuery({
+    queryKey: ['kb_folders'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('kb_folders').select('*').order('name');
+      if (error) {
+        toast.error("Failed to fetch folders list.");
+        return [];
+      }
+      return data as KbFolder[];
+    }
+  });
+
   if (isLoading) {
     return (
       <PortalLayout>
@@ -129,6 +141,7 @@ const ArticlePage = () => {
         open={isEditorOpen}
         onOpenChange={setIsEditorOpen}
         article={article}
+        folders={allFolders}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['kb_article', slug] });
           queryClient.invalidateQueries({ queryKey: ['kb_articles', article.folder_id] });
