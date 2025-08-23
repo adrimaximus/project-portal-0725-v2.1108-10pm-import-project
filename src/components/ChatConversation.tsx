@@ -93,7 +93,7 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
                   !isCurrentUser && isSameSenderAsPrevious && "ml-10"
                 )}
               >
-                {!isCurrentUser && !isSameSenderAsPrevious && (
+                {!isCurrentUser && !isSameSenderAsPrevious && sender.id !== 'ai-assistant' && (
                   <p className="text-sm font-semibold mb-1">{sender.name}</p>
                 )}
                 <div className="flex items-end gap-2">
