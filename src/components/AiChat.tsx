@@ -8,14 +8,19 @@ import ReactMarkdown from 'react-markdown';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Sparkles, Send, Loader2 } from 'lucide-react';
+import { Sparkles, Send, Loader2, ArrowLeft } from 'lucide-react';
 
 type ConversationMessage = {
   sender: 'user' | 'ai';
   content: string;
 };
 
-const AiChat = () => {
+interface AiChatProps {
+  isMobile?: boolean;
+  onBack?: () => void;
+}
+
+const AiChat = ({ isMobile, onBack }: AiChatProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
@@ -65,6 +70,22 @@ const AiChat = () => {
 
   return (
     <div className="flex flex-col h-full">
+      {isMobile && onBack && (
+        <div className="flex items-center p-4 border-b bg-background/60 backdrop-blur flex-shrink-0 h-[81px]">
+          <Button variant="ghost" size="icon" className="mr-2" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 border">
+              <AvatarFallback className="bg-primary text-primary-foreground"><Sparkles className="h-5 w-5" /></AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-lg font-semibold">AI Assistant</p>
+              <p className="text-sm text-muted-foreground">Online</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-6">
         {conversation.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">

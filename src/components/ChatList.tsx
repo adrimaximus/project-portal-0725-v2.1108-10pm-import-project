@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, MessageSquarePlus, MoreHorizontal, Trash2 } from "lucide-react";
+import { Search, MessageSquarePlus, MoreHorizontal, Trash2, Sparkles } from "lucide-react";
 import { Conversation, Collaborator } from "@/types";
 import NewConversationDialog from "./NewConversationDialog";
 import { cn, getInitials, generateVibrantGradient } from "@/lib/utils";
@@ -73,6 +73,28 @@ const ChatList = ({
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
+        <div
+          className={cn(
+            "flex items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group cursor-pointer",
+            selectedConversationId === 'ai-assistant' && "bg-muted border-l-primary"
+          )}
+          onClick={() => onSelectConversation('ai-assistant')}
+        >
+          <Avatar>
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              <Sparkles className="h-5 w-5" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 overflow-hidden">
+            <p className="font-semibold truncate">AI Assistant</p>
+            <p className="text-sm text-muted-foreground truncate">
+              Ask me anything...
+            </p>
+          </div>
+        </div>
+        <div className="px-4 py-2">
+          <div className="border-t"></div>
+        </div>
         {conversations.map((c) => {
           const otherUser = !c.isGroup ? c.members?.find(m => m.id !== currentUser?.id) : null;
           return (

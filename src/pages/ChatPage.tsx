@@ -5,6 +5,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useChat } from "@/hooks/useChat";
 import { useConversationMessages } from "@/hooks/useConversationMessages";
+import AiChat from "@/components/AiChat";
 
 const ChatPage = () => {
   const isMobile = useIsMobile();
@@ -37,7 +38,7 @@ const ChatPage = () => {
   } : null;
 
   useEffect(() => {
-    if (selectedConversationId && chatInputRef.current) {
+    if (selectedConversationId && selectedConversationId !== 'ai-assistant' && chatInputRef.current) {
       setTimeout(() => {
         chatInputRef.current?.focus();
       }, 100);
@@ -48,7 +49,7 @@ const ChatPage = () => {
     return (
       <PortalLayout noPadding disableMainScroll>
         <div className="h-full">
-          {!selectedConversation ? (
+          {!selectedConversationId ? (
             <ChatList
               conversations={conversations}
               selectedConversationId={selectedConversationId}
@@ -59,6 +60,8 @@ const ChatPage = () => {
               onStartNewGroupChat={handleStartNewGroupChat}
               onDeleteConversation={handleDeleteConversation}
             />
+          ) : selectedConversationId === 'ai-assistant' ? (
+            <AiChat isMobile={isMobile} onBack={() => setSelectedConversationId(null)} />
           ) : (
             <ChatWindow
               ref={chatInputRef}
@@ -90,16 +93,20 @@ const ChatPage = () => {
           onStartNewGroupChat={handleStartNewGroupChat}
           onDeleteConversation={handleDeleteConversation}
         />
-        <ChatWindow
-          ref={chatInputRef}
-          selectedConversation={conversationWithMessages}
-          onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
-          onClearChat={handleClearChat}
-          onLeaveGroup={handleLeaveGroup}
-          typing={isSomeoneTyping}
-          onTyping={sendTyping}
-          onUpdate={fetchConversations}
-        />
+        {selectedConversationId === 'ai-assistant' ? (
+          <AiChat />
+        ) : (
+          <ChatWindow
+            ref={chatInputRef}
+            selectedConversation={conversationWithMessages}
+            onSendMessage={(text, attachment) => handleSendMessage(text, attachment)}
+            onClearChat={handleClearChat}
+            onLeaveGroup={handleLeaveGroup}
+            typing={isSomeoneTyping}
+            onTyping={sendTyping}
+            onUpdate={fetchConversations}
+          />
+        )}
       </div>
     </PortalLayout>
   );
