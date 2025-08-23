@@ -107,14 +107,14 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
     let header_image_url = article?.header_image_url;
 
     if (imageFile) {
-      const filePath = `kb-images/${user.id}/${Date.now()}-${imageFile.name}`;
-      const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, imageFile);
+      const filePath = `${user.id}/${Date.now()}-${imageFile.name}`;
+      const { error: uploadError } = await supabase.storage.from('kb-images').upload(filePath, imageFile);
       if (uploadError) {
         toast.error("Failed to upload header image.");
         setIsSaving(false);
         return;
       }
-      const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+      const { data: urlData } = supabase.storage.from('kb-images').getPublicUrl(filePath);
       header_image_url = urlData.publicUrl;
     } else if (isRemovingImage) {
       header_image_url = undefined;
