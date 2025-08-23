@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
 import { KbFolder } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ArticleValues {
   id?: string;
@@ -23,6 +24,7 @@ interface ArticleValues {
 interface ArticleEditorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  folders?: KbFolder[];
   folder?: KbFolder | null;
   article?: ArticleValues | null;
   onSuccess: () => void;
@@ -36,7 +38,7 @@ const articleSchema = z.object({
 
 type ArticleFormValues = z.infer<typeof articleSchema>;
 
-const ArticleEditorDialog = ({ open, onOpenChange, folder, article, onSuccess }: ArticleEditorDialogProps) => {
+const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article, onSuccess }: ArticleEditorDialogProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const isEditMode = !!article;
   const { user } = useAuth();
@@ -157,6 +159,30 @@ const ArticleEditorDialog = ({ open, onOpenChange, folder, article, onSuccess }:
                 <FormMessage />
               </FormItem>
             )} />
+            {isEditMode && (
+              <FormField
+                control={form.control}
+                name="folder_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Folder</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a folder..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {folders.map(f => (
+                          <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <FormField control={form.control} name="content" render={({ field }) => (
               <FormItem>
                 <FormLabel>Content</FormLabel>

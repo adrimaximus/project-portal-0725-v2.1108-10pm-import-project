@@ -22,3 +22,16 @@ export interface KbFolder {
   access_level?: FolderAccessLevel;
   collaborators?: KbFolderCollaborator[];
 }
+
+export interface KbArticle {
+  id: string;
+  title: string;
+  slug: string;
+  content: any;
+  folder_id: string;
+  updated_at: string;
+  kb_folders: {
+    name: string;
+    slug: string;
+  };
+}

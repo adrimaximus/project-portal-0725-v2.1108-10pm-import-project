@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import PortalLayout from '@/components/PortalLayout';
 import { Button } from '@/components/ui/button';
-import { FolderPlus, Search, GitMerge, Loader2, LayoutGrid, List, FilePlus } from 'lucide-react';
+import { FolderPlus, Search, LayoutGrid, List, FilePlus } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { KbFolder } from '@/types';
+import { KbFolder, KbArticle } from '@/types';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import FolderCard from '@/components/kb/FolderCard';
@@ -14,12 +14,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import FolderListView from '@/components/kb/FolderListView';
 import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
+import ArticleListView from '@/components/kb/ArticleListView';
 
 const KnowledgeBasePage = () => {
   const [isFolderFormOpen, setIsFolderFormOpen] = useState(false);
   const [isArticleEditorOpen, setIsArticleEditorOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<KbFolder | null>(null);
+  const [editingArticle, setEditingArticle] = useState<KbArticle | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<KbFolder | null>(null);
+  const [articleToDelete, setArticleToDelete] = useState<KbArticle | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
@@ -32,15 +35,21 @@ const KnowledgeBasePage = () => {
     localStorage.setItem('kb_view_mode', viewMode);
   }, [viewMode]);
 
-  const { data: folders = [], isLoading } = useQuery({
+  const { data: folders = [], isLoading: isLoadingFolders } = useQuery({
     queryKey: ['kb_folders'],
     queryFn: async () => {
       const { data, error } = await supabase.from('kb_folders').select('*').order('name', { ascending: true });
-      if (error) {
-        toast.error("Failed to fetch folders.");
-        throw error;
-      }
+      if (error) throw error;
       return data as KbFolder[];
+    }
+  });
+
+  const { data: articles = [], isLoading: isLoadingArticles } = useQuery({
+    queryKey: ['kb_articles'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('kb_articles').select('*, kb_folders(name, slug)').order('title');
+      if (error) throw error;
+      return data as KbArticle[];
     }
   });
 
@@ -51,6 +60,12 @@ const KnowledgeBasePage = () => {
       (folder.category && folder.category.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [folders, searchTerm]);
+
+  const filteredArticles = useMemo(() => {
+    return articles.filter(article =>
+      article.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [articles, searchTerm]);
 
   const requestSort = (key: keyof KbFolder) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -66,16 +81,10 @@ const KnowledgeBasePage = () => {
         sortableItems.sort((a, b) => {
             const aValue = a[sortConfig.key!];
             const bValue = b[sortConfig.key!];
-
             if (aValue === null || aValue === undefined) return 1;
             if (bValue === null || bValue === undefined) return -1;
-            
-            if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
-                return sortConfig.direction === 'ascending' ? -1 : 1;
-            }
-            if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
-                return sortConfig.direction === 'ascending' ? 1 : -1;
-            }
+            if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) return sortConfig.direction === 'ascending' ? 1 : -1;
             return 0;
         });
     }
@@ -95,14 +104,36 @@ const KnowledgeBasePage = () => {
   const handleDeleteFolder = async () => {
     if (!folderToDelete) return;
     const { error } = await supabase.from('kb_folders').delete().eq('id', folderToDelete.id);
-    if (error) {
-      toast.error(`Failed to delete folder: ${error.message}`);
-    } else {
+    if (error) toast.error(`Failed to delete folder: ${error.message}`);
+    else {
       toast.success(`Folder "${folderToDelete.name}" deleted.`);
       queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
     }
     setFolderToDelete(null);
   };
+
+  const handleAddNewArticle = () => {
+    setEditingArticle(null);
+    setIsArticleEditorOpen(true);
+  };
+
+  const handleEditArticle = (article: KbArticle) => {
+    setEditingArticle(article);
+    setIsArticleEditorOpen(true);
+  };
+
+  const handleDeleteArticle = async () => {
+    if (!articleToDelete) return;
+    const { error } = await supabase.from('kb_articles').delete().eq('id', articleToDelete.id);
+    if (error) toast.error(`Failed to delete article: ${error.message}`);
+    else {
+      toast.success(`Article "${articleToDelete.title}" deleted.`);
+      queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
+    }
+    setArticleToDelete(null);
+  };
+
+  const isLoading = isLoadingFolders || isLoadingArticles;
 
   return (
     <PortalLayout>
@@ -113,13 +144,11 @@ const KnowledgeBasePage = () => {
             <p className="text-muted-foreground">Find and manage your team's articles and documentation.</p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button onClick={() => setIsArticleEditorOpen(true)} variant="outline" className="w-full">
-              <FilePlus className="mr-2 h-4 w-4" />
-              New Article
+            <Button onClick={handleAddNewArticle} variant="outline" className="w-full">
+              <FilePlus className="mr-2 h-4 w-4" /> New Article
             </Button>
             <Button onClick={handleAddNewFolder} className="w-full">
-              <FolderPlus className="mr-2 h-4 w-4" />
-              New Folder
+              <FolderPlus className="mr-2 h-4 w-4" /> New Folder
             </Button>
           </div>
         </div>
@@ -128,7 +157,7 @@ const KnowledgeBasePage = () => {
           <div className="relative w-full sm:flex-1 sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search folders..."
+              placeholder="Search folders and articles..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 w-full"
@@ -140,44 +169,55 @@ const KnowledgeBasePage = () => {
           </ToggleGroup>
         </div>
 
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Folders</h2>
-          {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48" />)}
-            </div>
-          ) : sortedFolders.length > 0 ? (
-            viewMode === 'grid' ? (
+        <div className="space-y-8">
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Folders</h2>
+            {isLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {sortedFolders.map(folder => (
-                  <FolderCard key={folder.id} folder={folder} onEdit={handleEditFolder} onDelete={setFolderToDelete} />
-                ))}
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
               </div>
+            ) : sortedFolders.length > 0 ? (
+              viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {sortedFolders.map(folder => (
+                    <FolderCard key={folder.id} folder={folder} onEdit={handleEditFolder} onDelete={setFolderToDelete} />
+                  ))}
+                </div>
+              ) : (
+                <FolderListView folders={sortedFolders} onEdit={handleEditFolder} onDelete={setFolderToDelete} requestSort={requestSort} />
+              )
             ) : (
-              <FolderListView folders={sortedFolders} onEdit={handleEditFolder} onDelete={setFolderToDelete} requestSort={requestSort} />
-            )
-          ) : (
-            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-              <p>No folders found.</p>
-              {searchTerm ? <p>Try a different search term.</p> : <p>Click "New Folder" to get started.</p>}
-            </div>
-          )}
+              <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                <p>No folders found.</p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Articles</h2>
+            {isLoading ? (
+              <div className="space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
+            ) : filteredArticles.length > 0 ? (
+              <ArticleListView articles={filteredArticles} onEdit={handleEditArticle} onDelete={setArticleToDelete} />
+            ) : (
+              <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                <p>No articles found.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
       <FolderFormDialog
         open={isFolderFormOpen}
         onOpenChange={setIsFolderFormOpen}
         folder={editingFolder}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
-          if (editingFolder) {
-            queryClient.invalidateQueries({ queryKey: ['kb_folder', editingFolder.slug] });
-          }
-        }}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['kb_folders'] })}
       />
       <ArticleEditorDialog
         open={isArticleEditorOpen}
         onOpenChange={setIsArticleEditorOpen}
+        article={editingArticle}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
           queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
@@ -185,16 +225,14 @@ const KnowledgeBasePage = () => {
       />
       <AlertDialog open={!!folderToDelete} onOpenChange={(open) => !open && setFolderToDelete(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the folder "{folderToDelete?.name}" and all articles inside it. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteFolder}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the folder "{folderToDelete?.name}" and all articles inside it. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteFolder}>Delete</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!articleToDelete} onOpenChange={(open) => !open && setArticleToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the article "{articleToDelete?.title}". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteArticle}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </PortalLayout>
