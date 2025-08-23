@@ -13,6 +13,12 @@ const PexelsImage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchPhotoAndCaption = useCallback(async () => {
+    if (!pexelsClient) {
+      setError("Fitur gambar Pexels tidak dikonfigurasi.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await pexelsClient.photos.search({ 
         query: 'event', 
