@@ -55,6 +55,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
   const [isImproving, setIsImproving] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const editorRef = useRef<ReactQuill>(null);
+  const [debouncedTitle, setDebouncedTitle] = useState('');
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -64,6 +65,20 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
       folder_id: '',
     }
   });
+
+  const titleValue = form.watch('title');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (titleValue) {
+        setDebouncedTitle(titleValue);
+      }
+    }, 500); // 500ms debounce delay
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [titleValue]);
 
   useEffect(() => {
     if (open) {
@@ -314,7 +329,15 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+          <form 
+            onSubmit={form.handleSubmit(onSubmit)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.target as HTMLElement).nodeName !== 'TEXTAREA' && (e.target as HTMLElement).getAttribute('role') !== 'textbox') {
+                e.preventDefault();
+              }
+            }}
+            className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4"
+          >
             <FormField control={form.control} name="title" render={({ field }) => (
               <FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
@@ -352,7 +375,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
                   </div>
                 </TabsContent>
                 <TabsContent value="pexels">
-                  <PexelsImagePicker onImageSelect={handlePexelsSelect} />
+                  <PexelsImagePicker onImageSelect={handlePexelsSelect} initialSearchTerm={debouncedTitle} />
                 </TabsContent>
               </Tabs>
             </FormItem>

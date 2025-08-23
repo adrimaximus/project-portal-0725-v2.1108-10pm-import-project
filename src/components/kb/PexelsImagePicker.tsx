@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Loader2, CameraOff } from 'lucide-react';
@@ -10,22 +10,23 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface PexelsImagePickerProps {
   onImageSelect: (url: string) => void;
+  initialSearchTerm?: string;
 }
 
-const PexelsImagePicker = ({ onImageSelect }: PexelsImagePickerProps) => {
+const PexelsImagePicker = ({ onImageSelect, initialSearchTerm }: PexelsImagePickerProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleSearch = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!searchTerm.trim()) return;
-
+  const handleSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
     setIsLoading(true);
-    setResults([]);
     try {
-      const response = await pexelsClient.photos.search({ query: searchTerm, per_page: 15 });
+      const response = await pexelsClient.photos.search({ query, per_page: 15 });
       if ("photos" in response) {
         setResults(response.photos);
       } else {
@@ -37,6 +38,18 @@ const PexelsImagePicker = ({ onImageSelect }: PexelsImagePickerProps) => {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (initialSearchTerm) {
+      setSearchTerm(initialSearchTerm);
+      handleSearch(initialSearchTerm);
+    }
+  }, [initialSearchTerm, handleSearch]);
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSearch(searchTerm);
   };
 
   const handleSelectAndUpload = async (pexelsUrl: string) => {
@@ -58,7 +71,7 @@ const PexelsImagePicker = ({ onImageSelect }: PexelsImagePickerProps) => {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={handleSearch} className="flex gap-2">
+      <form onSubmit={handleFormSubmit} className="flex gap-2">
         <Input
           placeholder="Search for an image..."
           value={searchTerm}
