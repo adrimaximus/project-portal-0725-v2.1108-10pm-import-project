@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Loader2, Image as ImageIcon, X, Sparkles } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
 import { KbFolder } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,6 +49,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImproving, setIsImproving] = useState(false);
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -103,6 +104,30 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
     setImageFile(null);
     setImagePreview(url);
     setIsRemovingImage(false);
+  };
+
+  const handleImproveContent = async () => {
+    const currentContent = form.getValues('content');
+    if (!currentContent || currentContent.trim().length < 20) {
+      toast.error("Please provide more content for the AI to improve.");
+      return;
+    }
+    setIsImproving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('openai-generator', {
+        body: {
+          feature: 'improve-article-content',
+          payload: { content: currentContent }
+        }
+      });
+      if (error) throw error;
+      form.setValue('content', data.result, { shouldDirty: true });
+      toast.success("Content improved by AI!");
+    } catch (error: any) {
+      toast.error("Failed to improve content.", { description: error.message });
+    } finally {
+      setIsImproving(false);
+    }
   };
 
   const onSubmit = async (values: ArticleFormValues) => {
@@ -270,7 +295,13 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
             />
             <FormField control={form.control} name="content" render={({ field }) => (
               <FormItem>
-                <FormLabel>Content</FormLabel>
+                <div className="flex justify-between items-center">
+                  <FormLabel>Content</FormLabel>
+                  <Button type="button" variant="outline" size="sm" onClick={handleImproveContent} disabled={isImproving}>
+                    {isImproving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    Improve with AI
+                  </Button>
+                </div>
                 <FormControl>
                   <RichTextEditor value={field.value || ''} onChange={field.onChange} />
                 </FormControl>

@@ -374,6 +374,28 @@ serve(async (req) => {
     let responseData;
 
     switch (feature) {
+      case 'improve-article-content': {
+        const { content } = payload;
+        if (!content) {
+          throw new Error("Content is required to improve the article.");
+        }
+
+        const systemPrompt = `You are an expert editor. Improve the following article content for clarity, grammar, and engagement. Maintain the original meaning and tone. Respond ONLY with the improved HTML content, preserving the original HTML structure as much as possible. Do not add any explanatory text before or after the HTML.`;
+        const userPrompt = `Improve this content:\n\n${content}`;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4-turbo",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.5,
+          max_tokens: 2048,
+        });
+
+        responseData = { result: response.choices[0].message.content?.trim() };
+        break;
+      }
       case 'suggest-icon': {
         const { title, icons } = payload;
         if (!title || !icons || !Array.isArray(icons)) {
