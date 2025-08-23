@@ -179,7 +179,7 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
       <div className="flex flex-row gap-4 overflow-x-auto pb-4">
         {columns.map(statusOption => {
           const projectsInColumn = projectGroups[statusOption.value];
-          const isColumnCollapsed = projectsInColumn.length === 0 && collapsedColumns.includes(statusOption.value);
+          const isColumnCollapsed = collapsedColumns.includes(statusOption.value);
           return (
             <KanbanColumn
               key={statusOption.value}
