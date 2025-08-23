@@ -24,7 +24,7 @@ export function KBCard({ article }: KBCardProps) {
     <Link to={`/knowledge-base/articles/${article.slug}`} className="group block h-full">
       <Card className="h-full overflow-hidden rounded-2xl transition-shadow duration-200 group-hover:shadow-lg flex flex-col">
         {/* Image Section */}
-        <div className="aspect-video w-full overflow-hidden">
+        <div className="aspect-[20/9] w-full overflow-hidden">
           {article.header_image_url ? (
             <img
               src={article.header_image_url}
