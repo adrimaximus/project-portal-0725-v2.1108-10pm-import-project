@@ -14,9 +14,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import FolderListView from '@/components/kb/FolderListView';
 import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
-import ArticleListView from '@/components/kb/ArticleListView';
 import { KBCard } from '@/components/kb/KBCard';
 import { formatDistanceToNow } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const KnowledgeBasePage = () => {
   const [isFolderFormOpen, setIsFolderFormOpen] = useState(false);
@@ -27,8 +27,8 @@ const KnowledgeBasePage = () => {
   const [articleToDelete, setArticleToDelete] = useState<KbArticle | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
-    const savedView = localStorage.getItem('kb_view_mode') as 'grid' | 'list';
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'articles'>(() => {
+    const savedView = localStorage.getItem('kb_view_mode') as 'grid' | 'list' | 'articles';
     return savedView || 'grid';
   });
   const [sortConfig, setSortConfig] = useState<{ key: keyof KbFolder | null; direction: 'ascending' | 'descending' }>({ key: 'name', direction: 'ascending' });
@@ -55,26 +55,17 @@ const KnowledgeBasePage = () => {
     }
   });
 
-  const uncategorizedArticles = useMemo(() => {
-    return articles.filter(article => article.kb_folders.name === 'Uncategorized');
-  }, [articles]);
-
-  const categorizedFolders = useMemo(() => {
-    return folders.filter(folder => folder.name !== 'Uncategorized');
-  }, [folders]);
-
   const filteredFolders = useMemo(() => {
-    return categorizedFolders.filter(folder =>
+    return folders.filter(folder =>
       folder.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (folder.description && folder.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (folder.category && folder.category.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [categorizedFolders, searchTerm]);
+  }, [folders, searchTerm]);
 
   const filteredArticles = useMemo(() => {
     return articles.filter(article =>
-      article.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      article.kb_folders.name !== 'Uncategorized'
+      article.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [articles, searchTerm]);
 
@@ -128,11 +119,6 @@ const KnowledgeBasePage = () => {
     setIsArticleEditorOpen(true);
   };
 
-  const handleEditArticle = (article: KbArticle) => {
-    setEditingArticle(article);
-    setIsArticleEditorOpen(true);
-  };
-
   const handleDeleteArticle = async () => {
     if (!articleToDelete) return;
     const { error } = await supabase.from('kb_articles').delete().eq('id', articleToDelete.id);
@@ -146,6 +132,55 @@ const KnowledgeBasePage = () => {
 
   const isLoading = isLoadingFolders || isLoadingArticles;
   const cardVariants: ('blue' | 'purple' | 'green')[] = ['blue', 'purple', 'green'];
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
+        </div>
+      );
+    }
+
+    if (viewMode === 'articles') {
+      return filteredArticles.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {filteredArticles.map((article, index) => (
+            <KBCard
+              key={article.id}
+              to={`/knowledge-base/articles/${article.slug}`}
+              title={article.title}
+              editedLabel={formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
+              variant={cardVariants[index % cardVariants.length]}
+              Icon={FileText}
+              header_image_url={article.header_image_url}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+          <p>No articles found.</p>
+        </div>
+      );
+    }
+
+    // Grid or List view for folders
+    return sortedFolders.length > 0 ? (
+      viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {sortedFolders.map(folder => (
+            <FolderCard key={folder.id} folder={folder} onEdit={handleEditFolder} onDelete={setFolderToDelete} />
+          ))}
+        </div>
+      ) : (
+        <FolderListView folders={sortedFolders} onEdit={handleEditFolder} onDelete={setFolderToDelete} requestSort={requestSort} />
+      )
+    ) : (
+      <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+        <p>No folders found.</p>
+      </div>
+    );
+  };
 
   return (
     <PortalLayout>
@@ -169,72 +204,42 @@ const KnowledgeBasePage = () => {
           <div className="relative w-full sm:flex-1 sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search folders and articles..."
+              placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 w-full"
             />
           </div>
-          <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'grid' | 'list')}}>
-            <ToggleGroupItem value="grid" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-            <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+          <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'grid' | 'list' | 'articles')}}>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="grid" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent><p>Folders (Grid)</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent><p>Folders (List)</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="articles" aria-label="Articles view"><FileText className="h-4 w-4" /></ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent><p>Articles View</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </ToggleGroup>
         </div>
 
         <div className="space-y-8">
-          {uncategorizedArticles.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Uncategorized Articles</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {uncategorizedArticles.map((article, index) => (
-                  <KBCard
-                    key={article.id}
-                    to={`/knowledge-base/articles/${article.slug}`}
-                    title={article.title}
-                    editedLabel={formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
-                    variant={cardVariants[index % cardVariants.length]}
-                    Icon={FileText}
-                    header_image_url={article.header_image_url}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
           <div>
-            <h2 className="text-xl font-semibold mb-4">Folders</h2>
-            {isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
-              </div>
-            ) : sortedFolders.length > 0 ? (
-              viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {sortedFolders.map(folder => (
-                    <FolderCard key={folder.id} folder={folder} onEdit={handleEditFolder} onDelete={setFolderToDelete} />
-                  ))}
-                </div>
-              ) : (
-                <FolderListView folders={sortedFolders} onEdit={handleEditFolder} onDelete={setFolderToDelete} requestSort={requestSort} />
-              )
-            ) : (
-              <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                <p>No folders found.</p>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <h2 className="text-xl font-semibold mb-4">All Articles</h2>
-            {isLoading ? (
-              <div className="space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
-            ) : filteredArticles.length > 0 ? (
-              <ArticleListView articles={filteredArticles} onEdit={handleEditArticle} onDelete={setArticleToDelete} />
-            ) : (
-              <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                <p>No articles found.</p>
-              </div>
-            )}
+            <h2 className="text-xl font-semibold mb-4">
+              {viewMode === 'articles' ? 'All Articles' : 'Folders'}
+            </h2>
+            {renderContent()}
           </div>
         </div>
       </div>
