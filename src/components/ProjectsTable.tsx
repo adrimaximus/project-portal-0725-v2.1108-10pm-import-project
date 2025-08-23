@@ -235,6 +235,16 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
     return sortableItems;
   }, [filteredProjects, sortConfig]);
 
+  const importableEvents = useMemo(() => {
+    const importedEventIds = new Set(
+      projects
+        .map(p => p.origin_event_id)
+        .filter(id => id && id.startsWith('cal-'))
+        .map(id => id.substring(4))
+    );
+    return calendarEvents.filter(event => !importedEventIds.has(event.id));
+  }, [projects, calendarEvents]);
+
   const requestSort = (key: keyof Project) => {
     let direction: 'ascending' | 'descending' = 'ascending';
     if (sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -321,7 +331,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
       case 'kanban':
         return <KanbanView projects={filteredProjects} groupBy={kanbanGroupBy} />;
       case 'calendar':
-        return <CalendarImportView events={calendarEvents} onImportEvent={handleImportEvent} />;
+        return <CalendarImportView events={importableEvents} onImportEvent={handleImportEvent} />;
       default:
         return null;
     }

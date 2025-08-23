@@ -63,6 +63,7 @@ export interface Project {
   venue?: string;
   kanban_order?: number;
   tags: Tag[];
+  origin_event_id?: string;
 }
 
 export const PROJECT_STATUS_OPTIONS = [
