@@ -27,7 +27,7 @@ interface ArticleValues {
   header_image_url?: string;
 }
 
-interface ArticleEditorDialogProps {
+interface PageEditorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   folders?: KbFolder[];
@@ -44,7 +44,7 @@ const articleSchema = z.object({
 
 type ArticleFormValues = z.infer<typeof articleSchema>;
 
-const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article, onSuccess }: ArticleEditorDialogProps) => {
+const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, onSuccess }: PageEditorDialogProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const isEditMode = !!article;
   const { user } = useAuth();
@@ -143,12 +143,12 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
 
     if (!fullContent || fullContent.trim() === '<p><br></p>' || fullContent.trim().length < 15) {
       if (!title.trim()) {
-        toast.error("Please provide a title to generate an article.");
+        toast.error("Please provide a title to generate a page.");
         return;
       }
       feature = 'generate-article-from-title';
       payload = { title };
-      toast.info("Generating article from title...");
+      toast.info("Generating page from title...");
     } else if (selection && selection.length > 0 && selectedText.trim()) {
       feature = 'expand-article-text';
       payload = { title, fullContent, selectedText };
@@ -156,7 +156,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
     } else {
       feature = 'improve-article-content';
       payload = { content: fullContent };
-      toast.info("Improving the entire article...");
+      toast.info("Improving the entire page...");
     }
     
     setIsImproving(true);
@@ -206,7 +206,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
         return;
       }
       payload = { content: fullContent };
-      toast.info("Summarizing the entire article...");
+      toast.info("Summarizing the entire page...");
     }
     
     setIsSummarizing(true);
@@ -282,14 +282,14 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
                 finalFolderId = newFolder!.id;
             }
         } catch (error: any) {
-            toast.error("Failed to manage default folder.", { description: error.message });
+            toast.error("Failed to manage default folder for the page.", { description: error.message });
             setIsSaving(false);
             return;
         }
     }
 
     if (!finalFolderId) {
-        toast.error("Could not determine a folder for the article.");
+        toast.error("Could not determine a folder for the page.");
         setIsSaving(false);
         return;
     }
@@ -309,9 +309,9 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
     setIsSaving(false);
 
     if (error) {
-      toast.error(`Failed to save article: ${error.message}`);
+      toast.error(`Failed to save page: ${error.message}`);
     } else {
-      toast.success(`Article "${values.title}" saved successfully.`);
+      toast.success(`Page "${values.title}" saved successfully.`);
       onSuccess();
       onOpenChange(false);
     }
@@ -321,11 +321,11 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Article' : 'Create New Article'}</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Page' : 'Create New Page'}</DialogTitle>
           <DialogDescription>
             {isEditMode 
               ? `Editing "${article?.title}". You can also move it to a different folder.`
-              : 'Create a new article and assign it to a folder.'
+              : 'Create a new page and assign it to a folder.'
             }
           </DialogDescription>
         </DialogHeader>
@@ -437,7 +437,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Article
+                Save Page
               </Button>
             </DialogFooter>
           </form>
@@ -447,4 +447,4 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
   );
 };
 
-export default ArticleEditorDialog;
+export default PageEditorDialog;

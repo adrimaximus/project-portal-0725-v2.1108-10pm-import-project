@@ -1,6 +1,6 @@
 import { KbFolder, KbArticle } from '@/types';
 import FolderCard from './FolderCard';
-import ArticleListView from './ArticleListView';
+import PageListView from './PageListView';
 
 interface FolderGridViewProps {
   folders: KbFolder[];
@@ -29,16 +29,16 @@ const FolderGridView = ({ folders, articles, onEditFolder, onDeleteFolder, onEdi
         )}
       </div>
       <div>
-        <h2 className="text-xl font-semibold mb-4">All Articles</h2>
+        <h2 className="text-xl font-semibold mb-4">All Pages</h2>
         {articles.length > 0 ? (
-          <ArticleListView 
+          <PageListView 
             articles={articles} 
             onEdit={onEditArticle} 
             onDelete={onDeleteArticle} 
           />
         ) : (
           <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-            <p>No articles found.</p>
+            <p>No pages found.</p>
           </div>
         )}
       </div>

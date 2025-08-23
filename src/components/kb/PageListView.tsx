@@ -6,13 +6,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from '../ui/button';
 import { MoreHorizontal, Edit, Trash2, FileText } from 'lucide-react';
 
-interface ArticleListViewProps {
+interface PageListViewProps {
   articles: KbArticle[];
   onEdit: (article: KbArticle) => void;
   onDelete: (article: KbArticle) => void;
 }
 
-const ArticleListView = ({ articles, onEdit, onDelete }: ArticleListViewProps) => {
+const PageListView = ({ articles, onEdit, onDelete }: PageListViewProps) => {
   return (
     <div className="border rounded-lg">
       <Table>
@@ -28,7 +28,7 @@ const ArticleListView = ({ articles, onEdit, onDelete }: ArticleListViewProps) =
           {articles.map(article => (
             <TableRow key={article.id}>
               <TableCell>
-                <Link to={`/knowledge-base/articles/${article.slug}`} className="flex items-center gap-3 group font-medium text-primary hover:underline">
+                <Link to={`/knowledge-base/pages/${article.slug}`} className="flex items-center gap-3 group font-medium text-primary hover:underline">
                   <FileText className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                   <span className="truncate">{article.title}</span>
                 </Link>
@@ -66,4 +66,4 @@ const ArticleListView = ({ articles, onEdit, onDelete }: ArticleListViewProps) =
   );
 };
 
-export default ArticleListView;
+export default PageListView;

@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Folder, FileText, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
+import PageEditorDialog from '@/components/kb/PageEditorDialog';
 
 type Article = {
   id: string;
@@ -56,7 +56,7 @@ const FolderDetailPage = () => {
         .eq('folder_id', folder.id)
         .order('title');
       if (error) {
-        toast.error("Failed to fetch articles.");
+        toast.error("Failed to fetch pages.");
         throw error;
       }
       return data;
@@ -126,7 +126,7 @@ const FolderDetailPage = () => {
           </div>
           <Button onClick={() => setIsEditorOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            New Article
+            New Page
           </Button>
         </div>
 
@@ -141,7 +141,7 @@ const FolderDetailPage = () => {
             {articles.map(article => (
               <Link
                 key={article.id}
-                to={`/knowledge-base/articles/${article.slug}`}
+                to={`/knowledge-base/pages/${article.slug}`}
                 className="flex items-center gap-3 p-4 border-b last:border-b-0 hover:bg-muted/50 transition-colors"
               >
                 <FileText className="h-5 w-5 text-muted-foreground" />
@@ -152,12 +152,12 @@ const FolderDetailPage = () => {
         ) : (
           <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">
             <FileText className="mx-auto h-12 w-12" />
-            <p className="mt-4 font-semibold">No articles in this folder yet.</p>
-            <p className="text-sm">Click "New Article" to add the first one.</p>
+            <p className="mt-4 font-semibold">No pages in this folder yet.</p>
+            <p className="text-sm">Click "New Page" to add the first one.</p>
           </div>
         )}
       </div>
-      <ArticleEditorDialog
+      <PageEditorDialog
         open={isEditorOpen}
         onOpenChange={setIsEditorOpen}
         folder={folder}

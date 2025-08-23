@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Folder, FileText, Edit } from 'lucide-react';
 import { useState } from 'react';
-import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
+import PageEditorDialog from '@/components/kb/PageEditorDialog';
 import { Button } from '@/components/ui/button';
 
 const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
@@ -26,14 +26,14 @@ const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
   
   if (error) {
     if (error.code === 'PGRST116') return null;
-    toast.error("Failed to fetch article details.");
+    toast.error("Failed to fetch page details.");
     console.error(error);
     return null;
   }
   return data as Article;
 };
 
-const ArticlePage = () => {
+const Page = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -78,8 +78,8 @@ const ArticlePage = () => {
     return (
       <PortalLayout>
         <div className="text-center">
-          <h2 className="text-2xl font-bold">Article Not Found</h2>
-          <p className="text-muted-foreground">The article you are looking for does not exist.</p>
+          <h2 className="text-2xl font-bold">Page Not Found</h2>
+          <p className="text-muted-foreground">The page you are looking for does not exist.</p>
         </div>
       </PortalLayout>
     );
@@ -137,7 +137,7 @@ const ArticlePage = () => {
           dangerouslySetInnerHTML={{ __html: articleContentHtml }}
         />
       </div>
-      <ArticleEditorDialog
+      <PageEditorDialog
         open={isEditorOpen}
         onOpenChange={setIsEditorOpen}
         article={article}
@@ -152,4 +152,4 @@ const ArticlePage = () => {
   );
 };
 
-export default ArticlePage;
+export default Page;

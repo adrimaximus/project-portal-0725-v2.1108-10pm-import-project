@@ -28,11 +28,11 @@ const KnowledgeBaseHeader = ({
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Knowledge Base</h1>
-          <p className="text-muted-foreground">Find and manage your team's articles and documentation.</p>
+          <p className="text-muted-foreground">Find and manage your team's pages and documentation.</p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button onClick={onAddNewArticle} variant="outline" className="w-full">
-            <FilePlus className="mr-2 h-4 w-4" /> New Article
+            <FilePlus className="mr-2 h-4 w-4" /> New Page
           </Button>
           <Button onClick={onAddNewFolder} className="w-full">
             <FolderPlus className="mr-2 h-4 w-4" /> New Folder
@@ -66,9 +66,9 @@ const KnowledgeBaseHeader = ({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <ToggleGroupItem value="articles" aria-label="Articles view"><FileText className="h-4 w-4" /></ToggleGroupItem>
+                <ToggleGroupItem value="articles" aria-label="Pages view"><FileText className="h-4 w-4" /></ToggleGroupItem>
               </TooltipTrigger>
-              <TooltipContent><p>Articles View</p></TooltipContent>
+              <TooltipContent><p>Pages View</p></TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </ToggleGroup>

@@ -7,19 +7,19 @@ import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import FolderFormDialog from '@/components/kb/FolderFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
+import PageEditorDialog from '@/components/kb/PageEditorDialog';
 import KnowledgeBaseHeader from '@/components/kb/KnowledgeBaseHeader';
 import FolderGridView from '@/components/kb/FolderGridView';
 import FolderListView from '@/components/kb/FolderListView';
-import ArticleGridView from '@/components/kb/ArticleGridView';
+import PageGridView from '@/components/kb/PageGridView';
 
 type DialogState = 
   | { type: 'edit-folder', data: KbFolder }
   | { type: 'create-folder' }
   | { type: 'delete-folder', data: KbFolder }
-  | { type: 'edit-article', data: KbArticle }
-  | { type: 'create-article' }
-  | { type: 'delete-article', data: KbArticle }
+  | { type: 'edit-page', data: KbArticle }
+  | { type: 'create-page' }
+  | { type: 'delete-page', data: KbArticle }
   | null;
 
 const KnowledgeBasePage = () => {
@@ -104,11 +104,11 @@ const KnowledgeBasePage = () => {
   };
 
   const handleDeleteArticle = async () => {
-    if (dialog?.type !== 'delete-article') return;
+    if (dialog?.type !== 'delete-page') return;
     const { error } = await supabase.from('kb_articles').delete().eq('id', dialog.data.id);
-    if (error) toast.error(`Failed to delete article: ${error.message}`);
+    if (error) toast.error(`Failed to delete page: ${error.message}`);
     else {
-      toast.success(`Article "${dialog.data.title}" deleted.`);
+      toast.success(`Page "${dialog.data.title}" deleted.`);
       queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
     }
     setDialog(null);
@@ -132,8 +132,8 @@ const KnowledgeBasePage = () => {
                   articles={filteredArticles} 
                   onEditFolder={(folder) => setDialog({ type: 'edit-folder', data: folder })}
                   onDeleteFolder={(folder) => setDialog({ type: 'delete-folder', data: folder })}
-                  onEditArticle={(article) => setDialog({ type: 'edit-article', data: article })}
-                  onDeleteArticle={(article) => setDialog({ type: 'delete-article', data: article })}
+                  onEditArticle={(article) => setDialog({ type: 'edit-page', data: article })}
+                  onDeleteArticle={(article) => setDialog({ type: 'delete-page', data: article })}
                 />;
       case 'list':
         return <FolderListView 
@@ -143,7 +143,7 @@ const KnowledgeBasePage = () => {
                   requestSort={requestSort} 
                 />;
       case 'articles':
-        return <ArticleGridView articles={filteredArticles} />;
+        return <PageGridView articles={filteredArticles} />;
       default:
         return null;
     }
@@ -158,7 +158,7 @@ const KnowledgeBasePage = () => {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           onAddNewFolder={() => setDialog({ type: 'create-folder' })}
-          onAddNewArticle={() => setDialog({ type: 'create-article' })}
+          onAddNewArticle={() => setDialog({ type: 'create-page' })}
         />
         {renderContent()}
       </div>
@@ -169,10 +169,10 @@ const KnowledgeBasePage = () => {
         folder={dialog?.type === 'edit-folder' ? dialog.data : null}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['kb_folders'] })}
       />
-      <ArticleEditorDialog
-        open={dialog?.type === 'create-article' || dialog?.type === 'edit-article'}
+      <PageEditorDialog
+        open={dialog?.type === 'create-page' || dialog?.type === 'edit-page'}
         onOpenChange={() => setDialog(null)}
-        article={dialog?.type === 'edit-article' ? dialog.data : null}
+        article={dialog?.type === 'edit-page' ? dialog.data : null}
         folders={folders}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
@@ -181,13 +181,13 @@ const KnowledgeBasePage = () => {
       />
       <AlertDialog open={dialog?.type === 'delete-folder'} onOpenChange={() => setDialog(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the folder "{dialog?.type === 'delete-folder' && dialog.data.name}" and all articles inside it. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the folder "{dialog?.type === 'delete-folder' && dialog.data.name}" and all pages inside it. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteFolder}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={dialog?.type === 'delete-article'} onOpenChange={() => setDialog(null)}>
+      <AlertDialog open={dialog?.type === 'delete-page'} onOpenChange={() => setDialog(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the article "{dialog?.type === 'delete-article' && dialog.data.title}". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the page "{dialog?.type === 'delete-page' && dialog.data.title}". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteArticle}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

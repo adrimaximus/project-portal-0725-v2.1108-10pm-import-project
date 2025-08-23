@@ -35,7 +35,7 @@ import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 import PeoplePage from "./pages/PeoplePage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import FolderDetailPage from "./pages/kb/FolderDetailPage";
-import ArticlePage from "./pages/kb/ArticlePage";
+import Page from "./pages/kb/Page";
 
 const ADMIN_ROLES = ['admin', 'master admin'];
 
@@ -68,7 +68,7 @@ function App() {
           <Route path="/custom" element={<EmbedPage />} />
           <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
           <Route path="/knowledge-base/folders/:slug" element={<FolderDetailPage />} />
-          <Route path="/knowledge-base/articles/:slug" element={<ArticlePage />} />
+          <Route path="/knowledge-base/pages/:slug" element={<Page />} />
         </Route>
 
         {/* Admin Protected Routes */}
