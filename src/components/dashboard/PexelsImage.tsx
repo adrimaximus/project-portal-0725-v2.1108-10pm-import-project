@@ -87,7 +87,7 @@ const PexelsImage = () => {
   }
 
   return (
-    <Card className="hidden md:block h-full">
+    <Card className="hidden md:block h-full overflow-hidden">
       <CardContent className="p-0 h-full">
         <a href={photo.url} target="_blank" rel="noopener noreferrer" className="block group h-full">
           <div className="w-full h-full overflow-hidden relative">
