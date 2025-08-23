@@ -25,6 +25,7 @@ export interface KbFolder {
 
 export interface KbArticle {
   id: string;
+  user_id: string;
   title: string;
   slug: string;
   content: any;
