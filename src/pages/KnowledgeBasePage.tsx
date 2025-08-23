@@ -12,6 +12,7 @@ import KnowledgeBaseHeader from '@/components/kb/KnowledgeBaseHeader';
 import FolderGridView from '@/components/kb/FolderGridView';
 import FolderListView from '@/components/kb/FolderListView';
 import PageGridView from '@/components/kb/PageGridView';
+import PageListView from '@/components/kb/PageListView';
 
 type DialogState = 
   | { type: 'edit-folder', data: KbFolder }
@@ -127,14 +128,32 @@ const KnowledgeBasePage = () => {
 
     switch (viewMode) {
       case 'grid':
-        return <FolderGridView 
-                  folders={sortedFolders} 
+        return (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Folders</h2>
+              <FolderGridView 
+                folders={sortedFolders} 
+                onEdit={(folder) => setDialog({ type: 'edit-folder', data: folder })}
+                onDelete={(folder) => setDialog({ type: 'delete-folder', data: folder })}
+              />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold mb-4">All Pages</h2>
+              {filteredArticles.length > 0 ? (
+                <PageListView 
                   articles={filteredArticles} 
-                  onEditFolder={(folder) => setDialog({ type: 'edit-folder', data: folder })}
-                  onDeleteFolder={(folder) => setDialog({ type: 'delete-folder', data: folder })}
-                  onEditArticle={(article) => setDialog({ type: 'edit-page', data: article })}
-                  onDeleteArticle={(article) => setDialog({ type: 'delete-page', data: article })}
-                />;
+                  onEdit={(article) => setDialog({ type: 'edit-page', data: article })} 
+                  onDelete={(article) => setDialog({ type: 'delete-page', data: article })} 
+                />
+              ) : (
+                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <p>No pages found.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
       case 'list':
         return <FolderListView 
                   folders={sortedFolders} 
