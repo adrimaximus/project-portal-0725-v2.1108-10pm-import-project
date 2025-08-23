@@ -144,6 +144,11 @@ export const useChat = () => {
 
     if (error) {
       toast.error("Failed to send message.", { description: error.message });
+    } else {
+      // Manually trigger a refetch for the current conversation's messages
+      // and the list of conversations (to update the last message).
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
     }
   };
 
