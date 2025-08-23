@@ -94,7 +94,7 @@ const PexelsImage = () => {
             <img src={photo.src.large} alt={photo.alt || 'Photo from Pexels'} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" />
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
               {caption ? (
-                <p className="text-white text-sm font-medium truncate">{caption}</p>
+                <p className="text-white text-sm font-medium line-clamp-2">{caption}</p>
               ) : (
                 <Skeleton className="h-4 w-3/4 bg-white/20" />
               )}
