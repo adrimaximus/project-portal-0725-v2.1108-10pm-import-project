@@ -47,8 +47,7 @@ const PexelsImagePicker = ({ onImageSelect, initialSearchTerm }: PexelsImagePick
     }
   }, [initialSearchTerm, handleSearch]);
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchClick = () => {
     handleSearch(searchTerm);
   };
 
@@ -71,16 +70,22 @@ const PexelsImagePicker = ({ onImageSelect, initialSearchTerm }: PexelsImagePick
 
   return (
     <div className="space-y-4">
-      <form onSubmit={handleFormSubmit} className="flex gap-2">
+      <div className="flex gap-2">
         <Input
           placeholder="Search for an image..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleSearchClick();
+            }
+          }}
         />
-        <Button type="submit" disabled={isLoading || isUploading}>
+        <Button type="button" onClick={handleSearchClick} disabled={isLoading || isUploading}>
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
         </Button>
-      </form>
+      </div>
       <ScrollArea className="h-64 border rounded-md">
         <div className="p-4 relative">
           {isUploading && (
