@@ -374,6 +374,49 @@ serve(async (req) => {
     let responseData;
 
     switch (feature) {
+      case 'generate-article-from-title': {
+        const { title } = payload;
+        if (!title) {
+          throw new Error("Title is required to generate an article.");
+        }
+
+        const systemPrompt = `You are an expert writer. Write a comprehensive article in HTML format based on the following title. The article should be well-structured with headings (h2, h3), paragraphs (p), and lists (ul, li) where appropriate. Respond ONLY with the HTML content.`;
+        const userPrompt = `Title: "${title}"`;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4-turbo",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 2048,
+        });
+
+        responseData = { result: response.choices[0].message.content?.trim() };
+        break;
+      }
+      case 'expand-article-text': {
+        const { title, fullContent, selectedText } = payload;
+        if (!selectedText) {
+          throw new Error("Selected text is required to expand upon.");
+        }
+
+        const systemPrompt = `You are an expert writer. Your task is to expand upon a selected piece of text within a larger article. Develop the idea further, add more detail, and ensure it flows naturally with the rest of the content. Respond ONLY with the new, expanded HTML content that should replace the original selected text. Do not repeat the original text unless it's naturally part of the expansion.`;
+        const userPrompt = `Article Title: "${title}"\n\nFull Article Content (for context):\n${fullContent}\n\nExpand this selected text:\n"${selectedText}"`;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4-turbo",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 1024,
+        });
+        responseData = { result: response.choices[0].message.content?.trim() };
+        break;
+      }
       case 'improve-article-content': {
         const { content } = payload;
         if (!content) {
