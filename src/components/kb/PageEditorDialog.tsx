@@ -261,9 +261,26 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
 
     if (!isEditMode && !finalFolderId) {
         try {
-            const { data, error } = await supabase.rpc('create_default_kb_folder');
-            if (error) throw error;
-            finalFolderId = data;
+            const { data: existingFolder, error: findError } = await supabase
+                .from('kb_folders')
+                .select('id')
+                .eq('name', 'Uncategorized')
+                .eq('user_id', user.id)
+                .single();
+
+            if (findError && findError.code !== 'PGRST116') throw findError;
+
+            if (existingFolder) {
+                finalFolderId = existingFolder.id;
+            } else {
+                const { data: newFolder, error: createError } = await supabase
+                    .from('kb_folders')
+                    .insert({ name: 'Uncategorized', icon: 'Archive', color: '#9ca3af', user_id: user.id })
+                    .select('id')
+                    .single();
+                if (createError) throw createError;
+                finalFolderId = newFolder!.id;
+            }
         } catch (error: any) {
             toast.error("Failed to manage default folder for the page.", { description: error.message });
             setIsSaving(false);
