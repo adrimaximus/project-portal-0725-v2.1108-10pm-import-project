@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { HandlerContext } from '../_shared/types.ts';
+import { HandlerContext } from './types.ts';
 
 export default async function analyzeDuplicates(payload: any, context: HandlerContext) {
   const { openai } = context;

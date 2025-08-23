@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { HandlerContext } from '../_shared/types.ts';
-import { articleWriterFeaturePrompts } from '../lib/prompts.ts';
+import { HandlerContext } from './types.ts';
+import { articleWriterFeaturePrompts } from './prompts.ts';
 
 export default async function articleWriter(payload: any, context: HandlerContext) {
   const { openai, feature } = context;

@@ -1,9 +1,9 @@
 // @ts-nocheck
-import { HandlerContext } from '../_shared/types.ts';
-import { createSupabaseUserClient } from '../lib/clients.ts';
-import { buildContext } from '../lib/context.ts';
-import { getAnalyzeProjectsSystemPrompt } from '../lib/prompts.ts';
-import { executeAction } from '../actions/index.ts';
+import { HandlerContext } from './types.ts';
+import { createSupabaseUserClient } from './clients.ts';
+import { buildContext } from './context.ts';
+import { getAnalyzeProjectsSystemPrompt } from './prompts.ts';
+import { executeAction } from './actions.ts';
 
 export default async function analyzeProjects(payload: any, context: HandlerContext) {
   const { req, openai } = context;
