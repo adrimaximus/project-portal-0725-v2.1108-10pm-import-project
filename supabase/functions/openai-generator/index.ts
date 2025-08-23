@@ -139,7 +139,7 @@ async function executeAction(actionData, context) {
       if (memberIds.length > 0) {
         await supabaseAdmin.from('project_members').insert(memberIds.map(id => ({ project_id: newProject.id, user_id: id })));
       }
-      return `Done! I've created the project "${name}". You can view it at /projects/${newProject.slug}`;
+      return `Done! I've created the project "${name}". You can view it [here](/projects/${newProject.slug}).`;
     }
 
     case 'CREATE_TASK': {
@@ -160,7 +160,34 @@ async function executeAction(actionData, context) {
       if (assigneeIds.length > 0) {
         await supabaseAdmin.from('task_assignees').insert(assigneeIds.map(id => ({ task_id: newTask.id, user_id: id })));
       }
-      return `Done! I've created the task "${task_title}" in the "${project_name}" project.`;
+      return `Done! I've created the task "${task_title}" in the [${project_name} project](/projects/${project.slug}).`;
+    }
+
+    case 'CREATE_GOAL': {
+      const { title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, icon, color, tags } = details.goal_details;
+
+      const { data: newGoal, error } = await supabaseAdmin
+        .rpc('create_goal_and_link_tags', {
+          p_title: title,
+          p_description: description || null,
+          p_icon: icon,
+          p_color: color,
+          p_type: type,
+          p_frequency: frequency || null,
+          p_specific_days: specific_days || null,
+          p_target_quantity: target_quantity || null,
+          p_target_period: target_period || null,
+          p_target_value: target_value || null,
+          p_unit: unit || null,
+          p_existing_tags: [],
+          p_custom_tags: tags || [],
+        })
+        .single();
+
+      if (error) throw new Error(`500: Failed to create goal: ${error.message}`);
+      if (!newGoal) throw new Error("500: Goal creation did not return data.");
+
+      return `Done! I've created the goal "${newGoal.title}". You can view it [here](/goals/${newGoal.slug}).`;
     }
 
     case 'CREATE_ARTICLE': {
@@ -177,7 +204,7 @@ async function executeAction(actionData, context) {
 
       if (error) throw new Error(`500: Failed to create article: ${error.message}`);
       
-      return `Done! I've created the article "${title}". You can view it at /knowledge-base/pages/${newArticle.slug}`;
+      return `Done! I've created the article "${title}". You can view it [here](/knowledge-base/pages/${newArticle.slug}).`;
     }
 
     default:
@@ -259,6 +286,7 @@ const getAnalyzeProjectsSystemPrompt = (context) => `You are an expert project a
     b.  If the user's NEXT message is a confirmation (e.g., "yes", "ok, do it", "proceed"), your response MUST be ONLY the \`CREATE_TASK\` action JSON. Do not add any other text.
 3.  **DIRECT ACTION FOR OTHER COMMANDS:** For all other actions (CREATE_PROJECT, UPDATE_PROJECT, etc.), you should act directly by responding with ONLY the action JSON, unless the request is dangerously ambiguous (e.g., "delete the project").
 4.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information, then and only then should you answer in natural language.
+5.  **LINKING:** When you answer questions and reference specific projects, goals, or articles, you MUST format them as markdown links using their slugs from the context. For example: \`You can find details in the [Brand Refresh project](/projects/brand-refresh-123)\`.
 
 **Your entire process is:**
 1. Analyze the user's latest message.
@@ -266,7 +294,7 @@ const getAnalyzeProjectsSystemPrompt = (context) => `You are an expert project a
    - YES: Respond with a natural language recommendation and wait for confirmation. If they have already confirmed, respond with the \`CREATE_TASK\` JSON.
    - NO: Is it another action?
      - YES: Respond with the appropriate action JSON.
-     - NO: It's a question. Answer it naturally.
+     - NO: It's a question. Answer it naturally, using markdown links where appropriate.
 
 AVAILABLE ACTIONS:
 You can perform several types of actions. When you decide to perform an action, you MUST respond ONLY with a JSON object in the specified format.
