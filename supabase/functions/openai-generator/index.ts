@@ -63,7 +63,7 @@ You can perform several types of actions. When you decide to perform an action, 
 - Infer a suitable 'description'.
 - Choose an appropriate 'type' ('frequency', 'quantity', or 'value').
 - Suggest a relevant 'icon' from the 'Available Icons' list and a suitable 'color'.
-- Create 2-3 relevant 'tags' as an array of objects like '[{"name": "Health", "color": "#FF6B6B"}, ...]'. These will be new tags.
+- Create 2-3 relevant 'tags' as an array of objects like '[{"name": "Health", "color": "#FF6B6B"}, {"name": "Hobby", "color": "#F7B801"}]'. These will be new tags.
 - Example: User says "create a goal to learn guitar". You might respond with: {"action": "CREATE_GOAL", "goal_details": {"title": "Learn Guitar", "description": "Practice guitar regularly to improve skills.", "type": "frequency", "frequency": "Weekly", "specific_days": ["Mo", "We", "Fr"], "icon": "Music", "color": "#4ECDC4", "tags": [{"name": "Music", "color": "#4ECDC4"}, {"name": "Hobby", "color": "#F7B801"}]}}
 
 8. UPDATE_GOAL:
@@ -839,6 +839,38 @@ Konteks Kemajuan: ${JSON.stringify(progressContext, null, 2)}`;
   return { result: response.choices[0].message.content };
 }
 
+async function aiSelectCalendarEvents(payload, context) {
+  const { openai } = context;
+  const { events, existingProjects } = payload;
+  if (!events || !Array.isArray(events)) {
+    throw new Error("A list of calendar events is required.");
+  }
+
+  const systemPrompt = `You are an AI assistant that helps users manage their projects. Your task is to analyze a list of upcoming Google Calendar events and decide which ones should be imported as new projects. You will be given a list of events and a list of existing project names for context.
+
+Your rules are:
+1.  Identify events that look like actual projects or significant client meetings. Ignore personal or trivial events (e.g., "Lunch", "Doctor's Appointment").
+2.  Compare the event summaries with the list of existing project names. Do NOT select events that seem to be duplicates of existing projects.
+3.  Your response MUST be a JSON object containing a single key: "event_ids_to_import". The value of this key must be an array of strings, where each string is the ID of an event you have chosen to import.
+4.  If you determine that no events should be imported, respond with an empty array: {"event_ids_to_import": []}.
+5.  Do not include any other text, explanation, or markdown in your response. Only the JSON object.`;
+
+  const userPrompt = `Existing Projects:\n${JSON.stringify(existingProjects, null, 2)}\n\nCalendar Events to Analyze:\n${JSON.stringify(events.map(e => ({id: e.id, summary: e.summary, description: e.description})), null, 2)}`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4-turbo",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+    temperature: 0.1,
+    response_format: { type: "json_object" },
+  });
+
+  const result = JSON.parse(response.choices[0].message.content);
+  return { result };
+}
+
 // --- MAIN ROUTER & SERVER ---
 
 const featureHandlers = {
@@ -853,6 +885,7 @@ const featureHandlers = {
   'suggest-icon': suggestIcon,
   'analyze-projects': analyzeProjects,
   'generate-insight': generateInsight,
+  'ai-select-calendar-events': aiSelectCalendarEvents,
 };
 
 serve(async (req) => {

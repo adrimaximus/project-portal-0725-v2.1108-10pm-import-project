@@ -3,7 +3,7 @@ import { Project } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban, Search } from "lucide-react";
+import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban, Search, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import {
@@ -37,6 +37,7 @@ interface CalendarEvent {
     htmlLink: string;
     status: string;
     location?: string;
+    description?: string;
 }
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'calendar';
@@ -59,6 +60,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const createProjectMutation = useCreateProject();
   const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: 'start_date', direction: 'descending' });
+  const [isAiImporting, setIsAiImporting] = useState(false);
 
   const handleViewChange = (newView: ViewMode | null) => {
     if (newView) {
@@ -322,6 +324,46 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
     });
   };
 
+  const handleAiImport = async () => {
+    if (importableEvents.length === 0) {
+      toast.info("No new calendar events to analyze.");
+      return;
+    }
+    setIsAiImporting(true);
+    toast.info("AI is analyzing your calendar events...");
+    try {
+      const { data, error } = await supabase.functions.invoke('openai-generator', {
+        body: {
+          feature: 'ai-select-calendar-events',
+          payload: {
+            events: importableEvents,
+            existingProjects: projects.map(p => p.name),
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      const { event_ids_to_import } = data.result;
+      if (!event_ids_to_import || event_ids_to_import.length === 0) {
+        toast.success("AI analysis complete. No new projects were found to import.");
+        return;
+      }
+
+      toast.info(`AI has selected ${event_ids_to_import.length} event(s) to import. Starting import...`);
+
+      const eventsToImport = importableEvents.filter(e => event_ids_to_import.includes(e.id));
+      await Promise.all(eventsToImport.map(event => handleImportEvent(event)));
+
+      toast.success(`Successfully imported ${eventsToImport.length} new project(s)!`);
+
+    } catch (error: any) {
+      toast.error("AI import failed.", { description: error.message });
+    } finally {
+      setIsAiImporting(false);
+    }
+  };
+
   const renderContent = () => {
     switch (view) {
       case 'table':
@@ -359,7 +401,13 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
             <CardTitle>Projects</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            {view === 'table' && (
+            {view === 'calendar' && (
+              <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
+                {isAiImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                Ask AI to Import
+              </Button>
+            )}
+            {view !== 'calendar' && (
               <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => {
                   refetch();
                   toast.success("Data proyek berhasil diperbarui.");
