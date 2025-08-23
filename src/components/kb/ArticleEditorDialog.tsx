@@ -107,10 +107,11 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
     let header_image_url = article?.header_image_url;
 
     if (imageFile) {
-      const filePath = `${user.id}/${Date.now()}-${imageFile.name}`;
+      const sanitizedFileName = imageFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+      const filePath = `${user.id}/${Date.now()}-${sanitizedFileName}`;
       const { error: uploadError } = await supabase.storage.from('kb-images').upload(filePath, imageFile);
       if (uploadError) {
-        toast.error("Failed to upload header image.");
+        toast.error("Failed to upload header image.", { description: uploadError.message });
         setIsSaving(false);
         return;
       }
