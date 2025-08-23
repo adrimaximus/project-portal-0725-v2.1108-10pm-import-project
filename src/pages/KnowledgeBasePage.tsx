@@ -27,11 +27,19 @@ const KnowledgeBasePage = () => {
   const [dialog, setDialog] = useState<DialogState>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'articles'>(() => {
-    const savedView = localStorage.getItem('kb_view_mode') as 'grid' | 'list' | 'articles';
-    return savedView || 'grid';
+  const [displayMode, setDisplayMode] = useState<'folders' | 'articles'>(() => {
+    const saved = localStorage.getItem('kb_display_mode') as 'folders' | 'articles';
+    return saved || 'folders';
+  });
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    const saved = localStorage.getItem('kb_view_mode') as 'grid' | 'list';
+    return saved || 'grid';
   });
   const [sortConfig, setSortConfig] = useState<{ key: keyof KbFolder | null; direction: 'ascending' | 'descending' }>({ key: 'name', direction: 'ascending' });
+
+  useEffect(() => {
+    localStorage.setItem('kb_display_mode', displayMode);
+  }, [displayMode]);
 
   useEffect(() => {
     localStorage.setItem('kb_view_mode', viewMode);
@@ -126,44 +134,38 @@ const KnowledgeBasePage = () => {
       );
     }
 
-    switch (viewMode) {
-      case 'grid':
-        return (
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Folders</h2>
-              <FolderGridView 
-                folders={sortedFolders} 
-                onEdit={(folder) => setDialog({ type: 'edit-folder', data: folder })}
-                onDelete={(folder) => setDialog({ type: 'delete-folder', data: folder })}
-              />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold mb-4">All Pages</h2>
-              <PageGridView 
-                articles={filteredArticles} 
-                onEdit={(article) => setDialog({ type: 'edit-page', data: article })} 
-                onDelete={(article) => setDialog({ type: 'delete-page', data: article })} 
-              />
-            </div>
-          </div>
-        );
-      case 'list':
-        return <FolderListView 
+    if (displayMode === 'folders') {
+      if (viewMode === 'grid') {
+        return <FolderGridView 
                   folders={sortedFolders} 
-                  onEdit={folder => setDialog({ type: 'edit-folder', data: folder })} 
-                  onDelete={folder => setDialog({ type: 'delete-folder', data: folder })} 
-                  requestSort={requestSort} 
+                  onEdit={(folder) => setDialog({ type: 'edit-folder', data: folder })}
+                  onDelete={(folder) => setDialog({ type: 'delete-folder', data: folder })}
                 />;
-      case 'articles':
+      }
+      return <FolderListView 
+                folders={sortedFolders} 
+                onEdit={folder => setDialog({ type: 'edit-folder', data: folder })} 
+                onDelete={folder => setDialog({ type: 'delete-folder', data: folder })} 
+                requestSort={requestSort} 
+              />;
+    }
+
+    if (displayMode === 'articles') {
+      if (viewMode === 'grid') {
         return <PageGridView 
                   articles={filteredArticles} 
                   onEdit={(article) => setDialog({ type: 'edit-page', data: article })} 
                   onDelete={(article) => setDialog({ type: 'delete-page', data: article })} 
                 />;
-      default:
-        return null;
+      }
+      return <PageListView 
+                articles={filteredArticles} 
+                onEdit={(article) => setDialog({ type: 'edit-page', data: article })} 
+                onDelete={(article) => setDialog({ type: 'delete-page', data: article })} 
+              />;
     }
+
+    return null;
   };
 
   return (
@@ -172,6 +174,8 @@ const KnowledgeBasePage = () => {
         <KnowledgeBaseHeader
           searchTerm={searchTerm}
           onSearchTermChange={setSearchTerm}
+          displayMode={displayMode}
+          onDisplayModeChange={setDisplayMode}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           onAddNewFolder={() => setDialog({ type: 'create-folder' })}
