@@ -1,7 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import ProtectedRouteLayout from "./components/ProtectedRouteLayout";
-import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/Dashboard";
@@ -90,7 +89,6 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster />
-      <SpeedInsights />
     </>
   );
 }

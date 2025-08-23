@@ -14,11 +14,10 @@ import RichTextEditor from '../RichTextEditor';
 import { KbFolder } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import ReactQuill from 'react-quill';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { allIcons } from '@/data/icons';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PexelsImagePicker from './PexelsImagePicker';
+import ReactQuill from 'react-quill';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface ArticleValues {
   id?: string;
@@ -56,6 +55,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
   const [isImproving, setIsImproving] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const editorRef = useRef<ReactQuill>(null);
+  const [debouncedTitle, setDebouncedTitle] = useState('');
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -67,6 +67,18 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
   });
 
   const titleValue = form.watch('title');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (titleValue) {
+        setDebouncedTitle(titleValue);
+      }
+    }, 500); // 500ms debounce delay
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [titleValue]);
 
   useEffect(() => {
     if (open) {
@@ -106,6 +118,12 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  const handlePexelsSelect = (file: File) => {
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setIsRemovingImage(false);
   };
 
   const handleImproveContent = async () => {
@@ -334,14 +352,10 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                   </Button>
                 </div>
               )}
-              <Tabs defaultValue="upload" className="w-full pt-2">
+              <Tabs defaultValue="upload" className="w-full mt-2">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="upload">
-                    <ImageIcon className="mr-2 h-4 w-4" /> Upload
-                  </TabsTrigger>
-                  <TabsTrigger value="pexels">
-                    <Sparkles className="mr-2 h-4 w-4" /> Pexels
-                  </TabsTrigger>
+                  <TabsTrigger value="upload">Upload</TabsTrigger>
+                  <TabsTrigger value="pexels">Search Pexels</TabsTrigger>
                 </TabsList>
                 <TabsContent value="upload" className="pt-4">
                   <div
@@ -361,12 +375,8 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                     />
                   </div>
                 </TabsContent>
-                <TabsContent value="pexels" className="pt-4">
-                  <PexelsImagePicker onImageSelect={(url) => {
-                    setImagePreview(url);
-                    setImageFile(null);
-                    setIsRemovingImage(false);
-                  }} />
+                <TabsContent value="pexels">
+                  <PexelsImagePicker onImageFileSelect={handlePexelsSelect} initialSearchTerm={debouncedTitle} />
                 </TabsContent>
               </Tabs>
             </FormItem>

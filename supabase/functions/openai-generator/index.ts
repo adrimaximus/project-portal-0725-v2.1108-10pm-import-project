@@ -101,12 +101,14 @@ You can perform several types of actions. When you decide to perform an action, 
 - For 'add_tags' and 'remove_tags', the value should be an array of tag names.
 
 8. CREATE_ARTICLE:
-{"action": "CREATE_ARTICLE", "article_details": {"title": "<article title>", "content": "<HTML content>", "folder_name": "<optional folder name>"}}
+{"action": "CREATE_ARTICLE", "article_details": {"title": "<article title>", "content": "<HTML content>", "folder_name": "<optional folder name>", "header_image_search_query": "<optional image search query>"}}
 - If folder_name is not provided, it will be placed in "Uncategorized".
+- If 'header_image_search_query' is provided, I will find an image on Pexels and set it as the article's header image.
 
 9. UPDATE_ARTICLE:
-{"action": "UPDATE_ARTICLE", "article_title": "<title of article to update>", "updates": {"title": "<new title>", "content": "<new HTML content>", "folder_name": "<new folder name>"}}
+{"action": "UPDATE_ARTICLE", "article_title": "<title of article to update>", "updates": {"title": "<new title>", "content": "<new HTML content>", "folder_name": "<new folder name>", "header_image_search_query": "<optional image search query>"}}
 - 'content' will replace the existing content. To append, first get the existing content and then provide the full new content.
+- Use 'header_image_search_query' to find and set a new header image for the article.
 
 10. DELETE_ARTICLE:
 {"action": "DELETE_ARTICLE", "article_title": "<title of article to delete>"}
@@ -403,7 +405,7 @@ async function executeAction(actionData, context) {
             return `Done! I've updated the goal "${updatedGoal.title}".`;
         }
         case 'CREATE_ARTICLE': {
-            const { title, content, folder_name } = actionData.article_details;
+            const { title, content, folder_name, header_image_search_query } = actionData.article_details;
             if (!title) return "I need a title to create an article.";
 
             let folder_id;
@@ -422,11 +424,26 @@ async function executeAction(actionData, context) {
                 folder_id = folder.id;
             }
 
+            let header_image_url = null;
+            if (header_image_search_query) {
+                const pexelsApiKey = Deno.env.get('VITE_PEXELS_API_KEY');
+                if (pexelsApiKey) {
+                    const pexelsResponse = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(header_image_search_query)}&per_page=1`, {
+                        headers: { Authorization: pexelsApiKey }
+                    });
+                    if (pexelsResponse.ok) {
+                        const pexelsData = await pexelsResponse.json();
+                        header_image_url = pexelsData.photos?.[0]?.src?.large2x;
+                    }
+                }
+            }
+
             const { data: newArticle, error: articleError } = await userSupabase.from('kb_articles').insert({
                 title,
                 content: { html: content || '<p></p>' },
                 folder_id,
                 user_id: user.id,
+                header_image_url: header_image_url,
             }).select('slug').single();
 
             if (articleError) return `I failed to create the article. The database said: ${articleError.message}`;
@@ -442,6 +459,22 @@ async function executeAction(actionData, context) {
             const updatePayload = {};
             if (updates.title) updatePayload.title = updates.title;
             if (updates.content) updatePayload.content = { html: updates.content };
+            
+            if (updates.header_image_search_query) {
+                const pexelsApiKey = Deno.env.get('VITE_PEXELS_API_KEY');
+                if (!pexelsApiKey) return "The Pexels API key is not configured on the server.";
+                
+                const pexelsResponse = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(updates.header_image_search_query)}&per_page=1`, {
+                    headers: { Authorization: pexelsApiKey }
+                });
+                if (pexelsResponse.ok) {
+                    const pexelsData = await pexelsResponse.json();
+                    const imageUrl = pexelsData.photos?.[0]?.src?.large2x;
+                    if (imageUrl) {
+                        updatePayload.header_image_url = imageUrl;
+                    }
+                }
+            }
             
             if (updates.folder_name) {
                 let folder = folders.find(f => f.name.toLowerCase() === updates.folder_name.toLowerCase());

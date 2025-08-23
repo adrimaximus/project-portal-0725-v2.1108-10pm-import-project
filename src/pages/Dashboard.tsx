@@ -74,16 +74,12 @@ const Index = () => {
                 </div>
                 <DateRangePicker date={date} onDateChange={setDate} />
             </div>
-            <div className="grid gap-6">
+            <div className="grid gap-6 md:grid-cols-2">
               <MonthlyProgressChart projects={filteredProjects} />
+              <PexelsImage />
             </div>
             <DashboardStatsGrid projects={filteredProjects} />
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <CollaboratorsList projects={filteredProjects} />
-              <div className="lg:col-span-2">
-                <PexelsImage />
-              </div>
-            </div>
+            <CollaboratorsList projects={filteredProjects} />
         </div>
       </div>
     </PortalLayout>
