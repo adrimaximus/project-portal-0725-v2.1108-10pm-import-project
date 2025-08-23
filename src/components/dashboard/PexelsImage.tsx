@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { pexelsClient } from '@/integrations/pexels/client';
 import { Photo } from 'pexels';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,56 +18,59 @@ const PexelsImage = () => {
     'corporate event', 'product launch'
   ];
 
-  useEffect(() => {
-    const fetchPhotoAndCaption = async () => {
-      try {
-        const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
-        const response = await pexelsClient.photos.search({ 
-          query: randomTerm, 
-          per_page: 1, 
-          page: Math.floor(Math.random() * 50) + 1,
-          orientation: 'landscape'
-        });
+  const fetchPhotoAndCaption = useCallback(async () => {
+    try {
+      const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+      const response = await pexelsClient.photos.search({ 
+        query: randomTerm, 
+        per_page: 1, 
+        page: Math.floor(Math.random() * 50) + 1,
+        orientation: 'landscape'
+      });
 
-        let fetchedPhoto: Photo | null = null;
-        if ("photos" in response && response.photos.length > 0) {
-          fetchedPhoto = response.photos[0];
+      let fetchedPhoto: Photo | null = null;
+      if ("photos" in response && response.photos.length > 0) {
+        fetchedPhoto = response.photos[0];
+        setPhoto(fetchedPhoto);
+      } else {
+        const curatedResponse = await pexelsClient.photos.curated({ per_page: 1, page: Math.floor(Math.random() * 100) + 1 });
+        if ("photos" in curatedResponse && curatedResponse.photos.length > 0) {
+          fetchedPhoto = curatedResponse.photos[0];
           setPhoto(fetchedPhoto);
         } else {
-          const curatedResponse = await pexelsClient.photos.curated({ per_page: 1, page: Math.floor(Math.random() * 100) + 1 });
-          if ("photos" in curatedResponse && curatedResponse.photos.length > 0) {
-            fetchedPhoto = curatedResponse.photos[0];
-            setPhoto(fetchedPhoto);
-          } else {
-            throw new Error("No photos returned from Pexels.");
-          }
+          throw new Error("No photos returned from Pexels.");
         }
-
-        if (fetchedPhoto && fetchedPhoto.alt) {
-          try {
-            const { data, error: captionError } = await supabase.functions.invoke('openai-generator', {
-              body: { feature: 'generate-caption', payload: { altText: fetchedPhoto.alt } },
-            });
-            if (captionError) throw captionError;
-            setCaption(data.caption);
-          } catch (captionErr: any) {
-            console.warn("Failed to generate AI caption, falling back to default.", captionErr);
-            setCaption(`Photo by ${fetchedPhoto.photographer}`);
-          }
-        } else if (fetchedPhoto) {
-            setCaption(`Photo by ${fetchedPhoto.photographer}`);
-        }
-
-      } catch (err: any) {
-        console.error("Failed to fetch from Pexels:", err);
-        setError("Could not fetch an image from Pexels. Please check your API key and internet connection.");
-      } finally {
-        setIsLoading(false);
       }
-    };
 
-    fetchPhotoAndCaption();
+      if (fetchedPhoto && fetchedPhoto.alt) {
+        setCaption(''); // Clear old caption while new one is generating
+        try {
+          const { data, error: captionError } = await supabase.functions.invoke('openai-generator', {
+            body: { feature: 'generate-caption', payload: { altText: fetchedPhoto.alt } },
+          });
+          if (captionError) throw captionError;
+          setCaption(data.caption);
+        } catch (captionErr: any) {
+          console.warn("Failed to generate AI caption, falling back to default.", captionErr);
+          setCaption(`Photo by ${fetchedPhoto.photographer}`);
+        }
+      } else if (fetchedPhoto) {
+          setCaption(`Photo by ${fetchedPhoto.photographer}`);
+      }
+
+    } catch (err: any) {
+      console.error("Failed to fetch from Pexels:", err);
+      setError("Could not fetch an image from Pexels. Please check your API key and internet connection.");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchPhotoAndCaption(); // Fetch image on initial load
+    const intervalId = setInterval(fetchPhotoAndCaption, 20000); // Fetch new image every 20 seconds
+    return () => clearInterval(intervalId); // Clean up interval on component unmount
+  }, [fetchPhotoAndCaption]);
 
   if (isLoading) {
     return (
@@ -95,7 +98,7 @@ const PexelsImage = () => {
       <CardContent className="p-0 h-full">
         <a href={photo.url} target="_blank" rel="noopener noreferrer" className="block group h-full">
           <div className="w-full h-full overflow-hidden relative">
-            <img src={photo.src.large} alt={photo.alt || 'Photo from Pexels'} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+            <img src={photo.src.large} alt={photo.alt || 'Photo from Pexels'} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" />
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
               {caption ? (
                 <p className="text-white text-sm font-medium truncate">{caption}</p>
