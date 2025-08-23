@@ -173,20 +173,40 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
       return;
     }
 
-    const content = form.getValues('content');
-    if (!content || content.trim() === '<p><br></p>' || content.trim().length < 50) {
-      toast.error("There is not enough content to summarize.");
-      return;
+    const selection = editor.getSelection();
+    const selectedText = selection ? editor.getText(selection.index, selection.length) : '';
+    const fullContent = form.getValues('content');
+
+    let contentToSummarize: string;
+    let isSelection = false;
+
+    if (selection && selection.length > 0 && selectedText.trim()) {
+      contentToSummarize = selectedText;
+      isSelection = true;
+      toast.info("Summarizing selected text...");
+    } else {
+      contentToSummarize = fullContent;
+      if (!contentToSummarize || contentToSummarize.trim() === '<p><br></p>' || contentToSummarize.trim().length < 50) {
+        toast.error("There is not enough content to summarize.");
+        return;
+      }
+      toast.info("Summarizing the entire article...");
     }
     
     setIsSummarizing(true);
     try {
       const { data, error } = await supabase.functions.invoke('openai-generator', {
-        body: { feature: 'summarize-article-content', payload: { content } }
+        body: { feature: 'summarize-article-content', payload: { content: contentToSummarize } }
       });
       if (error) throw error;
 
-      form.setValue('content', data.result, { shouldDirty: true });
+      if (isSelection && selection) {
+        editor.deleteText(selection.index, selection.length);
+        editor.clipboard.dangerouslyPasteHTML(selection.index, data.result);
+        form.setValue('content', editor.root.innerHTML, { shouldDirty: true });
+      } else {
+        form.setValue('content', data.result, { shouldDirty: true });
+      }
       toast.success("Content summarized by AI!");
     } catch (error: any) {
       toast.error("Failed to summarize content.", { description: error.message });
