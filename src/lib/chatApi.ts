@@ -1,0 +1,90 @@
+import { supabase } from '@/integrations/supabase/client';
+import { Conversation, Message, Attachment } from '@/types';
+import { getInitials } from '@/lib/utils';
+
+const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
+  id: c.conversation_id,
+  userName: c.is_group ? c.group_name : c.other_user_name,
+  userAvatar: c.is_group ? c.avatar_url : c.other_user_avatar,
+  lastMessage: c.last_message_content || "No messages yet.",
+  lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
+  unreadCount: 0,
+  isGroup: c.is_group,
+  members: (c.participants || []).map((p: any) => ({
+    id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
+  })),
+  created_by: c.created_by,
+});
+
+export const fetchConversations = async (): Promise<Omit<Conversation, 'messages'>[]> => {
+  const { data, error } = await supabase.rpc('get_user_conversations');
+  if (error) {
+    console.error("Error fetching conversations:", error);
+    throw new Error(error.message);
+  }
+  return data.map(mapConversationData);
+};
+
+export const fetchMessages = async (conversationId: string): Promise<Message[]> => {
+  const { data, error } = await supabase.rpc('get_conversation_messages', {
+    p_conversation_id: conversationId,
+  });
+
+  if (error) {
+    console.error("Message fetch error:", error);
+    throw new Error(error.message);
+  }
+
+  return (data || []).map((m: any) => {
+    const senderName = `${m.sender_first_name || ''} ${m.sender_last_name || ''}`.trim();
+    return {
+      id: m.id,
+      text: m.content,
+      timestamp: m.created_at,
+      sender: {
+        id: m.sender_id,
+        name: senderName || m.sender_email,
+        avatar: m.sender_avatar_url,
+        initials: getInitials(senderName, m.sender_email) || 'NN',
+        email: m.sender_email,
+      },
+      attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
+    };
+  });
+};
+
+export const sendMessage = async ({ conversationId, senderId, text, attachment }: { conversationId: string, senderId: string, text: string, attachment: Attachment | null }) => {
+  const { error } = await supabase
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      content: text,
+      attachment_url: attachment?.url,
+      attachment_name: attachment?.name,
+      attachment_type: attachment?.type,
+    });
+  if (error) throw error;
+};
+
+export const createOrGetConversation = async (otherUserId: string) => {
+  const { data, error } = await supabase.rpc('create_or_get_conversation', { p_other_user_id: otherUserId, p_is_group: false });
+  if (error) throw error;
+  return data as string;
+};
+
+export const createGroupConversation = async (groupName: string, memberIds: string[]) => {
+  const { data, error } = await supabase.rpc('create_group_conversation', { p_group_name: groupName, p_participant_ids: memberIds });
+  if (error) throw error;
+  return data as string;
+};
+
+export const hideConversation = async (conversationId: string) => {
+  const { error } = await supabase.rpc('hide_conversation', { p_conversation_id: conversationId });
+  if (error) throw error;
+};
+
+export const leaveGroup = async (conversationId: string) => {
+  const { error } = await supabase.rpc('leave_group', { p_conversation_id: conversationId });
+  if (error) throw error;
+};

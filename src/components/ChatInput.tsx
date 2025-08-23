@@ -7,30 +7,28 @@ import { Attachment } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
+import { useChatContext } from "@/contexts/ChatContext";
 
-interface ChatInputProps {
-  conversationId: string;
-  onSendMessage: (text: string, attachment: Attachment | null) => void;
-  onTyping?: () => void;
-}
+interface ChatInputProps {}
 
-const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ conversationId, onSendMessage, onTyping }, ref) => {
+const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) => {
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { user: currentUser } = useAuth();
+  const { selectedConversation, sendMessage, sendTyping } = useChatContext();
   const lastTypingSentAtRef = useRef<number>(0);
 
   const triggerTyping = () => {
     const now = Date.now();
-    if (onTyping && now - lastTypingSentAtRef.current > 800) {
+    if (now - lastTypingSentAtRef.current > 800) {
       lastTypingSentAtRef.current = now;
-      onTyping();
+      sendTyping();
     }
   };
 
   const handleSend = async () => {
-    if ((!text.trim() && !attachmentFile) || !currentUser) return;
+    if ((!text.trim() && !attachmentFile) || !currentUser || !selectedConversation) return;
 
     setIsUploading(true);
     let finalAttachment: Attachment | null = null;
@@ -38,7 +36,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ conversatio
     if (attachmentFile) {
       const fileExt = attachmentFile.name.split('.').pop();
       const fileName = `${uuidv4()}.${fileExt}`;
-      const filePath = `${currentUser.id}/${conversationId}/${fileName}`;
+      const filePath = `${currentUser.id}/${selectedConversation.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('chat-attachments')
@@ -59,7 +57,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ conversatio
       };
     }
 
-    onSendMessage(text, finalAttachment);
+    sendMessage(text, finalAttachment);
     setText("");
     setAttachmentFile(null);
     setIsUploading(false);
@@ -71,6 +69,8 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ conversatio
       setAttachmentFile(file);
     }
   };
+
+  if (!selectedConversation) return null;
 
   return (
     <div className="border-t p-4 flex-shrink-0">

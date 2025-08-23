@@ -19,7 +19,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Conversation } from "@/types";
 import { ArrowLeft, MoreVertical, Trash2, UserX, Users, Settings } from "lucide-react";
 import StackedAvatar from "./StackedAvatar";
 import { getInitials, generateVibrantGradient } from "@/lib/utils";
@@ -27,20 +26,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import GroupSettingsDialog from "./GroupSettingsDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { useChatContext } from "@/contexts/ChatContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface ChatHeaderProps {
-  selectedConversation: Conversation | null;
-  onClearChat: (conversationId: string) => void;
-  onLeaveGroup: (conversationId: string) => void;
-  onUpdate: () => void;
   onBack?: () => void;
   typing?: boolean;
 }
 
-const ChatHeader = ({ selectedConversation, onClearChat, onLeaveGroup, onUpdate, onBack, typing = false }: ChatHeaderProps) => {
+const ChatHeader = ({ onBack, typing = false }: ChatHeaderProps) => {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { selectedConversation, leaveGroup, refetchConversations } = useChatContext();
 
   if (!selectedConversation) {
     return (
@@ -50,13 +49,22 @@ const ChatHeader = ({ selectedConversation, onClearChat, onLeaveGroup, onUpdate,
     );
   }
 
-  const { userName, userAvatar, isGroup, members, created_by } = selectedConversation;
+  const { id, userName, userAvatar, isGroup, members, created_by } = selectedConversation;
   const otherUser = !isGroup ? members?.find(m => m.id !== currentUser?.id) : null;
   const isOwner = currentUser?.id === created_by;
 
   const handleViewProfile = () => {
     if (otherUser) {
       navigate(`/users/${otherUser.id}`);
+    }
+  };
+
+  const handleClearChat = async (conversationId: string) => {
+    const { error } = await supabase.from('messages').delete().eq('conversation_id', conversationId);
+    if (error) toast.error("Failed to clear chat history.");
+    else {
+      toast.success("Chat history has been cleared.");
+      refetchConversations();
     }
   };
 
@@ -83,7 +91,7 @@ const ChatHeader = ({ selectedConversation, onClearChat, onLeaveGroup, onUpdate,
         ) : (
           <Avatar className="h-10 w-10 border">
             <AvatarImage src={userAvatar} alt={userName} />
-            <AvatarFallback style={generateVibrantGradient(otherUser?.id || selectedConversation.id)}>{getInitials(userName)}</AvatarFallback>
+            <AvatarFallback style={generateVibrantGradient(otherUser?.id || id)}>{getInitials(userName)}</AvatarFallback>
           </Avatar>
         )}
         <div className="ml-4 flex-1">
@@ -154,7 +162,7 @@ const ChatHeader = ({ selectedConversation, onClearChat, onLeaveGroup, onUpdate,
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => isGroup ? onLeaveGroup(selectedConversation.id) : onClearChat(selectedConversation.id)}>
+                <AlertDialogAction onClick={() => isGroup ? leaveGroup(id) : handleClearChat(id)}>
                   {isGroup ? "Leave" : "Continue"}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -168,7 +176,7 @@ const ChatHeader = ({ selectedConversation, onClearChat, onLeaveGroup, onUpdate,
           onOpenChange={setIsSettingsOpen}
           conversation={selectedConversation}
           onUpdate={() => {
-            onUpdate();
+            refetchConversations();
             setIsSettingsOpen(false);
           }}
         />

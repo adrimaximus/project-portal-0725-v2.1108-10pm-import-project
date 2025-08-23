@@ -3,45 +3,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, MessageSquarePlus, MoreHorizontal, Trash2, Sparkles } from "lucide-react";
-import { Conversation, Collaborator } from "@/types";
 import NewConversationDialog from "./NewConversationDialog";
 import { cn, getInitials, generateVibrantGradient } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
+import { useChatContext } from "@/contexts/ChatContext";
 import { useAuth } from "@/contexts/AuthContext";
 
-interface ChatListProps {
-  conversations: Omit<Conversation, "messages">[];
-  selectedConversationId: string | null;
-  searchTerm: string;
-  onSearchTermChange: (term: string) => void;
-  onSelectConversation: (id: string | null) => void;
-  onStartNewChat: (collaborator: Collaborator) => void;
-  onStartNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
-  onDeleteConversation: (conversationId: string) => void;
-}
-
-const ChatList = ({
-  conversations,
-  selectedConversationId,
-  searchTerm,
-  onSearchTermChange,
-  onSelectConversation,
-  onStartNewChat,
-  onStartNewGroupChat,
-  onDeleteConversation,
-}: ChatListProps) => {
+const ChatList = () => {
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
+  const {
+    conversations,
+    selectedConversation,
+    selectConversation,
+    searchTerm,
+    setSearchTerm,
+    startNewChat,
+    startNewGroupChat,
+    deleteConversation,
+  } = useChatContext();
   const { user: currentUser } = useAuth();
 
   const formatTimestamp = (timestamp: string) => {
     try {
       const date = new Date(timestamp);
-      if (isNaN(date.getTime()) || date.getFullYear() < 2000) {
-        return "";
-      }
+      if (isNaN(date.getTime()) || date.getFullYear() < 2000) return "";
       return formatDistanceToNow(date, { addSuffix: true, locale: id });
     } catch (e) {
       console.error("Error formatting date:", e);
@@ -58,7 +46,7 @@ const ChatList = ({
           <Input
             placeholder="Search chats..."
             value={searchTerm}
-            onChange={(e) => onSearchTermChange(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8"
           />
         </div>
@@ -76,9 +64,9 @@ const ChatList = ({
         <div
           className={cn(
             "flex items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group cursor-pointer",
-            selectedConversationId === 'ai-assistant' && "bg-muted border-l-primary"
+            selectedConversation?.id === 'ai-assistant' && "bg-muted border-l-primary"
           )}
-          onClick={() => onSelectConversation('ai-assistant')}
+          onClick={() => selectConversation('ai-assistant')}
         >
           <Avatar>
             <AvatarFallback className="bg-primary text-primary-foreground">
@@ -102,12 +90,12 @@ const ChatList = ({
               key={c.id}
               className={cn(
                 "flex items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group",
-                selectedConversationId === c.id && "bg-muted border-l-primary"
+                selectedConversation?.id === c.id && "bg-muted border-l-primary"
               )}
             >
               <div
                 className="flex-1 flex items-center gap-3 overflow-hidden cursor-pointer"
-                onClick={() => onSelectConversation(c.id)}
+                onClick={() => selectConversation(c.id)}
               >
                 <Avatar>
                   <AvatarImage src={c.userAvatar} />
@@ -146,7 +134,7 @@ const ChatList = ({
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onDeleteConversation(c.id)}>
+                    <AlertDialogAction onClick={() => deleteConversation(c.id)}>
                       Delete
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -159,8 +147,8 @@ const ChatList = ({
       <NewConversationDialog
         open={isNewConversationOpen}
         onOpenChange={setIsNewConversationOpen}
-        onStartNewChat={onStartNewChat}
-        onStartNewGroupChat={onStartNewGroupChat}
+        onStartNewChat={startNewChat}
+        onStartNewGroupChat={startNewGroupChat}
       />
     </div>
   );
