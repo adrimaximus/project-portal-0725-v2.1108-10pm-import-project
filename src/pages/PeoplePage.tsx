@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,8 +6,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, GitMerge, Loader2, Kanban, LayoutGrid, Table as TableIcon } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { generateVibrantGradient } from "@/lib/utils";
@@ -18,139 +16,53 @@ import WhatsappIcon from "@/components/icons/WhatsappIcon";
 import { DuplicatePair } from "@/components/people/DuplicateContactsCard";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import PeopleKanbanView from "@/components/people/PeopleKanbanView";
-import { Tag } from "@/types";
 import PeopleGridView from "@/components/people/PeopleGridView";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
 import MergeDialog from "@/components/people/MergeDialog";
-
-export interface Person {
-  id: string;
-  full_name: string;
-  contact?: { emails?: string[]; phones?: string[] };
-  company?: string;
-  job_title?: string;
-  department?: string;
-  social_media?: { linkedin?: string; twitter?: string; instagram?: string };
-  birthday?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-  projects?: { id: string; name: string, slug: string }[];
-  tags?: { id: string; name: string; color: string }[];
-  address?: { formatted_address?: string; } | null;
-  avatar_url?: string;
-}
+import { usePeople } from "@/hooks/usePeople";
+import { usePeopleMutations } from "@/hooks/usePeopleMutations";
+import { Person } from "@/types";
 
 const PeoplePage = () => {
-  const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [personToEdit, setPersonToEdit] = useState<Person | null>(null);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
-  const queryClient = useQueryClient();
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
   const [viewMode, setViewMode] = useState<'table' | 'kanban' | 'grid'>(() => {
     const savedView = localStorage.getItem('people_view_mode') as 'table' | 'kanban' | 'grid';
     return savedView || 'grid';
   });
-  const [isFindingDuplicates, setIsFindingDuplicates] = useState(false);
   const [duplicateData, setDuplicateData] = useState<{ summary: string; pairs: DuplicatePair[] } | null>(null);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [selectedMergePair, setSelectedMergePair] = useState<DuplicatePair | null>(null);
+
+  const {
+    people,
+    tags,
+    isLoading,
+    searchTerm,
+    setSearchTerm,
+    sortConfig,
+    requestSort,
+  } = usePeople();
+
+  const {
+    deletePerson,
+    findDuplicates,
+    isFindingDuplicates,
+  } = usePeopleMutations();
 
   useEffect(() => {
     localStorage.setItem('people_view_mode', viewMode);
   }, [viewMode]);
 
-  const { data: people = [], isLoading } = useQuery({
-    queryKey: ['people'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_people_with_details');
-      if (error) throw error;
-      return data as Person[];
-    }
-  });
-
-  const { data: tags = [] } = useQuery({
-    queryKey: ['tags'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('tags').select('*');
-      if (error) throw error;
-      return data as Tag[];
-    }
-  });
-
   const findAndAnalyzeDuplicates = async () => {
-    setIsFindingDuplicates(true);
-    toast.info("Searching for duplicates...");
-
-    const { data: pairs, error: rpcError } = await supabase.rpc('find_duplicate_people');
-    if (rpcError) {
-      toast.error("Failed to check for duplicates.", { description: rpcError.message });
-      setIsFindingDuplicates(false);
-      return;
+    const result = await findDuplicates();
+    if (result) {
+      setDuplicateData(result as any);
+      setIsSummaryDialogOpen(true);
     }
-
-    if (!pairs || pairs.length === 0) {
-      toast.info("No potential duplicates found.");
-      setIsFindingDuplicates(false);
-      return;
-    }
-
-    toast.info(`Found ${pairs.length} potential duplicate(s). Asking AI for analysis...`);
-
-    const { data: aiData, error: aiError } = await supabase.functions.invoke('openai-generator', {
-      body: { feature: 'analyze-duplicates', payload: { duplicates: pairs } },
-    });
-
-    if (aiError) {
-      toast.error("AI analysis failed.", { description: aiError.message });
-      setIsFindingDuplicates(false);
-      return;
-    }
-
-    setDuplicateData({ summary: aiData.result, pairs: pairs as DuplicatePair[] });
-    setIsSummaryDialogOpen(true);
-    setIsFindingDuplicates(false);
   };
-
-  const requestSort = (key: keyof Person) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const sortedPeople = useMemo(() => {
-    let sortableItems = [...people];
-    if (sortConfig.key !== null) {
-      sortableItems.sort((a, b) => {
-        const aValue = a[sortConfig.key!];
-        const bValue = b[sortConfig.key!];
-
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-        
-        if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [people, sortConfig]);
-
-  const filteredPeople = useMemo(() => {
-    return sortedPeople.filter(person =>
-      person.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (person.company && person.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (person.job_title && person.job_title.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [sortedPeople, searchTerm]);
 
   const handleAddNew = () => {
     setPersonToEdit(null);
@@ -164,13 +76,7 @@ const PeoplePage = () => {
 
   const handleDelete = async () => {
     if (!personToDelete) return;
-    const { error } = await supabase.from('people').delete().eq('id', personToDelete.id);
-    if (error) {
-      toast.error(`Failed to delete ${personToDelete.full_name}.`);
-    } else {
-      toast.success(`${personToDelete.full_name} has been deleted.`);
-      queryClient.invalidateQueries({ queryKey: ['people'] });
-    }
+    deletePerson(personToDelete);
     setPersonToDelete(null);
   };
 
@@ -277,10 +183,10 @@ const PeoplePage = () => {
                 <TableBody>
                   {isLoading ? (
                     <TableRow><TableCell colSpan={7} className="text-center h-24">Loading...</TableCell></TableRow>
-                  ) : filteredPeople.length === 0 ? (
+                  ) : people.length === 0 ? (
                     <TableRow><TableCell colSpan={7} className="text-center h-24">No people found.</TableCell></TableRow>
                   ) : (
-                    filteredPeople.map(person => (
+                    people.map(person => (
                       <TableRow key={person.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -353,10 +259,10 @@ const PeoplePage = () => {
               </Table>
             </div>
           ) : viewMode === 'kanban' ? (
-            <PeopleKanbanView people={filteredPeople} tags={tags} onEditPerson={handleEdit} />
+            <PeopleKanbanView people={people} tags={tags} onEditPerson={handleEdit} />
           ) : (
             <div className="overflow-y-auto h-full">
-              <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
+              <PeopleGridView people={people} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
             </div>
           )}
         </div>

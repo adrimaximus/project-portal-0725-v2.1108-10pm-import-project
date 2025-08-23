@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Person } from '@/pages/PeoplePage';
+import { Person } from '@/types';
 import PersonCard from './PersonCard';
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 

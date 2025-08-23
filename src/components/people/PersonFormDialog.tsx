@@ -13,12 +13,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Person } from '@/pages/PeoplePage';
-import { Project, Tag } from '@/types';
+import { Person, Project, Tag } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
 import AddressAutocompleteInput from './AddressAutocompleteInput';
+import { usePeopleMutations } from '@/hooks/usePeopleMutations';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -46,10 +45,9 @@ const personSchema = z.object({
 type PersonFormValues = z.infer<typeof personSchema>;
 
 const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps) => {
-  const queryClient = useQueryClient();
-  const [isSaving, setIsSaving] = useState(false);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
+  const { upsertPerson, isUpserting } = usePeopleMutations();
 
   const form = useForm<PersonFormValues>({
     resolver: zodResolver(personSchema),
@@ -101,34 +99,11 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
   }, [person, form, open]);
 
   const onSubmit = async (values: PersonFormValues) => {
-    setIsSaving(true);
-    const { error } = await supabase.rpc('upsert_person_with_details', {
-      p_id: person?.id || null,
-      p_full_name: values.full_name,
-      p_contact: { 
-        emails: values.email ? [values.email] : [],
-        phones: values.phone ? [values.phone] : []
-      },
-      p_company: values.company,
-      p_job_title: values.job_title,
-      p_department: values.department,
-      p_social_media: { linkedin: values.linkedin, twitter: values.twitter, instagram: values.instagram },
-      p_birthday: values.birthday ? format(values.birthday, 'yyyy-MM-dd') : null,
-      p_notes: values.notes,
-      p_project_ids: values.project_ids,
-      p_existing_tag_ids: values.tag_ids,
-      p_custom_tags: [], // Assuming no custom tags from this simplified form for now
-      p_avatar_url: person?.avatar_url, // Assuming avatar is handled elsewhere
-      p_address: values.address || null,
-    });
-    setIsSaving(false);
-
-    if (error) {
-      toast.error(`Failed to save: ${error.message}`);
-    } else {
-      toast.success(`Successfully saved ${values.full_name}.`);
-      queryClient.invalidateQueries({ queryKey: ['people'] });
+    try {
+      await upsertPerson({ person, ...values });
       onOpenChange(false);
+    } catch (e) {
+      // Error is handled by the mutation's onError callback in the hook
     }
   };
 
@@ -229,8 +204,8 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
             )} />
             <DialogFooter className="pt-4 sticky bottom-0 bg-background">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={isUpserting}>
+                {isUpserting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save
               </Button>
             </DialogFooter>

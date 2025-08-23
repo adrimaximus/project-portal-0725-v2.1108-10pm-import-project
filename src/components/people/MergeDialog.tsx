@@ -5,11 +5,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Person } from '@/pages/PeoplePage';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { Person } from '@/types';
 import { Loader2, User as UserIcon } from 'lucide-react';
+import { usePeopleMutations } from '@/hooks/usePeopleMutations';
 
 interface MergeDialogProps {
   open: boolean;
@@ -20,8 +18,7 @@ interface MergeDialogProps {
 
 const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps) => {
   const [primaryId, setPrimaryId] = useState(person1.id);
-  const [isMerging, setIsMerging] = useState(false);
-  const queryClient = useQueryClient();
+  const { mergeDuplicates, isMerging } = usePeopleMutations();
 
   const { primary, secondary } = useMemo(() => ({
     primary: primaryId === person1.id ? person1 : person2,
@@ -53,25 +50,11 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
   }, [primary, secondary]);
 
   const handleMerge = async () => {
-    setIsMerging(true);
-    const { error } = await supabase.functions.invoke('openai-generator', {
-      body: {
-        feature: 'ai-merge-contacts',
-        payload: {
-          primary_person_id: primary.id,
-          secondary_person_id: secondary.id,
-        }
-      }
-    });
-    setIsMerging(false);
-
-    if (error) {
-      toast.error("Failed to merge contacts.", { description: error.message });
-    } else {
-      toast.success("Contacts merged successfully!");
-      queryClient.invalidateQueries({ queryKey: ['people'] });
-      queryClient.invalidateQueries({ queryKey: ['duplicates'] });
+    try {
+      await mergeDuplicates({ primary, secondary });
       onOpenChange(false);
+    } catch (e) {
+      // Error is handled by the mutation hook
     }
   };
 
