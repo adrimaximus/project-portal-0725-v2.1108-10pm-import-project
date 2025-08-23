@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import ReactQuill from 'react-quill';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { allIcons } from '@/data/icons';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import PexelsImagePicker from './PexelsImagePicker';
 
 interface ArticleValues {
   id?: string;
@@ -332,24 +334,41 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                   </Button>
                 </div>
               )}
-              <div className="pt-2">
-                <div
-                  className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-md cursor-pointer"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <div className="text-center">
-                    <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground" />
-                    <p className="mt-2 text-sm text-muted-foreground">Click to upload an image</p>
+              <Tabs defaultValue="upload" className="w-full pt-2">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="upload">
+                    <ImageIcon className="mr-2 h-4 w-4" /> Upload
+                  </TabsTrigger>
+                  <TabsTrigger value="pexels">
+                    <Sparkles className="mr-2 h-4 w-4" /> Pexels
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="upload" className="pt-4">
+                  <div
+                    className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-md cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <div className="text-center">
+                      <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground" />
+                      <p className="mt-2 text-sm text-muted-foreground">Click to upload an image</p>
+                    </div>
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                    />
                   </div>
-                  <Input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                  />
-                </div>
-              </div>
+                </TabsContent>
+                <TabsContent value="pexels" className="pt-4">
+                  <PexelsImagePicker onImageSelect={(url) => {
+                    setImagePreview(url);
+                    setImageFile(null);
+                    setIsRemovingImage(false);
+                  }} />
+                </TabsContent>
+              </Tabs>
             </FormItem>
             <FormField
               control={form.control}
