@@ -56,15 +56,6 @@ const ArticlePage = () => {
     enabled: !!slug,
   });
 
-  const { data: allFolders = [] } = useQuery({
-    queryKey: ['kb_folders'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('kb_folders').select('*');
-      if (error) throw error;
-      return data as KbFolder[];
-    }
-  });
-
   if (isLoading) {
     return (
       <PortalLayout>
@@ -137,7 +128,6 @@ const ArticlePage = () => {
       <ArticleEditorDialog
         open={isEditorOpen}
         onOpenChange={setIsEditorOpen}
-        folders={allFolders}
         article={article}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['kb_article', slug] });

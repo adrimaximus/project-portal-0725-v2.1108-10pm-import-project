@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
 import { KbFolder } from '@/types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ArticleValues {
   id?: string;
@@ -23,7 +23,6 @@ interface ArticleValues {
 interface ArticleEditorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  folders: KbFolder[];
   folder?: KbFolder | null;
   article?: ArticleValues | null;
   onSuccess: () => void;
@@ -32,14 +31,15 @@ interface ArticleEditorDialogProps {
 const articleSchema = z.object({
   title: z.string().min(1, "Title is required."),
   content: z.string().min(10, "Content is too short.").optional().or(z.literal('')),
-  folder_id: z.string().min(1, "Please select a folder."),
+  folder_id: z.string().optional(),
 });
 
 type ArticleFormValues = z.infer<typeof articleSchema>;
 
-const ArticleEditorDialog = ({ open, onOpenChange, folders, folder, article, onSuccess }: ArticleEditorDialogProps) => {
+const ArticleEditorDialog = ({ open, onOpenChange, folder, article, onSuccess }: ArticleEditorDialogProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const isEditMode = !!article;
+  const { user } = useAuth();
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -69,11 +69,53 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders, folder, article, onS
   }, [article, folder, open, form]);
 
   const onSubmit = async (values: ArticleFormValues) => {
+    if (!user) {
+        toast.error("You must be logged in.");
+        return;
+    }
     setIsSaving(true);
     
+    let finalFolderId = values.folder_id;
+
+    if (!isEditMode && !finalFolderId) {
+        try {
+            const { data: existingFolder, error: findError } = await supabase
+                .from('kb_folders')
+                .select('id')
+                .eq('name', 'Uncategorized')
+                .eq('user_id', user.id)
+                .single();
+
+            if (findError && findError.code !== 'PGRST116') throw findError;
+
+            if (existingFolder) {
+                finalFolderId = existingFolder.id;
+            } else {
+                const { data: newFolder, error: createError } = await supabase
+                    .from('kb_folders')
+                    .insert({ name: 'Uncategorized', icon: 'Archive', color: '#9ca3af', user_id: user.id })
+                    .select('id')
+                    .single();
+                if (createError) throw createError;
+                finalFolderId = newFolder!.id;
+            }
+        } catch (error: any) {
+            toast.error("Failed to manage default folder.", { description: error.message });
+            setIsSaving(false);
+            return;
+        }
+    }
+
+    if (!finalFolderId) {
+        toast.error("Could not determine a folder for the article.");
+        setIsSaving(false);
+        return;
+    }
+    
     const articleData = {
-      ...values,
+      title: values.title,
       content: values.content ? JSON.parse(JSON.stringify(values.content)) : null,
+      folder_id: finalFolderId,
     };
 
     const promise = isEditMode && article?.id
@@ -98,9 +140,11 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders, folder, article, onS
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Article' : 'Create New Article'}</DialogTitle>
           <DialogDescription>
-            {folder 
-              ? `This article will be saved in the "${folder.name}" folder.`
-              : 'Fill in the details for your article and select a folder to save it in.'
+            {isEditMode 
+              ? `Editing "${article?.title}".`
+              : folder 
+                ? `This article will be saved in the "${folder.name}" folder.`
+                : 'This article will be saved in your "Uncategorized" folder.'
             }
           </DialogDescription>
         </DialogHeader>
@@ -113,28 +157,6 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders, folder, article, onS
                 <FormMessage />
               </FormItem>
             )} />
-            <FormField
-              control={form.control}
-              name="folder_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Folder</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isEditMode}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a folder to save this article in..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {folders.map(f => (
-                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField control={form.control} name="content" render={({ field }) => (
               <FormItem>
                 <FormLabel>Content</FormLabel>

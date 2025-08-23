@@ -178,8 +178,10 @@ const KnowledgeBasePage = () => {
       <ArticleEditorDialog
         open={isArticleEditorOpen}
         onOpenChange={setIsArticleEditorOpen}
-        folders={folders}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['kb_articles'] })}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
+          queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
+        }}
       />
       <AlertDialog open={!!folderToDelete} onOpenChange={(open) => !open && setFolderToDelete(null)}>
         <AlertDialogContent>
