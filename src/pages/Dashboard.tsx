@@ -8,7 +8,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
-import PexelsImage from "@/components/dashboard/PexelsImage";
+import UnsplashImage from "@/components/dashboard/UnsplashImage";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -76,7 +76,7 @@ const Index = () => {
             </div>
             <div className="grid gap-6 md:grid-cols-2">
               <MonthlyProgressChart projects={filteredProjects} />
-              <PexelsImage />
+              <UnsplashImage />
             </div>
             <DashboardStatsGrid projects={filteredProjects} />
             <CollaboratorsList projects={filteredProjects} />

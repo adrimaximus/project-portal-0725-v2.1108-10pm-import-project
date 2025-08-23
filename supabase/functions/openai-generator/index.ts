@@ -103,7 +103,7 @@ You can perform several types of actions. When you decide to perform an action, 
 8. CREATE_ARTICLE:
 {"action": "CREATE_ARTICLE", "article_details": {"title": "<article title>", "content": "<HTML content>", "folder_name": "<optional folder name>", "header_image_search_query": "<optional image search query>"}}
 - If folder_name is not provided, it will be placed in "Uncategorized".
-- If 'header_image_search_query' is provided, I will find an image on Pexels and set it as the article's header image.
+- If 'header_image_search_query' is provided, I will find an image on Unsplash and set it as the article's header image.
 
 9. UPDATE_ARTICLE:
 {"action": "UPDATE_ARTICLE", "article_title": "<title of article to update>", "updates": {"title": "<new title>", "content": "<new HTML content>", "folder_name": "<new folder name>", "header_image_search_query": "<optional image search query>"}}
@@ -426,14 +426,14 @@ async function executeAction(actionData, context) {
 
             let header_image_url = null;
             if (header_image_search_query) {
-                const pexelsApiKey = Deno.env.get('VITE_PEXELS_API_KEY');
-                if (pexelsApiKey) {
-                    const pexelsResponse = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(header_image_search_query)}&per_page=1`, {
-                        headers: { Authorization: pexelsApiKey }
+                const unsplashApiKey = Deno.env.get('VITE_UNSPLASH_ACCESS_KEY');
+                if (unsplashApiKey) {
+                    const unsplashResponse = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(header_image_search_query)}&per_page=1&orientation=landscape`, {
+                        headers: { Authorization: `Client-ID ${unsplashApiKey}` }
                     });
-                    if (pexelsResponse.ok) {
-                        const pexelsData = await pexelsResponse.json();
-                        header_image_url = pexelsData.photos?.[0]?.src?.large2x;
+                    if (unsplashResponse.ok) {
+                        const unsplashData = await unsplashResponse.json();
+                        header_image_url = unsplashData.results?.[0]?.urls?.regular;
                     }
                 }
             }
@@ -461,15 +461,15 @@ async function executeAction(actionData, context) {
             if (updates.content) updatePayload.content = { html: updates.content };
             
             if (updates.header_image_search_query) {
-                const pexelsApiKey = Deno.env.get('VITE_PEXELS_API_KEY');
-                if (!pexelsApiKey) return "The Pexels API key is not configured on the server.";
+                const unsplashApiKey = Deno.env.get('VITE_UNSPLASH_ACCESS_KEY');
+                if (!unsplashApiKey) return "The Unsplash API key is not configured on the server.";
                 
-                const pexelsResponse = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(updates.header_image_search_query)}&per_page=1`, {
-                    headers: { Authorization: pexelsApiKey }
+                const unsplashResponse = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(updates.header_image_search_query)}&per_page=1&orientation=landscape`, {
+                    headers: { Authorization: `Client-ID ${unsplashApiKey}` }
                 });
-                if (pexelsResponse.ok) {
-                    const pexelsData = await pexelsResponse.json();
-                    const imageUrl = pexelsData.photos?.[0]?.src?.large2x;
+                if (unsplashResponse.ok) {
+                    const unsplashData = await unsplashResponse.json();
+                    const imageUrl = unsplashData.results?.[0]?.urls?.regular;
                     if (imageUrl) {
                         updatePayload.header_image_url = imageUrl;
                     }

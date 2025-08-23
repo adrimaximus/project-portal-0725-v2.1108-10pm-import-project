@@ -2,20 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Loader2, CameraOff } from 'lucide-react';
-import { pexelsClient } from '@/integrations/pexels/client';
-import { Photo } from 'pexels';
+import { unsplash } from '@/integrations/unsplash/client';
+import { Basic } from 'unsplash-js/dist/methods/photos/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 
-interface PexelsImagePickerProps {
+interface UnsplashImagePickerProps {
   onImageFileSelect: (file: File) => void;
   initialSearchTerm?: string;
 }
 
-const PexelsImagePicker = ({ onImageFileSelect, initialSearchTerm }: PexelsImagePickerProps) => {
+const UnsplashImagePicker = ({ onImageFileSelect, initialSearchTerm }: UnsplashImagePickerProps) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [results, setResults] = useState<Photo[]>([]);
+  const [results, setResults] = useState<Basic[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -24,17 +23,21 @@ const PexelsImagePicker = ({ onImageFileSelect, initialSearchTerm }: PexelsImage
       setResults([]);
       return;
     }
+    if (!unsplash) {
+      toast.error("Unsplash client is not configured. Please check your API key.");
+      return;
+    }
     setIsLoading(true);
     try {
-      const response = await pexelsClient.photos.search({ query, per_page: 15 });
-      if ("photos" in response) {
-        setResults(response.photos);
+      const response = await unsplash.search.getPhotos({ query, perPage: 15 });
+      if (response.type === 'success') {
+        setResults(response.response.results);
       } else {
-        throw new Error("Invalid response from Pexels API.");
+        throw new Error(response.errors.join(', '));
       }
     } catch (error) {
-      console.error("Pexels search failed:", error);
-      toast.error("Failed to search for images on Pexels.");
+      console.error("Unsplash search failed:", error);
+      toast.error("Failed to search for images on Unsplash.");
     } finally {
       setIsLoading(false);
     }
@@ -51,17 +54,17 @@ const PexelsImagePicker = ({ onImageFileSelect, initialSearchTerm }: PexelsImage
     handleSearch(searchTerm);
   };
 
-  const handleSelectAndPrepare = async (photo: Photo) => {
+  const handleSelectAndPrepare = async (photo: Basic) => {
     setIsUploading(true);
     toast.info("Preparing selected image...");
     try {
-      const response = await fetch(photo.src.large2x);
+      const response = await fetch(photo.urls.regular);
       if (!response.ok) {
-        throw new Error('Failed to download image from Pexels.');
+        throw new Error('Failed to download image from Unsplash.');
       }
       const blob = await response.blob();
       
-      const fileName = `${photo.id}-${photo.photographer.toLowerCase().replace(/\s/g, '-')}.jpeg`;
+      const fileName = `${photo.id}-${photo.user.username}.jpeg`;
       const imageFile = new File([blob], fileName, { type: 'image/jpeg' });
 
       onImageFileSelect(imageFile);
@@ -120,8 +123,8 @@ const PexelsImagePicker = ({ onImageFileSelect, initialSearchTerm }: PexelsImage
                 disabled={isUploading}
               >
                 <img
-                  src={photo.src.tiny}
-                  alt={photo.alt || 'Pexels photo'}
+                  src={photo.urls.thumb}
+                  alt={photo.alt_description || 'Unsplash photo'}
                   className="w-full h-full object-cover transition-transform group-hover:scale-105"
                 />
               </button>
@@ -133,4 +136,4 @@ const PexelsImagePicker = ({ onImageFileSelect, initialSearchTerm }: PexelsImage
   );
 };
 
-export default PexelsImagePicker;
+export default UnsplashImagePicker;

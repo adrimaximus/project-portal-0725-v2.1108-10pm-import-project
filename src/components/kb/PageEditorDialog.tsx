@@ -11,11 +11,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Image as ImageIcon, X, Sparkles, ListCollapse } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
-import { KbFolder } from '@/types';
+import { KbFolder, KbArticle as Article } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import PexelsImagePicker from './PexelsImagePicker';
+import UnsplashImagePicker from './UnsplashImagePicker';
 import ReactQuill from 'react-quill';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
@@ -355,7 +355,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
               <Tabs defaultValue="upload" className="w-full mt-2">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="upload">Upload</TabsTrigger>
-                  <TabsTrigger value="pexels">Search Pexels</TabsTrigger>
+                  <TabsTrigger value="pexels">Search Unsplash</TabsTrigger>
                 </TabsList>
                 <TabsContent value="upload" className="pt-4">
                   <div
@@ -376,7 +376,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                   </div>
                 </TabsContent>
                 <TabsContent value="pexels">
-                  <PexelsImagePicker onImageFileSelect={handlePexelsSelect} initialSearchTerm={debouncedTitle} />
+                  <UnsplashImagePicker onImageFileSelect={handlePexelsSelect} initialSearchTerm={debouncedTitle} />
                 </TabsContent>
               </Tabs>
             </FormItem>
