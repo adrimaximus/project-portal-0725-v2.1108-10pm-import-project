@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 async function executeAction(actionData, context) {
-    const { userSupabase, user, projects, users, goals, allTags } = context;
+    const { userSupabase, user, projects, users, goals, allTags, articles, folders } = context;
 
     switch (actionData.action) {
         case 'CREATE_PROJECT': {
@@ -224,6 +224,91 @@ async function executeAction(actionData, context) {
             if (error) return `I failed to update the goal. The database said: ${error.message}`;
             return `Done! I've updated the goal "${updatedGoal.title}".`;
         }
+        case 'CREATE_ARTICLE': {
+            const { title, content, folder_name } = actionData.article_details;
+            if (!title) return "I need a title to create an article.";
+
+            let folder_id;
+            const targetFolderName = folder_name || 'Uncategorized';
+            let folder = folders.find(f => f.name.toLowerCase() === targetFolderName.toLowerCase());
+
+            if (!folder) {
+                const { data: newFolder, error: folderError } = await userSupabase
+                    .from('kb_folders')
+                    .insert({ name: targetFolderName, user_id: user.id, icon: 'Archive', color: '#9ca3af' })
+                    .select('id')
+                    .single();
+                if (folderError) return `I couldn't create a new folder for the article. The database said: ${folderError.message}`;
+                folder_id = newFolder.id;
+            } else {
+                folder_id = folder.id;
+            }
+
+            const { data: newArticle, error: articleError } = await userSupabase.from('kb_articles').insert({
+                title,
+                content: { html: content || '<p></p>' },
+                folder_id,
+                user_id: user.id,
+            }).select('slug').single();
+
+            if (articleError) return `I failed to create the article. The database said: ${articleError.message}`;
+            return `Done! I've created the article "${title}". You can view it at /knowledge-base/articles/${newArticle.slug}`;
+        }
+        case 'UPDATE_ARTICLE': {
+            const { article_title, updates } = actionData;
+            if (!article_title || !updates) return "I need the article title and the updates to apply.";
+
+            const { data: article, error: findError } = await userSupabase.from('kb_articles').select('id, content, folder_id').ilike('title', `%${article_title}%`).single();
+            if (findError || !article) return `I couldn't find an article named "${article_title}".`;
+
+            const updatePayload = {};
+            if (updates.title) updatePayload.title = updates.title;
+            if (updates.content) updatePayload.content = { html: updates.content };
+            
+            if (updates.folder_name) {
+                let folder = folders.find(f => f.name.toLowerCase() === updates.folder_name.toLowerCase());
+                if (!folder) {
+                    const { data: newFolder, error: folderError } = await userSupabase
+                        .from('kb_folders')
+                        .insert({ name: updates.folder_name, user_id: user.id, icon: 'Folder', color: '#6b7280' })
+                        .select('id')
+                        .single();
+                    if (folderError) return `I couldn't find or create the new folder. The database said: ${folderError.message}`;
+                    updatePayload.folder_id = newFolder.id;
+                } else {
+                    updatePayload.folder_id = folder.id;
+                }
+            }
+
+            const { error: updateError } = await userSupabase.from('kb_articles').update(updatePayload).eq('id', article.id);
+            if (updateError) return `I failed to update the article. The database said: ${updateError.message}`;
+            return `Done! I've updated the article "${updates.title || article_title}".`;
+        }
+        case 'INSERT_IMAGE_INTO_ARTICLE': {
+            const { article_title, image_url } = actionData;
+            if (!article_title || !image_url) return "I need the article title and the image URL.";
+
+            const { data: article, error: findError } = await userSupabase.from('kb_articles').select('id, content').ilike('title', `%${article_title}%`).single();
+            if (findError || !article) return `I couldn't find an article named "${article_title}".`;
+
+            const currentContent = article.content?.html || '';
+            const newContent = `${currentContent}<p><img src="${image_url}" alt="Image inserted by AI"></p>`;
+
+            const { error: updateError } = await userSupabase.from('kb_articles').update({ content: { html: newContent } }).eq('id', article.id);
+            if (updateError) return `I failed to insert the image. The database said: ${updateError.message}`;
+            return `Done! I've added the image to the article "${article_title}".`;
+        }
+        case 'DELETE_ARTICLE': {
+            const { article_title } = actionData;
+            if (!article_title) return "I need the title of the article to delete.";
+
+            const { data: article, error: findError } = await userSupabase.from('kb_articles').select('id').ilike('title', `%${article_title}%`).single();
+            if (findError || !article) return `I couldn't find an article named "${article_title}".`;
+
+            const { error: deleteError } = await userSupabase.from('kb_articles').delete().eq('id', article.id);
+            if (deleteError) return `I failed to delete the article. The database said: ${deleteError.message}`;
+            return `Done! I've deleted the article "${article_title}".`;
+        }
         default:
             return "I'm not sure how to perform that action. Can you clarify?";
     }
@@ -317,6 +402,16 @@ serve(async (req) => {
             throw new Error(`Failed to fetch tags for context: ${allTagsError.message}`);
         }
 
+        const { data: articles, error: articlesError } = await userSupabase.from('kb_articles').select('id, title, slug, folder_id');
+        if (articlesError) {
+          throw new Error(`Failed to fetch articles for context: ${articlesError.message}`);
+        }
+
+        const { data: folders, error: foldersError } = await userSupabase.from('kb_folders').select('id, name');
+        if (foldersError) {
+          throw new Error(`Failed to fetch folders for context: ${foldersError.message}`);
+        }
+
         const summarizedProjects = projects.map(p => ({
             name: p.name,
             status: p.status,
@@ -336,6 +431,8 @@ serve(async (req) => {
         const userList = users.map(u => ({ id: u.id, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email }));
         const serviceList = [ "3D Graphic Design", "Accommodation", "Award Ceremony", "Branding", "Content Creation", "Digital Marketing", "Entertainment", "Event Decoration", "Event Equipment", "Event Gamification", "Exhibition Booth", "Food & Beverage", "Keyvisual Graphic Design", "LED Display", "Lighting System", "Logistics", "Man Power", "Merchandise", "Motiongraphic Video", "Multimedia System", "Payment Advance", "Photo Documentation", "Plaque & Trophy", "Prints", "Professional Security", "Professional video production for commercial ads", "Show Management", "Slido", "Sound System", "Stage Production", "Talent", "Ticket Management System", "Transport", "Venue", "Video Documentation", "VIP Services", "Virtual Events", "Awards System", "Brand Ambassadors", "Electricity & Genset", "Event Consultation", "Workshop" ];
         const iconList = [ 'Target', 'Flag', 'BookOpen', 'Dumbbell', 'TrendingUp', 'Star', 'Heart', 'Rocket', 'DollarSign', 'FileText', 'ImageIcon', 'Award', 'BarChart', 'Calendar', 'CheckCircle', 'Users', 'Activity', 'Anchor', 'Aperture', 'Bike', 'Briefcase', 'Brush', 'Camera', 'Car', 'ClipboardCheck', 'Cloud', 'Code', 'Coffee', 'Compass', 'Cpu', 'CreditCard', 'Crown', 'Database', 'Diamond', 'Feather', 'Film', 'Flame', 'Flower', 'Gift', 'Globe', 'GraduationCap', 'Headphones', 'Home', 'Key', 'Laptop', 'Leaf', 'Lightbulb', 'Link', 'Map', 'Medal', 'Mic', 'Moon', 'MousePointer', 'Music', 'Paintbrush', 'Palette', 'PenTool', 'Phone', 'PieChart', 'Plane', 'Puzzle', 'Save', 'Scale', 'Scissors', 'Settings', 'Shield', 'ShoppingBag', 'Smile', 'Speaker', 'Sun', 'Sunrise', 'Sunset', 'Sword', 'Tag', 'Trophy', 'Truck', 'Umbrella', 'Video', 'Wallet', 'Watch', 'Wind', 'Wrench', 'Zap' ];
+        const summarizedArticles = articles.map(a => ({ title: a.title, folder: folders.find(f => f.id === a.folder_id)?.name }));
+        const summarizedFolders = folders.map(f => f.name);
         
         const systemPrompt = `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
 
@@ -391,12 +488,29 @@ You can perform several types of actions. When you decide to perform an action, 
 - Valid fields for 'updates' are: title, description, type, frequency, specific_days, target_quantity, target_period, target_value, unit, icon, color, add_tags, remove_tags.
 - For 'add_tags' and 'remove_tags', the value should be an array of tag names.
 
+8. CREATE_ARTICLE:
+{"action": "CREATE_ARTICLE", "article_details": {"title": "<article title>", "content": "<HTML content>", "folder_name": "<optional folder name>"}}
+- If folder_name is not provided, it will be placed in "Uncategorized".
+
+9. UPDATE_ARTICLE:
+{"action": "UPDATE_ARTICLE", "article_title": "<title of article to update>", "updates": {"title": "<new title>", "content": "<new HTML content>", "folder_name": "<new folder name>"}}
+- 'content' will replace the existing content. To append, first get the existing content and then provide the full new content.
+
+10. INSERT_IMAGE_INTO_ARTICLE:
+{"action": "INSERT_IMAGE_INTO_ARTICLE", "article_title": "<title of article>", "image_url": "<URL of the image>"}
+- This will append the image to the end of the article's content.
+
+11. DELETE_ARTICLE:
+{"action": "DELETE_ARTICLE", "article_title": "<title of article to delete>"}
+
 CONTEXT:
 - Available Projects (with their tasks and tags): ${JSON.stringify(summarizedProjects, null, 2)}
 - Available Goals: ${JSON.stringify(summarizedGoals, null, 2)}
 - Available Users: ${JSON.stringify(userList, null, 2)}
 - Available Services: ${JSON.stringify(serviceList, null, 2)}
 - Available Icons: ${JSON.stringify(iconList, null, 2)}
+- Available Articles: ${JSON.stringify(summarizedArticles, null, 2)}
+- Available Folders: ${JSON.stringify(summarizedFolders, null, 2)}
 `;
 
         const messages = [
@@ -423,7 +537,7 @@ CONTEXT:
             const jsonString = jsonMatch[1] || jsonMatch[2];
             const actionData = JSON.parse(jsonString);
 
-            const actionResult = await executeAction(actionData, { userSupabase, user, projects, users, goals, allTags });
+            const actionResult = await executeAction(actionData, { userSupabase, user, projects, users, goals, allTags, articles, folders });
             responseData = { result: actionResult };
 
         } catch (e) {
