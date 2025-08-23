@@ -9,7 +9,7 @@ interface PeopleGridViewProps {
   onDeletePerson: (person: Person) => void;
 }
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 6;
 
 const PeopleGridView = ({ people, onEditPerson, onDeletePerson }: PeopleGridViewProps) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,7 +82,7 @@ const PeopleGridView = ({ people, onEditPerson, onDeletePerson }: PeopleGridView
 
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {currentPeople.map(person => (
           <PersonCard 
             key={person.id} 
