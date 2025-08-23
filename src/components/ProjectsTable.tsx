@@ -27,6 +27,7 @@ import TableView from "./projects/TableView";
 import ListView from "./projects/ListView";
 import CalendarImportView from "./projects/CalendarImportView";
 import KanbanView from "./projects/KanbanView";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 interface CalendarEvent {
     id: string;
@@ -66,7 +67,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
     }
   };
 
-  const refreshCalendarEvents = async () => {
+  const refreshCalendarEvents = async (range: DateRange | undefined) => {
     const token = localStorage.getItem('googleCalendarToken');
     const selectedCalendarsStr = localStorage.getItem('googleCalendarSelected');
     
@@ -85,10 +86,16 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
       return;
     }
 
-    toast.info("Refreshing calendar events...");
+    toast.info("Refreshing calendar events for the selected range...");
     try {
-      const timeMin = new Date().toISOString();
-      const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Next 30 days
+      const today = new Date();
+      const from = range?.from || startOfMonth(today);
+      const to = range?.to || endOfMonth(today);
+      to.setHours(23, 59, 59, 999);
+
+      const timeMin = from.toISOString();
+      const timeMax = to.toISOString();
+      
       const allEvents: any[] = [];
 
       for (const calendarId of selectedCalendars) {
@@ -118,7 +125,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
 
       localStorage.setItem('googleCalendarEvents', JSON.stringify(allEvents));
       setCalendarEvents(allEvents);
-      toast.success(`Successfully refreshed ${allEvents.length} events!`);
+      toast.success(`Successfully fetched ${allEvents.length} events!`);
     } catch (error) {
       console.error(error);
       toast.error("Failed to refresh events. Please try reconnecting in settings.");
@@ -148,6 +155,12 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
         window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
+  useEffect(() => {
+    if (view === 'calendar') {
+      refreshCalendarEvents(dateRange);
+    }
+  }, [dateRange, view]);
 
   const filteredProjects = useMemo(() => {
     let filtered = projects;
@@ -230,38 +243,6 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
     setSortConfig({ key, direction });
   };
 
-  const filteredCalendarEvents = useMemo(() => {
-    if (!dateRange || !dateRange.from) {
-      return calendarEvents;
-    }
-
-    const fromDate = new Date(dateRange.from);
-    fromDate.setHours(0, 0, 0, 0);
-
-    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-    toDate.setHours(23, 59, 59, 999);
-
-    return calendarEvents.filter(event => {
-      const startStr = event.start.dateTime || event.start.date;
-      if (!startStr) return false;
-
-      const eventStart = new Date(startStr);
-
-      const endStr = event.end.dateTime || event.end.date;
-      let eventEnd;
-      if (event.end.date) {
-          eventEnd = new Date(new Date(event.end.date).getTime() - 1);
-      } else if (event.end.dateTime) {
-          eventEnd = new Date(event.end.dateTime);
-      } else {
-          eventEnd = new Date(eventStart);
-          eventEnd.setHours(23, 59, 59, 999);
-      }
-      
-      return eventStart <= toDate && eventEnd >= fromDate;
-    });
-  }, [calendarEvents, dateRange]);
-
   const handleDeleteProject = (projectId: string) => {
     const project = projects.find(p => p.id === projectId);
     if (project) {
@@ -340,7 +321,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
       case 'kanban':
         return <KanbanView projects={filteredProjects} groupBy={kanbanGroupBy} />;
       case 'calendar':
-        return <CalendarImportView events={filteredCalendarEvents} onImportEvent={handleImportEvent} />;
+        return <CalendarImportView events={calendarEvents} onImportEvent={handleImportEvent} />;
       default:
         return null;
     }
@@ -378,7 +359,7 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
               </Button>
             )}
             {view === 'calendar' && (
-              <Button variant="ghost" className="h-8 w-8 p-0" onClick={refreshCalendarEvents}>
+              <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => refreshCalendarEvents(dateRange)}>
                 <span className="sr-only">Refresh calendar events</span>
                 <RefreshCw className="h-4 w-4" />
               </Button>
