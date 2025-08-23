@@ -49,7 +49,7 @@ const TiptapEditor = ({ content, onChange, placeholder, editable = true }: Tipta
 
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content, { emitUpdate: false });
+      editor.commands.setContent(content, false);
     }
   }, [content, editor]);
 
