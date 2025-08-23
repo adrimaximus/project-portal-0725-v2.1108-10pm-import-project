@@ -120,9 +120,9 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
     }
   };
 
-  const handlePexelsSelect = (url: string) => {
-    setImageFile(null);
-    setImagePreview(url);
+  const handlePexelsSelect = (file: File) => {
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
     setIsRemovingImage(false);
   };
 
@@ -249,8 +249,8 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
         setIsSaving(false);
         return;
       }
-      const { data: urlData } = supabase.storage.from('kb-images').getPublicUrl(filePath);
-      header_image_url = urlData.publicUrl;
+      const { data } = supabase.storage.from('kb-images').getPublicUrl(filePath);
+      header_image_url = data.publicUrl;
     } else if (isRemovingImage) {
       header_image_url = undefined;
     } else if (imagePreview && imagePreview !== article?.header_image_url) {
@@ -376,7 +376,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                   </div>
                 </TabsContent>
                 <TabsContent value="pexels">
-                  <PexelsImagePicker onImageSelect={handlePexelsSelect} initialSearchTerm={debouncedTitle} />
+                  <PexelsImagePicker onImageFileSelect={handlePexelsSelect} initialSearchTerm={debouncedTitle} />
                 </TabsContent>
               </Tabs>
             </FormItem>

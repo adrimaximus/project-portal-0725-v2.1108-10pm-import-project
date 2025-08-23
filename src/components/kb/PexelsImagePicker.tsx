@@ -9,11 +9,11 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PexelsImagePickerProps {
-  onImageSelect: (url: string) => void;
+  onImageFileSelect: (file: File) => void;
   initialSearchTerm?: string;
 }
 
-const PexelsImagePicker = ({ onImageSelect, initialSearchTerm }: PexelsImagePickerProps) => {
+const PexelsImagePicker = ({ onImageFileSelect, initialSearchTerm }: PexelsImagePickerProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,18 +51,24 @@ const PexelsImagePicker = ({ onImageSelect, initialSearchTerm }: PexelsImagePick
     handleSearch(searchTerm);
   };
 
-  const handleSelectAndUpload = async (pexelsUrl: string) => {
+  const handleSelectAndPrepare = async (photo: Photo) => {
     setIsUploading(true);
-    toast.info("Uploading selected image to your storage...");
+    toast.info("Preparing selected image...");
     try {
-      const { data, error } = await supabase.functions.invoke('upload-image-from-url', {
-        body: { imageUrl: pexelsUrl },
-      });
-      if (error) throw error;
-      onImageSelect(data.secure_url);
-      toast.success("Image selected and uploaded!");
+      const response = await fetch(photo.src.large2x);
+      if (!response.ok) {
+        throw new Error('Failed to download image from Pexels.');
+      }
+      const blob = await response.blob();
+      
+      const fileName = `${photo.id}-${photo.photographer.toLowerCase().replace(/\s/g, '-')}.jpeg`;
+      const imageFile = new File([blob], fileName, { type: 'image/jpeg' });
+
+      onImageFileSelect(imageFile);
+      toast.success("Image ready to be uploaded.");
+
     } catch (error: any) {
-      toast.error("Failed to upload image.", { description: error.message });
+      toast.error("Failed to prepare image.", { description: error.message });
     } finally {
       setIsUploading(false);
     }
@@ -110,7 +116,7 @@ const PexelsImagePicker = ({ onImageSelect, initialSearchTerm }: PexelsImagePick
                 key={photo.id}
                 type="button"
                 className="aspect-video rounded-md overflow-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 outline-none group"
-                onClick={() => handleSelectAndUpload(photo.src.large2x)}
+                onClick={() => handleSelectAndPrepare(photo)}
                 disabled={isUploading}
               >
                 <img
