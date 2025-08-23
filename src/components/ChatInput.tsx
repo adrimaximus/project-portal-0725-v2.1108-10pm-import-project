@@ -2,34 +2,38 @@ import { useRef, useState, forwardRef } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Paperclip, Send, X, Loader2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 import { Attachment } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
-import { useChatContext } from "@/contexts/ChatContext";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface ChatInputProps {}
+interface ChatInputProps {
+  onSendMessage: (text: string, attachment: Attachment | null) => void;
+  onTyping?: () => void;
+  isSending: boolean;
+  conversationId: string;
+}
 
-const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) => {
+const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ onSendMessage, onTyping, isSending, conversationId }, ref) => {
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { user: currentUser } = useAuth();
-  const { selectedConversation, sendMessage, sendTyping, isSendingMessage } = useChatContext();
   const lastTypingSentAtRef = useRef<number>(0);
 
   const triggerTyping = () => {
-    if (selectedConversation?.id === 'ai-assistant') return;
-    const now = Date.now();
-    if (now - lastTypingSentAtRef.current > 800) {
-      lastTypingSentAtRef.current = now;
-      sendTyping();
+    if (onTyping) {
+      const now = Date.now();
+      if (now - lastTypingSentAtRef.current > 800) {
+        lastTypingSentAtRef.current = now;
+        onTyping();
+      }
     }
   };
 
   const handleSend = async () => {
-    if ((!text.trim() && !attachmentFile) || !currentUser || !selectedConversation) return;
+    if ((!text.trim() && !attachmentFile) || !currentUser) return;
 
     let finalAttachment: Attachment | null = null;
 
@@ -37,7 +41,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) =
       setIsUploading(true);
       const fileExt = attachmentFile.name.split('.').pop();
       const fileName = `${uuidv4()}.${fileExt}`;
-      const filePath = `${currentUser.id}/${selectedConversation.id}/${fileName}`;
+      const filePath = `${currentUser.id}/${conversationId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('chat-attachments')
@@ -59,7 +63,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) =
       setIsUploading(false);
     }
 
-    sendMessage(text, finalAttachment);
+    onSendMessage(text, finalAttachment);
     setText("");
     setAttachmentFile(null);
   };
@@ -71,9 +75,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) =
     }
   };
 
-  if (!selectedConversation) return null;
-
-  const isSending = isUploading || isSendingMessage;
+  const isBusy = isUploading || isSending;
 
   return (
     <div className="border-t p-4 flex-shrink-0">
@@ -95,17 +97,17 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) =
             }
           }}
           className="pr-24"
-          disabled={isSending}
+          disabled={isBusy}
         />
         <div className="absolute bottom-2 right-2 flex items-center gap-2">
-          <Button variant="ghost" size="icon" asChild disabled={isSending}>
+          <Button variant="ghost" size="icon" asChild disabled={isBusy}>
             <label htmlFor="file-upload" className="cursor-pointer">
               <Paperclip className="h-5 w-5" />
               <input id="file-upload" type="file" className="sr-only" onChange={handleFileChange} />
             </label>
           </Button>
-          <Button size="icon" onClick={handleSend} disabled={isSending || (!text.trim() && !attachmentFile)}>
-            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+          <Button size="icon" onClick={handleSend} disabled={isBusy || (!text.trim() && !attachmentFile)}>
+            {isBusy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
           </Button>
         </div>
       </div>
@@ -113,7 +115,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>((props, ref) =
         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground bg-muted p-2 rounded-md">
           <Paperclip className="h-4 w-4" />
           <span>{attachmentFile.name}</span>
-          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => setAttachmentFile(null)} disabled={isSending}>
+          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => setAttachmentFile(null)} disabled={isBusy}>
             <X className="h-4 w-4" />
           </Button>
         </div>

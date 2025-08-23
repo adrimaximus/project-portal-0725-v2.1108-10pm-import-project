@@ -5,10 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import * as chatApi from '@/lib/chatApi';
-import { Conversation, Message, Collaborator, Attachment, User } from '@/types';
+import { Conversation, Message, Collaborator, Attachment } from '@/types';
 import debounce from 'lodash.debounce';
-import { v4 as uuidv4 } from 'uuid';
-import { analyzeProjects } from '@/lib/openai';
 
 interface ChatContextType {
   conversations: Omit<Conversation, 'messages'>[];
@@ -32,27 +30,11 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const AI_ASSISTANT_USER: User = {
-  id: 'ai-assistant',
-  name: 'AI Assistant',
-  initials: 'AI',
-  avatar: '/ai-avatar.png', // Anda mungkin perlu menambahkan gambar avatar AI
-};
-
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isSomeoneTyping, setIsSomeoneTyping] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [messageSearchResults, setMessageSearchResults] = useState<string[]>([]);
-  const [aiConversation, setAiConversation] = useState<Message[]>([
-    {
-      id: 'ai-initial-message',
-      text: "You can ask me to create projects, add tasks, write articles, or find information. How can I help you today?",
-      timestamp: new Date().toISOString(),
-      sender: AI_ASSISTANT_USER,
-    }
-  ]);
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
   
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
@@ -106,13 +88,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const sendMessageMutation = useMutation({
     mutationFn: (variables: { text: string, attachment: Attachment | null }) => 
       chatApi.sendMessage({ conversationId: selectedConversationId!, senderId: currentUser!.id, ...variables }),
-    onMutate: () => setIsSendingMessage(true),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
     },
     onError: (error: any) => toast.error("Failed to send message.", { description: error.message }),
-    onSettled: () => setIsSendingMessage(false),
   });
 
   const startNewChatMutation = useMutation({
@@ -187,92 +167,14 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     channel.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser?.id, conversationId: selectedConversationId } });
   }, [currentUser, selectedConversationId]);
 
-  const handleAiSendMessage = async (text: string, attachment: Attachment | null) => {
-    if (!currentUser) return;
-
-    const userMessage: Message = {
-      id: uuidv4(),
-      text: text,
-      timestamp: new Date().toISOString(),
-      sender: currentUser,
-      attachment: attachment || undefined,
-    };
-
-    setAiConversation(prev => [...prev, userMessage]);
-    setIsSendingMessage(true);
-
-    try {
-      let aiPrompt = text;
-      if (attachment) {
-        aiPrompt += `\n\n(The user has attached a file named "${attachment.name}", but I cannot view its content. I should inform the user about this limitation if relevant to my response.)`;
-      }
-
-      const result = await analyzeProjects(aiPrompt, aiConversation.map(m => ({ sender: m.sender.id === currentUser.id ? 'user' : 'ai', content: m.text })));
-      
-      const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made', 'deleted'];
-      if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
-        toast.info("Action successful. Refreshing data...");
-        await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['projects'] }),
-            queryClient.invalidateQueries({ queryKey: ['project'] }),
-            queryClient.invalidateQueries({ queryKey: ['kb_articles'] }),
-            queryClient.invalidateQueries({ queryKey: ['kb_article'] }),
-            queryClient.invalidateQueries({ queryKey: ['kb_folders'] }),
-            queryClient.invalidateQueries({ queryKey: ['goals'] }),
-            queryClient.invalidateQueries({ queryKey: ['goal'] }),
-        ]);
-      }
-  
-      const aiMessage: Message = {
-        id: uuidv4(),
-        text: result,
-        timestamp: new Date().toISOString(),
-        sender: AI_ASSISTANT_USER,
-      };
-      setAiConversation(prev => [...prev, aiMessage]);
-    } catch (error: any) {
-      let displayError = `Sorry, I encountered an error: ${error.message}.`;
-      if (error.message.includes('non-2xx status code')) {
-        displayError = "I'm having trouble connecting to my brain (the AI service). An administrator may need to configure the OpenAI integration in the settings.";
-      }
-      const errorMessage: Message = {
-        id: uuidv4(),
-        text: displayError,
-        timestamp: new Date().toISOString(),
-        sender: AI_ASSISTANT_USER,
-      };
-      setAiConversation(prev => [...prev, errorMessage]);
-    } finally {
-      setIsSendingMessage(false);
-    }
-  };
-
-  const sendMessage = (text: string, attachment: Attachment | null) => {
-    if (selectedConversationId === 'ai-assistant') {
-      handleAiSendMessage(text, attachment);
-    } else {
-      sendMessageMutation.mutate({ text, attachment });
-    }
-  };
-
   const selectedConversation = useMemo(() => {
     if (!selectedConversationId) return null;
     if (selectedConversationId === 'ai-assistant') {
-      return {
-        id: 'ai-assistant',
-        userName: 'AI Assistant',
-        userAvatar: AI_ASSISTANT_USER.avatar,
-        isGroup: false,
-        members: [currentUser!, AI_ASSISTANT_USER],
-        messages: aiConversation,
-        lastMessage: aiConversation[aiConversation.length - 1]?.text || "Ask me anything...",
-        lastMessageTimestamp: aiConversation[aiConversation.length - 1]?.timestamp || new Date().toISOString(),
-        unreadCount: 0,
-      } as Conversation;
+      return { id: 'ai-assistant' } as Conversation; // Return a shell object
     }
     const conversation = conversations.find(c => c.id === selectedConversationId);
     return conversation ? { ...conversation, messages } : null;
-  }, [selectedConversationId, conversations, messages, aiConversation, currentUser]);
+  }, [selectedConversationId, conversations, messages]);
 
   const value = {
     conversations: filteredConversations,
@@ -281,8 +183,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     selectConversation: setSelectedConversationId,
     messages,
     isLoadingMessages,
-    isSendingMessage: isSendingMessage || sendMessageMutation.isPending,
-    sendMessage,
+    isSendingMessage: sendMessageMutation.isPending,
+    sendMessage: sendMessageMutation.mutate,
     startNewChat: startNewChatMutation.mutate,
     startNewGroupChat: (collaborators: Collaborator[], groupName: string) => startNewGroupChatMutation.mutate({ members: collaborators, groupName }),
     deleteConversation: deleteConversationMutation.mutate,

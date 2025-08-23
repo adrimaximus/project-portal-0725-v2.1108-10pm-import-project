@@ -26,22 +26,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import GroupSettingsDialog from "./GroupSettingsDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { useChatContext } from "@/contexts/ChatContext";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Conversation } from "@/types";
 
 interface ChatHeaderProps {
+  conversation: Conversation;
   onBack?: () => void;
   typing?: boolean;
+  onLeaveGroup?: (conversationId: string) => void;
+  onClearChat?: (conversationId: string) => void;
+  onRefetchConversations?: () => void;
 }
 
-const ChatHeader = ({ onBack, typing = false }: ChatHeaderProps) => {
+const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClearChat, onRefetchConversations }: ChatHeaderProps) => {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { selectedConversation, leaveGroup, refetchConversations } = useChatContext();
 
-  if (!selectedConversation) {
+  if (!conversation) {
     return (
       <div className="flex items-center justify-center p-4 border-b h-[81px] flex-shrink-0">
         <p className="text-muted-foreground">Select a conversation to start chatting</p>
@@ -49,22 +50,13 @@ const ChatHeader = ({ onBack, typing = false }: ChatHeaderProps) => {
     );
   }
 
-  const { id, userName, userAvatar, isGroup, members, created_by } = selectedConversation;
+  const { id, userName, userAvatar, isGroup, members, created_by } = conversation;
   const otherUser = !isGroup ? members?.find(m => m.id !== currentUser?.id) : null;
   const isOwner = currentUser?.id === created_by;
 
   const handleViewProfile = () => {
     if (otherUser) {
       navigate(`/users/${otherUser.id}`);
-    }
-  };
-
-  const handleClearChat = async (conversationId: string) => {
-    const { error } = await supabase.from('messages').delete().eq('conversation_id', conversationId);
-    if (error) toast.error("Failed to clear chat history.");
-    else {
-      toast.success("Chat history has been cleared.");
-      refetchConversations();
     }
   };
 
@@ -162,7 +154,7 @@ const ChatHeader = ({ onBack, typing = false }: ChatHeaderProps) => {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => isGroup ? leaveGroup(id) : handleClearChat(id)}>
+                <AlertDialogAction onClick={() => isGroup ? onLeaveGroup?.(id) : onClearChat?.(id)}>
                   {isGroup ? "Leave" : "Continue"}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -174,9 +166,9 @@ const ChatHeader = ({ onBack, typing = false }: ChatHeaderProps) => {
         <GroupSettingsDialog
           open={isSettingsOpen}
           onOpenChange={setIsSettingsOpen}
-          conversation={selectedConversation}
+          conversation={conversation}
           onUpdate={() => {
-            refetchConversations();
+            onRefetchConversations?.();
             setIsSettingsOpen(false);
           }}
         />
