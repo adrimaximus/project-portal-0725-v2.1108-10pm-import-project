@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Image as ImageIcon, X } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
 import { KbFolder } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,7 @@ interface ArticleValues {
   title: string;
   content: string;
   folder_id: string;
+  header_image_url?: string;
 }
 
 interface ArticleEditorDialogProps {
@@ -42,6 +43,10 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
   const [isSaving, setIsSaving] = useState(false);
   const isEditMode = !!article;
   const { user } = useAuth();
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isRemovingImage, setIsRemovingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -60,15 +65,37 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
           content: article.content || '',
           folder_id: article.folder_id,
         });
+        setImagePreview(article.header_image_url || null);
       } else {
         form.reset({
           title: '',
           content: '',
           folder_id: folder?.id || '',
         });
+        setImagePreview(null);
       }
+      setImageFile(null);
+      setIsRemovingImage(false);
     }
   }, [article, folder, open, form]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+      setIsRemovingImage(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setIsRemovingImage(true);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const onSubmit = async (values: ArticleFormValues) => {
     if (!user) {
@@ -77,6 +104,22 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
     }
     setIsSaving(true);
     
+    let header_image_url = article?.header_image_url;
+
+    if (imageFile) {
+      const filePath = `kb-images/${user.id}/${Date.now()}-${imageFile.name}`;
+      const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, imageFile);
+      if (uploadError) {
+        toast.error("Failed to upload header image.");
+        setIsSaving(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+      header_image_url = urlData.publicUrl;
+    } else if (isRemovingImage) {
+      header_image_url = undefined;
+    }
+
     let finalFolderId = values.folder_id;
 
     if (!isEditMode && !finalFolderId) {
@@ -118,6 +161,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
       title: values.title,
       content: values.content ? JSON.parse(JSON.stringify(values.content)) : null,
       folder_id: finalFolderId,
+      header_image_url: header_image_url,
     };
 
     const promise = isEditMode && article?.id
@@ -149,7 +193,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
             <FormField control={form.control} name="title" render={({ field }) => (
               <FormItem>
                 <FormLabel>Title</FormLabel>
@@ -157,6 +201,36 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
                 <FormMessage />
               </FormItem>
             )} />
+            <FormItem>
+              <FormLabel>Header Image</FormLabel>
+              <FormControl>
+                {imagePreview ? (
+                  <div className="relative">
+                    <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-md" />
+                    <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={handleRemoveImage}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-md cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <div className="text-center">
+                      <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground" />
+                      <p className="mt-2 text-sm text-muted-foreground">Click to upload an image</p>
+                    </div>
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                    />
+                  </div>
+                )}
+              </FormControl>
+            </FormItem>
             <FormField
               control={form.control}
               name="folder_id"

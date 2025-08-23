@@ -194,6 +194,7 @@ const KnowledgeBasePage = () => {
                     editedLabel={formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
                     variant={cardVariants[index % cardVariants.length]}
                     Icon={FileText}
+                    header_image_url={article.header_image_url}
                   />
                 ))}
               </div>

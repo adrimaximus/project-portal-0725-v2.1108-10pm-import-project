@@ -16,6 +16,7 @@ type Article = {
   title: string;
   content: any;
   folder_id: string;
+  header_image_url?: string;
   kb_folders: {
     name: string;
     slug: string;
@@ -73,6 +74,7 @@ const ArticlePage = () => {
       <PortalLayout>
         <div className="space-y-4 max-w-4xl mx-auto">
           <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-64 w-full" />
           <Skeleton className="h-12 w-full" />
           <div className="space-y-2 pt-4">
             <Skeleton className="h-6 w-full" />
@@ -123,6 +125,14 @@ const ArticlePage = () => {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
+
+        {article.header_image_url && (
+          <img
+            src={article.header_image_url}
+            alt={article.title}
+            className="w-full h-64 object-cover rounded-lg"
+          />
+        )}
 
         <div className="flex justify-between items-start">
           <h1 className="text-4xl font-bold tracking-tight">{article.title}</h1>

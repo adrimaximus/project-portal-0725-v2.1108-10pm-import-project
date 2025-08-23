@@ -30,6 +30,7 @@ export interface KbArticle {
   content: any;
   folder_id: string;
   updated_at: string;
+  header_image_url?: string;
   kb_folders: {
     name: string;
     slug: string;
