@@ -440,13 +440,23 @@ serve(async (req) => {
         break;
       }
       case 'summarize-article-content': {
-        const { content } = payload;
+        const { content, fullArticleContent, articleTitle } = payload;
         if (!content) {
             throw new Error("Content is required to summarize.");
         }
 
-        const systemPrompt = `You are an expert editor. Your task is to summarize the following article content. The summary should be concise, capture the main points, and be presented in well-structured HTML format (paragraphs, lists). Respond ONLY with the summarized HTML content.`;
-        const userPrompt = `Summarize this content:\n\n${content}`;
+        const systemPrompt = `You are an expert editor. Your task is to summarize the provided text.
+- If you are given only 'content', summarize that content.
+- If you are given 'content' (a selection), 'fullArticleContent', and 'articleTitle', summarize the 'content' selection *within the context* of the full article. The summary should fit seamlessly back into the article.
+- The summary should be concise, capture the main points, and be presented in well-structured HTML format (paragraphs, lists).
+- Respond ONLY with the summarized HTML content.`;
+        
+        let userPrompt;
+        if (fullArticleContent && articleTitle) {
+            userPrompt = `Article Title: "${articleTitle}"\n\nFull Article Content (for context):\n${fullArticleContent}\n\nSummarize this selected text:\n"${content}"`;
+        } else {
+            userPrompt = `Summarize this content:\n\n${content}`;
+        }
 
         const response = await openai.chat.completions.create({
             model: "gpt-4-turbo",

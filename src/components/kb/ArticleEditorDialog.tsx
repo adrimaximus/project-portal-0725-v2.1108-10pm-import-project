@@ -188,30 +188,31 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
       return;
     }
 
+    const title = form.getValues('title');
+    const fullContent = form.getValues('content');
     const selection = editor.getSelection();
     const selectedText = selection ? editor.getText(selection.index, selection.length) : '';
-    const fullContent = form.getValues('content');
 
-    let contentToSummarize: string;
+    let payload: any;
     let isSelection = false;
 
     if (selection && selection.length > 0 && selectedText.trim()) {
-      contentToSummarize = selectedText;
+      payload = { content: selectedText, fullArticleContent: fullContent, articleTitle: title };
       isSelection = true;
       toast.info("Summarizing selected text...");
     } else {
-      contentToSummarize = fullContent;
-      if (!contentToSummarize || contentToSummarize.trim() === '<p><br></p>' || contentToSummarize.trim().length < 50) {
+      if (!fullContent || fullContent.trim() === '<p><br></p>' || fullContent.trim().length < 50) {
         toast.error("There is not enough content to summarize.");
         return;
       }
+      payload = { content: fullContent };
       toast.info("Summarizing the entire article...");
     }
     
     setIsSummarizing(true);
     try {
       const { data, error } = await supabase.functions.invoke('openai-generator', {
-        body: { feature: 'summarize-article-content', payload: { content: contentToSummarize } }
+        body: { feature: 'summarize-article-content', payload }
       });
       if (error) throw error;
 
