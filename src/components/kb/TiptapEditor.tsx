@@ -1,4 +1,5 @@
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import BubbleMenuExtension from '@tiptap/extension-bubble-menu';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -26,6 +27,7 @@ const TiptapEditor = ({ content, onChange, placeholder, editable = true }: Tipta
         placeholder,
       }),
       Underline,
+      BubbleMenuExtension,
     ],
     content: content,
     onUpdate: ({ editor }) => {
@@ -74,7 +76,7 @@ const TiptapEditor = ({ content, onChange, placeholder, editable = true }: Tipta
 
   return (
     <div className="relative border rounded-lg">
-      {editable && (
+      {editable && editor && (
         <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
           <div className="flex items-center gap-1 p-1 bg-background border rounded-lg shadow-md">
             <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive('bold') ? 'is-active bg-muted' : ''}>
