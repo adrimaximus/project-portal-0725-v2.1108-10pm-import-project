@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { cn, getInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { KbArticle } from "@/types";
 import { FileText, ArrowUpRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -10,9 +10,17 @@ interface KBCardProps {
   article: KbArticle;
 }
 
+const extractTextFromHtml = (html: string | undefined): string => {
+  if (!html) return "No description available.";
+  const strippedHtml = html.replace(/<[^>]+>/g, '');
+  if (strippedHtml.trim().length === 0) return "No description available.";
+  return strippedHtml;
+};
+
 export function KBCard({ article }: KBCardProps) {
-  // Placeholder data as discussed
-  const description = article.description || "No description available. This is a placeholder text to show how it looks.";
+  const contentHtml = article.content?.html || (typeof article.content === 'string' ? article.content : '');
+  const description = extractTextFromHtml(contentHtml);
+  
   const tags = article.tags || [{ id: '1', name: 'Placeholder', color: '#3b82f6' }, { id: '2', name: 'Tag', color: '#8b5cf6' }];
   const creator = article.creator || { id: '1', name: 'Admin User', avatar_url: '', initials: 'AU' };
 
