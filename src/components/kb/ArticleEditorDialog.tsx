@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface ArticleValues {
   id?: string;
   title: string;
-  content: string;
+  content: any;
   folder_id: string;
   header_image_url?: string;
 }
@@ -62,7 +62,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
       if (article) {
         form.reset({
           title: article.title,
-          content: article.content || '',
+          content: article.content?.html || article.content || '',
           folder_id: article.folder_id,
         });
         setImagePreview(article.header_image_url || null);
@@ -159,7 +159,7 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
     
     const articleData = {
       title: values.title,
-      content: values.content ? JSON.parse(JSON.stringify(values.content)) : null,
+      content: values.content ? { html: values.content } : null,
       folder_id: finalFolderId,
       header_image_url: header_image_url,
     };

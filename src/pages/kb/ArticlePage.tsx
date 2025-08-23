@@ -97,6 +97,8 @@ const ArticlePage = () => {
     );
   }
 
+  const articleContentHtml = article.content?.html || article.content || "";
+
   return (
     <PortalLayout>
       <div className="max-w-4xl mx-auto space-y-6">
@@ -144,7 +146,7 @@ const ArticlePage = () => {
 
         <div
           className="prose dark:prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: article.content || "" }}
+          dangerouslySetInnerHTML={{ __html: articleContentHtml }}
         />
       </div>
       <ArticleEditorDialog
