@@ -15,12 +15,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import PersonFormDialog from "@/components/people/PersonFormDialog";
 import { Badge } from "@/components/ui/badge";
 import WhatsappIcon from "@/components/icons/WhatsappIcon";
-import DuplicateContactsCard, { DuplicatePair } from "@/components/people/DuplicateContactsCard";
+import { DuplicatePair } from "@/components/people/DuplicateContactsCard";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import PeopleKanbanView from "@/components/people/PeopleKanbanView";
 import { Tag } from "@/types";
 import PeopleGridView from "@/components/people/PeopleGridView";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
+import MergeDialog from "@/components/people/MergeDialog";
 
 export interface Person {
   id: string;
@@ -51,6 +53,10 @@ const PeoplePage = () => {
     const savedView = localStorage.getItem('people_view_mode') as 'table' | 'kanban' | 'grid';
     return savedView || 'grid';
   });
+  const [isFindingDuplicates, setIsFindingDuplicates] = useState(false);
+  const [duplicateData, setDuplicateData] = useState<{ summary: string; pairs: DuplicatePair[] } | null>(null);
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
+  const [selectedMergePair, setSelectedMergePair] = useState<DuplicatePair | null>(null);
 
   useEffect(() => {
     localStorage.setItem('people_view_mode', viewMode);
@@ -74,23 +80,39 @@ const PeoplePage = () => {
     }
   });
 
-  const { data: duplicates = [], refetch: findDuplicates, isLoading: isFindingDuplicates } = useQuery({
-    queryKey: ['duplicates'],
-    queryFn: async () => {
-        const { data, error } = await supabase.rpc('find_duplicate_people');
-        if (error) {
-            toast.error("Failed to check for duplicates.", { description: error.message });
-            return [];
-        }
-        if (data && data.length > 0) {
-            toast.success(`Found ${data.length} potential duplicate(s).`);
-        } else {
-            toast.info("No potential duplicates found.");
-        }
-        return data as DuplicatePair[];
-    },
-    enabled: false,
-  });
+  const findAndAnalyzeDuplicates = async () => {
+    setIsFindingDuplicates(true);
+    toast.info("Searching for duplicates...");
+
+    const { data: pairs, error: rpcError } = await supabase.rpc('find_duplicate_people');
+    if (rpcError) {
+      toast.error("Failed to check for duplicates.", { description: rpcError.message });
+      setIsFindingDuplicates(false);
+      return;
+    }
+
+    if (!pairs || pairs.length === 0) {
+      toast.info("No potential duplicates found.");
+      setIsFindingDuplicates(false);
+      return;
+    }
+
+    toast.info(`Found ${pairs.length} potential duplicate(s). Asking AI for analysis...`);
+
+    const { data: aiData, error: aiError } = await supabase.functions.invoke('openai-generator', {
+      body: { feature: 'analyze-duplicates', payload: { duplicates: pairs } },
+    });
+
+    if (aiError) {
+      toast.error("AI analysis failed.", { description: aiError.message });
+      setIsFindingDuplicates(false);
+      return;
+    }
+
+    setDuplicateData({ summary: aiData.result, pairs: pairs as DuplicatePair[] });
+    setIsSummaryDialogOpen(true);
+    setIsFindingDuplicates(false);
+  };
 
   const requestSort = (key: keyof Person) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -183,7 +205,7 @@ const PeoplePage = () => {
             <p className="text-muted-foreground">Manage your contacts and connections.</p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="icon" onClick={() => findDuplicates()} disabled={isFindingDuplicates} className="flex-shrink-0">
+            <Button variant="outline" size="icon" onClick={findAndAnalyzeDuplicates} disabled={isFindingDuplicates} className="flex-shrink-0">
               {isFindingDuplicates ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitMerge className="h-4 w-4" />}
             </Button>
             <Button onClick={handleAddNew} className="w-full">
@@ -192,8 +214,6 @@ const PeoplePage = () => {
             </Button>
           </div>
         </div>
-
-        <DuplicateContactsCard duplicates={duplicates} />
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="relative w-full sm:flex-1 sm:max-w-md">
@@ -356,6 +376,28 @@ const PeoplePage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {duplicateData && (
+        <DuplicateSummaryDialog
+          open={isSummaryDialogOpen}
+          onOpenChange={setIsSummaryDialogOpen}
+          summary={duplicateData.summary}
+          duplicates={duplicateData.pairs}
+          onSelectPair={(pair) => {
+            setIsSummaryDialogOpen(false);
+            setSelectedMergePair(pair);
+          }}
+        />
+      )}
+
+      {selectedMergePair && (
+        <MergeDialog
+          open={!!selectedMergePair}
+          onOpenChange={() => setSelectedMergePair(null)}
+          person1={selectedMergePair.person1}
+          person2={selectedMergePair.person2}
+        />
+      )}
     </PortalLayout>
   );
 };
