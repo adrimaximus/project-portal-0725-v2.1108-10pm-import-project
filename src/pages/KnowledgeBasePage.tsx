@@ -1,31 +1,29 @@
 import { useState, useMemo, useEffect } from 'react';
 import PortalLayout from '@/components/PortalLayout';
-import { Button } from '@/components/ui/button';
-import { FolderPlus, Search, LayoutGrid, List, FilePlus, FileText } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { KbFolder, KbArticle } from '@/types';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
-import FolderCard from '@/components/kb/FolderCard';
-import { Input } from '@/components/ui/input';
 import FolderFormDialog from '@/components/kb/FolderFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import FolderListView from '@/components/kb/FolderListView';
 import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
-import { KBCard } from '@/components/kb/KBCard';
-import { formatDistanceToNow } from 'date-fns';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import ArticleListView from '@/components/kb/ArticleListView';
+import KnowledgeBaseHeader from '@/components/kb/KnowledgeBaseHeader';
+import FolderGridView from '@/components/kb/FolderGridView';
+import FolderListView from '@/components/kb/FolderListView';
+import ArticleGridView from '@/components/kb/ArticleGridView';
+
+type DialogState = 
+  | { type: 'edit-folder', data: KbFolder }
+  | { type: 'create-folder' }
+  | { type: 'delete-folder', data: KbFolder }
+  | { type: 'edit-article', data: KbArticle }
+  | { type: 'create-article' }
+  | { type: 'delete-article', data: KbArticle }
+  | null;
 
 const KnowledgeBasePage = () => {
-  const [isFolderFormOpen, setIsFolderFormOpen] = useState(false);
-  const [isArticleEditorOpen, setIsArticleEditorOpen] = useState(false);
-  const [editingFolder, setEditingFolder] = useState<KbFolder | null>(null);
-  const [editingArticle, setEditingArticle] = useState<KbArticle | null>(null);
-  const [folderToDelete, setFolderToDelete] = useState<KbFolder | null>(null);
-  const [articleToDelete, setArticleToDelete] = useState<KbArticle | null>(null);
+  const [dialog, setDialog] = useState<DialogState>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'articles'>(() => {
@@ -94,50 +92,29 @@ const KnowledgeBasePage = () => {
     return sortableItems;
   }, [filteredFolders, sortConfig]);
 
-  const handleAddNewFolder = () => {
-    setEditingFolder(null);
-    setIsFolderFormOpen(true);
-  };
-
-  const handleEditFolder = (folder: KbFolder) => {
-    setEditingFolder(folder);
-    setIsFolderFormOpen(true);
-  };
-
   const handleDeleteFolder = async () => {
-    if (!folderToDelete) return;
-    const { error } = await supabase.from('kb_folders').delete().eq('id', folderToDelete.id);
+    if (dialog?.type !== 'delete-folder') return;
+    const { error } = await supabase.from('kb_folders').delete().eq('id', dialog.data.id);
     if (error) toast.error(`Failed to delete folder: ${error.message}`);
     else {
-      toast.success(`Folder "${folderToDelete.name}" deleted.`);
+      toast.success(`Folder "${dialog.data.name}" deleted.`);
       queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
     }
-    setFolderToDelete(null);
-  };
-
-  const handleAddNewArticle = () => {
-    setEditingArticle(null);
-    setIsArticleEditorOpen(true);
-  };
-
-  const handleEditArticle = (article: KbArticle) => {
-    setEditingArticle(article);
-    setIsArticleEditorOpen(true);
+    setDialog(null);
   };
 
   const handleDeleteArticle = async () => {
-    if (!articleToDelete) return;
-    const { error } = await supabase.from('kb_articles').delete().eq('id', articleToDelete.id);
+    if (dialog?.type !== 'delete-article') return;
+    const { error } = await supabase.from('kb_articles').delete().eq('id', dialog.data.id);
     if (error) toast.error(`Failed to delete article: ${error.message}`);
     else {
-      toast.success(`Article "${articleToDelete.title}" deleted.`);
+      toast.success(`Article "${dialog.data.title}" deleted.`);
       queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
     }
-    setArticleToDelete(null);
+    setDialog(null);
   };
 
   const isLoading = isLoadingFolders || isLoadingArticles;
-  const cardVariants: ('blue' | 'purple' | 'green')[] = ['blue', 'purple', 'green'];
 
   const renderContent = () => {
     if (isLoading) {
@@ -150,76 +127,23 @@ const KnowledgeBasePage = () => {
 
     switch (viewMode) {
       case 'grid':
-        return (
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Folders</h2>
-              {sortedFolders.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {sortedFolders.map(folder => (
-                    <FolderCard key={folder.id} folder={folder} onEdit={handleEditFolder} onDelete={setFolderToDelete} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                  <p>No folders found.</p>
-                </div>
-              )}
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold mb-4">All Articles</h2>
-              {filteredArticles.length > 0 ? (
-                <ArticleListView 
+        return <FolderGridView 
+                  folders={sortedFolders} 
                   articles={filteredArticles} 
-                  onEdit={handleEditArticle} 
-                  onDelete={setArticleToDelete} 
-                />
-              ) : (
-                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                  <p>No articles found.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        );
+                  onEditFolder={(folder) => setDialog({ type: 'edit-folder', data: folder })}
+                  onDeleteFolder={(folder) => setDialog({ type: 'delete-folder', data: folder })}
+                  onEditArticle={(article) => setDialog({ type: 'edit-article', data: article })}
+                  onDeleteArticle={(article) => setDialog({ type: 'delete-article', data: article })}
+                />;
       case 'list':
-        return (
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Folders</h2>
-            {sortedFolders.length > 0 ? (
-              <FolderListView folders={sortedFolders} onEdit={handleEditFolder} onDelete={setFolderToDelete} requestSort={requestSort} />
-            ) : (
-              <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                <p>No folders found.</p>
-              </div>
-            )}
-          </div>
-        );
+        return <FolderListView 
+                  folders={sortedFolders} 
+                  onEdit={folder => setDialog({ type: 'edit-folder', data: folder })} 
+                  onDelete={folder => setDialog({ type: 'delete-folder', data: folder })} 
+                  requestSort={requestSort} 
+                />;
       case 'articles':
-        return (
-          <div>
-            <h2 className="text-xl font-semibold mb-4">All Articles</h2>
-            {filteredArticles.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {filteredArticles.map((article, index) => (
-                  <KBCard
-                    key={article.id}
-                    to={`/knowledge-base/articles/${article.slug}`}
-                    title={article.title}
-                    editedLabel={formatDistanceToNow(new Date(article.updated_at), { addSuffix: true })}
-                    variant={cardVariants[index % cardVariants.length]}
-                    Icon={FileText}
-                    header_image_url={article.header_image_url}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                <p>No articles found.</p>
-              </div>
-            )}
-          </div>
-        );
+        return <ArticleGridView articles={filteredArticles} />;
       default:
         return null;
     }
@@ -228,83 +152,42 @@ const KnowledgeBasePage = () => {
   return (
     <PortalLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Knowledge Base</h1>
-            <p className="text-muted-foreground">Find and manage your team's articles and documentation.</p>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button onClick={handleAddNewArticle} variant="outline" className="w-full">
-              <FilePlus className="mr-2 h-4 w-4" /> New Article
-            </Button>
-            <Button onClick={handleAddNewFolder} className="w-full">
-              <FolderPlus className="mr-2 h-4 w-4" /> New Folder
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="relative w-full sm:flex-1 sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 w-full"
-            />
-          </div>
-          <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'grid' | 'list' | 'articles')}}>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="grid" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Folders (Grid)</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Folders (List)</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="articles" aria-label="Articles view"><FileText className="h-4 w-4" /></ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Articles View</p></TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </ToggleGroup>
-        </div>
-
+        <KnowledgeBaseHeader
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onAddNewFolder={() => setDialog({ type: 'create-folder' })}
+          onAddNewArticle={() => setDialog({ type: 'create-article' })}
+        />
         {renderContent()}
       </div>
 
       <FolderFormDialog
-        open={isFolderFormOpen}
-        onOpenChange={setIsFolderFormOpen}
-        folder={editingFolder}
+        open={dialog?.type === 'create-folder' || dialog?.type === 'edit-folder'}
+        onOpenChange={() => setDialog(null)}
+        folder={dialog?.type === 'edit-folder' ? dialog.data : null}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['kb_folders'] })}
       />
       <ArticleEditorDialog
-        open={isArticleEditorOpen}
-        onOpenChange={setIsArticleEditorOpen}
-        article={editingArticle}
+        open={dialog?.type === 'create-article' || dialog?.type === 'edit-article'}
+        onOpenChange={() => setDialog(null)}
+        article={dialog?.type === 'edit-article' ? dialog.data : null}
         folders={folders}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
           queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
         }}
       />
-      <AlertDialog open={!!folderToDelete} onOpenChange={(open) => !open && setFolderToDelete(null)}>
+      <AlertDialog open={dialog?.type === 'delete-folder'} onOpenChange={() => setDialog(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the folder "{folderToDelete?.name}" and all articles inside it. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the folder "{dialog?.type === 'delete-folder' && dialog.data.name}" and all articles inside it. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteFolder}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={!!articleToDelete} onOpenChange={(open) => !open && setArticleToDelete(null)}>
+      <AlertDialog open={dialog?.type === 'delete-article'} onOpenChange={() => setDialog(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the article "{articleToDelete?.title}". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the article "{dialog?.type === 'delete-article' && dialog.data.title}". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteArticle}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
