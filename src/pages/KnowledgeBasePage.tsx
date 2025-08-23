@@ -40,7 +40,7 @@ const KnowledgeBasePage = () => {
   const { data: folders = [], isLoading: isLoadingFolders } = useQuery({
     queryKey: ['kb_folders'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('kb_folders').select('*').order('name', { ascending: true });
+      const { data, error } = await supabase.rpc('get_user_kb_folders');
       if (error) throw error;
       return data as KbFolder[];
     }
@@ -49,7 +49,7 @@ const KnowledgeBasePage = () => {
   const { data: articles = [], isLoading: isLoadingArticles } = useQuery({
     queryKey: ['kb_articles'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('kb_articles').select('*, kb_folders(name, slug)').order('title');
+      const { data, error } = await supabase.rpc('get_user_kb_articles');
       if (error) throw error;
       return data as KbArticle[];
     }
