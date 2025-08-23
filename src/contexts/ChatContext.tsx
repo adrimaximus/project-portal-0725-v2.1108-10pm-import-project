@@ -231,9 +231,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       };
       setAiConversation(prev => [...prev, aiMessage]);
     } catch (error: any) {
+      let displayError = `Sorry, I encountered an error: ${error.message}.`;
+      if (error.message.includes('non-2xx status code')) {
+        displayError = "I'm having trouble connecting to my brain (the AI service). An administrator may need to configure the OpenAI integration in the settings.";
+      }
       const errorMessage: Message = {
         id: uuidv4(),
-        text: `Sorry, I encountered an error: ${error.message}`,
+        text: displayError,
         timestamp: new Date().toISOString(),
         sender: AI_ASSISTANT_USER,
       };
