@@ -74,6 +74,13 @@ export const initialFeatures: Feature[] = [
     path: '/knowledge-base',
   },
   {
+    id: 'ai-assistant',
+    name: 'AI Assistant',
+    description: 'Interact with the AI assistant in a dedicated chat interface.',
+    status: 'enabled',
+    path: '/ai-assistant',
+  },
+  {
     id: 'notifications',
     name: 'Notifications',
     description: 'Stay updated with important events and alerts.',

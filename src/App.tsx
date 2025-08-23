@@ -36,6 +36,7 @@ import PeoplePage from "./pages/PeoplePage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import FolderDetailPage from "./pages/kb/FolderDetailPage";
 import Page from "./pages/kb/Page";
+import AiAssistantPage from "./pages/AiAssistantPage";
 
 const ADMIN_ROLES = ['admin', 'master admin'];
 
@@ -69,6 +70,7 @@ function App() {
           <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
           <Route path="/knowledge-base/folders/:slug" element={<FolderDetailPage />} />
           <Route path="/knowledge-base/pages/:slug" element={<Page />} />
+          <Route path="/ai-assistant" element={<AiAssistantPage />} />
         </Route>
 
         {/* Admin Protected Routes */}
