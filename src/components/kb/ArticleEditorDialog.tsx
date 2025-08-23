@@ -13,6 +13,8 @@ import RichTextEditor from '../RichTextEditor';
 import { KbFolder } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import PexelsImagePicker from './PexelsImagePicker';
 
 interface ArticleValues {
   id?: string;
@@ -97,6 +99,12 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
     }
   };
 
+  const handlePexelsSelect = (url: string) => {
+    setImageFile(null);
+    setImagePreview(url);
+    setIsRemovingImage(false);
+  };
+
   const onSubmit = async (values: ArticleFormValues) => {
     if (!user) {
         toast.error("You must be logged in.");
@@ -119,6 +127,8 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
       header_image_url = urlData.publicUrl;
     } else if (isRemovingImage) {
       header_image_url = undefined;
+    } else if (imagePreview && imagePreview !== article?.header_image_url) {
+      header_image_url = imagePreview;
     }
 
     let finalFolderId = values.folder_id;
@@ -196,23 +206,24 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
             <FormField control={form.control} name="title" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Title</FormLabel>
-                <FormControl><Input {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
+              <FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <FormItem>
               <FormLabel>Header Image</FormLabel>
-              <FormControl>
-                {imagePreview ? (
-                  <div className="relative">
-                    <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-md" />
-                    <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={handleRemoveImage}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
+              {imagePreview && (
+                <div className="relative">
+                  <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-md" />
+                  <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={handleRemoveImage}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              <Tabs defaultValue="upload" className="w-full mt-2">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="upload">Upload</TabsTrigger>
+                  <TabsTrigger value="pexels">Search Pexels</TabsTrigger>
+                </TabsList>
+                <TabsContent value="upload" className="pt-4">
                   <div
                     className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-md cursor-pointer"
                     onClick={() => fileInputRef.current?.click()}
@@ -229,8 +240,11 @@ const ArticleEditorDialog = ({ open, onOpenChange, folders = [], folder, article
                       onChange={handleFileChange}
                     />
                   </div>
-                )}
-              </FormControl>
+                </TabsContent>
+                <TabsContent value="pexels">
+                  <PexelsImagePicker onImageSelect={handlePexelsSelect} />
+                </TabsContent>
+              </Tabs>
             </FormItem>
             <FormField
               control={form.control}
