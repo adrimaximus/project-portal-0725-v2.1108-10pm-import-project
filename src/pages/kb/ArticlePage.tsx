@@ -6,12 +6,10 @@ import { KbFolder, KbArticle as Article } from '@/types';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Folder, FileText, Edit, Save, X } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Folder, FileText, Edit } from 'lucide-react';
+import { useState } from 'react';
 import ArticleEditorDialog from '@/components/kb/ArticleEditorDialog';
-import { useAuth } from '@/contexts/AuthContext';
-import TiptapEditor from '@/components/kb/TiptapEditor';
+import { Button } from '@/components/ui/button';
 
 const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
   const { data, error } = await supabase
@@ -39,9 +37,7 @@ const ArticlePage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [content, setContent] = useState('');
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   const { data: article, isLoading } = useQuery({
     queryKey: ['kb_article', slug],
@@ -60,35 +56,6 @@ const ArticlePage = () => {
       return data as KbFolder[];
     }
   });
-
-  useEffect(() => {
-    if (article) {
-      setContent(article.content?.html || article.content || "");
-    }
-  }, [article]);
-
-  const handleSave = async () => {
-    if (!article) return;
-    const { error } = await supabase
-      .from('kb_articles')
-      .update({ content: { html: content }, updated_at: new Date().toISOString() })
-      .eq('id', article.id);
-
-    if (error) {
-      toast.error("Failed to save article.", { description: error.message });
-    } else {
-      toast.success("Article saved successfully.");
-      queryClient.invalidateQueries({ queryKey: ['kb_article', slug] });
-      setIsEditing(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (article) {
-      setContent(article.content?.html || article.content || "");
-    }
-    setIsEditing(false);
-  };
 
   if (isLoading) {
     return (
@@ -118,7 +85,7 @@ const ArticlePage = () => {
     );
   }
 
-  const canEdit = user && (user.id === article.user_id || user.role === 'admin' || user.role === 'master admin');
+  const articleContentHtml = article.content?.html || article.content || "";
 
   return (
     <PortalLayout>
@@ -159,30 +126,28 @@ const ArticlePage = () => {
 
         <div className="flex justify-between items-start">
           <h1 className="text-4xl font-bold tracking-tight">{article.title}</h1>
-          {canEdit && (
-            <div className="flex gap-2">
-              {isEditing ? (
-                <>
-                  <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" /> Save</Button>
-                  <Button variant="outline" onClick={handleCancel}><X className="mr-2 h-4 w-4" /> Cancel</Button>
-                </>
-              ) : (
-                <Button variant="outline" onClick={() => setIsEditing(true)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-              )}
-            </div>
-          )}
+          <Button variant="outline" onClick={() => setIsEditorOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
         </div>
 
-        <TiptapEditor
-          content={content}
-          onChange={setContent}
-          placeholder="Start writing your article..."
-          editable={isEditing}
+        <div
+          className="prose dark:prose-invert max-w-none"
+          dangerouslySetInnerHTML={{ __html: articleContentHtml }}
         />
       </div>
+      <ArticleEditorDialog
+        open={isEditorOpen}
+        onOpenChange={setIsEditorOpen}
+        article={article}
+        folders={allFolders}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['kb_article', slug] });
+          queryClient.invalidateQueries({ queryKey: ['kb_articles', article.folder_id] });
+          queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
+        }}
+      />
     </PortalLayout>
   );
 };
