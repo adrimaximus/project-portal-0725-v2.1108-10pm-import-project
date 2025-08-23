@@ -12,17 +12,10 @@ const PexelsImage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const searchTerms = [
-    'event', 'brand activation', 'exhibition', 'booth', 'design', 
-    'marketing', 'gathering', 'meeting', 'mice', 'symposium', 'conference',
-    'corporate event', 'product launch'
-  ];
-
   const fetchPhotoAndCaption = useCallback(async () => {
     try {
-      const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
       const response = await pexelsClient.photos.search({ 
-        query: randomTerm, 
+        query: 'event', 
         per_page: 1, 
         page: Math.floor(Math.random() * 50) + 1,
         orientation: 'landscape'
