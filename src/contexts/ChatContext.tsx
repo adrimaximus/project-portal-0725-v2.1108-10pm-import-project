@@ -44,7 +44,14 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [isSomeoneTyping, setIsSomeoneTyping] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [messageSearchResults, setMessageSearchResults] = useState<string[]>([]);
-  const [aiConversation, setAiConversation] = useState<Message[]>([]);
+  const [aiConversation, setAiConversation] = useState<Message[]>([
+    {
+      id: 'ai-initial-message',
+      text: "You can ask me to create projects, add tasks, write articles, or find information. How can I help you today?",
+      timestamp: new Date().toISOString(),
+      sender: AI_ASSISTANT_USER,
+    }
+  ]);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   
   const { user: currentUser } = useAuth();
