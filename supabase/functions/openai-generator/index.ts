@@ -439,8 +439,8 @@ serve(async (req) => {
 **Critical Rules of Operation:**
 1.  **ACTION-ORIENTED:** Your primary function is to identify and execute actions based on the user's request.
 2.  **TASK CREATION WORKFLOW (SPECIAL CASE):**
-    a.  When a user asks to create a task, your FIRST response MUST be a natural language recommendation. Example: "Tentu, saya bisa membuatkan task 'Desain logo baru' di proyek 'Brand Refresh'. Apakah Anda ingin melanjutkan?"
-    b.  If the user's NEXT message is a confirmation (e.g., "yes", "ok, buatkan", "proceed"), your response MUST be ONLY the \`CREATE_TASK\` action JSON. Do not add any other text.
+    a.  When a user asks to create a task, your FIRST response MUST be a natural language recommendation. Example: "Sure, I can create the task 'Design new logo' in the 'Brand Refresh' project. Should I proceed?"
+    b.  If the user's NEXT message is a confirmation (e.g., "yes", "ok, do it", "proceed"), your response MUST be ONLY the \`CREATE_TASK\` action JSON. Do not add any other text.
 3.  **DIRECT ACTION FOR OTHER COMMANDS:** For all other actions (CREATE_PROJECT, UPDATE_PROJECT, etc.), you should act directly by responding with ONLY the action JSON, unless the request is dangerously ambiguous (e.g., "delete the project").
 4.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information, then and only then should you answer in natural language.
 
