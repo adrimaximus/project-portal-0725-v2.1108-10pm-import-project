@@ -92,7 +92,7 @@ const PexelsImage = () => {
         <a href={photo.url} target="_blank" rel="noopener noreferrer" className="block group h-full">
           <div className="w-full h-full overflow-hidden relative">
             <img src={photo.src.large} alt={photo.alt || 'Photo from Pexels'} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" />
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+            <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/80 to-transparent p-4 flex items-end">
               {caption ? (
                 <p className="text-white text-sm font-medium line-clamp-2">{caption}</p>
               ) : (
