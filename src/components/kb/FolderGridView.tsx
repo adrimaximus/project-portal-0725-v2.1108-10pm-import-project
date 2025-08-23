@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { KbFolder, KbArticle } from '@/types';
 import FolderCard from './FolderCard';
 import PageListView from './PageListView';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '../ui/button';
 
 interface FolderGridViewProps {
   folders: KbFolder[];
@@ -15,8 +16,17 @@ interface FolderGridViewProps {
   onDeleteArticle: (article: KbArticle) => void;
 }
 
+const FOLDERS_PREVIEW_LIMIT = 8;
+
 const FolderGridView = ({ folders, articles, onEditFolder, onDeleteFolder, onEditArticle, onDeleteArticle }: FolderGridViewProps) => {
   const [isFoldersOpen, setIsFoldersOpen] = useState(true);
+  const [isFoldersExpanded, setIsFoldersExpanded] = useState(false);
+
+  const sortedFolders = useMemo(() => {
+    return [...folders].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  }, [folders]);
+
+  const visibleFolders = isFoldersExpanded ? sortedFolders : sortedFolders.slice(0, FOLDERS_PREVIEW_LIMIT);
 
   return (
     <div className="space-y-8">
@@ -27,10 +37,19 @@ const FolderGridView = ({ folders, articles, onEditFolder, onDeleteFolder, onEdi
         </CollapsibleTrigger>
         <CollapsibleContent>
           {folders.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {folders.map(folder => (
-                <FolderCard key={folder.id} folder={folder} onEdit={onEditFolder} onDelete={onDeleteFolder} />
-              ))}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {visibleFolders.map(folder => (
+                  <FolderCard key={folder.id} folder={folder} onEdit={onEditFolder} onDelete={onDeleteFolder} />
+                ))}
+              </div>
+              {sortedFolders.length > FOLDERS_PREVIEW_LIMIT && (
+                <div className="text-center mt-6">
+                  <Button variant="outline" onClick={() => setIsFoldersExpanded(!isFoldersExpanded)}>
+                    {isFoldersExpanded ? 'Show Less' : `View All ${sortedFolders.length} Folders`}
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
