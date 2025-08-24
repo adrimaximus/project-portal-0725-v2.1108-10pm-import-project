@@ -59,7 +59,8 @@ export const PERMISSIONS: PermissionCategory[] = [
     id: 'billing',
     label: 'Billing',
     permissions: [
-      { id: 'billing:access', label: 'Access Billing', description: 'Allows user to view the billing page and invoices.' },
+      // This section is now empty as module:billing covers access.
+      // More granular permissions like billing:manage_subscription could be added here later.
     ],
   },
 ];
