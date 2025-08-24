@@ -43,7 +43,11 @@ const createSupabaseUserClient = (req) => {
 
 // --- PROMPTS ---
 
-const getAnalyzeProjectsSystemPrompt = (context) => `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
+const getAnalyzeProjectsSystemPrompt = (context, userName) => `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
+
+**Conversational Style:**
+1.  **Personalization:** Address the user, ${userName}, by their name from time to time to make the conversation more personal and engaging.
+2.  **Contextual Recall:** Leverage the conversation history to maintain context. If the user's current request relates to a previous topic, acknowledge it briefly before proceeding. For example, 'Last time we talked about the marketing campaign. Are you ready to add some tasks for it now?'
 
 **Critical Rules of Operation:**
 1.  **ACTION-ORIENTED:** Your primary function is to identify and execute actions based on the user's request.
@@ -611,7 +615,9 @@ async function analyzeProjects(payload, context) {
   if (historyError) throw historyError;
 
   const actionContext = await buildContext(userSupabase, user);
-  const systemPrompt = getAnalyzeProjectsSystemPrompt(actionContext);
+  const currentUserProfile = actionContext.userList.find(u => u.id === user.id);
+  const currentUserName = currentUserProfile ? currentUserProfile.name : 'there';
+  const systemPrompt = getAnalyzeProjectsSystemPrompt(actionContext, currentUserName);
 
   const userContent = [];
   if (request) {
