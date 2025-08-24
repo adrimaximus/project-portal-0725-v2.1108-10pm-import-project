@@ -22,7 +22,12 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
 
   const checkConnection = useCallback(async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('manage-openai-key', { method: 'GET' });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return false;
+      const { data, error } = await supabase.functions.invoke('manage-openai-key', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        method: 'GET'
+      });
       if (error) throw error;
       setIsConnected(data.connected);
       return data.connected;

@@ -91,11 +91,18 @@ const TeamSettingsPage = () => {
       return;
     }
 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error("Authentication error. Please log in again.");
+      return;
+    }
+
     let successCount = 0;
     toast.info(`Sending ${validInvites.length} invite(s)...`);
 
     for (const invite of validInvites) {
       const { error } = await supabase.functions.invoke('invite-user', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
         body: { email: invite.email, role: invite.role },
       });
 
@@ -139,7 +146,13 @@ const TeamSettingsPage = () => {
 
   const confirmDeleteMember = async () => {
     if (!memberToDelete) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error("Authentication error. Please log in again.");
+      return;
+    }
     const { error } = await supabase.functions.invoke('delete-user', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
       body: { user_id: memberToDelete.id },
     });
     if (error) {
@@ -186,7 +199,14 @@ const TeamSettingsPage = () => {
       return;
     }
 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error("Authentication error. Please log in again.");
+      return;
+    }
+
     const { error: deleteError } = await supabase.functions.invoke('delete-user', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
       body: { user_id: member.id },
     });
 
@@ -196,6 +216,7 @@ const TeamSettingsPage = () => {
     }
 
     const { error: inviteError } = await supabase.functions.invoke('invite-user', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
       body: { email: member.email, role: member.role },
     });
 

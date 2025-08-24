@@ -54,7 +54,17 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
 
   const handleMerge = async () => {
     setIsMerging(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error("Authentication error. Please log in again.");
+      setIsMerging(false);
+      return;
+    }
+
     const { error } = await supabase.functions.invoke('contact-duplicate-handler', {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
       body: {
         primary_person_id: primary.id,
         secondary_person_id: secondary.id,

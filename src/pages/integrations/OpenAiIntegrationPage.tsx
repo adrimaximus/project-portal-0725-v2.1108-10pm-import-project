@@ -19,11 +19,18 @@ const OpenAiIntegrationPage = () => {
   const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('manage-openai-key', { method: 'GET' });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setIsConnected(false);
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke('manage-openai-key', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        method: 'GET'
+      });
       if (error) throw error;
       setIsConnected(data.connected);
     } catch (error: any) {
-      // Don't show an error toast on initial check, as it might just not be configured yet.
       console.error("Failed to check OpenAI connection status:", error.message);
       setIsConnected(false);
     } finally {
@@ -42,7 +49,13 @@ const OpenAiIntegrationPage = () => {
     }
     setIsLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Authentication error. Please log in again.");
+        return;
+      }
       const { error } = await supabase.functions.invoke('manage-openai-key', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
         body: { apiKey },
       });
       if (error) throw error;
@@ -61,7 +74,13 @@ const OpenAiIntegrationPage = () => {
   const handleDisconnect = async () => {
     setIsLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Authentication error. Please log in again.");
+        return;
+      }
       const { error } = await supabase.functions.invoke('manage-openai-key', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
         method: 'DELETE',
       });
       if (error) throw error;

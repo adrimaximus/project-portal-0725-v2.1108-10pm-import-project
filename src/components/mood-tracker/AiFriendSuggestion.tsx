@@ -42,7 +42,16 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
     setConversation([]);
 
     try {
-      const { data: statusData, error: statusError } = await supabase.functions.invoke('manage-openai-key', { method: 'GET' });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setIsConnected(false);
+        setIsLoading(false);
+        return;
+      }
+      const { data: statusData, error: statusError } = await supabase.functions.invoke('manage-openai-key', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        method: 'GET'
+      });
       if (statusError || !statusData.connected) {
         setIsConnected(false);
         setIsLoading(false);
@@ -54,7 +63,8 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
       const moodSummary = data.length > 0 ? data.map(mood => `${mood.label} (${mood.value} kali)`).join(', ') : 'belum ada data suasana hati yang tercatat';
       const prompt = `Nama saya ${userName}. Selama ${periodInIndonesian} terakhir, ringkasan suasana hati saya adalah: ${moodSummary}. Berdasarkan data ini, berikan saya saran yang membangun.`;
 
-      const { data: insightData, error: insightError } = await supabase.functions.invoke('openai-generator', {
+      const { data: insightData, error: insightError } = await supabase.functions.invoke('ai-handler', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
         body: { feature: 'generate-mood-insight', payload: { prompt, userName, conversationHistory: [] } }
       });
 
@@ -82,7 +92,12 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
     setIsLoading(true);
 
     try {
-      const { data: insightData, error: insightError } = await supabase.functions.invoke('openai-generator', {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Not authenticated");
+      }
+      const { data: insightData, error: insightError } = await supabase.functions.invoke('ai-handler', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
         body: {
           feature: 'generate-mood-insight',
           payload: {

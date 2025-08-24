@@ -3,7 +3,15 @@ import { Project } from "@/types";
 import { Goal } from "@/types";
 
 const invokeOpenAiGenerator = async (feature: string, payload: any) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error("User not authenticated for AI function call.");
+  }
+
   const { data, error } = await supabase.functions.invoke('ai-handler', {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
     body: { feature, payload },
   });
 
@@ -51,7 +59,15 @@ export const analyzeProjects = async (request: string, conversationHistory?: { s
 };
 
 export const diagnoseProjectVisibility = async (): Promise<string> => {
-  const { data, error } = await supabase.functions.invoke('diagnose-projects');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error("User not authenticated for AI function call.");
+  }
+  const { data, error } = await supabase.functions.invoke('diagnose-projects', {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
   if (error) throw new Error(error.message);
   if (data.error) throw new Error(data.error);
   return data.result;

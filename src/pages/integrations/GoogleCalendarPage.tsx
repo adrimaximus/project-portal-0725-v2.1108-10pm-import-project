@@ -24,7 +24,12 @@ const GoogleCalendarPage = () => {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const fetchUserSelections = useCallback(async () => {
-    const { data, error } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'get-selections' } });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const { data, error } = await supabase.functions.invoke('google-auth-handler', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: { method: 'get-selections' }
+    });
     if (error) {
       toast.error("Failed to fetch your calendar selections.");
     } else {
@@ -35,7 +40,12 @@ const GoogleCalendarPage = () => {
   const handleDisconnect = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'disconnect' } });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const { error } = await supabase.functions.invoke('google-auth-handler', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { method: 'disconnect' }
+      });
       if (error) throw error;
       setIsConnected(false);
       setCalendars([]);
@@ -51,7 +61,10 @@ const GoogleCalendarPage = () => {
   const handleFetchCalendars = useCallback(async () => {
     setIsLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
       const { data, error } = await supabase.functions.invoke('google-auth-handler', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
         body: { method: 'list-calendars' }
       });
       if (error) throw error;
@@ -71,10 +84,18 @@ const GoogleCalendarPage = () => {
   const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setIsConnected(false);
+        return;
+      }
       const { error: healthError } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'health-check' } });
       if (healthError) throw new Error(`Edge Function not responding: ${healthError.message}`);
 
-      const { data, error } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'get-status' } });
+      const { data, error } = await supabase.functions.invoke('google-auth-handler', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { method: 'get-status' }
+      });
       if (error) throw error;
       setIsConnected(data.connected);
       if (data.connected) {
@@ -97,7 +118,14 @@ const GoogleCalendarPage = () => {
   const login = useGoogleLogin({
     onSuccess: async (codeResponse) => {
       setIsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Authentication error. Please log in again.");
+        setIsLoading(false);
+        return;
+      }
       const { error } = await supabase.functions.invoke('google-auth-handler', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
         body: { method: 'exchange-code', code: codeResponse.code }
       });
       if (error) {
@@ -125,8 +153,15 @@ const GoogleCalendarPage = () => {
 
   const handleSaveSelection = async () => {
     setIsLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error("Authentication error. Please log in again.");
+      setIsLoading(false);
+      return;
+    }
     const selectionsToSave = calendars.filter(c => selectedCalendars.includes(c.id));
     const { error } = await supabase.functions.invoke('google-auth-handler', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
       body: { method: 'save-selections', selections: selectionsToSave.map(s => ({ id: s.id, summary: s.summary })) }
     });
     if (error) {

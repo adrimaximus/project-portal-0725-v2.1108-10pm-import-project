@@ -46,7 +46,12 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
   const onSubmit = async (values: AddUserFormValues) => {
     setIsSaving(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Authentication error. Please log in again.");
+      }
       const { data, error } = await supabase.functions.invoke('create-user-manually', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
         body: {
           email: values.email,
           password: values.password,
