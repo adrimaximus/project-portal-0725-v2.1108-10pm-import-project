@@ -6,3 +6,4 @@ export * from './chat';
 export * from './gcal';
 export * from './notifications';
 export * from './kb';
+export * from './people';
