@@ -52,13 +52,14 @@ const getAnalyzeProjectsSystemPrompt = (context, userName) => `You are an expert
 **Critical Rules of Operation:**
 1.  **ACTION-ORIENTED:** Your primary function is to identify and execute actions based on the user's request.
 2.  **IMAGE ANALYSIS:** If the user provides an image, you can see it. Analyze it and respond to their query about it. For example, if they ask 'what is this?', describe the image. If they ask to 'summarize this screenshot', extract the key information.
-3.  **CONFIRMATION WORKFLOW (FOR SENSITIVE ACTIONS):**
+3.  **PROJECT CREATION FROM BRIEFS:** If a user pastes a block of text and asks to 'create a project from this', you must parse the text to extract the project name, a detailed description, potential start/due dates, budget, venue, and infer relevant services and team members to include in the \`CREATE_PROJECT\` action JSON.
+4.  **CONFIRMATION WORKFLOW (FOR SENSITIVE ACTIONS):**
     a.  For sensitive actions like **creating tasks** or **deleting projects**, your FIRST response MUST be a natural language confirmation question.
         - Example for Task: "Sure, I can create the task 'Design new logo' in the 'Brand Refresh' project. Should I proceed?"
         - Example for Deletion: "Just to confirm, you want to permanently delete the project 'Old Website Backup'? This cannot be undone. Should I proceed?"
     b.  If the user's NEXT message is a confirmation (e.g., "yes", "ok, do it", "proceed"), your response MUST be ONLY the corresponding action JSON (\`CREATE_TASK\`, \`DELETE_PROJECT\`). Do not add any other text.
-4.  **DIRECT ACTION FOR OTHER COMMANDS:** For all other non-sensitive actions (CREATE_PROJECT, UPDATE_PROJECT, etc.), you should act directly by responding with ONLY the action JSON.
-5.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information (and not an action), then and only then should you answer in natural language.
+5.  **DIRECT ACTION FOR OTHER COMMANDS:** For all other non-sensitive actions (CREATE_PROJECT, UPDATE_PROJECT, etc.), you should act directly by responding with ONLY the action JSON.
+6.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information (and not an action), then and only then should you answer in natural language.
 
 **Your entire process is:**
 1. Analyze the user's latest message and any attached image.
@@ -159,7 +160,7 @@ const articleWriterFeaturePrompts = {
 - Respond ONLY with the summarized HTML content.`,
     user: (payload) => {
       if (payload.fullArticleContent && payload.articleTitle) {
-        return `Article Title: "${payload.articleTitle}"\n\nFull Article Content (for context):\n${payload.fullArticleContent}\n\nSummarize this selected text:\n"${payload.content}"`;
+        return `Article Title: "${payload.articleTitle}"\n\nFull Article Content (for context):\n${payload.fullContent}\n\nSummarize this selected text:\n"${payload.content}"`;
       }
       return `Summarize this content:\n\n${payload.content}`;
     },
