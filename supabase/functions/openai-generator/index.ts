@@ -10,6 +10,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// --- HELPER FUNCTIONS ---
+
+const createSupabaseAdmin = () => {
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+};
+
+const getOpenAIClient = async (supabaseAdmin) => {
+  const { data: config, error: configError } = await supabaseAdmin
+    .from('app_config')
+    .select('value')
+    .eq('key', 'OPENAI_API_KEY')
+    .single();
+
+  if (configError || !config?.value) {
+    throw new Error("OpenAI API key is not configured by an administrator.");
+  }
+  return new OpenAI({ apiKey: config.value });
+};
+
+const createSupabaseUserClient = (req) => {
+    return createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+};
+
 // --- PROMPTS ---
 
 const getAnalyzeProjectsSystemPrompt = (context) => `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
