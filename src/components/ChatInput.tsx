@@ -1,8 +1,8 @@
-import { useRef, useState, forwardRef, useCallback } from "react";
+import { useRef, useState, forwardRef, useCallback, useEffect } from "react";
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import { Paperclip, Send, X, Loader2, UploadCloud } from "lucide-react";
+import { Paperclip, Send, X, Loader2, UploadCloud, Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
@@ -10,9 +10,20 @@ interface ChatInputProps {
   onTyping?: () => void;
   isSending: boolean;
   conversationId: string;
+  isListening?: boolean;
+  onToggleListening?: () => void;
+  isSpeechRecognitionSupported?: boolean;
 }
 
-const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ onSendMessage, onTyping, isSending, conversationId }, ref) => {
+const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ 
+  onSendMessage, 
+  onTyping, 
+  isSending, 
+  conversationId,
+  isListening,
+  onToggleListening,
+  isSpeechRecognitionSupported
+}, ref) => {
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const lastTypingSentAtRef = useRef<number>(0);
@@ -54,6 +65,13 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ onSendMessa
     }
   };
 
+  // This allows the parent component to update the text (e.g., from speech recognition)
+  useEffect(() => {
+    if (typeof ref === 'object' && ref?.current) {
+      (ref.current as any).setText = setText;
+    }
+  }, [ref]);
+
   return (
     <div {...getRootProps()} className="border-t p-4 flex-shrink-0 relative">
       <input {...getInputProps()} />
@@ -82,10 +100,15 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ onSendMessa
               triggerTyping();
             }
           }}
-          className="pr-24"
+          className="pr-36"
           disabled={isSending}
         />
-        <div className="absolute bottom-2 right-2 flex items-center gap-2">
+        <div className="absolute bottom-2 right-2 flex items-center gap-1">
+          {isSpeechRecognitionSupported && onToggleListening && (
+            <Button variant="ghost" size="icon" onClick={onToggleListening} disabled={isSending}>
+              {isListening ? <MicOff className="h-5 w-5 text-red-500 animate-pulse" /> : <Mic className="h-5 w-5" />}
+            </Button>
+          )}
           <Button variant="ghost" size="icon" asChild disabled={isSending}>
             <label htmlFor={`file-upload-${conversationId}`} className="cursor-pointer">
               <Paperclip className="h-5 w-5" />

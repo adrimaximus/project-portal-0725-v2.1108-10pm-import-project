@@ -3,12 +3,13 @@ import { useAiChat } from "@/hooks/useAiChat";
 import ChatHeader from "./ChatHeader";
 import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
-import { forwardRef, useMemo } from "react";
+import { forwardRef, useMemo, useEffect } from "react";
 import { Conversation } from "@/types";
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Loader2 } from 'lucide-react';
+import useSpeechRecognition from "@/hooks/useSpeechRecognition";
 
 interface AiChatViewProps {
   onBack?: () => void;
@@ -17,6 +18,17 @@ interface AiChatViewProps {
 const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack }, ref) => {
   const { user: currentUser } = useAuth();
   const { conversation, isLoading, sendMessage, aiUser, isConnected, isCheckingConnection } = useAiChat(currentUser);
+  const { isListening, transcript, startListening, stopListening, isSupported } = useSpeechRecognition();
+
+  useEffect(() => {
+    if (transcript && typeof ref === 'object' && ref?.current) {
+      const inputElement = ref.current as any;
+      inputElement.value = transcript;
+      if (inputElement.setText) {
+        inputElement.setText(transcript);
+      }
+    }
+  }, [transcript, ref]);
 
   const aiConversationObject = useMemo((): Conversation => ({
     id: 'ai-assistant',
@@ -79,6 +91,9 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
         onSendMessage={sendMessage}
         isSending={isLoading}
         conversationId="ai-assistant"
+        isListening={isListening}
+        onToggleListening={isListening ? stopListening : startListening}
+        isSpeechRecognitionSupported={isSupported}
       />
     </div>
   );
