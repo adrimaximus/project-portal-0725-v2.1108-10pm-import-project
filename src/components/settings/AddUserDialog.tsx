@@ -46,13 +46,25 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
   const onSubmit = async (values: AddUserFormValues) => {
     setIsSaving(true);
     try {
-      const { error } = await supabase.functions.invoke('create-user-manually', {
-        body: values,
+      const { data, error } = await supabase.functions.invoke('create-user-manually', {
+        body: {
+          email: values.email,
+          password: values.password,
+          mode: 'create',
+          email_confirm: true,
+          user_metadata: {
+            first_name: values.first_name,
+            last_name: values.last_name,
+          },
+          app_metadata: {
+            role: values.role,
+          }
+        },
       });
 
-      if (error) {
-        // This 'error' is a FunctionsHttpError from the supabase-js client
-        throw error;
+      if (error) throw error;
+      if (data && !data.ok) {
+        throw new Error(data.error);
       }
 
       toast.success("User added successfully.");
@@ -60,18 +72,8 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
       onOpenChange(false);
       form.reset();
     } catch (error: any) {
-      // This catches the thrown FunctionsHttpError
-      let description = "An unknown error occurred. Please check the console.";
-      
-      // The actual error message from the function is in the 'context' property
-      if (error.context && error.context.error) {
-        description = error.context.error;
-      } else {
-        // Fallback for unexpected error structures
-        description = error.message || "The server returned an error.";
-      }
-      
-      toast.error("Failed to add user.", { description });
+      const errorMessage = error.context?.error?.error || error.message || "An unknown error occurred.";
+      toast.error("Failed to add user.", { description: errorMessage });
     } finally {
       setIsSaving(false);
     }

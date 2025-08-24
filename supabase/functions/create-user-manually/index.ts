@@ -1,62 +1,70 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4'
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST,OPTIONS",
+  "Content-Type": "application/json",
+};
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { email, password, first_name, last_name, role } = await req.json()
-    if (!email || !password || !role) {
-      return new Response(JSON.stringify({ error: "Email, password, and role are required." }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    const body = await req.json().catch(() => ({}));
+    const {
+      email,
+      password,
+      mode = "create",
+      email_confirm = true,
+      user_metadata = {},
+      app_metadata = {}, // Ditambahkan untuk menangani peran
+      redirectTo,
+    } = body ?? {};
+
+    if (!email) {
+      return new Response(JSON.stringify({ ok: false, error: "email is required" }),
+        { status: 400, headers: corsHeaders });
+    }
+
+    if (mode === "invite") {
+      const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+        redirectTo,
+        data: app_metadata, // Invite menggunakan 'data' untuk app_metadata
       });
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true, mode, data }), { headers: corsHeaders });
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
+    // mode === "create"
+    const pwd = password ?? crypto.randomUUID() + "Aa1!";
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password: pwd,
+      email_confirm,
+      user_metadata,
+      app_metadata, // Ditambahkan untuk peran
+    });
+    if (error) throw error;
 
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
-      password: password,
-      email_confirm: true,
-      user_metadata: { first_name, last_name },
-      app_metadata: { role }
-    })
+    return new Response(JSON.stringify({ ok: true, mode, user: data.user, default_password: password ? undefined : pwd }),
+      { headers: corsHeaders });
 
-    if (error) {
-      // Let the client know about specific, common errors
-      if (error.message.includes('User already registered')) {
-        return new Response(JSON.stringify({ error: `A user with the email ${email} already exists.` }), {
-          status: 409, // Conflict
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      // Throw a generic server error for other issues
-      throw new Error(error.message);
-    }
-
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
-  } catch (error) {
-    console.error("Error in create-user-manually function:", error);
-    return new Response(JSON.stringify({ error: error.message || "An unexpected server error occurred." }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), {
       status: 500,
-    })
+      headers: corsHeaders,
+    });
   }
-})
+});
