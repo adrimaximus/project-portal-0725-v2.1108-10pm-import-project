@@ -32,7 +32,11 @@ const UnsplashImage = () => {
         if (fetchedPhoto.alt_description) {
           setCaption(''); // Clear old caption
           try {
-            const { data, error: captionError } = await supabase.functions.invoke('openai-generator', {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Not authenticated");
+
+            const { data, error: captionError } = await supabase.functions.invoke('ai-handler', {
+              headers: { Authorization: `Bearer ${session.access_token}` },
               body: { feature: 'generate-caption', payload: { altText: fetchedPhoto.alt_description } },
             });
             if (captionError) throw captionError;
