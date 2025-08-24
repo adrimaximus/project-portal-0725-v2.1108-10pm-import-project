@@ -43,7 +43,8 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
 
   const entriesMap = new Map<number, MoodHistoryEntry>();
   entries.forEach(entry => {
-    const entryDate = new Date(entry.date + 'T00:00:00');
+    const [entryYear, entryMonth, entryDay] = entry.date.split('-').map(Number);
+    const entryDate = new Date(entryYear, entryMonth - 1, entryDay);
     const dayOfMonth = entryDate.getDate();
     entriesMap.set(dayOfMonth, entry);
   });
