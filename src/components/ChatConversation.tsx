@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn, generateVibrantGradient } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
+import ReactMarkdown from 'react-markdown';
+import { Link } from 'react-router-dom';
 
 interface ChatConversationProps {
   messages: Message[];
@@ -116,7 +118,27 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
                 ) : (
                   <div className="flex items-end gap-2">
                     <div className="min-w-0">
-                      {message.text && <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>}
+                      {message.text && (
+                        <div className={cn(
+                          "text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none",
+                          isCurrentUser ? "prose-p:text-primary-foreground" : "",
+                          "[&_p]:my-0"
+                        )}>
+                          <ReactMarkdown
+                            components={{
+                              a: ({ node, ...props }) => {
+                                const href = props.href || '';
+                                if (href.startsWith('/')) {
+                                  return <Link to={href} {...props} className="text-inherit hover:text-inherit font-medium underline" />;
+                                }
+                                return <a {...props} target="_blank" rel="noopener noreferrer" className="text-inherit hover:text-inherit font-medium underline" />;
+                              }
+                            }}
+                          >
+                            {message.text}
+                          </ReactMarkdown>
+                        </div>
+                      )}
                       {message.attachment && (
                         <MessageAttachment attachment={message.attachment} />
                       )}

@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Message, Attachment, User } from '@/types';
 import { analyzeProjects } from '@/lib/openai';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AI_ASSISTANT_USER: User = {
   id: 'ai-assistant',
@@ -168,6 +169,10 @@ export const useAiChat = (currentUser: User | null) => {
       let displayError = `Sorry, I encountered an error: ${error.message}.`;
       if (error.message.includes('non-2xx status code') || error.message.includes('not configured')) {
         displayError = "I'm having trouble connecting to my brain (the AI service). An administrator may need to configure the OpenAI integration in the settings.";
+        const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
+        if (isAdmin) {
+            displayError += "\n\nYou can [configure it here](/settings/integrations/openai)."
+        }
       }
       const errorMessage: Message = {
         id: uuidv4(),
