@@ -29,7 +29,7 @@ serve(async (req) => {
       mode = "create",
       email_confirm = true,
       user_metadata = {},
-      app_metadata = {}, // Ditambahkan untuk menangani peran
+      app_metadata = {}, // Added for role
       redirectTo,
     } = body ?? {};
 
@@ -41,7 +41,7 @@ serve(async (req) => {
     if (mode === "invite") {
       const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
         redirectTo,
-        data: app_metadata, // Invite menggunakan 'data' untuk app_metadata
+        data: app_metadata, // inviteUserByEmail uses `data` for app_metadata
       });
       if (error) throw error;
       return new Response(JSON.stringify({ ok: true, mode, data }), { headers: corsHeaders });
@@ -54,15 +54,23 @@ serve(async (req) => {
       password: pwd,
       email_confirm,
       user_metadata,
-      app_metadata, // Ditambahkan untuk peran
+      app_metadata, // Pass app_metadata here
     });
-    if (error) throw error;
+    if (error) {
+        if (error.message.includes('User already registered')) {
+            return new Response(JSON.stringify({ ok: false, error: `A user with the email ${email} already exists.` }), {
+              status: 409, // Conflict
+              headers: corsHeaders,
+            });
+        }
+        throw error;
+    }
 
     return new Response(JSON.stringify({ ok: true, mode, user: data.user, default_password: password ? undefined : pwd }),
       { headers: corsHeaders });
 
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: String(e) }), {
+    return new Response(JSON.stringify({ ok: false, error: String(e.message || e) }), {
       status: 500,
       headers: corsHeaders,
     });

@@ -46,12 +46,23 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
   const onSubmit = async (values: AddUserFormValues) => {
     setIsSaving(true);
     try {
-      const { error } = await supabase.functions.invoke('create-user-manually', {
-        body: values,
+      const { data, error } = await supabase.functions.invoke('create-user-manually', {
+        body: {
+          email: values.email,
+          password: values.password,
+          user_metadata: {
+            first_name: values.first_name,
+            last_name: values.last_name,
+          },
+          app_metadata: {
+            role: values.role,
+          }
+        },
       });
 
-      if (error) {
-        throw error;
+      if (error) throw error;
+      if (data && !data.ok) {
+        throw new Error(data.error);
       }
 
       toast.success("User added successfully.");
@@ -61,7 +72,6 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
     } catch (error: any) {
       let description = "An unknown error occurred. Please check the console.";
       
-      // Correctly parse the error response from the Edge Function
       if (error.context && typeof error.context.json === 'function') {
         try {
           const errorBody = await error.context.json();
