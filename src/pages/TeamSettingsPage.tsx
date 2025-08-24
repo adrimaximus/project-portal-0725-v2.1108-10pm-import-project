@@ -47,6 +47,7 @@ const TeamSettingsPage = () => {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isRolesOpen, setIsRolesOpen] = useState(false);
+  const [isMembersOpen, setIsMembersOpen] = useState(true);
 
   const isMasterAdmin = currentUser?.role === 'master admin';
   const isAdmin = currentUser?.role === 'admin' || isMasterAdmin;
@@ -342,124 +343,131 @@ const TeamSettingsPage = () => {
         )}
 
         <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <div>
-                    <CardTitle>Current Members</CardTitle>
-                    <CardDescription>Review and manage existing team members.</CardDescription>
-                </div>
-                <div className="relative flex-1 max-w-xs">
+          <Collapsible open={isMembersOpen} onOpenChange={setIsMembersOpen}>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <CollapsibleTrigger className="flex-grow text-left flex justify-between items-center">
+                  <div>
+                      <CardTitle>Current Members</CardTitle>
+                      <CardDescription>Review and manage existing team members.</CardDescription>
+                  </div>
+                  <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                </CollapsibleTrigger>
+                <div className="relative w-full sm:w-auto sm:max-w-xs" onClick={(e) => e.stopPropagation()}>
                   <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
                   <Input placeholder="Search by name..." className="pl-8 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 </div>
               </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Last Active</TableHead>
-                    <TableHead className="w-[180px]">Role</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoadingMembers || isLoadingRoles ? (
-                    <TableRow><TableCell colSpan={4} className="text-center">Loading members...</TableCell></TableRow>
-                  ) : filteredMembers.map((member) => {
-                    const isRoleChangeDisabled = !isAdmin || member.id === currentUser?.id || (member.role === 'master admin' && !isMasterAdmin);
-                    const availableRolesForMember = validRoles.filter(role => isMasterAdmin || role.name !== 'master admin');
-                    const tooltipMessage = getDisabledTooltipMessage(member, currentUser);
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Last Active</TableHead>
+                        <TableHead className="w-[180px]">Role</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoadingMembers || isLoadingRoles ? (
+                        <TableRow><TableCell colSpan={4} className="text-center">Loading members...</TableCell></TableRow>
+                      ) : filteredMembers.map((member) => {
+                        const isRoleChangeDisabled = !isAdmin || member.id === currentUser?.id || (member.role === 'master admin' && !isMasterAdmin);
+                        const availableRolesForMember = validRoles.filter(role => isMasterAdmin || role.name !== 'master admin');
+                        const tooltipMessage = getDisabledTooltipMessage(member, currentUser);
 
-                    return (
-                    <TableRow key={member.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar><AvatarImage src={member.avatar} /><AvatarFallback>{member.initials}</AvatarFallback></Avatar>
-                          <div>
-                            <span className="font-medium">{member.name}</span>
-                            <p className="text-sm text-muted-foreground">{member.email}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {member.status === 'Pending invite' ? (
-                          <Badge variant={getStatusBadgeVariant(member.status)}>Pending invite</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            {member.updated_at ? formatDistanceToNow(new Date(member.updated_at), { addSuffix: true, locale: id }) : 'N/A'}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {member.status === 'suspended' ? (
-                          <Badge variant={getStatusBadgeVariant(member.status)}>Suspended</Badge>
-                        ) : member.status === 'Pending invite' ? (
-                          <span className="text-muted-foreground capitalize">{member.role}</span>
-                        ) : isRoleChangeDisabled ? (
-                          <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                                <div className="w-full">
-                                  <Select value={member.role || undefined} disabled>
-                                    <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50">
-                                      <SelectValue placeholder="No role assigned">
-                                        {roles.find(r => r.name === member.role)?.name || member.role}
-                                      </SelectValue>
-                                    </SelectTrigger>
-                                  </Select>
-                                </div>
-                              </TooltipTrigger><TooltipContent><p>{tooltipMessage}</p></TooltipContent></Tooltip></TooltipProvider>
-                        ) : (
-                          <Select value={member.role || undefined} onValueChange={(value) => handleRoleChange(member.id, value)}>
-                            <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent"><SelectValue placeholder="Select a role" /></SelectTrigger>
-                            <SelectContent>
-                              {availableRolesForMember.map(role => (
-                                <SelectItem key={role.id} value={role.name}>{role.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {member.id !== currentUser?.id && isAdmin && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {member.status === 'Pending invite' ? (
-                                <>
-                                  <DropdownMenuItem onSelect={() => handleResendInvite(member)}>
-                                    <Send className="mr-2 h-4 w-4" />
-                                    Resend Invite
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem className="text-red-600" onSelect={() => openDeleteDialog(member)}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Cancel Invite
-                                  </DropdownMenuItem>
-                                </>
-                              ) : (
-                                <>
-                                  <DropdownMenuItem onSelect={() => handleToggleSuspend(member)} disabled={member.role === 'master admin' && !isMasterAdmin}>
-                                    {member.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem className="text-red-600" onSelect={() => openDeleteDialog(member)} disabled={(member.role === 'master admin' && !isMasterAdmin)}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )})}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
+                        return (
+                        <TableRow key={member.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar><AvatarImage src={member.avatar} /><AvatarFallback>{member.initials}</AvatarFallback></Avatar>
+                              <div>
+                                <span className="font-medium">{member.name}</span>
+                                <p className="text-sm text-muted-foreground">{member.email}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {member.status === 'Pending invite' ? (
+                              <Badge variant={getStatusBadgeVariant(member.status)}>Pending invite</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                {member.updated_at ? formatDistanceToNow(new Date(member.updated_at), { addSuffix: true, locale: id }) : 'N/A'}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {member.status === 'suspended' ? (
+                              <Badge variant={getStatusBadgeVariant(member.status)}>Suspended</Badge>
+                            ) : member.status === 'Pending invite' ? (
+                              <span className="text-muted-foreground capitalize">{member.role}</span>
+                            ) : isRoleChangeDisabled ? (
+                              <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                                    <div className="w-full">
+                                      <Select value={member.role || undefined} disabled>
+                                        <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50">
+                                          <SelectValue placeholder="No role assigned">
+                                            {roles.find(r => r.name === member.role)?.name || member.role}
+                                          </SelectValue>
+                                        </SelectTrigger>
+                                      </Select>
+                                    </div>
+                                  </TooltipTrigger><TooltipContent><p>{tooltipMessage}</p></TooltipContent></Tooltip></TooltipProvider>
+                            ) : (
+                              <Select value={member.role || undefined} onValueChange={(value) => handleRoleChange(member.id, value)}>
+                                <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent"><SelectValue placeholder="Select a role" /></SelectTrigger>
+                                <SelectContent>
+                                  {availableRolesForMember.map(role => (
+                                    <SelectItem key={role.id} value={role.name}>{role.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {member.id !== currentUser?.id && isAdmin && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {member.status === 'Pending invite' ? (
+                                    <>
+                                      <DropdownMenuItem onSelect={() => handleResendInvite(member)}>
+                                        <Send className="mr-2 h-4 w-4" />
+                                        Resend Invite
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem className="text-red-600" onSelect={() => openDeleteDialog(member)}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Cancel Invite
+                                      </DropdownMenuItem>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <DropdownMenuItem onSelect={() => handleToggleSuspend(member)} disabled={member.role === 'master admin' && !isMasterAdmin}>
+                                        {member.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem className="text-red-600" onSelect={() => openDeleteDialog(member)} disabled={(member.role === 'master admin' && !isMasterAdmin)}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )})}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
       </div>
 
