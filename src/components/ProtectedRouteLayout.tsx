@@ -1,23 +1,26 @@
 import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import LoadingScreen from "./LoadingScreen";
 import React from "react";
 
 const ProtectedRouteLayout = () => {
-  const { session, loading } = useAuth();
+  const { session, user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
-    // Saat status otentikasi sedang dimuat, jangan render apa pun.
-    // Suspense di App.tsx akan menangani tampilan layar loading.
-    return null;
+    return <LoadingScreen />;
   }
 
   if (!session) {
-    // Jika tidak login, arahkan ke halaman login.
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
+  
+  if (!user) {
+    // This state might happen briefly while the profile is being fetched after a session is found.
+    // LoadingScreen is appropriate here.
+    return <LoadingScreen />;
+  }
 
-  // Jika sudah login, render halaman yang diminta.
   return <Outlet />;
 };
 

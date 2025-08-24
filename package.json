@@ -1,12 +1,14 @@
 {
-  "name": "project-portal",
+  "name": "vite_react_shadcn_ts",
+  "private": true,
   "version": "0.0.0",
   "type": "module",
-  "packageManager": "pnpm@10.13.1",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --port 5173"
+    "build:dev": "vite build --mode development",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -52,6 +54,8 @@
     "@tiptap/pm": "^3.0.7",
     "@tiptap/react": "^3.0.7",
     "@tiptap/starter-kit": "^3.0.7",
+    "@types/gapi.auth2": "^0.0.61",
+    "@types/gapi.client.calendar": "^3.0.12",
     "@types/lodash.debounce": "^4.0.9",
     "@types/react-big-calendar": "^1.16.2",
     "@types/react-mentions": "^4.4.1",
@@ -66,6 +70,7 @@
     "date-fns-tz": "^3.2.0",
     "dayjs": "^1.11.13",
     "embla-carousel-react": "^8.3.0",
+    "gapi-script": "^1.2.0",
     "input-otp": "^1.2.4",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.462.0",
@@ -97,7 +102,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@dyad-sh/react-vite-component-tagger": "latest",
+    "@dyad-sh/react-vite-component-tagger": "^0.8.0",
     "@eslint/js": "^9.9.0",
     "@tailwindcss/typography": "^0.5.15",
     "@types/node": "^22.5.5",
