@@ -103,7 +103,7 @@ const PeoplePage = () => {
 
     toast.info(`Found ${pairs.length} potential duplicate(s). Asking AI for analysis...`);
 
-    const { data: aiData, error: aiError } = await supabase.functions.invoke('openai-generator', {
+    const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-handler', {
       body: { feature: 'analyze-duplicates', payload: { duplicates: pairs } },
     });
 

@@ -3,7 +3,7 @@ import { Project } from "@/types";
 import { Goal } from "@/types";
 
 const invokeOpenAiGenerator = async (feature: string, payload: any) => {
-  const { data, error } = await supabase.functions.invoke('openai-generator', {
+  const { data, error } = await supabase.functions.invoke('ai-handler', {
     body: { feature, payload },
   });
 
