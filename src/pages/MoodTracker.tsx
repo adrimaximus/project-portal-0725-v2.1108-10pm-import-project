@@ -65,7 +65,10 @@ const MoodTracker = () => {
     }
 
     const today = new Date();
-    const todayString = today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    const todayString = `${year}-${month}-${day}`;
 
     const { error } = await supabase
       .from('mood_history')
@@ -162,8 +165,7 @@ const MoodTracker = () => {
     endDate.setHours(23, 59, 59, 999);
 
     const filteredHistory = history.filter(entry => {
-      const [year, month, day] = entry.date.split('-').map(Number);
-      const entryDate = new Date(year, month - 1, day);
+      const entryDate = new Date(entry.date + 'T00:00:00');
       return isWithinInterval(entryDate, { start: startDate!, end: endDate! });
     });
 
