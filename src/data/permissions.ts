@@ -55,12 +55,4 @@ export const PERMISSIONS: PermissionCategory[] = [
       { id: 'settings:manage_integrations', label: 'Manage Integrations', description: 'Allows user to connect or disconnect third-party apps.' },
     ],
   },
-  {
-    id: 'billing',
-    label: 'Billing',
-    permissions: [
-      // This section is now empty as module:billing covers access.
-      // More granular permissions like billing:manage_subscription could be added here later.
-    ],
-  },
 ];
