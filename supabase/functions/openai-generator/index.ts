@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 import OpenAI from 'https://esm.sh/openai@4.29.2';
 
 // --- UTILITIES & CONSTANTS ---
@@ -597,15 +597,11 @@ async function executeAction(actionData, context) {
 // --- FEATURE HANDLERS ---
 
 async function analyzeProjects(payload, context) {
-  const { req, openai } = context;
+  const { openai, user, userSupabase } = context;
   const { request, attachmentUrl } = payload;
   if (!request && !attachmentUrl) {
     throw new Error("An analysis request is required.");
   }
-
-  const userSupabase = createSupabaseUserClient(req);
-  const { data: { user } } = await userSupabase.auth.getUser();
-  if (!user) throw new Error("User not authenticated.");
 
   const { data: history, error: historyError } = await userSupabase
     .from('ai_chat_history')
@@ -978,6 +974,11 @@ serve(async (req) => {
   }
 
   try {
+    const userSupabase = createSupabaseUserClient(req);
+    const { data: { user }, error: authError } = await userSupabase.auth.getUser();
+    if (authError) throw authError;
+    if (!user) throw new Error("User not authenticated.");
+
     const { feature, payload } = await req.json();
     const handler = featureHandlers[feature];
 
@@ -993,6 +994,8 @@ serve(async (req) => {
         openai,
         supabaseAdmin,
         feature,
+        user,
+        userSupabase,
     };
 
     const responseData = await handler(payload, context);
