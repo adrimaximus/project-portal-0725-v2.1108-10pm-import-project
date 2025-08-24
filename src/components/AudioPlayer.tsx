@@ -40,7 +40,7 @@ const AudioPlayer = ({ src }: AudioPlayerProps) => {
       audio.removeEventListener('timeupdate', setAudioTime);
       audio.removeEventListener('ended', () => setIsPlaying(false));
     };
-  }, []);
+  }, [src]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
