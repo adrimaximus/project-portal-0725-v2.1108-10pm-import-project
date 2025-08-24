@@ -67,7 +67,7 @@ const LoginPage = () => {
                   },
                 },
               }}
-              providers={['google']}
+              providers={[]}
               socialLayout="horizontal"
             />
           </div>
