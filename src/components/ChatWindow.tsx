@@ -2,12 +2,13 @@ import ChatHeader from "./ChatHeader";
 import { ChatConversation } from "./ChatConversation";
 import { ChatInput } from "./ChatInput";
 import ChatPlaceholder from "./ChatPlaceholder";
-import { forwardRef, useState } from "react";
+import { forwardRef, useState, useEffect } from "react";
 import { useChatContext } from "@/contexts/ChatContext";
 import AiChatView from "./AiChatView";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Message } from "@/types";
+import useSpeechRecognition from "@/hooks/useSpeechRecognition";
 
 interface ChatWindowProps {
   onBack?: () => void;
@@ -16,6 +17,17 @@ interface ChatWindowProps {
 export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ onBack }, ref) => {
   const { selectedConversation, isSomeoneTyping, sendMessage, sendTyping, isSendingMessage, leaveGroup, refetchConversations } = useChatContext();
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const { isListening, transcript, startListening, stopListening, isSupported } = useSpeechRecognition();
+
+  useEffect(() => {
+    if (transcript && typeof ref === 'object' && ref?.current) {
+      const inputElement = ref.current as any;
+      inputElement.value = transcript;
+      if (inputElement.setText) {
+        inputElement.setText(transcript);
+      }
+    }
+  }, [transcript, ref]);
 
   const handleClearChat = async (conversationId: string) => {
     const { error } = await supabase.from('messages').delete().eq('conversation_id', conversationId);
@@ -62,6 +74,9 @@ export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ on
         conversationId={selectedConversation.id}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
+        isListening={isListening}
+        onToggleListening={isListening ? stopListening : startListening}
+        isSpeechRecognitionSupported={isSupported}
       />
     </div>
   );
