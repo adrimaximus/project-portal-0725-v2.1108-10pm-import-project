@@ -53,16 +53,30 @@ serve(async (req) => {
 
     const openai = await getOpenAIClient(supabaseAdmin);
 
-    // Fetch both person records with their relations
+    // Fetch both person records directly, bypassing RLS
     const { data: peopleData, error: peopleError } = await supabaseAdmin
-      .rpc('get_people_with_details')
+      .from('people')
+      .select(`
+        *,
+        people_projects ( projects (id, name, slug) ),
+        people_tags ( tags (id, name, color) )
+      `)
       .in('id', [primary_person_id, secondary_person_id]);
 
     if (peopleError) throw peopleError;
     if (!peopleData || peopleData.length < 2) throw new Error("Could not find both contacts to merge.");
 
-    const primaryPerson = peopleData.find(p => p.id === primary_person_id);
-    const secondaryPerson = peopleData.find(p => p.id === secondary_person_id);
+    // Re-shape the data to match the expected format (projects and tags as direct arrays)
+    const formattedPeopleData = peopleData.map(p => ({
+        ...p,
+        projects: p.people_projects.map(pp => pp.projects),
+        tags: p.people_tags.map(pt => pt.tags),
+        people_projects: undefined, // remove join table data
+        people_tags: undefined,
+    }));
+
+    const primaryPerson = formattedPeopleData.find(p => p.id === primary_person_id);
+    const secondaryPerson = formattedPeopleData.find(p => p.id === secondary_person_id);
 
     // Ask AI to merge
     const response = await openai.chat.completions.create({
@@ -85,27 +99,42 @@ serve(async (req) => {
     const allProjectIds = [...new Set([...(primaryPerson.projects || []).map(p => p.id), ...(secondaryPerson.projects || []).map(p => p.id)])];
     const allTagIds = [...new Set([...(primaryPerson.tags || []).map(t => t.id), ...(secondaryPerson.tags || []).map(t => t.id)])];
 
-    const { error: upsertError } = await supabaseAdmin.rpc('upsert_person_with_details', {
-        p_id: primary_person_id,
-        p_full_name: mergedPerson.full_name,
-        p_contact: mergedPerson.contact,
-        p_company: mergedPerson.company,
-        p_job_title: mergedPerson.job_title,
-        p_department: mergedPerson.department,
-        p_social_media: mergedPerson.social_media,
-        p_birthday: mergedPerson.birthday,
-        p_notes: mergedPerson.notes,
-        p_avatar_url: mergedPerson.avatar_url,
-        p_address: mergedPerson.address,
-        p_project_ids: allProjectIds,
-        p_existing_tag_ids: allTagIds,
-        p_custom_tags: [],
-    });
+    // 1. Update the primary person's details
+    const { error: updateError } = await supabaseAdmin
+      .from('people')
+      .update({
+        full_name: mergedPerson.full_name,
+        contact: mergedPerson.contact,
+        company: mergedPerson.company,
+        job_title: mergedPerson.job_title,
+        department: mergedPerson.department,
+        social_media: mergedPerson.social_media,
+        birthday: mergedPerson.birthday,
+        notes: mergedPerson.notes,
+        avatar_url: mergedPerson.avatar_url,
+        address: mergedPerson.address,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', primary_person_id);
+    if (updateError) throw new Error(`Failed to update primary contact: ${updateError.message}`);
 
-    if (upsertError) {
-        throw new Error(`Failed to update primary contact: ${upsertError.message}`);
+    // 2. Re-link all projects
+    await supabaseAdmin.from('people_projects').delete().eq('person_id', primary_person_id);
+    if (allProjectIds.length > 0) {
+        const projectLinks = allProjectIds.map(pid => ({ person_id: primary_person_id, project_id: pid }));
+        const { error: projectLinkError } = await supabaseAdmin.from('people_projects').insert(projectLinks);
+        if (projectLinkError) throw new Error(`Failed to link projects: ${projectLinkError.message}`);
     }
 
+    // 3. Re-link all tags
+    await supabaseAdmin.from('people_tags').delete().eq('person_id', primary_person_id);
+    if (allTagIds.length > 0) {
+        const tagLinks = allTagIds.map(tid => ({ person_id: primary_person_id, tag_id: tid }));
+        const { error: tagLinkError } = await supabaseAdmin.from('people_tags').insert(tagLinks);
+        if (tagLinkError) throw new Error(`Failed to link tags: ${tagLinkError.message}`);
+    }
+
+    // 4. Delete the secondary person
     const { error: deleteError } = await supabaseAdmin.from('people').delete().eq('id', secondary_person_id);
     if (deleteError) {
         console.error(`Failed to delete secondary contact ${secondary_person_id}: ${deleteError.message}`);
