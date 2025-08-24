@@ -26,6 +26,7 @@ const mapDbMessageToUiMessage = (dbMsg: any, currentUser: User): Message => ({
   text: dbMsg.content,
   timestamp: dbMsg.created_at,
   sender: dbMsg.sender === 'user' ? currentUser : AI_ASSISTANT_USER,
+  reply_to_message_id: dbMsg.reply_to_message_id,
 });
 
 export const useAiChat = (currentUser: User | null) => {
@@ -48,7 +49,27 @@ export const useAiChat = (currentUser: User | null) => {
         toast.error("Failed to load chat history.");
         throw error;
       }
-      return data.map(dbMsg => mapDbMessageToUiMessage(dbMsg, currentUser));
+      
+      const messages = data.map(dbMsg => mapDbMessageToUiMessage(dbMsg, currentUser));
+      
+      const messagesWithReplies = messages.map(msg => {
+          if (msg.reply_to_message_id) {
+              const repliedMsg = messages.find(m => m.id === msg.reply_to_message_id);
+              if (repliedMsg) {
+                  return {
+                      ...msg,
+                      repliedMessage: {
+                          content: repliedMsg.text,
+                          senderName: repliedMsg.sender.name,
+                          isDeleted: false,
+                      }
+                  };
+              }
+          }
+          return msg;
+      });
+
+      return messagesWithReplies;
     },
     enabled: !!currentUser,
   });
@@ -109,7 +130,7 @@ export const useAiChat = (currentUser: User | null) => {
     checkConnection();
   }, [checkConnection]);
 
-  const sendMessage = useCallback(async (text: string, attachmentFile: File | null) => {
+  const sendMessage = useCallback(async (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => {
     if (!currentUser) {
       toast.error("You must be logged in to chat with the AI.");
       return;
@@ -130,7 +151,19 @@ export const useAiChat = (currentUser: User | null) => {
       timestamp: new Date().toISOString(),
       sender: currentUser,
       attachment: attachmentForUi,
+      reply_to_message_id: replyToMessageId,
     };
+
+    if (replyToMessageId) {
+        const repliedMsg = conversation.find(m => m.id === replyToMessageId);
+        if (repliedMsg) {
+            userMessage.repliedMessage = {
+                content: repliedMsg.text,
+                senderName: repliedMsg.sender.name,
+                isDeleted: false,
+            };
+        }
+    }
 
     setConversation(prev => [...prev, userMessage]);
     setIsLoading(true);
@@ -146,7 +179,7 @@ export const useAiChat = (currentUser: User | null) => {
         attachmentUrl = urlData.publicUrl;
       }
 
-      const result = await analyzeProjects(text, undefined, attachmentUrl);
+      const result = await analyzeProjects(text, undefined, attachmentUrl, replyToMessageId);
       
       const aiMessage: Message = {
         id: uuidv4(),
@@ -198,7 +231,7 @@ export const useAiChat = (currentUser: User | null) => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, queryClient]);
+  }, [currentUser, queryClient, conversation]);
 
   return {
     conversation,

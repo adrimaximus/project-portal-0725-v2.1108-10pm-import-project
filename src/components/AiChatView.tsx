@@ -44,8 +44,7 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
   }), [aiUser, conversation, currentUser]);
 
   const handleSendMessage = (text: string, attachmentFile: File | null) => {
-    // The replyTo object is mainly for UI context. The AI gets the whole history.
-    sendMessage(text, attachmentFile);
+    sendMessage(text, attachmentFile, replyTo?.id);
     setReplyTo(null);
   };
 

@@ -445,7 +445,7 @@ async function executeAction(actionData, context) {
 async function analyzeProjects(payload, context) {
   console.log("[DIAGNOSTIC] analyzeProjects: Starting analysis.");
   const { openai, user, userSupabase, supabaseAdmin } = context;
-  const { request, attachmentUrl } = payload;
+  const { request, attachmentUrl, replyToMessageId } = payload;
   if (!request && !attachmentUrl) {
     throw new Error("An analysis request is required.");
   }
@@ -492,10 +492,19 @@ async function analyzeProjects(payload, context) {
   
   // Save conversation to DB
   if (request) {
-    await userSupabase.from('ai_chat_history').insert({ user_id: user.id, sender: 'user', content: request });
+    await userSupabase.from('ai_chat_history').insert({ 
+      user_id: user.id, 
+      sender: 'user', 
+      content: request,
+      reply_to_message_id: replyToMessageId,
+    });
   }
   if (responseText) {
-    await userSupabase.from('ai_chat_history').insert({ user_id: user.id, sender: 'ai', content: responseText });
+    await userSupabase.from('ai_chat_history').insert({ 
+      user_id: user.id, 
+      sender: 'ai', 
+      content: responseText 
+    });
   }
   console.log("[DIAGNOSTIC] analyzeProjects: Saved conversation history.");
 
