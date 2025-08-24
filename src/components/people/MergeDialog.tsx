@@ -5,7 +5,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Person } from '@/types';
+import { Person } from '@/pages/PeoplePage';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -31,8 +31,9 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
   const mergedPreview = useMemo(() => {
     const combined: Partial<Person> = { ...primary };
     
-    combined.email = primary.email || secondary.email;
-    combined.phone = primary.phone || secondary.phone;
+    const emails = [...new Set([...(primary.contact?.emails || []), ...(secondary.contact?.emails || [])])];
+    const phones = [...new Set([...(primary.contact?.phones || []), ...(secondary.contact?.phones || [])])];
+    combined.contact = { emails, phones };
 
     combined.social_media = { ...secondary.social_media, ...primary.social_media };
     
@@ -90,8 +91,8 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
       <CardContent className="p-3 pt-0 space-y-1">
         <DetailRow label="Job" value={person.job_title} />
         <DetailRow label="Company" value={person.company} />
-        <DetailRow label="Email" value={person.email} />
-        <DetailRow label="Phone" value={person.phone} />
+        <DetailRow label="Email" value={person.contact?.emails?.join(', ')} />
+        <DetailRow label="Phone" value={person.contact?.phones?.join(', ')} />
       </CardContent>
     </Card>
   );
@@ -114,8 +115,8 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
               <DetailRow label="Name" value={mergedPreview.full_name} />
               <DetailRow label="Job" value={mergedPreview.job_title} />
               <DetailRow label="Company" value={mergedPreview.company} />
-              <DetailRow label="Email" value={mergedPreview.email} />
-              <DetailRow label="Phone" value={mergedPreview.phone} />
+              <DetailRow label="Email" value={mergedPreview.contact?.emails?.join(', ')} />
+              <DetailRow label="Phone" value={mergedPreview.contact?.phones?.join(', ')} />
             </CardContent>
           </Card>
         </RadioGroup>
