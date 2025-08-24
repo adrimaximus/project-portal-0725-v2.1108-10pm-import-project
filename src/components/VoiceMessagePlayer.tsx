@@ -47,18 +47,25 @@ const VoiceMessagePlayer = ({ src, sender, timestamp, isCurrentUser }: VoiceMess
       setCurrentTime(audio.currentTime);
     };
     const setAudioTime = () => setCurrentTime(audio.currentTime);
-    const onEnded = () => setIsPlaying(false);
+    const onEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
 
-    audio.addEventListener('loadeddata', setAudioData);
+    audio.addEventListener('loadedmetadata', setAudioData);
     audio.addEventListener('timeupdate', setAudioTime);
     audio.addEventListener('ended', onEnded);
 
+    if (audio.readyState >= 1) {
+        setAudioData();
+    }
+
     return () => {
-      audio.removeEventListener('loadeddata', setAudioData);
+      audio.removeEventListener('loadedmetadata', setAudioData);
       audio.removeEventListener('timeupdate', setAudioTime);
       audio.removeEventListener('ended', onEnded);
     };
-  }, []);
+  }, [src]);
 
   const togglePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation();
