@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Message } from "@/types";
 
 interface ChatInputProps {
-  onSendMessage: (text: string, attachment: File | null) => void;
+  onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
   onTyping?: () => void;
   isSending: boolean;
   conversationId: string;
@@ -18,7 +18,7 @@ interface ChatInputProps {
   onCancelReply: () => void;
 }
 
-const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ 
+export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ 
   onSendMessage, 
   onTyping, 
   isSending, 
@@ -58,9 +58,10 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
 
   const handleSend = async () => {
     if (!text.trim() && !attachmentFile) return;
-    onSendMessage(text, attachmentFile);
+    onSendMessage(text, attachmentFile, replyTo?.id);
     setText("");
     setAttachmentFile(null);
+    onCancelReply();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,5 +150,3 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     </div>
   );
 });
-
-export default ChatInput;

@@ -38,7 +38,7 @@ const formatDateSeparator = (timestamp: string) => {
   }
 };
 
-const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
+export const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -196,5 +196,3 @@ const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConvers
     </div>
   );
 };
-
-export default ChatConversation;

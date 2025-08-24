@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import ChatList from "@/components/ChatList";
-import ChatWindow from "@/components/ChatWindow";
+import { ChatWindow } from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatProvider, useChatContext } from "@/contexts/ChatContext";

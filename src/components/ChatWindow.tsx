@@ -1,6 +1,6 @@
 import ChatHeader from "./ChatHeader";
-import ChatConversation from "./ChatConversation";
-import ChatInput from "./ChatInput";
+import { ChatConversation } from "./ChatConversation";
+import { ChatInput } from "./ChatInput";
 import ChatPlaceholder from "./ChatPlaceholder";
 import { forwardRef, useState } from "react";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -13,7 +13,7 @@ interface ChatWindowProps {
   onBack?: () => void;
 }
 
-const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ onBack }, ref) => {
+export const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ onBack }, ref) => {
   const { selectedConversation, isSomeoneTyping, sendMessage, sendTyping, isSendingMessage, leaveGroup, refetchConversations } = useChatContext();
   const [replyTo, setReplyTo] = useState<Message | null>(null);
 
@@ -66,5 +66,3 @@ const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ onBack },
     </div>
   );
 });
-
-export default ChatWindow;
