@@ -12,7 +12,7 @@ interface MoodHistoryProps {
 
 const MoodHistory = ({ history, title, className }: MoodHistoryProps) => {
   const groupedByMonth = history.reduce((acc, entry) => {
-    const entryDate = new Date(entry.date + 'T00:00:00Z');
+    const entryDate = new Date(entry.date + 'T00:00:00');
     const monthKey = format(entryDate, 'MMMM yyyy');
     
     if (!acc[monthKey]) {
