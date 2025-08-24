@@ -24,6 +24,7 @@ import PeopleGridView from "@/components/people/PeopleGridView";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
 import MergeDialog from "@/components/people/MergeDialog";
+import React from "react";
 
 export interface Person {
   id: string;
@@ -154,6 +155,17 @@ const PeoplePage = () => {
       (person.job_title && person.job_title.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [sortedPeople, searchTerm]);
+
+  const groupedPeople = useMemo(() => {
+    return filteredPeople.reduce((acc, person) => {
+      const company = person.company || 'No Company';
+      if (!acc[company]) {
+        acc[company] = [];
+      }
+      acc[company].push(person);
+      return acc;
+    }, {} as Record<string, Person[]>);
+  }, [filteredPeople]);
 
   const handleAddNew = () => {
     setPersonToEdit(null);
@@ -289,76 +301,85 @@ const PeoplePage = () => {
                 <TableBody>
                   {isLoading ? (
                     <TableRow><TableCell colSpan={7} className="text-center h-24">Loading...</TableCell></TableRow>
-                  ) : filteredPeople.length === 0 ? (
+                  ) : Object.keys(groupedPeople).length === 0 ? (
                     <TableRow><TableCell colSpan={7} className="text-center h-24">No people found.</TableCell></TableRow>
                   ) : (
-                    filteredPeople.map(person => (
-                      <TableRow key={person.id} className="cursor-pointer" onClick={() => handleViewProfile(person)}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={person.avatar_url} />
-                              <AvatarFallback style={generateVibrantGradient(person.id)}>
-                                <UserIcon className="h-5 w-5 text-white" />
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{person.full_name}</p>
-                              <p className="text-sm text-muted-foreground">{person.contact?.emails?.[0]}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <p className="font-medium">{person.job_title || '-'}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {person.department}{person.department && person.company ? ' at ' : ''}{person.company}
-                          </p>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell max-w-[200px] truncate text-sm text-muted-foreground">
-                          {person.address?.formatted_address || '-'}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <div className="flex items-center gap-3">
-                            {person.contact?.phones?.[0] && (
-                              <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.contact.phones[0])}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
-                                <WhatsappIcon className="h-4 w-4" />
-                                <span className="text-sm">{person.contact.phones[0]}</span>
-                              </a>
-                            )}
-                            {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                            {person.social_media?.twitter && <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                            {person.social_media?.instagram && (
-                              <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
-                                <Instagram className="h-4 w-4" />
-                                <span className="text-sm">{getInstagramUsername(person.social_media.instagram)}</span>
-                              </a>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <div className="flex flex-wrap gap-1">
-                            {(person.tags || []).map(tag => (
-                              <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
-                                {tag.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                          {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true })}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleEdit(person); }}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); setPersonToDelete(person); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                    Object.entries(groupedPeople).map(([company, peopleInGroup]) => (
+                      <React.Fragment key={company}>
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={7} className="font-semibold bg-muted/50">
+                            {company}
+                          </TableCell>
+                        </TableRow>
+                        {peopleInGroup.map(person => (
+                          <TableRow key={person.id} className="cursor-pointer" onClick={() => handleViewProfile(person)}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarImage src={person.avatar_url} />
+                                  <AvatarFallback style={generateVibrantGradient(person.id)}>
+                                    <UserIcon className="h-5 w-5 text-white" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium">{person.full_name}</p>
+                                  <p className="text-sm text-muted-foreground">{person.contact?.emails?.[0]}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              <p className="font-medium">{person.job_title || '-'}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {person.department}{person.department && person.company ? ' at ' : ''}{person.company}
+                              </p>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell max-w-[200px] truncate text-sm text-muted-foreground">
+                              {person.address?.formatted_address || '-'}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <div className="flex items-center gap-3">
+                                {person.contact?.phones?.[0] && (
+                                  <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.contact.phones[0])}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
+                                    <WhatsappIcon className="h-4 w-4" />
+                                    <span className="text-sm">{person.contact.phones[0]}</span>
+                                  </a>
+                                )}
+                                {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                                {person.social_media?.twitter && <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                                {person.social_media?.instagram && (
+                                  <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
+                                    <Instagram className="h-4 w-4" />
+                                    <span className="text-sm">{getInstagramUsername(person.social_media.instagram)}</span>
+                                  </a>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              <div className="flex flex-wrap gap-1">
+                                {(person.tags || []).map(tag => (
+                                  <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
+                                    {tag.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                              {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true })}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleEdit(person); }}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); setPersonToDelete(person); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </React.Fragment>
                     ))
                   )}
                 </TableBody>
