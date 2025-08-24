@@ -9,7 +9,8 @@ import { useGoogleLogin } from "@react-oauth/google";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle, Loader2, XCircle } from "lucide-react";
+import GoogleConnectionStatus, { DiagnosticStep } from "@/components/settings/GoogleConnectionStatus";
 
 interface GoogleCalendar {
   id: string;
@@ -21,7 +22,79 @@ const GoogleCalendarPage = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([]);
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticStep[]>([]);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  const runDiagnostics = useCallback(async () => {
+    setDiagnostics([]);
+    
+    const updateStep = (step: DiagnosticStep) => {
+      setDiagnostics(prev => {
+        const existingIndex = prev.findIndex(s => s.step === step.step);
+        if (existingIndex > -1) {
+          const newSteps = [...prev];
+          newSteps[existingIndex] = step;
+          return newSteps;
+        }
+        return [...prev, step];
+      });
+    };
+
+    // Step 1: Check Supabase Session
+    updateStep({ step: "Checking Supabase session", status: 'pending' });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      updateStep({ step: "Checking Supabase session", status: 'error', details: "You are not logged in." });
+      return;
+    }
+    updateStep({ step: "Checking Supabase session", status: 'success' });
+
+    // Step 2: Edge Function Health Check
+    updateStep({ step: "Pinging Edge Function", status: 'pending' });
+    try {
+      const { error } = await supabase.functions.invoke('google-auth-handler', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { method: 'health-check' }
+      });
+      if (error) throw error;
+      updateStep({ step: "Pinging Edge Function", status: 'success' });
+    } catch (error: any) {
+      updateStep({ step: "Pinging Edge Function", status: 'error', details: error.message });
+      return;
+    }
+
+    // Step 3: Check for stored Google Token
+    updateStep({ step: "Checking for stored Google token", status: 'pending' });
+    try {
+      const { data, error } = await supabase.functions.invoke('google-auth-handler', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { method: 'get-status' }
+      });
+      if (error) throw error;
+      if (data.connected) {
+        updateStep({ step: "Checking for stored Google token", status: 'success', details: "Token found." });
+      } else {
+        updateStep({ step: "Checking for stored Google token", status: 'success', details: "No token found. Please connect." });
+        return; // Stop if not connected
+      }
+    } catch (error: any) {
+      updateStep({ step: "Checking for stored Google token", status: 'error', details: error.message });
+      return;
+    }
+
+    // Step 4: Test Google API Access
+    updateStep({ step: "Testing Google API access", status: 'pending' });
+    try {
+      const { error } = await supabase.functions.invoke('google-auth-handler', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { method: 'list-calendars' }
+      });
+      if (error) throw error;
+      updateStep({ step: "Testing Google API access", status: 'success', details: "Successfully connected to Google Calendar API." });
+    } catch (error: any) {
+      updateStep({ step: "Testing Google API access", status: 'error', details: error.message });
+    }
+  }, []);
 
   const fetchUserSelections = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -55,8 +128,9 @@ const GoogleCalendarPage = () => {
       toast.error("Failed to disconnect.", { description: error.message });
     } finally {
       setIsLoading(false);
+      runDiagnostics();
     }
-  }, []);
+  }, [runDiagnostics]);
 
   const handleFetchCalendars = useCallback(async () => {
     setIsLoading(true);
@@ -89,12 +163,6 @@ const GoogleCalendarPage = () => {
         setIsConnected(false);
         return;
       }
-      const { error: healthError } = await supabase.functions.invoke('google-auth-handler', { 
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { method: 'health-check' } 
-      });
-      if (healthError) throw new Error(`Edge Function not responding: ${healthError.message}`);
-
       const { data, error } = await supabase.functions.invoke('google-auth-handler', {
         headers: { Authorization: `Bearer ${session.access_token}` },
         body: { method: 'get-status' }
@@ -107,7 +175,6 @@ const GoogleCalendarPage = () => {
       }
     } catch (error: any) {
       console.error("Failed to check connection status:", error.message);
-      toast.error("Connection Check Failed", { description: error.message });
       setIsConnected(false);
     } finally {
       setIsLoading(false);
@@ -116,7 +183,8 @@ const GoogleCalendarPage = () => {
 
   useEffect(() => {
     checkConnectionStatus();
-  }, [checkConnectionStatus]);
+    runDiagnostics();
+  }, [checkConnectionStatus, runDiagnostics]);
 
   const login = useGoogleLogin({
     onSuccess: async (codeResponse) => {
@@ -140,6 +208,7 @@ const GoogleCalendarPage = () => {
         await handleFetchCalendars();
       }
       setIsLoading(false);
+      runDiagnostics();
     },
     onError: () => {
       toast.error("Failed to connect to Google Calendar. Please try again.");
@@ -247,6 +316,8 @@ const GoogleCalendarPage = () => {
             </CardFooter>
           </Card>
         )}
+
+        <GoogleConnectionStatus steps={diagnostics} onRun={runDiagnostics} />
       </div>
     </PortalLayout>
   );
