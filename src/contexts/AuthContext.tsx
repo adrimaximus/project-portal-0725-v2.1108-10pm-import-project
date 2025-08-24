@@ -81,27 +81,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      if (session) {
-        await fetchUserProfile(session.user);
+    const getSessionAndListen = async () => {
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      if (initialSession) {
+        await fetchUserProfile(initialSession.user);
       } else {
         setUser(null);
-        localStorage.removeItem('lastUserName');
       }
-      
-      if (event === 'PASSWORD_RECOVERY') {
-        navigate('/reset-password');
-      }
-      if (event === 'SIGNED_OUT') {
-        toast.success("You have been successfully logged out.");
-      }
-      
       setLoading(false);
-    });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          navigate('/reset-password');
+        }
+        if (event === 'SIGNED_OUT') {
+          toast.success("You have been successfully logged out.");
+        }
+        setSession(newSession);
+        if (newSession) {
+          fetchUserProfile(newSession.user);
+        } else {
+          setUser(null);
+          localStorage.removeItem('lastUserName'); // Clear on logout
+        }
+      });
+
+      return subscription;
+    };
+
+    const subscriptionPromise = getSessionAndListen();
 
     return () => {
-      subscription.unsubscribe();
+      subscriptionPromise.then(subscription => subscription?.unsubscribe());
     };
   }, [navigate]);
 
