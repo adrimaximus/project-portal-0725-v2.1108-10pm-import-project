@@ -162,7 +162,7 @@ const MoodTracker = () => {
     endDate.setHours(23, 59, 59, 999);
 
     const filteredHistory = history.filter(entry => {
-      const entryDate = new Date(entry.date);
+      const entryDate = new Date(entry.date + 'T00:00:00');
       return isWithinInterval(entryDate, { start: startDate!, end: endDate! });
     });
 
