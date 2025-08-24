@@ -3,13 +3,12 @@ import { useAiChat } from "@/hooks/useAiChat";
 import ChatHeader from "./ChatHeader";
 import { ChatConversation } from "./ChatConversation";
 import { ChatInput } from "./ChatInput";
-import { forwardRef, useMemo, useEffect, useState } from "react";
+import { forwardRef, useMemo, useState } from "react";
 import { Conversation, Message } from "@/types";
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Loader2 } from 'lucide-react';
-import useSpeechRecognition from "@/hooks/useSpeechRecognition";
 
 interface AiChatViewProps {
   onBack?: () => void;
@@ -18,18 +17,9 @@ interface AiChatViewProps {
 const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack }, ref) => {
   const { user: currentUser } = useAuth();
   const { conversation, isLoading, sendMessage, aiUser, isConnected, isCheckingConnection } = useAiChat(currentUser);
-  const { isListening, transcript, startListening, stopListening, isSupported } = useSpeechRecognition();
   const [replyTo, setReplyTo] = useState<Message | null>(null);
 
-  useEffect(() => {
-    if (transcript && typeof ref === 'object' && ref?.current) {
-      const inputElement = ref.current as any;
-      inputElement.value = transcript;
-      if (inputElement.setText) {
-        inputElement.setText(transcript);
-      }
-    }
-  }, [transcript, ref]);
+  if (!currentUser) return null;
 
   const aiConversationObject = useMemo((): Conversation => ({
     id: 'ai-assistant',
@@ -47,8 +37,6 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
     sendMessage(text, attachmentFile, replyTo?.id);
     setReplyTo(null);
   };
-
-  if (!currentUser) return null;
 
   if (isCheckingConnection) {
     return (
@@ -99,9 +87,6 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
         onSendMessage={handleSendMessage}
         isSending={isLoading}
         conversationId="ai-assistant"
-        isListening={isListening}
-        onToggleListening={isListening ? stopListening : startListening}
-        isSpeechRecognitionSupported={isSupported}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
       />

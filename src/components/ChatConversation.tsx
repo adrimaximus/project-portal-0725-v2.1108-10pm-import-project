@@ -9,6 +9,7 @@ import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
 import { Loader2, CornerUpLeft } from "lucide-react";
 import { Button } from "./ui/button";
+import AudioPlayer from "./AudioPlayer";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -65,6 +66,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
         
         const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
         const isImageAttachment = message.attachment?.type.startsWith('image/');
+        const isAudioAttachment = message.attachment?.type.startsWith('audio/');
 
         return (
           <div key={message.id || index}>
@@ -134,6 +136,16 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                         {formatTimestamp(message.timestamp)}
                       </span>
                     </div>
+                  </div>
+                ) : isAudioAttachment ? (
+                  <div className="flex items-center gap-2">
+                    <AudioPlayer src={message.attachment!.url} />
+                    <span className={cn(
+                        "text-xs self-end flex-shrink-0",
+                        isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                    )}>
+                        {formatTimestamp(message.timestamp)}
+                    </span>
                   </div>
                 ) : (
                   <div className="flex items-end gap-2">

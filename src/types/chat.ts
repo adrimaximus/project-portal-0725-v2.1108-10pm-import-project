@@ -3,7 +3,7 @@ import { User, Collaborator } from './user';
 export interface Attachment {
   name: string;
   url: string;
-  type: 'image' | 'file';
+  type: string;
 }
 
 export interface RepliedMessageInfo {
