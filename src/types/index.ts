@@ -6,3 +6,11 @@ export * from './chat';
 export * from './gcal';
 export * from './notifications';
 export * from './kb';
+
+export interface ContactProperty {
+  id: string;
+  name: string;
+  label: string;
+  type: 'text' | 'email' | 'phone' | 'url' | 'date' | 'textarea' | 'number';
+  is_default: boolean;
+}

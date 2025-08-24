@@ -39,6 +39,7 @@ import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import FolderDetailPage from "./pages/kb/FolderDetailPage";
 import Page from "./pages/kb/Page";
 import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
+import ContactPropertiesPage from "./pages/ContactPropertiesPage";
 
 function App() {
   return (
@@ -71,6 +72,7 @@ function App() {
           <Route path="/settings" element={<PermissionGuard permission="module:settings"><SettingsPage /></PermissionGuard>} />
           <Route path="/settings/workspace" element={<MasterAdminGuard><WorkspaceSettingsPage /></MasterAdminGuard>} />
           <Route path="/settings/team" element={<PermissionGuard permission="module:settings"><TeamSettingsPage /></PermissionGuard>} />
+          <Route path="/settings/people-properties" element={<PermissionGuard permission="users:manage"><ContactPropertiesPage /></PermissionGuard>} />
           <Route path="/settings/integrations" element={<PermissionGuard permission="module:settings"><IntegrationsPage /></PermissionGuard>} />
           <Route path="/settings/integrations/openai" element={<PermissionGuard permission="module:settings"><OpenAiIntegrationPage /></PermissionGuard>} />
           <Route path="/settings/integrations/github" element={<PermissionGuard permission="module:settings"><GitHubPage /></PermissionGuard>} />

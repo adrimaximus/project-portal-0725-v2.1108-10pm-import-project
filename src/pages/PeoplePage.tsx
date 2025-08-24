@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, GitMerge, Loader2, Kanban, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search, Trash2, Edit, User as UserIcon, Linkedin, Twitter, Instagram, GitMerge, Loader2, Kanban, LayoutGrid, Table as TableIcon, Settings } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -251,37 +251,43 @@ const PeoplePage = () => {
                     className="pl-9 w-full"
                 />
             </div>
-            <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban' | 'grid')}} className="w-full sm:w-auto justify-center sm:justify-end">
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <ToggleGroupItem value="grid" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Grid View</p></TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Table View</p></TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Kanban View</p></TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            </ToggleGroup>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => navigate('/settings/people-properties')}>
+                <Settings className="mr-2 h-4 w-4" />
+                Manage Properties
+              </Button>
+              <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban' | 'grid')}} className="w-full sm:w-auto justify-center sm:justify-end">
+                  <TooltipProvider>
+                      <Tooltip>
+                          <TooltipTrigger asChild>
+                              <ToggleGroupItem value="grid" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Grid View</p></TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                          <TooltipTrigger asChild>
+                              <ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Table View</p></TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                          <TooltipTrigger asChild>
+                              <ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Kanban View</p></TooltipContent>
+                      </Tooltip>
+                  </TooltipProvider>
+              </ToggleGroup>
+            </div>
         </div>
 
         <div className="flex-grow min-h-0">
           {viewMode === 'table' ? (
             <div className="border rounded-lg overflow-auto h-full">
-              <Table>
+              <Table className="relative">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[250px]">
+                    <TableHead className="w-[250px] sticky left-0 bg-card z-10">
                       <Button variant="ghost" onClick={() => requestSort('full_name')} className="px-2">Name</Button>
                     </TableHead>
                     <TableHead className="hidden sm:table-cell">
@@ -295,7 +301,7 @@ const PeoplePage = () => {
                     <TableHead className="hidden lg:table-cell">
                       <Button variant="ghost" onClick={() => requestSort('updated_at')} className="px-2">Last Activity</Button>
                     </TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right sticky right-0 bg-card z-10">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -307,13 +313,13 @@ const PeoplePage = () => {
                     Object.entries(groupedPeople).map(([company, peopleInGroup]) => (
                       <React.Fragment key={company}>
                         <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={7} className="font-semibold bg-muted/50">
+                          <TableCell colSpan={7} className="font-semibold bg-muted/50 sticky left-0 z-10">
                             {company}
                           </TableCell>
                         </TableRow>
                         {peopleInGroup.map(person => (
                           <TableRow key={person.id} className="cursor-pointer" onClick={() => handleViewProfile(person)}>
-                            <TableCell>
+                            <TableCell className="sticky left-0 bg-card z-10">
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
                                   <AvatarImage src={person.avatar_url} />
@@ -366,7 +372,7 @@ const PeoplePage = () => {
                             <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                               {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true })}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right sticky right-0 bg-card z-10">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button>
