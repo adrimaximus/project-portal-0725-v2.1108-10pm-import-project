@@ -85,6 +85,7 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
       <ChatConversation
         messages={conversation}
         members={[currentUser, aiUser]}
+        isLoading={isLoading}
       />
       <ChatInput 
         ref={ref} 

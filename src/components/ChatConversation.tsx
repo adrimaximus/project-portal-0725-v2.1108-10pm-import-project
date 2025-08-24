@@ -1,4 +1,4 @@
-import { Message, Collaborator } from "@/types";
+import { Message, Collaborator, User } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,10 +7,12 @@ import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
+import { Loader2 } from "lucide-react";
 
 interface ChatConversationProps {
   messages: Message[];
   members: Collaborator[];
+  isLoading?: boolean;
 }
 
 const formatTimestamp = (timestamp: string) => {
@@ -34,22 +36,24 @@ const formatDateSeparator = (timestamp: string) => {
   }
 };
 
-const ChatConversation = ({ messages, members }: ChatConversationProps) => {
+const ChatConversation = ({ messages, members, isLoading }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "auto", block: "end" });
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
   if (!currentUser) {
     return <div>Loading...</div>;
   }
 
+  const aiUser = members.find(m => m.id === 'ai-assistant');
+
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-1">
+    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1">
       {messages.map((message, index) => {
         const isCurrentUser = message.sender.id === currentUser.id;
         const sender = members.find(m => m.id === message.sender.id) || message.sender;
@@ -156,7 +160,18 @@ const ChatConversation = ({ messages, members }: ChatConversationProps) => {
           </div>
         );
       })}
-      <div ref={scrollRef} />
+      {isLoading && aiUser && (
+        <div className="flex items-end gap-2 justify-start mt-4">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={aiUser.avatar} />
+            <AvatarFallback style={generateVibrantGradient(aiUser.id)}>{aiUser.initials}</AvatarFallback>
+          </Avatar>
+          <div className="max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 bg-muted flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm text-muted-foreground">AI is thinking...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
