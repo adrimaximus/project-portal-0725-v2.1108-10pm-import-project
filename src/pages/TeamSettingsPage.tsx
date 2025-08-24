@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Search, X, Edit, Trash2, Send } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, X, Edit, Trash2, Send, ChevronsUpDown } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -25,6 +25,7 @@ import AddUserDialog from '@/components/settings/AddUserDialog';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useRoles } from '@/hooks/useRoles';
 import { useQueryClient } from '@tanstack/react-query';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 type Invite = {
   id: number;
@@ -45,6 +46,7 @@ const TeamSettingsPage = () => {
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [isRolesOpen, setIsRolesOpen] = useState(false);
 
   const isMasterAdmin = currentUser?.role === 'master admin';
   const isAdmin = currentUser?.role === 'admin' || isMasterAdmin;
@@ -234,46 +236,58 @@ const TeamSettingsPage = () => {
         </div>
 
         <Card>
-          <CardHeader className="flex flex-row justify-between items-center">
-            <div>
-              <CardTitle>Manage Roles</CardTitle>
-              <CardDescription>Define roles and their permissions.</CardDescription>
+          <Collapsible open={isRolesOpen} onOpenChange={setIsRolesOpen}>
+            <div className="flex items-center justify-between p-6">
+              <div>
+                <CardTitle>Manage Roles</CardTitle>
+                <CardDescription>Define roles and their permissions.</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button onClick={() => { setEditingRole(null); setIsRoleDialogOpen(true); }}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Create Role
+                </Button>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <ChevronsUpDown className="h-4 w-4" />
+                    <span className="sr-only">Toggle</span>
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
             </div>
-            <Button onClick={() => { setEditingRole(null); setIsRoleDialogOpen(true); }}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Create Role
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {roles.map((role) => (
-                  <TableRow key={role.id}>
-                    <TableCell className="font-medium">{role.name}</TableCell>
-                    <TableCell>{role.description}</TableCell>
-                    <TableCell className="text-right">
-                      {!role.is_predefined && (
-                        <div className="flex gap-2 justify-end">
-                          <Button variant="ghost" size="icon" onClick={() => { setEditingRole(role); setIsRoleDialogOpen(true); }}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setRoleToDelete(role)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {roles.map((role) => (
+                      <TableRow key={role.id}>
+                        <TableCell className="font-medium">{role.name}</TableCell>
+                        <TableCell>{role.description}</TableCell>
+                        <TableCell className="text-right">
+                          {!role.is_predefined && (
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="ghost" size="icon" onClick={() => { setEditingRole(role); setIsRoleDialogOpen(true); }}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => setRoleToDelete(role)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
 
         {isAdmin && (
