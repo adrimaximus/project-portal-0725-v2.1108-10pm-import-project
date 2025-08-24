@@ -83,20 +83,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     setLoading(true);
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+
       if (_event === 'PASSWORD_RECOVERY') {
         navigate('/reset-password');
       }
-      if (_event === 'SIGNED_OUT') {
-        toast.success("You have been successfully logged out.");
-      }
       
-      setSession(session);
-      if (session) {
+      if (_event === 'SIGNED_IN' && session) {
+        await fetchUserProfile(session.user);
+        navigate('/dashboard', { replace: true });
+      } else if (_event === 'SIGNED_OUT') {
+        toast.success("You have been successfully logged out.");
+        setUser(null);
+        localStorage.removeItem('lastUserName');
+      } else if (session) {
         await fetchUserProfile(session.user);
       } else {
         setUser(null);
-        localStorage.removeItem('lastUserName');
       }
+      
       setLoading(false);
     });
 
