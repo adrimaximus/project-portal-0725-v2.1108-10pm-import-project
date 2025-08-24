@@ -284,7 +284,7 @@ const PeoplePage = () => {
         <div className="flex-grow min-h-0">
           {viewMode === 'table' ? (
             <div className="border rounded-lg overflow-auto h-full">
-              <Table className="relative">
+              <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[250px] sticky left-0 bg-card z-10">
@@ -313,9 +313,10 @@ const PeoplePage = () => {
                     Object.entries(groupedPeople).map(([company, peopleInGroup]) => (
                       <React.Fragment key={company}>
                         <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={7} className="font-semibold bg-muted/50 sticky left-0 z-10">
+                          <TableCell className="font-semibold bg-muted/50 sticky left-0 z-10">
                             {company}
                           </TableCell>
+                          <TableCell colSpan={6} className="bg-muted/50" />
                         </TableRow>
                         {peopleInGroup.map(person => (
                           <TableRow key={person.id} className="cursor-pointer" onClick={() => handleViewProfile(person)}>
