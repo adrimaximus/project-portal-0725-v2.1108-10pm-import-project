@@ -46,21 +46,22 @@ const getAnalyzeProjectsSystemPrompt = (context) => `You are an expert project a
 
 **Critical Rules of Operation:**
 1.  **ACTION-ORIENTED:** Your primary function is to identify and execute actions based on the user's request.
-2.  **CONFIRMATION WORKFLOW (FOR SENSITIVE ACTIONS):**
+2.  **IMAGE ANALYSIS:** If the user provides an image, you can see it. Analyze it and respond to their query about it. For example, if they ask 'what is this?', describe the image. If they ask to 'summarize this screenshot', extract the key information.
+3.  **CONFIRMATION WORKFLOW (FOR SENSITIVE ACTIONS):**
     a.  For sensitive actions like **creating tasks** or **deleting projects**, your FIRST response MUST be a natural language confirmation question.
         - Example for Task: "Sure, I can create the task 'Design new logo' in the 'Brand Refresh' project. Should I proceed?"
         - Example for Deletion: "Just to confirm, you want to permanently delete the project 'Old Website Backup'? This cannot be undone. Should I proceed?"
     b.  If the user's NEXT message is a confirmation (e.g., "yes", "ok, do it", "proceed"), your response MUST be ONLY the corresponding action JSON (\`CREATE_TASK\`, \`DELETE_PROJECT\`). Do not add any other text.
-3.  **DIRECT ACTION FOR OTHER COMMANDS:** For all other non-sensitive actions (CREATE_PROJECT, UPDATE_PROJECT, etc.), you should act directly by responding with ONLY the action JSON.
-4.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information, then and only then should you answer in natural language.
+4.  **DIRECT ACTION FOR OTHER COMMANDS:** For all other non-sensitive actions (CREATE_PROJECT, UPDATE_PROJECT, etc.), you should act directly by responding with ONLY the action JSON.
+5.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information (and not an action), then and only then should you answer in natural language.
 
 **Your entire process is:**
-1. Analyze the user's latest message.
+1. Analyze the user's latest message and any attached image.
 2. Is it a request to create a task or delete a project?
    - YES: Respond with a natural language recommendation and wait for confirmation. If they have already confirmed, respond with the appropriate action JSON.
    - NO: Is it another action?
      - YES: Respond with the appropriate action JSON.
-     - NO: It's a question. Answer it naturally.
+     - NO: It's a question (or an image to analyze). Answer it naturally.
 
 AVAILABLE ACTIONS:
 You can perform several types of actions. When you decide to perform an action, you MUST respond ONLY with a JSON object in the specified format.
@@ -591,9 +592,9 @@ async function executeAction(actionData, context) {
 
 async function analyzeProjects(payload, context) {
   const { req, openai } = context;
-  const { request, conversationHistory } = payload;
-  if (!request) {
-    throw new Error("An analysis request type is required.");
+  const { request, conversationHistory, attachmentUrl } = payload;
+  if (!request && !attachmentUrl) {
+    throw new Error("An analysis request is required.");
   }
 
   const userSupabase = createSupabaseUserClient(req);
@@ -603,14 +604,22 @@ async function analyzeProjects(payload, context) {
   const actionContext = await buildContext(userSupabase, user);
   const systemPrompt = getAnalyzeProjectsSystemPrompt(actionContext);
 
+  const userContent = [];
+  if (request) {
+    userContent.push({ type: "text", text: request });
+  }
+  if (attachmentUrl) {
+    userContent.push({ type: "image_url", image_url: { url: attachmentUrl } });
+  }
+
   const messages = [
     { role: "system", content: systemPrompt },
     ...(conversationHistory || []).map(msg => ({ role: msg.sender === 'ai' ? 'assistant' : 'user', content: msg.content })),
-    { role: "user", content: request }
+    { role: "user", content: userContent }
   ];
 
   const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-4o",
       messages,
       temperature: 0.1,
       max_tokens: 1000,

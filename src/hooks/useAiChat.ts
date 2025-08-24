@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { Message, Attachment, User } from '@/types';
 import { analyzeProjects } from '@/lib/openai';
+import { supabase } from '@/integrations/supabase/client';
 
 const AI_ASSISTANT_USER: User = {
   id: 'ai-assistant',
@@ -24,10 +25,19 @@ export const useAiChat = (currentUser: User | null) => {
   const [isLoading, setIsLoading] = useState(false);
   const queryClient = useQueryClient();
 
-  const sendMessage = useCallback(async (text: string, attachment: Attachment | null) => {
+  const sendMessage = useCallback(async (text: string, attachmentFile: File | null) => {
     if (!currentUser) {
       toast.error("You must be logged in to chat with the AI.");
       return;
+    }
+
+    let attachmentForUi: Attachment | undefined = undefined;
+    if (attachmentFile) {
+      attachmentForUi = {
+        name: attachmentFile.name,
+        url: URL.createObjectURL(attachmentFile),
+        type: attachmentFile.type.startsWith('image/') ? 'image' : 'file',
+      };
     }
 
     const userMessage: Message = {
@@ -35,19 +45,23 @@ export const useAiChat = (currentUser: User | null) => {
       text,
       timestamp: new Date().toISOString(),
       sender: currentUser,
-      attachment: attachment || undefined,
+      attachment: attachmentForUi,
     };
 
     setConversation(prev => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
-      let aiPrompt = text;
-      if (attachment) {
-        aiPrompt += `\n\n(The user has attached a file named "${attachment.name}", but I cannot view its content. I should inform the user about this limitation if relevant to my response.)`;
+      let attachmentUrl: string | null = null;
+      if (attachmentFile) {
+        const filePath = `ai-uploads/${currentUser.id}/${uuidv4()}-${attachmentFile.name}`;
+        const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, attachmentFile);
+        if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
+        const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
+        attachmentUrl = urlData.publicUrl;
       }
 
-      const result = await analyzeProjects(aiPrompt, conversation.map(m => ({ sender: m.sender.id === currentUser.id ? 'user' : 'ai', content: m.text })));
+      const result = await analyzeProjects(text, conversation.map(m => ({ sender: m.sender.id === currentUser.id ? 'user' : 'ai', content: m.text })), attachmentUrl);
       
       const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made', 'deleted'];
       if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {

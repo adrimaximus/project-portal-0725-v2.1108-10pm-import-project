@@ -7,6 +7,7 @@ import { useAuth } from './AuthContext';
 import * as chatApi from '@/lib/chatApi';
 import { Conversation, Message, Collaborator, Attachment } from '@/types';
 import debounce from 'lodash.debounce';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ChatContextType {
   conversations: Omit<Conversation, 'messages'>[];
@@ -16,7 +17,7 @@ interface ChatContextType {
   messages: Message[];
   isLoadingMessages: boolean;
   isSendingMessage: boolean;
-  sendMessage: (text: string, attachment: Attachment | null) => void;
+  sendMessage: (text: string, attachmentFile: File | null) => void;
   startNewChat: (collaborator: Collaborator) => void;
   startNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
   deleteConversation: (conversationId: string) => void;
@@ -86,8 +87,29 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, [conversations, searchTerm, messageSearchResults]);
 
   const sendMessageMutation = useMutation({
-    mutationFn: (variables: { text: string, attachment: Attachment | null }) => 
-      chatApi.sendMessage({ conversationId: selectedConversationId!, senderId: currentUser!.id, ...variables }),
+    mutationFn: async (variables: { text: string, attachmentFile: File | null }) => {
+      let attachment: Attachment | null = null;
+      if (variables.attachmentFile && currentUser && selectedConversationId) {
+        const file = variables.attachmentFile;
+        const filePath = `chat-uploads/${currentUser.id}/${selectedConversationId}/${uuidv4()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, file);
+        if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
+        
+        const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
+        attachment = {
+          name: file.name,
+          url: urlData.publicUrl,
+          type: file.type.startsWith('image/') ? 'image' : 'file',
+        };
+      }
+      
+      return chatApi.sendMessage({ 
+        conversationId: selectedConversationId!, 
+        senderId: currentUser!.id, 
+        text: variables.text, 
+        attachment 
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations', currentUser?.id] });
@@ -176,8 +198,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return conversation ? { ...conversation, messages } : null;
   }, [selectedConversationId, conversations, messages]);
 
-  const sendMessage = (text: string, attachment: Attachment | null) => {
-    sendMessageMutation.mutate({ text, attachment });
+  const sendMessage = (text: string, attachmentFile: File | null) => {
+    sendMessageMutation.mutate({ text, attachmentFile });
   };
 
   const value = {
