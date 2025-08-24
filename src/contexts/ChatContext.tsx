@@ -91,7 +91,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       let attachment: Attachment | null = null;
       if (variables.attachmentFile && currentUser && selectedConversationId) {
         const file = variables.attachmentFile;
-        const filePath = `chat-uploads/${currentUser.id}/${selectedConversationId}/${uuidv4()}-${file.name}`;
+        const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+        const filePath = `chat-uploads/${currentUser.id}/${selectedConversationId}/${uuidv4()}-${sanitizedFileName}`;
         const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, file);
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
         

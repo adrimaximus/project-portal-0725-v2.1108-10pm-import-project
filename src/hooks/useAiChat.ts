@@ -54,7 +54,8 @@ export const useAiChat = (currentUser: User | null) => {
     try {
       let attachmentUrl: string | null = null;
       if (attachmentFile) {
-        const filePath = `ai-uploads/${currentUser.id}/${uuidv4()}-${attachmentFile.name}`;
+        const sanitizedFileName = attachmentFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+        const filePath = `ai-uploads/${currentUser.id}/${uuidv4()}-${sanitizedFileName}`;
         const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, attachmentFile);
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
         const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
