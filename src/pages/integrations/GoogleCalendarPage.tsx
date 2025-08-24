@@ -89,7 +89,10 @@ const GoogleCalendarPage = () => {
         setIsConnected(false);
         return;
       }
-      const { error: healthError } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'health-check' } });
+      const { error: healthError } = await supabase.functions.invoke('google-auth-handler', { 
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { method: 'health-check' } 
+      });
       if (healthError) throw new Error(`Edge Function not responding: ${healthError.message}`);
 
       const { data, error } = await supabase.functions.invoke('google-auth-handler', {
