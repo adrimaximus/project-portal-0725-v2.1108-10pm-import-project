@@ -3,6 +3,8 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient as createSupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 import OpenAI from 'https://esm.sh/openai@4.29.2';
 import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
+import * as pdfjs from 'https://esm.sh/pdfjs-dist@4.4.168';
+import mammoth from 'https://esm.sh/mammoth@1.7.2';
 
 // --- UTILITIES & CONSTANTS ---
 
@@ -57,22 +59,23 @@ const getAnalyzeProjectsSystemPrompt = (context, userName) => `You are an expert
 **Critical Rules of Operation:**
 1.  **ACTION-ORIENTED:** Your primary function is to identify and execute actions based on the user's request.
 2.  **IMAGE ANALYSIS:** If the user provides an image, you can see it. Analyze it and respond to their query about it. For example, if they ask 'what is this?', describe the image. If they ask to 'summarize this screenshot', extract the key information.
-3.  **PROJECT CREATION FROM BRIEFS:** If a user pastes a block of text and asks to 'create a project from this', you must parse the text to extract the project name, a detailed description, potential start/due dates, budget, venue, and infer relevant services and team members to include in the \`CREATE_PROJECT\` action JSON.
-4.  **CONFIRMATION WORKFLOW (FOR SENSITIVE ACTIONS):**
+3.  **DOCUMENT ANALYSIS:** If the user uploads a PDF or Word document, its text content will be provided to you. Use this content to answer questions, summarize, or perform actions like creating a project based on a brief.
+4.  **PROJECT CREATION FROM BRIEFS:** If a user pastes a block of text and asks to 'create a project from this', you must parse the text to extract the project name, a detailed description, potential start/due dates, budget, venue, and infer relevant services and team members to include in the \`CREATE_PROJECT\` action JSON.
+5.  **CONFIRMATION WORKFLOW (FOR SENSITIVE ACTIONS):**
     a.  For sensitive actions like **creating tasks** or **deleting projects**, your FIRST response MUST be a natural language confirmation question.
         - Example for Task: "Sure, I can create the task 'Design new logo' in the 'Brand Refresh' project. Should I proceed?"
         - Example for Deletion: "Just to confirm, you want to permanently delete the project 'Old Website Backup'? This cannot be undone. Should I proceed?"
     b.  If the user's NEXT message is a confirmation (e.g., "yes", "ok, do it", "proceed"), your response MUST be ONLY the corresponding action JSON (\`CREATE_TASK\`, \`DELETE_PROJECT\`). Do not add any other text.
-5.  **DIRECT ACTION FOR OTHER COMMANDS:** For all other non-sensitive actions (CREATE_PROJECT, UPDATE_PROJECT, etc.), you should act directly by responding with ONLY the action JSON.
-6.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information (and not an action), then and only then should you answer in natural language.
+6.  **DIRECT ACTION FOR OTHER COMMANDS:** For all other non-sensitive actions (CREATE_PROJECT, UPDATE_PROJECT, etc.), you should act directly by responding with ONLY the action JSON.
+7.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information (and not an action), then and only then should you answer in natural language.
 
 **Your entire process is:**
-1. Analyze the user's latest message and any attached image.
+1. Analyze the user's latest message and any attached image or document.
 2. Is it a request to create a task or delete a project?
    - YES: Respond with a natural language recommendation and wait for confirmation. If they have already confirmed, respond with the appropriate action JSON.
    - NO: Is it another action?
      - YES: Respond with the appropriate action JSON.
-     - NO: It's a question (or an image to analyze). Answer it naturally.
+     - NO: It's a question (or an image/document to analyze). Answer it naturally.
 
 AVAILABLE ACTIONS:
 You can perform several types of actions. When you decide to perform an action, you MUST respond ONLY with a JSON object in the specified format.
@@ -387,9 +390,9 @@ async function executeAction(actionData, context) {
                 }
 
                 if (!folder_id) {
-                    const { data: defaultFolder, error: folderError } = await userSupabase.rpc('create_default_kb_folder');
-                    if (folderError) return `I couldn't find or create a default folder for the article: ${folderError.message}`;
-                    folder_id = defaultFolder;
+                    const { data: defaultFolderData, error: folderError } = await userSupabase.rpc('create_default_kb_folder').single();
+                    if (folderError || !defaultFolderData) return `I couldn't find or create a default folder for the article: ${folderError?.message}`;
+                    folder_id = defaultFolderData.id;
                 }
 
                 const { data: newArticle, error } = await userSupabase.from('kb_articles').insert({
@@ -429,7 +432,7 @@ async function executeAction(actionData, context) {
                 if (!article) return `I couldn't find an article named "${article_title}".`;
                 const { error } = await userSupabase.from('kb_articles').delete().eq('id', article.id);
                 if (error) return `I failed to delete the article. The database said: ${error.message}`;
-                return `I've deleted the article "${article.title}".`;
+                return `I've deleted the article "${article_title}".`;
             }
             default:
                 return "I'm not sure how to perform that action. Can you clarify?";
@@ -445,14 +448,41 @@ async function executeAction(actionData, context) {
 async function analyzeProjects(payload, context) {
   console.log("[DIAGNOSTIC] analyzeProjects: Starting analysis.");
   const { openai, user, userSupabase, supabaseAdmin } = context;
-  let { request, attachmentUrl, replyToMessageId } = payload;
+  let { request, attachmentUrl, attachmentType, replyToMessageId } = payload;
   
   if (!request && !attachmentUrl) {
     throw new Error("An analysis request is required.");
   }
 
-  // New: Handle audio transcription
-  if (attachmentUrl && !request) {
+  let documentContext = '';
+  if (attachmentUrl && (attachmentType === 'application/pdf' || attachmentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+    console.log(`[DIAGNOSTIC] analyzeProjects: Detected document attachment for parsing: ${attachmentType}`);
+    try {
+      const response = await fetch(attachmentUrl);
+      if (!response.ok) throw new Error(`Failed to fetch attachment from storage: ${response.statusText}`);
+      const fileBuffer = await response.arrayBuffer();
+
+      if (attachmentType === 'application/pdf') {
+        const pdf = await pdfjs.getDocument(fileBuffer).promise;
+        let textContent = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const text = await page.getTextContent();
+          textContent += text.items.map(item => item.str).join(' ') + '\n';
+        }
+        documentContext = textContent;
+      } else if (attachmentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const { value } = await mammoth.extractRawText({ arrayBuffer: fileBuffer });
+        documentContext = value;
+      }
+      console.log("[DIAGNOSTIC] analyzeProjects: Document parsing successful.");
+    } catch (e) {
+      console.error("[DIAGNOSTIC] analyzeProjects: CRITICAL ERROR during document parsing:", e);
+      return { result: `I'm sorry, I had trouble reading the attached document. Error: ${e.message}` };
+    }
+  }
+
+  if (attachmentUrl && attachmentType?.startsWith('audio/')) {
     console.log("[DIAGNOSTIC] analyzeProjects: Detected audio attachment for transcription.");
     try {
       const audioResponse = await fetch(attachmentUrl);
@@ -466,7 +496,6 @@ async function analyzeProjects(payload, context) {
       request = transcription.text;
       console.log("[DIAGNOSTIC] analyzeProjects: Transcription successful. Text:", request);
       
-      // Save the transcribed text to the user's message in the DB
       const { error: updateError } = await userSupabase
         .from('ai_chat_history')
         .update({ content: `(Voice Message): ${request}` })
@@ -497,10 +526,16 @@ async function analyzeProjects(payload, context) {
   console.log("[DIAGNOSTIC] analyzeProjects: System prompt generated.");
 
   const userContent = [];
-  if (request) {
-    userContent.push({ type: "text", text: request });
+  let combinedRequest = request || '';
+  if (documentContext) {
+    combinedRequest += `\n\n--- Attached Document Content ---\n${documentContext}`;
   }
-  if (attachmentUrl && !attachmentUrl.includes('.webm')) { // Don't send audio to vision model
+
+  if (combinedRequest) {
+    userContent.push({ type: "text", text: combinedRequest });
+  }
+  
+  if (attachmentUrl && (attachmentType?.startsWith('image/'))) {
     userContent.push({ type: "image_url", image_url: { url: attachmentUrl } });
   }
 

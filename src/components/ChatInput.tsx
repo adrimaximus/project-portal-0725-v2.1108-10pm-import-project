@@ -118,7 +118,13 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
           <Button variant="ghost" size="icon" asChild disabled={isSending} className="absolute bottom-2 right-2">
             <label htmlFor={`file-upload-${conversationId}`} className="cursor-pointer">
               <Paperclip className="h-5 w-5" />
-              <input id={`file-upload-${conversationId}`} type="file" className="sr-only" onChange={handleFileChange} />
+              <input 
+                id={`file-upload-${conversationId}`} 
+                type="file" 
+                className="sr-only" 
+                onChange={handleFileChange}
+                accept="image/*,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              />
             </label>
           </Button>
         </div>

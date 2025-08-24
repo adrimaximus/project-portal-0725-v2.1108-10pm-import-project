@@ -170,7 +170,9 @@ export const useAiChat = (currentUser: User | null) => {
 
     try {
       let attachmentUrl: string | null = null;
+      let attachmentType: string | null = null;
       if (attachmentFile) {
+        attachmentType = attachmentFile.type;
         const sanitizedFileName = attachmentFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = `ai-uploads/${currentUser.id}/${uuidv4()}-${sanitizedFileName}`;
         const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, attachmentFile);
@@ -191,7 +193,7 @@ export const useAiChat = (currentUser: User | null) => {
         console.error("Failed to save user message:", dbError);
       }
 
-      const result = await analyzeProjects(text, undefined, attachmentUrl, replyToMessageId);
+      const result = await analyzeProjects(text, undefined, attachmentUrl, attachmentType);
       
       const aiMessage: Message = {
         id: uuidv4(),
