@@ -14,6 +14,13 @@ serve(async (req) => {
   }
 
   try {
+    // --- Pemeriksaan Variabel Lingkungan ---
+    const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
+    const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+    if (!googleClientId || !googleClientSecret) {
+      throw new Error("Kredensial Google tidak dikonfigurasi di server. Seorang administrator perlu mengatur secret GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET untuk Edge Function.");
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -30,8 +37,8 @@ serve(async (req) => {
     const { method, ...payload } = await req.json();
 
     const oAuth2Client = new OAuth2Client(
-      Deno.env.get('GOOGLE_CLIENT_ID'),
-      Deno.env.get('GOOGLE_CLIENT_SECRET')
+      googleClientId,
+      googleClientSecret
     );
 
     switch (method) {
