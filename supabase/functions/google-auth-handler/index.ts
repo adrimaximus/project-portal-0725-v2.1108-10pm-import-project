@@ -10,49 +10,50 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Explicitly handle OPTIONS requests first
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const googleClientId = Deno.env.get('VITE_GOOGLE_CLIENT_ID');
-    const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
-    if (!googleClientId || !googleClientSecret) {
-      throw new Error("Kredensial Google tidak dikonfigurasi di server. Seorang administrator perlu mengatur secret VITE_GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET untuk Edge Function.");
-    }
-
-    const { method, ...payload } = await req.json();
-
-    if (method === 'health-check') {
-      return new Response(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
+    // Get Supabase clients
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
-    const { data: { user } } = await supabase.auth.getUser();
+
+    // Authenticate user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
     if (!user) throw new Error("User not authenticated.");
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Get Google credentials
+    const googleClientId = Deno.env.get('VITE_GOOGLE_CLIENT_ID');
+    const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+    if (!googleClientId || !googleClientSecret) {
+      throw new Error("Google credentials are not configured on the server.");
+    }
+    const oAuth2Client = new OAuth2Client(googleClientId, googleClientSecret);
 
-    const oAuth2Client = new OAuth2Client(
-      googleClientId,
-      googleClientSecret
-    );
+    // Parse request body
+    const { method, ...payload } = await req.json();
 
+    // Handle different methods
     switch (method) {
+      case 'health-check': {
+        return new Response(JSON.stringify({ status: 'ok' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
       case 'exchange-code': {
         const { tokens } = await oAuth2Client.getToken({
           code: payload.code,
           redirect_uri: 'postmessage'
         });
         const { access_token, refresh_token, expiry_date, scope } = tokens;
-
         if (!access_token) throw new Error("Failed to get access token.");
 
         const { error } = await supabaseAdmin.from('user_google_tokens').upsert({
@@ -76,7 +77,7 @@ serve(async (req) => {
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
       case 'get-selections': {
-        const { data, error } = await supabase.from('user_calendar_selections').select('calendar_id');
+        const { data, error } = await supabase.from('user_calendar_selections').select('calendar_id').eq('user_id', user.id);
         if (error) throw error;
         return new Response(JSON.stringify({ selections: data.map(s => s.calendar_id) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
@@ -99,7 +100,6 @@ serve(async (req) => {
           .select('refresh_token')
           .eq('user_id', user.id)
           .single();
-
         if (tokenError || !tokenData?.refresh_token) {
           throw new Error("No refresh token found for user. Please reconnect.");
         }
