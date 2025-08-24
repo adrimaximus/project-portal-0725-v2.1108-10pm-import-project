@@ -41,6 +41,7 @@ export interface Person {
   tags?: { id: string; name: string; color: string }[];
   address?: { formatted_address?: string; } | null;
   avatar_url?: string;
+  user_id?: string;
 }
 
 const PeoplePage = () => {
@@ -165,7 +166,12 @@ const PeoplePage = () => {
   };
 
   const handleViewProfile = (person: Person) => {
-    navigate(`/users/${person.id}`);
+    if (person.user_id) {
+      navigate(`/users/${person.user_id}`);
+    } else {
+      handleEdit(person);
+      toast.info("This contact is not a system user. You can edit their details here.");
+    }
   };
 
   const handleDelete = async () => {
@@ -359,7 +365,7 @@ const PeoplePage = () => {
               </Table>
             </div>
           ) : viewMode === 'kanban' ? (
-            <PeopleKanbanView people={filteredPeople} tags={tags} onEditPerson={handleEdit} />
+            <PeopleKanbanView people={filteredPeople} tags={tags} onEditPerson={handleViewProfile} />
           ) : (
             <div className="overflow-y-auto h-full">
               <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} onViewProfile={handleViewProfile} />
