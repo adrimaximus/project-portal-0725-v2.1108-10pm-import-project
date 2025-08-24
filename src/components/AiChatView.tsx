@@ -5,6 +5,10 @@ import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
 import { forwardRef, useMemo } from "react";
 import { Conversation } from "@/types";
+import { Link } from 'react-router-dom';
+import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
+import { Loader2 } from 'lucide-react';
 
 interface AiChatViewProps {
   onBack?: () => void;
@@ -12,7 +16,7 @@ interface AiChatViewProps {
 
 const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack }, ref) => {
   const { user: currentUser } = useAuth();
-  const { conversation, isLoading, sendMessage, aiUser } = useAiChat(currentUser);
+  const { conversation, isLoading, sendMessage, aiUser, isConnected, isCheckingConnection } = useAiChat(currentUser);
 
   const aiConversationObject = useMemo((): Conversation => ({
     id: 'ai-assistant',
@@ -27,6 +31,38 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
   }), [aiUser, conversation, currentUser]);
 
   if (!currentUser) return null;
+
+  if (isCheckingConnection) {
+    return (
+      <div className="flex flex-col h-full bg-background overflow-hidden">
+        <ChatHeader onBack={onBack} conversation={aiConversationObject} />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="flex flex-col h-full bg-background overflow-hidden">
+        <ChatHeader onBack={onBack} conversation={aiConversationObject} />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md text-center">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold">AI Assistant is Offline</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                An administrator needs to configure the OpenAI integration in the settings to enable the AI Assistant.
+              </p>
+              <Button asChild className="mt-4">
+                <Link to="/settings/integrations/openai">Go to Settings</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">

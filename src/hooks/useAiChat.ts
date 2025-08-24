@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,7 +23,27 @@ const initialMessage: Message = {
 export const useAiChat = (currentUser: User | null) => {
   const [conversation, setConversation] = useState<Message[]>([initialMessage]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const queryClient = useQueryClient();
+
+  const checkConnection = useCallback(async () => {
+    setIsCheckingConnection(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-openai-key', { method: 'GET' });
+      if (error) throw error;
+      setIsConnected(data.connected);
+    } catch (error) {
+      console.error("Failed to check OpenAI connection status:", error);
+      setIsConnected(false);
+    } finally {
+      setIsCheckingConnection(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkConnection();
+  }, [checkConnection]);
 
   const sendMessage = useCallback(async (text: string, attachmentFile: File | null) => {
     if (!currentUser) {
@@ -87,7 +107,7 @@ export const useAiChat = (currentUser: User | null) => {
       setConversation(prev => [...prev, aiMessage]);
     } catch (error: any) {
       let displayError = `Sorry, I encountered an error: ${error.message}.`;
-      if (error.message.includes('non-2xx status code')) {
+      if (error.message.includes('non-2xx status code') || error.message.includes('not configured')) {
         displayError = "I'm having trouble connecting to my brain (the AI service). An administrator may need to configure the OpenAI integration in the settings.";
       }
       const errorMessage: Message = {
@@ -107,5 +127,7 @@ export const useAiChat = (currentUser: User | null) => {
     isLoading,
     sendMessage,
     aiUser: AI_ASSISTANT_USER,
+    isConnected,
+    isCheckingConnection,
   };
 };
