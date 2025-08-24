@@ -7,11 +7,12 @@ interface PeopleGridViewProps {
   people: Person[];
   onEditPerson: (person: Person) => void;
   onDeletePerson: (person: Person) => void;
+  onViewProfile: (person: Person) => void;
 }
 
 const ITEMS_PER_PAGE = 6;
 
-const PeopleGridView = ({ people, onEditPerson, onDeletePerson }: PeopleGridViewProps) => {
+const PeopleGridView = ({ people, onEditPerson, onDeletePerson, onViewProfile }: PeopleGridViewProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.ceil(people.length / ITEMS_PER_PAGE);
 
@@ -89,6 +90,7 @@ const PeopleGridView = ({ people, onEditPerson, onDeletePerson }: PeopleGridView
             person={person} 
             onEdit={onEditPerson} 
             onDelete={onDeletePerson} 
+            onViewProfile={onViewProfile}
           />
         ))}
       </div>

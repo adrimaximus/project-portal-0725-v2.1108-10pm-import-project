@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import PortalLayout from '@/components/PortalLayout';
@@ -34,6 +34,7 @@ const fetchUserProfile = async (userId: string): Promise<User | null> => {
 
 const UserProfilePage = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   const { data: profile, isLoading, error } = useQuery({
     queryKey: ['userProfile', id],
@@ -82,11 +83,9 @@ const UserProfilePage = () => {
   return (
     <PortalLayout>
       <div className="max-w-2xl mx-auto">
-        <Button asChild variant="ghost" className="mb-4">
-          <Link to="/chat">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Chat
-          </Link>
+        <Button variant="ghost" className="mb-4" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
         </Button>
         <Card>
           <CardHeader className="items-center text-center">

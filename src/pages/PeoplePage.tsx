@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
+import { Project, User, Tag } from '@/types';
+import { useNavigate } from 'react-router-dom';
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +20,6 @@ import WhatsappIcon from "@/components/icons/WhatsappIcon";
 import { DuplicatePair } from "@/components/people/DuplicateContactsCard";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import PeopleKanbanView from "@/components/people/PeopleKanbanView";
-import { Tag } from "@/types";
 import PeopleGridView from "@/components/people/PeopleGridView";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
@@ -48,6 +49,7 @@ const PeoplePage = () => {
   const [personToEdit, setPersonToEdit] = useState<Person | null>(null);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
   const [viewMode, setViewMode] = useState<'table' | 'kanban' | 'grid'>(() => {
     const savedView = localStorage.getItem('people_view_mode') as 'table' | 'kanban' | 'grid';
@@ -160,6 +162,10 @@ const PeoplePage = () => {
   const handleEdit = (person: Person) => {
     setPersonToEdit(person);
     setIsFormOpen(true);
+  };
+
+  const handleViewProfile = (person: Person) => {
+    navigate(`/users/${person.id}`);
   };
 
   const handleDelete = async () => {
@@ -281,7 +287,7 @@ const PeoplePage = () => {
                     <TableRow><TableCell colSpan={7} className="text-center h-24">No people found.</TableCell></TableRow>
                   ) : (
                     filteredPeople.map(person => (
-                      <TableRow key={person.id}>
+                      <TableRow key={person.id} className="cursor-pointer" onClick={() => handleViewProfile(person)}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10">
@@ -308,15 +314,15 @@ const PeoplePage = () => {
                         <TableCell className="hidden md:table-cell">
                           <div className="flex items-center gap-3">
                             {person.contact?.phones?.[0] && (
-                              <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.contact.phones[0])}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+                              <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.contact.phones[0])}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
                                 <WhatsappIcon className="h-4 w-4" />
                                 <span className="text-sm">{person.contact.phones[0]}</span>
                               </a>
                             )}
-                            {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer"><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
-                            {person.social_media?.twitter && <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer"><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                            {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}><Linkedin className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
+                            {person.social_media?.twitter && <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}><Twitter className="h-4 w-4 text-muted-foreground hover:text-primary" /></a>}
                             {person.social_media?.instagram && (
-                              <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+                              <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
                                 <Instagram className="h-4 w-4" />
                                 <span className="text-sm">{getInstagramUsername(person.social_media.instagram)}</span>
                               </a>
@@ -338,11 +344,11 @@ const PeoplePage = () => {
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => handleEdit(person)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => setPersonToDelete(person)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleEdit(person); }}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); setPersonToDelete(person); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -356,7 +362,7 @@ const PeoplePage = () => {
             <PeopleKanbanView people={filteredPeople} tags={tags} onEditPerson={handleEdit} />
           ) : (
             <div className="overflow-y-auto h-full">
-              <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
+              <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} onViewProfile={handleViewProfile} />
             </div>
           )}
         </div>

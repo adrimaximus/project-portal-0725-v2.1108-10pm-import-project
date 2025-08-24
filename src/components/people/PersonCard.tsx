@@ -11,13 +11,14 @@ interface PersonCardProps {
   person: Person;
   onEdit: (person: Person) => void;
   onDelete: (person: Person) => void;
+  onViewProfile: (person: Person) => void;
 }
 
-const PersonCard = ({ person, onEdit, onDelete }: PersonCardProps) => {
+const PersonCard = ({ person, onEdit, onDelete, onViewProfile }: PersonCardProps) => {
   const firstTag = person.tags?.[0];
 
   return (
-    <Card className="group h-full flex transition-shadow hover:shadow-md">
+    <Card className="group h-full flex transition-shadow hover:shadow-md cursor-pointer" onClick={() => onViewProfile(person)}>
       <div className="p-4 flex items-center justify-center">
         <Avatar className="h-24 w-24">
           <AvatarImage src={person.avatar_url} />
@@ -46,20 +47,19 @@ const PersonCard = ({ person, onEdit, onDelete }: PersonCardProps) => {
         <div className="flex justify-end items-center mt-2 gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => onEdit(person)}>
+              <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEdit(person); }}>
                 <Edit className="mr-2 h-4 w-4" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onDelete(person)} className="text-destructive">
+              <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onDelete(person); }} className="text-destructive">
                 <Trash2 className="mr-2 h-4 w-4" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button size="sm" onClick={() => onEdit(person)}>View</Button>
         </div>
       </div>
     </Card>
