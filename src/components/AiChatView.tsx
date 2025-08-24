@@ -86,6 +86,7 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
         messages={conversation}
         members={[currentUser, aiUser]}
         isLoading={isLoading}
+        onReply={() => {}}
       />
       <ChatInput 
         ref={ref} 
@@ -95,6 +96,8 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
         isListening={isListening}
         onToggleListening={isListening ? stopListening : startListening}
         isSpeechRecognitionSupported={isSupported}
+        replyTo={null}
+        onCancelReply={() => {}}
       />
     </div>
   );

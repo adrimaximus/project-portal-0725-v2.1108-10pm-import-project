@@ -17,7 +17,7 @@ interface ChatContextType {
   messages: Message[];
   isLoadingMessages: boolean;
   isSendingMessage: boolean;
-  sendMessage: (text: string, attachmentFile: File | null) => void;
+  sendMessage: (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => void;
   startNewChat: (collaborator: Collaborator) => void;
   startNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
   deleteConversation: (conversationId: string) => void;
@@ -87,7 +87,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   }, [conversations, searchTerm, messageSearchResults]);
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (variables: { text: string, attachmentFile: File | null }) => {
+    mutationFn: async (variables: { text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
       let attachment: Attachment | null = null;
       if (variables.attachmentFile && currentUser && selectedConversationId) {
         const file = variables.attachmentFile;
@@ -108,7 +108,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         conversationId: selectedConversationId!, 
         senderId: currentUser!.id, 
         text: variables.text, 
-        attachment 
+        attachment,
+        replyToMessageId: variables.replyToMessageId,
       });
     },
     onSuccess: () => {
@@ -199,8 +200,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return conversation ? { ...conversation, messages } : null;
   }, [selectedConversationId, conversations, messages]);
 
-  const sendMessage = (text: string, attachmentFile: File | null) => {
-    sendMessageMutation.mutate({ text, attachmentFile });
+  const sendMessage = (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => {
+    sendMessageMutation.mutate({ text, attachmentFile, replyToMessageId });
   };
 
   const value = {

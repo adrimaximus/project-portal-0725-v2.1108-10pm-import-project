@@ -49,11 +49,17 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
         email: m.sender_email,
       },
       attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
+      reply_to_message_id: m.reply_to_message_id,
+      repliedMessage: m.reply_to_message_id ? {
+        content: m.replied_message_content,
+        senderName: m.replied_message_sender_name,
+        isDeleted: m.replied_message_is_deleted,
+      } : null,
     };
   });
 };
 
-export const sendMessage = async ({ conversationId, senderId, text, attachment }: { conversationId: string, senderId: string, text: string, attachment: Attachment | null }) => {
+export const sendMessage = async ({ conversationId, senderId, text, attachment, replyToMessageId }: { conversationId: string, senderId: string, text: string, attachment: Attachment | null, replyToMessageId?: string | null }) => {
   const { error } = await supabase
     .from('messages')
     .insert({
@@ -63,6 +69,7 @@ export const sendMessage = async ({ conversationId, senderId, text, attachment }
       attachment_url: attachment?.url,
       attachment_name: attachment?.name,
       attachment_type: attachment?.type,
+      reply_to_message_id: replyToMessageId,
     });
   if (error) throw error;
 };

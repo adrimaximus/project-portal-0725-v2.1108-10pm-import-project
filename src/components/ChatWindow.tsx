@@ -2,11 +2,12 @@ import ChatHeader from "./ChatHeader";
 import ChatConversation from "./ChatConversation";
 import ChatInput from "./ChatInput";
 import ChatPlaceholder from "./ChatPlaceholder";
-import { forwardRef } from "react";
+import { forwardRef, useState } from "react";
 import { useChatContext } from "@/contexts/ChatContext";
 import AiChatView from "./AiChatView";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Message } from "@/types";
 
 interface ChatWindowProps {
   onBack?: () => void;
@@ -14,6 +15,7 @@ interface ChatWindowProps {
 
 const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ onBack }, ref) => {
   const { selectedConversation, isSomeoneTyping, sendMessage, sendTyping, isSendingMessage, leaveGroup, refetchConversations } = useChatContext();
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
 
   const handleClearChat = async (conversationId: string) => {
     const { error } = await supabase.from('messages').delete().eq('conversation_id', conversationId);
@@ -32,6 +34,11 @@ const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ onBack },
     return <AiChatView ref={ref} onBack={onBack} />;
   }
 
+  const handleSendMessage = (text: string, attachmentFile: File | null) => {
+    sendMessage(text, attachmentFile, replyTo?.id);
+    setReplyTo(null);
+  };
+
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
       <ChatHeader
@@ -45,13 +52,16 @@ const ChatWindow = forwardRef<HTMLTextAreaElement, ChatWindowProps>(({ onBack },
       <ChatConversation
         messages={selectedConversation.messages}
         members={selectedConversation.members || []}
+        onReply={setReplyTo}
       />
       <ChatInput 
         ref={ref} 
-        onSendMessage={sendMessage}
+        onSendMessage={handleSendMessage}
         onTyping={sendTyping}
         isSending={isSendingMessage}
         conversationId={selectedConversation.id}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
       />
     </div>
   );

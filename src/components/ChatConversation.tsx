@@ -7,12 +7,14 @@ import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
-import { Loader2 } from "lucide-react";
+import { Loader2, CornerUpLeft } from "lucide-react";
+import { Button } from "./ui/button";
 
 interface ChatConversationProps {
   messages: Message[];
   members: Collaborator[];
   isLoading?: boolean;
+  onReply: (message: Message) => void;
 }
 
 const formatTimestamp = (timestamp: string) => {
@@ -36,7 +38,7 @@ const formatDateSeparator = (timestamp: string) => {
   }
 };
 
-const ChatConversation = ({ messages, members, isLoading }: ChatConversationProps) => {
+const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -80,11 +82,16 @@ const ChatConversation = ({ messages, members, isLoading }: ChatConversationProp
             )}
             <div
               className={cn(
-                "flex items-end gap-2",
+                "flex items-end gap-2 group",
                 isCurrentUser ? "justify-end" : "justify-start",
                 isSameSenderAsPrevious ? "mt-1" : "mt-4"
               )}
             >
+              {isCurrentUser && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => onReply(message)}>
+                  <CornerUpLeft className="h-4 w-4" />
+                </Button>
+              )}
               {!isCurrentUser && !isSameSenderAsPrevious && (
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={sender.avatar} />
@@ -105,6 +112,15 @@ const ChatConversation = ({ messages, members, isLoading }: ChatConversationProp
                   <p className="text-sm font-semibold mb-1">{sender.name}</p>
                 )}
                 
+                {message.repliedMessage && (
+                  <div className="p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary">
+                    <p className="font-semibold">{message.repliedMessage.senderName}</p>
+                    <p className="text-xs line-clamp-2 opacity-80">
+                      {message.repliedMessage.isDeleted ? "This message was deleted." : message.repliedMessage.content}
+                    </p>
+                  </div>
+                )}
+
                 {isImageAttachment ? (
                   <div className="relative">
                     <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
@@ -156,6 +172,11 @@ const ChatConversation = ({ messages, members, isLoading }: ChatConversationProp
                   </div>
                 )}
               </div>
+              {!isCurrentUser && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => onReply(message)}>
+                  <CornerUpLeft className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         );

@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Paperclip, Send, X, Loader2, UploadCloud, Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Message } from "@/types";
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachment: File | null) => void;
@@ -13,6 +14,8 @@ interface ChatInputProps {
   isListening?: boolean;
   onToggleListening?: () => void;
   isSpeechRecognitionSupported?: boolean;
+  replyTo: Message | null;
+  onCancelReply: () => void;
 }
 
 const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ 
@@ -22,7 +25,9 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   conversationId,
   isListening,
   onToggleListening,
-  isSpeechRecognitionSupported
+  isSpeechRecognitionSupported,
+  replyTo,
+  onCancelReply,
 }, ref) => {
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
@@ -80,6 +85,18 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
         <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 border-2 border-dashed border-primary rounded-lg m-4">
           <UploadCloud className="h-10 w-10 text-primary" />
           <p className="mt-2 text-lg font-medium text-primary">Drop file to attach</p>
+        </div>
+      )}
+
+      {replyTo && (
+        <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center">
+          <div className="text-sm overflow-hidden">
+            <p className="font-semibold text-primary">Replying to {replyTo.sender.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{replyTo.text}</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7">
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       )}
 
