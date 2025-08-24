@@ -593,7 +593,7 @@ async function executeAction(actionData, context) {
 
 async function analyzeProjects(payload, context) {
   const { req, openai } = context;
-  const { request, conversationHistory, attachmentUrl } = payload;
+  const { request, attachmentUrl } = payload;
   if (!request && !attachmentUrl) {
     throw new Error("An analysis request is required.");
   }
@@ -601,6 +601,14 @@ async function analyzeProjects(payload, context) {
   const userSupabase = createSupabaseUserClient(req);
   const { data: { user } } = await userSupabase.auth.getUser();
   if (!user) throw new Error("User not authenticated.");
+
+  const { data: history, error: historyError } = await userSupabase
+    .from('ai_chat_history')
+    .select('sender, content')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+    .limit(20);
+  if (historyError) throw historyError;
 
   const actionContext = await buildContext(userSupabase, user);
   const systemPrompt = getAnalyzeProjectsSystemPrompt(actionContext);
@@ -615,7 +623,7 @@ async function analyzeProjects(payload, context) {
 
   const messages = [
     { role: "system", content: systemPrompt },
-    ...(conversationHistory || []).map(msg => ({ role: msg.sender === 'ai' ? 'assistant' : 'user', content: msg.content })),
+    ...(history || []).map(msg => ({ role: msg.sender === 'ai' ? 'assistant' : 'user', content: msg.content })),
     { role: "user", content: userContent }
   ];
 
@@ -628,6 +636,14 @@ async function analyzeProjects(payload, context) {
 
   const responseText = response.choices[0].message.content;
   
+  // Save conversation to DB
+  if (request) {
+    await userSupabase.from('ai_chat_history').insert({ user_id: user.id, sender: 'user', content: request });
+  }
+  if (responseText) {
+    await userSupabase.from('ai_chat_history').insert({ user_id: user.id, sender: 'ai', content: responseText });
+  }
+
   try {
       const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```|({[\s\S]*})/);
       if (!jsonMatch) {
@@ -637,6 +653,10 @@ async function analyzeProjects(payload, context) {
       const actionData = JSON.parse(jsonString);
 
       const actionResult = await executeAction(actionData, { ...actionContext, userSupabase, user });
+      
+      // Save the action result as a new AI message
+      await userSupabase.from('ai_chat_history').insert({ user_id: user.id, sender: 'ai', content: actionResult });
+
       return { result: actionResult };
 
   } catch (e) {
