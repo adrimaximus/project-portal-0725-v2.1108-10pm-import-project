@@ -39,7 +39,7 @@ serve(async (req) => {
     if (req.method === 'POST') {
       await checkAdminPermissions();
       const { apiKey } = await req.json();
-      if (!apiKey) throw new Error("API key is required.");
+      if (!apiKey || apiKey.trim() === '') throw new Error("A valid API key is required.");
 
       const { error } = await supabaseAdmin.from('app_config').upsert({ key: 'OPENAI_API_KEY', value: apiKey });
       if (error) throw error;
@@ -55,9 +55,9 @@ serve(async (req) => {
     
     if (req.method === 'GET') {
         // This part is now accessible to all authenticated users
-        const { data, error } = await supabaseAdmin.from('app_config').select('key').eq('key', 'OPENAI_API_KEY').maybeSingle();
+        const { data, error } = await supabaseAdmin.from('app_config').select('value').eq('key', 'OPENAI_API_KEY').maybeSingle();
         if (error) throw error;
-        return new Response(JSON.stringify({ connected: !!data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ connected: !!data && !!data.value }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders });
