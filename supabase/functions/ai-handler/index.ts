@@ -174,7 +174,7 @@ const articleWriterFeaturePrompts = {
 
 // --- FEATURES ---
 
-const buildContext = async (userSupabase, user) => {
+const buildContext = async (supabaseClient, user) => {
   console.log("[DIAGNOSTIC] buildContext: Starting context build.");
   try {
     const [
@@ -185,12 +185,12 @@ const buildContext = async (userSupabase, user) => {
       articlesRes,
       foldersRes
     ] = await Promise.all([
-      userSupabase.rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 }),
-      userSupabase.from('profiles').select('id, first_name, last_name, email'),
-      userSupabase.rpc('get_user_goals'),
-      userSupabase.from('tags').select('id, name'),
-      userSupabase.from('kb_articles').select('id, title, slug, folder_id'),
-      userSupabase.from('kb_folders').select('id, name')
+      supabaseClient.rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 }),
+      supabaseClient.from('profiles').select('id, first_name, last_name, email'),
+      supabaseClient.rpc('get_user_goals'),
+      supabaseClient.from('tags').select('id, name'),
+      supabaseClient.from('kb_articles').select('id, title, slug, folder_id'),
+      supabaseClient.from('kb_folders').select('id, name')
     ]);
     console.log("[DIAGNOSTIC] buildContext: All parallel fetches completed.");
 
@@ -306,7 +306,7 @@ async function executeAction(actionData, context) {
 
 async function analyzeProjects(payload, context) {
   console.log("[DIAGNOSTIC] analyzeProjects: Starting analysis.");
-  const { openai, user, userSupabase } = context;
+  const { openai, user, userSupabase, supabaseAdmin } = context;
   const { request, attachmentUrl } = payload;
   if (!request && !attachmentUrl) {
     throw new Error("An analysis request is required.");
@@ -321,7 +321,7 @@ async function analyzeProjects(payload, context) {
   if (historyError) throw historyError;
   console.log("[DIAGNOSTIC] analyzeProjects: Fetched chat history.");
 
-  const actionContext = await buildContext(userSupabase, user);
+  const actionContext = await buildContext(supabaseAdmin, user);
   const currentUserProfile = actionContext.userList.find(u => u.id === user.id);
   const currentUserName = currentUserProfile ? currentUserProfile.name : 'there';
   const systemPrompt = getAnalyzeProjectsSystemPrompt(actionContext, currentUserName);
