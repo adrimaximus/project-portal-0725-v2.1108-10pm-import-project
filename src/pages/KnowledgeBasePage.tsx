@@ -45,7 +45,7 @@ const KnowledgeBasePage = () => {
     localStorage.setItem('kb_view_mode', viewMode);
   }, [viewMode]);
 
-  const { data: folders = [], isLoading: isLoadingFolders } = useQuery({
+  const { data: folders = [], isLoading: isLoadingFolders, error: foldersError } = useQuery({
     queryKey: ['kb_folders'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_user_kb_folders');
@@ -54,7 +54,7 @@ const KnowledgeBasePage = () => {
     }
   });
 
-  const { data: articles = [], isLoading: isLoadingArticles } = useQuery({
+  const { data: articles = [], isLoading: isLoadingArticles, error: articlesError } = useQuery({
     queryKey: ['kb_articles'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_user_kb_articles');
@@ -62,6 +62,15 @@ const KnowledgeBasePage = () => {
       return data as KbArticle[];
     }
   });
+
+  useEffect(() => {
+    if (foldersError) {
+        toast.error("Failed to load knowledge base folders.", { description: foldersError.message });
+    }
+    if (articlesError) {
+        toast.error("Failed to load knowledge base articles.", { description: articlesError.message });
+    }
+  }, [foldersError, articlesError]);
 
   const filteredFolders = useMemo(() => {
     return folders.filter(folder =>

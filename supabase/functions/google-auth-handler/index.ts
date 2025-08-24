@@ -15,10 +15,10 @@ serve(async (req) => {
   }
 
   try {
-    const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
+    const googleClientId = Deno.env.get('VITE_GOOGLE_CLIENT_ID');
     const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
     if (!googleClientId || !googleClientSecret) {
-      throw new Error("Kredensial Google tidak dikonfigurasi di server. Seorang administrator perlu mengatur secret GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET untuk Edge Function.");
+      throw new Error("Kredensial Google tidak dikonfigurasi di server. Seorang administrator perlu mengatur secret VITE_GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET untuk Edge Function.");
     }
 
     const { method, ...payload } = await req.json();
