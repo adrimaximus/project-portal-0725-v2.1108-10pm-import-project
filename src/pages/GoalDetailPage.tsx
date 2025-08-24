@@ -32,7 +32,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const fetchGoalBySlug = async (slug: string): Promise<Goal | null> => {
   const { data, error } = await supabase
-    .rpc('get_goal_by_slug', { slug: slug })
+    .rpc('get_goal_by_slug', { p_slug: slug })
     .single();
 
   if (error) {
