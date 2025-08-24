@@ -9,7 +9,7 @@ interface ProtectedRouteLayoutProps {
 }
 
 const ProtectedRouteLayout = ({ featureId }: ProtectedRouteLayoutProps) => {
-  const { session, user, loading } = useAuth();
+  const { session, user, loading, hasPermission } = useAuth();
   const { isFeatureEnabled } = useFeatures();
   const location = useLocation();
 
@@ -23,6 +23,26 @@ const ProtectedRouteLayout = ({ featureId }: ProtectedRouteLayoutProps) => {
   
   if (!user) {
     return <LoadingScreen />;
+  }
+
+  // Logika pengalihan jika dasbor dinonaktifkan
+  if (location.pathname === '/dashboard' && !isFeatureEnabled('dashboard')) {
+    // Urutan prioritas untuk pengalihan
+    const pageOrder = [
+      'projects', 'request', 'chat', 'goals', 'people', 
+      'knowledge-base', 'billing', 'mood-tracker', 'settings'
+    ];
+
+    const firstAvailablePage = pageOrder.find(id =>
+      isFeatureEnabled(id) && hasPermission(`module:${id}`)
+    );
+
+    if (firstAvailablePage) {
+      return <Navigate to={`/${firstAvailablePage}`} replace />;
+    }
+    
+    // Fallback jika tidak ada halaman lain yang tersedia
+    return <Navigate to="/profile" replace />;
   }
 
   if (featureId && !isFeatureEnabled(featureId)) {
