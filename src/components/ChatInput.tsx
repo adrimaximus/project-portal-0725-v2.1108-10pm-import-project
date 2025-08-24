@@ -1,8 +1,9 @@
-import { useRef, useState, forwardRef } from "react";
+import { useRef, useState, forwardRef, useCallback } from "react";
+import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import { Paperclip, Send, X, Loader2 } from "lucide-react";
-import { Attachment } from "@/types";
+import { Paperclip, Send, X, Loader2, UploadCloud } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachment: File | null) => void;
@@ -15,6 +16,19 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ onSendMessa
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const lastTypingSentAtRef = useRef<number>(0);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles && acceptedFiles.length > 0) {
+      setAttachmentFile(acceptedFiles[0]);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+    multiple: false,
+  });
 
   const triggerTyping = () => {
     if (onTyping) {
@@ -41,11 +55,20 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ onSendMessa
   };
 
   return (
-    <div className="border-t p-4 flex-shrink-0">
+    <div {...getRootProps()} className="border-t p-4 flex-shrink-0 relative">
+      <input {...getInputProps()} />
+      
+      {isDragActive && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 border-2 border-dashed border-primary rounded-lg m-4">
+          <UploadCloud className="h-10 w-10 text-primary" />
+          <p className="mt-2 text-lg font-medium text-primary">Drop file to attach</p>
+        </div>
+      )}
+
       <div className="relative">
         <Textarea
           ref={ref}
-          placeholder="Type a message..."
+          placeholder="Type a message or drop a file..."
           value={text}
           onChange={(e) => {
             setText(e.target.value);
