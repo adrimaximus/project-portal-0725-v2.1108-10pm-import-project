@@ -10,7 +10,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Explicitly handle OPTIONS requests first
+  // Explicitly handle OPTIONS requests first and exit
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
