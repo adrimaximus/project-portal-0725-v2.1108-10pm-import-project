@@ -445,9 +445,40 @@ async function executeAction(actionData, context) {
 async function analyzeProjects(payload, context) {
   console.log("[DIAGNOSTIC] analyzeProjects: Starting analysis.");
   const { openai, user, userSupabase, supabaseAdmin } = context;
-  const { request, attachmentUrl, replyToMessageId } = payload;
+  let { request, attachmentUrl, replyToMessageId } = payload;
+  
   if (!request && !attachmentUrl) {
     throw new Error("An analysis request is required.");
+  }
+
+  // New: Handle audio transcription
+  if (attachmentUrl && !request) {
+    console.log("[DIAGNOSTIC] analyzeProjects: Detected audio attachment for transcription.");
+    try {
+      const audioResponse = await fetch(attachmentUrl);
+      if (!audioResponse.ok) throw new Error(`Failed to fetch audio file: ${audioResponse.statusText}`);
+      
+      const transcription = await openai.audio.transcriptions.create({
+        file: audioResponse,
+        model: "whisper-1",
+      });
+      
+      request = transcription.text;
+      console.log("[DIAGNOSTIC] analyzeProjects: Transcription successful. Text:", request);
+      
+      // Save the transcribed text to the user's message in the DB
+      const { error: updateError } = await userSupabase
+        .from('ai_chat_history')
+        .update({ content: `(Voice Message): ${request}` })
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (updateError) console.error("Failed to update history with transcription:", updateError);
+
+    } catch (transcriptionError) {
+      console.error("[DIAGNOSTIC] analyzeProjects: CRITICAL ERROR during transcription:", transcriptionError);
+      throw new Error(`Failed to transcribe audio: ${transcriptionError.message}`);
+    }
   }
 
   const { data: history, error: historyError } = await userSupabase
@@ -469,7 +500,7 @@ async function analyzeProjects(payload, context) {
   if (request) {
     userContent.push({ type: "text", text: request });
   }
-  if (attachmentUrl) {
+  if (attachmentUrl && !attachmentUrl.includes('.webm')) { // Don't send audio to vision model
     userContent.push({ type: "image_url", image_url: { url: attachmentUrl } });
   }
 
@@ -490,15 +521,6 @@ async function analyzeProjects(payload, context) {
 
   const responseText = response.choices[0].message.content;
   
-  // Save conversation to DB
-  if (request) {
-    await userSupabase.from('ai_chat_history').insert({ 
-      user_id: user.id, 
-      sender: 'user', 
-      content: request,
-      reply_to_message_id: replyToMessageId,
-    });
-  }
   if (responseText) {
     await userSupabase.from('ai_chat_history').insert({ 
       user_id: user.id, 
@@ -506,7 +528,7 @@ async function analyzeProjects(payload, context) {
       content: responseText 
     });
   }
-  console.log("[DIAGNOSTIC] analyzeProjects: Saved conversation history.");
+  console.log("[DIAGNOSTIC] analyzeProjects: Saved AI response to history.");
 
   try {
       const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```|({[\s\S]*})/);
@@ -521,7 +543,6 @@ async function analyzeProjects(payload, context) {
       const actionResult = await executeAction(actionData, { ...actionContext, userSupabase, user });
       console.log("[DIAGNOSTIC] analyzeProjects: Action executed. Result:", actionResult);
       
-      // Save the action result as a new AI message
       await userSupabase.from('ai_chat_history').insert({ user_id: user.id, sender: 'ai', content: actionResult });
 
       return { result: actionResult };

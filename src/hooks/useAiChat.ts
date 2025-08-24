@@ -141,7 +141,7 @@ export const useAiChat = (currentUser: User | null) => {
       attachmentForUi = {
         name: attachmentFile.name,
         url: URL.createObjectURL(attachmentFile),
-        type: attachmentFile.type.startsWith('image/') ? 'image' : 'file',
+        type: attachmentFile.type,
       };
     }
 
@@ -177,6 +177,18 @@ export const useAiChat = (currentUser: User | null) => {
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
         const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
         attachmentUrl = urlData.publicUrl;
+      }
+
+      // Save user message to DB first
+      const { error: dbError } = await supabase.from('ai_chat_history').insert({
+        id: userMessage.id,
+        user_id: currentUser.id,
+        sender: 'user',
+        content: text,
+        reply_to_message_id: replyToMessageId,
+      });
+      if (dbError) {
+        console.error("Failed to save user message:", dbError);
       }
 
       const result = await analyzeProjects(text, undefined, attachmentUrl, replyToMessageId);
