@@ -4,8 +4,8 @@ import { getInitials } from '@/lib/utils';
 
 const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
   id: c.conversation_id,
-  userName: c.is_group ? c.group_name : c.other_user_name,
-  userAvatar: c.is_group ? c.avatar_url : c.other_user_avatar,
+  userName: c.conversation_name || 'Chat',
+  userAvatar: c.conversation_avatar,
   lastMessage: c.last_message_content || "No messages yet.",
   lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
   unreadCount: 0,
