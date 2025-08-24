@@ -1,8 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User, SupabaseSession, SupabaseUser } from '@/types';
-import { toast } from 'sonner';
 import { getInitials } from '@/lib/utils';
 
 interface AuthContextType {
@@ -20,7 +18,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser, retries = 3, delay = 500) => {
     for (let i = 0; i < retries; i++) {
@@ -52,7 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           permissions: roleData?.permissions || [],
         };
         setUser(userToSet);
-        localStorage.setItem('lastUserName', userToSet.name); // Store user name
+        localStorage.setItem('lastUserName', userToSet.name);
         return;
       }
 
@@ -77,38 +74,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       permissions: [],
     };
     setUser(fallbackUser);
-    localStorage.setItem('lastUserName', fallbackUser.name); // Store fallback name
+    localStorage.setItem('lastUserName', fallbackUser.name);
   };
 
   useEffect(() => {
     setLoading(true);
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
-
-      if (_event === 'PASSWORD_RECOVERY') {
-        navigate('/reset-password');
-      }
-      
-      if (_event === 'SIGNED_IN' && session) {
-        await fetchUserProfile(session.user);
-        navigate('/dashboard', { replace: true });
-      } else if (_event === 'SIGNED_OUT') {
-        toast.success("You have been successfully logged out.");
-        setUser(null);
-        localStorage.removeItem('lastUserName');
-      } else if (session) {
+      if (session) {
         await fetchUserProfile(session.user);
       } else {
         setUser(null);
+        localStorage.removeItem('lastUserName');
       }
-      
       setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
   const refreshUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -118,16 +103,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut({ scope: 'global' });
-    if (error) {
-      console.error("Error logging out:", error);
-      toast.error("Logout failed. Please try again.");
-    } else {
-      setUser(null);
-      setSession(null);
-      localStorage.removeItem('lastUserName'); // Also clear on explicit logout
-      navigate('/', { replace: true });
-    }
+    await supabase.auth.signOut({ scope: 'global' });
+    setUser(null);
+    setSession(null);
+    localStorage.removeItem('lastUserName');
   };
 
   const hasPermission = (permission: string): boolean => {
