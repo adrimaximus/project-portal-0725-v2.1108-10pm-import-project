@@ -43,7 +43,6 @@ const OpenAiIntegrationPage = () => {
     setIsLoading(true);
     try {
       const { error } = await supabase.functions.invoke('manage-openai-key', {
-        method: 'POST',
         body: { apiKey },
       });
       if (error) throw error;
@@ -120,7 +119,7 @@ const OpenAiIntegrationPage = () => {
           </CardContent>
           <CardFooter className="flex justify-end">
             {isConnected ? (
-              <Button variant="outline" onClick={handleDisconnect} disabled={isLoading}>
+              <Button variant="destructive" onClick={handleDisconnect} disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Disconnect
               </Button>
