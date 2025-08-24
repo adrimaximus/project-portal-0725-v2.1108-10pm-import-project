@@ -114,6 +114,11 @@ You can perform several types of actions. When you decide to perform an action, 
 11. DELETE_ARTICLE:
 {"action": "DELETE_ARTICLE", "article_title": "<title of article to delete>"}
 
+12. CREATE_FOLDER:
+{"action": "CREATE_FOLDER", "folder_details": {"name": "<folder name>", "description": "<desc>", "icon": "IconName", "color": "#RRGGBB", "category": "<category>"}}
+- If the user only provides a name, you MUST infer the other details.
+- Suggest a relevant 'icon' from the 'Available Icons' list and a suitable 'color'.
+
 CONTEXT:
 - Available Projects (with their tasks and tags): ${JSON.stringify(context.summarizedProjects, null, 2)}
 - Available Goals: ${JSON.stringify(context.summarizedGoals, null, 2)}
@@ -560,6 +565,22 @@ async function executeAction(actionData, context) {
             const { error: deleteError } = await userSupabase.from('kb_articles').delete().eq('id', article.id);
             if (deleteError) return `I failed to delete the article. The database said: ${deleteError.message}`;
             return `Done! I've deleted the article "${article_title}".`;
+        }
+        case 'CREATE_FOLDER': {
+            const { name, description, icon, color, category } = actionData.folder_details;
+            if (!name) return "I need a name to create a folder.";
+
+            const { data: newFolder, error } = await userSupabase.from('kb_folders').insert({
+                name,
+                description,
+                icon: icon || 'Folder',
+                color: color || '#6b7280',
+                category,
+                user_id: user.id,
+            }).select('slug, name').single();
+
+            if (error) return `I failed to create the folder. The database said: ${error.message}`;
+            return `Done! I've created the folder "${newFolder.name}". You can view it at /knowledge-base/folders/${newFolder.slug}`;
         }
         default:
             return "I'm not sure how to perform that action. Can you clarify?";
