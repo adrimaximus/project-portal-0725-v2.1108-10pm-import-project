@@ -51,7 +51,9 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
     setIsSaving(false);
 
     if (error) {
-      toast.error("Failed to add user.", { description: error.message });
+      const functionError = (error as any).context?.error;
+      const description = functionError || error.message;
+      toast.error("Failed to add user.", { description });
     } else {
       toast.success("User added successfully.");
       onUserAdded();
