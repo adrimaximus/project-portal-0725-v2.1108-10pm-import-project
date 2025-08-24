@@ -54,13 +54,10 @@ const MergeDialog = ({ open, onOpenChange, person1, person2 }: MergeDialogProps)
 
   const handleMerge = async () => {
     setIsMerging(true);
-    const { error } = await supabase.functions.invoke('openai-generator', {
+    const { error } = await supabase.functions.invoke('contact-duplicate-handler', {
       body: {
-        feature: 'ai-merge-contacts',
-        payload: {
-          primary_person_id: primary.id,
-          secondary_person_id: secondary.id,
-        }
+        primary_person_id: primary.id,
+        secondary_person_id: secondary.id,
       }
     });
     setIsMerging(false);
