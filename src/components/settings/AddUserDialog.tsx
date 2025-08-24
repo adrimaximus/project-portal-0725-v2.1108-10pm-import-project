@@ -45,20 +45,35 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
 
   const onSubmit = async (values: AddUserFormValues) => {
     setIsSaving(true);
-    const { error } = await supabase.functions.invoke('create-user-manually', {
-      body: values,
-    });
-    setIsSaving(false);
+    try {
+      const { error } = await supabase.functions.invoke('create-user-manually', {
+        body: values,
+      });
 
-    if (error) {
-      const functionError = (error as any).context?.error;
-      const description = functionError || error.message;
-      toast.error("Failed to add user.", { description });
-    } else {
+      if (error) {
+        // This 'error' is a FunctionsHttpError from the supabase-js client
+        throw error;
+      }
+
       toast.success("User added successfully.");
       onUserAdded();
       onOpenChange(false);
       form.reset();
+    } catch (error: any) {
+      // This catches the thrown FunctionsHttpError
+      let description = "An unknown error occurred. Please check the console.";
+      
+      // The actual error message from the function is in the 'context' property
+      if (error.context && error.context.error) {
+        description = error.context.error;
+      } else {
+        // Fallback for unexpected error structures
+        description = error.message || "The server returned an error.";
+      }
+      
+      toast.error("Failed to add user.", { description });
+    } finally {
+      setIsSaving(false);
     }
   };
 
