@@ -10,8 +10,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { User } from '@/types';
 import { getInitials } from '@/lib/utils';
-import UserProfileStats from '@/components/UserProfileStats';
-import UserProfileProjects from '@/components/UserProfileProjects';
 
 const fetchUserProfile = async (userId: string): Promise<User | null> => {
   const { data, error } = await supabase
@@ -47,17 +45,19 @@ const UserProfilePage = () => {
   if (isLoading) {
     return (
       <PortalLayout>
-        <div className="max-w-4xl mx-auto space-y-6">
-          <Skeleton className="h-8 w-32 mb-4" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-1">
-              <Skeleton className="h-64 w-full" />
-            </div>
-            <div className="md:col-span-2 space-y-6">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-48 w-full" />
-            </div>
-          </div>
+        <div className="max-w-2xl mx-auto">
+          <Skeleton className="h-8 w-32 mb-8" />
+          <Card>
+            <CardHeader className="items-center text-center">
+              <Skeleton className="h-24 w-24 rounded-full" />
+              <Skeleton className="h-8 w-48 mt-4" />
+              <Skeleton className="h-4 w-32 mt-2" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
         </div>
       </PortalLayout>
     );
@@ -82,39 +82,37 @@ const UserProfilePage = () => {
 
   return (
     <PortalLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-2xl mx-auto">
         <Button variant="ghost" className="mb-4" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          <div className="md:col-span-1">
-            <Card>
-              <CardHeader className="items-center text-center">
-                <Avatar className="h-24 w-24 mb-4">
-                  <AvatarImage src={profile.avatar} alt={profile.name} />
-                  <AvatarFallback className="text-3xl">{profile.initials}</AvatarFallback>
-                </Avatar>
-                <CardTitle className="text-2xl">{profile.name}</CardTitle>
-                <CardDescription>
-                  <Badge variant="outline" className="capitalize mt-2">{profile.role || 'Member'}</Badge>
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-md">
-                  <Mail className="h-5 w-5 text-muted-foreground" />
-                  <a href={`mailto:${profile.email}`} className="text-sm text-primary hover:underline truncate">
-                    {profile.email}
-                  </a>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          <div className="md:col-span-2 space-y-6">
-            <UserProfileStats userId={profile.id} />
-            <UserProfileProjects userId={profile.id} />
-          </div>
-        </div>
+        <Card>
+          <CardHeader className="items-center text-center">
+            <Avatar className="h-24 w-24 mb-4">
+              <AvatarImage src={profile.avatar} alt={profile.name} />
+              <AvatarFallback className="text-3xl">{profile.initials}</AvatarFallback>
+            </Avatar>
+            <CardTitle className="text-2xl">{profile.name}</CardTitle>
+            <CardDescription>
+              <Badge variant="outline" className="capitalize mt-2">{profile.role || 'Member'}</Badge>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-md">
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <a href={`mailto:${profile.email}`} className="text-sm text-primary hover:underline">
+                {profile.email}
+              </a>
+            </div>
+            <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-md">
+              <Briefcase className="h-5 w-5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                View projects this user is on (feature coming soon).
+              </span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </PortalLayout>
   );
