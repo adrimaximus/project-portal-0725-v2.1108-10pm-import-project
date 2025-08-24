@@ -103,7 +103,7 @@ You can perform several types of actions. When you decide to perform an action, 
 
 9. CREATE_ARTICLE:
 {"action": "CREATE_ARTICLE", "article_details": {"title": "<article title>", "content": "<HTML content>", "folder_name": "<optional folder name>", "header_image_search_query": "<optional image search query>"}}
-- If folder_name is not provided, it will be placed in "Uncategorized".
+- If folder_name is not provided or does not exist, it will be placed in a default "Uncategorized" folder for the user.
 - If 'header_image_search_query' is provided, I will find an image on Unsplash and set it as the article's header image.
 
 10. UPDATE_ARTICLE:
@@ -458,13 +458,9 @@ async function executeAction(actionData, context) {
             let folder = folders.find(f => f.name.toLowerCase() === targetFolderName.toLowerCase());
 
             if (!folder) {
-                const { data: newFolder, error: folderError } = await userSupabase
-                    .from('kb_folders')
-                    .insert({ name: targetFolderName, user_id: user.id, icon: 'Archive', color: '#9ca3af' })
-                    .select('id')
-                    .single();
-                if (folderError) return `I couldn't create a new folder for the article. The database said: ${folderError.message}`;
-                folder_id = newFolder.id;
+                const { data: defaultFolderId, error: rpcError } = await userSupabase.rpc('create_default_kb_folder');
+                if (rpcError) return `I couldn't find or create a default folder for the article. The database said: ${rpcError.message}`;
+                folder_id = defaultFolderId;
             } else {
                 folder_id = folder.id;
             }
