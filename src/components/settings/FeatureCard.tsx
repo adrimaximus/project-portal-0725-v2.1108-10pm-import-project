@@ -1,17 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Feature } from "@/data/features";
+import { FeatureFlag } from "@/contexts/FeaturesContext";
 import { useFeatures } from "@/contexts/FeaturesContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface FeatureCardProps {
-  feature: Feature;
+  feature: FeatureFlag;
 }
 
 const FeatureCard = ({ feature }: FeatureCardProps) => {
   const { toggleFeatureStatus } = useFeatures();
   const isCoreFeature = feature.id === 'settings' || feature.id === 'dashboard';
-  const isEnabled = feature.status === 'enabled';
+  const isEnabled = feature.is_enabled;
 
   return (
     <Card>
@@ -19,7 +19,7 @@ const FeatureCard = ({ feature }: FeatureCardProps) => {
         <CardTitle className="text-base font-medium">{feature.name}</CardTitle>
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => toggleFeatureStatus(feature.id)}
+            onClick={() => toggleFeatureStatus(feature.id, feature.is_enabled)}
             disabled={isCoreFeature}
             variant={isEnabled ? "outline" : "default"}
             size="sm"
@@ -29,7 +29,7 @@ const FeatureCard = ({ feature }: FeatureCardProps) => {
               isCoreFeature && "cursor-not-allowed opacity-50"
             )}
           >
-            {feature.status}
+            {isEnabled ? 'enabled' : 'disabled'}
           </Button>
         </div>
       </CardHeader>

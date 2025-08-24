@@ -26,6 +26,7 @@ import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useRoles } from '@/hooks/useRoles';
 import { useQueryClient } from '@tanstack/react-query';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useFeatures } from '@/contexts/FeaturesContext';
 
 type Invite = {
   id: number;
@@ -38,6 +39,7 @@ const TeamSettingsPage = () => {
   const queryClient = useQueryClient();
   const { data: members = [], isLoading: isLoadingMembers, refetch: refetchMembers } = useTeamMembers();
   const { data: roles = [], isLoading: isLoadingRoles, refetch: refetchRoles } = useRoles();
+  const { features: workspaceFeatures } = useFeatures();
   
   const [invites, setInvites] = useState<Invite[]>([{ id: Date.now(), email: '', role: 'member' }]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -496,7 +498,7 @@ const TeamSettingsPage = () => {
             <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteRole}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <RoleManagerDialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen} onSave={handleSaveRole} role={editingRole} />
+      <RoleManagerDialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen} onSave={handleSaveRole} role={editingRole} workspaceFeatures={workspaceFeatures} />
       <AddUserDialog
         open={isAddUserDialogOpen}
         onOpenChange={setIsAddUserDialogOpen}

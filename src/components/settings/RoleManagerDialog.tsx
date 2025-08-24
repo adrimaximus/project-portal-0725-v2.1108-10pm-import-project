@@ -7,6 +7,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { PERMISSIONS } from '@/data/permissions';
 import { ScrollArea } from '../ui/scroll-area';
 import { toast } from 'sonner';
+import { FeatureFlag } from '@/contexts/FeaturesContext';
+import { cn } from '@/lib/utils';
 
 export type Role = {
   id?: string;
@@ -21,9 +23,10 @@ interface RoleManagerDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (role: Role) => void;
   role?: Role | null;
+  workspaceFeatures: FeatureFlag[];
 }
 
-const RoleManagerDialog = ({ open, onOpenChange, onSave, role }: RoleManagerDialogProps) => {
+const RoleManagerDialog = ({ open, onOpenChange, onSave, role, workspaceFeatures }: RoleManagerDialogProps) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -59,6 +62,15 @@ const RoleManagerDialog = ({ open, onOpenChange, onSave, role }: RoleManagerDial
     onSave({ ...role, name, description, permissions });
   };
 
+  const isModuleEnabled = (permissionId: string) => {
+    if (!permissionId.startsWith('module:')) {
+      return true;
+    }
+    const featureId = permissionId.replace('module:', '');
+    const feature = workspaceFeatures.find(f => f.id === featureId);
+    return feature ? feature.is_enabled : false;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -84,23 +96,33 @@ const RoleManagerDialog = ({ open, onOpenChange, onSave, role }: RoleManagerDial
               <div key={category.id}>
                 <h4 className="font-semibold mb-3">{category.label}</h4>
                 <div className="space-y-3">
-                  {category.permissions.map(permission => (
-                    <div key={permission.id} className="flex items-start space-x-3">
-                      <Checkbox
-                        id={permission.id}
-                        checked={permissions.includes(permission.id)}
-                        onCheckedChange={(checked) => handlePermissionChange(permission.id, !!checked)}
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor={permission.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                          {permission.label}
-                        </label>
-                        <p className="text-sm text-muted-foreground">
-                          {permission.description}
-                        </p>
+                  {category.permissions.map(permission => {
+                    const isEnabled = isModuleEnabled(permission.id);
+                    return (
+                      <div key={permission.id} className="flex items-start space-x-3">
+                        <Checkbox
+                          id={permission.id}
+                          checked={permissions.includes(permission.id)}
+                          onCheckedChange={(checked) => handlePermissionChange(permission.id, !!checked)}
+                          disabled={!isEnabled}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label
+                            htmlFor={permission.id}
+                            className={cn(
+                              "text-sm font-medium leading-none",
+                              !isEnabled ? "cursor-not-allowed opacity-50" : "peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            )}
+                          >
+                            {permission.label}
+                          </label>
+                          <p className="text-sm text-muted-foreground">
+                            {permission.description}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}

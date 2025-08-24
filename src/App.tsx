@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import ProtectedRouteLayout from "./components/ProtectedRouteLayout";
 import PermissionGuard from "./components/PermissionGuard";
+import MasterAdminGuard from "./components/MasterAdminGuard";
 
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/Dashboard";
@@ -18,7 +19,7 @@ import Profile from "./pages/Profile";
 import SearchPage from "./pages/SearchPage";
 import UserManagementPage from "./pages/UserManagement";
 import UserProfilePage from "./pages/UserProfilePage";
-import SettingsPage from "./pages/Settings";
+import SettingsPage from "./pages/SettingsPage";
 import TeamSettingsPage from "./pages/TeamSettingsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import OpenAiIntegrationPage from "./pages/integrations/OpenAiIntegrationPage";
@@ -37,6 +38,7 @@ import PeoplePage from "./pages/PeoplePage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import FolderDetailPage from "./pages/kb/FolderDetailPage";
 import Page from "./pages/kb/Page";
+import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
 
 function App() {
   return (
@@ -67,6 +69,7 @@ function App() {
           
           {/* Settings are a special group */}
           <Route path="/settings" element={<PermissionGuard permission="module:settings"><SettingsPage /></PermissionGuard>} />
+          <Route path="/settings/workspace" element={<MasterAdminGuard><WorkspaceSettingsPage /></MasterAdminGuard>} />
           <Route path="/settings/team" element={<PermissionGuard permission="module:settings"><TeamSettingsPage /></PermissionGuard>} />
           <Route path="/settings/integrations" element={<PermissionGuard permission="module:settings"><IntegrationsPage /></PermissionGuard>} />
           <Route path="/settings/integrations/openai" element={<PermissionGuard permission="module:settings"><OpenAiIntegrationPage /></PermissionGuard>} />
