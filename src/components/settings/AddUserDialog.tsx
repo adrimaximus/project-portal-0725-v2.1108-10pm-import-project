@@ -23,6 +23,7 @@ const addUserSchema = z.object({
   first_name: z.string().optional(),
   last_name: z.string().optional(),
   email: z.string().email({ message: "Invalid email address." }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
   role: z.string().min(1, { message: "Please select a role." }),
 });
 
@@ -37,6 +38,7 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
       first_name: '',
       last_name: '',
       email: '',
+      password: '',
       role: 'member',
     },
   });
@@ -44,10 +46,11 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
   const onSubmit = async (values: AddUserFormValues) => {
     setIsSaving(true);
     try {
-      const { error } = await supabase.functions.invoke('create-user-manually', {
+      const { data, error } = await supabase.functions.invoke('create-user-manually', {
         body: {
           email: values.email,
-          mode: 'invite',
+          password: values.password,
+          mode: 'create',
           user_metadata: {
             first_name: values.first_name,
             last_name: values.last_name,
@@ -59,8 +62,11 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
       });
 
       if (error) throw error;
+      if (data && !data.ok) {
+        throw new Error(data.error);
+      }
 
-      toast.success(`Invite sent successfully to ${values.email}.`);
+      toast.success("User added successfully.");
       onUserAdded();
       onOpenChange(false);
       form.reset();
@@ -82,7 +88,7 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
         description = error.message || "The server returned an error.";
       }
       
-      toast.error("Failed to send invite.", { description });
+      toast.error("Failed to add user.", { description });
     } finally {
       setIsSaving(false);
     }
@@ -92,9 +98,9 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Invite New Member</DialogTitle>
+          <DialogTitle>Add New Member Manually</DialogTitle>
           <DialogDescription>
-            Send an email invitation for a new user to join your workspace. They will set their own password.
+            Create a new user account directly. The user will be able to log in with the email and password you provide.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -122,6 +128,13 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
                 <FormMessage />
               </FormItem>
             )} />
+            <FormField control={form.control} name="password" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl><Input type="password" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
             <FormField control={form.control} name="role" render={({ field }) => (
               <FormItem>
                 <FormLabel>Role</FormLabel>
@@ -140,7 +153,7 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Send Invite
+                Add Member
               </Button>
             </DialogFooter>
           </form>
