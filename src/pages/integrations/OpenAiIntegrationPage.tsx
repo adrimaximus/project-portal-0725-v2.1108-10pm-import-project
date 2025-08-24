@@ -50,7 +50,9 @@ const OpenAiIntegrationPage = () => {
       setIsConnected(true);
       setApiKey("");
     } catch (error: any) {
-      toast.error("Failed to connect", { description: error.message });
+      toast.error("Failed to connect", { 
+        description: error.message || "Please check your API key and try again. Ensure it has sufficient credits and is not expired." 
+      });
     } finally {
       setIsLoading(false);
     }
