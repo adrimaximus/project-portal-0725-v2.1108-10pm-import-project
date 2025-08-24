@@ -584,7 +584,7 @@ async function analyzeProjects(payload, context) {
 
   } catch (e) {
       console.error("[DIAGNOSTIC] analyzeProjects: Error parsing or executing action. Returning raw response.", e);
-      return { result: responseText };
+      return { result: `I'm sorry, I encountered an error while processing that action: ${e.message}` };
   }
 }
 
