@@ -46,25 +46,12 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
   const onSubmit = async (values: AddUserFormValues) => {
     setIsSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-user-manually', {
-        body: {
-          email: values.email,
-          password: values.password,
-          mode: 'create',
-          email_confirm: true,
-          user_metadata: {
-            first_name: values.first_name,
-            last_name: values.last_name,
-          },
-          app_metadata: {
-            role: values.role,
-          }
-        },
+      const { error } = await supabase.functions.invoke('create-user-manually', {
+        body: values,
       });
 
-      if (error) throw error;
-      if (data && !data.ok) {
-        throw new Error(data.error);
+      if (error) {
+        throw error;
       }
 
       toast.success("User added successfully.");
@@ -72,8 +59,25 @@ const AddUserDialog = ({ open, onOpenChange, onUserAdded, roles }: AddUserDialog
       onOpenChange(false);
       form.reset();
     } catch (error: any) {
-      const errorMessage = error.context?.error?.error || error.message || "An unknown error occurred.";
-      toast.error("Failed to add user.", { description: errorMessage });
+      let description = "An unknown error occurred. Please check the console.";
+      
+      // Correctly parse the error response from the Edge Function
+      if (error.context && typeof error.context.json === 'function') {
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody.error) {
+            description = errorBody.error;
+          } else {
+            description = "The server returned an error without a specific message.";
+          }
+        } catch (e) {
+          description = "Failed to parse the error response from the server.";
+        }
+      } else {
+        description = error.message || "The server returned an error.";
+      }
+      
+      toast.error("Failed to add user.", { description });
     } finally {
       setIsSaving(false);
     }
