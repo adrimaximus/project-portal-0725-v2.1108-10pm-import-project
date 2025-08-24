@@ -8,6 +8,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 interface GoogleCalendar {
   id: string;
@@ -19,6 +21,7 @@ const GoogleCalendarPage = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([]);
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const fetchUserSelections = useCallback(async () => {
     const { data, error } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'get-selections' } });
@@ -68,6 +71,9 @@ const GoogleCalendarPage = () => {
   const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
     try {
+      const { error: healthError } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'health-check' } });
+      if (healthError) throw new Error(`Edge Function not responding: ${healthError.message}`);
+
       const { data, error } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'get-status' } });
       if (error) throw error;
       setIsConnected(data.connected);
@@ -77,6 +83,7 @@ const GoogleCalendarPage = () => {
       }
     } catch (error: any) {
       console.error("Failed to check connection status:", error.message);
+      toast.error("Connection Check Failed", { description: error.message });
       setIsConnected(false);
     } finally {
       setIsLoading(false);
@@ -129,6 +136,20 @@ const GoogleCalendarPage = () => {
     }
     setIsLoading(false);
   };
+
+  if (!googleClientId) {
+    return (
+      <PortalLayout>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Configuration Error</AlertTitle>
+          <AlertDescription>
+            The Google Client ID is missing in the application's environment variables. Please add <strong>VITE_GOOGLE_CLIENT_ID</strong> to your .env file and rebuild the application.
+          </AlertDescription>
+        </Alert>
+      </PortalLayout>
+    )
+  }
 
   return (
     <PortalLayout>

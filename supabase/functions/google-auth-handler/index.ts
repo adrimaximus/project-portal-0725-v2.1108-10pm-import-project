@@ -14,11 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    // --- Pemeriksaan Variabel Lingkungan ---
     const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
     if (!googleClientId || !googleClientSecret) {
       throw new Error("Kredensial Google tidak dikonfigurasi di server. Seorang administrator perlu mengatur secret GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET untuk Edge Function.");
+    }
+
+    const { method, ...payload } = await req.json();
+
+    if (method === 'health-check') {
+      return new Response(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const supabase = createClient(
@@ -33,8 +38,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
-
-    const { method, ...payload } = await req.json();
 
     const oAuth2Client = new OAuth2Client(
       googleClientId,
