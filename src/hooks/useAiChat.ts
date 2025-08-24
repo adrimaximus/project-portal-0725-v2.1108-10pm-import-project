@@ -146,10 +146,17 @@ export const useAiChat = (currentUser: User | null) => {
         attachmentUrl = urlData.publicUrl;
       }
 
-      await analyzeProjects(text, undefined, attachmentUrl);
+      const result = await analyzeProjects(text, undefined, attachmentUrl);
       
+      const aiMessage: Message = {
+        id: uuidv4(),
+        text: result,
+        timestamp: new Date().toISOString(),
+        sender: AI_ASSISTANT_USER,
+      };
+      setConversation(prev => [...prev, aiMessage]);
+
       const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made', 'deleted'];
-      const result = "placeholder"; // This is not used, but to avoid breaking the code
       if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
         toast.info("Action successful. Refreshing data...");
         await Promise.all([
@@ -187,7 +194,7 @@ export const useAiChat = (currentUser: User | null) => {
         timestamp: new Date().toISOString(),
         sender: AI_ASSISTANT_USER,
       };
-      setConversation(prev => [...prev.filter(msg => msg.id !== userMessage.id), errorMessage]);
+      setConversation(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
