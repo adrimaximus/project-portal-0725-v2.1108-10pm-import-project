@@ -49,7 +49,13 @@ const useSpeechRecognition = (): SpeechRecognitionHook => {
 
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error', event.error);
-      toast.error(`Speech recognition error: ${event.error}`);
+      if (event.error === 'network') {
+        toast.error("Speech recognition failed", {
+          description: "Could not connect to the speech service. Please check your internet connection and try again."
+        });
+      } else {
+        toast.error(`Speech recognition error: ${event.error}`);
+      }
       setIsListening(false);
     };
     
