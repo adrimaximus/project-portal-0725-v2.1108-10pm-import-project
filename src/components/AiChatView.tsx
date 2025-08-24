@@ -3,8 +3,8 @@ import { useAiChat } from "@/hooks/useAiChat";
 import ChatHeader from "./ChatHeader";
 import { ChatConversation } from "./ChatConversation";
 import { ChatInput } from "./ChatInput";
-import { forwardRef, useMemo, useEffect } from "react";
-import { Conversation } from "@/types";
+import { forwardRef, useMemo, useEffect, useState } from "react";
+import { Conversation, Message } from "@/types";
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
@@ -19,6 +19,7 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
   const { user: currentUser } = useAuth();
   const { conversation, isLoading, sendMessage, aiUser, isConnected, isCheckingConnection } = useAiChat(currentUser);
   const { isListening, transcript, startListening, stopListening, isSupported } = useSpeechRecognition();
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
 
   useEffect(() => {
     if (transcript && typeof ref === 'object' && ref?.current) {
@@ -41,6 +42,12 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
     lastMessageTimestamp: conversation[conversation.length - 1]?.timestamp || new Date().toISOString(),
     unreadCount: 0,
   }), [aiUser, conversation, currentUser]);
+
+  const handleSendMessage = (text: string, attachmentFile: File | null) => {
+    // The replyTo object is mainly for UI context. The AI gets the whole history.
+    sendMessage(text, attachmentFile);
+    setReplyTo(null);
+  };
 
   if (!currentUser) return null;
 
@@ -86,18 +93,18 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
         messages={conversation}
         members={[currentUser, aiUser]}
         isLoading={isLoading}
-        onReply={() => {}}
+        onReply={setReplyTo}
       />
       <ChatInput 
         ref={ref} 
-        onSendMessage={sendMessage}
+        onSendMessage={handleSendMessage}
         isSending={isLoading}
         conversationId="ai-assistant"
         isListening={isListening}
         onToggleListening={isListening ? stopListening : startListening}
         isSpeechRecognitionSupported={isSupported}
-        replyTo={null}
-        onCancelReply={() => {}}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
       />
     </div>
   );
