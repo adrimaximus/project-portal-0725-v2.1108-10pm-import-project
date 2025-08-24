@@ -3,7 +3,7 @@ import { DateRange } from "react-day-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, differenceInDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval } from "date-fns";
+import { format, differenceInDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import PortalLayout from '@/components/PortalLayout';
 import MoodSelector from '@/components/mood-tracker/MoodSelector';
@@ -161,12 +161,11 @@ const MoodTracker = () => {
       return { moodDataForPeriod: [], historyForPeriod: [] };
     }
     
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
+    const startDateString = format(startDate, 'yyyy-MM-dd');
+    const endDateString = format(endDate, 'yyyy-MM-dd');
 
     const filteredHistory = history.filter(entry => {
-      const entryDate = new Date(entry.date + 'T00:00:00');
-      return isWithinInterval(entryDate, { start: startDate!, end: endDate! });
+      return entry.date >= startDateString && entry.date <= endDateString;
     });
 
     const calculatedMoodData = moods.map(mood => ({
