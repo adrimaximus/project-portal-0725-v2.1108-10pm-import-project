@@ -1,45 +1,46 @@
 import { Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
-import ProtectedRouteLayout from "./components/ProtectedRouteLayout";
-import PermissionGuard from "./components/PermissionGuard";
-import MasterAdminGuard from "./components/MasterAdminGuard";
+import ProtectedRouteLayout from "@/components/ProtectedRouteLayout";
+import PermissionGuard from "@/components/PermissionGuard";
+import MasterAdminGuard from "@/components/MasterAdminGuard";
 
-import LandingPage from "./pages/LandingPage";
-import DashboardPage from "./pages/Dashboard";
-import ProjectsPage from "./pages/ProjectsPage";
-import ProjectDetail from "./pages/ProjectDetail";
-import RequestPage from "./pages/Request";
-import ChatPage from "./pages/ChatPage";
-import MoodTracker from "./pages/MoodTracker";
-import GoalsPage from "./pages/GoalsPage";
-import GoalDetailPage from "./pages/GoalDetailPage";
-import Billing from "./pages/Billing";
-import NotificationsPage from "./pages/Notifications";
-import Profile from "./pages/Profile";
-import SearchPage from "./pages/SearchPage";
-import UserManagementPage from "./pages/UserManagement";
-import UserProfilePage from "./pages/UserProfilePage";
-import SettingsPage from "./pages/SettingsPage";
-import TeamSettingsPage from "./pages/TeamSettingsPage";
-import IntegrationsPage from "./pages/IntegrationsPage";
-import OpenAiIntegrationPage from "./pages/integrations/OpenAiIntegrationPage";
-import NavigationSettingsPage from "./pages/NavigationSettingsPage";
-import EmbedPage from "./pages/EmbedPage";
-import NotFound from "./pages/NotFound";
-import LoginPage from "./pages/LoginPage";
-import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
-import TermsOfServicePage from "./pages/TermsOfServicePage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import GitHubPage from "./pages/integrations/GitHubPage";
-import SlackPage from "./pages/integrations/SlackPage";
-import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
-import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
-import PeoplePage from "./pages/PeoplePage";
-import KnowledgeBasePage from "./pages/KnowledgeBasePage";
-import FolderDetailPage from "./pages/kb/FolderDetailPage";
-import Page from "./pages/kb/Page";
-import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
-import ContactPropertiesPage from "./pages/ContactPropertiesPage";
+import LandingPage from "@/pages/LandingPage";
+import DashboardPage from "@/pages/Dashboard";
+import ProjectsPage from "@/pages/ProjectsPage";
+import ProjectDetail from "@/pages/ProjectDetail";
+import RequestPage from "@/pages/Request";
+import ChatPage from "@/pages/ChatPage";
+import MoodTracker from "@/pages/MoodTracker";
+import GoalsPage from "@/pages/GoalsPage";
+import GoalDetailPage from "@/pages/GoalDetailPage";
+import Billing from "@/pages/Billing";
+import NotificationsPage from "@/pages/Notifications";
+import Profile from "@/pages/Profile";
+import SearchPage from "@/pages/SearchPage";
+import UserManagementPage from "@/pages/UserManagement";
+import UserProfilePage from "@/pages/UserProfilePage";
+import SettingsPage from "@/pages/SettingsPage";
+import TeamSettingsPage from "@/pages/TeamSettingsPage";
+import IntegrationsPage from "@/pages/IntegrationsPage";
+import OpenAiIntegrationPage from "@/pages/integrations/OpenAiIntegrationPage";
+import NavigationSettingsPage from "@/pages/NavigationSettingsPage";
+import EmbedPage from "@/pages/EmbedPage";
+import NotFound from "@/pages/NotFound";
+import LoginPage from "@/pages/LoginPage";
+import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
+import TermsOfServicePage from "@/pages/TermsOfServicePage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import GitHubPage from "@/pages/integrations/GitHubPage";
+import SlackPage from "@/pages/integrations/SlackPage";
+import GoogleDrivePage from "@/pages/integrations/GoogleDrivePage";
+import GoogleCalendarPage from "@/pages/integrations/GoogleCalendarPage";
+import PeoplePage from "@/pages/PeoplePage";
+import KnowledgeBasePage from "@/pages/KnowledgeBasePage";
+import FolderDetailPage from "@/pages/kb/FolderDetailPage";
+import Page from "@/pages/kb/Page";
+import WorkspaceSettingsPage from "@/pages/WorkspaceSettingsPage";
+import ContactPropertiesPage from "@/pages/ContactPropertiesPage";
+import ExchangeCode from "@/pages/ExchangeCode";
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<ExchangeCode />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />

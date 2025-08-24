@@ -78,7 +78,7 @@ const LoginPage = () => {
                 },
               }}
               providers={['google']}
-              redirectTo={`${window.location.origin}/dashboard`}
+              redirectTo={`${window.location.origin}/auth/callback`}
               socialLayout="horizontal"
               queryParams={{
                 prompt: 'select_account',
