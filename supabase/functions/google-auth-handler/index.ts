@@ -6,6 +6,7 @@ import { OAuth2Client } from 'https://esm.sh/google-auth-library@9.11.0'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
 }
 
 serve(async (req) => {
