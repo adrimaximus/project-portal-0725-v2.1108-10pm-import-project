@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import PortalLayout from "@/components/PortalLayout";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { generateVibrantGradient } from "@/lib/utils";
+import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
 
 const Profile = () => {
   const { user, refreshUser, logout } = useAuth();
@@ -208,28 +208,7 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Notification Settings</CardTitle>
-            <CardDescription>Manage how you receive notifications from the platform.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div>
-                <Label htmlFor="email-mentions">Email Notifications</Label>
-                <p className="text-sm text-muted-foreground">Receive an email when you are mentioned or a critical event occurs.</p>
-              </div>
-              <Switch id="email-mentions" defaultChecked />
-            </div>
-             <div className="flex items-center justify-between rounded-lg border p-4">
-              <div>
-                <Label htmlFor="push-notifications">Push Notifications</Label>
-                <p className="text-sm text-muted-foreground">Get push notifications on your devices for all activities.</p>
-              </div>
-              <Switch id="push-notifications" defaultChecked />
-            </div>
-          </CardContent>
-        </Card>
+        <NotificationPreferencesCard />
 
         <Card>
           <CardHeader>
