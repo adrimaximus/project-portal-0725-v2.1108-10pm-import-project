@@ -1,7 +1,8 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
+import { createClient as createSupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 import OpenAI from 'https://esm.sh/openai@4.29.2';
+import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
 
 // --- UTILITIES & CONSTANTS ---
 
@@ -14,7 +15,7 @@ const corsHeaders = {
 // --- HELPER FUNCTIONS ---
 
 const createSupabaseAdmin = () => {
-  return createClient(
+  return createSupabaseClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
   );
@@ -38,7 +39,7 @@ const createSupabaseUserClient = (req) => {
     if (!authHeader) {
       throw new Error('Missing Authorization header');
     }
-    return createClient(
+    return createSupabaseClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
@@ -292,7 +293,144 @@ async function executeAction(actionData, context) {
 
                 return `Done! I've created the project "${newProject.name}"${followUpMessage}. You can view it at /projects/${newProject.slug}`;
             }
-            // ... (rest of the cases remain the same)
+            case 'UPDATE_PROJECT': {
+                const { project_name, updates } = actionData;
+                const project = projects.find(p => p.name.toLowerCase() === project_name.toLowerCase());
+                if (!project) return `I couldn't find a project named "${project_name}".`;
+
+                const { data, error } = await userSupabase.rpc('update_project_details', {
+                    p_project_id: project.id,
+                    p_name: updates.name || project.name,
+                    p_description: updates.description || project.description,
+                    p_category: updates.category || project.category,
+                    p_status: updates.status || project.status,
+                    p_budget: updates.budget || project.budget,
+                    p_start_date: updates.start_date || project.start_date,
+                    p_due_date: updates.due_date || project.due_date,
+                    p_payment_status: updates.payment_status || project.payment_status,
+                    p_payment_due_date: updates.payment_due_date || project.payment_due_date,
+                    p_venue: updates.venue || project.venue,
+                    p_member_ids: project.assignedTo.map(m => m.id), // This RPC requires all members, not just changes
+                    p_service_titles: updates.services || project.services,
+                    p_existing_tags: (updates.tags || project.tags || []).map(t => t.id),
+                    p_custom_tags: [],
+                });
+
+                if (error) return `I failed to update the project. The database said: ${error.message}`;
+                return `I've updated the project "${project.name}".`;
+            }
+            case 'CREATE_GOAL': {
+                const { goal_details } = actionData;
+                const { data: newGoal, error } = await userSupabase.rpc('create_goal_and_link_tags', {
+                    p_title: goal_details.title,
+                    p_description: goal_details.description,
+                    p_icon: goal_details.icon,
+                    p_color: goal_details.color,
+                    p_type: goal_details.type,
+                    p_frequency: goal_details.frequency,
+                    p_specific_days: goal_details.specific_days,
+                    p_target_quantity: goal_details.target_quantity,
+                    p_target_period: goal_details.target_period,
+                    p_target_value: goal_details.target_value,
+                    p_unit: goal_details.unit,
+                    p_existing_tags: [],
+                    p_custom_tags: goal_details.tags || [],
+                }).single();
+
+                if (error) return `I failed to create the goal. The database said: ${error.message}`;
+                return `I've created the goal "${newGoal.title}". You can view it at /goals/${newGoal.slug}`;
+            }
+            case 'UPDATE_GOAL': {
+                const { goal_title, updates } = actionData;
+                const goal = goals.find(g => g.title.toLowerCase() === goal_title.toLowerCase());
+                if (!goal) return `I couldn't find a goal named "${goal_title}".`;
+
+                const { error } = await userSupabase.rpc('update_goal_with_tags', {
+                    p_goal_id: goal.id,
+                    p_title: updates.title,
+                    p_description: updates.description,
+                    p_icon: updates.icon,
+                    p_color: updates.color,
+                    p_type: updates.type,
+                    p_frequency: updates.frequency,
+                    p_specific_days: updates.specific_days,
+                    p_target_quantity: updates.target_quantity,
+                    p_target_period: updates.target_period,
+                    p_target_value: updates.target_value,
+                    p_unit: updates.unit,
+                    p_tags: (updates.tags || goal.tags || []).map(t => t.id),
+                    p_custom_tags: [],
+                });
+
+                if (error) return `I failed to update the goal. The database said: ${error.message}`;
+                return `I've updated the goal "${goal.title}".`;
+            }
+            case 'CREATE_FOLDER': {
+                const { name, description, icon, color, category } = actionData.folder_details;
+                const { data: newFolder, error } = await userSupabase.from('kb_folders').insert({
+                    name, description, icon, color, category, user_id: user.id
+                }).select().single();
+                if (error) return `I failed to create the folder. The database said: ${error.message}`;
+                return `I've created the folder "${newFolder.name}". You can view it at /knowledge-base/folders/${newFolder.slug}`;
+            }
+            case 'CREATE_ARTICLE': {
+                const { title, content, folder_name, header_image_search_query } = actionData.article_details;
+                let folder_id = folders.find(f => f.name.toLowerCase() === folder_name?.toLowerCase())?.id;
+                let header_image_url = null;
+
+                if (header_image_search_query) {
+                    const unsplash = createApi({ accessKey: Deno.env.get('VITE_UNSPLASH_ACCESS_KEY')! });
+                    const photo = await unsplash.search.getPhotos({ query: header_image_search_query, perPage: 1 });
+                    if (photo.response?.results[0]) {
+                        header_image_url = photo.response.results[0].urls.regular;
+                    }
+                }
+
+                if (!folder_id) {
+                    const { data: defaultFolder, error: folderError } = await userSupabase.rpc('create_default_kb_folder');
+                    if (folderError) return `I couldn't find or create a default folder for the article: ${folderError.message}`;
+                    folder_id = defaultFolder;
+                }
+
+                const { data: newArticle, error } = await userSupabase.from('kb_articles').insert({
+                    title, content: { html: content }, folder_id, user_id: user.id, header_image_url
+                }).select().single();
+
+                if (error) return `I failed to create the article. The database said: ${error.message}`;
+                return `I've created the article "${newArticle.title}". You can view it at /knowledge-base/pages/${newArticle.slug}`;
+            }
+            case 'UPDATE_ARTICLE': {
+                const { article_title, updates } = actionData;
+                const article = articles.find(a => a.title.toLowerCase() === article_title.toLowerCase());
+                if (!article) return `I couldn't find an article named "${article_title}".`;
+
+                let header_image_url = article.header_image_url;
+                if (updates.header_image_search_query) {
+                    const unsplash = createApi({ accessKey: Deno.env.get('VITE_UNSPLASH_ACCESS_KEY')! });
+                    const photo = await unsplash.search.getPhotos({ query: updates.header_image_search_query, perPage: 1 });
+                    if (photo.response?.results[0]) {
+                        header_image_url = photo.response.results[0].urls.regular;
+                    }
+                }
+
+                const { error } = await userSupabase.from('kb_articles').update({
+                    title: updates.title,
+                    content: updates.content ? { html: updates.content } : undefined,
+                    folder_id: updates.folder_name ? folders.find(f => f.name.toLowerCase() === updates.folder_name.toLowerCase())?.id : undefined,
+                    header_image_url,
+                }).eq('id', article.id);
+
+                if (error) return `I failed to update the article. The database said: ${error.message}`;
+                return `I've updated the article "${article.title}".`;
+            }
+            case 'DELETE_ARTICLE': {
+                const { article_title } = actionData;
+                const article = articles.find(a => a.title.toLowerCase() === article_title.toLowerCase());
+                if (!article) return `I couldn't find an article named "${article_title}".`;
+                const { error } = await userSupabase.from('kb_articles').delete().eq('id', article.id);
+                if (error) return `I failed to delete the article. The database said: ${error.message}`;
+                return `I've deleted the article "${article.title}".`;
+            }
             default:
                 return "I'm not sure how to perform that action. Can you clarify?";
         }
