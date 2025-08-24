@@ -39,7 +39,7 @@ const MonthHistorySection = ({ month, entries }: MonthHistorySectionProps) => {
 
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, monthIndex, 1).getDay();
-  const placeholders = (firstDayOfWeek + 6) % 7;
+  const placeholders = firstDayOfWeek;
 
   const entriesMap = new Map<number, MoodHistoryEntry>();
   entries.forEach(entry => {

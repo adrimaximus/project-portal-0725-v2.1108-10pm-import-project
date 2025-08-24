@@ -138,8 +138,8 @@ const MoodTracker = () => {
 
     switch (period) {
       case 'week':
-        startDate = startOfWeek(today, { weekStartsOn: 1 });
-        endDate = endOfWeek(today, { weekStartsOn: 1 });
+        startDate = startOfWeek(today);
+        endDate = endOfWeek(today);
         break;
       case 'month':
         startDate = startOfMonth(today);
