@@ -88,7 +88,7 @@ const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConvers
               )}
             >
               {isCurrentUser && (
-                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => onReply(message)}>
+                <Button variant="ghost" size="icon" className="h-7 w-7 invisible group-hover:visible" onClick={() => onReply(message)}>
                   <CornerUpLeft className="h-4 w-4" />
                 </Button>
               )}
@@ -173,7 +173,7 @@ const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConvers
                 )}
               </div>
               {!isCurrentUser && (
-                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => onReply(message)}>
+                <Button variant="ghost" size="icon" className="h-7 w-7 invisible group-hover:visible" onClick={() => onReply(message)}>
                   <CornerUpLeft className="h-4 w-4" />
                 </Button>
               )}
