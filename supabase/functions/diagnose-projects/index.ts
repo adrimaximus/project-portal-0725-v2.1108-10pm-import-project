@@ -6,16 +6,15 @@ import OpenAI from 'https://esm.sh/openai@4.29.2';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // 1. Authenticate user and create clients
     const userSupabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -29,23 +28,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 2. Run Diagnostics
     const diagnostics = {};
 
-    // Check RLS on projects table
     const { data: projectPolicies } = await supabaseAdmin.from('pg_policies').select('policyname').eq('tablename', 'projects');
     diagnostics.projectsRLS = projectPolicies && projectPolicies.length > 0;
 
-    // Check RLS on project_members table
     const { data: memberPolicies } = await supabaseAdmin.from('pg_policies').select('policyname').eq('tablename', 'project_members');
     diagnostics.projectMembersRLS = memberPolicies && memberPolicies.length > 0;
 
-    // Run the main RPC function as the user to see what they see
     const { data: userProjects, error: rpcError } = await userSupabase.rpc('get_dashboard_projects');
     diagnostics.rpcReturnsData = !rpcError && userProjects && userProjects.length > 0;
     diagnostics.projectCount = userProjects ? userProjects.length : 0;
 
-    // Check for projects with null dates which can affect calendar views
     const { data: projectsWithNullDates, error: nullDateError } = await supabaseAdmin
       .from('projects')
       .select('id', { count: 'exact' })
@@ -53,7 +47,6 @@ serve(async (req) => {
       .in('id', userProjects ? userProjects.map(p => p.id) : []);
     diagnostics.projectsWithNullDates = nullDateError ? 'unknown' : projectsWithNullDates?.length || 0;
 
-    // 3. Get OpenAI API Key
     const { data: config, error: configError } = await supabaseAdmin
       .from('app_config')
       .select('value')
@@ -65,7 +58,6 @@ serve(async (req) => {
     }
     const openai = new OpenAI({ apiKey: config.value });
 
-    // 4. Ask AI to interpret results
     const systemPrompt = `You are an expert Supabase and application support AI. Your goal is to help a user diagnose why their projects might not be showing up in the UI. You will be given a JSON object with diagnostic results. Interpret these results and provide a clear, friendly, and actionable explanation in markdown format.
 
 Here's what the diagnostic keys mean:

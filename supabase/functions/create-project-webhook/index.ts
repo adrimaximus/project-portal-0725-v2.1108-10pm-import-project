@@ -5,22 +5,19 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
-  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // 1. Check for POST method
     if (req.method !== 'POST') {
       throw new Error('Method not allowed. Please use POST.');
     }
 
-    // 2. Check for secret key
     const url = new URL(req.url);
     const providedSecret = url.searchParams.get('secret');
     const expectedSecret = Deno.env.get('WEBHOOK_SECRET');
@@ -29,7 +26,6 @@ serve(async (req) => {
       throw new Error('Unauthorized. Invalid or missing secret.');
     }
 
-    // 3. Parse and validate the incoming JSON payload
     const {
       name,
       description,
@@ -37,22 +33,20 @@ serve(async (req) => {
       startDate,
       dueDate,
       clientEmail,
-      category = 'Webhook Event', // Default category
-      status = 'Requested' // Default status
+      category = 'Webhook Event',
+      status = 'Requested'
     } = await req.json();
 
     if (!name || !clientEmail) {
       throw new Error('Missing required fields: name and clientEmail are required.');
     }
 
-    // 4. Create Supabase admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // 5. Find the user ID for the client's email
     const { data: clientProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id')
@@ -63,7 +57,6 @@ serve(async (req) => {
       throw new Error(`Client with email "${clientEmail}" not found.`);
     }
 
-    // 6. Insert the new project into the database
     const projectData = {
       name,
       description,
@@ -85,20 +78,20 @@ serve(async (req) => {
       throw insertError;
     }
 
-    // 7. Return a success response
     return new Response(JSON.stringify({
       message: 'Project created successfully',
       project: newProject
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 201, // 201 Created
+      status: 201,
     });
 
   } catch (error) {
     console.error('Webhook Error:', error.message);
+    const status = error.message.includes('Unauthorized') ? 401 : 400;
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: error.message.includes('Unauthorized') ? 401 : 400,
+      status,
     });
   }
 })

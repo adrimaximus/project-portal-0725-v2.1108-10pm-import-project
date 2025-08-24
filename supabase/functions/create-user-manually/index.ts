@@ -6,15 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST,OPTIONS",
-  "Content-Type": "application/json",
 };
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -22,44 +14,47 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json().catch(() => ({}));
     const {
       email,
       password,
       mode = "create",
       email_confirm = true,
       user_metadata = {},
-      app_metadata = {}, // Added for role
+      app_metadata = {},
       redirectTo,
-    } = body ?? {};
+    } = await req.json();
 
     if (!email) {
-      return new Response(JSON.stringify({ ok: false, error: "email is required" }),
-        { status: 400, headers: corsHeaders });
+      throw new Error("email is required");
     }
+
+    const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL")!, 
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, 
+        { auth: { autoRefreshToken: false, persistSession: false } }
+    );
 
     if (mode === "invite") {
-      const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+      const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
         redirectTo,
-        data: app_metadata, // inviteUserByEmail uses `data` for app_metadata
+        data: app_metadata,
       });
       if (error) throw error;
-      return new Response(JSON.stringify({ ok: true, mode, data }), { headers: corsHeaders });
+      return new Response(JSON.stringify({ ok: true, mode, data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // mode === "create"
     const pwd = password ?? crypto.randomUUID() + "Aa1!";
     const { data, error } = await admin.auth.admin.createUser({
       email,
       password: pwd,
       email_confirm,
       user_metadata,
-      app_metadata, // Pass app_metadata here
+      app_metadata,
     });
     if (error) {
         if (error.message.includes('User already registered')) {
             return new Response(JSON.stringify({ ok: false, error: `A user with the email ${email} already exists.` }), {
-              status: 409, // Conflict
+              status: 409,
               headers: corsHeaders,
             });
         }
@@ -67,12 +62,12 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ ok: true, mode, user: data.user, default_password: password ? undefined : pwd }),
-      { headers: corsHeaders });
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: String(e.message || e) }), {
-      status: 500,
-      headers: corsHeaders,
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
