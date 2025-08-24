@@ -20,35 +20,14 @@ const GoogleCalendarPage = () => {
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([]);
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
 
-  const checkConnectionStatus = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'get-status' } });
-      if (error) throw error;
-      setIsConnected(data.connected);
-      if (data.connected) {
-        await fetchUserSelections();
-      }
-    } catch (error: any) {
-      console.error("Failed to check connection status:", error.message);
-      setIsConnected(false);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const fetchUserSelections = async () => {
+  const fetchUserSelections = useCallback(async () => {
     const { data, error } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'get-selections' } });
     if (error) {
       toast.error("Failed to fetch your calendar selections.");
     } else {
       setSelectedCalendars(data.selections || []);
     }
-  };
-
-  useEffect(() => {
-    checkConnectionStatus();
-  }, [checkConnectionStatus]);
+  }, []);
 
   const handleDisconnect = useCallback(async () => {
     setIsLoading(true);
@@ -69,33 +48,44 @@ const GoogleCalendarPage = () => {
   const handleFetchCalendars = useCallback(async () => {
     setIsLoading(true);
     try {
-      // We need a valid access token to list calendars. We'll get a temporary one via the client-side flow.
-      // The refresh token for the cron job is handled separately on the server.
-      const tempLogin = await new Promise<string>((resolve, reject) => {
-        const loginFn = useGoogleLogin({
-          onSuccess: (tokenResponse) => resolve(tokenResponse.access_token),
-          onError: () => reject(new Error('Failed to get temporary token.')),
-          scope: 'https://www.googleapis.com/auth/calendar.readonly',
-        });
-        loginFn();
+      const { data, error } = await supabase.functions.invoke('google-auth-handler', {
+        body: { method: 'list-calendars' }
       });
-
-      const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
-        headers: { 'Authorization': `Bearer ${tempLogin}` },
-      });
-      if (!response.ok) throw new Error('Failed to fetch calendar list');
+      if (error) throw error;
       
-      const data = await response.json();
-      const fetchedCalendars = (data.items || []).filter((cal: GoogleCalendar) => cal.id);
+      const fetchedCalendars = (data || []).filter((cal: GoogleCalendar) => cal.id);
       setCalendars(fetchedCalendars);
       toast.success("Successfully fetched your calendars.");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to fetch your calendars. Please try again.");
+      toast.error("Failed to fetch your calendars.", { description: error.message });
+      await handleDisconnect();
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [handleDisconnect]);
+
+  const checkConnectionStatus = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'get-status' } });
+      if (error) throw error;
+      setIsConnected(data.connected);
+      if (data.connected) {
+        await fetchUserSelections();
+        await handleFetchCalendars();
+      }
+    } catch (error: any) {
+      console.error("Failed to check connection status:", error.message);
+      setIsConnected(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchUserSelections, handleFetchCalendars]);
+
+  useEffect(() => {
+    checkConnectionStatus();
+  }, [checkConnectionStatus]);
 
   const login = useGoogleLogin({
     onSuccess: async (codeResponse) => {
@@ -108,6 +98,7 @@ const GoogleCalendarPage = () => {
       } else {
         toast.success("Successfully connected to Google Calendar!");
         setIsConnected(true);
+        await fetchUserSelections();
         await handleFetchCalendars();
       }
       setIsLoading(false);

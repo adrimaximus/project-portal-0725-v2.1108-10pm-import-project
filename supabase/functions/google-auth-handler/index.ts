@@ -31,13 +31,15 @@ serve(async (req) => {
 
     const oAuth2Client = new OAuth2Client(
       Deno.env.get('GOOGLE_CLIENT_ID'),
-      Deno.env.get('GOOGLE_CLIENT_SECRET'),
-      'postmessage' // This must match the redirect_uri in your client-side code
+      Deno.env.get('GOOGLE_CLIENT_SECRET')
     );
 
     switch (method) {
       case 'exchange-code': {
-        const { tokens } = await oAuth2Client.getToken(payload.code);
+        const { tokens } = await oAuth2Client.getToken({
+          code: payload.code,
+          redirect_uri: 'postmessage'
+        });
         const { access_token, refresh_token, expiry_date, scope } = tokens;
 
         if (!access_token) throw new Error("Failed to get access token.");
@@ -79,6 +81,33 @@ serve(async (req) => {
           if (error) throw error;
         }
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      case 'list-calendars': {
+        const { data: tokenData, error: tokenError } = await supabaseAdmin
+          .from('user_google_tokens')
+          .select('refresh_token')
+          .eq('user_id', user.id)
+          .single();
+
+        if (tokenError || !tokenData?.refresh_token) {
+          throw new Error("No refresh token found for user. Please reconnect.");
+        }
+
+        oAuth2Client.setCredentials({ refresh_token: tokenData.refresh_token });
+        const { token: accessToken } = await oAuth2Client.getAccessToken();
+        if (!accessToken) throw new Error("Failed to refresh access token.");
+
+        const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.json();
+          throw new Error(`Google API Error: ${errorBody.error.message}`);
+        }
+        
+        const calendarData = await response.json();
+        return new Response(JSON.stringify(calendarData.items || []), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
       default:
         throw new Error("Invalid method");
