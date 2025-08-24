@@ -80,9 +80,6 @@ const LoginPage = () => {
               providers={['google']}
               redirectTo={`${window.location.origin}/dashboard`}
               socialLayout="horizontal"
-              queryParams={{
-                prompt: 'select_account',
-              }}
             />
           </div>
         </div>

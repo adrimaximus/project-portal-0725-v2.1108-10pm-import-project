@@ -93,6 +93,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (event === 'PASSWORD_RECOVERY') {
         navigate('/reset-password');
       }
+      if (event === 'SIGNED_OUT') {
+        toast.success("You have been successfully logged out.");
+      }
       
       setLoading(false);
     });
@@ -115,7 +118,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error logging out:", error);
       toast.error("Logout failed. Please try again.");
     } else {
-      toast.success("You have been successfully logged out.");
+      setUser(null);
+      setSession(null);
+      localStorage.removeItem('lastUserName'); // Also clear on explicit logout
       navigate('/', { replace: true });
     }
   };
