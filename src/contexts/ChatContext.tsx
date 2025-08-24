@@ -176,6 +176,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return conversation ? { ...conversation, messages } : null;
   }, [selectedConversationId, conversations, messages]);
 
+  const sendMessage = (text: string, attachment: Attachment | null) => {
+    sendMessageMutation.mutate({ text, attachment });
+  };
+
   const value = {
     conversations: filteredConversations,
     isLoadingConversations,
@@ -184,7 +188,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     messages,
     isLoadingMessages,
     isSendingMessage: sendMessageMutation.isPending,
-    sendMessage: sendMessageMutation.mutate,
+    sendMessage,
     startNewChat: startNewChatMutation.mutate,
     startNewGroupChat: (collaborators: Collaborator[], groupName: string) => startNewGroupChatMutation.mutate({ members: collaborators, groupName }),
     deleteConversation: deleteConversationMutation.mutate,
