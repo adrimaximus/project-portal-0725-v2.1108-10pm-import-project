@@ -120,6 +120,46 @@ serve(async (req) => {
         const calendarData = await response.json();
         return new Response(JSON.stringify(calendarData.items || []), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
+      case 'list-events': {
+        const { data: tokenData, error: tokenError } = await supabaseAdmin
+          .from('user_google_tokens')
+          .select('refresh_token')
+          .eq('user_id', user.id)
+          .single();
+        if (tokenError || !tokenData?.refresh_token) {
+          throw new Error("No refresh token found for user. Please reconnect.");
+        }
+
+        oAuth2Client.setCredentials({ refresh_token: tokenData.refresh_token });
+        const { token: accessToken } = await oAuth2Client.getAccessToken();
+        if (!accessToken) throw new Error("Failed to refresh access token.");
+
+        const { calendarIds, timeMin, timeMax } = payload;
+        if (!calendarIds || !Array.isArray(calendarIds) || !timeMin || !timeMax) {
+            throw new Error("calendarIds array, timeMin, and timeMax are required.");
+        }
+
+        const allEvents = [];
+        for (const calendarId of calendarIds) {
+            const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` },
+            });
+            if (!response.ok) {
+                console.warn(`Could not fetch events for calendar ${calendarId}. Status: ${response.status}`);
+                continue;
+            }
+            const data = await response.json();
+            if (data.items) allEvents.push(...data.items);
+        }
+
+        allEvents.sort((a, b) => {
+            const dateA = new Date(a.start.dateTime || a.start.date);
+            const dateB = new Date(b.start.dateTime || b.start.date);
+            return dateA.getTime() - dateB.getTime();
+        });
+
+        return new Response(JSON.stringify(allEvents), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
       default:
         throw new Error("Invalid method");
     }

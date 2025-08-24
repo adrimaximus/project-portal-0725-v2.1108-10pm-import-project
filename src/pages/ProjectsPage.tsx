@@ -68,18 +68,11 @@ const ProjectsPage = () => {
   };
 
   const refreshCalendarEvents = async (range: DateRange | undefined) => {
-    const token = localStorage.getItem('googleCalendarToken');
     const selectedCalendarsStr = localStorage.getItem('googleCalendarSelected');
-    
-    if (!token) {
-      toast.error("Google Calendar is not connected or session expired. Please connect in settings.");
-      return;
-    }
     if (!selectedCalendarsStr) {
       toast.info("No calendars selected to refresh.");
       return;
     }
-
     const selectedCalendars = JSON.parse(selectedCalendarsStr);
     if (!Array.isArray(selectedCalendars) || selectedCalendars.length === 0) {
       toast.info("No calendars selected to refresh.");
@@ -88,47 +81,35 @@ const ProjectsPage = () => {
 
     toast.info("Refreshing calendar events for the selected range...");
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Authentication error. Please log in again.");
+        return;
+      }
+
       const today = new Date();
       const from = range?.from || startOfMonth(today);
       const to = range?.to || endOfMonth(today);
       to.setHours(23, 59, 59, 999);
 
-      const timeMin = from.toISOString();
-      const timeMax = to.toISOString();
-      
-      const allEvents: any[] = [];
-
-      for (const calendarId of selectedCalendars) {
-        const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-
-        if (response.status === 401) {
-            toast.error("Authentication expired. Please reconnect in settings.");
-            localStorage.removeItem('googleCalendarToken');
-            localStorage.removeItem('googleCalendarConnected');
-            return;
+      const { data: allEvents, error } = await supabase.functions.invoke('google-auth-handler', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: {
+          method: 'list-events',
+          calendarIds: selectedCalendars,
+          timeMin: from.toISOString(),
+          timeMax: to.toISOString(),
         }
-        if (!response.ok) {
-            throw new Error(`Failed to fetch events for calendar ${calendarId}`);
-        }
-        
-        const data = await response.json();
-        if (data.items) allEvents.push(...data.items);
-      }
-      
-      allEvents.sort((a, b) => {
-        const dateA = new Date(a.start.dateTime || a.start.date);
-        const dateB = new Date(b.start.dateTime || b.start.date);
-        return dateA.getTime() - dateB.getTime();
       });
 
+      if (error) throw new Error(error.message);
+      
       localStorage.setItem('googleCalendarEvents', JSON.stringify(allEvents));
       setCalendarEvents(allEvents);
       toast.success(`Successfully fetched ${allEvents.length} events!`);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to refresh events. Please try reconnecting in settings.");
+      toast.error("Failed to refresh events.", { description: error.message });
     }
   };
 
@@ -214,7 +195,7 @@ const ProjectsPage = () => {
 
         if (aValue === null || aValue === undefined) return 1;
         if (bValue === null || bValue === undefined) return -1;
-
+        
         if (typeof aValue === 'number' && typeof bValue === 'number') {
             if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
             if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
