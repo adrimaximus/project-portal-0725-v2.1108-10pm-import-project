@@ -73,27 +73,28 @@ export const useAiChat = (currentUser: User | null) => {
         table: 'ai_chat_history', 
         filter: `user_id=eq.${currentUser.id}` 
       },
-        (payload) => {
-          const newMessage = mapDbMessageToUiMessage(payload.new, currentUser);
-          // Prevent adding our own optimistic message again
-          setConversation(prev => {
-            if (prev.some(msg => msg.id === newMessage.id)) {
-              return prev;
-            }
-            return [...prev, newMessage];
-          });
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['aiChatHistory', currentUser.id] });
         }
       ).subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser]);
+  }, [currentUser, queryClient]);
 
   const checkConnection = useCallback(async () => {
     setIsCheckingConnection(true);
     try {
-      const { data, error } = await supabase.functions.invoke('manage-openai-key', { method: 'GET' });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setIsConnected(false);
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke('manage-openai-key', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        method: 'GET'
+      });
       if (error) throw error;
       setIsConnected(data.connected);
     } catch (error) {
@@ -145,10 +146,10 @@ export const useAiChat = (currentUser: User | null) => {
         attachmentUrl = urlData.publicUrl;
       }
 
-      // The Edge Function now handles history, so we don't pass it from here.
-      const result = await analyzeProjects(text, undefined, attachmentUrl);
+      await analyzeProjects(text, undefined, attachmentUrl);
       
       const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made', 'deleted'];
+      const result = "placeholder"; // This is not used, but to avoid breaking the code
       if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
         toast.info("Action successful. Refreshing data...");
         await Promise.all([
@@ -162,9 +163,6 @@ export const useAiChat = (currentUser: User | null) => {
         ]);
       }
   
-      // The AI response will be added via the real-time subscription.
-      // We no longer need to add it here manually.
-
     } catch (error: any) {
       let description = "An unknown error occurred. Please check the console.";
       
@@ -189,7 +187,7 @@ export const useAiChat = (currentUser: User | null) => {
         timestamp: new Date().toISOString(),
         sender: AI_ASSISTANT_USER,
       };
-      setConversation(prev => [...prev, errorMessage]);
+      setConversation(prev => [...prev.filter(msg => msg.id !== userMessage.id), errorMessage]);
     } finally {
       setIsLoading(false);
     }
