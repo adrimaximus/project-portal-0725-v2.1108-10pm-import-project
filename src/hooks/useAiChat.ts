@@ -166,17 +166,26 @@ export const useAiChat = (currentUser: User | null) => {
       // We no longer need to add it here manually.
 
     } catch (error: any) {
-      let displayError = `Sorry, I encountered an error: ${error.message}.`;
-      if (error.message.includes('non-2xx status code') || error.message.includes('not configured')) {
-        displayError = "I'm having trouble connecting to my brain (the AI service). An administrator may need to configure the OpenAI integration in the settings.";
-        const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
-        if (isAdmin) {
-            displayError += "\n\nYou can [configure it here](/settings/integrations/openai)."
+      let description = "An unknown error occurred. Please check the console.";
+      
+      if (error.context && typeof error.context.json === 'function') {
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody.error) {
+            description = errorBody.error;
+          } else {
+            description = "The server returned an error without a specific message.";
+          }
+        } catch (e) {
+          description = "Failed to parse the error response from the server.";
         }
+      } else {
+        description = error.message || "The server returned an error.";
       }
+      
       const errorMessage: Message = {
         id: uuidv4(),
-        text: displayError,
+        text: `Sorry, I'm having trouble: ${description}`,
         timestamp: new Date().toISOString(),
         sender: AI_ASSISTANT_USER,
       };

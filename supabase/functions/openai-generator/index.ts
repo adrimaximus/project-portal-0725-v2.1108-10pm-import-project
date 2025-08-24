@@ -375,7 +375,7 @@ async function executeAction(actionData, context) {
             let assignmentMessage = "";
             if (assignees && assignees.length > 0) {
                 const userIdsToAssign = users
-                    .filter(u => assignees.some(name => `${u.first_name} ${u.last_name}`.toLowerCase() === name.toLowerCase() || u.email.toLowerCase() === name.toLowerCase()))
+                    .filter(u => assignees.some(name => `${u.first_name} ${u.last_name}`.trim().toLowerCase() === name.toLowerCase() || u.email.toLowerCase() === name.toLowerCase()))
                     .map(u => u.id);
                 
                 if (userIdsToAssign.length > 0) {
@@ -1004,9 +1004,20 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Edge function error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    let status = 500;
+    let message = error.message;
+
+    if (error.status === 401) {
+      status = 401;
+      message = "OpenAI API key is invalid or has been revoked. Please check your key in the settings.";
+    } else if (error.status === 429) {
+      status = 429;
+      message = "You've exceeded your OpenAI quota or have a billing issue. Please check your OpenAI account.";
+    }
+
+    return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: status,
     });
   }
 });
