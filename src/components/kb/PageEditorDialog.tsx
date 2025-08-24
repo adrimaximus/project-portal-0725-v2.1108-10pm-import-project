@@ -161,7 +161,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
     
     setIsImproving(true);
     try {
-      const { data, error } = await supabase.functions.invoke('openai-generator', {
+      const { data, error } = await supabase.functions.invoke('ai-handler', {
         body: { feature, payload }
       });
       if (error) throw error;
@@ -211,7 +211,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
     
     setIsSummarizing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('openai-generator', {
+      const { data, error } = await supabase.functions.invoke('ai-handler', {
         body: { feature: 'summarize-article-content', payload }
       });
       if (error) throw error;

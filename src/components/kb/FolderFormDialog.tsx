@@ -59,7 +59,7 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
       const handler = setTimeout(async () => {
         setIsSuggestingIcon(true);
         try {
-          const { data, error } = await supabase.functions.invoke('openai-generator', {
+          const { data, error } = await supabase.functions.invoke('ai-handler', {
             body: {
               feature: 'suggest-icon',
               payload: { title: titleValue, icons: allIcons }
