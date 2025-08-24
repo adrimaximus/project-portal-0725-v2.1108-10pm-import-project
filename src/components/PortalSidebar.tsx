@@ -45,7 +45,6 @@ type NavItem = {
   icon: LucideIcon;
   badge?: number;
   isCustom?: boolean;
-  allowedRoles?: string[];
 };
 
 const NavLink = ({ item, isCollapsed, location }: { item: NavItem, isCollapsed: boolean, location: any }) => {
@@ -115,7 +114,7 @@ const SortableItem = ({ item, isCollapsed, location }: { item: NavItem, isCollap
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, hasPermission } = useAuth();
   const location = useLocation();
   const { isFeatureEnabled } = useFeatures();
   const [navItems, setNavItems] = useState<NavItem[]>([]);
@@ -135,16 +134,15 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       { id: "mood-tracker", href: "/mood-tracker", label: "Mood Tracker", icon: Smile },
       { id: "goals", href: "/goals", label: "Goals", icon: Target },
       { id: "billing", href: "/billing", label: "Billing", icon: CreditCard },
-      { id: "people", href: "/people", label: "People", icon: Users, allowedRoles: ['admin', 'master admin'] },
+      { id: "people", href: "/people", label: "People", icon: Users },
       { id: "knowledge-base", href: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
-      { id: "settings", href: "/settings", label: "Settings", icon: Settings, allowedRoles: ['admin', 'master admin'] },
+      { id: "settings", href: "/settings", label: "Settings", icon: Settings },
     ];
 
     const visibleDefaultItems = defaultItemsList.filter(item => {
       const featureEnabled = isFeatureEnabled(item.id);
       if (!featureEnabled) return false;
-      if (item.allowedRoles && !item.allowedRoles.includes(user.role || '')) return false;
-      return true;
+      return hasPermission(`module:${item.id}`);
     });
 
     let customItems: NavItem[] = [];
@@ -189,7 +187,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     
     setNavItems([...ordered, ...newItems]);
 
-  }, [user, isFeatureEnabled, customItemsTrigger, totalUnreadChatCount, unreadNotificationCount]);
+  }, [user, isFeatureEnabled, customItemsTrigger, totalUnreadChatCount, unreadNotificationCount, hasPermission]);
 
   useEffect(() => {
     const customNavItemsKey = user ? `customNavItems_${user.id}` : null;

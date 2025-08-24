@@ -12,6 +12,22 @@ export type PermissionCategory = {
 
 export const PERMISSIONS: PermissionCategory[] = [
   {
+    id: 'modules',
+    label: 'Module Access',
+    permissions: [
+      { id: 'module:dashboard', label: 'Dashboard', description: 'Access to the main dashboard page.' },
+      { id: 'module:projects', label: 'Projects', description: 'Access to the projects list and details.' },
+      { id: 'module:request', label: 'Request', description: 'Access to the project request form.' },
+      { id: 'module:chat', label: 'Chat', description: 'Access to the team chat.' },
+      { id: 'module:mood-tracker', label: 'Mood Tracker', description: 'Access to the mood tracking feature.' },
+      { id: 'module:goals', label: 'Goals', description: 'Access to the goal tracking feature.' },
+      { id: 'module:billing', label: 'Billing', description: 'Access to billing and invoice information.' },
+      { id: 'module:people', label: 'People', description: 'Access to the contacts management page.' },
+      { id: 'module:knowledge-base', label: 'Knowledge Base', description: 'Access to articles and documentation.' },
+      { id: 'module:settings', label: 'Settings', description: 'Access to all settings pages.' },
+    ],
+  },
+  {
     id: 'projects',
     label: 'Projects',
     permissions: [

@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import ProtectedRouteLayout from "./components/ProtectedRouteLayout";
+import PermissionGuard from "./components/PermissionGuard";
 
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/Dashboard";
@@ -37,8 +38,6 @@ import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import FolderDetailPage from "./pages/kb/FolderDetailPage";
 import Page from "./pages/kb/Page";
 
-const ADMIN_ROLES = ['admin', 'master admin'];
-
 function App() {
   return (
     <>
@@ -50,40 +49,40 @@ function App() {
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         
-        {/* General Protected Routes */}
+        {/* Protected Routes */}
         <Route element={<ProtectedRouteLayout />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/:slug" element={<ProjectDetail />} />
-          <Route path="/request" element={<RequestPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/mood-tracker" element={<MoodTracker />} />
-          <Route path="/goals" element={<GoalsPage />} />
-          <Route path="/goals/:slug" element={<GoalDetailPage />} />
-          <Route path="/billing" element={<Billing />} />
+          <Route path="/dashboard" element={<PermissionGuard permission="module:dashboard"><DashboardPage /></PermissionGuard>} />
+          <Route path="/projects" element={<PermissionGuard permission="module:projects"><Projects /></PermissionGuard>} />
+          <Route path="/projects/:slug" element={<PermissionGuard permission="module:projects"><ProjectDetail /></PermissionGuard>} />
+          <Route path="/request" element={<PermissionGuard permission="module:request"><RequestPage /></PermissionGuard>} />
+          <Route path="/chat" element={<PermissionGuard permission="module:chat"><ChatPage /></PermissionGuard>} />
+          <Route path="/mood-tracker" element={<PermissionGuard permission="module:mood-tracker"><MoodTracker /></PermissionGuard>} />
+          <Route path="/goals" element={<PermissionGuard permission="module:goals"><GoalsPage /></PermissionGuard>} />
+          <Route path="/goals/:slug" element={<PermissionGuard permission="module:goals"><GoalDetailPage /></PermissionGuard>} />
+          <Route path="/billing" element={<PermissionGuard permission="module:billing"><Billing /></PermissionGuard>} />
+          <Route path="/people" element={<PermissionGuard permission="module:people"><PeoplePage /></PermissionGuard>} />
+          <Route path="/knowledge-base" element={<PermissionGuard permission="module:knowledge-base"><KnowledgeBasePage /></PermissionGuard>} />
+          <Route path="/knowledge-base/folders/:slug" element={<PermissionGuard permission="module:knowledge-base"><FolderDetailPage /></PermissionGuard>} />
+          <Route path="/knowledge-base/pages/:slug" element={<PermissionGuard permission="module:knowledge-base"><Page /></PermissionGuard>} />
+          
+          {/* Settings are a special group */}
+          <Route path="/settings" element={<PermissionGuard permission="module:settings"><SettingsPage /></PermissionGuard>} />
+          <Route path="/settings/team" element={<PermissionGuard permission="module:settings"><TeamSettingsPage /></PermissionGuard>} />
+          <Route path="/settings/integrations" element={<PermissionGuard permission="module:settings"><IntegrationsPage /></PermissionGuard>} />
+          <Route path="/settings/integrations/openai" element={<PermissionGuard permission="module:settings"><OpenAiIntegrationPage /></PermissionGuard>} />
+          <Route path="/settings/integrations/github" element={<PermissionGuard permission="module:settings"><GitHubPage /></PermissionGuard>} />
+          <Route path="/settings/integrations/slack" element={<PermissionGuard permission="module:settings"><SlackPage /></PermissionGuard>} />
+          <Route path="/settings/integrations/google-drive" element={<PermissionGuard permission="module:settings"><GoogleDrivePage /></PermissionGuard>} />
+          <Route path="/settings/integrations/google-calendar" element={<PermissionGuard permission="module:settings"><GoogleCalendarPage /></PermissionGuard>} />
+          <Route path="/settings/navigation" element={<PermissionGuard permission="module:settings"><NavigationSettingsPage /></PermissionGuard>} />
+
+          {/* Routes accessible to all authenticated users */}
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/users/:id" element={<UserProfilePage />} />
           <Route path="/custom" element={<EmbedPage />} />
-          <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
-          <Route path="/knowledge-base/folders/:slug" element={<FolderDetailPage />} />
-          <Route path="/knowledge-base/pages/:slug" element={<Page />} />
-        </Route>
-
-        {/* Admin Protected Routes */}
-        <Route element={<ProtectedRouteLayout allowedRoles={ADMIN_ROLES} />}>
-          <Route path="/people" element={<PeoplePage />} />
           <Route path="/users" element={<UserManagementPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/team" element={<TeamSettingsPage />} />
-          <Route path="/settings/integrations" element={<IntegrationsPage />} />
-          <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
-          <Route path="/settings/integrations/github" element={<GitHubPage />} />
-          <Route path="/settings/integrations/slack" element={<SlackPage />} />
-          <Route path="/settings/integrations/google-drive" element={<GoogleDrivePage />} />
-          <Route path="/settings/integrations/google-calendar" element={<GoogleCalendarPage />} />
-          <Route path="/settings/navigation" element={<NavigationSettingsPage />} />
         </Route>
         
         <Route path="*" element={<NotFound />} />

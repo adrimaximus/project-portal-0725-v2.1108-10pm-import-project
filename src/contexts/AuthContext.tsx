@@ -11,6 +11,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,8 +31,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single();
 
       if (profile) {
+        const { data: roleData } = await supabase
+          .from('roles')
+          .select('permissions')
+          .eq('name', profile.role)
+          .single();
+
         const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-        const userToSet = {
+        const userToSet: User = {
           id: profile.id,
           email: supabaseUser.email,
           name: fullName || supabaseUser.email || 'No name',
@@ -42,6 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           role: profile.role,
           status: profile.status,
           sidebar_order: profile.sidebar_order,
+          permissions: roleData?.permissions || [],
         };
         setUser(userToSet);
         localStorage.setItem('lastUserName', userToSet.name); // Store user name
@@ -60,12 +68,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     console.warn(`Could not fetch user profile for ${supabaseUser.id} after ${retries} attempts. Using fallback data.`);
-    const fallbackUser = {
+    const fallbackUser: User = {
       id: supabaseUser.id,
       email: supabaseUser.email,
       name: supabaseUser.email || 'New User',
       avatar: undefined,
       initials: getInitials('', supabaseUser.email) || 'NN',
+      permissions: [],
     };
     setUser(fallbackUser);
     localStorage.setItem('lastUserName', fallbackUser.name); // Store fallback name
@@ -128,12 +137,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    if (user.role === 'master admin') return true;
+    return user.permissions?.includes(permission) ?? false;
+  };
+
   const value = {
     session,
     user,
     loading,
     logout,
     refreshUser,
+    hasPermission,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

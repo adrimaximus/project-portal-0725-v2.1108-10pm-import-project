@@ -38,7 +38,8 @@ const RoleManagerDialog = ({ open, onOpenChange, onSave, role }: RoleManagerDial
     } else if (open) {
       setName('');
       setDescription('');
-      setPermissions([]);
+      const modulePermissions = PERMISSIONS.find(cat => cat.id === 'modules')?.permissions.map(p => p.id) || [];
+      setPermissions(modulePermissions);
     }
   }, [role, open]);
 

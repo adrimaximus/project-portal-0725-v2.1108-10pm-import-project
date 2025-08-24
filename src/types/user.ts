@@ -10,6 +10,7 @@ export interface User {
   status?: string;
   sidebar_order?: string[];
   updated_at?: string;
+  permissions?: string[];
 }
 
 export type Collaborator = User & { online?: boolean };
