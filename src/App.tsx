@@ -5,7 +5,7 @@ import PermissionGuard from "./components/PermissionGuard";
 
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/Dashboard";
-import Projects from "./pages/Projects";
+import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetail from "./pages/ProjectDetail";
 import RequestPage from "./pages/Request";
 import ChatPage from "./pages/ChatPage";
@@ -52,7 +52,7 @@ function App() {
         {/* Protected Routes */}
         <Route element={<ProtectedRouteLayout />}>
           <Route path="/dashboard" element={<PermissionGuard permission="module:dashboard"><DashboardPage /></PermissionGuard>} />
-          <Route path="/projects" element={<PermissionGuard permission="module:projects"><Projects /></PermissionGuard>} />
+          <Route path="/projects" element={<PermissionGuard permission="module:projects"><ProjectsPage /></PermissionGuard>} />
           <Route path="/projects/:slug" element={<PermissionGuard permission="module:projects"><ProjectDetail /></PermissionGuard>} />
           <Route path="/request" element={<PermissionGuard permission="module:request"><RequestPage /></PermissionGuard>} />
           <Route path="/chat" element={<PermissionGuard permission="module:chat"><ChatPage /></PermissionGuard>} />

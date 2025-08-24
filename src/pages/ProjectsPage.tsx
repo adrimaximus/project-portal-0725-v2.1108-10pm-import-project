@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { Project } from "@/types";
 import { useNavigate } from "react-router-dom";
+import PortalLayout from "@/components/PortalLayout";
+import { Button } from "@/components/ui/button";
+import { PlusCircle, List, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban, Search, Sparkles, Loader2 } from "lucide-react";
+import { useProjects } from "@/hooks/useProjects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, CalendarDays, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban, Search, Sparkles, Loader2 } from "lucide-react";
-import { Button } from "./ui/button";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -17,16 +19,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DateRange } from "react-day-picker";
-import { DatePickerWithRange } from "./ui/date-picker-with-range";
+import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateProject } from "@/hooks/useCreateProject";
-import { Input } from "./ui/input";
+import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-import TableView from "./projects/TableView";
-import ListView from "./projects/ListView";
-import CalendarImportView from "./projects/CalendarImportView";
-import KanbanView from "./projects/KanbanView";
+import TableView from "@/components/projects/TableView";
+import ListView from "@/components/projects/ListView";
+import CalendarImportView from "@/components/projects/CalendarImportView";
+import KanbanView from "@/components/projects/KanbanView";
 import { startOfMonth, endOfMonth } from "date-fns";
 
 interface CalendarEvent {
@@ -42,13 +44,9 @@ interface CalendarEvent {
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'calendar';
 
-interface ProjectsTableProps {
-  projects: Project[];
-  isLoading: boolean;
-  refetch: () => void;
-}
-
-const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => {
+const ProjectsPage = () => {
+  const navigate = useNavigate();
+  const { data: projects = [], isLoading, refetch } = useProjects();
   const [view, setView] = useState<ViewMode>(() => {
     const savedView = localStorage.getItem('project_view_mode') as ViewMode;
     return savedView || 'list';
@@ -380,126 +378,139 @@ const ProjectsTable = ({ projects, isLoading, refetch }: ProjectsTableProps) => 
   };
 
   return (
-    <>
-      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <Card className="h-full flex flex-col">
-        <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4 flex-shrink-0">
+    <PortalLayout>
+      <div className="flex flex-col h-full">
+        <div className="flex justify-between items-center mb-6 flex-shrink-0">
+          <h1 className="text-3xl font-bold tracking-tight">All Projects</h1>
           <div className="flex items-center gap-2">
-            <CardTitle>Projects</CardTitle>
-          </div>
-          <div className="flex items-center gap-2">
-            {view === 'calendar' && (
-              <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
-                {isAiImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                Ask AI to Import
-              </Button>
-            )}
-            {view !== 'calendar' && (
-              <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => {
-                  refetch();
-                  toast.success("Data proyek berhasil diperbarui.");
-              }}>
-                  <span className="sr-only">Refresh projects data</span>
-                  <RefreshCw className="h-4 w-4" />
-              </Button>
-            )}
-            {view === 'calendar' && (
-              <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => refreshCalendarEvents(dateRange)}>
-                <span className="sr-only">Refresh calendar events</span>
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            )}
-            <TooltipProvider>
-              <ToggleGroup 
-                type="single" 
-                value={view} 
-                onValueChange={handleViewChange}
-                aria-label="View mode"
-              >
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ToggleGroupItem value="list" aria-label="List view">
-                      <List className="h-4 w-4" />
-                    </ToggleGroupItem>
-                  </TooltipTrigger>
-                  <TooltipContent><p>List View</p></TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ToggleGroupItem value="table" aria-label="Table view">
-                      <TableIcon className="h-4 w-4" />
-                    </ToggleGroupItem>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Table View</p></TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ToggleGroupItem value="kanban" aria-label="Kanban view">
-                      <Kanban className="h-4 w-4" />
-                    </ToggleGroupItem>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Kanban View</p></TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
-                      <CalendarPlus className="h-4 w-4" />
-                    </ToggleGroupItem>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Calendar Import</p></TooltipContent>
-                </Tooltip>
-              </ToggleGroup>
-            </TooltipProvider>
-          </div>
-        </CardHeader>
-        <div className="px-6 py-4 flex flex-col md:flex-row md:flex-wrap gap-4 items-center flex-shrink-0 border-b">
-          <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
-          {view === 'kanban' && (
-            <ToggleGroup 
-                type="single" 
-                value={kanbanGroupBy} 
-                onValueChange={(value) => { if (value) setKanbanGroupBy(value as 'status' | 'payment_status')}}
-                className="h-10"
-            >
-                <ToggleGroupItem value="status" className="text-sm px-3">By Project Status</ToggleGroupItem>
-                <ToggleGroupItem value="payment_status" className="text-sm px-3">By Payment Status</ToggleGroupItem>
-            </ToggleGroup>
-          )}
-          <div className="relative w-full md:w-auto md:flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search projects..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+            <Button onClick={() => navigate('/request')}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              New Project
+            </Button>
           </div>
         </div>
-        {view === 'kanban' ? (
-          <CardContent className="flex-grow min-h-0 p-4 md:p-6">
-            {renderContent()}
-          </CardContent>
-        ) : (
-          <CardContent className="flex-grow min-h-0 overflow-y-auto p-0">
-            {renderContent()}
-          </CardContent>
-        )}
-      </Card>
-    </>
+        <div className="flex-grow min-h-0">
+          <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Card className="h-full flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <CardTitle>Projects</CardTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                {view === 'calendar' && (
+                  <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
+                    {isAiImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    Ask AI to Import
+                  </Button>
+                )}
+                {view !== 'calendar' && (
+                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => {
+                      refetch();
+                      toast.success("Data proyek berhasil diperbarui.");
+                  }}>
+                      <span className="sr-only">Refresh projects data</span>
+                      <RefreshCw className="h-4 w-4" />
+                  </Button>
+                )}
+                {view === 'calendar' && (
+                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => refreshCalendarEvents(dateRange)}>
+                    <span className="sr-only">Refresh calendar events</span>
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                )}
+                <TooltipProvider>
+                  <ToggleGroup 
+                    type="single" 
+                    value={view} 
+                    onValueChange={handleViewChange}
+                    aria-label="View mode"
+                  >
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ToggleGroupItem value="list" aria-label="List view">
+                          <List className="h-4 w-4" />
+                        </ToggleGroupItem>
+                      </TooltipTrigger>
+                      <TooltipContent><p>List View</p></TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ToggleGroupItem value="table" aria-label="Table view">
+                          <TableIcon className="h-4 w-4" />
+                        </ToggleGroupItem>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Table View</p></TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ToggleGroupItem value="kanban" aria-label="Kanban view">
+                          <Kanban className="h-4 w-4" />
+                        </ToggleGroupItem>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Kanban View</p></TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
+                          <CalendarPlus className="h-4 w-4" />
+                        </ToggleGroupItem>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Calendar Import</p></TooltipContent>
+                    </Tooltip>
+                  </ToggleGroup>
+                </TooltipProvider>
+              </div>
+            </CardHeader>
+            <div className="px-6 py-4 flex flex-col md:flex-row md:flex-wrap gap-4 items-center flex-shrink-0 border-b">
+              <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+              {view === 'kanban' && (
+                <ToggleGroup 
+                    type="single" 
+                    value={kanbanGroupBy} 
+                    onValueChange={(value) => { if (value) setKanbanGroupBy(value as 'status' | 'payment_status')}}
+                    className="h-10"
+                >
+                    <ToggleGroupItem value="status" className="text-sm px-3">By Project Status</ToggleGroupItem>
+                    <ToggleGroupItem value="payment_status" className="text-sm px-3">By Payment Status</ToggleGroupItem>
+                </ToggleGroup>
+              )}
+              <div className="relative w-full md:w-auto md:flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            {view === 'kanban' ? (
+              <CardContent className="flex-grow min-h-0 p-4 md:p-6">
+                {renderContent()}
+              </CardContent>
+            ) : (
+              <CardContent className="flex-grow min-h-0 overflow-y-auto p-0">
+                {renderContent()}
+              </CardContent>
+            )}
+          </Card>
+        </div>
+      </div>
+    </PortalLayout>
   );
 };
 
-export default ProjectsTable;
+export default ProjectsPage;

@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,7 +22,9 @@ import { id } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import RoleManagerDialog, { Role } from '@/components/settings/RoleManagerDialog';
 import AddUserDialog from '@/components/settings/AddUserDialog';
-import { getInitials } from '@/lib/utils';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useRoles } from '@/hooks/useRoles';
+import { useQueryClient } from '@tanstack/react-query';
 
 type Invite = {
   id: number;
@@ -32,13 +34,14 @@ type Invite = {
 
 const TeamSettingsPage = () => {
   const { user: currentUser } = useAuth();
-  const [members, setMembers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
+  const queryClient = useQueryClient();
+  const { data: members = [], isLoading: isLoadingMembers, refetch: refetchMembers } = useTeamMembers();
+  const { data: roles = [], isLoading: isLoadingRoles, refetch: refetchRoles } = useRoles();
+  
   const [invites, setInvites] = useState<Invite[]>([{ id: Date.now(), email: '', role: 'member' }]);
   const [searchTerm, setSearchTerm] = useState('');
   const [memberToDelete, setMemberToDelete] = useState<User | null>(null);
   const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
@@ -46,42 +49,10 @@ const TeamSettingsPage = () => {
   const isMasterAdmin = currentUser?.role === 'master admin';
   const isAdmin = currentUser?.role === 'admin' || isMasterAdmin;
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    const { data: membersData, error: membersError } = await supabase.from('profiles').select('*');
-    if (membersError) {
-      toast.error("Failed to fetch team members.");
-      console.error(membersError);
-    } else {
-      const mappedUsers: User[] = membersData.map(profile => {
-        const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-        return {
-          id: profile.id,
-          name: fullName || profile.email || 'No name',
-          email: profile.email,
-          avatar: profile.avatar_url,
-          role: profile.role,
-          status: profile.status,
-          initials: getInitials(fullName, profile.email) || 'NN',
-          updated_at: profile.updated_at,
-        };
-      });
-      setMembers(mappedUsers);
-    }
-
-    const { data: rolesData, error: rolesError } = await supabase.from('roles').select('*');
-    if (rolesError) {
-      toast.error("Failed to fetch roles.");
-    } else {
-      setRoles(rolesData);
-    }
-
-    setIsLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const fetchData = () => {
+    refetchMembers();
+    refetchRoles();
+  };
 
   const validRoles = useMemo(() => roles.filter(r => r.name && r.name.trim() !== ''), [roles]);
 
@@ -381,7 +352,7 @@ const TeamSettingsPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading ? (
+                  {isLoadingMembers || isLoadingRoles ? (
                     <TableRow><TableCell colSpan={4} className="text-center">Loading members...</TableCell></TableRow>
                   ) : filteredMembers.map((member) => {
                     const isRoleChangeDisabled = !isAdmin || member.id === currentUser?.id || (member.role === 'master admin' && !isMasterAdmin);
