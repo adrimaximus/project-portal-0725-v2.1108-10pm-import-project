@@ -53,6 +53,10 @@ const useSpeechRecognition = (): SpeechRecognitionHook => {
         toast.error("Speech recognition failed", {
           description: "Could not connect to the speech service. Please check your internet connection and try again."
         });
+      } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        toast.error("Microphone access denied", {
+          description: "Please allow microphone access in your browser settings to use speech recognition."
+        });
       } else {
         toast.error(`Speech recognition error: ${event.error}`);
       }
