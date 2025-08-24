@@ -19,6 +19,7 @@ import { GlobalSearch } from "./GlobalSearch";
 import { generateVibrantGradient } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Badge } from "./ui/badge";
+import { useFeatures } from "@/contexts/FeaturesContext";
 
 interface PortalHeaderProps {
     summary?: ReactNode;
@@ -29,6 +30,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { unreadCount } = useNotifications();
+  const { isFeatureEnabled } = useFeatures();
 
   if (!user) {
     return null;
@@ -68,18 +70,20 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
       <div className="w-full flex-1">
         {summary}
       </div>
-      <GlobalSearch />
-      <Button variant="outline" size="icon" asChild>
-        <Link to="/notifications" className="relative">
-          <Bell className="h-[1.2rem] w-[1.2rem]" />
-          {unreadCount > 0 && (
-            <Badge variant="destructive" className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full p-0 text-xs">
-              {unreadCount}
-            </Badge>
-          )}
-          <span className="sr-only">View notifications</span>
-        </Link>
-      </Button>
+      {isFeatureEnabled('search') && <GlobalSearch />}
+      {isFeatureEnabled('notifications') && (
+        <Button variant="outline" size="icon" asChild>
+          <Link to="/notifications" className="relative">
+            <Bell className="h-[1.2rem] w-[1.2rem]" />
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full p-0 text-xs">
+                {unreadCount}
+              </Badge>
+            )}
+            <span className="sr-only">View notifications</span>
+          </Link>
+        </Button>
+      )}
       <Button variant="outline" size="icon" onClick={toggleTheme}>
         {theme === 'light' && <Sun className="h-[1.2rem] w-[1.2rem]" />}
         {theme === 'dark' && <Moon className="h-[1.2rem] w-[1.2rem]" />}
