@@ -21,8 +21,9 @@ const checkMasterAdmin = async (supabase, userId) => {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests immediately
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -57,11 +58,12 @@ serve(async (req) => {
         }
       }
     }
-    const { method, ...payload } = body;
+    
+    const { method: action, ...payload } = body;
 
     let result;
 
-    switch (method) {
+    switch (action) {
       case 'health-check':
         result = { status: 'ok' };
         break;
@@ -97,18 +99,12 @@ serve(async (req) => {
       }
 
       case 'get-selections': {
-        const { data, error } = await supabaseAdmin.from('app_config').select('value').eq('key', 'GOOGLE_CALENDAR_SELECTIONS').maybeSingle();
-        if (error) throw error;
-        result = { selections: data?.value ? JSON.parse(data.value) : [] };
+        result = { selections: [] }; // This is now handled by localStorage on client
         break;
       }
 
       case 'save-selections': {
-        await checkMasterAdmin(supabase, user.id);
-        const selectionsToSave = payload.selections || [];
-        const { error } = await supabaseAdmin.from('app_config').upsert({ key: 'GOOGLE_CALENDAR_SELECTIONS', value: JSON.stringify(selectionsToSave.map(s => s.id)) });
-        if (error) throw error;
-        result = { success: true };
+        result = { success: true }; // This is now handled by localStorage on client
         break;
       }
 
@@ -127,7 +123,7 @@ serve(async (req) => {
         const { token: accessToken } = await oAuth2Client.getAccessToken();
         if (!accessToken) throw new Error("Failed to refresh access token.");
 
-        if (method === 'list-calendars') {
+        if (action === 'list-calendars') {
           const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
             headers: { 'Authorization': `Bearer ${accessToken}` },
           });
@@ -138,8 +134,7 @@ serve(async (req) => {
           const calendarData = await response.json();
           result = calendarData.items || [];
         } else { // list-events
-          const { data: selectionsData } = await supabaseAdmin.from('app_config').select('value').eq('key', 'GOOGLE_CALENDAR_SELECTIONS').maybeSingle();
-          const calendarIds = selectionsData?.value ? JSON.parse(selectionsData.value) : [];
+          const calendarIds = payload.calendarIds || [];
           const { timeMin, timeMax } = payload;
           if (calendarIds.length === 0 || !timeMin || !timeMax) {
             result = [];
@@ -170,10 +165,10 @@ serve(async (req) => {
       }
 
       default:
-        if (!method) {
-            throw new Error("A 'method' property is required in the request body.");
+        if (!action) {
+            throw new Error("A 'method' property is required in the request body for POST requests.");
         }
-        throw new Error(`Invalid method specified: ${method}`);
+        throw new Error(`Invalid method specified: ${action}`);
     }
 
     return new Response(JSON.stringify(result), {
