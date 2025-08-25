@@ -387,15 +387,15 @@ const ProjectsPage = () => {
             </AlertDialogContent>
           </AlertDialog>
           <Card className="h-full flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between pb-4 gap-4 flex-shrink-0">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <CardTitle>Projects</CardTitle>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto">
                 {view === 'calendar' && (
                   <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
-                    {isAiImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                    Ask AI to Import
+                    {isAiImporting ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Sparkles className="h-4 w-4 sm:mr-2" />}
+                    <span className="hidden sm:inline">Ask AI to Import</span>
                   </Button>
                 )}
                 {view !== 'calendar' && (
