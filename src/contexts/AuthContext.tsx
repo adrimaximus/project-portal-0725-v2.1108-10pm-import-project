@@ -58,7 +58,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
-        setUser(null);
+        // Do not set user to null on a transient error.
+        // The protected route will show a loading screen if user is null.
         return;
       }
 
@@ -98,18 +99,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (event === 'SIGNED_OUT') {
           toast.success("You have been successfully logged out.");
         }
-        // **START: Perbaikan untuk sesi tidak valid**
         if (event === 'TOKEN_REFRESHED' && !newSession) {
           console.warn('Token refresh failed, forcing logout.');
           await supabase.auth.signOut();
         }
-        // **END: Perbaikan untuk sesi tidak valid**
         setSession(newSession);
         if (newSession) {
           await fetchUserProfile(newSession.user);
         } else {
           setUser(null);
-          localStorage.removeItem('lastUserName'); // Clear on logout
+          localStorage.removeItem('lastUserName');
         }
       });
 
@@ -118,8 +117,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const subscriptionPromise = getSessionAndListen();
 
+    // Proactively refresh session when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        supabase.auth.getSession();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       subscriptionPromise.then(subscription => subscription?.unsubscribe());
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [navigate]);
 
@@ -138,7 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setUser(null);
       setSession(null);
-      localStorage.removeItem('lastUserName'); // Also clear on explicit logout
+      localStorage.removeItem('lastUserName');
       navigate('/', { replace: true });
     }
   };
