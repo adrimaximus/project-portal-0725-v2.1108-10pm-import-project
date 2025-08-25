@@ -36,6 +36,9 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
       return {
         id: u.id,
         display: displayName,
+        avatar: u.avatar,
+        initials: u.initials,
+        email: u.email,
       };
     });
   }, [project]);
@@ -118,10 +121,15 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               </label>
             </Button>
           </div>
-          <Button type="submit" disabled={isSubmitting || !newComment.trim()}>
-            <Send className="mr-2 h-4 w-4" />
-            {isSubmitting ? "Posting..." : "Post"}
-          </Button>
+          <div>
+            <Button type="submit" size="icon" className="sm:hidden" disabled={isSubmitting || !newComment.trim()}>
+                <Send className="h-4 w-4" />
+            </Button>
+            <Button type="submit" className="hidden sm:inline-flex" disabled={isSubmitting || !newComment.trim()}>
+                <Send className="mr-2 h-4 w-4" />
+                {isSubmitting ? "Posting..." : "Post"}
+            </Button>
+          </div>
         </div>
         {attachment && (
           <div className="text-sm text-muted-foreground flex items-center gap-2">
