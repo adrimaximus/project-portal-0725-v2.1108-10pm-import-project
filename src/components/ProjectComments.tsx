@@ -108,15 +108,15 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
           </MentionsInput>
         </div>
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Button type="button" variant={isTicket ? "default" : "outline"} size="sm" onClick={() => setIsTicket(!isTicket)}>
-              <Ticket className="mr-2 h-4 w-4" />
-              {isTicket ? "This is a Ticket" : "Make a Ticket"}
+          <div className="flex items-center gap-2">
+            <Button type="button" variant={isTicket ? "default" : "outline"} size="sm" onClick={() => setIsTicket(!isTicket)} className="w-9 sm:w-auto px-0 sm:px-3">
+              <Ticket className="h-4 w-4 mx-auto sm:mr-2" />
+              <span className="hidden sm:inline">{isTicket ? "This is a Ticket" : "Make a Ticket"}</span>
             </Button>
             <Button type="button" variant="outline" size="sm" asChild>
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <Paperclip className="mr-2 h-4 w-4" />
-                Attach File
+              <label htmlFor="file-upload" className="cursor-pointer flex items-center justify-center w-9 sm:w-auto px-0 sm:px-3">
+                <Paperclip className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Attach File</span>
                 <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} />
               </label>
             </Button>
