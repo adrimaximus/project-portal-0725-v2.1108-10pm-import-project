@@ -67,17 +67,7 @@ const LoginPage = () => {
                   },
                 },
               }}
-              localization={{
-                variables: {
-                  sign_in: {
-                    button_label: "Press S to Sign In",
-                  },
-                  sign_up: {
-                    button_label: "Press S to Sign Up",
-                  },
-                },
-              }}
-              providers={['google']}
+              providers={[]}
               redirectTo={`${window.location.origin}/dashboard`}
               socialLayout="horizontal"
             />
