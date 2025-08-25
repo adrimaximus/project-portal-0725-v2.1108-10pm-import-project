@@ -44,7 +44,7 @@ serve(async (req) => {
     }
 
     const pwd = password ?? crypto.randomUUID() + "Aa1!";
-    const { data, error } = await admin.auth.admin.createUser({
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: pwd,
       email_confirm,
