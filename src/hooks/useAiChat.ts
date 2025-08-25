@@ -107,13 +107,7 @@ export const useAiChat = (currentUser: User | null) => {
   const checkConnection = useCallback(async () => {
     setIsCheckingConnection(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setIsConnected(false);
-        return;
-      }
       const { data, error } = await supabase.functions.invoke('manage-openai-key', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
         method: 'GET'
       });
       if (error) throw error;

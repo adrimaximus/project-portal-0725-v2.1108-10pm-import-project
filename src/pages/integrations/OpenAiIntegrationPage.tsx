@@ -19,13 +19,7 @@ const OpenAiIntegrationPage = () => {
   const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setIsConnected(false);
-        return;
-      }
       const { data, error } = await supabase.functions.invoke('manage-openai-key', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
         method: 'GET'
       });
       if (error) throw error;
@@ -49,13 +43,7 @@ const OpenAiIntegrationPage = () => {
     }
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Authentication error. Please log in again.");
-        return;
-      }
       const { error } = await supabase.functions.invoke('manage-openai-key', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
         body: { apiKey },
       });
       if (error) throw error;
@@ -74,13 +62,7 @@ const OpenAiIntegrationPage = () => {
   const handleDisconnect = async () => {
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Authentication error. Please log in again.");
-        return;
-      }
       const { error } = await supabase.functions.invoke('manage-openai-key', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
         method: 'DELETE',
       });
       if (error) throw error;

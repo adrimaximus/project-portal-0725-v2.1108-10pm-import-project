@@ -56,7 +56,6 @@ const GoogleCalendarPage = () => {
       currentStepName = "Pinging Edge Function";
       updateStep({ step: currentStepName, status: 'pending' });
       const { error: healthError } = await supabase.functions.invoke('google-auth-handler', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
           body: { method: 'health-check' }
       });
       if (healthError) throw healthError;
@@ -66,7 +65,6 @@ const GoogleCalendarPage = () => {
       currentStepName = "Checking for stored Google token";
       updateStep({ step: currentStepName, status: 'pending' });
       const { data: statusData, error: statusError } = await supabase.functions.invoke('google-auth-handler', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
           body: { method: 'get-status' }
       });
       if (statusError) throw statusError;
@@ -81,7 +79,6 @@ const GoogleCalendarPage = () => {
       currentStepName = "Testing Google API access";
       updateStep({ step: currentStepName, status: 'pending' });
       const { error: apiError } = await supabase.functions.invoke('google-auth-handler', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
           body: { method: 'list-calendars' }
       });
       if (apiError) throw apiError;
@@ -97,10 +94,7 @@ const GoogleCalendarPage = () => {
   }, []);
 
   const fetchUserSelections = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
     const { data, error } = await supabase.functions.invoke('google-auth-handler', {
-      headers: { Authorization: `Bearer ${session.access_token}` },
       body: { method: 'get-selections' }
     });
     if (error) {
@@ -113,10 +107,7 @@ const GoogleCalendarPage = () => {
   const handleDisconnect = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
       const { error } = await supabase.functions.invoke('google-auth-handler', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
         body: { method: 'disconnect' }
       });
       if (error) throw error;
@@ -135,10 +126,7 @@ const GoogleCalendarPage = () => {
   const handleFetchCalendars = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
       const { data, error } = await supabase.functions.invoke('google-auth-handler', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
         body: { method: 'list-calendars' }
       });
       if (error) throw error;
@@ -158,13 +146,7 @@ const GoogleCalendarPage = () => {
   const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setIsConnected(false);
-        return;
-      }
       const { data, error } = await supabase.functions.invoke('google-auth-handler', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
         body: { method: 'get-status' }
       });
       if (error) throw error;
@@ -189,14 +171,7 @@ const GoogleCalendarPage = () => {
   const login = useGoogleLogin({
     onSuccess: async (codeResponse) => {
       setIsLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Authentication error. Please log in again.");
-        setIsLoading(false);
-        return;
-      }
       const { error } = await supabase.functions.invoke('google-auth-handler', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
         body: { method: 'exchange-code', code: codeResponse.code }
       });
       if (error) {
@@ -225,15 +200,8 @@ const GoogleCalendarPage = () => {
 
   const handleSaveSelection = async () => {
     setIsLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      toast.error("Authentication error. Please log in again.");
-      setIsLoading(false);
-      return;
-    }
     const selectionsToSave = calendars.filter(c => selectedCalendars.includes(c.id));
     const { error } = await supabase.functions.invoke('google-auth-handler', {
-      headers: { Authorization: `Bearer ${session.access_token}` },
       body: { method: 'save-selections', selections: selectionsToSave.map(s => ({ id: s.id, summary: s.summary })) }
     });
     if (error) {
