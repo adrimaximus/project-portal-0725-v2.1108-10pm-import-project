@@ -83,10 +83,6 @@ serve(async (req) => {
     let result;
 
     switch (action) {
-      case 'health-check':
-        result = { status: 'ok' };
-        break;
-      
       case 'exchange-code': {
         await checkMasterAdmin(supabase, user.id);
         const { tokens } = await oAuth2Client.getToken({
@@ -99,13 +95,6 @@ serve(async (req) => {
         const { error } = await supabaseAdmin.from('app_config').upsert({ key: 'GOOGLE_REFRESH_TOKEN', value: refresh_token });
         if (error) throw error;
         result = { success: true };
-        break;
-      }
-
-      case 'get-status': {
-        const { data, error } = await supabaseAdmin.from('app_config').select('value').eq('key', 'GOOGLE_REFRESH_TOKEN').maybeSingle();
-        if (error) throw error;
-        result = { connected: !!data?.value };
         break;
       }
 
