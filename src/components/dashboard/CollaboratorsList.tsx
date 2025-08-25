@@ -30,7 +30,6 @@ interface CollaboratorsListProps {
 
 interface CollaboratorStat extends User {
   projectCount: number;
-  taskCount: number;
 }
 
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
@@ -40,16 +39,9 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
     const collaboratorStats = projects.reduce((acc, p) => {
         p.assignedTo.forEach(user => {
             if (!acc[user.id]) {
-                acc[user.id] = { ...user, projectCount: 0, taskCount: 0 };
+                acc[user.id] = { ...user, projectCount: 0 };
             }
             acc[user.id].projectCount++;
-            if (p.tasks) {
-              p.tasks.forEach(task => {
-                if (!task.completed && task.assignedTo?.some(assignee => assignee.id === user.id)) {
-                  acc[user.id].taskCount++;
-                }
-              });
-            }
         });
         return acc;
     }, {} as Record<string, CollaboratorStat>);
@@ -94,7 +86,6 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                           <TableRow>
                               <TableHead>Collaborator</TableHead>
                               <TableHead className="text-right">Projects</TableHead>
-                              <TableHead className="text-right">Tasks</TableHead>
                           </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -110,7 +101,6 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                       </div>
                                   </TableCell>
                                   <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
-                                  <TableCell className="text-right font-medium">{c.taskCount}</TableCell>
                               </TableRow>
                           ))}
                       </TableBody>
