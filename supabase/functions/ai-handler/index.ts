@@ -273,6 +273,7 @@ async function executeAction(actionData, context) {
                 }).select().single();
 
                 if (projectError) return `I failed to create the project. The database said: ${projectError.message}`;
+                if (!newProject) return `I tried to create the project, but the database didn't confirm it was created. Please check your projects list.`;
 
                 let followUpMessage = "";
 
@@ -343,6 +344,7 @@ async function executeAction(actionData, context) {
                 }).single();
 
                 if (error) return `I failed to create the goal. The database said: ${error.message}`;
+                if (!newGoal) return `I tried to create the goal, but the database didn't confirm it was created. Please check your goals list.`;
                 return `I've created the goal "${newGoal.title}". You can view it at /goals/${newGoal.slug}`;
             }
             case 'UPDATE_GOAL': {
