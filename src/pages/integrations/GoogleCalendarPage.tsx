@@ -25,6 +25,14 @@ const GoogleCalendarPage = () => {
   const [diagnostics, setDiagnostics] = useState<DiagnosticStep[]>([]);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+  const getAuthHeaders = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error("Not authenticated");
+    }
+    return { Authorization: `Bearer ${session.access_token}` };
+  };
+
   const runDiagnostics = useCallback(async () => {
     const steps: DiagnosticStep[] = [
       { step: "Checking Google Client ID...", status: 'pending' },
@@ -33,7 +41,6 @@ const GoogleCalendarPage = () => {
     ];
     setDiagnostics(steps);
 
-    // Step 1: Check Client ID (Client-side)
     if (!googleClientId) {
       steps[0] = { ...steps[0], status: 'error', details: 'VITE_GOOGLE_CLIENT_ID is not set in environment variables.' };
       steps[1] = { ...steps[1], status: 'error', details: 'Skipped due to missing Client ID.' };
@@ -45,8 +52,9 @@ const GoogleCalendarPage = () => {
     setDiagnostics([...steps]);
 
     try {
-      // Step 2: Health Check (Server-side)
-      const { error: healthError } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'health-check' } });
+      const headers = await getAuthHeaders();
+      
+      const { error: healthError } = await supabase.functions.invoke('google-auth-handler', { headers, body: { method: 'health-check' } });
       if (healthError) {
         steps[1] = { ...steps[1], status: 'error', details: `Failed to connect to the server function. ${healthError.message}` };
         steps[2] = { ...steps[2], status: 'error', details: 'Skipped due to server connection failure.' };
@@ -56,8 +64,7 @@ const GoogleCalendarPage = () => {
       steps[1] = { ...steps[1], status: 'success' };
       setDiagnostics([...steps]);
 
-      // Step 3: Fetch Calendars (Server-side)
-      const { data, error: calendarError } = await supabase.functions.invoke('google-auth-handler', { body: { method: 'list-calendars' } });
+      const { data, error: calendarError } = await supabase.functions.invoke('google-auth-handler', { headers, body: { method: 'list-calendars' } });
       if (calendarError) {
         if (calendarError.message.includes("not connected")) {
           steps[2] = { ...steps[2], status: 'error', details: 'No active Google connection found. Please connect your account.' };
@@ -68,7 +75,13 @@ const GoogleCalendarPage = () => {
         steps[2] = { ...steps[2], status: 'success', details: `Successfully fetched ${data.length} calendars.` };
       }
     } catch (e: any) {
-      steps[2] = { ...steps[2], status: 'error', details: e.message };
+      const errorMessage = e.message || 'An unknown error occurred.';
+      if (steps[1].status === 'pending') {
+        steps[1] = { ...steps[1], status: 'error', details: errorMessage };
+        steps[2] = { ...steps[2], status: 'error', details: 'Skipped due to authentication/connection failure.' };
+      } else {
+        steps[2] = { ...steps[2], status: 'error', details: errorMessage };
+      }
     }
     setDiagnostics([...steps]);
   }, [googleClientId]);
@@ -76,7 +89,9 @@ const GoogleCalendarPage = () => {
   const initializePage = useCallback(async () => {
     setIsLoading(true);
     try {
+      const headers = await getAuthHeaders();
       const { data, error } = await supabase.functions.invoke('google-auth-handler', {
+        headers,
         body: { method: 'list-calendars' }
       });
 
@@ -112,15 +127,18 @@ const GoogleCalendarPage = () => {
   const login = useGoogleLogin({
     onSuccess: async (codeResponse) => {
       setIsLoading(true);
-      const { error } = await supabase.functions.invoke('google-auth-handler', {
-        body: { method: 'exchange-code', code: codeResponse.code }
-      });
-      if (error) {
-        toast.error("Failed to connect Google Account.", { description: error.message });
-        setIsLoading(false);
-      } else {
+      try {
+        const headers = await getAuthHeaders();
+        const { error } = await supabase.functions.invoke('google-auth-handler', {
+          headers,
+          body: { method: 'exchange-code', code: codeResponse.code }
+        });
+        if (error) throw error;
         toast.success("Successfully connected to Google Calendar!");
         await initializePage();
+      } catch (error: any) {
+        toast.error("Failed to connect Google Account.", { description: error.message });
+        setIsLoading(false);
       }
     },
     onError: () => {
@@ -134,7 +152,9 @@ const GoogleCalendarPage = () => {
   const handleDisconnect = useCallback(async () => {
     setIsLoading(true);
     try {
+      const headers = await getAuthHeaders();
       const { error } = await supabase.functions.invoke('google-auth-handler', {
+        headers,
         body: { method: 'disconnect' }
       });
       if (error) throw error;
