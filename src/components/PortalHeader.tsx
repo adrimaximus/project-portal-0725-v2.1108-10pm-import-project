@@ -6,8 +6,8 @@ import {
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
   DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PortalSidebar from "./PortalSidebar";
@@ -51,7 +51,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
   };
 
   return (
-    <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
+    <header className="flex h-14 items-center gap-2 border-b bg-background px-2 sm:gap-4 sm:px-4 lg:h-[60px] lg:px-6">
       <Sheet>
         <SheetTrigger asChild>
           <Button
@@ -72,8 +72,8 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
       </div>
       {isFeatureEnabled('search') && <GlobalSearch />}
       {isFeatureEnabled('notifications') && (
-        <Button variant="outline" size="icon" asChild>
-          <Link to="/notifications" className="relative">
+        <Button variant="outline" size="icon" asChild className="h-9 w-9 rounded-full">
+          <Link to="/notifications" className="relative flex h-full w-full items-center justify-center">
             <Bell className="h-[1.2rem] w-[1.2rem]" />
             {unreadCount > 0 && (
               <Badge variant="destructive" className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full p-0 text-xs">
@@ -84,7 +84,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
           </Link>
         </Button>
       )}
-      <Button variant="outline" size="icon" onClick={toggleTheme}>
+      <Button variant="outline" size="icon" onClick={toggleTheme} className="h-9 w-9 rounded-full">
         {theme === 'light' && <Sun className="h-[1.2rem] w-[1.2rem]" />}
         {theme === 'dark' && <Moon className="h-[1.2rem] w-[1.2rem]" />}
         {theme === 'system' && <Laptop className="h-[1.2rem] w-[1.2rem]" />}
