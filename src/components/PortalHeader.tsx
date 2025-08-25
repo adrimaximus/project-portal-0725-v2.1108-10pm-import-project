@@ -20,6 +20,9 @@ import { generateVibrantGradient } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Badge } from "./ui/badge";
 import { useFeatures } from "@/contexts/FeaturesContext";
+import { notificationIcons } from "@/data/notifications";
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 interface PortalHeaderProps {
     summary?: ReactNode;
@@ -29,8 +32,10 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  const { unreadCount } = useNotifications();
+  const { notifications, unreadCount, markAsRead } = useNotifications();
   const { isFeatureEnabled } = useFeatures();
+
+  const recentNotifications = notifications.slice(0, 5);
 
   if (!user) {
     return null;
@@ -72,17 +77,53 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
       </div>
       {isFeatureEnabled('search') && <GlobalSearch />}
       {isFeatureEnabled('notifications') && (
-        <Button variant="outline" size="icon" asChild className="h-9 w-9 rounded-full">
-          <Link to="/notifications" className="relative flex h-full w-full items-center justify-center">
-            <Bell className="h-[1.2rem] w-[1.2rem]" />
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full p-0 text-xs">
-                {unreadCount}
-              </Badge>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="h-9 w-9 rounded-full relative">
+              <Bell className="h-[1.2rem] w-[1.2rem]" />
+              {unreadCount > 0 && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full p-0 text-xs">
+                  {unreadCount}
+                </Badge>
+              )}
+              <span className="sr-only">View notifications</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80 sm:w-96">
+            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {recentNotifications.length > 0 ? (
+              recentNotifications.map(notification => {
+                const Icon = notificationIcons[notification.type as keyof typeof notificationIcons] || notificationIcons.system;
+                return (
+                  <DropdownMenuItem key={notification.id} onSelect={() => {
+                    if (!notification.read) {
+                      markAsRead(notification.id);
+                    }
+                    navigate(notification.link || '/notifications');
+                  }} className="flex items-start gap-3 p-3 cursor-pointer">
+                    <Icon className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium leading-none">{notification.title}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{notification.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: id })}
+                      </p>
+                    </div>
+                  </DropdownMenuItem>
+                )
+              })
+            ) : (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                No new notifications.
+              </div>
             )}
-            <span className="sr-only">View notifications</span>
-          </Link>
-        </Button>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => navigate('/notifications')} className="justify-center">
+              View all notifications
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
       <Button variant="outline" size="icon" onClick={toggleTheme} className="h-9 w-9 rounded-full">
         {theme === 'light' && <Sun className="h-[1.2rem] w-[1.2rem]" />}
