@@ -4,32 +4,18 @@ import { Project } from '@/types';
 import { toast } from 'sonner';
 
 const fetchProjects = async (): Promise<Project[]> => {
-  const batchSize = 10;
-  let offset = 0;
-  let allData: Project[] = [];
-  
-  while (true) {
-    const { data, error } = await supabase
-      .rpc('get_dashboard_projects', { p_limit: batchSize, p_offset: offset });
-      
-    if (error) {
-      console.error('Error fetching projects:', error);
-      toast.error('Failed to fetch projects.');
-      throw new Error(error.message);
-    }
+  // Fetch up to 1000 projects in a single call for dashboard efficiency.
+  // The previous loop was causing performance issues.
+  const { data, error } = await supabase
+    .rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 });
     
-    if (data) {
-      allData = allData.concat(data as Project[]);
-      if ((data as any[]).length < batchSize) {
-        break;
-      }
-      offset += batchSize;
-    } else {
-      break;
-    }
+  if (error) {
+    console.error('Error fetching projects:', error);
+    toast.error('Failed to fetch projects.');
+    throw new Error(error.message);
   }
   
-  return allData;
+  return data as Project[];
 };
 
 export const useProjects = () => {
