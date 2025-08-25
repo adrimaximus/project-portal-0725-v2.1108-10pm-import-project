@@ -52,7 +52,13 @@ serve(async (req) => {
     const oAuth2Client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    if (authError) {
+      return new Response(JSON.stringify({ error: `Authentication error: ${authError.message}` }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (!user) {
       return new Response(JSON.stringify({ error: 'User not authenticated' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -83,6 +89,10 @@ serve(async (req) => {
     let result;
 
     switch (action) {
+      case 'health-check':
+        result = { ok: true };
+        break;
+      
       case 'exchange-code': {
         await checkMasterAdmin(supabase, user.id);
         const { tokens } = await oAuth2Client.getToken({
