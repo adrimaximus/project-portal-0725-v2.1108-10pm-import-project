@@ -91,16 +91,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setLoading(false);
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
         if (event === 'PASSWORD_RECOVERY') {
           navigate('/reset-password');
         }
         if (event === 'SIGNED_OUT') {
           toast.success("You have been successfully logged out.");
         }
+        // **START: Perbaikan untuk sesi tidak valid**
+        if (event === 'TOKEN_REFRESHED' && !newSession) {
+          console.warn('Token refresh failed, forcing logout.');
+          await supabase.auth.signOut();
+        }
+        // **END: Perbaikan untuk sesi tidak valid**
         setSession(newSession);
         if (newSession) {
-          fetchUserProfile(newSession.user);
+          await fetchUserProfile(newSession.user);
         } else {
           setUser(null);
           localStorage.removeItem('lastUserName'); // Clear on logout
