@@ -22,7 +22,7 @@ const CustomTooltip = ({ active, payload, label, chartType }: any) => {
             <span className="font-semibold capitalize" style={{ color: payload[0].fill }}>
               {chartType}:
             </span>{' '}
-            {chartType === 'value' ? `Rp ${new Intl.NumberFormat('id-ID').format(payload[0].value as number)}` : payload[0].value}
+            {chartType === 'value' ? `Rp\u00A0${new Intl.NumberFormat('id-ID').format(payload[0].value as number)}` : payload[0].value}
           </p>
         ) : (
           <ul className="space-y-1">

@@ -32,7 +32,7 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
         <p className="text-xs text-muted-foreground">
           {metricType === 'quantity'
             ? `${metric} project${metric === 1 ? '' : 's'}`
-            : `Rp ${metric.toLocaleString('id-ID')}`}
+            : `Rp\u00A0${metric.toLocaleString('id-ID')}`}
         </p>
       </div>
     </div>
@@ -144,7 +144,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
         />
         <StatCard
           title="Total Project Value"
-          value={'Rp ' + stats.totalValue.toLocaleString('id-ID')}
+          value={'Rp\u00A0' + stats.totalValue.toLocaleString('id-ID')}
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
@@ -161,7 +161,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                   <div key={option.value} className="flex justify-between">
                     <span>{option.label}</span>
                     <span className="font-semibold">
-                      {viewMode === 'quantity' ? count : `Rp ${value.toLocaleString('id-ID')}`}
+                      {viewMode === 'quantity' ? count : `Rp\u00A0${value.toLocaleString('id-ID')}`}
                     </span>
                   </div>
                 );
@@ -183,7 +183,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                   <div key={option.value} className="flex justify-between">
                     <span>{option.label}</span>
                     <span className="font-semibold">
-                      {viewMode === 'quantity' ? count : `Rp ${value.toLocaleString('id-ID')}`}
+                      {viewMode === 'quantity' ? count : `Rp\u00A0${value.toLocaleString('id-ID')}`}
                     </span>
                   </div>
                 );
