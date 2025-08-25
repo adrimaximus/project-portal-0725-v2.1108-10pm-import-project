@@ -11,8 +11,17 @@ import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ContactProperty } from '@/types';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import PropertyFormDialog from '@/components/settings/PropertyFormDialog';
 
 const ContactPropertiesPage = () => {
+  const queryClient = useQueryClient();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [propertyToEdit, setPropertyToEdit] = useState<ContactProperty | null>(null);
+  const [propertyToDelete, setPropertyToDelete] = useState<ContactProperty | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
   const { data: properties = [], isLoading } = useQuery({
     queryKey: ['contact_properties'],
     queryFn: async () => {
@@ -21,6 +30,49 @@ const ContactPropertiesPage = () => {
       return data as ContactProperty[];
     }
   });
+
+  const handleAddNew = () => {
+    setPropertyToEdit(null);
+    setIsFormOpen(true);
+  };
+
+  const handleEdit = (property: ContactProperty) => {
+    setPropertyToEdit(property);
+    setIsFormOpen(true);
+  };
+
+  const handleSave = async (propertyData: Omit<ContactProperty, 'id' | 'is_default'>) => {
+    setIsSaving(true);
+    const { id, is_default, ...dataToSave } = propertyToEdit || {};
+    const upsertData = { ...dataToSave, ...propertyData };
+
+    const promise = propertyToEdit?.id
+      ? supabase.from('contact_properties').update(upsertData).eq('id', propertyToEdit.id)
+      : supabase.from('contact_properties').insert(upsertData);
+
+    const { error } = await promise;
+    setIsSaving(false);
+
+    if (error) {
+      toast.error(`Failed to save property: ${error.message}`);
+    } else {
+      toast.success(`Property "${propertyData.label}" saved.`);
+      queryClient.invalidateQueries({ queryKey: ['contact_properties'] });
+      setIsFormOpen(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!propertyToDelete) return;
+    const { error } = await supabase.from('contact_properties').delete().eq('id', propertyToDelete.id);
+    if (error) {
+      toast.error(`Failed to delete property: ${error.message}`);
+    } else {
+      toast.success(`Property "${propertyToDelete.label}" deleted.`);
+      queryClient.invalidateQueries({ queryKey: ['contact_properties'] });
+    }
+    setPropertyToDelete(null);
+  };
 
   return (
     <PortalLayout>
@@ -38,7 +90,7 @@ const ContactPropertiesPage = () => {
             <h1 className="text-2xl font-bold tracking-tight">Contact Properties</h1>
             <p className="text-muted-foreground">Modify and create contact properties.</p>
           </div>
-          <Button disabled>
+          <Button onClick={handleAddNew}>
             <PlusCircle className="mr-2 h-4 w-4" /> Create New Property
           </Button>
         </div>
@@ -65,7 +117,17 @@ const ContactPropertiesPage = () => {
                     <TableCell className="font-medium">{prop.label}</TableCell>
                     <TableCell><Badge variant="outline" className="capitalize">{prop.type}</Badge></TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" disabled>Edit</Button>
+                      {!prop.is_default && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => handleEdit(prop)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setPropertyToDelete(prop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -74,6 +136,29 @@ const ContactPropertiesPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <PropertyFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        onSave={handleSave}
+        property={propertyToEdit}
+        isSaving={isSaving}
+      />
+
+      <AlertDialog open={!!propertyToDelete} onOpenChange={(open) => !open && setPropertyToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the "{propertyToDelete?.label}" property. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PortalLayout>
   );
 };
