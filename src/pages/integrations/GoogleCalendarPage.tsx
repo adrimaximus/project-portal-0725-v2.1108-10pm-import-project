@@ -79,13 +79,14 @@ const GoogleCalendarPage = () => {
   }, [googleClientId]);
 
   const fetchUserSelections = useCallback(async () => {
-    const { data, error } = await supabase.functions.invoke('google-auth-handler', {
-      body: { method: 'get-selections' }
-    });
-    if (error) {
-      toast.error("Failed to fetch calendar selections.");
-    } else {
-      setSelectedCalendars(data.selections || []);
+    try {
+      const storedSelections = localStorage.getItem('googleCalendarSelected');
+      if (storedSelections) {
+        setSelectedCalendars(JSON.parse(storedSelections));
+      }
+    } catch (e) {
+      console.error("Failed to parse calendar selections from localStorage", e);
+      setSelectedCalendars([]);
     }
   }, []);
 
@@ -99,6 +100,8 @@ const GoogleCalendarPage = () => {
       setIsConnected(false);
       setCalendars([]);
       setSelectedCalendars([]);
+      localStorage.removeItem('googleCalendarSelected');
+      localStorage.removeItem('googleCalendarSelectedObjects');
       toast.info("Disconnected from Google Calendar.");
     } catch (error: any) {
       toast.error("Failed to disconnect.", { description: error.message });
@@ -185,16 +188,16 @@ const GoogleCalendarPage = () => {
 
   const handleSaveSelection = async () => {
     setIsLoading(true);
-    const selectionsToSave = calendars.filter(c => selectedCalendars.includes(c.id));
-    const { error } = await supabase.functions.invoke('google-auth-handler', {
-      body: { method: 'save-selections', selections: selectionsToSave.map(s => ({ id: s.id, summary: s.summary })) }
-    });
-    if (error) {
-      toast.error("Failed to save preferences.", { description: error.message });
-    } else {
-      toast.success("Calendar preferences have been saved for the workspace.");
+    try {
+      const selectionsToSave = calendars.filter(c => selectedCalendars.includes(c.id));
+      localStorage.setItem('googleCalendarSelected', JSON.stringify(selectionsToSave.map(s => s.id)));
+      localStorage.setItem('googleCalendarSelectedObjects', JSON.stringify(selectionsToSave));
+      toast.success("Calendar preferences for manual import have been saved.");
+    } catch (error) {
+      toast.error("Could not save calendar preferences to local storage.");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   if (!googleClientId) {
@@ -226,14 +229,14 @@ const GoogleCalendarPage = () => {
         
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Google Calendar Integration</h1>
-          <p className="text-muted-foreground">Connect a Google account for the workspace to automatically import events as projects.</p>
+          <p className="text-muted-foreground">Connect a Google account for the workspace to manually import events as projects.</p>
         </div>
         
         {!isConnected ? (
           <Card>
             <CardHeader>
               <CardTitle>Connect to Google Calendar</CardTitle>
-              <CardDescription>Allow access to a Google Calendar to enable automatic daily imports for the entire workspace.</CardDescription>
+              <CardDescription>Allow access to a Google Calendar to enable manual event imports for the entire workspace.</CardDescription>
             </CardHeader>
             <CardContent>
               <Button onClick={handleConnect} disabled={isLoading}>
@@ -245,7 +248,7 @@ const GoogleCalendarPage = () => {
           <Card>
             <CardHeader>
               <CardTitle>Manage Workspace Calendars</CardTitle>
-              <CardDescription>Select which calendars to sync automatically for all users.</CardDescription>
+              <CardDescription>Select which calendars to make available for manual import by all users.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {isLoading && calendars.length === 0 ? (
@@ -258,7 +261,7 @@ const GoogleCalendarPage = () => {
                   }))}
                   onChange={setSelectedCalendars}
                   value={selectedCalendars}
-                  placeholder="Select calendars to sync..."
+                  placeholder="Select calendars to make available..."
                   className="w-full"
                 />
               )}
