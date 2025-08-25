@@ -98,21 +98,21 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           />
         </MentionsInput>
       </div>
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Button type="button" variant={isTicket ? "default" : "outline"} size="sm" onClick={() => setIsTicket(!isTicket)}>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button type="button" variant={isTicket ? "default" : "outline"} size="sm" onClick={() => setIsTicket(!isTicket)} className="flex-1">
             <Ticket className="mr-2 h-4 w-4" />
             {isTicket ? "This is a Ticket" : "Make a Ticket"}
           </Button>
-          <Button type="button" variant="outline" size="sm" asChild>
-            <label htmlFor="file-upload" className="cursor-pointer">
+          <Button type="button" variant="outline" size="sm" asChild className="flex-1">
+            <label htmlFor="file-upload" className="cursor-pointer flex items-center justify-center">
               <Paperclip className="mr-2 h-4 w-4" />
               Attach File
               <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} />
             </label>
           </Button>
         </div>
-        <Button type="submit" disabled={isSubmitting || !newComment.trim()}>
+        <Button type="submit" disabled={isSubmitting || !newComment.trim()} className="w-full sm:w-auto" size="sm">
           <Send className="mr-2 h-4 w-4" />
           {isSubmitting ? "Posting..." : "Post"}
         </Button>
