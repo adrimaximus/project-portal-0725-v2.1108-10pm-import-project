@@ -5,6 +5,17 @@ import { User, SupabaseSession, SupabaseUser } from '@/types';
 import { toast } from 'sonner';
 import { getInitials } from '@/lib/utils';
 
+interface ProfileWithPermissions {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  role: string | null;
+  status: string | null;
+  sidebar_order: string[] | null;
+  permissions: string[] | null;
+}
+
 interface AuthContextType {
   session: SupabaseSession | null;
   user: User | null;
@@ -24,32 +35,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser, retries = 3, delay = 500) => {
     for (let i = 0; i < retries; i++) {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
+      const { data, error } = await supabase
+        .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
         .single();
 
-      if (profile) {
-        const { data: roleData } = await supabase
-          .from('roles')
-          .select('permissions')
-          .eq('name', profile.role)
-          .single();
+      const profile = data as ProfileWithPermissions | null;
 
+      if (profile) {
         const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
         const userToSet: User = {
           id: profile.id,
           email: supabaseUser.email,
           name: fullName || supabaseUser.email || 'No name',
-          avatar: profile.avatar_url,
+          avatar: profile.avatar_url || undefined,
           initials: getInitials(fullName, supabaseUser.email) || 'NN',
           first_name: profile.first_name,
           last_name: profile.last_name,
-          role: profile.role,
-          status: profile.status,
-          sidebar_order: profile.sidebar_order,
-          permissions: roleData?.permissions || [],
+          role: profile.role || undefined,
+          status: profile.status || undefined,
+          sidebar_order: profile.sidebar_order || undefined,
+          permissions: profile.permissions || [],
         };
         setUser(userToSet);
         localStorage.setItem('lastUserName', userToSet.name); // Store user name
