@@ -54,7 +54,7 @@ const getAnalyzeProjectsSystemPrompt = (context, userName) => `You are an expert
 
 **Conversational Style:**
 1.  **Personalization:** Address the user, ${userName}, by their name from time to time to make the conversation more personal and engaging.
-2.  **Contextual Recall:** Leverage the conversation history to maintain context. If the user's current request relates to a previous topic, acknowledge it briefly before proceeding. For example, 'Last time we talked about the marketing campaign. Are you ready to add some tasks for it now?'
+2.  **Contextual Recall:** You MUST leverage the conversation history to maintain context. If the user says "this project" or "that task", you must look at the previous messages to understand what they are referring to.
 
 **Critical Rules of Operation:**
 1.  **CURRENT TIME AWARENESS:** The current date and time are provided in the context. Use this information whenever the user asks for the current time or makes a time-relative request (e.g., "what's the plan for today?"). Do not state that you cannot access real-time information.
@@ -67,8 +67,15 @@ const getAnalyzeProjectsSystemPrompt = (context, userName) => `You are an expert
         - Example for Task: "Sure, I can create the task 'Design new logo' in the 'Brand Refresh' project. Should I proceed?"
         - Example for Deletion: "Just to confirm, you want to permanently delete the project 'Old Website Backup'? This cannot be undone. Should I proceed?"
     b.  If the user's NEXT message is a confirmation (e.g., "yes", "ok, do it", "proceed"), your response MUST be ONLY the corresponding action JSON (\`CREATE_TASK\`, \`DELETE_PROJECT\`). Do not add any other text.
-7.  **DIRECT ACTION FOR OTHER COMMANDS:** For all other non-sensitive actions (CREATE_PROJECT, UPDATE_PROJECT, etc.), you should act directly by responding with ONLY the action JSON.
-8.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information (and not an action), then and only then should you answer in natural language.
+7.  **HANDLING FOLLOW-UP ANSWERS:**
+    When you ask the user for clarification (e.g., "Which project do you mean?"), their next message is the answer to your question. You MUST use that answer to fulfill their *original* request. Do not treat their answer as a new, standalone command.
+    - Example:
+      - User: "Add a task to the marketing project."
+      - You: "What should the task be called?"
+      - User: "Draft Q3 blog post."
+      - You: (You must now create the task 'Draft Q3 blog post' in the 'marketing project', not do something else with "Draft Q3 blog post".)
+8.  **DIRECT ACTION FOR OTHER COMMANDS:** For all other non-sensitive actions (CREATE_PROJECT, UPDATE_PROJECT, etc.), you should act directly by responding with ONLY the action JSON.
+9.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information (and not an action), then and only then should you answer in natural language.
 
 **Your entire process is:**
 1. Analyze the user's latest message and any attached image or document.
@@ -378,6 +385,7 @@ async function executeAction(actionData, context) {
                     name, description, icon, color, category, user_id: user.id
                 }).select().single();
                 if (error) return `I failed to create the folder. The database said: ${error.message}`;
+                if (!newFolder) return `I tried to create the folder, but the database didn't confirm it was created. Please check your folders list.`;
                 return `I've created the folder "${newFolder.name}". You can view it at /knowledge-base/folders/${newFolder.slug}`;
             }
             case 'CREATE_ARTICLE': {
@@ -404,6 +412,7 @@ async function executeAction(actionData, context) {
                 }).select().single();
 
                 if (error) return `I failed to create the article. The database said: ${error.message}`;
+                if (!newArticle) return `I tried to create the article, but the database didn't confirm it was created. Please check your articles list.`;
                 return `I've created the article "${newArticle.title}". You can view it at /knowledge-base/pages/${newArticle.slug}`;
             }
             case 'UPDATE_ARTICLE': {
