@@ -26,6 +26,25 @@ serve(async (req) => {
   }
 
   try {
+    // --- Early exit for health check, before any auth ---
+    if (req.method === 'POST') {
+      const bodyText = await req.text();
+      if (bodyText) {
+        try {
+          const body = JSON.parse(bodyText);
+          if (body.method === 'health-check') {
+            return new Response(JSON.stringify({ ok: true }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200,
+            });
+          }
+        } catch (e) {
+          // Not a valid JSON body, proceed to auth checks
+        }
+      }
+    }
+    // --- End of health check ---
+
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const GOOGLE_CLIENT_ID = Deno.env.get('VITE_GOOGLE_CLIENT_ID');
@@ -52,13 +71,7 @@ serve(async (req) => {
     const oAuth2Client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) {
-      return new Response(JSON.stringify({ error: `Authentication error: ${authError.message}` }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (!user) {
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: 'User not authenticated' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -89,10 +102,6 @@ serve(async (req) => {
     let result;
 
     switch (action) {
-      case 'health-check':
-        result = { ok: true };
-        break;
-      
       case 'exchange-code': {
         await checkMasterAdmin(supabase, user.id);
         const { tokens } = await oAuth2Client.getToken({
