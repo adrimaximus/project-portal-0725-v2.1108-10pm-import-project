@@ -26,6 +26,31 @@ const LoginPage = () => {
     }
   }, [session, authContextLoading, navigate]);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key.toLowerCase() === 's' &&
+        !(event.target instanceof HTMLInputElement) &&
+        !(event.target instanceof HTMLTextAreaElement) &&
+        !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey
+      ) {
+        event.preventDefault();
+        const signInButton = document.querySelector(
+          '.supabase-auth-ui_ui-button[type="submit"]'
+        ) as HTMLElement | null;
+        
+        if (signInButton) {
+          signInButton.click();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1554147090-e1221a04a025?q=80&w=2940&auto=format&fit=crop')"}}>
       <div className="w-full max-w-4xl grid lg:grid-cols-2 rounded-2xl overflow-hidden shadow-2xl">
@@ -71,6 +96,9 @@ const LoginPage = () => {
               redirectTo={`${window.location.origin}/dashboard`}
               socialLayout="horizontal"
             />
+            <p className="text-center text-xs text-white/50 mt-6">
+              Press <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-white/20 bg-white/10 px-1.5 font-mono text-[10px] font-medium text-white/80">S</kbd> to sign in
+            </p>
           </div>
         </div>
       </div>
