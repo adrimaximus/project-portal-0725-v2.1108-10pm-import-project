@@ -9,14 +9,23 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
 }
 
-serve(async (req) => {
-  try {
-    // Handle CORS preflight requests
-    if (req.method === 'OPTIONS') {
-      return new Response('ok', { headers: corsHeaders, status: 200 })
-    }
+const checkMasterAdmin = async (supabase, userId) => {
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  if (error || !profile || profile.role !== 'master admin') {
+    throw new Error("Permission denied. Only master admins can manage this integration.");
+  }
+};
 
-    // --- Environment Variable Validation ---
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders, status: 200 })
+  }
+
+  try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const GOOGLE_CLIENT_ID = Deno.env.get('VITE_GOOGLE_CLIENT_ID');
@@ -26,7 +35,6 @@ serve(async (req) => {
       throw new Error("Required environment variables are not set on the server.");
     }
 
-    // --- Client Initialization ---
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const supabase = createClient(
       SUPABASE_URL,
@@ -35,11 +43,9 @@ serve(async (req) => {
     );
     const oAuth2Client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
 
-    // --- User Authentication ---
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("User not authenticated.");
 
-    // --- Request Body Parsing ---
     let body = {};
     if (req.body) {
       try {
@@ -53,64 +59,53 @@ serve(async (req) => {
 
     let result;
 
-    // --- Method Routing ---
     switch (method) {
       case 'health-check':
         result = { status: 'ok' };
         break;
       
       case 'exchange-code': {
+        await checkMasterAdmin(supabase, user.id);
         const { tokens } = await oAuth2Client.getToken({
           code: payload.code,
           redirect_uri: 'postmessage'
         });
-        const { access_token, refresh_token, expiry_date, scope } = tokens;
-        if (!access_token) throw new Error("Failed to get access token.");
+        const { refresh_token } = tokens;
+        if (!refresh_token) throw new Error("Failed to get refresh token from Google.");
 
-        const { error } = await supabaseAdmin.from('user_google_tokens').upsert({
-          user_id: user.id,
-          access_token,
-          refresh_token,
-          expires_at: new Date(expiry_date).toISOString(),
-          scope,
-        });
+        const { error } = await supabaseAdmin.from('app_config').upsert({ key: 'GOOGLE_REFRESH_TOKEN', value: refresh_token });
         if (error) throw error;
         result = { success: true };
         break;
       }
 
       case 'get-status': {
-        const { data, error } = await supabaseAdmin.from('user_google_tokens').select('user_id').eq('user_id', user.id).single();
-        if (error && error.code !== 'PGRST116') throw error;
-        result = { connected: !!data };
+        const { data, error } = await supabaseAdmin.from('app_config').select('value').eq('key', 'GOOGLE_REFRESH_TOKEN').maybeSingle();
+        if (error) throw error;
+        result = { connected: !!data?.value };
         break;
       }
 
       case 'disconnect': {
-        await supabaseAdmin.from('user_calendar_selections').delete().eq('user_id', user.id);
-        await supabaseAdmin.from('user_google_tokens').delete().eq('user_id', user.id);
+        await checkMasterAdmin(supabase, user.id);
+        await supabaseAdmin.from('app_config').delete().eq('key', 'GOOGLE_CALENDAR_SELECTIONS');
+        await supabaseAdmin.from('app_config').delete().eq('key', 'GOOGLE_REFRESH_TOKEN');
         result = { success: true };
         break;
       }
 
       case 'get-selections': {
-        const { data, error } = await supabase.from('user_calendar_selections').select('calendar_id').eq('user_id', user.id);
+        const { data, error } = await supabaseAdmin.from('app_config').select('value').eq('key', 'GOOGLE_CALENDAR_SELECTIONS').maybeSingle();
         if (error) throw error;
-        result = { selections: data.map(s => s.calendar_id) };
+        result = { selections: data?.value ? JSON.parse(data.value) : [] };
         break;
       }
 
       case 'save-selections': {
-        await supabaseAdmin.from('user_calendar_selections').delete().eq('user_id', user.id);
-        if (payload.selections && payload.selections.length > 0) {
-          const toInsert = payload.selections.map(s => ({
-            user_id: user.id,
-            calendar_id: s.id,
-            calendar_summary: s.summary,
-          }));
-          const { error } = await supabaseAdmin.from('user_calendar_selections').insert(toInsert);
-          if (error) throw error;
-        }
+        await checkMasterAdmin(supabase, user.id);
+        const selectionsToSave = payload.selections || [];
+        const { error } = await supabaseAdmin.from('app_config').upsert({ key: 'GOOGLE_CALENDAR_SELECTIONS', value: JSON.stringify(selectionsToSave.map(s => s.id)) });
+        if (error) throw error;
         result = { success: true };
         break;
       }
@@ -118,15 +113,15 @@ serve(async (req) => {
       case 'list-calendars':
       case 'list-events': {
         const { data: tokenData, error: tokenError } = await supabaseAdmin
-          .from('user_google_tokens')
-          .select('refresh_token')
-          .eq('user_id', user.id)
+          .from('app_config')
+          .select('value')
+          .eq('key', 'GOOGLE_REFRESH_TOKEN')
           .single();
-        if (tokenError || !tokenData?.refresh_token) {
-          throw new Error("No refresh token found for user. Please reconnect.");
+        if (tokenError || !tokenData?.value) {
+          throw new Error("Google Calendar is not connected for this workspace.");
         }
 
-        oAuth2Client.setCredentials({ refresh_token: tokenData.refresh_token });
+        oAuth2Client.setCredentials({ refresh_token: tokenData.value });
         const { token: accessToken } = await oAuth2Client.getAccessToken();
         if (!accessToken) throw new Error("Failed to refresh access token.");
 
@@ -141,9 +136,12 @@ serve(async (req) => {
           const calendarData = await response.json();
           result = calendarData.items || [];
         } else { // list-events
-          const { calendarIds, timeMin, timeMax } = payload;
-          if (!calendarIds || !Array.isArray(calendarIds) || !timeMin || !timeMax) {
-            throw new Error("calendarIds array, timeMin, and timeMax are required.");
+          const { data: selectionsData } = await supabaseAdmin.from('app_config').select('value').eq('key', 'GOOGLE_CALENDAR_SELECTIONS').maybeSingle();
+          const calendarIds = selectionsData?.value ? JSON.parse(selectionsData.value) : [];
+          const { timeMin, timeMax } = payload;
+          if (calendarIds.length === 0 || !timeMin || !timeMax) {
+            result = [];
+            break;
           }
 
           const allEvents = [];

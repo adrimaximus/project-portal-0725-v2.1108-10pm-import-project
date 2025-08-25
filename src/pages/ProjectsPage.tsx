@@ -288,6 +288,7 @@ const ProjectsPage = () => {
       dueDate: finalDueDate.toISOString(),
       origin_event_id: `cal-${event.id}`,
       venue: event.location,
+      public: true, // Make imported projects visible to all
     };
 
     createProjectMutation.mutate(newProjectData, {

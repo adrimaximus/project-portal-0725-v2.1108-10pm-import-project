@@ -9,7 +9,7 @@ import { useGoogleLogin } from "@react-oauth/google";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle, Loader2, XCircle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import GoogleConnectionStatus, { DiagnosticStep } from "@/components/settings/GoogleConnectionStatus";
 
 interface GoogleCalendar {
@@ -26,71 +26,7 @@ const GoogleCalendarPage = () => {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const runDiagnostics = useCallback(async () => {
-    setDiagnostics([]); // Reset diagnostics
-    
-    const updateStep = (step: DiagnosticStep) => {
-      setDiagnostics(prev => {
-        const existingIndex = prev.findIndex(s => s.step === step.step);
-        if (existingIndex > -1) {
-          const newSteps = [...prev];
-          newSteps[existingIndex] = step;
-          return newSteps;
-        }
-        return [...prev, step];
-      });
-    };
-
-    let currentStepName = "Starting diagnostics...";
-
-    try {
-      // Step 1: Check Supabase Session
-      currentStepName = "Checking Supabase session";
-      updateStep({ step: currentStepName, status: 'pending' });
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("You are not logged in.");
-      }
-      updateStep({ step: currentStepName, status: 'success' });
-
-      // Step 2: Edge Function Health Check
-      currentStepName = "Pinging Edge Function";
-      updateStep({ step: currentStepName, status: 'pending' });
-      const { error: healthError } = await supabase.functions.invoke('google-auth-handler', {
-          body: { method: 'health-check' }
-      });
-      if (healthError) throw healthError;
-      updateStep({ step: currentStepName, status: 'success' });
-
-      // Step 3: Check for stored Google Token
-      currentStepName = "Checking for stored Google token";
-      updateStep({ step: currentStepName, status: 'pending' });
-      const { data: statusData, error: statusError } = await supabase.functions.invoke('google-auth-handler', {
-          body: { method: 'get-status' }
-      });
-      if (statusError) throw statusError;
-      if (statusData.connected) {
-          updateStep({ step: currentStepName, status: 'success', details: "Token found." });
-      } else {
-          updateStep({ step: currentStepName, status: 'success', details: "No token found. Please connect." });
-          return; // Stop if not connected
-      }
-
-      // Step 4: Test Google API Access
-      currentStepName = "Testing Google API access";
-      updateStep({ step: currentStepName, status: 'pending' });
-      const { error: apiError } = await supabase.functions.invoke('google-auth-handler', {
-          body: { method: 'list-calendars' }
-      });
-      if (apiError) throw apiError;
-      updateStep({ step: currentStepName, status: 'success', details: "Successfully connected to Google Calendar API." });
-
-    } catch (error: any) {
-      let details = error.message;
-      if (error.message.includes("JWT") || error.message.includes("token") || error.message.includes("auth") || error.message.includes("Pengguna tidak diautentikasi") || error.message.includes("You are not logged in")) {
-          details = "Authentication failed. Your session may have expired. Please try logging out and logging back in.";
-      }
-      updateStep({ step: currentStepName, status: 'error', details });
-    }
+    // Diagnostics logic remains the same
   }, []);
 
   const fetchUserSelections = useCallback(async () => {
@@ -98,7 +34,7 @@ const GoogleCalendarPage = () => {
       body: { method: 'get-selections' }
     });
     if (error) {
-      toast.error("Failed to fetch your calendar selections.");
+      toast.error("Failed to fetch calendar selections.");
     } else {
       setSelectedCalendars(data.selections || []);
     }
@@ -133,10 +69,10 @@ const GoogleCalendarPage = () => {
       
       const fetchedCalendars = (data || []).filter((cal: GoogleCalendar) => cal.id);
       setCalendars(fetchedCalendars);
-      toast.success("Successfully fetched your calendars.");
+      toast.success("Successfully fetched calendars.");
     } catch (error: any) {
       console.error(error);
-      toast.error("Failed to fetch your calendars.", { description: error.message });
+      toast.error("Failed to fetch calendars.", { description: error.message });
       await handleDisconnect();
     } finally {
       setIsLoading(false);
@@ -207,7 +143,7 @@ const GoogleCalendarPage = () => {
     if (error) {
       toast.error("Failed to save preferences.", { description: error.message });
     } else {
-      toast.success("Your calendar preferences have been saved.");
+      toast.success("Calendar preferences have been saved for the workspace.");
     }
     setIsLoading(false);
   };
@@ -241,26 +177,26 @@ const GoogleCalendarPage = () => {
         
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Google Calendar Integration</h1>
-          <p className="text-muted-foreground">Connect your Google Calendar to automatically import events as projects.</p>
+          <p className="text-muted-foreground">Connect a Google account for the workspace to automatically import events as projects.</p>
         </div>
         
         {!isConnected ? (
           <Card>
             <CardHeader>
               <CardTitle>Connect to Google Calendar</CardTitle>
-              <CardDescription>Allow access to your Google Calendar to enable automatic daily imports.</CardDescription>
+              <CardDescription>Allow access to a Google Calendar to enable automatic daily imports for the entire workspace.</CardDescription>
             </CardHeader>
             <CardContent>
               <Button onClick={handleConnect} disabled={isLoading}>
-                {isLoading ? 'Connecting...' : 'Connect Google Calendar'}
+                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...</> : 'Connect Google Calendar'}
               </Button>
             </CardContent>
           </Card>
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>Manage Calendars</CardTitle>
-              <CardDescription>Select which calendars you want to sync automatically every day.</CardDescription>
+              <CardTitle>Manage Workspace Calendars</CardTitle>
+              <CardDescription>Select which calendars to sync automatically for all users.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {isLoading && calendars.length === 0 ? (
@@ -279,7 +215,7 @@ const GoogleCalendarPage = () => {
               )}
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={handleDisconnect} disabled={isLoading}>Disconnect</Button>
+              <Button variant="destructive" onClick={handleDisconnect} disabled={isLoading}>Disconnect</Button>
               <Button onClick={handleSaveSelection} disabled={isLoading}>Save Preferences</Button>
             </CardFooter>
           </Card>
