@@ -23,7 +23,7 @@ const checkMasterAdmin = async (supabase, userId) => {
 serve(async (req) => {
   // Handle CORS preflight requests immediately
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders, status: 204 });
   }
 
   try {
@@ -60,6 +60,10 @@ serve(async (req) => {
     }
     
     const { method: action, ...payload } = body;
+
+    if (!action) {
+        throw new Error("A 'method' property is required in the request body for POST requests.");
+    }
 
     let result;
 
@@ -165,9 +169,6 @@ serve(async (req) => {
       }
 
       default:
-        if (!action) {
-            throw new Error("A 'method' property is required in the request body for POST requests.");
-        }
         throw new Error(`Invalid method specified: ${action}`);
     }
 
@@ -180,7 +181,7 @@ serve(async (req) => {
     console.error("Edge Function Error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: 400,
     });
   }
 });
