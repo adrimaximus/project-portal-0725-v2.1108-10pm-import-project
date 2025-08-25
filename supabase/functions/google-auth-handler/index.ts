@@ -47,12 +47,14 @@ serve(async (req) => {
     if (authError || !user) throw new Error("User not authenticated.");
 
     let body = {};
-    if (req.body) {
-      try {
-        const raw = await req.text();
-        if (raw) body = JSON.parse(raw);
-      } catch (e) {
-        throw new Error("Invalid JSON body");
+    if (req.method === 'POST') {
+      const bodyText = await req.text();
+      if (bodyText) {
+        try {
+          body = JSON.parse(bodyText);
+        } catch (e) {
+          throw new Error(`Invalid JSON body: ${e.message}`);
+        }
       }
     }
     const { method, ...payload } = body;
@@ -168,7 +170,10 @@ serve(async (req) => {
       }
 
       default:
-        throw new Error("Invalid method specified.");
+        if (!method) {
+            throw new Error("A 'method' property is required in the request body.");
+        }
+        throw new Error(`Invalid method specified: ${method}`);
     }
 
     return new Response(JSON.stringify(result), {
