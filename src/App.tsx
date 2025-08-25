@@ -35,6 +35,7 @@ import SlackPage from "./pages/integrations/SlackPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import GoogleCalendarPage from "./pages/integrations/GoogleCalendarPage";
 import PeoplePage from "./pages/PeoplePage";
+import PersonProfilePage from "./pages/people/PersonProfilePage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import FolderDetailPage from "./pages/kb/FolderDetailPage";
 import Page from "./pages/kb/Page";
@@ -64,6 +65,7 @@ function App() {
           <Route path="/goals/:slug" element={<PermissionGuard permission="module:goals"><GoalDetailPage /></PermissionGuard>} />
           <Route path="/billing" element={<PermissionGuard permission="module:billing"><Billing /></PermissionGuard>} />
           <Route path="/people" element={<PermissionGuard permission="module:people"><PeoplePage /></PermissionGuard>} />
+          <Route path="/people/:id" element={<PermissionGuard permission="module:people"><PersonProfilePage /></PermissionGuard>} />
           <Route path="/knowledge-base" element={<PermissionGuard permission="module:knowledge-base"><KnowledgeBasePage /></PermissionGuard>} />
           <Route path="/knowledge-base/folders/:slug" element={<PermissionGuard permission="module:knowledge-base"><FolderDetailPage /></PermissionGuard>} />
           <Route path="/knowledge-base/pages/:slug" element={<PermissionGuard permission="module:knowledge-base"><Page /></PermissionGuard>} />

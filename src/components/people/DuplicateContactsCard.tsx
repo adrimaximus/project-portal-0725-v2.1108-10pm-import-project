@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users, GitMerge } from 'lucide-react';
-import { Person } from '@/pages/PeoplePage';
+import { Person } from '@/types';
 import MergeDialog from './MergeDialog';
 
 export type DuplicatePair = {

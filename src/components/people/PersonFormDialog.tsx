@@ -15,8 +15,7 @@ import { format } from "date-fns";
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Person } from '@/pages/PeoplePage';
-import { Project, Tag } from '@/types';
+import { Person, Project, Tag } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
 import AddressAutocompleteInput from './AddressAutocompleteInput';
 

@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Person } from '@/pages/PeoplePage';
-import { Tag } from '@/types';
+import { Person, Tag } from '@/types';
 import PeopleKanbanCard from './PeopleKanbanCard';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
