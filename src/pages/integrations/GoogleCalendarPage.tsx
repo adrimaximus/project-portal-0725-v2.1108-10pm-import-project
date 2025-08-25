@@ -26,7 +26,7 @@ const GoogleCalendarPage = () => {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const runDiagnostics = useCallback(async () => {
-    setDiagnostics([]);
+    setDiagnostics([]); // Reset diagnostics
     
     const updateStep = (step: DiagnosticStep) => {
       setDiagnostics(prev => {
@@ -40,59 +40,59 @@ const GoogleCalendarPage = () => {
       });
     };
 
-    // Step 1: Check Supabase Session
-    updateStep({ step: "Checking Supabase session", status: 'pending' });
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      updateStep({ step: "Checking Supabase session", status: 'error', details: "You are not logged in." });
-      return;
-    }
-    updateStep({ step: "Checking Supabase session", status: 'success' });
+    let currentStepName = "Starting diagnostics...";
 
-    // Step 2: Edge Function Health Check
-    updateStep({ step: "Pinging Edge Function", status: 'pending' });
     try {
-      const { error } = await supabase.functions.invoke('google-auth-handler', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { method: 'health-check' }
-      });
-      if (error) throw error;
-      updateStep({ step: "Pinging Edge Function", status: 'success' });
-    } catch (error: any) {
-      updateStep({ step: "Pinging Edge Function", status: 'error', details: error.message });
-      return;
-    }
-
-    // Step 3: Check for stored Google Token
-    updateStep({ step: "Checking for stored Google token", status: 'pending' });
-    try {
-      const { data, error } = await supabase.functions.invoke('google-auth-handler', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { method: 'get-status' }
-      });
-      if (error) throw error;
-      if (data.connected) {
-        updateStep({ step: "Checking for stored Google token", status: 'success', details: "Token found." });
-      } else {
-        updateStep({ step: "Checking for stored Google token", status: 'success', details: "No token found. Please connect." });
-        return; // Stop if not connected
+      // Step 1: Check Supabase Session
+      currentStepName = "Checking Supabase session";
+      updateStep({ step: currentStepName, status: 'pending' });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("You are not logged in.");
       }
-    } catch (error: any) {
-      updateStep({ step: "Checking for stored Google token", status: 'error', details: error.message });
-      return;
-    }
+      updateStep({ step: currentStepName, status: 'success' });
 
-    // Step 4: Test Google API Access
-    updateStep({ step: "Testing Google API access", status: 'pending' });
-    try {
-      const { error } = await supabase.functions.invoke('google-auth-handler', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { method: 'list-calendars' }
+      // Step 2: Edge Function Health Check
+      currentStepName = "Pinging Edge Function";
+      updateStep({ step: currentStepName, status: 'pending' });
+      const { error: healthError } = await supabase.functions.invoke('google-auth-handler', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: { method: 'health-check' }
       });
-      if (error) throw error;
-      updateStep({ step: "Testing Google API access", status: 'success', details: "Successfully connected to Google Calendar API." });
+      if (healthError) throw healthError;
+      updateStep({ step: currentStepName, status: 'success' });
+
+      // Step 3: Check for stored Google Token
+      currentStepName = "Checking for stored Google token";
+      updateStep({ step: currentStepName, status: 'pending' });
+      const { data: statusData, error: statusError } = await supabase.functions.invoke('google-auth-handler', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: { method: 'get-status' }
+      });
+      if (statusError) throw statusError;
+      if (statusData.connected) {
+          updateStep({ step: currentStepName, status: 'success', details: "Token found." });
+      } else {
+          updateStep({ step: currentStepName, status: 'success', details: "No token found. Please connect." });
+          return; // Stop if not connected
+      }
+
+      // Step 4: Test Google API Access
+      currentStepName = "Testing Google API access";
+      updateStep({ step: currentStepName, status: 'pending' });
+      const { error: apiError } = await supabase.functions.invoke('google-auth-handler', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: { method: 'list-calendars' }
+      });
+      if (apiError) throw apiError;
+      updateStep({ step: currentStepName, status: 'success', details: "Successfully connected to Google Calendar API." });
+
     } catch (error: any) {
-      updateStep({ step: "Testing Google API access", status: 'error', details: error.message });
+      let details = error.message;
+      if (error.message.includes("JWT") || error.message.includes("token") || error.message.includes("auth") || error.message.includes("Pengguna tidak diautentikasi") || error.message.includes("You are not logged in")) {
+          details = "Authentication failed. Your session may have expired. Please try logging out and logging back in.";
+      }
+      updateStep({ step: currentStepName, status: 'error', details });
     }
   }, []);
 
