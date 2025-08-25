@@ -72,7 +72,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
       </div>
       {isFeatureEnabled('search') && <GlobalSearch />}
       {isFeatureEnabled('notifications') && (
-        <Button variant="outline" size="icon" asChild className="h-9 w-9 rounded-full flex-shrink-0">
+        <Button variant="outline" size="icon" asChild className="h-9 w-9 rounded-full">
           <Link to="/notifications" className="relative flex h-full w-full items-center justify-center">
             <Bell className="h-[1.2rem] w-[1.2rem]" />
             {unreadCount > 0 && (
@@ -84,7 +84,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
           </Link>
         </Button>
       )}
-      <Button variant="outline" size="icon" onClick={toggleTheme} className="h-9 w-9 rounded-full flex-shrink-0">
+      <Button variant="outline" size="icon" onClick={toggleTheme} className="h-9 w-9 rounded-full">
         {theme === 'light' && <Sun className="h-[1.2rem] w-[1.2rem]" />}
         {theme === 'dark' && <Moon className="h-[1.2rem] w-[1.2rem]" />}
         {theme === 'system' && <Laptop className="h-[1.2rem] w-[1.2rem]" />}
@@ -92,7 +92,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="secondary" size="icon" className="rounded-full flex-shrink-0">
+          <Button variant="secondary" size="icon" className="rounded-full">
             <Avatar className="h-8 w-8">
               <AvatarImage src={user.avatar} alt={user.name} />
               <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
