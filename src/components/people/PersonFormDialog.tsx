@@ -15,7 +15,7 @@ import { format } from "date-fns";
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Person, Project, Tag } from '@/types';
+import { Person, Project, Tag, ContactProperty } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
 import AddressAutocompleteInput from './AddressAutocompleteInput';
 
@@ -40,6 +40,7 @@ const personSchema = z.object({
   project_ids: z.array(z.string()).optional(),
   tag_ids: z.array(z.string()).optional(),
   address: z.any().optional(),
+  custom_properties: z.record(z.any()).optional(),
 });
 
 type PersonFormValues = z.infer<typeof personSchema>;
@@ -49,13 +50,14 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
   const [isSaving, setIsSaving] = useState(false);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [customProperties, setCustomProperties] = useState<ContactProperty[]>([]);
 
   const form = useForm<PersonFormValues>({
     resolver: zodResolver(personSchema),
     defaultValues: {
       full_name: '', email: '', phone: '', company: '', job_title: '',
       department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-      notes: '', project_ids: [], tag_ids: [], address: null,
+      notes: '', project_ids: [], tag_ids: [], address: null, custom_properties: {},
     }
   });
 
@@ -66,6 +68,9 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
 
       const { data: tagsData } = await supabase.from('tags').select('id, name, color');
       if (tagsData) setAllTags(tagsData);
+
+      const { data: customPropsData } = await supabase.from('contact_properties').select('*').eq('is_default', false);
+      if (customPropsData) setCustomProperties(customPropsData);
     };
     if (open) {
       fetchData();
@@ -89,18 +94,20 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         project_ids: person.projects?.map(p => p.id) || [],
         tag_ids: person.tags?.map(t => t.id) || [],
         address: person.address || null,
+        custom_properties: person.custom_properties || {},
       });
     } else {
       form.reset({
         full_name: '', email: '', phone: '', company: '', job_title: '',
         department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-        notes: '', project_ids: [], tag_ids: [], address: null,
+        notes: '', project_ids: [], tag_ids: [], address: null, custom_properties: {},
       });
     }
   }, [person, form, open]);
 
   const onSubmit = async (values: PersonFormValues) => {
     setIsSaving(true);
+    const { custom_properties, ...standardValues } = values;
     const { error } = await supabase.rpc('upsert_person_with_details', {
       p_id: person?.id || null,
       p_full_name: values.full_name,
@@ -116,9 +123,10 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       p_notes: values.notes,
       p_project_ids: values.project_ids,
       p_existing_tag_ids: values.tag_ids,
-      p_custom_tags: [], // Assuming no custom tags from this simplified form for now
-      p_avatar_url: person?.avatar_url, // Assuming avatar is handled elsewhere
+      p_custom_tags: [],
+      p_avatar_url: person?.avatar_url,
       p_address: values.address || null,
+      p_custom_properties: custom_properties,
     });
     setIsSaving(false);
 
@@ -127,6 +135,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     } else {
       toast.success(`Successfully saved ${values.full_name}.`);
       queryClient.invalidateQueries({ queryKey: ['people'] });
+      queryClient.invalidateQueries({ queryKey: ['person', person?.id] });
       onOpenChange(false);
     }
   };
@@ -226,6 +235,29 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
             <FormField control={form.control} name="notes" render={({ field }) => (
               <FormItem><FormLabel>Notes</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
+            
+            {customProperties.length > 0 && (
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="text-sm font-medium text-muted-foreground">Additional Information</h3>
+                {customProperties.map(prop => (
+                  <FormField
+                    key={prop.id}
+                    control={form.control}
+                    name={`custom_properties.${prop.name}`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{prop.label}</FormLabel>
+                        <FormControl>
+                          <Input type={prop.type} {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
+            )}
+
             <DialogFooter className="pt-4 sticky bottom-0 bg-background">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>

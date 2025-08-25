@@ -11,7 +11,9 @@ import { ArrowLeft, Briefcase, Cake, Edit, Globe, Instagram, Linkedin, Mail, Map
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generateVibrantGradient } from '@/lib/utils';
 import PersonFormDialog from '@/components/people/PersonFormDialog';
-import { Person } from '@/types';
+import { Person, ContactProperty } from '@/types';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const PersonProfileSkeleton = () => (
   <PortalLayout>
@@ -35,6 +37,15 @@ const PersonProfilePage = () => {
   const { data: person, isLoading, error } = usePerson(id!);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
+  const { data: customProperties = [] } = useQuery({
+    queryKey: ['contact_properties'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('contact_properties').select('*').eq('is_default', false);
+      if (error) throw error;
+      return data as ContactProperty[];
+    }
+  });
+
   if (isLoading) return <PersonProfileSkeleton />;
 
   if (error || !person) {
@@ -45,6 +56,8 @@ const PersonProfilePage = () => {
 
   const firstEmail = person.contact?.emails?.[0];
   const firstPhone = person.contact?.phones?.[0];
+
+  const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name]);
 
   return (
     <PortalLayout>
@@ -102,6 +115,20 @@ const PersonProfilePage = () => {
                 <div className="flex items-center gap-3"><Users className="h-4 w-4 text-muted-foreground" /><span>Department: {person.department || 'Not specified'}</span></div>
               </CardContent>
             </Card>
+
+            {customPropertiesWithValue.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle>Additional Information</CardTitle></CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  {customPropertiesWithValue.map(prop => (
+                    <div key={prop.id} className="flex items-start gap-3">
+                      <span className="font-semibold w-24 flex-shrink-0">{prop.label}:</span>
+                      <span className="text-muted-foreground">{person.custom_properties?.[prop.name]}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader><CardTitle>Related Projects</CardTitle></CardHeader>

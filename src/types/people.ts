@@ -15,4 +15,5 @@ export interface Person {
   address?: { formatted_address?: string; } | null;
   avatar_url?: string;
   user_id?: string;
+  custom_properties?: Record<string, any>;
 }
