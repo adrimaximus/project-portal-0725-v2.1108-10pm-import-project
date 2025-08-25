@@ -67,7 +67,7 @@ const UnsplashImage = () => {
 
   if (isLoading) {
     return (
-      <Card className="hidden md:block h-full">
+      <Card className="h-full">
         <CardContent className="p-4 h-full">
           <Skeleton className="w-full h-full" />
         </CardContent>
@@ -77,7 +77,7 @@ const UnsplashImage = () => {
 
   if (error || !photo) {
     return (
-      <Card className="hidden md:block h-full">
+      <Card className="h-full">
         <CardContent className="p-4 flex flex-col items-center justify-center h-full">
           <CameraOff className="h-8 w-8 text-muted-foreground mb-2" />
           <p className="text-sm text-muted-foreground text-center">{error || "Could not load image."}</p>
@@ -87,7 +87,7 @@ const UnsplashImage = () => {
   }
 
   return (
-    <Card className="hidden md:block h-full overflow-hidden">
+    <Card className="h-full overflow-hidden">
       <CardContent className="p-0 h-full">
         <a href={photo.links.html} target="_blank" rel="noopener noreferrer" className="block group h-full">
           <div className="w-full h-full overflow-hidden relative">
