@@ -21,7 +21,6 @@ const checkMasterAdmin = async (supabase, userId) => {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests immediately
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders, status: 204 });
   }
@@ -36,34 +35,50 @@ serve(async (req) => {
       throw new Error("Required environment variables are not set on the server.");
     }
 
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const supabase = createClient(
       SUPABASE_URL,
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      { global: { headers: { Authorization: authHeader } } }
     );
     const oAuth2Client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("User not authenticated.");
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'User not authenticated' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     let body = {};
+    let action = null;
     if (req.method === 'POST') {
       const bodyText = await req.text();
       if (bodyText) {
         try {
           body = JSON.parse(bodyText);
+          action = body.method;
         } catch (e) {
           throw new Error(`Invalid JSON body: ${e.message}`);
         }
       }
     }
-    
-    const { method: action, ...payload } = body;
 
     if (!action) {
-        throw new Error("A 'method' property is required in the request body for POST requests.");
+      throw new Error("A 'method' property is required in the request body for POST requests.");
     }
+    
+    const { ...payload } = body;
+    delete payload.method;
 
     let result;
 
@@ -99,16 +114,6 @@ serve(async (req) => {
         await supabaseAdmin.from('app_config').delete().eq('key', 'GOOGLE_CALENDAR_SELECTIONS');
         await supabaseAdmin.from('app_config').delete().eq('key', 'GOOGLE_REFRESH_TOKEN');
         result = { success: true };
-        break;
-      }
-
-      case 'get-selections': {
-        result = { selections: [] }; // This is now handled by localStorage on client
-        break;
-      }
-
-      case 'save-selections': {
-        result = { success: true }; // This is now handled by localStorage on client
         break;
       }
 
@@ -181,7 +186,7 @@ serve(async (req) => {
     console.error("Edge Function Error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+      status: 500,
     });
   }
 });
