@@ -22,7 +22,7 @@ const checkMasterAdmin = async (supabase, userId) => {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders, status: 200 })
+    return new Response(null, { headers: corsHeaders, status: 204 })
   }
 
   try {
