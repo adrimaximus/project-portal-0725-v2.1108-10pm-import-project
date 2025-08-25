@@ -27,7 +27,7 @@ serve(async (req) => {
     if (usersError) throw usersError;
 
     const oAuth2Client = new OAuth2Client(
-      Deno.env.get('GOOGLE_CLIENT_ID'),
+      Deno.env.get('VITE_GOOGLE_CLIENT_ID'),
       Deno.env.get('GOOGLE_CLIENT_SECRET')
     );
 
