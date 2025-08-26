@@ -18,52 +18,63 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
   const navigate = useNavigate();
   const [visibleDays, setVisibleDays] = useState(10);
   const dayRefs = useRef(new Map<string, HTMLDivElement>());
+  const [scrollToDate, setScrollToDate] = useState<string | null>(null);
+  const initialScrollDone = useRef(false);
 
-  const sortedProjects = projects
-    .filter(p => p.start_date)
-    .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
+  const dayEntries = useMemo(() => {
+    const sortedProjects = projects
+      .filter(p => p.start_date)
+      .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
 
-  const groupedByDay = sortedProjects.reduce((acc, project) => {
-    const dateKey = formatInJakarta(project.start_date!, 'yyyy-MM-dd');
-    
-    if (!acc[dateKey]) {
-      acc[dateKey] = [];
-    }
-    acc[dateKey].push(project);
-    return acc;
-  }, {} as Record<string, Project[]>);
+    const groupedByDay = sortedProjects.reduce((acc, project) => {
+      const dateKey = formatInJakarta(project.start_date!, 'yyyy-MM-dd');
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(project);
+      return acc;
+    }, {} as Record<string, Project[]>);
 
-  const dayEntries = Object.entries(groupedByDay);
+    return Object.entries(groupedByDay);
+  }, [projects]);
 
   useEffect(() => {
-    if (dayEntries.length === 0) return;
+    if (dayEntries.length === 0 || initialScrollDone.current) return;
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
-    
-    // Find today's entry or the first one after today
-    let targetDateStr = dayEntries.find(([dateStr]) => dateStr >= todayStr)?.[0];
+    let targetIndex = dayEntries.findIndex(([dateStr]) => dateStr >= todayStr);
 
-    // If no future/today entry, find the closest past one (the last one)
-    if (!targetDateStr) {
-        targetDateStr = dayEntries[dayEntries.length - 1]?.[0];
+    if (targetIndex === -1 && dayEntries.length > 0) {
+      targetIndex = dayEntries.length - 1;
     }
 
-    if (targetDateStr) {
-        const targetElement = dayRefs.current.get(targetDateStr);
-        if (targetElement) {
-            // Use a timeout to ensure the DOM is fully rendered before scrolling
-            setTimeout(() => {
-                targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
-            }, 100);
-        }
+    if (targetIndex !== -1) {
+      const targetDateStr = dayEntries[targetIndex][0];
+      if (targetIndex >= visibleDays) {
+        setVisibleDays(targetIndex + 1);
+      }
+      setScrollToDate(targetDateStr);
+      initialScrollDone.current = true;
     }
-  }, [projects]); // Re-run when projects data changes.
+  }, [dayEntries, visibleDays]);
+
+  useEffect(() => {
+    if (scrollToDate) {
+      const targetElement = dayRefs.current.get(scrollToDate);
+      if (targetElement) {
+        setTimeout(() => {
+          targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+          setScrollToDate(null);
+        }, 100);
+      }
+    }
+  }, [scrollToDate, visibleDays]);
 
   const visibleDayEntries = dayEntries.slice(0, visibleDays);
 
   let lastMonth: string | null = null;
 
-  if (sortedProjects.length === 0) {
+  if (projects.length > 0 && dayEntries.length === 0) {
     return (
       <div className="flex items-center justify-center h-40 text-muted-foreground">
         Tidak ada proyek yang dijadwalkan.
