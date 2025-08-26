@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Project } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,10 +12,12 @@ import {
 import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2, MapPin, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getStatusStyles, formatInJakarta, generateVibrantGradient } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
   const navigate = useNavigate();
   const [visibleDays, setVisibleDays] = useState(10);
+  const dayRefs = useRef(new Map<string, HTMLDivElement>());
 
   const sortedProjects = projects
     .filter(p => p.start_date)
@@ -32,6 +34,31 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
   }, {} as Record<string, Project[]>);
 
   const dayEntries = Object.entries(groupedByDay);
+
+  useEffect(() => {
+    if (dayEntries.length === 0) return;
+
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    
+    // Find today's entry or the first one after today
+    let targetDateStr = dayEntries.find(([dateStr]) => dateStr >= todayStr)?.[0];
+
+    // If no future/today entry, find the closest past one (the last one)
+    if (!targetDateStr) {
+        targetDateStr = dayEntries[dayEntries.length - 1]?.[0];
+    }
+
+    if (targetDateStr) {
+        const targetElement = dayRefs.current.get(targetDateStr);
+        if (targetElement) {
+            // Use a timeout to ensure the DOM is fully rendered before scrolling
+            setTimeout(() => {
+                targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }, 100);
+        }
+    }
+  }, [projects]); // Re-run when projects data changes.
+
   const visibleDayEntries = dayEntries.slice(0, visibleDays);
 
   let lastMonth: string | null = null;
@@ -56,7 +83,13 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
         const dayOfMonth = formatInJakarta(date, 'dd');
 
         return (
-          <div key={dateStr}>
+          <div 
+            key={dateStr}
+            ref={el => {
+                if (el) dayRefs.current.set(dateStr, el);
+                else dayRefs.current.delete(dateStr);
+            }}
+          >
             {showMonthHeader && (
               <h2 className="text-lg font-semibold my-4 pl-2">{currentMonth}</h2>
             )}
