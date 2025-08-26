@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Clock, UserPlus, CalendarOff, Send, Pencil, Trash2, MapPin, CheckCircle } from 'lucide-react';
+import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getStatusStyles, formatInJakarta, generateVibrantGradient } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -152,35 +152,14 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                         <div onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 sm:h-auto sm:w-auto sm:px-3 sm:py-1.5">
-                                <span className="hidden sm:inline">Edit</span>
-                                <MoreHorizontal className="h-4 w-4 sm:ml-1" />
+                              <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Clock className="mr-2 h-4 w-4" />
-                                <span>Jadwalkan ulang</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Send className="mr-2 h-4 w-4" />
-                                <span>Minta penjadwalan ulang</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate(`/projects/${project.slug}`)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                <span>Edit detail</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                <span>Undang orang</span>
-                              </DropdownMenuItem>
                               <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Hapus proyek</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
-                                <CalendarOff className="mr-2 h-4 w-4" />
-                                <span>Batalkan proyek</span>
+                                <span>Hapus Proyek</span>
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
