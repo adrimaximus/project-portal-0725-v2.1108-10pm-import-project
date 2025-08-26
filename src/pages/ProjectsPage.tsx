@@ -31,6 +31,10 @@ import CalendarImportView from "@/components/projects/CalendarImportView";
 import KanbanView from "@/components/projects/KanbanView";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { formatInJakarta } from "@/lib/utils";
+import { useProjectFilters } from "@/hooks/useProjectFilters";
+import ProjectsPageHeader from "@/components/projects/ProjectsPageHeader";
+import ProjectsToolbar from "@/components/projects/ProjectsToolbar";
+import ProjectViewContainer from "@/components/projects/ProjectViewContainer";
 
 interface CalendarEvent {
     id: string;
@@ -53,37 +57,32 @@ const ProjectsPage = () => {
     return savedView || 'list';
   });
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const createProjectMutation = useCreateProject();
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: 'start_date', direction: 'descending' });
   const [isAiImporting, setIsAiImporting] = useState(false);
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
   const initialTableScrollDone = useRef(false);
 
+  const {
+    searchTerm, setSearchTerm, dateRange, setDateRange,
+    sortConfig, requestSort, sortedProjects
+  } = useProjectFilters(projects);
+
   useEffect(() => {
-    if (view === 'table' && !initialTableScrollDone.current && projects.length > 0) {
+    if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
       const todayStr = format(new Date(), 'yyyy-MM-dd');
-      
-      const sortedByDate = [...projects]
-        .filter(p => p.start_date)
-        .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
-
-      let targetProject = sortedByDate.find(p => formatInJakarta(p.start_date!, 'yyyy-MM-dd') >= todayStr);
-
-      if (!targetProject && sortedByDate.length > 0) {
-        targetProject = sortedByDate[sortedByDate.length - 1];
+      let targetProject = sortedProjects.find(p => p.start_date && formatInJakarta(p.start_date, 'yyyy-MM-dd') >= todayStr);
+      if (!targetProject && sortedProjects.length > 0) {
+        targetProject = sortedProjects[sortedProjects.length - 1];
       }
-
       if (targetProject) {
         setScrollToProjectId(targetProject.id);
         initialTableScrollDone.current = true;
       }
     }
-  }, [projects, view]);
+  }, [sortedProjects, view]);
 
   useEffect(() => {
     if (scrollToProjectId) {
@@ -108,62 +107,39 @@ const ProjectsPage = () => {
     }
   };
 
-  const refreshCalendarEvents = async (range: DateRange | undefined) => {
+  const refreshCalendarEvents = async () => {
     const selectedCalendarsStr = localStorage.getItem('googleCalendarSelected');
-    if (!selectedCalendarsStr) {
-      toast.info("No calendars selected to refresh.");
-      return;
-    }
+    if (!selectedCalendarsStr) return;
     const selectedCalendars = JSON.parse(selectedCalendarsStr);
-    if (!Array.isArray(selectedCalendars) || selectedCalendars.length === 0) {
-      toast.info("No calendars selected to refresh.");
-      return;
-    }
+    if (!Array.isArray(selectedCalendars) || selectedCalendars.length === 0) return;
 
-    toast.info("Refreshing calendar events for the selected range...");
+    toast.info("Refreshing calendar events...");
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Authentication error. Please log in again.");
-        return;
-      }
+      if (!session) throw new Error("Not authenticated");
 
       const today = new Date();
-      const from = range?.from || startOfMonth(today);
-      const to = range?.to || endOfMonth(today);
+      const from = dateRange?.from || startOfMonth(today);
+      const to = dateRange?.to || endOfMonth(today);
       to.setHours(23, 59, 59, 999);
 
       const { data: allEvents, error } = await supabase.functions.invoke('google-auth-handler', {
         headers: { Authorization: `Bearer ${session.access_token}` },
-        body: {
-          method: 'list-events',
-          calendarIds: selectedCalendars,
-          timeMin: from.toISOString(),
-          timeMax: to.toISOString(),
-        }
+        body: { method: 'list-events', calendarIds: selectedCalendars, timeMin: from.toISOString(), timeMax: to.toISOString() }
       });
 
-      if (error) throw new Error(error.message);
-      
+      if (error) throw error;
       localStorage.setItem('googleCalendarEvents', JSON.stringify(allEvents));
       setCalendarEvents(allEvents);
-      toast.success(`Successfully fetched ${allEvents.length} events!`);
+      toast.success(`Fetched ${allEvents.length} events!`);
     } catch (error: any) {
-      console.error(error);
       toast.error("Failed to refresh events.", { description: error.message });
     }
   };
 
   useEffect(() => {
     const storedEvents = localStorage.getItem('googleCalendarEvents');
-    if (storedEvents) {
-      try {
-        setCalendarEvents(JSON.parse(storedEvents));
-      } catch (e) {
-        console.error("Failed to parse calendar events from localStorage", e);
-        setCalendarEvents([]);
-      }
-    }
+    if (storedEvents) setCalendarEvents(JSON.parse(storedEvents));
     
     const handleStorageChange = (e: StorageEvent) => {
         if (e.key === 'googleCalendarEvents') {
@@ -171,128 +147,31 @@ const ProjectsPage = () => {
             setCalendarEvents(updatedEvents ? JSON.parse(updatedEvents) : []);
         }
     };
-
     window.addEventListener('storage', handleStorageChange);
-    return () => {
-        window.removeEventListener('storage', handleStorageChange);
-    };
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   useEffect(() => {
     if (view === 'calendar') {
-      refreshCalendarEvents(dateRange);
+      refreshCalendarEvents();
     }
   }, [dateRange, view]);
 
-  const filteredProjects = useMemo(() => {
-    let filtered = projects;
-
-    if (dateRange?.from) {
-      const fromDate = new Date(dateRange.from);
-      fromDate.setHours(0, 0, 0, 0);
-
-      const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-      toDate.setHours(23, 59, 59, 999);
-
-      filtered = filtered.filter(project => {
-        if (!project.start_date && !project.due_date) {
-          return false;
-        }
-        
-        const projectStart = project.start_date ? new Date(project.start_date) : null;
-        const projectEnd = project.due_date ? new Date(project.due_date) : projectStart;
-
-        if (projectStart && projectEnd) {
-          return projectStart <= toDate && projectEnd >= fromDate;
-        }
-        if (projectStart) {
-          return projectStart >= fromDate && projectStart <= toDate;
-        }
-        if (projectEnd) {
-          return projectEnd >= fromDate && projectEnd <= toDate;
-        }
-
-        return false;
-      });
-    }
-
-    if (searchTerm.trim() !== "") {
-      const lowercasedFilter = searchTerm.toLowerCase();
-      filtered = filtered.filter(project =>
-        project.name.toLowerCase().includes(lowercasedFilter) ||
-        (project.description && project.description.toLowerCase().includes(lowercasedFilter))
-      );
-    }
-
-    return filtered;
-  }, [projects, dateRange, searchTerm]);
-
-  const sortedProjects = useMemo(() => {
-    let sortableItems = [...filteredProjects];
-    if (sortConfig.key !== null) {
-      sortableItems.sort((a, b) => {
-        const aValue = a[sortConfig.key!];
-        const bValue = b[sortConfig.key!];
-
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-        
-        if (typeof aValue === 'number' && typeof bValue === 'number') {
-            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-        } else if (sortConfig.key === 'start_date' || sortConfig.key === 'due_date') {
-            const dateA = new Date(aValue as string).getTime();
-            const dateB = new Date(bValue as string).getTime();
-            if (dateA < dateB) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (dateA > dateB) return sortConfig.direction === 'ascending' ? 1 : -1;
-        } else {
-            const stringA = String(aValue).toLowerCase();
-            const stringB = String(bValue).toLowerCase();
-            if (stringA < stringB) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (stringA > stringB) return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [filteredProjects, sortConfig]);
-
   const importableEvents = useMemo(() => {
-    const importedEventIds = new Set(
-      projects
-        .map(p => p.origin_event_id)
-        .filter(id => id && id.startsWith('cal-'))
-        .map(id => id.substring(4))
-    );
+    const importedEventIds = new Set(projects.map(p => p.origin_event_id?.substring(4)).filter(Boolean));
     return calendarEvents.filter(event => !importedEventIds.has(event.id));
   }, [projects, calendarEvents]);
 
-  const requestSort = (key: keyof Project) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
-
   const handleDeleteProject = (projectId: string) => {
     const project = projects.find(p => p.id === projectId);
-    if (project) {
-      setProjectToDelete(project);
-    }
+    if (project) setProjectToDelete(project);
   };
 
   const confirmDelete = async () => {
     if (projectToDelete) {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', projectToDelete.id);
-
-      if (error) {
-        toast.error(`Failed to delete project "${projectToDelete.name}".`);
-        console.error(error);
-      } else {
+      const { error } = await supabase.from('projects').delete().eq('id', projectToDelete.id);
+      if (error) toast.error(`Failed to delete project "${projectToDelete.name}".`);
+      else {
         toast.success(`Project "${projectToDelete.name}" has been deleted.`);
         refetch();
       }
@@ -303,45 +182,30 @@ const ProjectsPage = () => {
   const handleImportEvent = async (event: CalendarEvent) => {
     const startDateStr = event.start.date || event.start.dateTime;
     let dueDateStr = event.end.date || event.end.dateTime || startDateStr;
-
     if (!startDateStr) {
         toast.error("Cannot import event without a start date.");
         return;
     }
+    const isAllDay = !!event.start.date;
+    const finalStartDate = new Date(startDateStr);
+    let finalDueDate = new Date(dueDateStr);
+    if (isAllDay) finalDueDate.setDate(finalDueDate.getDate() - 1);
 
-    const isAllDay = event.start.date && !event.start.dateTime;
-    
-    const finalStartDate = isAllDay ? new Date(startDateStr + 'T00:00:00Z') : new Date(startDateStr);
-    let finalDueDate;
-
-    if (isAllDay) {
-        const endDate = new Date(dueDateStr + 'T00:00:00Z');
-        endDate.setUTCDate(endDate.getUTCDate() - 1);
-        finalDueDate = endDate;
-    } else {
-        finalDueDate = new Date(dueDateStr);
-    }
-
-    const newProjectData = {
+    createProjectMutation.mutate({
       name: event.summary || "Untitled Event",
       category: 'Imported Event',
       startDate: finalStartDate.toISOString(),
       dueDate: finalDueDate.toISOString(),
       origin_event_id: `cal-${event.id}`,
       venue: event.location,
-      public: true, // Make imported projects visible to all
-    };
-
-    createProjectMutation.mutate(newProjectData, {
-        onSuccess: () => {
-            setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-        },
-        onError: (error) => {
-            if (error.message.includes('duplicate key value violates unique constraint')) {
-                toast.info(`"${event.summary}" has already been imported.`);
-                setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-            }
+    }, {
+      onSuccess: () => setCalendarEvents(prev => prev.filter(e => e.id !== event.id)),
+      onError: (error) => {
+        if (error.message.includes('duplicate key')) {
+          toast.info(`"${event.summary}" has already been imported.`);
+          setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
         }
+      }
     });
   };
 
@@ -353,31 +217,19 @@ const ProjectsPage = () => {
     setIsAiImporting(true);
     toast.info("AI is analyzing your calendar events...");
     try {
-      const { data, error } = await supabase.functions.invoke('openai-generator', {
-        body: {
-          feature: 'ai-select-calendar-events',
-          payload: {
-            events: importableEvents,
-            existingProjects: projects.map(p => p.name),
-          }
-        }
+      const { data, error } = await supabase.functions.invoke('ai-handler', {
+        body: { feature: 'ai-select-calendar-events', payload: { events: importableEvents, existingProjects: projects.map(p => p.name) } }
       });
-
       if (error) throw error;
-
       const { event_ids_to_import } = data.result;
       if (!event_ids_to_import || event_ids_to_import.length === 0) {
         toast.success("AI analysis complete. No new projects were found to import.");
         return;
       }
-
       toast.info(`AI has selected ${event_ids_to_import.length} event(s) to import. Starting import...`);
-
       const eventsToImport = importableEvents.filter(e => event_ids_to_import.includes(e.id));
       await Promise.all(eventsToImport.map(event => handleImportEvent(event)));
-
       toast.success(`Successfully imported ${eventsToImport.length} new project(s)!`);
-
     } catch (error: any) {
       toast.error("AI import failed.", { description: error.message });
     } finally {
@@ -385,53 +237,20 @@ const ProjectsPage = () => {
     }
   };
 
-  const renderContent = () => {
-    switch (view) {
-      case 'table':
-        return <TableView projects={sortedProjects} isLoading={isLoading} onDeleteProject={handleDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} />;
-      case 'list':
-        return <ListView projects={sortedProjects} onDeleteProject={handleDeleteProject} />;
-      case 'kanban':
-        return <KanbanView projects={filteredProjects} groupBy={kanbanGroupBy} />;
-      case 'calendar':
-        return <CalendarImportView events={importableEvents} onImportEvent={handleImportEvent} />;
-      default:
-        return null;
-    }
-  };
-
   return (
     <PortalLayout>
       <div className="flex flex-col h-full">
-        <div className="flex justify-between items-center mb-6 flex-shrink-0">
-          <h1 className="text-3xl font-bold tracking-tight">All Projects</h1>
-          <div className="flex items-center gap-2">
-            <Button onClick={() => navigate('/request')}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              New Project
-            </Button>
-          </div>
-        </div>
+        <ProjectsPageHeader />
         <div className="flex-grow min-h-0">
           <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
             <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
+              <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".</AlertDialogDescription></AlertDialogHeader>
+              <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
           <Card className="h-full flex flex-col">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <CardTitle>Projects</CardTitle>
-              </div>
+              <CardTitle>Projects</CardTitle>
               <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto">
                 {view === 'calendar' && (
                   <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
@@ -439,100 +258,45 @@ const ProjectsPage = () => {
                     <span className="hidden sm:inline">Ask AI to Import</span>
                   </Button>
                 )}
-                {view !== 'calendar' && (
-                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => {
-                      refetch();
-                      toast.success("Data proyek berhasil diperbarui.");
-                  }}>
-                      <span className="sr-only">Refresh projects data</span>
-                      <RefreshCw className="h-4 w-4" />
-                  </Button>
-                )}
-                {view === 'calendar' && (
-                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => refreshCalendarEvents(dateRange)}>
-                    <span className="sr-only">Refresh calendar events</span>
+                <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => {
+                    view === 'calendar' ? refreshCalendarEvents() : refetch();
+                    toast.success("Data diperbarui.");
+                }}>
+                    <span className="sr-only">Refresh data</span>
                     <RefreshCw className="h-4 w-4" />
-                  </Button>
-                )}
+                </Button>
                 <TooltipProvider>
-                  <ToggleGroup 
-                    type="single" 
-                    value={view} 
-                    onValueChange={handleViewChange}
-                    aria-label="View mode"
-                  >
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <ToggleGroupItem value="list" aria-label="List view">
-                          <List className="h-4 w-4" />
-                        </ToggleGroupItem>
-                      </TooltipTrigger>
-                      <TooltipContent><p>List View</p></TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <ToggleGroupItem value="table" aria-label="Table view">
-                          <TableIcon className="h-4 w-4" />
-                        </ToggleGroupItem>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Table View</p></TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <ToggleGroupItem value="kanban" aria-label="Kanban view">
-                          <Kanban className="h-4 w-4" />
-                        </ToggleGroupItem>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Kanban View</p></TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <ToggleGroupItem value="calendar" aria-label="Calendar Import view">
-                          <CalendarPlus className="h-4 w-4" />
-                        </ToggleGroupItem>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Calendar Import</p></TooltipContent>
-                    </Tooltip>
+                  <ToggleGroup type="single" value={view} onValueChange={handleViewChange} aria-label="View mode">
+                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>List View</p></TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Table View</p></TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Kanban View</p></TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="calendar" aria-label="Calendar Import view"><CalendarPlus className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Calendar Import</p></TooltipContent></Tooltip>
                   </ToggleGroup>
                 </TooltipProvider>
               </div>
             </CardHeader>
-            <div className="px-6 py-4 flex flex-col sm:flex-row gap-4 items-center flex-shrink-0 border-b">
-                <div className="w-full sm:flex-1">
-                    <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
-                </div>
-                <div className="relative w-full sm:flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search projects..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 w-full"
-                    />
-                </div>
-            </div>
-            {view === 'kanban' && (
-                <div className="px-6 pt-4 flex justify-center sm:justify-start">
-                    <ToggleGroup 
-                        type="single" 
-                        value={kanbanGroupBy} 
-                        onValueChange={(value) => { if (value) setKanbanGroupBy(value as 'status' | 'payment_status')}}
-                        className="h-10"
-                    >
-                        <ToggleGroupItem value="status" className="text-sm px-3">By Project Status</ToggleGroupItem>
-                        <ToggleGroupItem value="payment_status" className="text-sm px-3">By Payment Status</ToggleGroupItem>
-                    </ToggleGroup>
-                </div>
-            )}
-            {view === 'kanban' ? (
-              <CardContent className="flex-grow min-h-0 p-4 md:p-6">
-                {renderContent()}
-              </CardContent>
-            ) : (
-              <CardContent className="flex-grow min-h-0 overflow-y-auto p-0">
-                {renderContent()}
-              </CardContent>
-            )}
+            <ProjectsToolbar
+              view={view} onViewChange={handleViewChange}
+              searchTerm={searchTerm} onSearchTermChange={setSearchTerm}
+              dateRange={dateRange} onDateRangeChange={setDateRange}
+              kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
+              onRefreshProjects={refetch} onRefreshCalendar={refreshCalendarEvents}
+              onAiImport={handleAiImport} isAiImporting={isAiImporting}
+            />
+            <CardContent className="flex-grow min-h-0 overflow-y-auto p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6" data-view={view}>
+              <ProjectViewContainer
+                view={view}
+                projects={sortedProjects}
+                isLoading={isLoading}
+                onDeleteProject={handleDeleteProject}
+                sortConfig={sortConfig}
+                requestSort={requestSort}
+                rowRefs={rowRefs}
+                kanbanGroupBy={kanbanGroupBy}
+                importableEvents={importableEvents}
+                onImportEvent={handleImportEvent}
+              />
+            </CardContent>
           </Card>
         </div>
       </div>
