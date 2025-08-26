@@ -108,54 +108,22 @@ const ProjectsPage = () => {
   };
 
   const refreshCalendarEvents = async () => {
-    const selectedCalendarsStr = localStorage.getItem('googleCalendarSelected');
-    if (!selectedCalendarsStr) return;
-    const selectedCalendars = JSON.parse(selectedCalendarsStr);
-    if (!Array.isArray(selectedCalendars) || selectedCalendars.length === 0) return;
-
     toast.info("Refreshing calendar events...");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
-
-      const today = new Date();
-      const from = dateRange?.from || startOfMonth(today);
-      const to = dateRange?.to || endOfMonth(today);
-      to.setHours(23, 59, 59, 999);
-
-      const { data: allEvents, error } = await supabase.functions.invoke('google-auth-handler', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { method: 'list-events', calendarIds: selectedCalendars, timeMin: from.toISOString(), timeMax: to.toISOString() }
-      });
-
+      const { data, error } = await supabase.from('calendar_events').select('*').order('start_time', { ascending: true });
       if (error) throw error;
-      localStorage.setItem('googleCalendarEvents', JSON.stringify(allEvents));
-      setCalendarEvents(allEvents);
-      toast.success(`Fetched ${allEvents.length} events!`);
+      setCalendarEvents(data);
+      toast.success(`Fetched ${data.length} events!`);
     } catch (error: any) {
       toast.error("Failed to refresh events.", { description: error.message });
     }
   };
 
   useEffect(() => {
-    const storedEvents = localStorage.getItem('googleCalendarEvents');
-    if (storedEvents) setCalendarEvents(JSON.parse(storedEvents));
-    
-    const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === 'googleCalendarEvents') {
-            const updatedEvents = localStorage.getItem('googleCalendarEvents');
-            setCalendarEvents(updatedEvents ? JSON.parse(updatedEvents) : []);
-        }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  useEffect(() => {
     if (view === 'calendar') {
       refreshCalendarEvents();
     }
-  }, [dateRange, view]);
+  }, [view]);
 
   const importableEvents = useMemo(() => {
     const importedEventIds = new Set(projects.map(p => p.origin_event_id?.substring(4)).filter(Boolean));
