@@ -46,8 +46,11 @@ const ProjectHeader = ({
   const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast.success("Project link copied to clipboard!");
+    const title = `*${project.name}*`;
+    const url = window.location.href;
+    const textToCopy = `${title}\n${url}`;
+    navigator.clipboard.writeText(textToCopy);
+    toast.success("Project title and link copied to clipboard!");
   };
 
   return (
