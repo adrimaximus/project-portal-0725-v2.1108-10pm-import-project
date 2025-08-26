@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient, InfiniteData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Notification } from '@/types';
@@ -37,6 +37,7 @@ const fetchNotifications = async (pageParam: number = 0): Promise<Notification[]
 export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const queryKey = ['notifications', user?.id];
 
   const {
     data,
@@ -44,8 +45,8 @@ export const useNotifications = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: ['notifications', user?.id],
+  } = useInfiniteQuery<Notification[], Error, InfiniteData<Notification[]>, (string | undefined)[] | undefined, number>({
+    queryKey,
     queryFn: ({ pageParam }) => fetchNotifications(pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
@@ -97,12 +98,31 @@ export const useNotifications = () => {
         .eq('user_id', user!.id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+    onMutate: async (notificationId: string) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousNotifications = queryClient.getQueryData<InfiniteData<Notification[]>>(queryKey);
+      queryClient.setQueryData<InfiniteData<Notification[]>>(queryKey, (oldData) => {
+        if (!oldData) return undefined;
+        return {
+          ...oldData,
+          pages: oldData.pages.map(page =>
+            page.map(notification =>
+              notification.id === notificationId ? { ...notification, read: true } : notification
+            )
+          ),
+        };
+      });
+      return { previousNotifications };
     },
-    onError: () => {
+    onError: (err, variables, context) => {
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(queryKey, context.previousNotifications);
+      }
       toast.error("Failed to mark notification as read.");
-    }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
   });
 
   const markAllAsReadMutation = useMutation({
@@ -115,13 +135,34 @@ export const useNotifications = () => {
         .is('read_at', null);
       if (error) throw error;
     },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousNotifications = queryClient.getQueryData<InfiniteData<Notification[]>>(queryKey);
+      queryClient.setQueryData<InfiniteData<Notification[]>>(queryKey, (oldData) => {
+        if (!oldData) return undefined;
+        return {
+          ...oldData,
+          pages: oldData.pages.map(page =>
+            page.map(notification =>
+              !notification.read ? { ...notification, read: true } : notification
+            )
+          ),
+        };
+      });
+      return { previousNotifications };
+    },
     onSuccess: () => {
       toast.success("All notifications marked as read.");
-      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
     },
-    onError: () => {
+    onError: (err, variables, context) => {
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(queryKey, context.previousNotifications);
+      }
       toast.error("Failed to mark all notifications as read.");
-    }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
   });
 
   return {
