@@ -26,7 +26,7 @@ serve(async (req) => {
 
     // 2. Parse the body
     const body = await req.json();
-    const { id: event_id, title, start, end, location, syncTime } = body;
+    const { id: event_id, title, start, end, location, createdAt: syncTime, calendar: calendar_id } = body;
 
     if (!event_id || !title || !start || !end) {
         throw new Error('Missing required fields in the request body.');
@@ -47,7 +47,8 @@ serve(async (req) => {
         start_time: start,
         end_time: end,
         location: location,
-        sync_time: syncTime
+        sync_time: syncTime,
+        calendar_id: calendar_id
       });
 
     if (error) {
