@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Project } from "@/types";
 import { useNavigate } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
@@ -29,7 +29,8 @@ import TableView from "@/components/projects/TableView";
 import ListView from "@/components/projects/ListView";
 import CalendarImportView from "@/components/projects/CalendarImportView";
 import KanbanView from "@/components/projects/KanbanView";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
+import { formatInJakarta } from "@/lib/utils";
 
 interface CalendarEvent {
     id: string;
@@ -59,6 +60,46 @@ const ProjectsPage = () => {
   const createProjectMutation = useCreateProject();
   const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: 'start_date', direction: 'descending' });
   const [isAiImporting, setIsAiImporting] = useState(false);
+  const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
+  const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
+  const initialTableScrollDone = useRef(false);
+
+  useEffect(() => {
+    if (view === 'table' && !initialTableScrollDone.current && projects.length > 0) {
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      
+      const sortedByDate = [...projects]
+        .filter(p => p.start_date)
+        .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
+
+      let targetProject = sortedByDate.find(p => formatInJakarta(p.start_date!, 'yyyy-MM-dd') >= todayStr);
+
+      if (!targetProject && sortedByDate.length > 0) {
+        targetProject = sortedByDate[sortedByDate.length - 1];
+      }
+
+      if (targetProject) {
+        setScrollToProjectId(targetProject.id);
+        initialTableScrollDone.current = true;
+      }
+    }
+  }, [projects, view]);
+
+  useEffect(() => {
+    if (scrollToProjectId) {
+      const targetElement = rowRefs.current.get(scrollToProjectId);
+      if (targetElement) {
+        setTimeout(() => {
+          targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          targetElement.classList.add('bg-muted', 'transition-colors', 'duration-1000');
+          setTimeout(() => {
+            targetElement.classList.remove('bg-muted');
+          }, 2000);
+          setScrollToProjectId(null);
+        }, 100);
+      }
+    }
+  }, [scrollToProjectId]);
 
   const handleViewChange = (newView: ViewMode | null) => {
     if (newView) {
@@ -347,7 +388,7 @@ const ProjectsPage = () => {
   const renderContent = () => {
     switch (view) {
       case 'table':
-        return <TableView projects={sortedProjects} isLoading={isLoading} onDeleteProject={handleDeleteProject} sortConfig={sortConfig} requestSort={requestSort} />;
+        return <TableView projects={sortedProjects} isLoading={isLoading} onDeleteProject={handleDeleteProject} sortConfig={sortConfig} requestSort={requestSort} rowRefs={rowRefs} />;
       case 'list':
         return <ListView projects={sortedProjects} onDeleteProject={handleDeleteProject} />;
       case 'kanban':

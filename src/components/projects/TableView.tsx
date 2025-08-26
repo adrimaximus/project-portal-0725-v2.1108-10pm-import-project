@@ -34,6 +34,7 @@ interface TableViewProps {
   onDeleteProject: (projectId: string) => void;
   sortConfig: { key: keyof Project | null; direction: 'ascending' | 'descending' };
   requestSort: (key: keyof Project) => void;
+  rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
 }
 
 const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
@@ -63,7 +64,7 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
   return `${formatInJakarta(startDate, 'd')} - ${formatInJakarta(dueDate, 'd MMM')}`;
 };
 
-const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort }: TableViewProps) => {
+const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs }: TableViewProps) => {
   return (
     <Table>
       <TableHeader>
@@ -118,7 +119,13 @@ const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSo
           projects.map((project) => {
             const paymentBadgeColor = getPaymentStatusStyles(project.payment_status).tw;
             return (
-              <TableRow key={project.id}>
+              <TableRow 
+                key={project.id}
+                ref={el => {
+                  if (el) rowRefs.current.set(project.id, el);
+                  else rowRefs.current.delete(project.id);
+                }}
+              >
                 <TableCell style={{ borderLeft: `4px solid ${getStatusStyles(project.status).hex}` }}>
                   <Link to={`/projects/${project.slug}`} className="font-medium text-primary hover:underline">
                     {project.name}
