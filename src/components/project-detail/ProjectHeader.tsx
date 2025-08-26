@@ -1,6 +1,6 @@
 import { Project } from "@/types";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil, Loader2, MoreVertical, Trash2, CheckCircle } from "lucide-react";
+import { ArrowLeft, Pencil, Loader2, MoreVertical, Trash2, CheckCircle, Link as LinkIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "../StatusBadge";
 import { getStatusStyles, cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { toast } from "sonner";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -43,6 +44,11 @@ const ProjectHeader = ({
   const statusStyles = getStatusStyles(project.status);
   const isCompleted = project.status === 'Completed';
   const hasOpenTasks = project.tasks?.some(task => !task.completed);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast.success("Project link copied to clipboard!");
+  };
 
   return (
     <div className="space-y-4">
@@ -78,6 +84,10 @@ const ProjectHeader = ({
               </div>
             ) : (
               <>
+                <Button variant="outline" size="icon" onClick={handleCopyLink}>
+                  <LinkIcon className="h-4 w-4" />
+                  <span className="sr-only">Copy link</span>
+                </Button>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>

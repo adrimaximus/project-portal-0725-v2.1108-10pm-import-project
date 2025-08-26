@@ -34,6 +34,25 @@ const createProject = async (projectData: NewProjectData) => {
         console.error('Error creating project:', error);
         throw new Error(error.message);
     }
+
+    const projectUrl = `${window.location.origin}/projects/${data.slug}`;
+    const linkBlock = `<strong>${data.name}</strong><br><a href="${projectUrl}" target="_blank" rel="noopener noreferrer">${projectUrl}</a>`;
+    
+    const existingDescription = projectData.description || '';
+    const newDescription = existingDescription 
+        ? `${linkBlock}<br><br>${existingDescription}`
+        : linkBlock;
+
+    const { error: updateError } = await supabase
+        .from('projects')
+        .update({ description: newDescription })
+        .eq('id', data.id);
+
+    if (updateError) {
+        console.error("Failed to update project description with link:", updateError);
+        toast.warning("Project created, but failed to add the project link to the description.");
+    }
+
     return data;
 };
 
