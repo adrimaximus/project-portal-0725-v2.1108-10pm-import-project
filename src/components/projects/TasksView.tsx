@@ -10,12 +10,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Edit, Trash2, Ticket } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface TasksViewProps {
   tasks: Task[];
   isLoading: boolean;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   sortConfig: { key: string; direction: 'asc' | 'desc' };
   requestSort: (key: string) => void;
 }
@@ -29,7 +31,7 @@ const getInitials = (user: TaskAssignee) => {
     return (user.email?.[0] || 'U').toUpperCase();
 }
 
-const TasksView = ({ tasks, isLoading, onEdit, onDelete, sortConfig, requestSort }: TasksViewProps) => {
+const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, sortConfig, requestSort }: TasksViewProps) => {
   if (isLoading) {
     return (
       <div className="p-4 md:p-6">
@@ -79,18 +81,27 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, sortConfig, requestSort
             const statusStyle = getTaskStatusStyles(task.status);
             const priorityStyle = getPriorityStyles(task.priority);
             return (
-              <TableRow key={task.id}>
-                <TableCell className="font-medium sticky left-0 bg-background z-10">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      {task.originTicketId && <Ticket className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-                      <span className="font-semibold">{task.title}</span>
-                    </div>
-                    {task.description && <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>}
-                    <div className="flex gap-1 flex-wrap mt-2">
-                      {task.tags?.map(tag => (
-                        <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
-                      ))}
+              <TableRow key={task.id} data-state={task.completed ? "completed" : ""}>
+                <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%]">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id={`task-${task.id}`}
+                      checked={task.completed}
+                      onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
+                      aria-label={`Mark task ${task.title} as complete`}
+                      className="mt-1"
+                    />
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        {task.originTicketId && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
+                        <span className={`font-semibold ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.title}</span>
+                      </div>
+                      {task.description && <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>}
+                      <div className="flex gap-1 flex-wrap mt-2">
+                        {task.tags?.map(tag => (
+                          <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </TableCell>

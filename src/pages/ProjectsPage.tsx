@@ -42,7 +42,7 @@ interface CalendarEvent {
     id: string;
     summary: string;
     start: { dateTime?: string; date?: string; };
-    end: { dateTime?: string; date?: string; };
+    end: { dateTime?: string; date?:string; };
     htmlLink: string;
     status: string;
     location?: string;
@@ -280,6 +280,20 @@ const ProjectsPage = () => {
     });
   };
 
+  const handleToggleTaskCompletion = (task: Task, completed: boolean) => {
+    upsertTask({
+      id: task.id,
+      project_id: task.project_id,
+      title: task.title,
+      status: completed ? 'Done' : 'To do',
+    }, {
+      onSuccess: () => {
+        toast.success(`Task "${task.title}" marked as ${completed ? 'done' : 'to do'}.`);
+      },
+      onError: (error) => toast.error(`Failed to update task status: ${error.message}`),
+    });
+  };
+
   return (
     <PortalLayout>
       <div className="flex flex-col h-full">
@@ -362,6 +376,7 @@ const ProjectsPage = () => {
                 onImportEvent={handleImportEvent}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
+                onToggleTaskCompletion={handleToggleTaskCompletion}
                 taskSortConfig={taskSortConfig}
                 requestTaskSort={requestTaskSort}
               />
