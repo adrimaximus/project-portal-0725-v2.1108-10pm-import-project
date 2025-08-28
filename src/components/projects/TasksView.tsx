@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { generateVibrantGradient, getPriorityStyles, getTaskStatusStyles } from "@/lib/utils";
+import { generateVibrantGradient, getPriorityStyles, getTaskStatusStyles, isOverdue, cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -119,7 +119,11 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                   <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
                 </TableCell>
                 <TableCell>
-                  {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy") : <span className="text-muted-foreground text-xs">No due date</span>}
+                  {task.due_date ? (
+                    <span className={cn(isOverdue(task.due_date) && "text-red-600 font-bold")}>
+                      {format(new Date(task.due_date), "MMM d, yyyy")}
+                    </span>
+                  ) : <span className="text-muted-foreground text-xs">No due date</span>}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center -space-x-2">

@@ -148,3 +148,12 @@ export const formatInJakarta = (dateString: string | Date | null | undefined, fo
         return "Invalid Date";
     }
 }
+
+export const isOverdue = (dateString: string | null | undefined): boolean => {
+  if (!dateString) return false;
+  const today = new Date();
+  const dueDate = new Date(dateString);
+  today.setHours(0, 0, 0, 0);
+  dueDate.setHours(0, 0, 0, 0);
+  return dueDate <= today;
+};

@@ -1,13 +1,12 @@
 import { Task, TaskAssignee } from '@/types/task';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { generateVibrantGradient, getPriorityStyles } from '@/lib/utils';
+import { generateVibrantGradient, getPriorityStyles, isOverdue, cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Ticket } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface TasksKanbanCardProps {
@@ -42,23 +41,23 @@ const TasksKanbanCard = ({ task }: TasksKanbanCardProps) => {
       {...listeners}
       className="mb-4 touch-none bg-card border-l-4 cursor-grab active:cursor-grabbing"
       // @ts-ignore
-      style={{ ...style, borderLeftColor: priorityStyle.color }}
+      style={{ ...style, borderLeftColor: priorityStyle.hex }}
     >
       <CardHeader className="p-3">
         <CardTitle className="text-sm font-medium leading-snug flex items-center gap-1.5">
           {task.status === 'Done' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+          {task.originTicketId && <Ticket className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
           <span>{task.title}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-0">
-        <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
-          {task.projects ? (
+        {task.projects && (
+          <div className="text-xs text-muted-foreground mb-2">
             <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary truncate max-w-[120px]">
               {task.projects.name}
             </Link>
-          ) : <span>&nbsp;</span>}
-          <Badge variant="outline" className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
-        </div>
+          </div>
+        )}
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center -space-x-2">
             {(task.assignees && task.assignees.length > 0)
@@ -82,9 +81,11 @@ const TasksKanbanCard = ({ task }: TasksKanbanCardProps) => {
               : <div className="h-6 w-6" />
             }
           </div>
-          <div className="text-xs text-muted-foreground">
-            {task.due_date ? format(new Date(task.due_date), "MMM d") : ''}
-          </div>
+          {task.due_date && (
+            <div className={cn("text-xs text-muted-foreground", isOverdue(task.due_date) && "text-red-600 font-bold")}>
+              {format(new Date(task.due_date), "MMM d")}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
