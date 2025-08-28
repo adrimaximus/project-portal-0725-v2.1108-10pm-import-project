@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types/task';
 import TasksKanbanColumn from './TasksKanbanColumn';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import TasksKanbanCard from './TasksKanbanCard';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
@@ -52,15 +52,17 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
   }, [internalTasks]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
+      // Untuk mouse, mulai seret setelah bergerak 8 piksel
       activationConstraint: {
         distance: 8,
       },
     }),
     useSensor(TouchSensor, {
+      // Untuk perangkat sentuh, tekan dan tahan selama 2 detik sebelum menyeret
       activationConstraint: {
         delay: 2000,
-        tolerance: 5,
+        tolerance: 16, // Izinkan beberapa gerakan jari selama menahan
       },
     })
   );
