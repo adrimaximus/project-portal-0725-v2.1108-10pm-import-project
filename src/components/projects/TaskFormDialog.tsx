@@ -3,6 +3,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerDescription } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +26,7 @@ import { toast } from 'sonner';
 import { useProfiles } from '@/hooks/useProfiles';
 import { Profile } from '@/types/user';
 import { Project } from '@/types/project';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -48,6 +50,7 @@ const taskFormSchema = z.object({
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: TaskFormDialogProps) => {
+  const isMobile = useIsMobile();
   const { data: projects = [], isLoading: isLoadingProjects } = useProjects();
   const { data: allTags = [], refetch: refetchTags } = useTags();
   const { data: allProfiles = [], isLoading: isLoadingProfiles } = useProfiles();
@@ -189,6 +192,201 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     };
   }), [assignableUsers]);
 
+  const formContent = (
+    <div className="space-y-4">
+      <FormField
+        control={form.control}
+        name="project_id"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Project</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingProjects}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a project" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {isLoadingProjects ? (
+                  <SelectItem value="loading" disabled>Loading projects...</SelectItem>
+                ) : (
+                  projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)
+                )}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="title"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Title</FormLabel>
+            <FormControl>
+              <Input placeholder="e.g., Design the main page" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="description"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea
+                placeholder="Add a more detailed description..."
+                className="resize-none"
+                {...field}
+                value={field.value || ''}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <div className="grid grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {TASK_STATUS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="priority"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Priority</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {TASK_PRIORITY_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="assignee_ids"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Assignees</FormLabel>
+            <FormControl>
+              <MultiSelect
+                options={userOptions}
+                value={field.value || []}
+                onChange={field.onChange}
+                placeholder="Select team members..."
+                disabled={isLoadingProfiles || !selectedProjectId}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormItem>
+        <FormLabel>Tags</FormLabel>
+        <TagInput
+          allTags={allTags}
+          selectedTags={selectedTags}
+          onTagsChange={handleTagsChange}
+          onTagCreate={handleCreateTag}
+          onTagsUpdated={refetchTags}
+          user={currentUser}
+        />
+      </FormItem>
+      <FormField
+        control={form.control}
+        name="due_date"
+        render={({ field }) => (
+          <FormItem className="flex flex-col">
+            <FormLabel>Due Date</FormLabel>
+            <Popover>
+              <PopoverTrigger asChild>
+                <FormControl>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full pl-3 text-left font-normal",
+                      !field.value && "text-muted-foreground"
+                    )}
+                  >
+                    {field.value ? (
+                      format(field.value, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </FormControl>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={field.value || undefined}
+                  onSelect={field.onChange}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent>
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{task ? 'Edit Task' : 'Create New Task'}</DrawerTitle>
+            <DrawerDescription>
+              {task ? "Edit the details of your task." : "Fill in the details to create a new task."}
+            </DrawerDescription>
+          </DrawerHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)}>
+              <div className="px-4 overflow-y-auto max-h-[60vh]">
+                {formContent}
+              </div>
+              <DrawerFooter className="pt-4">
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {task ? 'Save Changes' : 'Create Task'}
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+              </DrawerFooter>
+            </form>
+          </Form>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -199,169 +397,11 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="project_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingProjects}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a project" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isLoadingProjects ? (
-                        <SelectItem value="loading" disabled>Loading projects...</SelectItem>
-                      ) : (
-                        projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Design the main page" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Add a more detailed description..."
-                      className="resize-none"
-                      {...field}
-                      value={field.value || ''}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {TASK_STATUS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="priority"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Priority</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {TASK_PRIORITY_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form onSubmit={form.handleSubmit(handleSubmit)}>
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto p-1 pr-4">
+              {formContent}
             </div>
-            <FormField
-              control={form.control}
-              name="assignee_ids"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assignees</FormLabel>
-                  <FormControl>
-                    <MultiSelect
-                      options={userOptions}
-                      value={field.value || []}
-                      onChange={field.onChange}
-                      placeholder="Select team members..."
-                      disabled={isLoadingProfiles || !selectedProjectId}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormItem>
-              <FormLabel>Tags</FormLabel>
-              <TagInput
-                allTags={allTags}
-                selectedTags={selectedTags}
-                onTagsChange={handleTagsChange}
-                onTagCreate={handleCreateTag}
-                onTagsUpdated={refetchTags}
-                user={currentUser}
-              />
-            </FormItem>
-            <FormField
-              control={form.control}
-              name="due_date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Due Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value || undefined}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
+            <DialogFooter className="pt-4">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
