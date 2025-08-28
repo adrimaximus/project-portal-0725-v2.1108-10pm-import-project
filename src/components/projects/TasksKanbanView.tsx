@@ -59,8 +59,8 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 500,
-        tolerance: 8,
+        delay: 2000,
+        tolerance: 16,
       },
     })
   );
