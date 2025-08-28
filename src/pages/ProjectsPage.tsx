@@ -3,10 +3,9 @@ import { Project } from "@/types";
 import { useNavigate } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, List, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban, Search, Sparkles, Loader2, ListChecks, LayoutGrid } from "lucide-react";
+import { PlusCircle, RefreshCw, Sparkles, Loader2 } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -20,17 +19,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateProject } from "@/hooks/useCreateProject";
-import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-import TableView from "@/components/projects/TableView";
-import ListView from "@/components/projects/ListView";
-import CalendarImportView from "@/components/projects/CalendarImportView";
-import KanbanView from "@/components/projects/KanbanView";
 import { format } from "date-fns";
 import { formatInJakarta } from "@/lib/utils";
 import { useProjectFilters } from "@/hooks/useProjectFilters";
-import ProjectsPageHeader from "@/components/projects/ProjectsPageHeader";
 import ProjectsToolbar from "@/components/projects/ProjectsToolbar";
 import ProjectViewContainer from "@/components/projects/ProjectViewContainer";
 import { useTasks } from "@/hooks/useTasks";
@@ -317,84 +308,85 @@ const ProjectsPage = () => {
   return (
     <PortalLayout>
       <div className="flex flex-col h-full">
-        <ProjectsPageHeader />
-        <div className="flex-grow min-h-0">
-          <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
-            <AlertDialogContent>
-              <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".</AlertDialogDescription></AlertDialogHeader>
-              <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteProject}>Delete</AlertDialogAction></AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+        <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the project "{projectToDelete?.name}".</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteProject}>Delete</AlertDialogAction></AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-          <AlertDialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
-            <AlertDialogContent>
-              <AlertDialogHeader><AlertDialogTitle>Delete Task?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. Are you sure you want to delete this task?</AlertDialogDescription></AlertDialogHeader>
-              <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction></AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+        <AlertDialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader><AlertDialogTitle>Delete Task?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. Are you sure you want to delete this task?</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteTask}>Delete</AlertDialogAction></AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-          <TaskFormDialog
-            open={isTaskFormOpen}
-            onOpenChange={setIsTaskFormOpen}
-            onSubmit={handleTaskFormSubmit}
-            isSubmitting={isUpserting}
-            task={editingTask}
-          />
+        <TaskFormDialog
+          open={isTaskFormOpen}
+          onOpenChange={setIsTaskFormOpen}
+          onSubmit={handleTaskFormSubmit}
+          isSubmitting={isUpserting}
+          task={editingTask}
+        />
 
-          <Card className="h-full flex flex-col">
-            <div className="sticky top-0 bg-background z-10 sm:relative">
-              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4 flex-shrink-0">
-                <CardTitle>Projects</CardTitle>
-                <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto">
-                  {(view === 'tasks' || view === 'tasks-kanban') && (
-                    <Button size="sm" onClick={handleCreateTask}>
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      New Task
-                    </Button>
-                  )}
-                  {view === 'calendar' && (
-                    <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
-                      {isAiImporting ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Sparkles className="h-4 w-4 sm:mr-2" />}
-                      <span className="hidden sm:inline">Ask AI to Import</span>
-                    </Button>
-                  )}
-                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
-                      <span className="sr-only">Refresh data</span>
-                      <RefreshCw className="h-4 w-4" />
+        <Card className="h-full flex flex-col">
+          <div className="sticky top-0 bg-background z-10 sm:relative">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4 flex-shrink-0">
+              <CardTitle>All Projects</CardTitle>
+              <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto">
+                <Button onClick={() => navigate('/request')}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  New Project
+                </Button>
+                {(view === 'tasks' || view === 'tasks-kanban') && (
+                  <Button size="sm" onClick={handleCreateTask}>
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    New Task
                   </Button>
-                </div>
-              </CardHeader>
-              <ProjectsToolbar
-                view={view} onViewChange={handleViewChange}
-                searchTerm={searchTerm} onSearchTermChange={setSearchTerm}
-                dateRange={dateRange} onDateRangeChange={setDateRange}
-                kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
-              />
-            </div>
-            <CardContent className="flex-grow min-h-0 overflow-y-auto p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6 data-[view=tasks-kanban]:p-0" data-view={view}>
-              <ProjectViewContainer
-                view={view}
-                projects={sortedProjects}
-                tasks={tasks}
-                isLoading={isLoading}
-                isTasksLoading={tasksLoading}
-                onDeleteProject={handleDeleteProject}
-                sortConfig={sortConfig}
-                requestSort={requestSort}
-                rowRefs={rowRefs}
-                kanbanGroupBy={kanbanGroupBy}
-                importableEvents={importableEvents}
-                onImportEvent={handleImportEvent}
-                onEditTask={handleEditTask}
-                onDeleteTask={handleDeleteTask}
-                onToggleTaskCompletion={handleToggleTaskCompletion}
-                taskSortConfig={taskSortConfig}
-                requestTaskSort={requestTaskSort}
-                onTaskStatusChange={handleTaskStatusChange}
-              />
-            </CardContent>
-          </Card>
-        </div>
+                )}
+                {view === 'calendar' && (
+                  <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
+                    {isAiImporting ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Sparkles className="h-4 w-4 sm:mr-2" />}
+                    <span className="hidden sm:inline">Ask AI to Import</span>
+                  </Button>
+                )}
+                <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
+                    <span className="sr-only">Refresh data</span>
+                    <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <ProjectsToolbar
+              view={view} onViewChange={handleViewChange}
+              searchTerm={searchTerm} onSearchTermChange={setSearchTerm}
+              dateRange={dateRange} onDateRangeChange={setDateRange}
+              kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
+            />
+          </div>
+          <CardContent className="flex-grow min-h-0 overflow-y-auto p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6 data-[view=tasks-kanban]:p-0" data-view={view}>
+            <ProjectViewContainer
+              view={view}
+              projects={sortedProjects}
+              tasks={tasks}
+              isLoading={isLoading}
+              isTasksLoading={tasksLoading}
+              onDeleteProject={handleDeleteProject}
+              sortConfig={sortConfig}
+              requestSort={requestSort}
+              rowRefs={rowRefs}
+              kanbanGroupBy={kanbanGroupBy}
+              importableEvents={importableEvents}
+              onImportEvent={handleImportEvent}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              onToggleTaskCompletion={handleToggleTaskCompletion}
+              taskSortConfig={taskSortConfig}
+              requestTaskSort={requestTaskSort}
+              onTaskStatusChange={handleTaskStatusChange}
+            />
+          </CardContent>
+        </Card>
       </div>
     </PortalLayout>
   );
