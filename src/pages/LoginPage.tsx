@@ -80,7 +80,6 @@ const LoginPage = () => {
             
             <Auth
               supabaseClient={supabase}
-              theme="dark"
               appearance={{
                 theme: ThemeSupa,
                 variables: {
