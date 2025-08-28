@@ -22,7 +22,8 @@ const LoginPage = () => {
     if (authContextLoading) return;
 
     if (session) {
-      navigate('/dashboard', { replace: true });
+      const lastVisitedPage = localStorage.getItem('lastVisitedPage');
+      navigate(lastVisitedPage || '/dashboard', { replace: true });
     }
   }, [session, authContextLoading, navigate]);
 

@@ -2,10 +2,12 @@ import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingScreen from "./LoadingScreen";
 import React from "react";
+import { useLocationSaver } from '@/hooks/useLocationSaver';
 
 const ProtectedRouteLayout = () => {
   const { session, user, loading } = useAuth();
   const location = useLocation();
+  useLocationSaver();
 
   if (loading) {
     return <LoadingScreen />;
