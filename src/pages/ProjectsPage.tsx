@@ -3,7 +3,7 @@ import { Project } from "@/types";
 import { useNavigate } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, List, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban, Search, Sparkles, Loader2 } from "lucide-react";
+import { PlusCircle, List, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban, Search, Sparkles, Loader2, ListChecks } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -35,6 +35,7 @@ import { useProjectFilters } from "@/hooks/useProjectFilters";
 import ProjectsPageHeader from "@/components/projects/ProjectsPageHeader";
 import ProjectsToolbar from "@/components/projects/ProjectsToolbar";
 import ProjectViewContainer from "@/components/projects/ProjectViewContainer";
+import { useTasks } from "@/hooks/useTasks";
 
 interface CalendarEvent {
     id: string;
@@ -47,7 +48,7 @@ interface CalendarEvent {
     description?: string;
 }
 
-type ViewMode = 'table' | 'list' | 'kanban' | 'calendar';
+type ViewMode = 'table' | 'list' | 'kanban' | 'calendar' | 'tasks';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
@@ -69,6 +70,9 @@ const ProjectsPage = () => {
     searchTerm, setSearchTerm, dateRange, setDateRange,
     sortConfig, requestSort, sortedProjects
   } = useProjectFilters(projects);
+
+  const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
+  const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ projectIds: view === 'tasks' ? projectIds : [] });
 
   useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
@@ -205,6 +209,21 @@ const ProjectsPage = () => {
     }
   };
 
+  const handleRefresh = () => {
+    switch (view) {
+      case 'calendar':
+        refreshCalendarEvents();
+        break;
+      case 'tasks':
+        refetchTasks();
+        break;
+      default:
+        refetch();
+        break;
+    }
+    toast.success("Data diperbarui.");
+  };
+
   return (
     <PortalLayout>
       <div className="flex flex-col h-full">
@@ -226,10 +245,7 @@ const ProjectsPage = () => {
                     <span className="hidden sm:inline">Ask AI to Import</span>
                   </Button>
                 )}
-                <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => {
-                    view === 'calendar' ? refreshCalendarEvents() : refetch();
-                    toast.success("Data diperbarui.");
-                }}>
+                <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
                     <span className="sr-only">Refresh data</span>
                     <RefreshCw className="h-4 w-4" />
                 </Button>
@@ -238,6 +254,7 @@ const ProjectsPage = () => {
                     <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>List View</p></TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Table View</p></TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Kanban View</p></TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="tasks" aria-label="Tasks view"><ListChecks className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Tasks View</p></TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="calendar" aria-label="Calendar Import view"><CalendarPlus className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Calendar Import</p></TooltipContent></Tooltip>
                   </ToggleGroup>
                 </TooltipProvider>
@@ -255,7 +272,9 @@ const ProjectsPage = () => {
               <ProjectViewContainer
                 view={view}
                 projects={sortedProjects}
+                tasks={tasks}
                 isLoading={isLoading}
+                isTasksLoading={tasksLoading}
                 onDeleteProject={handleDeleteProject}
                 sortConfig={sortConfig}
                 requestSort={requestSort}

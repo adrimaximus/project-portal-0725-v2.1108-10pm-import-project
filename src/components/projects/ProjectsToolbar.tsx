@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { List, Table as TableIcon, Kanban, CalendarPlus, Search, RefreshCw, Sparkles, Loader2 } from "lucide-react";
 
-type ViewMode = 'table' | 'list' | 'kanban' | 'calendar';
+type ViewMode = 'table' | 'list' | 'kanban' | 'calendar' | 'tasks';
 
 interface ProjectsToolbarProps {
   view: ViewMode;

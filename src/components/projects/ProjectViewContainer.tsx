@@ -1,11 +1,13 @@
 import React from 'react';
 import { Project } from '@/types';
+import { Task } from '@/types/task';
 import TableView from './TableView';
 import ListView from './ListView';
 import KanbanView from './KanbanView';
 import CalendarImportView from './CalendarImportView';
+import TasksView from './TasksView';
 
-type ViewMode = 'table' | 'list' | 'kanban' | 'calendar';
+type ViewMode = 'table' | 'list' | 'kanban' | 'calendar' | 'tasks';
 
 interface CalendarEvent {
     id: string;
@@ -21,7 +23,9 @@ interface CalendarEvent {
 interface ProjectViewContainerProps {
   view: ViewMode;
   projects: Project[];
+  tasks: Task[];
   isLoading: boolean;
+  isTasksLoading: boolean;
   onDeleteProject: (projectId: string) => void;
   sortConfig: { key: keyof Project | null; direction: 'ascending' | 'descending' };
   requestSort: (key: keyof Project) => void;
@@ -32,7 +36,7 @@ interface ProjectViewContainerProps {
 }
 
 const ProjectViewContainer = ({
-  view, projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
+  view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
   kanbanGroupBy, importableEvents, onImportEvent
 }: ProjectViewContainerProps) => {
   switch (view) {
@@ -44,6 +48,8 @@ const ProjectViewContainer = ({
       return <KanbanView projects={projects} groupBy={kanbanGroupBy} />;
     case 'calendar':
       return <CalendarImportView events={importableEvents} onImportEvent={onImportEvent} />;
+    case 'tasks':
+      return <TasksView tasks={tasks} isLoading={isTasksLoading} />;
     default:
       return null;
   }

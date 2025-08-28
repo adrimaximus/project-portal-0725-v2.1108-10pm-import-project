@@ -218,5 +218,5 @@ export function useTasks(options: UseTasksOptions = {}) {
     
   }, [projectIds?.join(','), completed, limit, page, orderBy, orderDirection]);
 
-  return { tasks, loading, error, count };
+  return { tasks, loading, error, count, refetch: fetchTasksUsingFunction };
 }
