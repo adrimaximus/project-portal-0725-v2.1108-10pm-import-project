@@ -18,8 +18,8 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 2000,
-        tolerance: 16,
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
