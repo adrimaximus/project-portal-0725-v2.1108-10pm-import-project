@@ -117,6 +117,29 @@ export const useTaskMutations = () => {
     },
   });
 
+  const moveTaskMutation = useMutation({
+    mutationFn: async (data: { taskId: string; newStatus: string; orderedTaskIds: string[] }) => {
+      const { error: statusError } = await supabase
+        .from('tasks')
+        .update({ status: data.newStatus, completed: data.newStatus === 'Done' })
+        .eq('id', data.taskId);
+
+      if (statusError) throw new Error(`Pembaruan status gagal: ${statusError.message}`);
+
+      const { error: orderError } = await supabase.rpc('update_task_kanban_order', { p_task_ids: data.orderedTaskIds });
+      
+      if (orderError) throw new Error(`Pembaruan urutan gagal: ${orderError.message}`);
+    },
+    onSuccess: () => {
+      toast.success('Tugas berhasil dipindahkan');
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (error) => {
+      toast.error('Gagal memindahkan tugas', { description: error.message });
+    },
+  });
+
   return {
     upsertTask: upsertTaskMutation.mutate,
     isUpserting: upsertTaskMutation.isPending,
@@ -124,5 +147,7 @@ export const useTaskMutations = () => {
     isDeleting: deleteTaskMutation.isPending,
     updateTaskOrder: updateTaskOrderMutation.mutate,
     isUpdatingOrder: updateTaskOrderMutation.isPending,
+    moveTask: moveTaskMutation.mutate,
+    isMoving: moveTaskMutation.isPending,
   };
 };

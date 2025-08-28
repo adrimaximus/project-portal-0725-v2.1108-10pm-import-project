@@ -81,7 +81,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
         </div>
       </CardHeader>
       <CardContent className="p-3 pt-0">
-        {task.projects && (
+        {task.projects && task.projects.name !== 'General Tasks' && (
           <div className="text-xs text-muted-foreground mb-2">
             <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary truncate max-w-[120px]">
               {task.projects.name}

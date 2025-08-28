@@ -17,7 +17,7 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [internalTasks, setInternalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const { updateTaskOrder } = useTaskMutations();
+  const { updateTaskOrder, moveTask } = useTaskMutations();
 
   useEffect(() => {
     setInternalTasks(tasks);
@@ -59,7 +59,7 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
+        delay: 2000,
         tolerance: 5,
       },
     })
@@ -82,47 +82,40 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    const activeTask = internalTasks.find((t) => t.id === activeId);
-    if (!activeTask) return;
+    const activeTaskIndex = internalTasks.findIndex((t) => t.id === activeId);
+    if (activeTaskIndex === -1) return;
+
+    const activeTask = internalTasks[activeTaskIndex];
+    const oldStatus = activeTask.status;
 
     const overIsColumn = TASK_STATUS_OPTIONS.some(opt => opt.value === overId);
     const overTask = internalTasks.find((t) => t.id === overId);
-
+    
     if (activeId === overId && !overIsColumn) return;
     if (!overTask && !overIsColumn) return;
 
-    const oldStatus = activeTask.status;
     const newStatus = overTask ? overTask.status : (overId as TaskStatus);
 
-    let reorderedTasks = internalTasks;
+    let reorderedTasks = [...internalTasks];
 
     if (oldStatus === newStatus) {
-      // Reordering within the same column
-      const oldIndex = internalTasks.findIndex((t) => t.id === activeId);
-      const newIndex = internalTasks.findIndex((t) => t.id === overId);
-      if (oldIndex !== -1 && newIndex !== -1) {
-        reorderedTasks = arrayMove(internalTasks, oldIndex, newIndex);
+      const overTaskIndex = internalTasks.findIndex((t) => t.id === overId);
+      if (overTaskIndex !== -1) {
+        reorderedTasks = arrayMove(reorderedTasks, activeTaskIndex, overTaskIndex);
       }
     } else {
-      // Moving to a different column
-      const activeIndex = internalTasks.findIndex((t) => t.id === activeId);
-      
-      // Optimistically update the status
-      activeTask.status = newStatus;
+      reorderedTasks[activeTaskIndex] = { ...activeTask, status: newStatus };
 
-      let overIndex = overTask ? internalTasks.findIndex((t) => t.id === overId) : -1;
-      
+      let overIndex = overTask ? reorderedTasks.findIndex((t) => t.id === overId) : -1;
       if (overIndex === -1 && overIsColumn) {
-        // Find the index of the first item in the new column to place the active task before it
-        overIndex = internalTasks.findIndex(t => t.status === newStatus);
+        overIndex = reorderedTasks.findIndex(t => t.status === newStatus);
         if (overIndex === -1) {
-          // If the column is empty, find where to insert it based on column order
           const columnOrder = TASK_STATUS_OPTIONS.map(o => o.value);
           const newStatusIndex = columnOrder.indexOf(newStatus);
-          let insertAtIndex = internalTasks.length;
+          let insertAtIndex = reorderedTasks.length;
           for (let i = newStatusIndex + 1; i < columnOrder.length; i++) {
             const nextStatus = columnOrder[i];
-            const firstIndexOfNextCol = internalTasks.findIndex(t => t.status === nextStatus);
+            const firstIndexOfNextCol = reorderedTasks.findIndex(t => t.status === nextStatus);
             if (firstIndexOfNextCol !== -1) {
               insertAtIndex = firstIndexOfNextCol;
               break;
@@ -131,16 +124,17 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
           overIndex = insertAtIndex;
         }
       }
-      
-      reorderedTasks = arrayMove(internalTasks, activeIndex, overIndex);
-      onStatusChange(activeId, newStatus);
+      reorderedTasks = arrayMove(reorderedTasks, activeTaskIndex, overIndex);
     }
 
     setInternalTasks(reorderedTasks);
     
-    // After optimistic update, send the new order to the backend
     const finalTaskIds = reorderedTasks.map(t => t.id);
-    updateTaskOrder(finalTaskIds);
+    if (oldStatus === newStatus) {
+      updateTaskOrder(finalTaskIds);
+    } else {
+      moveTask({ taskId: activeId, newStatus, orderedTaskIds: finalTaskIds });
+    }
   };
 
   return (
