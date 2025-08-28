@@ -55,7 +55,6 @@ const TasksKanbanCard = ({ task }: TasksKanbanCardProps) => {
               {task.projects.name}
             </Link>
           ) : <span>&nbsp;</span>}
-          {task.originTicketId && <Ticket className="h-4 w-4 text-muted-foreground" />}
           <Badge variant="outline" className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
         </div>
         <div className="flex items-center justify-between mt-2">

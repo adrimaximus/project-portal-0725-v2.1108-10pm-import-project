@@ -2,9 +2,10 @@ import { Task, TaskStatus } from '@/types/task';
 import TasksKanbanCard from './TasksKanbanCard';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronsLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 
 interface TasksKanbanColumnProps {
   status: TaskStatus;
@@ -17,43 +18,51 @@ const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse }: Tas
   const { setNodeRef } = useDroppable({ id: status });
 
   return (
-    <Collapsible
-      open={!isCollapsed}
-      onOpenChange={() => onToggleCollapse(status)}
+    <div 
+      ref={setNodeRef} 
       className={cn(
-        "w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-[280px] flex-shrink-0 transition-all duration-300 ease-in-out rounded-lg",
-        isCollapsed && "xl:w-[60px]"
+        "flex-shrink-0 transition-all duration-300 ease-in-out",
+        isCollapsed ? "w-14" : "w-[280px] sm:w-72"
       )}
     >
-      <div ref={setNodeRef} className="bg-muted h-full flex flex-col rounded-lg">
-        <CollapsibleTrigger asChild>
-          <div className="flex items-center justify-between p-4 border-b cursor-pointer hover:bg-muted-foreground/10 rounded-t-lg">
-            <h3 className={cn("text-base font-semibold", isCollapsed && "hidden")}>
-              {status} <span className="text-muted-foreground font-normal">({tasks.length})</span>
+      <div className="h-full flex flex-col bg-muted/50 rounded-lg">
+        {/* Header */}
+        <div className="font-semibold p-3 text-base flex items-center justify-between flex-shrink-0">
+          {!isCollapsed && (
+            <h3 className="flex items-center truncate">
+              <span className="truncate">{status}</span>
+              <Badge variant="secondary" className="ml-2">{tasks.length}</Badge>
             </h3>
-            <div className="flex items-center">
-                {isCollapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+          )}
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onToggleCollapse(status)}>
+            <ChevronsLeft className={cn("h-4 w-4 transition-transform", !isCollapsed && "rotate-180")} />
+          </Button>
+        </div>
+        
+        {/* Content */}
+        {isCollapsed ? (
+          <div className="flex-grow min-h-0 flex items-center justify-center cursor-pointer" onClick={() => onToggleCollapse(status)}>
+            <div className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap flex items-center gap-2 text-sm font-medium">
+              <span className="truncate">{status}</span>
+              <Badge variant="secondary">{tasks.length}</Badge>
             </div>
           </div>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="flex-grow p-2 overflow-y-auto">
-          {isCollapsed ? (
-             <div className="flex justify-center items-start pt-4">
-                <span className="writing-mode-vertical-rl rotate-180 text-sm font-semibold text-muted-foreground">{status}</span>
-             </div>
-          ) : (
+        ) : (
+          <div className="flex-grow min-h-0 overflow-y-auto p-2 pt-0">
             <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="p-2">
-                {tasks.map(task => (
-                  <TasksKanbanCard key={task.id} task={task} />
-                ))}
-                {tasks.length === 0 && <div className="h-full w-full min-h-[100px]" />}
-              </div>
+              {tasks.map(task => (
+                <TasksKanbanCard key={task.id} task={task} />
+              ))}
             </SortableContext>
-          )}
-        </CollapsibleContent>
+            {tasks.length === 0 && (
+               <div className="flex items-center justify-center h-20 m-2 border-2 border-dashed border-border rounded-lg">
+                <p className="text-sm text-muted-foreground">Drop here</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </Collapsible>
+    </div>
   );
 };
 
