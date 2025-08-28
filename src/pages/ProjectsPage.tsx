@@ -3,7 +3,7 @@ import { Project } from "@/types";
 import { useNavigate } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, List, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban, Search, Sparkles, Loader2, ListChecks } from "lucide-react";
+import { PlusCircle, List, Table as TableIcon, MoreHorizontal, Trash2, CalendarPlus, RefreshCw, Calendar as CalendarIcon, Kanban, Search, Sparkles, Loader2, ListChecks, LayoutGrid } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -36,7 +36,7 @@ import ProjectViewContainer from "@/components/projects/ProjectViewContainer";
 import { useTasks } from "@/hooks/useTasks";
 import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
 import TaskFormDialog from "@/components/projects/TaskFormDialog";
-import { Task } from "@/types/task";
+import { Task, TaskStatus } from "@/types/task";
 
 interface CalendarEvent {
     id: string;
@@ -49,7 +49,7 @@ interface CalendarEvent {
     description?: string;
 }
 
-type ViewMode = 'table' | 'list' | 'kanban' | 'calendar' | 'tasks';
+type ViewMode = 'table' | 'list' | 'kanban' | 'calendar' | 'tasks' | 'tasks-kanban';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
@@ -81,7 +81,7 @@ const ProjectsPage = () => {
 
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
   const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ 
-    projectIds: view === 'tasks' ? undefined : [],
+    projectIds: (view === 'tasks' || view === 'tasks-kanban') ? undefined : [],
     orderBy: taskSortConfig.key,
     orderDirection: taskSortConfig.direction,
   });
@@ -227,6 +227,7 @@ const ProjectsPage = () => {
         refreshCalendarEvents();
         break;
       case 'tasks':
+      case 'tasks-kanban':
         refetchTasks();
         break;
       default:
@@ -242,6 +243,24 @@ const ProjectsPage = () => {
       direction = 'desc';
     }
     setTaskSortConfig({ key, direction });
+  };
+
+  const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+        upsertTask({
+            id: task.id,
+            project_id: task.project_id,
+            title: task.title,
+            status: newStatus,
+        }, {
+            onSuccess: () => {
+                toast.success(`Task "${task.title}" moved to ${newStatus}.`);
+                refetchTasks();
+            },
+            onError: (error) => toast.error(`Failed to update task status: ${error.message}`),
+        });
+    }
   };
 
   // Task handlers
@@ -326,7 +345,7 @@ const ProjectsPage = () => {
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4 flex-shrink-0">
               <CardTitle>Projects</CardTitle>
               <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto">
-                {view === 'tasks' && (
+                {(view === 'tasks' || view === 'tasks-kanban') && (
                   <Button size="sm" onClick={handleCreateTask}>
                     <PlusCircle className="h-4 w-4 mr-2" />
                     New Task
@@ -347,7 +366,8 @@ const ProjectsPage = () => {
                     <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>List View</p></TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Table View</p></TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Kanban View</p></TooltipContent></Tooltip>
-                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="tasks" aria-label="Tasks view"><ListChecks className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Tasks View</p></TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="tasks" aria-label="Tasks view"><ListChecks className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Tasks List View</p></TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="tasks-kanban" aria-label="Tasks Kanban view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Tasks Kanban View</p></TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="calendar" aria-label="Calendar Import view"><CalendarPlus className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Calendar Import</p></TooltipContent></Tooltip>
                   </ToggleGroup>
                 </TooltipProvider>
@@ -361,7 +381,7 @@ const ProjectsPage = () => {
               onRefreshProjects={refetch} onRefreshCalendar={refreshCalendarEvents}
               onAiImport={handleAiImport} isAiImporting={isAiImporting}
             />
-            <CardContent className="flex-grow min-h-0 overflow-y-auto p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6" data-view={view}>
+            <CardContent className="flex-grow min-h-0 overflow-y-auto p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6 data-[view=tasks-kanban]:p-0" data-view={view}>
               <ProjectViewContainer
                 view={view}
                 projects={sortedProjects}
@@ -380,6 +400,7 @@ const ProjectsPage = () => {
                 onToggleTaskCompletion={handleToggleTaskCompletion}
                 taskSortConfig={taskSortConfig}
                 requestTaskSort={requestTaskSort}
+                onTaskStatusChange={handleTaskStatusChange}
               />
             </CardContent>
           </Card>

@@ -6,8 +6,9 @@ import ListView from './ListView';
 import KanbanView from './KanbanView';
 import CalendarImportView from './CalendarImportView';
 import TasksView from './TasksView';
+import TasksKanbanView from './TasksKanbanView';
 
-type ViewMode = 'table' | 'list' | 'kanban' | 'calendar' | 'tasks';
+type ViewMode = 'table' | 'list' | 'kanban' | 'calendar' | 'tasks' | 'tasks-kanban';
 
 interface CalendarEvent {
     id: string;
@@ -38,12 +39,13 @@ interface ProjectViewContainerProps {
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   taskSortConfig: { key: string; direction: 'asc' | 'desc' };
   requestTaskSort: (key: string) => void;
+  onTaskStatusChange: (taskId: string, newStatus: any) => void;
 }
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
   kanbanGroupBy, importableEvents, onImportEvent, onEditTask, onDeleteTask, onToggleTaskCompletion,
-  taskSortConfig, requestTaskSort
+  taskSortConfig, requestTaskSort, onTaskStatusChange
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
@@ -64,6 +66,8 @@ const ProjectViewContainer = ({
         sortConfig={taskSortConfig}
         requestSort={requestTaskSort}
       />;
+    case 'tasks-kanban':
+      return <TasksKanbanView tasks={tasks} onStatusChange={onTaskStatusChange} />;
     default:
       return null;
   }
