@@ -7,7 +7,7 @@ import { generateVibrantGradient, getPriorityStyles } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Ticket } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface TasksKanbanCardProps {
@@ -24,11 +24,12 @@ const getInitials = (user: TaskAssignee) => {
 }
 
 const TasksKanbanCard = ({ task }: TasksKanbanCardProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
   const priorityStyle = getPriorityStyles(task.priority);
@@ -44,7 +45,10 @@ const TasksKanbanCard = ({ task }: TasksKanbanCardProps) => {
       style={{ ...style, borderLeftColor: priorityStyle.color }}
     >
       <CardHeader className="p-3">
-        <CardTitle className="text-sm font-medium leading-snug">{task.title}</CardTitle>
+        <CardTitle className="text-sm font-medium leading-snug flex items-center gap-1.5">
+          {task.status === 'Done' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+          <span>{task.title}</span>
+        </CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-0">
         <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
