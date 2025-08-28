@@ -7,10 +7,17 @@ import { format } from "date-fns";
 import { generateVibrantGradient } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "../ui/checkbox";
 
 interface TasksViewProps {
   tasks: Task[];
   isLoading: boolean;
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
+  onStatusChange: (task: Task, completed: boolean) => void;
 }
 
 const getInitials = (user: TaskAssignee) => {
@@ -22,7 +29,7 @@ const getInitials = (user: TaskAssignee) => {
     return (user.email?.[0] || 'U').toUpperCase();
 }
 
-const TasksView = ({ tasks, isLoading }: TasksViewProps) => {
+const TasksView = ({ tasks, isLoading, onEdit, onDelete, onStatusChange }: TasksViewProps) => {
   if (isLoading) {
     return (
       <div className="p-4 md:p-6">
@@ -43,16 +50,23 @@ const TasksView = ({ tasks, isLoading }: TasksViewProps) => {
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-12"></TableHead>
           <TableHead className="w-[40%]">Task</TableHead>
           <TableHead>Project</TableHead>
           <TableHead>Due Date</TableHead>
           <TableHead>Assignees</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {tasks.map(task => (
           <TableRow key={task.id}>
+            <TableCell>
+              <Checkbox
+                checked={task.completed}
+                onCheckedChange={(checked) => onStatusChange(task, !!checked)}
+              />
+            </TableCell>
             <TableCell className="font-medium">{task.title}</TableCell>
             <TableCell>
               {task.projects ? (
@@ -71,7 +85,7 @@ const TasksView = ({ tasks, isLoading }: TasksViewProps) => {
                 {(task.assignees && task.assignees.length > 0)
                   ? task.assignees.map((user) => (
                     <Avatar key={user.id} className="h-8 w-8 border-2 border-background">
-                      <AvatarImage src={user.avatar_url} />
+                      <AvatarImage src={user.avatar_url || undefined} />
                       <AvatarFallback style={generateVibrantGradient(user.id)}>
                         {getInitials(user)}
                       </AvatarFallback>
@@ -82,7 +96,7 @@ const TasksView = ({ tasks, isLoading }: TasksViewProps) => {
                       <Tooltip>
                         <TooltipTrigger>
                           <Avatar key={task.created_by.id} className="h-8 w-8 border-2 border-background opacity-50">
-                            <AvatarImage src={task.created_by.avatar_url} />
+                            <AvatarImage src={task.created_by.avatar_url || undefined} />
                             <AvatarFallback style={generateVibrantGradient(task.created_by.id)}>
                               {getInitials(task.created_by)}
                             </AvatarFallback>
@@ -97,11 +111,28 @@ const TasksView = ({ tasks, isLoading }: TasksViewProps) => {
                 }
               </div>
             </TableCell>
-            <TableCell>
-              <Badge variant={task.completed ? "outline" : "default"}>
-                {task.completed ? "Completed" : "Open"}
-              </Badge>
-            </TableCell>          
+            <TableCell className="text-right">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onEdit(task)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-red-500"
+                    onClick={() => onDelete(task.id)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

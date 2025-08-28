@@ -33,11 +33,14 @@ interface ProjectViewContainerProps {
   kanbanGroupBy: 'status' | 'payment_status';
   importableEvents: CalendarEvent[];
   onImportEvent: (event: CalendarEvent) => void;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
+  onTaskStatusChange: (task: Task, completed: boolean) => void;
 }
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
-  kanbanGroupBy, importableEvents, onImportEvent
+  kanbanGroupBy, importableEvents, onImportEvent, onEditTask, onDeleteTask, onTaskStatusChange
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
@@ -49,7 +52,13 @@ const ProjectViewContainer = ({
     case 'calendar':
       return <CalendarImportView events={importableEvents} onImportEvent={onImportEvent} />;
     case 'tasks':
-      return <TasksView tasks={tasks} isLoading={isTasksLoading} />;
+      return <TasksView 
+        tasks={tasks} 
+        isLoading={isTasksLoading} 
+        onEdit={onEditTask}
+        onDelete={onDeleteTask}
+        onStatusChange={onTaskStatusChange}
+      />;
     default:
       return null;
   }

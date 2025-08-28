@@ -16,7 +16,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Option = Record<"value" | "label", string>;
@@ -27,6 +26,7 @@ interface MultiSelectProps {
   onChange: (value: string[]) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export function MultiSelect({
@@ -35,6 +35,7 @@ export function MultiSelect({
   onChange,
   placeholder = "Select...",
   className,
+  disabled = false,
 }: MultiSelectProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
@@ -55,9 +56,9 @@ export function MultiSelect({
     .filter((v): v is Option => v !== undefined);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open && !disabled} onOpenChange={(isOpen) => setOpen(isOpen && !disabled)}>
       <PopoverTrigger asChild>
-        <div className={cn("group flex min-h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2", className)}>
+        <div className={cn("group flex min-h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2", className, disabled && "cursor-not-allowed opacity-50")}>
           <div className="flex flex-wrap gap-1">
             {selectedObjects.map((option) => (
               <Badge
@@ -72,6 +73,7 @@ export function MultiSelect({
                     e.stopPropagation();
                   }}
                   onClick={() => handleUnselect(option.value)}
+                  disabled={disabled}
                   className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
                   <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -90,6 +92,7 @@ export function MultiSelect({
             ref={inputRef}
             placeholder="Search..."
             className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 px-3"
+            disabled={disabled}
           />
           <CommandList>
             <CommandGroup>
