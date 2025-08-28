@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           permissions: profile.permissions || [],
         };
         setUser(userToSet);
-        localStorage.setItem('lastUserName', userToSet.name); // Store user name
+        localStorage.setItem('lastUserName', userToSet.name);
         return;
       }
 
@@ -86,44 +86,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    console.warn(`Could not fetch user profile for ${supabaseUser.id} after ${retries} attempts. Using fallback data.`);
-    const fallbackUser: User = {
-      id: supabaseUser.id,
-      email: supabaseUser.email,
-      name: supabaseUser.email || 'New User',
-      avatar: undefined,
-      initials: getInitials('', supabaseUser.email) || 'NN',
-      permissions: [],
-    };
-    setUser(fallbackUser);
-    localStorage.setItem('lastUserName', fallbackUser.name); // Store fallback name
+    console.warn(`Could not fetch user profile for ${supabaseUser.id} after ${retries} attempts. Logging out.`);
+    toast.error("Could not retrieve your user profile. Please try logging in again.");
+    await logout();
   }, [logout]);
 
   useEffect(() => {
     const getInitialSession = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      if (initialSession) {
-        await fetchUserProfile(initialSession.user);
-      } else {
-        setUser(null);
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
+        if (initialSession) {
+          await fetchUserProfile(initialSession.user);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Error during initial session fetch:", error);
+        await logout();
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     getInitialSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      if (session?.user) {
-        await fetchUserProfile(session.user);
-      } else {
-        setUser(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      try {
+        setSession(newSession);
+        if (newSession?.user) {
+          await fetchUserProfile(newSession.user);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Error during auth state change:", error);
+        await logout();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, logout]);
 
   const refreshUser = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
