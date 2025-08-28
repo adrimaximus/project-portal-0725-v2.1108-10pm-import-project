@@ -8,7 +8,7 @@ import { generateVibrantGradient, getPriorityStyles, getTaskStatusStyles } from 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Edit, Trash2, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface TasksViewProps {
@@ -52,134 +52,129 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, sortConfig, requestSort
     return <div className="text-center text-muted-foreground p-8">No tasks found.</div>;
   }
 
-  const renderSortIcon = (columnKey: string) => {
-    if (sortConfig.key !== columnKey) {
-      return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
-    }
-    return <ArrowUpDown className="ml-2 h-4 w-4" />;
-  };
-
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[40%] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('title')}>
-            <div className="flex items-center">Task {renderSortIcon('title')}</div>
-          </TableHead>
-          <TableHead>Project</TableHead>
-          <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('status')}>
-            <div className="flex items-center">Status {renderSortIcon('status')}</div>
-          </TableHead>
-          <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('priority')}>
-            <div className="flex items-center">Priority {renderSortIcon('priority')}</div>
-          </TableHead>
-          <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('due_date')}>
-            <div className="flex items-center">Due Date {renderSortIcon('due_date')}</div>
-          </TableHead>
-          <TableHead>Assignees</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {tasks.map(task => {
-          const statusStyle = getTaskStatusStyles(task.status);
-          const priorityStyle = getPriorityStyles(task.priority);
-          return (
-            <TableRow key={task.id}>
-              <TableCell className="font-medium">
-                <div className="flex flex-col">
-                  <span className="font-semibold">{task.title}</span>
-                  {task.description && <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>}
-                  <div className="flex gap-1 flex-wrap mt-2">
-                    {task.tags?.map(tag => (
-                      <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
-                    ))}
+    <div className="w-full overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[40%] cursor-pointer hover:bg-muted/50 sticky left-0 bg-background z-10" onClick={() => requestSort('title')}>
+              Task
+            </TableHead>
+            <TableHead>Project</TableHead>
+            <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('status')}>
+              Status
+            </TableHead>
+            <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('priority')}>
+              Priority
+            </TableHead>
+            <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('due_date')}>
+              Due Date
+            </TableHead>
+            <TableHead>Assignees</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {tasks.map(task => {
+            const statusStyle = getTaskStatusStyles(task.status);
+            const priorityStyle = getPriorityStyles(task.priority);
+            return (
+              <TableRow key={task.id}>
+                <TableCell className="font-medium sticky left-0 bg-background z-10">
+                  <div className="flex flex-col">
+                    <span className="font-semibold">{task.title}</span>
+                    {task.description && <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>}
+                    <div className="flex gap-1 flex-wrap mt-2">
+                      {task.tags?.map(tag => (
+                        <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>{tag.name}</Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                {task.projects ? (
-                  <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary text-xs">
-                    {task.projects.name}
-                  </Link>
-                ) : 'N/A'}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className={statusStyle.tw}>{task.status}</Badge>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
-              </TableCell>
-              <TableCell>
-                {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy") : <span className="text-muted-foreground text-xs">No due date</span>}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center -space-x-2">
-                  {(task.assignees && task.assignees.length > 0)
-                    ? task.assignees.map((user) => (
-                      <TooltipProvider key={user.id}>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Avatar className="h-8 w-8 border-2 border-background">
-                              <AvatarImage src={user.avatar_url || undefined} />
-                              <AvatarFallback style={generateVibrantGradient(user.id)}>
-                                {getInitials(user)}
-                              </AvatarFallback>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ))
-                    : task.created_by && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Avatar key={task.created_by.id} className="h-8 w-8 border-2 border-background opacity-50">
-                              <AvatarImage src={task.created_by.avatar_url || undefined} />
-                              <AvatarFallback style={generateVibrantGradient(task.created_by.id)}>
-                                {getInitials(task.created_by)}
-                              </AvatarFallback>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Created by {[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )
-                  }
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onEdit(task)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-red-500"
-                      onClick={() => onDelete(task.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+                </TableCell>
+                <TableCell>
+                  {task.projects ? (
+                    <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary text-xs">
+                      {task.projects.name}
+                    </Link>
+                  ) : 'N/A'}
+                </TableCell>
+                <TableCell>
+                  <Badge className={statusStyle.tw}>{task.status}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
+                </TableCell>
+                <TableCell>
+                  {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy") : <span className="text-muted-foreground text-xs">No due date</span>}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center -space-x-2">
+                    {(task.assignees && task.assignees.length > 0)
+                      ? task.assignees.map((user) => (
+                        <TooltipProvider key={user.id}>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Avatar className="h-8 w-8 border-2 border-background">
+                                <AvatarImage src={user.avatar_url || undefined} />
+                                <AvatarFallback style={generateVibrantGradient(user.id)}>
+                                  {getInitials(user)}
+                                </AvatarFallback>
+                              </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))
+                      : task.created_by && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Avatar key={task.created_by.id} className="h-8 w-8 border-2 border-background opacity-50">
+                                <AvatarImage src={task.created_by.avatar_url || undefined} />
+                                <AvatarFallback style={generateVibrantGradient(task.created_by.id)}>
+                                  {getInitials(task.created_by)}
+                                </AvatarFallback>
+                              </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Created by {[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )
+                    }
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onEdit(task)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-500"
+                        onClick={() => onDelete(task.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 
