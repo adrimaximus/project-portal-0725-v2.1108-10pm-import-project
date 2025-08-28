@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const getSessionAndListen = async () => {
+    const getInitialSession = async () => {
       const { data: { session: initialSession } } = await supabase.auth.getSession();
       setSession(initialSession);
       if (initialSession) {
@@ -96,44 +96,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
       }
       setLoading(false);
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-        if (event === 'PASSWORD_RECOVERY') {
-          navigate('/reset-password');
-        }
-        if (event === 'SIGNED_OUT') {
-          toast.success("You have been successfully logged out.");
-        }
-        if (event === 'TOKEN_REFRESHED' && !newSession) {
-          console.warn('Token refresh failed, forcing logout.');
-          await supabase.auth.signOut();
-        }
-        setSession(newSession);
-        if (newSession) {
-          await fetchUserProfile(newSession.user);
-        } else {
-          setUser(null);
-          localStorage.removeItem('lastUserName');
-        }
-      });
-
-      return subscription;
     };
 
-    const subscriptionPromise = getSessionAndListen();
+    getInitialSession();
 
-    // Proactively refresh session when tab becomes visible
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        supabase.auth.getSession();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      if (session?.user) {
+        await fetchUserProfile(session.user);
+      } else {
+        setUser(null);
       }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    });
 
-    return () => {
-      subscriptionPromise.then(subscription => subscription?.unsubscribe());
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const refreshUser = async () => {
