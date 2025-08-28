@@ -7,6 +7,7 @@ export interface Task {
   completed: boolean;
   assignedTo: User[];
   originTicketId?: string;
+  createdBy?: User;
 }
 
 export interface Comment {

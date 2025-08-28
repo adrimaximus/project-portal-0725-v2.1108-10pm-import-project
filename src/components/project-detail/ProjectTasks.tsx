@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { generateVibrantGradient } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProjectTasksProps {
   project: Project;
@@ -76,12 +77,29 @@ const ProjectTasks = ({
               {task.title}
             </label>
             <div className="flex items-center -space-x-2">
-              {(task.assignedTo || []).map((user) => (
-                <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
-                </Avatar>
-              ))}
+              {(task.assignedTo && task.assignedTo.length > 0) 
+                ? task.assignedTo.map((user) => (
+                  <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
+                    <AvatarImage src={user.avatar} />
+                    <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
+                  </Avatar>
+                ))
+                : task.createdBy && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Avatar key={task.createdBy.id} className="h-6 w-6 border-2 border-background opacity-50">
+                          <AvatarImage src={task.createdBy.avatar} />
+                          <AvatarFallback style={generateVibrantGradient(task.createdBy.id)}>{task.createdBy.initials}</AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Created by {task.createdBy.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )
+              }
             </div>
             <Dialog>
               <DropdownMenu>

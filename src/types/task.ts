@@ -1,27 +1,26 @@
 export interface TaskAssignee {
-  id: string;
-  first_name?: string;
-  last_name?: string;
-  email: string;
-  avatar_url?: string;
-}
-
-export interface ProjectSummary {
-  id: string;
-  name: string;
-  slug: string;
-  status: string;
-  created_by: string | null;
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+    avatar_url: string | null;
 }
 
 export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-  due_date?: string;
-  priority?: string;
-  project_id: string;
-  projects?: ProjectSummary;
-  assignees?: TaskAssignee[];
+    id: string;
+    title: string;
+    description: string | null;
+    completed: boolean;
+    due_date: string | null;
+    priority: string | null;
+    project_id: string;
+    projects: {
+        id: string;
+        name: string;
+        slug: string;
+        status: string;
+        created_by: string | null;
+    } | null;
+    assignees: TaskAssignee[];
+    created_by: TaskAssignee | null;
 }

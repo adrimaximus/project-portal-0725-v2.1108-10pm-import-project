@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { generateVibrantGradient } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TasksViewProps {
   tasks: Task[];
@@ -67,21 +68,40 @@ const TasksView = ({ tasks, isLoading }: TasksViewProps) => {
             </TableCell>
             <TableCell>
               <div className="flex items-center -space-x-2">
-                {(task.assignees || []).map((user) => (
-                  <Avatar key={user.id} className="h-8 w-8 border-2 border-background">
-                    <AvatarImage src={user.avatar_url} />
-                    <AvatarFallback style={generateVibrantGradient(user.id)}>
-                      {getInitials(user)}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
+                {(task.assignees && task.assignees.length > 0)
+                  ? task.assignees.map((user) => (
+                    <Avatar key={user.id} className="h-8 w-8 border-2 border-background">
+                      <AvatarImage src={user.avatar_url} />
+                      <AvatarFallback style={generateVibrantGradient(user.id)}>
+                        {getInitials(user)}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))
+                  : task.created_by && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Avatar key={task.created_by.id} className="h-8 w-8 border-2 border-background opacity-50">
+                            <AvatarImage src={task.created_by.avatar_url} />
+                            <AvatarFallback style={generateVibrantGradient(task.created_by.id)}>
+                              {getInitials(task.created_by)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Created by {[task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' ')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )
+                }
               </div>
             </TableCell>
             <TableCell>
               <Badge variant={task.completed ? "outline" : "default"}>
                 {task.completed ? "Completed" : "Open"}
               </Badge>
-            </TableCell>
+            </TableCell>          
           </TableRow>
         ))}
       </TableBody>
