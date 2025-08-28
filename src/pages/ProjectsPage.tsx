@@ -342,45 +342,35 @@ const ProjectsPage = () => {
           />
 
           <Card className="h-full flex flex-col">
-            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4 flex-shrink-0">
-              <CardTitle>Projects</CardTitle>
-              <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto">
-                {(view === 'tasks' || view === 'tasks-kanban') && (
-                  <Button size="sm" onClick={handleCreateTask}>
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    New Task
+            <div className="sticky top-0 bg-background z-10 sm:relative">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4 flex-shrink-0">
+                <CardTitle>Projects</CardTitle>
+                <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto">
+                  {(view === 'tasks' || view === 'tasks-kanban') && (
+                    <Button size="sm" onClick={handleCreateTask}>
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      New Task
+                    </Button>
+                  )}
+                  {view === 'calendar' && (
+                    <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
+                      {isAiImporting ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Sparkles className="h-4 w-4 sm:mr-2" />}
+                      <span className="hidden sm:inline">Ask AI to Import</span>
+                    </Button>
+                  )}
+                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
+                      <span className="sr-only">Refresh data</span>
+                      <RefreshCw className="h-4 w-4" />
                   </Button>
-                )}
-                {view === 'calendar' && (
-                  <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
-                    {isAiImporting ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Sparkles className="h-4 w-4 sm:mr-2" />}
-                    <span className="hidden sm:inline">Ask AI to Import</span>
-                  </Button>
-                )}
-                <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
-                    <span className="sr-only">Refresh data</span>
-                    <RefreshCw className="h-4 w-4" />
-                </Button>
-                <TooltipProvider>
-                  <ToggleGroup type="single" value={view} onValueChange={handleViewChange} aria-label="View mode">
-                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>List View</p></TooltipContent></Tooltip>
-                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Table View</p></TooltipContent></Tooltip>
-                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Kanban View</p></TooltipContent></Tooltip>
-                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="tasks" aria-label="Tasks view"><ListChecks className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Tasks List View</p></TooltipContent></Tooltip>
-                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="tasks-kanban" aria-label="Tasks Kanban view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Tasks Kanban View</p></TooltipContent></Tooltip>
-                    <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="calendar" aria-label="Calendar Import view"><CalendarPlus className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Calendar Import</p></TooltipContent></Tooltip>
-                  </ToggleGroup>
-                </TooltipProvider>
-              </div>
-            </CardHeader>
-            <ProjectsToolbar
-              view={view} onViewChange={handleViewChange}
-              searchTerm={searchTerm} onSearchTermChange={setSearchTerm}
-              dateRange={dateRange} onDateRangeChange={setDateRange}
-              kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
-              onRefreshProjects={refetch} onRefreshCalendar={refreshCalendarEvents}
-              onAiImport={handleAiImport} isAiImporting={isAiImporting}
-            />
+                </div>
+              </CardHeader>
+              <ProjectsToolbar
+                view={view} onViewChange={handleViewChange}
+                searchTerm={searchTerm} onSearchTermChange={setSearchTerm}
+                dateRange={dateRange} onDateRangeChange={setDateRange}
+                kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
+              />
+            </div>
             <CardContent className="flex-grow min-h-0 overflow-y-auto p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6 data-[view=tasks-kanban]:p-0" data-view={view}>
               <ProjectViewContainer
                 view={view}
