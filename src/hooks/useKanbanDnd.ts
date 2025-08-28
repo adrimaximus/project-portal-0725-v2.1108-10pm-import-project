@@ -115,7 +115,10 @@ export const useKanbanDnd = (
 
         if (finalUpdates.length === 0) return;
 
-        const { error } = await supabase.rpc('update_project_kanban_order', { updates: finalUpdates });
+        const { error } = await supabase.rpc('update_project_kanban_order', {
+            updates: finalUpdates,
+            group_by_key: groupBy,
+        });
 
         if (error) {
             toast.error(`Failed to move project: ${error.message}`);
