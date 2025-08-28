@@ -51,9 +51,10 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onStatusChange }: Tasks
       <TableHeader>
         <TableRow>
           <TableHead className="w-12"></TableHead>
-          <TableHead className="w-[40%]">Task</TableHead>
+          <TableHead className="w-[30%]">Task</TableHead>
           <TableHead>Project</TableHead>
           <TableHead>Due Date</TableHead>
+          <TableHead>Created Date</TableHead>
           <TableHead>Assignees</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -79,6 +80,9 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onStatusChange }: Tasks
             </TableCell>
             <TableCell>
               {task.due_date ? format(new Date(task.due_date), "MMM d, yyyy") : <span className="text-muted-foreground">No due date</span>}
+            </TableCell>
+            <TableCell>
+              {task.created_at ? format(new Date(task.created_at), "MMM d, yyyy") : <span className="text-muted-foreground">N/A</span>}
             </TableCell>
             <TableCell>
               <div className="flex items-center -space-x-2">
