@@ -55,8 +55,14 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     
     projects.forEach(project => {
       const key = project[groupBy];
-      if (key && groups[key]) {
+      if (key && Object.prototype.hasOwnProperty.call(groups, key)) {
         groups[key].push(project);
+      } else {
+        // If status is null, undefined, or not a valid column,
+        // assign it to the first column as a default.
+        if (columns.length > 0) {
+          groups[columns[0].value].push(project);
+        }
       }
     });
 
