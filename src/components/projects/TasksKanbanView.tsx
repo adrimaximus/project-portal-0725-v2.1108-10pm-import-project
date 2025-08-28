@@ -59,8 +59,8 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 2000,
-        tolerance: 16,
+        delay: 500,
+        tolerance: 5,
       },
     })
   );
@@ -77,66 +77,58 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
     setActiveTask(null);
     const { active, over } = event;
 
-    if (!over) return;
+    if (!over || active.id === over.id) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    const activeTaskIndex = internalTasks.findIndex((t) => t.id === activeId);
-    if (activeTaskIndex === -1) return;
+    const oldTasks = [...internalTasks];
+    const activeIndex = oldTasks.findIndex(t => t.id === activeId);
+    let overIndex = oldTasks.findIndex(t => t.id === overId);
 
-    const activeTask = internalTasks[activeTaskIndex];
-    const oldStatus = activeTask.status;
+    if (activeIndex === -1) return;
 
-    const overIsColumn = TASK_STATUS_OPTIONS.some(opt => opt.value === overId);
-    const overTask = internalTasks.find((t) => t.id === overId);
+    const activeTask = oldTasks[activeIndex];
+    const overTask = overIndex !== -1 ? oldTasks[overIndex] : null;
     
-    if (activeId === overId && !overIsColumn) return;
-    if (!overTask && !overIsColumn) return;
-
     const newStatus = overTask ? overTask.status : (overId as TaskStatus);
 
-    let reorderedTasks = [...internalTasks];
-
-    if (oldStatus === newStatus) {
-      const overTaskIndex = internalTasks.findIndex((t) => t.id === overId);
-      if (overTaskIndex !== -1) {
-        reorderedTasks = arrayMove(reorderedTasks, activeTaskIndex, overTaskIndex);
-      }
-    } else {
-      const tempTaskWithNewStatus = { ...activeTask, status: newStatus };
-      const tempTasks = [...internalTasks];
-      tempTasks[activeTaskIndex] = tempTaskWithNewStatus;
-
-      let overIndex = overTask ? tempTasks.findIndex((t) => t.id === overId) : -1;
-      if (overIndex === -1 && overIsColumn) {
-        overIndex = tempTasks.findIndex(t => t.status === newStatus);
-        if (overIndex === -1) {
-          const columnOrder = TASK_STATUS_OPTIONS.map(o => o.value);
-          const newStatusIndex = columnOrder.indexOf(newStatus);
-          let insertAtIndex = tempTasks.length;
-          for (let i = newStatusIndex + 1; i < columnOrder.length; i++) {
-            const nextStatus = columnOrder[i];
-            const firstIndexOfNextCol = tempTasks.findIndex(t => t.status === nextStatus);
-            if (firstIndexOfNextCol !== -1) {
-              insertAtIndex = firstIndexOfNextCol;
-              break;
+    if (overIndex === -1) { // Dropped on a column, not a task
+        const tasksInTargetColumn = oldTasks.filter(t => t.status === newStatus);
+        if (tasksInTargetColumn.length > 0) {
+            overIndex = oldTasks.findIndex(t => t.id === tasksInTargetColumn[0].id);
+        } else {
+            const columnOrder = TASK_STATUS_OPTIONS.map(o => o.value);
+            const newStatusIndex = columnOrder.indexOf(newStatus);
+            let nextTask: Task | undefined;
+            for (let i = newStatusIndex + 1; i < columnOrder.length; i++) {
+                nextTask = oldTasks.find(t => t.status === columnOrder[i]);
+                if (nextTask) break;
             }
-          }
-          overIndex = insertAtIndex;
+            
+            if (nextTask) {
+                overIndex = oldTasks.findIndex(t => t.id === nextTask!.id);
+            } else {
+                overIndex = oldTasks.length;
+            }
         }
-      }
-      reorderedTasks = arrayMove(tempTasks, activeTaskIndex, overIndex);
     }
 
-    setInternalTasks(reorderedTasks);
-    
-    const finalTaskIds = reorderedTasks.map(t => t.id);
-    
+    // Optimistic update
+    const newTasksOptimistic = arrayMove(oldTasks, activeIndex, overIndex);
+    const movedItemIndexInNew = newTasksOptimistic.findIndex(t => t.id === activeId);
+    if (movedItemIndexInNew !== -1) {
+      newTasksOptimistic[movedItemIndexInNew] = { ...newTasksOptimistic[movedItemIndexInNew], status: newStatus };
+    }
+
+    setInternalTasks(newTasksOptimistic);
+
+    // Call mutation
+    const finalTaskIds = newTasksOptimistic.map(t => t.id);
     updateTaskStatusAndOrder({ 
-      taskId: activeId, 
-      newStatus, 
-      orderedTaskIds: finalTaskIds 
+        taskId: activeId, 
+        newStatus, 
+        orderedTaskIds: finalTaskIds 
     });
   };
 

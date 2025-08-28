@@ -82,8 +82,8 @@ const ProjectsPage = () => {
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
   const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ 
     projectIds: (view === 'tasks' || view === 'tasks-kanban') ? undefined : [],
-    orderBy: taskSortConfig.key,
-    orderDirection: taskSortConfig.direction,
+    orderBy: view === 'tasks-kanban' ? 'kanban_order' : taskSortConfig.key,
+    orderDirection: view === 'tasks-kanban' ? 'asc' : taskSortConfig.direction,
   });
 
   useEffect(() => {
