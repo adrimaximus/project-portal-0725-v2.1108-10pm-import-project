@@ -1,19 +1,15 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { DndContext, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay, DragStartEvent } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
+import React, { useMemo, useState, useEffect } from 'react';
+import { DndContext, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
 import { formatInJakarta, generateVibrantGradient } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { CheckCircle } from 'lucide-react';
 import KanbanColumn from './KanbanColumn';
+import { useKanbanDnd } from '@/hooks/useKanbanDnd';
 
 const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'status' | 'payment_status' }) => {
-  const queryClient = useQueryClient();
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
@@ -27,8 +23,7 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
       },
     })
   );
-  const dragHappened = useRef(false);
-  const [activeProject, setActiveProject] = useState<Project | null>(null);
+  
   const [collapsedColumns, setCollapsedColumns] = useState<string[]>([]);
 
   useEffect(() => {
@@ -67,111 +62,13 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     return groups;
   }, [projects, columns, groupBy]);
 
-  const handleDragStart = (event: DragStartEvent) => {
-    dragHappened.current = true;
-    const { active } = event;
-    setActiveProject(projects.find(p => p.id === active.id) || null);
-  };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    setActiveProject(null);
-    setTimeout(() => {
-      dragHappened.current = false;
-    }, 0);
-
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeId = String(active.id);
-    const overId = String(over.id);
-    
-    const activeContainer = active.data.current?.sortable.containerId as string;
-    const overContainer = over.data.current?.sortable.containerId as string || over.id as string;
-
-    const activeProject = projects.find(p => p.id === activeId);
-    if (!activeProject) return;
-
-    const originalProjects = [...projects];
-
-    if (activeContainer === overContainer) {
-      const items = projectGroups[activeContainer];
-      const oldIndex = items.findIndex(p => p.id === activeId);
-      const newIndex = items.findIndex(p => p.id === overId);
-
-      if (oldIndex !== newIndex) {
-        const reorderedItems = arrayMove(items, oldIndex, newIndex);
-        
-        const newProjects = originalProjects.map(p => {
-            if (p[groupBy] === activeContainer) {
-                const reorderedIndex = reorderedItems.findIndex(item => item.id === p.id);
-                return { ...p, kanban_order: reorderedIndex };
-            }
-            return p;
-        });
-        queryClient.setQueryData(['projects'], newProjects);
-
-        const updates = reorderedItems.map((project, index) => ({
-            project_id: project.id,
-            kanban_order: index,
-            [groupBy]: activeContainer,
-        }));
-
-        const { error } = await supabase.rpc('update_project_kanban_order', { updates });
-
-        if (error) {
-            toast.error(`Failed to reorder projects: ${error.message}`);
-            queryClient.setQueryData(['projects'], originalProjects);
-        } else {
-            toast.success(`Project order updated.`);
-            queryClient.invalidateQueries({ queryKey: ['projects'] });
-        }
-      }
-    } else {
-      const newGroupValue = overContainer;
-      
-      const sourceItems = [...projectGroups[activeContainer]];
-      const destinationItems = [...projectGroups[overContainer]];
-      
-      const [movedItem] = sourceItems.splice(sourceItems.findIndex(p => p.id === activeId), 1);
-      
-      const overIndex = destinationItems.findIndex(p => p.id === overId);
-      const newIndex = overIndex >= 0 ? overIndex : destinationItems.length;
-      
-      destinationItems.splice(newIndex, 0, { ...movedItem, [groupBy]: newGroupValue });
-
-      const updatedProjectGroups = {
-          ...projectGroups,
-          [activeContainer]: sourceItems,
-          [overContainer]: destinationItems,
-      };
-      const optimisticallyUpdatedProjects = Object.values(updatedProjectGroups).flat();
-      queryClient.setQueryData(['projects'], optimisticallyUpdatedProjects);
-
-      const sourceUpdates = sourceItems.map((project, index) => ({
-          project_id: project.id,
-          kanban_order: index,
-          [groupBy]: activeContainer,
-      }));
-      const destinationUpdates = destinationItems.map((project, index) => ({
-          project_id: project.id,
-          kanban_order: index,
-          [groupBy]: newGroupValue,
-      }));
-
-      const allUpdates = [...sourceUpdates, ...destinationUpdates];
-
-      const { error } = await supabase.rpc('update_project_kanban_order', { updates: allUpdates });
-
-      if (error) {
-          toast.error(`Failed to move project: ${error.message}`);
-          queryClient.setQueryData(['projects'], originalProjects);
-      } else {
-          const newStatusLabel = columns.find(opt => opt.value === newGroupValue)?.label || newGroupValue;
-          toast.success(`Project "${activeProject.name}" moved to ${newStatusLabel}.`);
-          queryClient.invalidateQueries({ queryKey: ['projects'] });
-      }
-    }
-  };
+  const { 
+    activeProject, 
+    dragHappened, 
+    handleDragStart, 
+    handleDragEnd, 
+    handleDragCancel 
+  } = useKanbanDnd(projects, groupBy, projectGroups, columns);
 
   const renderDateBadgeForOverlay = (project: Project) => {
     const { start_date, due_date } = project;
@@ -187,10 +84,10 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
   };
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveProject(null)}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
       <div className="flex flex-row gap-4 overflow-x-auto pb-4 h-full">
         {columns.map(statusOption => {
-          const projectsInColumn = projectGroups[statusOption.value];
+          const projectsInColumn = projectGroups[statusOption.value] || [];
           const isColumnCollapsed = collapsedColumns.includes(statusOption.value);
           return (
             <KanbanColumn
