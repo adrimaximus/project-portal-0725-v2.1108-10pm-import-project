@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { Task } from '../types/task';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UseTasksOptions {
   projectIds?: string[];
@@ -25,9 +26,9 @@ export function useTasks(options: UseTasksOptions = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [count, setCount] = useState(0);
+  const { user } = useAuth();
 
-  // Method 1: Using a database function (recommended for complex queries)
-  const fetchTasksUsingFunction = async () => {
+  const fetchTasksUsingFunction = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -43,7 +44,6 @@ export function useTasks(options: UseTasksOptions = {}) {
       
       if (error) throw new Error(error.message);
       
-      // Transform the flattened data back to the expected structure
       const formattedTasks: Task[] = data?.map((task: any) => ({
         id: task.id,
         title: task.title,
@@ -57,7 +57,7 @@ export function useTasks(options: UseTasksOptions = {}) {
           name: task.project_name,
           slug: task.project_slug,
           status: task.project_status,
-          created_by: null // Note: This isn't returned by our function for security
+          created_by: null
         },
         assignees: task.assignees,
         created_by: task.created_by,
@@ -76,152 +76,39 @@ export function useTasks(options: UseTasksOptions = {}) {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Method 2: Using Edge Function (alternative approach for very complex queries)
-  const fetchTasksUsingEdgeFunction = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const { data, error } = await supabase.functions.invoke('project-tasks', {
-        body: {
-          projectIds: projectIds || [],
-          completed,
-          limit,
-          page,
-          orderBy,
-          orderDirection
-        }
-      });
-      
-      if (error) throw new Error(error.message);
-      
-      setTasks(data?.tasks || []);
-      setCount(data?.count || 0);
-      
-    } catch (err: any) {
-      console.error('Error fetching tasks:', err);
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Method 3: Using smaller batched queries to reduce URL length (fallback approach)
-  const fetchTasksInBatches = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // No project IDs provided
-      if (!projectIds || projectIds.length === 0) {
-        const { data, error } = await supabase
-          .from('tasks')
-          .select(`
-            id,
-            title,
-            completed,
-            description,
-            due_date,
-            priority,
-            project_id,
-            projects (
-              id,
-              name,
-              slug,
-              status,
-              created_by
-            ),
-            task_assignees!inner (
-              profiles (
-                id,
-                first_name,
-                last_name,
-                email,
-                avatar_url
-              )
-            )
-          `)
-          .order(orderBy, { ascending: orderDirection === 'asc' })
-          .range(page * limit, (page + 1) * limit - 1);
-        
-        if (error) throw new Error(error.message);
-        setTasks(data as any[] || []);
-        setCount(data?.length || 0);
-        return;
-      }
-      
-      // Split project IDs into batches of 5 to avoid URL length issues
-      const batchSize = 5;
-      let allTasks: any[] = [];
-      
-      for (let i = 0; i < projectIds.length; i += batchSize) {
-        const batchIds = projectIds.slice(i, i + batchSize);
-        
-        const { data, error } = await supabase
-          .from('tasks')
-          .select(`
-            id,
-            title,
-            completed,
-            description,
-            due_date,
-            priority,
-            project_id,
-            projects (
-              id,
-              name,
-              slug,
-              status,
-              created_by
-            ),
-            task_assignees (
-              profiles (
-                id,
-                first_name,
-                last_name,
-                email,
-                avatar_url
-              )
-            )
-          `)
-          .in('project_id', batchIds)
-          .order(orderBy, { ascending: orderDirection === 'asc' });
-        
-        if (error) throw new Error(error.message);
-        
-        if (data && data.length > 0) {
-          allTasks = [...allTasks, ...data];
-        }
-      }
-      
-      // Manual pagination after fetching all results
-      const paginatedTasks = allTasks.slice(page * limit, (page + 1) * limit);
-      
-      setTasks(paginatedTasks);
-      setCount(paginatedTasks.length);
-      
-    } catch (err: any) {
-      console.error('Error fetching tasks:', err);
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [projectIds, completed, limit, page, orderBy, orderDirection]);
 
   useEffect(() => {
-    // Choose which method to use based on your needs
-    // Option 1: Database function (recommended)
     fetchTasksUsingFunction();
-    
-    // Option 2: Edge Function
-    // fetchTasksUsingEdgeFunction();
-    
-    // Option 3: Batched queries
-    // fetchTasksInBatches();
-    
-  }, [projectIds?.join(','), completed, limit, page, orderBy, orderDirection]);
+  }, [fetchTasksUsingFunction]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const tasksChannel = supabase
+      .channel('realtime-tasks-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        () => {
+          console.log('Tasks table change detected, refetching tasks.');
+          fetchTasksUsingFunction();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'task_assignees' },
+        () => {
+          console.log('Task assignees table change detected, refetching tasks.');
+          fetchTasksUsingFunction();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(tasksChannel);
+    };
+  }, [user, fetchTasksUsingFunction]);
 
   return { tasks, loading, error, count, refetch: fetchTasksUsingFunction };
 }

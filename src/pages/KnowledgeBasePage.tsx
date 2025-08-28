@@ -13,6 +13,7 @@ import FolderGridView from '@/components/kb/FolderGridView';
 import FolderListView from '@/components/kb/FolderListView';
 import PageGridView from '@/components/kb/PageGridView';
 import PageListView from '@/components/kb/PageListView';
+import { useAuth } from '@/contexts/AuthContext';
 
 type DialogState = 
   | { type: 'edit-folder', data: KbFolder }
@@ -27,6 +28,7 @@ const KnowledgeBasePage = () => {
   const [dialog, setDialog] = useState<DialogState>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [displayMode, setDisplayMode] = useState<'folders' | 'articles'>(() => {
     const saved = localStorage.getItem('kb_display_mode') as 'folders' | 'articles';
     return saved || 'folders';
@@ -71,6 +73,45 @@ const KnowledgeBasePage = () => {
         toast.error("Failed to load knowledge base articles.", { description: articlesError.message });
     }
   }, [foldersError, articlesError]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const kbChannel = supabase
+      .channel('realtime-kb-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'kb_folders' },
+        () => {
+          console.log('KB folders change detected, refetching.');
+          queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
+          queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'kb_articles' },
+        () => {
+          console.log('KB articles change detected, refetching.');
+          queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
+          queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'kb_folder_collaborators' },
+        () => {
+          console.log('KB collaborators change detected, refetching.');
+          queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
+          queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(kbChannel);
+    };
+  }, [user, queryClient]);
 
   const filteredFolders = useMemo(() => {
     return folders.filter(folder =>
