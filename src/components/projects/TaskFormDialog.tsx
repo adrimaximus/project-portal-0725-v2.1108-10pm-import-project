@@ -111,9 +111,10 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
       });
       setSelectedTags(task.tags || []);
     } else if (open && !task) {
+      const generalTasksProject = projects.find(p => p.slug === 'general-tasks');
       form.reset({
         title: '',
-        project_id: '',
+        project_id: generalTasksProject?.id || '',
         description: '',
         due_date: null,
         priority: 'Normal',
@@ -123,7 +124,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
       });
       setSelectedTags([]);
     }
-  }, [task, open, form]);
+  }, [task, open, form, projects]);
 
   const handleTagsChange = (newTags: Tag[]) => {
     setSelectedTags(newTags);
