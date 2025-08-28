@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { DateRange } from "react-day-picker";
-import PortalLayout from "@/components/PortalLayout";
 import DashboardStatsGrid from "@/components/dashboard/DashboardStatsGrid";
 import CollaboratorsList from "@/components/dashboard/CollaboratorsList";
 import { useProjects } from "@/hooks/useProjects";
@@ -35,54 +34,50 @@ const Index = () => {
 
   if (isLoading) {
     return (
-      <PortalLayout>
-        <div className="space-y-8">
-          <div className="text-left">
-            <Skeleton className="h-10 w-1/2" />
-            <Skeleton className="h-6 w-3/4 mt-2" />
-          </div>
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <Skeleton className="h-8 w-32" />
-              <Skeleton className="h-10 w-full md:w-auto lg:w-[300px]" />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Skeleton className="h-28" />
-              <Skeleton className="h-28" />
-              <Skeleton className="h-28" />
-              <Skeleton className="h-28" />
-            </div>
-            <Skeleton className="h-48 w-full" />
-          </div>
+      <div className="space-y-8">
+        <div className="text-left">
+          <Skeleton className="h-10 w-1/2" />
+          <Skeleton className="h-6 w-3/4 mt-2" />
         </div>
-      </PortalLayout>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-10 w-full md:w-auto lg:w-[300px]" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+          </div>
+          <Skeleton className="h-48 w-full" />
+        </div>
+      </div>
     );
   }
 
   return (
-    <PortalLayout>
-      <div className="space-y-8">
-        <div className="text-left">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user?.name || 'there'}, have a good day! 👋</h1>
-          <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
-        </div>
-
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-2xl font-bold">Insights</h2>
-                </div>
-                <DateRangePicker date={date} onDateChange={setDate} />
-            </div>
-            <div className="grid gap-6 md:grid-cols-2">
-              <MonthlyProgressChart projects={filteredProjects} />
-              <UnsplashImage />
-            </div>
-            <DashboardStatsGrid projects={filteredProjects} />
-            <CollaboratorsList projects={filteredProjects} />
-        </div>
+    <div className="space-y-8">
+      <div className="text-left">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Hey {user?.name || 'there'}, have a good day! 👋</h1>
+        <p className="text-lg sm:text-xl text-muted-foreground mt-2">Here's a quick overview of your projects.</p>
       </div>
-    </PortalLayout>
+
+      <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-bold">Insights</h2>
+              </div>
+              <DateRangePicker date={date} onDateChange={setDate} />
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <MonthlyProgressChart projects={filteredProjects} />
+            <UnsplashImage />
+          </div>
+          <DashboardStatsGrid projects={filteredProjects} />
+          <CollaboratorsList projects={filteredProjects} />
+      </div>
+    </div>
   );
 };
 
