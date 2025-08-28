@@ -67,7 +67,12 @@ const ProjectViewContainer = ({
         requestSort={requestTaskSort}
       />;
     case 'tasks-kanban':
-      return <TasksKanbanView tasks={tasks} onStatusChange={onTaskStatusChange} />;
+      return <TasksKanbanView 
+        tasks={tasks} 
+        onStatusChange={onTaskStatusChange} 
+        onEdit={onEditTask}
+        onDelete={onDeleteTask}
+      />;
     default:
       return null;
   }

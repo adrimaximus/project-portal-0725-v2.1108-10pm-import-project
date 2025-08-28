@@ -12,9 +12,11 @@ interface TasksKanbanColumnProps {
   tasks: Task[];
   isCollapsed: boolean;
   onToggleCollapse: (status: TaskStatus) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
 }
 
-const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse }: TasksKanbanColumnProps) => {
+const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdit, onDelete }: TasksKanbanColumnProps) => {
   const { setNodeRef } = useDroppable({ id: status });
 
   return (
@@ -51,7 +53,7 @@ const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse }: Tas
           <div className="flex-grow min-h-0 overflow-y-auto p-2 pt-0">
             <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
               {tasks.map(task => (
-                <TasksKanbanCard key={task.id} task={task} />
+                <TasksKanbanCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
               ))}
             </SortableContext>
             {tasks.length === 0 && (

@@ -6,11 +6,15 @@ import { generateVibrantGradient, getPriorityStyles, isOverdue, cn } from '@/lib
 import { Link } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CheckCircle, Ticket } from 'lucide-react';
+import { CheckCircle, Ticket, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { Button } from '../ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 interface TasksKanbanCardProps {
   task: Task;
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
 }
 
 const getInitials = (user: TaskAssignee) => {
@@ -22,7 +26,7 @@ const getInitials = (user: TaskAssignee) => {
     return (user.email?.[0] || 'U').toUpperCase();
 }
 
-const TasksKanbanCard = ({ task }: TasksKanbanCardProps) => {
+const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
   const style = {
@@ -32,6 +36,10 @@ const TasksKanbanCard = ({ task }: TasksKanbanCardProps) => {
   };
 
   const priorityStyle = getPriorityStyles(task.priority);
+
+  const handleDropdownClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
 
   return (
     <Card 
@@ -44,11 +52,33 @@ const TasksKanbanCard = ({ task }: TasksKanbanCardProps) => {
       style={{ ...style, borderLeftColor: priorityStyle.hex }}
     >
       <CardHeader className="p-3">
-        <CardTitle className="text-sm font-medium leading-snug flex items-center gap-1.5">
-          {task.status === 'Done' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
-          {task.originTicketId && <Ticket className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-          <span>{task.title}</span>
-        </CardTitle>
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-sm font-medium leading-snug flex items-center gap-1.5 pr-2">
+            {task.status === 'Done' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+            {task.originTicketId && <Ticket className={cn("h-4 w-4 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-red-500')} />}
+            <span>{task.title}</span>
+          </CardTitle>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={handleDropdownClick}>
+              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={handleDropdownClick}>
+              <DropdownMenuItem onClick={() => onEdit(task)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-red-500"
+                onClick={() => onDelete(task.id)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardHeader>
       <CardContent className="p-3 pt-0">
         {task.projects && (
@@ -83,7 +113,7 @@ const TasksKanbanCard = ({ task }: TasksKanbanCardProps) => {
           </div>
           {task.due_date && (
             <div className={cn("text-xs text-muted-foreground", isOverdue(task.due_date) && "text-red-600 font-bold")}>
-              {format(new Date(task.due_date), "MMM d")}
+              due {format(new Date(task.due_date), "MMM d")}
             </div>
           )}
         </div>

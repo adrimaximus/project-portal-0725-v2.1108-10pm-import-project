@@ -8,9 +8,11 @@ import TasksKanbanCard from './TasksKanbanCard';
 interface TasksKanbanViewProps {
   tasks: Task[];
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
 }
 
-const TasksKanbanView = ({ tasks, onStatusChange }: TasksKanbanViewProps) => {
+const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [internalTasks, setInternalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -153,11 +155,13 @@ const TasksKanbanView = ({ tasks, onStatusChange }: TasksKanbanViewProps) => {
             tasks={tasksByStatus[option.value] || []}
             isCollapsed={collapsedColumns.has(option.value)}
             onToggleCollapse={toggleColumnCollapse}
+            onEdit={onEdit}
+            onDelete={onDelete}
           />
         ))}
       </div>
       <DragOverlay>
-        {activeTask ? <TasksKanbanCard task={activeTask} /> : null}
+        {activeTask ? <TasksKanbanCard task={activeTask} onEdit={onEdit} onDelete={onDelete} /> : null}
       </DragOverlay>
     </DndContext>
   );
