@@ -78,6 +78,34 @@ export const getPaymentStatusStyles = (status: string) => {
   return paymentStatusConfig[status] || { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' };
 };
 
+export const getTaskStatusStyles = (status: string) => {
+  switch (status) {
+    case 'Done':
+      return { tw: 'bg-green-100 text-green-800 border-green-200', hex: '#16a34a' };
+    case 'In Progress':
+      return { tw: 'bg-blue-100 text-blue-800 border-blue-200', hex: '#2563eb' };
+    case 'Cancelled':
+      return { tw: 'bg-red-100 text-red-800 border-red-200', hex: '#dc2626' };
+    case 'To do':
+    default:
+      return { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' };
+  }
+};
+
+export const getPriorityStyles = (priority: string | null) => {
+  switch (priority) {
+    case 'Urgent':
+      return { tw: 'bg-red-100 text-red-800 border-red-200', hex: '#dc2626' };
+    case 'High':
+      return { tw: 'bg-orange-100 text-orange-800 border-orange-200', hex: '#f97316' };
+    case 'Normal':
+      return { tw: 'bg-blue-100 text-blue-800 border-blue-200', hex: '#2563eb' };
+    case 'Low':
+    default:
+      return { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' };
+  }
+};
+
 export const mapProfileToUser = (profile: any) => {
   if (!profile) return null;
   const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();

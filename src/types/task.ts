@@ -1,3 +1,5 @@
+import { Tag } from './goal';
+
 export interface TaskAssignee {
     id: string;
     first_name: string | null;
@@ -6,13 +8,32 @@ export interface TaskAssignee {
     avatar_url: string | null;
 }
 
+export type TaskStatus = 'To do' | 'In Progress' | 'Done' | 'Cancelled';
+
+export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: 'To do', label: 'To do' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'Done', label: 'Done' },
+  { value: 'Cancelled', label: 'Cancelled' },
+];
+
+export type TaskPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
+
+export const TASK_PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
+    { value: 'Low', label: 'Low' },
+    { value: 'Normal', label: 'Normal' },
+    { value: 'High', label: 'High' },
+    { value: 'Urgent', label: 'Urgent' },
+];
+
 export interface Task {
     id: string;
     title: string;
     description: string | null;
     completed: boolean;
+    status: TaskStatus;
     due_date: string | null;
-    priority: string | null;
+    priority: TaskPriority | null;
     project_id: string;
     projects: {
         id: string;
@@ -24,4 +45,5 @@ export interface Task {
     assignees: TaskAssignee[];
     created_by: TaskAssignee | null;
     created_at: string;
+    tags: Tag[];
 }

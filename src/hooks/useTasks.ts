@@ -61,7 +61,9 @@ export function useTasks(options: UseTasksOptions = {}) {
         },
         assignees: task.assignees,
         created_by: task.created_by,
-        created_at: task.created_at
+        created_at: task.created_at,
+        status: task.status,
+        tags: task.tags,
       }));
       
       setTasks(formattedTasks || []);

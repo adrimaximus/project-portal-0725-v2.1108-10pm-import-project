@@ -275,15 +275,6 @@ const ProjectsPage = () => {
     });
   };
 
-  const handleTaskStatusChange = (task: Task, completed: boolean) => {
-    upsertTask({
-      id: task.id,
-      project_id: task.project_id,
-      title: task.title,
-      completed,
-    });
-  };
-
   return (
     <PortalLayout>
       <div className="flex flex-col h-full">
@@ -366,7 +357,6 @@ const ProjectsPage = () => {
                 onImportEvent={handleImportEvent}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
-                onTaskStatusChange={handleTaskStatusChange}
                 taskSortConfig={taskSortConfig}
                 requestTaskSort={requestTaskSort}
               />

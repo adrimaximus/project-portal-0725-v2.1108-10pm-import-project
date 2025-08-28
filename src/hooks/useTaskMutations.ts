@@ -10,8 +10,9 @@ export type UpsertTaskPayload = {
   description?: string | null;
   due_date?: string | null;
   priority?: string | null;
-  completed?: boolean;
+  status?: string;
   assignee_ids?: string[];
+  tag_ids?: string[];
 };
 
 export const useTaskMutations = () => {
@@ -19,12 +20,12 @@ export const useTaskMutations = () => {
 
   const upsertTaskMutation = useMutation({
     mutationFn: async (taskData: UpsertTaskPayload) => {
-      const { assignee_ids, id, ...taskFields } = taskData;
+      const { assignee_ids, tag_ids, id, ...taskFields } = taskData;
       
       // 1. Upsert tugas itu sendiri
       const { data: taskResult, error: taskError } = await supabase
         .from('tasks')
-        .upsert({ id, ...taskFields })
+        .upsert({ id, ...taskFields, completed: taskFields.status === 'Done' })
         .select()
         .single();
 
@@ -52,6 +53,26 @@ export const useTaskMutations = () => {
             .from('task_assignees')
             .insert(newAssignees);
           if (insertError) throw insertError;
+        }
+      }
+
+      // 3. Handle tags if provided
+      if (tag_ids !== undefined) {
+        const { error: deleteTagsError } = await supabase
+          .from('task_tags')
+          .delete()
+          .eq('task_id', taskId);
+        if (deleteTagsError) throw deleteTagsError;
+
+        if (tag_ids.length > 0) {
+          const newTaskTags = tag_ids.map(tagId => ({
+            task_id: taskId,
+            tag_id: tagId,
+          }));
+          const { error: insertTagsError } = await supabase
+            .from('task_tags')
+            .insert(newTaskTags);
+          if (insertTagsError) throw insertTagsError;
         }
       }
       
