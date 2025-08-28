@@ -79,6 +79,8 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     onSubmit({
       ...values,
       id: task?.id,
+      title: values.title,
+      project_id: values.project_id,
       due_date: values.due_date ? values.due_date.toISOString() : null,
     });
   };
