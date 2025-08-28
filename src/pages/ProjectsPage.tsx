@@ -30,6 +30,8 @@ import TaskFormDialog from "@/components/projects/TaskFormDialog";
 import { Task, TaskStatus } from "@/types/task";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { Input } from "@/components/ui/input";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CalendarEvent {
     id: string;
@@ -60,6 +62,8 @@ const ProjectsPage = () => {
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
   const initialTableScrollDone = useRef(false);
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -74,10 +78,43 @@ const ProjectsPage = () => {
 
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
   const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ 
-    projectIds: (view === 'tasks' || view === 'tasks-kanban') ? undefined : [],
+    enabled: view === 'tasks' || view === 'tasks-kanban',
     orderBy: view === 'tasks-kanban' ? 'kanban_order' : taskSortConfig.key,
     orderDirection: view === 'tasks-kanban' ? 'asc' : taskSortConfig.direction,
   });
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('realtime-tasks-page-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'task_assignees' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'task_tags' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
