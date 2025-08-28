@@ -234,6 +234,16 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
                 </FormItem>
               )}
             />
+            {task?.created_at && (
+              <FormItem>
+                <FormLabel>Created Date</FormLabel>
+                <Input
+                  readOnly
+                  value={format(new Date(task.created_at), "PPP p")}
+                  className="border-dashed bg-muted"
+                />
+              </FormItem>
+            )}
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>

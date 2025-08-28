@@ -60,7 +60,8 @@ export function useTasks(options: UseTasksOptions = {}) {
           created_by: null // Note: This isn't returned by our function for security
         },
         assignees: task.assignees,
-        created_by: task.created_by
+        created_by: task.created_by,
+        created_at: task.created_at
       }));
       
       setTasks(formattedTasks || []);

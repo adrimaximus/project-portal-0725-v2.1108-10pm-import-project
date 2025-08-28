@@ -23,4 +23,5 @@ export interface Task {
     } | null;
     assignees: TaskAssignee[];
     created_by: TaskAssignee | null;
+    created_at: string;
 }
