@@ -47,17 +47,21 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
 
   const projectGroups = useMemo(() => {
     const groups: Record<string, Project[]> = {};
+    const orderKey = groupBy === 'status' ? 'kanban_order' : 'payment_kanban_order';
+    
     columns.forEach(opt => {
       groups[opt.value] = [];
     });
+    
     projects.forEach(project => {
       const key = project[groupBy];
       if (key && groups[key]) {
         groups[key].push(project);
       }
     });
+
     for (const groupKey in groups) {
-        groups[groupKey].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
+        groups[groupKey].sort((a, b) => (a[orderKey] || 0) - (b[orderKey] || 0));
     }
     return groups;
   }, [projects, columns, groupBy]);

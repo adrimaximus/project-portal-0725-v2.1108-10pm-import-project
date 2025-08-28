@@ -63,6 +63,7 @@ export interface Project {
   activities?: Activity[];
   venue?: string;
   kanban_order?: number;
+  payment_kanban_order?: number;
   tags: Tag[];
   origin_event_id?: string;
 }

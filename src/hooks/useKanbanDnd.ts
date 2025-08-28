@@ -101,13 +101,14 @@ export const useKanbanDnd = (
 
         const affectedGroups = new Set([activeContainer, overContainer]);
         const finalUpdates = [];
+        const orderKey = groupBy === 'status' ? 'kanban_order' : 'payment_kanban_order';
 
         for (const groupKey of affectedGroups) {
             const items = newProjectGroups[groupKey] || [];
             items.forEach((project: Project, index: number) => {
                 finalUpdates.push({
                     project_id: project.id,
-                    kanban_order: index,
+                    kanban_order: index, // This key is now generic for the RPC payload
                     [groupBy]: groupKey,
                 });
             });
