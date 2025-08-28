@@ -3,7 +3,7 @@ import { Project } from "@/types";
 import { useNavigate } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, RefreshCw, Sparkles, Loader2 } from "lucide-react";
+import { PlusCircle, RefreshCw, Sparkles, Loader2, Search } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -28,6 +28,8 @@ import { useTasks } from "@/hooks/useTasks";
 import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
 import TaskFormDialog from "@/components/projects/TaskFormDialog";
 import { Task, TaskStatus } from "@/types/task";
+import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
+import { Input } from "@/components/ui/input";
 
 interface CalendarEvent {
     id: string;
@@ -331,24 +333,45 @@ const ProjectsPage = () => {
         />
 
         <Card className="h-full flex flex-col">
-          <div className="sticky top-0 bg-background z-10 sm:relative">
-            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4 flex-shrink-0">
-              <CardTitle>All Projects</CardTitle>
-              <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto">
-                <Button onClick={() => navigate('/request')}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  New Project
+          <div className="sticky top-0 bg-background z-10 sm:relative border-b">
+            <CardHeader className="p-4 space-y-4">
+              {/* Row 1: Title and Desktop buttons */}
+              <div className="flex items-center justify-between">
+                <CardTitle>All Projects</CardTitle>
+                <div className="hidden sm:flex items-center gap-2">
+                  <Button onClick={() => navigate('/request')}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    New Project
+                  </Button>
+                  {(view === 'tasks' || view === 'tasks-kanban') && (
+                    <Button size="sm" onClick={handleCreateTask}>
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      New Task
+                    </Button>
+                  )}
+                  {view === 'calendar' && (
+                    <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
+                      {isAiImporting ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Sparkles className="h-4 w-4 sm:mr-2" />}
+                      <span className="hidden sm:inline">Ask AI to Import</span>
+                    </Button>
+                  )}
+                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
+                      <span className="sr-only">Refresh data</span>
+                      <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Mobile: Row 2 - Buttons */}
+              <div className="sm:hidden flex items-center gap-2">
+                <Button onClick={() => navigate('/request')} size="sm" className="flex-1">
+                  <PlusCircle className="mr-1 h-4 w-4" />
+                  + Project
                 </Button>
                 {(view === 'tasks' || view === 'tasks-kanban') && (
-                  <Button size="sm" onClick={handleCreateTask}>
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    New Task
-                  </Button>
-                )}
-                {view === 'calendar' && (
-                  <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
-                    {isAiImporting ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Sparkles className="h-4 w-4 sm:mr-2" />}
-                    <span className="hidden sm:inline">Ask AI to Import</span>
+                  <Button size="sm" onClick={handleCreateTask} className="flex-1">
+                    <PlusCircle className="mr-1 h-4 w-4" />
+                    + Task
                   </Button>
                 )}
                 <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
@@ -356,11 +379,25 @@ const ProjectsPage = () => {
                     <RefreshCw className="h-4 w-4" />
                 </Button>
               </div>
+
+              {/* All screens: Row 3 (mobile) / Row 2 (desktop) - Filters */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+                </div>
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search projects..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 w-full"
+                  />
+                </div>
+              </div>
             </CardHeader>
             <ProjectsToolbar
               view={view} onViewChange={handleViewChange}
-              searchTerm={searchTerm} onSearchTermChange={setSearchTerm}
-              dateRange={dateRange} onDateRangeChange={setDateRange}
               kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
             />
           </div>
