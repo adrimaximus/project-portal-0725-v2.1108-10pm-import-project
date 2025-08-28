@@ -81,14 +81,14 @@ export const getPaymentStatusStyles = (status: string) => {
 export const getTaskStatusStyles = (status: string) => {
   switch (status) {
     case 'Done':
-      return { tw: 'bg-green-500 text-white border-transparent', hex: '#16a34a' };
+      return { tw: 'text-green-600 font-medium', hex: '#16a34a' };
     case 'In Progress':
-      return { tw: 'bg-blue-500 text-white border-transparent', hex: '#2563eb' };
+      return { tw: 'text-blue-600 font-medium', hex: '#2563eb' };
     case 'Cancelled':
-      return { tw: 'bg-red-500 text-white border-transparent', hex: '#dc2626' };
+      return { tw: 'text-red-600 font-medium', hex: '#dc2626' };
     case 'To do':
     default:
-      return { tw: 'bg-gray-500 text-white border-transparent', hex: '#6b7280' };
+      return { tw: 'text-gray-600 font-medium', hex: '#6b7280' };
   }
 };
 

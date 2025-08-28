@@ -261,8 +261,12 @@ const ProjectsPage = () => {
 
   const confirmDeleteTask = () => {
     if (taskToDelete) {
-      deleteTask(taskToDelete);
-      setTaskToDelete(null);
+      deleteTask(taskToDelete, {
+        onSuccess: () => {
+          refetchTasks();
+          setTaskToDelete(null);
+        }
+      });
     }
   };
 
@@ -271,6 +275,7 @@ const ProjectsPage = () => {
       onSuccess: () => {
         setIsTaskFormOpen(false);
         setEditingTask(null);
+        refetchTasks();
       },
     });
   };

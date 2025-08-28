@@ -99,7 +99,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, sortConfig, requestSort
                   ) : 'N/A'}
                 </TableCell>
                 <TableCell>
-                  <Badge className={statusStyle.tw}>{task.status}</Badge>
+                  <span className={statusStyle.tw}>{task.status}</span>
                 </TableCell>
                 <TableCell>
                   <Badge className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
