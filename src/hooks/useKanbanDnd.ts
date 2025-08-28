@@ -48,10 +48,11 @@ export const useKanbanDnd = (
         const activeId = String(active.id);
         const overId = String(over.id);
 
-        if (activeId === overId) return;
-
         const activeContainer = active.data.current?.sortable.containerId as string;
-        const overContainer = over.data.current?.sortable.containerId as string || overId;
+        let overContainer = over.data.current?.sortable.containerId as string;
+        if (!overContainer) {
+            overContainer = overId;
+        }
         
         const activeProjectInstance = projects.find(p => p.id === activeId);
         if (!activeProjectInstance || !activeContainer || !overContainer) return;
@@ -59,34 +60,39 @@ export const useKanbanDnd = (
         const originalProjects = [...projects];
         const newProjectGroups = JSON.parse(JSON.stringify(projectGroups));
 
-        const sourceItems = newProjectGroups[activeContainer];
-        const destinationItems = newProjectGroups[overContainer];
-
-        const activeIndex = sourceItems.findIndex(p => p.id === activeId);
-        if (activeIndex === -1) return;
-
-        const [movedItem] = sourceItems.splice(activeIndex, 1);
-
         if (activeContainer === overContainer) {
-            const newIndex = destinationItems.findIndex(p => p.id === overId);
-            if (newIndex !== -1) {
-                destinationItems.splice(newIndex, 0, movedItem);
+            if (activeId === overId) return;
+
+            const items = newProjectGroups[activeContainer];
+            const oldIndex = items.findIndex((p: Project) => p.id === activeId);
+            const newIndex = items.findIndex((p: Project) => p.id === overId);
+
+            if (oldIndex !== -1 && newIndex !== -1) {
+                newProjectGroups[activeContainer] = arrayMove(items, oldIndex, newIndex);
             }
         } else {
-            movedItem[groupBy] = overContainer;
+            const sourceItems = newProjectGroups[activeContainer];
+            const destinationItems = newProjectGroups[overContainer];
+            
+            const activeIndex = sourceItems.findIndex((p: Project) => p.id === activeId);
+            if (activeIndex === -1) return;
+
+            const [movedItem] = sourceItems.splice(activeIndex, 1);
+            movedItem[groupBy] = overContainer as ProjectStatus | PaymentStatus;
+
             const overIsItem = !!over.data.current?.sortable;
             let newIndex;
 
             if (overIsItem) {
-                newIndex = destinationItems.findIndex(p => p.id === overId);
+                newIndex = destinationItems.findIndex((p: Project) => p.id === overId);
             } else {
                 newIndex = destinationItems.length;
             }
-            
+
             if (newIndex === -1) {
                 newIndex = destinationItems.length;
             }
-
+            
             destinationItems.splice(newIndex, 0, movedItem);
         }
 
@@ -94,15 +100,18 @@ export const useKanbanDnd = (
         queryClient.setQueryData(['projects'], optimisticallyUpdatedProjects);
 
         const affectedGroups = new Set([activeContainer, overContainer]);
-        const finalUpdates = Object.entries(newProjectGroups)
-            .filter(([group]) => affectedGroups.has(group))
-            .flatMap(([group, items]) => 
-                (items as Project[]).map((project, index) => ({
+        const finalUpdates = [];
+
+        for (const groupKey of affectedGroups) {
+            const items = newProjectGroups[groupKey] || [];
+            items.forEach((project: Project, index: number) => {
+                finalUpdates.push({
                     project_id: project.id,
                     kanban_order: index,
-                    [groupBy]: group,
-                }))
-            );
+                    [groupBy]: groupKey,
+                });
+            });
+        }
 
         if (finalUpdates.length === 0) return;
 
@@ -118,7 +127,6 @@ export const useKanbanDnd = (
             } else {
                 toast.success(`Project "${activeProjectInstance.name}" moved to ${newStatusLabel}.`);
             }
-            // Invalidate queries to refetch from server and confirm the change
             await queryClient.invalidateQueries({ queryKey: ['projects'] });
         }
     };
