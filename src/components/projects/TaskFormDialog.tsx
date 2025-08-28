@@ -15,15 +15,14 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useProjects } from '@/hooks/useProjects';
 import { MultiSelect } from '@/components/ui/multi-select';
-import { Task, TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from '@/types/task';
+import { Task, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from '@/types/task';
 import { UpsertTaskPayload } from '@/hooks/useTaskMutations';
 import { useTags } from '@/hooks/useTags';
 import { TagInput } from '../goals/TagInput';
 import { Tag } from '@/types/goal';
-import { useTagMutations } from '@/hooks/useTagMutations';
-import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useProfiles } from '@/hooks/useProfiles';
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -49,19 +48,18 @@ type TaskFormValues = z.infer<typeof taskFormSchema>;
 const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: TaskFormDialogProps) => {
   const { data: projects = [], isLoading: isLoadingProjects } = useProjects();
   const { data: allTags = [], refetch: refetchTags } = useTags();
+  const { data: allProfiles = [], isLoading: isLoadingProfiles } = useProfiles();
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user!.id).single();
       setCurrentUser(profile);
     }
     getUser();
   }, []);
-
-  const queryClient = useQueryClient();
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
@@ -77,14 +75,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     },
   });
 
-  const selectedProjectId = form.watch('project_id');
-
-  const projectMembers = useMemo(() => {
-    if (!selectedProjectId || projects.length === 0) return [];
-    const project = projects.find(p => p.id === selectedProjectId);
-    return project?.assignedTo || [];
-  }, [selectedProjectId, projects]);
-
   useEffect(() => {
     if (open && task) {
       form.reset({
@@ -92,7 +82,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
         project_id: task.project_id,
         description: task.description,
         due_date: task.due_date ? new Date(task.due_date) : null,
-        priority: task.priority,
+        priority: task.priority || 'Normal',
         status: task.status,
         assignee_ids: task.assignees?.map(a => a.id) || [],
         tag_ids: task.tags?.map(t => t.id) || [],
@@ -113,17 +103,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     }
   }, [task, open, form]);
 
-  useEffect(() => {
-    if (selectedProjectId) {
-      const currentAssignees = form.getValues('assignee_ids') || [];
-      const memberIds = new Set(projectMembers.map(m => m.id));
-      const validAssignees = currentAssignees.filter(id => memberIds.has(id));
-      if (validAssignees.length !== currentAssignees.length) {
-        form.setValue('assignee_ids', validAssignees, { shouldValidate: true });
-      }
-    }
-  }, [selectedProjectId, projectMembers, form]);
-
   const handleTagsChange = (newTags: Tag[]) => {
     setSelectedTags(newTags);
     form.setValue('tag_ids', newTags.map(t => t.id));
@@ -133,7 +112,9 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     const newTag = {
       id: `new-${tagName}-${Date.now()}`,
       name: tagName,
-      color: '#808080'
+      color: '#808080',
+      isNew: true,
+      user_id: currentUser?.id,
     };
     toast.info(`New tag "${tagName}" will be created upon saving.`);
     return newTag;
@@ -141,14 +122,14 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
 
   const handleSubmit = async (values: TaskFormValues) => {
     const finalTagIds: string[] = [];
-    const newTagsToCreate = selectedTags.filter(t => t.id.startsWith('new-'));
+    const newTagsToCreate = selectedTags.filter(t => t.isNew);
 
     if (newTagsToCreate.length > 0) {
         const createTagPromises = newTagsToCreate.map(tag => 
             supabase.from('tags').insert({ name: tag.name, color: tag.color, user_id: currentUser?.id }).select().single()
         );
         const results = await Promise.all(createTagPromises);
-        results.forEach(res => {
+        for (const res of results) {
             if (res.error) {
                 toast.error(`Failed to create tag: ${res.error.message}`);
                 throw new Error(res.error.message);
@@ -156,34 +137,34 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
             if (res.data) {
                 finalTagIds.push(res.data.id);
             }
-        });
+        }
     }
 
-    const existingTagIds = selectedTags.filter(t => !t.id.startsWith('new-')).map(t => t.id);
+    const existingTagIds = selectedTags.filter(t => !t.isNew).map(t => t.id);
     finalTagIds.push(...existingTagIds);
 
     const payload: UpsertTaskPayload = {
       id: task?.id,
-      title: values.title,
       project_id: values.project_id,
+      title: values.title,
       description: values.description,
-      due_date: values.due_date ? values.due_date.toISOString() : null,
       priority: values.priority,
       status: values.status,
       assignee_ids: values.assignee_ids,
+      due_date: values.due_date ? values.due_date.toISOString() : null,
       tag_ids: finalTagIds,
     };
 
     onSubmit(payload);
   };
 
-  const userOptions = projectMembers.map(member => {
+  const userOptions = useMemo(() => allProfiles.map(member => {
     const fullName = [member.first_name, member.last_name].filter(Boolean).join(' ').trim();
     return {
       value: member.id,
       label: fullName || (member.email ? member.email.split('@')[0] : 'Unknown User'),
     };
-  });
+  }), [allProfiles]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -202,7 +183,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Project</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!!task || isLoadingProjects}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingProjects}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a project" />
@@ -301,7 +282,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
                       value={field.value || []}
                       onChange={field.onChange}
                       placeholder="Select team members..."
-                      disabled={!selectedProjectId || isLoadingProjects}
+                      disabled={isLoadingProfiles}
                     />
                   </FormControl>
                   <FormMessage />

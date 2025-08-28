@@ -1,3 +1,14 @@
+export interface Profile {
+  id: string;
+  email?: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  avatar_url?: string | null;
+  role?: string;
+  status?: string;
+  updated_at?: string;
+}
+
 export interface User {
   id: string;
   email?: string;
