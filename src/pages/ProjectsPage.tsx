@@ -77,8 +77,14 @@ const ProjectsPage = () => {
     sortConfig, requestSort, sortedProjects
   } = useProjectFilters(projects);
 
+  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'due_date', direction: 'asc' });
+
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
-  const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ projectIds: view === 'tasks' ? undefined : [] });
+  const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ 
+    projectIds: view === 'tasks' ? undefined : [],
+    orderBy: taskSortConfig.key,
+    orderDirection: taskSortConfig.direction,
+  });
 
   useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
@@ -230,6 +236,14 @@ const ProjectsPage = () => {
     toast.success("Data diperbarui.");
   };
 
+  const requestTaskSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (taskSortConfig.key === key && taskSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setTaskSortConfig({ key, direction });
+  };
+
   // Task handlers
   const handleCreateTask = () => {
     setEditingTask(null);
@@ -353,6 +367,8 @@ const ProjectsPage = () => {
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
                 onTaskStatusChange={handleTaskStatusChange}
+                taskSortConfig={taskSortConfig}
+                requestTaskSort={requestTaskSort}
               />
             </CardContent>
           </Card>

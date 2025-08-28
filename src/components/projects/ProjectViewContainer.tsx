@@ -36,11 +36,14 @@ interface ProjectViewContainerProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   onTaskStatusChange: (task: Task, completed: boolean) => void;
+  taskSortConfig: { key: string; direction: 'asc' | 'desc' };
+  requestTaskSort: (key: string) => void;
 }
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
-  kanbanGroupBy, importableEvents, onImportEvent, onEditTask, onDeleteTask, onTaskStatusChange
+  kanbanGroupBy, importableEvents, onImportEvent, onEditTask, onDeleteTask, onTaskStatusChange,
+  taskSortConfig, requestTaskSort
 }: ProjectViewContainerProps) => {
   switch (view) {
     case 'table':
@@ -58,6 +61,8 @@ const ProjectViewContainer = ({
         onEdit={onEditTask}
         onDelete={onDeleteTask}
         onStatusChange={onTaskStatusChange}
+        sortConfig={taskSortConfig}
+        requestSort={requestTaskSort}
       />;
     default:
       return null;

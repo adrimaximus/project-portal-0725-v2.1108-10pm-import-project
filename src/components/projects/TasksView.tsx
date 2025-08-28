@@ -8,7 +8,7 @@ import { generateVibrantGradient } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, ArrowUpDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "../ui/checkbox";
 
@@ -18,6 +18,8 @@ interface TasksViewProps {
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   onStatusChange: (task: Task, completed: boolean) => void;
+  sortConfig: { key: string; direction: 'asc' | 'desc' };
+  requestSort: (key: string) => void;
 }
 
 const getInitials = (user: TaskAssignee) => {
@@ -29,7 +31,7 @@ const getInitials = (user: TaskAssignee) => {
     return (user.email?.[0] || 'U').toUpperCase();
 }
 
-const TasksView = ({ tasks, isLoading, onEdit, onDelete, onStatusChange }: TasksViewProps) => {
+const TasksView = ({ tasks, isLoading, onEdit, onDelete, onStatusChange, sortConfig, requestSort }: TasksViewProps) => {
   if (isLoading) {
     return (
       <div className="p-4 md:p-6">
@@ -46,15 +48,40 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onStatusChange }: Tasks
     return <div className="text-center text-muted-foreground p-8">No tasks found.</div>;
   }
 
+  const renderSortIcon = (columnKey: string) => {
+    if (sortConfig.key !== columnKey) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
+    }
+    if (sortConfig.direction === 'asc') {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />; // Icon indicates it's active
+    }
+    return <ArrowUpDown className="ml-2 h-4 w-4" />;
+  };
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead className="w-12"></TableHead>
-          <TableHead className="w-[30%]">Task</TableHead>
+          <TableHead className="w-[30%] cursor-pointer hover:bg-muted/50" onClick={() => requestSort('title')}>
+            <div className="flex items-center">
+              Task
+              {renderSortIcon('title')}
+            </div>
+          </TableHead>
           <TableHead>Project</TableHead>
-          <TableHead>Due Date</TableHead>
-          <TableHead>Created Date</TableHead>
+          <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('due_date')}>
+            <div className="flex items-center">
+              Due Date
+              {renderSortIcon('due_date')}
+            </div>
+          </TableHead>
+          <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('created_at')}>
+            <div className="flex items-center">
+              Created Date
+              {renderSortIcon('created_at')}
+            </div>
+          </TableHead>
           <TableHead>Assignees</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
