@@ -17,7 +17,7 @@ export function useTasks(options: UseTasksOptions = {}) {
     completed,
     limit = 100,
     page = 0,
-    orderBy = 'due_date',
+    orderBy = 'kanban_order',
     orderDirection = 'asc',
   } = options;
   

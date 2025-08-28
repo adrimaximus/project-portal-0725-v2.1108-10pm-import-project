@@ -103,10 +103,26 @@ export const useTaskMutations = () => {
     },
   });
 
+  const updateTaskOrderMutation = useMutation({
+    mutationFn: async (taskIds: string[]) => {
+      const { error } = await supabase.rpc('update_task_kanban_order', { p_task_ids: taskIds });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (error) => {
+      toast.error('Gagal memperbarui urutan tugas', { description: error.message });
+    },
+  });
+
   return {
     upsertTask: upsertTaskMutation.mutate,
     isUpserting: upsertTaskMutation.isPending,
     deleteTask: deleteTaskMutation.mutate,
     isDeleting: deleteTaskMutation.isPending,
+    updateTaskOrder: updateTaskOrderMutation.mutate,
+    isUpdatingOrder: updateTaskOrderMutation.isPending,
   };
 };
