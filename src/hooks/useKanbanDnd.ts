@@ -40,105 +40,86 @@ export const useKanbanDnd = (
     };
 
     const handleDragEnd = async (event: DragEndEvent) => {
-        resetDragState();
         const { active, over } = event;
+        resetDragState();
 
         if (!over) return;
 
         const activeId = String(active.id);
         const overId = String(over.id);
-        
-        const activeContainer = active.data.current?.sortable.containerId as string;
-        const overContainer = over.data.current?.sortable.containerId as string || over.id as string;
 
+        if (activeId === overId) return;
+
+        const activeContainer = active.data.current?.sortable.containerId as string;
+        const overContainer = over.data.current?.sortable.containerId as string || overId;
+        
         const activeProjectInstance = projects.find(p => p.id === activeId);
-        if (!activeProjectInstance) return;
+        if (!activeProjectInstance || !activeContainer || !overContainer) return;
 
         const originalProjects = [...projects];
+        const newProjectGroups = JSON.parse(JSON.stringify(projectGroups));
+
+        const sourceItems = newProjectGroups[activeContainer];
+        const destinationItems = newProjectGroups[overContainer];
+
+        const activeIndex = sourceItems.findIndex(p => p.id === activeId);
+        if (activeIndex === -1) return;
+
+        const [movedItem] = sourceItems.splice(activeIndex, 1);
 
         if (activeContainer === overContainer) {
-            if (activeId === overId) return;
-            
-            const items = projectGroups[activeContainer];
-            const oldIndex = items.findIndex(p => p.id === activeId);
-            const newIndex = items.findIndex(p => p.id === overId);
-
-            if (oldIndex !== newIndex && oldIndex !== -1 && newIndex !== -1) {
-                const reorderedItems = arrayMove(items, oldIndex, newIndex);
-                
-                const newProjects = [...originalProjects];
-                reorderedItems.forEach((p, index) => {
-                    const projectInNew = newProjects.find(proj => proj.id === p.id);
-                    if (projectInNew) {
-                        projectInNew.kanban_order = index;
-                    }
-                });
-
-                queryClient.setQueryData(['projects'], newProjects);
-
-                const updates = reorderedItems.map((project, index) => ({
-                    project_id: project.id,
-                    kanban_order: index,
-                    [groupBy]: activeContainer,
-                }));
-
-                const { error } = await supabase.rpc('update_project_kanban_order', { updates });
-
-                if (error) {
-                    toast.error(`Failed to reorder projects: ${error.message}`);
-                    queryClient.setQueryData(['projects'], originalProjects);
-                } else {
-                    toast.success(`Project order updated.`);
-                    queryClient.invalidateQueries({ queryKey: ['projects'] });
-                }
+            const newIndex = destinationItems.findIndex(p => p.id === overId);
+            if (newIndex !== -1) {
+                destinationItems.splice(newIndex, 0, movedItem);
             }
         } else {
-            const newGroupValue = overContainer;
-            
-            const sourceItems = [...projectGroups[activeContainer]];
-            const destinationItems = [...projectGroups[overContainer]];
-            
-            const activeItemIndex = sourceItems.findIndex(p => p.id === activeId);
-            if (activeItemIndex === -1) return;
-            const [movedItem] = sourceItems.splice(activeItemIndex, 1);
-            
-            const overIndex = destinationItems.findIndex(p => p.id === overId);
-            const newIndex = overIndex >= 0 ? overIndex : destinationItems.length;
-            
-            destinationItems.splice(newIndex, 0, { ...movedItem, [groupBy]: newGroupValue as ProjectStatus | PaymentStatus });
+            movedItem[groupBy] = overContainer;
+            const overIsItem = !!over.data.current?.sortable;
+            let newIndex;
 
-            const updatedProjectGroups = {
-                ...projectGroups,
-                [activeContainer]: sourceItems,
-                [overContainer]: destinationItems,
-            };
-
-            const optimisticallyUpdatedProjects = Object.values(updatedProjectGroups).flat();
-            queryClient.setQueryData(['projects'], optimisticallyUpdatedProjects);
-
-            const sourceUpdates = sourceItems.map((project, index) => ({
-                project_id: project.id,
-                kanban_order: index,
-                [groupBy]: project[groupBy],
-            }));
-            const destinationUpdates = destinationItems.map((project, index) => ({
-                project_id: project.id,
-                kanban_order: index,
-                [groupBy]: project[groupBy],
-            }));
-
-            const allUpdates = [...sourceUpdates, ...destinationUpdates];
-
-            const { error } = await supabase.rpc('update_project_kanban_order', { updates: allUpdates });
-
-            if (error) {
-                toast.error(`Failed to move project: ${error.message}`);
-                queryClient.setQueryData(['projects'], originalProjects);
+            if (overIsItem) {
+                newIndex = destinationItems.findIndex(p => p.id === overId);
             } else {
-                const newStatusLabel = columns.find(opt => opt.value === newGroupValue)?.label || newGroupValue;
-                toast.success(`Project "${activeProjectInstance.name}" moved to ${newStatusLabel}.`);
-                queryClient.invalidateQueries({ queryKey: ['projects'] });
+                newIndex = destinationItems.length;
             }
+            
+            if (newIndex === -1) {
+                newIndex = destinationItems.length;
+            }
+
+            destinationItems.splice(newIndex, 0, movedItem);
+        }
+
+        const optimisticallyUpdatedProjects = Object.values(newProjectGroups).flat();
+        queryClient.setQueryData(['projects'], optimisticallyUpdatedProjects);
+
+        const affectedGroups = new Set([activeContainer, overContainer]);
+        const finalUpdates = Object.entries(newProjectGroups)
+            .filter(([group]) => affectedGroups.has(group))
+            .flatMap(([group, items]) => 
+                (items as Project[]).map((project, index) => ({
+                    project_id: project.id,
+                    kanban_order: index,
+                    [groupBy]: group,
+                }))
+            );
+
+        if (finalUpdates.length === 0) return;
+
+        const { error } = await supabase.rpc('update_project_kanban_order', { updates: finalUpdates });
+
+        if (error) {
+            toast.error(`Failed to move project: ${error.message}`);
+            queryClient.setQueryData(['projects'], originalProjects);
+        } else {
+            const newStatusLabel = columns.find(opt => opt.value === overContainer)?.label || overContainer;
+            if (activeContainer === overContainer) {
+                toast.success(`Project order updated in ${newStatusLabel}.`);
+            } else {
+                toast.success(`Project "${activeProjectInstance.name}" moved to ${newStatusLabel}.`);
+            }
+            // Invalidate queries to refetch from server and confirm the change
+            await queryClient.invalidateQueries({ queryKey: ['projects'] });
         }
     };
 
