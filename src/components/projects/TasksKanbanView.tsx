@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types/task';
 import TasksKanbanColumn from './TasksKanbanColumn';
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext } from '@dnd-kit/sortable';
+import { DndContext, DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 
 interface TasksKanbanViewProps {
   tasks: Task[];
@@ -11,6 +10,11 @@ interface TasksKanbanViewProps {
 
 const TasksKanbanView = ({ tasks, onStatusChange }: TasksKanbanViewProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
+  const [internalTasks, setInternalTasks] = useState<Task[]>(tasks);
+
+  useEffect(() => {
+    setInternalTasks(tasks);
+  }, [tasks]);
 
   const toggleColumnCollapse = (status: TaskStatus) => {
     setCollapsedColumns(prev => {
@@ -29,7 +33,7 @@ const TasksKanbanView = ({ tasks, onStatusChange }: TasksKanbanViewProps) => {
     TASK_STATUS_OPTIONS.forEach(opt => {
       grouped[opt.value] = [];
     });
-    tasks.forEach(task => {
+    internalTasks.forEach(task => {
       if (grouped[task.status]) {
         grouped[task.status]!.push(task);
       } else {
@@ -38,12 +42,18 @@ const TasksKanbanView = ({ tasks, onStatusChange }: TasksKanbanViewProps) => {
       }
     });
     return grouped as { [key in TaskStatus]: Task[] };
-  }, [tasks]);
+  }, [internalTasks]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
@@ -51,36 +61,52 @@ const TasksKanbanView = ({ tasks, onStatusChange }: TasksKanbanViewProps) => {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (over && active.id !== over.id) {
-      const overIsColumn = TASK_STATUS_OPTIONS.some(opt => opt.value === over.id);
-      
-      if (overIsColumn) {
-        const taskId = active.id as string;
-        const newStatus = over.id as TaskStatus;
-        const oldStatus = Object.keys(tasksByStatus).find(status => tasksByStatus[status as TaskStatus].some(t => t.id === taskId)) as TaskStatus;
+    if (!over) return;
 
-        if (oldStatus && newStatus && oldStatus !== newStatus) {
-          onStatusChange(taskId, newStatus);
+    const activeId = active.id.toString();
+    const overId = over.id.toString();
+
+    if (activeId === overId) return;
+
+    const activeTask = internalTasks.find(t => t.id === activeId);
+    if (!activeTask) return;
+
+    const oldStatus = activeTask.status;
+    let newStatus: TaskStatus | undefined;
+
+    const overIsColumn = TASK_STATUS_OPTIONS.some(opt => opt.value === overId);
+    if (overIsColumn) {
+        newStatus = overId as TaskStatus;
+    } else {
+        const overTask = internalTasks.find(t => t.id === overId);
+        if (overTask) {
+            newStatus = overTask.status;
         }
-      }
+    }
+
+    if (newStatus && newStatus !== oldStatus) {
+        setInternalTasks(currentTasks => 
+            currentTasks.map(t => 
+                t.id === activeId ? { ...t, status: newStatus! } : t
+            )
+        );
+        onStatusChange(activeId, newStatus);
     }
   };
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <SortableContext items={tasks.map(t => t.id)}>
-        <div className="flex gap-4 overflow-x-auto p-4 h-full">
-          {TASK_STATUS_OPTIONS.map(option => (
-            <TasksKanbanColumn
-              key={option.value}
-              status={option.value}
-              tasks={tasksByStatus[option.value] || []}
-              isCollapsed={collapsedColumns.has(option.value)}
-              onToggleCollapse={toggleColumnCollapse}
-            />
-          ))}
-        </div>
-      </SortableContext>
+      <div className="flex gap-4 overflow-x-auto p-4 h-full">
+        {TASK_STATUS_OPTIONS.map(option => (
+          <TasksKanbanColumn
+            key={option.value}
+            status={option.value}
+            tasks={tasksByStatus[option.value] || []}
+            isCollapsed={collapsedColumns.has(option.value)}
+            onToggleCollapse={toggleColumnCollapse}
+          />
+        ))}
+      </div>
     </DndContext>
   );
 };
