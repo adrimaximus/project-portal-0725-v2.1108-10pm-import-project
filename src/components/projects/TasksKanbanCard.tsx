@@ -7,7 +7,7 @@ import { generateVibrantGradient, getPriorityStyles } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Ticket } from 'lucide-react';
+import { Ticket } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface TasksKanbanCardProps {
@@ -38,15 +38,13 @@ const TasksKanbanCard = ({ task }: TasksKanbanCardProps) => {
       ref={setNodeRef} 
       style={style} 
       {...attributes} 
-      className="mb-4 touch-none bg-card border-l-4"
+      {...listeners}
+      className="mb-4 touch-none bg-card border-l-4 cursor-grab active:cursor-grabbing"
       // @ts-ignore
       style={{ ...style, borderLeftColor: priorityStyle.color }}
     >
-      <CardHeader className="p-3 flex flex-row items-start justify-between">
-        <CardTitle className="text-sm font-medium leading-snug pr-2">{task.title}</CardTitle>
-        <div {...listeners} className="cursor-grab p-1 flex-shrink-0">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-        </div>
+      <CardHeader className="p-3">
+        <CardTitle className="text-sm font-medium leading-snug">{task.title}</CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-0">
         <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
