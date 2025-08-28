@@ -11,12 +11,7 @@ const LandingPage = () => {
 
   useEffect(() => {
     if (!loading && session) {
-      const lastVisitedPage = localStorage.getItem('lastVisitedPage');
-      if (lastVisitedPage && lastVisitedPage !== '/') {
-        navigate(lastVisitedPage, { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      navigate('/dashboard', { replace: true });
     }
   }, [session, loading, navigate]);
 
