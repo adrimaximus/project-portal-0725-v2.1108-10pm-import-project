@@ -8,7 +8,7 @@ import { generateVibrantGradient, getPriorityStyles, getTaskStatusStyles } from 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Ticket } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface TasksViewProps {
@@ -82,7 +82,10 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, sortConfig, requestSort
               <TableRow key={task.id}>
                 <TableCell className="font-medium sticky left-0 bg-background z-10">
                   <div className="flex flex-col">
-                    <span className="font-semibold">{task.title}</span>
+                    <div className="flex items-center gap-2">
+                      {task.originTicketId && <Ticket className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                      <span className="font-semibold">{task.title}</span>
+                    </div>
                     {task.description && <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>}
                     <div className="flex gap-1 flex-wrap mt-2">
                       {task.tags?.map(tag => (

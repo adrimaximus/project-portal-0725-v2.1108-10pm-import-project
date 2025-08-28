@@ -64,6 +64,7 @@ export function useTasks(options: UseTasksOptions = {}) {
         created_at: task.created_at,
         status: task.status,
         tags: task.tags,
+        originTicketId: task.origin_ticket_id,
       }));
       
       setTasks(formattedTasks || []);

@@ -46,4 +46,5 @@ export interface Task {
     created_by: TaskAssignee | null;
     created_at: string;
     tags: Tag[];
+    originTicketId?: string;
 }
