@@ -47,7 +47,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
       style={style} 
       {...attributes} 
       {...listeners}
-      className="mb-4 touch-none bg-card border-l-4 cursor-grab active:cursor-grabbing"
+      className="mb-4 bg-card border-l-4 cursor-grab active:cursor-grabbing"
       // @ts-ignore
       style={{ ...style, borderLeftColor: priorityStyle.hex }}
     >
