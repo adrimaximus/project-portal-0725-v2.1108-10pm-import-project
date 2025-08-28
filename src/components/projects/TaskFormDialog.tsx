@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -23,6 +23,8 @@ import { Tag } from '@/types/goal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useProfiles } from '@/hooks/useProfiles';
+import { Profile } from '@/types/user';
+import { Project } from '@/types/project';
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -51,15 +53,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
   const { data: allProfiles = [], isLoading: isLoadingProfiles } = useProfiles();
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user!.id).single();
-      setCurrentUser(profile);
-    }
-    getUser();
-  }, []);
+  const [assignableUsers, setAssignableUsers] = useState<Profile[]>([]);
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
@@ -74,6 +68,34 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
       tag_ids: [],
     },
   });
+
+  const selectedProjectId = useWatch({ control: form.control, name: 'project_id' });
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user!.id).single();
+      setCurrentUser(profile);
+    }
+    getUser();
+  }, []);
+
+  useEffect(() => {
+    if (selectedProjectId && projects.length > 0 && allProfiles.length > 0) {
+      const selectedProject = projects.find((p: Project) => p.id === selectedProjectId);
+      if (selectedProject) {
+        if (selectedProject.slug === 'general-tasks') {
+          setAssignableUsers(allProfiles);
+        } else {
+          const memberIds = selectedProject.assignedTo?.map(m => m.id) || [];
+          const projectMembers = allProfiles.filter(p => memberIds.includes(p.id));
+          setAssignableUsers(projectMembers);
+        }
+      }
+    } else if (!selectedProjectId) {
+        setAssignableUsers([]);
+    }
+  }, [selectedProjectId, projects, allProfiles]);
 
   useEffect(() => {
     if (open && task) {
@@ -158,13 +180,13 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     onSubmit(payload);
   };
 
-  const userOptions = useMemo(() => allProfiles.map(member => {
+  const userOptions = useMemo(() => assignableUsers.map(member => {
     const fullName = [member.first_name, member.last_name].filter(Boolean).join(' ').trim();
     return {
       value: member.id,
       label: fullName || (member.email ? member.email.split('@')[0] : 'Unknown User'),
     };
-  }), [allProfiles]);
+  }), [assignableUsers]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -282,7 +304,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
                       value={field.value || []}
                       onChange={field.onChange}
                       placeholder="Select team members..."
-                      disabled={isLoadingProfiles}
+                      disabled={isLoadingProfiles || !selectedProjectId}
                     />
                   </FormControl>
                   <FormMessage />
