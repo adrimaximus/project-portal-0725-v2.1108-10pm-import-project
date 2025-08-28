@@ -17,7 +17,7 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
   const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
   const [internalTasks, setInternalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const { updateTaskOrder, moveTask } = useTaskMutations();
+  const { updateTaskStatusAndOrder } = useTaskMutations();
 
   useEffect(() => {
     setInternalTasks(tasks);
@@ -53,16 +53,14 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
-      // Untuk mouse, mulai seret setelah bergerak 8 piksel
       activationConstraint: {
         distance: 8,
       },
     }),
     useSensor(TouchSensor, {
-      // Untuk perangkat sentuh, tekan dan tahan selama 2 detik sebelum menyeret
       activationConstraint: {
         delay: 2000,
-        tolerance: 16, // Izinkan beberapa gerakan jari selama menahan
+        tolerance: 16,
       },
     })
   );
@@ -106,18 +104,20 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
         reorderedTasks = arrayMove(reorderedTasks, activeTaskIndex, overTaskIndex);
       }
     } else {
-      reorderedTasks[activeTaskIndex] = { ...activeTask, status: newStatus };
+      const tempTaskWithNewStatus = { ...activeTask, status: newStatus };
+      const tempTasks = [...internalTasks];
+      tempTasks[activeTaskIndex] = tempTaskWithNewStatus;
 
-      let overIndex = overTask ? reorderedTasks.findIndex((t) => t.id === overId) : -1;
+      let overIndex = overTask ? tempTasks.findIndex((t) => t.id === overId) : -1;
       if (overIndex === -1 && overIsColumn) {
-        overIndex = reorderedTasks.findIndex(t => t.status === newStatus);
+        overIndex = tempTasks.findIndex(t => t.status === newStatus);
         if (overIndex === -1) {
           const columnOrder = TASK_STATUS_OPTIONS.map(o => o.value);
           const newStatusIndex = columnOrder.indexOf(newStatus);
-          let insertAtIndex = reorderedTasks.length;
+          let insertAtIndex = tempTasks.length;
           for (let i = newStatusIndex + 1; i < columnOrder.length; i++) {
             const nextStatus = columnOrder[i];
-            const firstIndexOfNextCol = reorderedTasks.findIndex(t => t.status === nextStatus);
+            const firstIndexOfNextCol = tempTasks.findIndex(t => t.status === nextStatus);
             if (firstIndexOfNextCol !== -1) {
               insertAtIndex = firstIndexOfNextCol;
               break;
@@ -126,17 +126,18 @@ const TasksKanbanView = ({ tasks, onStatusChange, onEdit, onDelete }: TasksKanba
           overIndex = insertAtIndex;
         }
       }
-      reorderedTasks = arrayMove(reorderedTasks, activeTaskIndex, overIndex);
+      reorderedTasks = arrayMove(tempTasks, activeTaskIndex, overIndex);
     }
 
     setInternalTasks(reorderedTasks);
     
     const finalTaskIds = reorderedTasks.map(t => t.id);
-    if (oldStatus === newStatus) {
-      updateTaskOrder(finalTaskIds);
-    } else {
-      moveTask({ taskId: activeId, newStatus, orderedTaskIds: finalTaskIds });
-    }
+    
+    updateTaskStatusAndOrder({ 
+      taskId: activeId, 
+      newStatus, 
+      orderedTaskIds: finalTaskIds 
+    });
   };
 
   return (

@@ -103,35 +103,23 @@ export const useTaskMutations = () => {
     },
   });
 
-  const updateTaskOrderMutation = useMutation({
-    mutationFn: async (taskIds: string[]) => {
-      const { error } = await supabase.rpc('update_task_kanban_order', { p_task_ids: taskIds });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-    },
-    onError: (error) => {
-      toast.error('Gagal memperbarui urutan tugas', { description: error.message });
-    },
-  });
-
-  const moveTaskMutation = useMutation({
+  const updateTaskStatusAndOrderMutation = useMutation({
     mutationFn: async (data: { taskId: string; newStatus: string; orderedTaskIds: string[] }) => {
+      // Mutasi ini menangani perubahan status dan pengurutan ulang.
+      // Untuk pengurutan ulang di kolom yang sama, newStatus akan sama dengan status lama.
       const { error: statusError } = await supabase
         .from('tasks')
         .update({ status: data.newStatus, completed: data.newStatus === 'Done' })
         .eq('id', data.taskId);
 
-      if (statusError) throw new Error(`Pembaruan status gagal: ${statusError.message}`);
+      if (statusError) throw new Error(`Pembaruan status tugas gagal: ${statusError.message}`);
 
       const { error: orderError } = await supabase.rpc('update_task_kanban_order', { p_task_ids: data.orderedTaskIds });
       
-      if (orderError) throw new Error(`Pembaruan urutan gagal: ${orderError.message}`);
+      if (orderError) throw new Error(`Pembaruan urutan tugas gagal: ${orderError.message}`);
     },
     onSuccess: () => {
-      toast.success('Tugas berhasil dipindahkan');
+      toast.success('Posisi tugas berhasil diperbarui');
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
@@ -145,9 +133,7 @@ export const useTaskMutations = () => {
     isUpserting: upsertTaskMutation.isPending,
     deleteTask: deleteTaskMutation.mutate,
     isDeleting: deleteTaskMutation.isPending,
-    updateTaskOrder: updateTaskOrderMutation.mutate,
-    isUpdatingOrder: updateTaskOrderMutation.isPending,
-    moveTask: moveTaskMutation.mutate,
-    isMoving: moveTaskMutation.isPending,
+    updateTaskStatusAndOrder: updateTaskStatusAndOrderMutation.mutate,
+    isUpdatingStatusAndOrder: updateTaskStatusAndOrderMutation.isPending,
   };
 };
