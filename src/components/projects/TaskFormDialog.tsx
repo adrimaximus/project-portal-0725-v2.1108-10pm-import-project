@@ -93,7 +93,6 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     }
   }, [selectedProjectId, projectMembers, form]);
 
-
   const handleSubmit = (values: TaskFormValues) => {
     onSubmit({
       ...values,
@@ -104,10 +103,13 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     });
   };
 
-  const userOptions = projectMembers.map(member => ({
-    value: member.id,
-    label: [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email || 'Unknown User',
-  }));
+  const userOptions = projectMembers.map(member => {
+    const fullName = [member.first_name, member.last_name].filter(Boolean).join(' ').trim();
+    return {
+      value: member.id,
+      label: fullName || (member.email ? member.email.split('@')[0] : 'Unknown User'),
+    };
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
