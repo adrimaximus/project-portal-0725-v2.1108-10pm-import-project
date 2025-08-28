@@ -1,27 +1,32 @@
-import { Outlet, Navigate, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import PortalLayout from "./PortalLayout";
+import { useEffect } from "react";
 import LoadingScreen from "./LoadingScreen";
-import React from "react";
 
 const ProtectedRouteLayout = () => {
-  const { session, user, loading } = useAuth();
+  const { session, loading } = useAuth();
   const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname && location.pathname !== '/settings') {
+      localStorage.setItem('lastVisitedPage', location.pathname);
+    }
+  }, [location.pathname]);
 
   if (loading) {
     return <LoadingScreen />;
   }
 
   if (!session) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-  
-  if (!user) {
-    // This state might happen briefly while the profile is being fetched after a session is found.
-    // LoadingScreen is appropriate here.
-    return <LoadingScreen />;
+    return <Navigate to="/login" replace />;
   }
 
-  return <Outlet />;
+  return (
+    <PortalLayout>
+      <Outlet />
+    </PortalLayout>
+  );
 };
 
 export default ProtectedRouteLayout;

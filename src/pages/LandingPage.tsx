@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from "@/components/ui/button";
-import { Package, BarChart, Users, ListChecks, ArrowRight, BrainCircuit } from 'lucide-react';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
+import LoadingScreen from '@/components/LoadingScreen';
 
 const LandingPage = () => {
   const { session, loading } = useAuth();
@@ -11,105 +11,56 @@ const LandingPage = () => {
 
   useEffect(() => {
     if (!loading && session) {
-      navigate('/dashboard', { replace: true });
+      const lastVisitedPage = localStorage.getItem('lastVisitedPage');
+      if (lastVisitedPage && lastVisitedPage !== '/') {
+        navigate(lastVisitedPage, { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     }
   }, [session, loading, navigate]);
 
-  if (loading) {
-    return <LoadingSpinner />;
+  if (loading || session) {
+    return <LoadingScreen />;
   }
-
-  const features = [
-    {
-      icon: <ListChecks className="h-10 w-10 text-primary" />,
-      title: 'Comprehensive Project Tracking',
-      description: 'Manage every aspect of your projects from start to finish. Track tasks, monitor progress in real-time, and ensure deadlines are met with our intuitive interface.',
-    },
-    {
-      icon: <BarChart className="h-10 w-10 text-primary" />,
-      title: 'Actionable Insights',
-      description: 'Gain valuable insights with our analytics dashboard. Understand project value, team performance, and identify bottlenecks before they become problems.',
-    },
-    {
-      icon: <Users className="h-10 w-10 text-primary" />,
-      title: 'Seamless Collaboration',
-      description: 'Work together with your team and clients effortlessly. Assign tasks, share files, and keep all project-related communication centralized and organized.',
-    },
-    {
-      icon: <BrainCircuit className="h-10 w-10 text-primary" />,
-      title: 'Smart AI Agent',
-      description: 'Leverage our smart AI to get insights, recall data, and execute tasks like creating projects, updating goals, and more—all through simple conversation.',
-    },
-  ];
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <Package className="h-7 w-7 text-primary" />
-          <span className="text-xl font-bold">Client Portal</span>
-        </Link>
-        <Button asChild>
-          <Link to="/login">Access Portal</Link>
-        </Button>
+      <header className="px-4 lg:px-6 h-14 flex items-center">
+        <a className="flex items-center justify-center" href="#">
+          <span className="sr-only">Your App</span>
+        </a>
+        <nav className="ml-auto flex gap-4 sm:gap-6">
+          <a className="text-sm font-medium hover:underline underline-offset-4" href="/login">
+            Login
+          </a>
+          <Button onClick={() => navigate('/login')}>
+            Get Started
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </nav>
       </header>
-
-      <main className="flex-grow">
-        {/* Hero Section */}
-        <section className="py-20 md:py-32">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter mb-6">
-              Your Projects, Simplified.
-            </h1>
-            <p className="max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground mb-10">
-              Welcome to your dedicated client portal. Track progress, collaborate with your team, and get real-time insights on all your projects from a single, unified dashboard.
-            </p>
-            <Button size="lg" asChild>
-              <Link to="/login">
-                Get Started <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
-        </section>
-
-        {/* Features Section */}
-        <section id="features" className="py-20 md:py-28 bg-muted/40">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold">Key Features</h2>
-              <p className="max-w-2xl mx-auto mt-4 text-muted-foreground">
-                Everything you need to stay on top of your client work.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {features.map((feature, index) => (
-                <div key={index} className="bg-background p-8 rounded-lg shadow-sm flex flex-col">
-                  <div className="mb-6">{feature.icon}</div>
-                  <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                  <p className="text-muted-foreground flex-grow">{feature.description}</p>
-                </div>
-              ))}
+      <main className="flex-1">
+        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
+                  Welcome to Your Application
+                </h1>
+                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
+                  This is a great place to introduce your product and its features.
+                </p>
+              </div>
+              <div className="space-x-4">
+                <Button onClick={() => navigate('/login')} size="lg">
+                  Get Started
+                </Button>
+              </div>
             </div>
           </div>
         </section>
       </main>
-
-      <footer className="bg-background border-t">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Package className="h-6 w-6" />
-            <span className="text-md font-semibold">Client Portal © {new Date().getFullYear()}</span>
-          </div>
-          <div className="flex gap-4 mt-4 sm:mt-0">
-            <Link to="/terms-of-service" className="text-sm text-muted-foreground hover:text-primary">
-              Terms of Service
-            </Link>
-            <Link to="/privacy-policy" className="text-sm text-muted-foreground hover:text-primary">
-              Privacy Policy
-            </Link>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
