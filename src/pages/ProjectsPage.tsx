@@ -72,7 +72,7 @@ const ProjectsPage = () => {
   } = useProjectFilters(projects);
 
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
-  const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ projectIds: view === 'tasks' ? projectIds : [] });
+  const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ projectIds: view === 'tasks' ? undefined : [] });
 
   useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
