@@ -289,6 +289,7 @@ const ProjectsPage = () => {
     }, {
       onSuccess: () => {
         toast.success(`Task "${task.title}" marked as ${completed ? 'done' : 'to do'}.`);
+        refetchTasks();
       },
       onError: (error) => toast.error(`Failed to update task status: ${error.message}`),
     });
