@@ -7,7 +7,7 @@ import { generateVibrantGradient, getPriorityStyles } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Ticket } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface TasksKanbanCardProps {
@@ -34,20 +34,28 @@ const TasksKanbanCard = ({ task }: TasksKanbanCardProps) => {
   const priorityStyle = getPriorityStyles(task.priority);
 
   return (
-    <Card ref={setNodeRef} style={style} {...attributes} className="mb-4 touch-none bg-background">
-      <CardHeader className="p-4 flex flex-row items-center justify-between">
-        <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
-        <div {...listeners} className="cursor-grab p-1">
+    <Card 
+      ref={setNodeRef} 
+      style={style} 
+      {...attributes} 
+      className="mb-4 touch-none bg-card border-l-4"
+      // @ts-ignore
+      style={{ ...style, borderLeftColor: priorityStyle.color }}
+    >
+      <CardHeader className="p-3 flex flex-row items-start justify-between">
+        <CardTitle className="text-sm font-medium leading-snug pr-2">{task.title}</CardTitle>
+        <div {...listeners} className="cursor-grab p-1 flex-shrink-0">
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
       </CardHeader>
-      <CardContent className="p-4 pt-0">
+      <CardContent className="p-3 pt-0">
         <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
           {task.projects ? (
-            <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary">
+            <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary truncate max-w-[120px]">
               {task.projects.name}
             </Link>
           ) : <span>&nbsp;</span>}
+          {task.originTicketId && <Ticket className="h-4 w-4 text-muted-foreground" />}
           <Badge variant="outline" className={priorityStyle.tw}>{task.priority || 'Low'}</Badge>
         </div>
         <div className="flex items-center justify-between mt-2">

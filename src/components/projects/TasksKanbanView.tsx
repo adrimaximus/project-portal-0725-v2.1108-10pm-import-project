@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types/task';
 import TasksKanbanColumn from './TasksKanbanColumn';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -10,6 +10,20 @@ interface TasksKanbanViewProps {
 }
 
 const TasksKanbanView = ({ tasks, onStatusChange }: TasksKanbanViewProps) => {
+  const [collapsedColumns, setCollapsedColumns] = useState<Set<TaskStatus>>(new Set());
+
+  const toggleColumnCollapse = (status: TaskStatus) => {
+    setCollapsedColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(status)) {
+        newSet.delete(status);
+      } else {
+        newSet.add(status);
+      }
+      return newSet;
+    });
+  };
+
   const tasksByStatus = useMemo(() => {
     const grouped: { [key in TaskStatus]?: Task[] } = {};
     TASK_STATUS_OPTIONS.forEach(opt => {
@@ -19,7 +33,6 @@ const TasksKanbanView = ({ tasks, onStatusChange }: TasksKanbanViewProps) => {
       if (grouped[task.status]) {
         grouped[task.status]!.push(task);
       } else {
-        // Fallback for any tasks with a status not in options
         if (!grouped['To do']) grouped['To do'] = [];
         grouped['To do']!.push(task);
       }
@@ -62,6 +75,8 @@ const TasksKanbanView = ({ tasks, onStatusChange }: TasksKanbanViewProps) => {
               key={option.value}
               status={option.value}
               tasks={tasksByStatus[option.value] || []}
+              isCollapsed={collapsedColumns.has(option.value)}
+              onToggleCollapse={toggleColumnCollapse}
             />
           ))}
         </div>
