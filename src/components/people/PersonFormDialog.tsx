@@ -7,10 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Loader2 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -19,6 +16,7 @@ import { Person, Project, Tag, ContactProperty } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
 import AddressAutocompleteInput from './AddressAutocompleteInput';
 import PhoneNumberInput from '../PhoneNumberInput';
+import AntDatePicker from './AntDatePicker';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -223,28 +221,15 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
               </FormItem>
             )} />
             <FormField control={form.control} name="birthday" render={({ field }) => (
-              <FormItem className="flex flex-col"><FormLabel>Birthday</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar 
-                      mode="single" 
-                      selected={field.value || undefined} 
-                      onSelect={field.onChange} 
-                      initialFocus 
-                      captionLayout="dropdown-buttons"
-                      fromYear={new Date().getFullYear() - 100}
-                      toYear={new Date().getFullYear()}
-                    />
-                  </PopoverContent>
-                </Popover><FormMessage />
+              <FormItem>
+                <FormLabel>Birthday</FormLabel>
+                <FormControl>
+                  <AntDatePicker 
+                    value={field.value} 
+                    onChange={field.onChange} 
+                  />
+                </FormControl>
+                <FormMessage />
               </FormItem>
             )} />
             <FormField control={form.control} name="notes" render={({ field }) => (
