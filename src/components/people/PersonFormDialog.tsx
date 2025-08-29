@@ -80,7 +80,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     if (person) {
       form.reset({
         full_name: person.full_name,
-        email: person.contact?.emails?.[0] || '',
+        email: person.email || person.contact?.emails?.[0] || '',
         phone: person.contact?.phones?.[0] || '',
         company: person.company || '',
         job_title: person.job_title || '',
