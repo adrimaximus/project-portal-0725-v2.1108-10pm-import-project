@@ -101,7 +101,7 @@ const UnsplashImage = () => {
                 <Skeleton className="h-4 w-3/4 bg-white/20" />
               )}
             </div>
-            <a href={photo.links.html} target="_blank" rel="noopener noreferrer" className="no-underline opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <a href={photo.links.html} target="_blank" rel="noopener noreferrer" className="no-underline opacity-50 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white h-8 w-8">
                 <ExternalLink className="h-4 w-4" />
               </Button>
