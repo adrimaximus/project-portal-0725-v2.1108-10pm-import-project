@@ -91,11 +91,9 @@ export const useNotifications = () => {
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
-        .from('notification_recipients')
-        .update({ read_at: new Date().toISOString() })
-        .eq('notification_id', notificationId)
-        .eq('user_id', user!.id);
+      const { error } = await supabase.functions.invoke('update-notification', {
+        body: { notificationId },
+      });
       if (error) throw error;
     },
     onMutate: async (notificationId: string) => {
@@ -123,7 +121,6 @@ export const useNotifications = () => {
       toast.error("Failed to mark notification as read.");
     },
     onSettled: () => {
-      // Invalidate to refetch in the background, ensuring eventual consistency
       queryClient.invalidateQueries({ queryKey });
     },
   });
@@ -131,11 +128,9 @@ export const useNotifications = () => {
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
       if (!user) return;
-      const { error } = await supabase
-        .from('notification_recipients')
-        .update({ read_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .is('read_at', null);
+      const { error } = await supabase.functions.invoke('update-notification', {
+        body: { markAll: true },
+      });
       if (error) throw error;
     },
     onMutate: async () => {
@@ -162,7 +157,6 @@ export const useNotifications = () => {
       toast.error("Failed to mark all notifications as read.");
     },
     onSettled: () => {
-      // Invalidate to refetch in the background, ensuring eventual consistency
       queryClient.invalidateQueries({ queryKey });
     },
   });
