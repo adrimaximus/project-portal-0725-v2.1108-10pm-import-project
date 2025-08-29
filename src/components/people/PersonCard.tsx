@@ -1,5 +1,5 @@
 import { Person } from '@/types';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -18,49 +18,45 @@ const PersonCard = ({ person, onEdit, onDelete, onViewProfile }: PersonCardProps
   const firstTag = person.tags?.[0];
 
   return (
-    <Card className="group h-full flex transition-shadow hover:shadow-md cursor-pointer" onClick={() => onViewProfile(person)}>
-      <div className="p-4 flex items-center justify-center">
-        <Avatar className="h-24 w-24">
+    <Card 
+      className="group h-full flex flex-col text-center transition-shadow hover:shadow-lg cursor-pointer rounded-2xl bg-muted/50" 
+      onClick={() => onViewProfile(person)}
+    >
+      <CardContent className="p-6 flex flex-col items-center justify-center flex-grow">
+        <Avatar className="h-24 w-24 mb-4">
           <AvatarImage src={person.avatar_url} />
           <AvatarFallback style={generateVibrantGradient(person.id)}>
             <UserIcon className="h-10 w-10 text-white" />
           </AvatarFallback>
         </Avatar>
-      </div>
-      <div className="p-4 flex flex-col flex-1 justify-between min-w-0">
-        <div>
-          <div className="flex justify-between items-start">
-            <div className="min-w-0">
-              <h3 className="font-bold text-lg truncate">{person.full_name}</h3>
-              <p className="text-sm text-muted-foreground truncate">{person.job_title || 'No title'}</p>
-            </div>
-            {firstTag && (
-              <Badge variant="outline" style={{ backgroundColor: `${firstTag.color}20`, borderColor: firstTag.color, color: firstTag.color }} className="flex-shrink-0 ml-2">
-                {firstTag.name}
-              </Badge>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-            {person.notes || 'No additional notes.'}
-          </p>
-        </div>
-        <div className="flex justify-end items-center mt-2 gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEdit(person); }}>
-                <Edit className="mr-2 h-4 w-4" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onDelete(person); }} className="text-destructive">
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <h3 className="font-bold text-lg truncate w-full">{person.full_name}</h3>
+        <p className="text-sm text-muted-foreground truncate w-full">{person.job_title || 'No title'}</p>
+        {firstTag && (
+          <Badge 
+            variant="outline" 
+            style={{ backgroundColor: `${firstTag.color}20`, borderColor: firstTag.color, color: firstTag.color }} 
+            className="mt-2"
+          >
+            {firstTag.name}
+          </Badge>
+        )}
+      </CardContent>
+      <div className="p-2 border-t border-muted/50 flex justify-end items-center">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEdit(person); }}>
+              <Edit className="mr-2 h-4 w-4" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onDelete(person); }} className="text-destructive">
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </Card>
   );
