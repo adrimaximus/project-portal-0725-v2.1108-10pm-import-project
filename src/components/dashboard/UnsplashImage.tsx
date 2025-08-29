@@ -3,8 +3,9 @@ import { unsplash } from '@/integrations/unsplash/client';
 import { Random } from 'unsplash-js/dist/methods/photos/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CameraOff } from 'lucide-react';
+import { CameraOff, Download, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
 
 const UnsplashImage = () => {
   const [photo, setPhoto] = useState<Random | null>(null);
@@ -65,6 +66,19 @@ const UnsplashImage = () => {
     return () => clearInterval(intervalId);
   }, [fetchPhotoAndCaption]);
 
+  const handleDownload = useCallback(() => {
+    if (!unsplash || !photo) return;
+
+    // Trigger a download event as requested
+    unsplash.photos.trackDownload({
+      downloadLocation: photo.links.download_location,
+    });
+
+    // To ensure the user gets the file, we also open the link.
+    // The Unsplash API's download_location URL handles the redirect to the actual file.
+    window.open(photo.links.download_location, '_blank');
+  }, [photo]);
+
   if (isLoading) {
     return (
       <Card className="h-full">
@@ -89,18 +103,32 @@ const UnsplashImage = () => {
   return (
     <Card className="h-full overflow-hidden">
       <CardContent className="p-0 h-full">
-        <a href={photo.links.html} target="_blank" rel="noopener noreferrer" className="block group h-full">
-          <div className="w-full h-full overflow-hidden relative">
-            <img src={photo.urls.regular} alt={photo.alt_description || 'Photo from Unsplash'} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" />
-            <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/80 to-transparent p-4 flex items-end">
-              {caption ? (
-                <p className="text-white text-sm font-medium line-clamp-2">{caption}</p>
-              ) : (
-                <Skeleton className="h-4 w-3/4 bg-white/20" />
-              )}
+        <div className="block group h-full relative">
+          <img src={photo.urls.regular} alt={photo.alt_description || 'Photo from Unsplash'} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" />
+          
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" size="sm" onClick={handleDownload} className="bg-white/20 text-white border-white/50 hover:bg-white/30 hover:text-white">
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+              <a href={photo.links.html} target="_blank" rel="noopener noreferrer" className="no-underline">
+                <Button variant="outline" size="sm" className="bg-white/20 text-white border-white/50 hover:bg-white/30 hover:text-white">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  View Source
+                </Button>
+              </a>
             </div>
           </div>
-        </a>
+
+          <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/80 to-transparent p-4 flex items-end pointer-events-none">
+            {caption ? (
+              <p className="text-white text-sm font-medium line-clamp-2">{caption}</p>
+            ) : (
+              <Skeleton className="h-4 w-3/4 bg-white/20" />
+            )}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
