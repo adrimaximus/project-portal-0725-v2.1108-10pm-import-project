@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import GooglePlacesAutocomplete, { geocodeByAddress, getLatLng } from 'react-google-places-autocomplete';
 import { toast } from 'sonner';
 import { useJsApiLoader } from '@react-google-maps/api';
 import { Skeleton } from '../ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AddressAutocompleteInputProps {
   value: any;
@@ -11,40 +12,51 @@ interface AddressAutocompleteInputProps {
 }
 
 const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocompleteInputProps) => {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [loadingKey, setLoadingKey] = useState(true);
 
   useEffect(() => {
-    if (!apiKey) {
-      console.error("AddressAutocomplete: VITE_GOOGLE_MAPS_API_KEY is not set in the environment variables.");
-    }
-  }, [apiKey]);
+    const fetchKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-google-maps-key');
+        if (error) throw error;
+        if (data.apiKey) {
+          setApiKey(data.apiKey);
+        } else {
+          throw new Error("Kunci API tidak dikembalikan dari fungsi.");
+        }
+      } catch (error: any) {
+        console.error("Gagal mengambil kunci API Google Maps:", error.message);
+      } finally {
+        setLoadingKey(false);
+      }
+    };
+    fetchKey();
+  }, []);
+
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: apiKey || '',
+    libraries: ['places'],
+    preventGoogleFontsLoading: true,
+  });
+
+  if (loadingKey) {
+    return <Skeleton className="h-10 w-full" />;
+  }
 
   if (!apiKey) {
     return (
       <div className="p-3 text-center text-sm text-red-700 bg-red-100 border border-red-200 rounded-md">
-        Kunci API Google Maps tidak dikonfigurasi. Silakan tambahkan VITE_GOOGLE_MAPS_API_KEY ke file .env Anda dan <strong>Rebuild</strong> aplikasi.
+        Kunci API Google Maps tidak dikonfigurasi di server. Silakan hubungi administrator.
       </div>
     );
   }
   
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey,
-    libraries: ['places'],
-  });
-
-  useEffect(() => {
-    if (loadError) {
-      console.error("Google Maps API Load Error:", loadError);
-      toast.error("Gagal memuat Google Maps API.", {
-        description: "Silakan periksa konsol developer untuk detail kesalahan.",
-      });
-    }
-  }, [loadError]);
-
   if (loadError) {
+    console.error("Google Maps API Load Error:", loadError);
     return (
       <div className="p-3 text-center text-sm text-red-700 bg-red-100 border border-red-200 rounded-md">
-        Gagal memuat skrip Google Maps. Silakan periksa kunci API Anda dan koneksi internet. Pastikan API yang diperlukan diaktifkan di Google Cloud Console.
+        Gagal memuat skrip Google Maps. Silakan periksa kunci API Anda dan koneksi internet.
       </div>
     );
   }
@@ -87,7 +99,6 @@ const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocomp
     }
   };
 
-  // This logic is now safer. It handles string or object values and ensures the label is always a string.
   const getDisplayLabel = (val: any): string | undefined => {
     if (!val) return undefined;
     if (typeof val === 'string') return val;
