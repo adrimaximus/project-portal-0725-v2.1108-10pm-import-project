@@ -81,7 +81,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       form.reset({
         full_name: person.full_name,
         email: person.email || person.contact?.emails?.[0] || '',
-        phone: person.contact?.phones?.[0] || '',
+        phone: person.phone || person.contact?.phones?.[0] || '',
         company: person.company || '',
         job_title: person.job_title || '',
         department: person.department || '',

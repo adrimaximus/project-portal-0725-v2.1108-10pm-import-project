@@ -2,6 +2,7 @@ export interface Person {
   id: string;
   full_name: string;
   email?: string;
+  phone?: string;
   contact?: { emails?: string[]; phones?: string[] };
   company?: string;
   job_title?: string;
