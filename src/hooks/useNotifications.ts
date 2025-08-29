@@ -123,6 +123,7 @@ export const useNotifications = () => {
       toast.error("Failed to mark notification as read.");
     },
     onSettled: () => {
+      // Invalidate to refetch in the background, ensuring eventual consistency
       queryClient.invalidateQueries({ queryKey });
     },
   });
@@ -161,6 +162,7 @@ export const useNotifications = () => {
       toast.error("Failed to mark all notifications as read.");
     },
     onSettled: () => {
+      // Invalidate to refetch in the background, ensuring eventual consistency
       queryClient.invalidateQueries({ queryKey });
     },
   });
