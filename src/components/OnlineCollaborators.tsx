@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Users } from "lucide-react";
 import { Collaborator } from "@/types";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateVibrantGradient } from "@/lib/utils";
 
@@ -14,60 +13,9 @@ type OnlineCollaboratorsProps = {
 
 const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
+  const { onlineCollaborators } = useAuth();
 
-  useEffect(() => {
-    if (!currentUser) return;
-
-    const channel = supabase.channel('online-users', {
-      config: {
-        presence: {
-          key: currentUser.id,
-        },
-      },
-    });
-
-    const handlePresenceChange = () => {
-      const newState = channel.presenceState<any>();
-      const collaborators: Collaborator[] = [];
-      for (const id in newState) {
-        if (id !== currentUser.id) {
-          const presences = newState[id];
-          if (presences && presences.length > 0 && presences[0].user) {
-            collaborators.push(presences[0].user);
-          }
-        }
-      }
-      setOnlineCollaborators(collaborators.sort((a, b) => a.name.localeCompare(b.name)));
-    };
-
-    channel
-      .on('presence', { event: 'sync' }, handlePresenceChange)
-      .on('presence', { event: 'join' }, handlePresenceChange)
-      .on('presence', { event: 'leave' }, handlePresenceChange);
-
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await channel.track({
-          user: {
-            id: currentUser.id,
-            name: currentUser.name,
-            initials: currentUser.initials,
-            avatar_url: currentUser.avatar_url,
-            online: true,
-          },
-          online_at: new Date().toISOString(),
-        });
-      }
-    });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUser]);
-  
   const visibleCollaborators = onlineCollaborators.slice(0, 3);
   const remainingCount = onlineCollaborators.length - visibleCollaborators.length;
 

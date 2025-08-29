@@ -38,7 +38,7 @@ interface ChatHeaderProps {
 }
 
 const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClearChat, onRefetchConversations }: ChatHeaderProps) => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, onlineCollaborators } = useAuth();
   const navigate = useNavigate();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -53,6 +53,7 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
   const { id, userName, userAvatar, isGroup, members, created_by } = conversation;
   const otherUser = !isGroup ? members?.find(m => m.id !== currentUser?.id) : null;
   const isOwner = currentUser?.id === created_by;
+  const isOtherUserOnline = otherUser ? onlineCollaborators.some(c => c.id === otherUser.id) : false;
 
   const handleViewProfile = () => {
     if (otherUser) {
@@ -91,8 +92,17 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
           {isGroup ? (
             <p className="text-sm text-muted-foreground">{members?.length} members</p>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              {typing ? "Typing..." : "Online"}
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              {typing ? (
+                "Typing..."
+              ) : isOtherUserOnline ? (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                  Online
+                </>
+              ) : (
+                "Offline"
+              )}
             </p>
           )}
         </div>

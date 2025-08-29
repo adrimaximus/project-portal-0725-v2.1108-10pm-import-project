@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { User, SupabaseSession, SupabaseUser } from '@/types';
+import { User, SupabaseSession, SupabaseUser, Collaborator } from '@/types';
 import { toast } from 'sonner';
 import { getInitials } from '@/lib/utils';
 
@@ -23,6 +23,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
+  onlineCollaborators: Collaborator[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +32,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
   const navigate = useNavigate();
 
   const logout = useCallback(async () => {
@@ -153,6 +155,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [fetchUserProfile, logout, navigate]);
 
+  useEffect(() => {
+    if (!user) {
+      setOnlineCollaborators([]);
+      return;
+    };
+
+    const channel = supabase.channel('online-users', {
+      config: {
+        presence: {
+          key: user.id,
+        },
+      },
+    });
+
+    const handlePresenceChange = () => {
+      const newState = channel.presenceState<any>();
+      const collaborators: Collaborator[] = [];
+      for (const id in newState) {
+        if (id !== user.id) {
+          const presences = newState[id];
+          if (presences && presences.length > 0 && presences[0].user) {
+            collaborators.push({ ...presences[0].user, online: true });
+          }
+        }
+      }
+      setOnlineCollaborators(collaborators.sort((a, b) => a.name.localeCompare(b.name)));
+    };
+
+    channel
+      .on('presence', { event: 'sync' }, handlePresenceChange)
+      .on('presence', { event: 'join' }, handlePresenceChange)
+      .on('presence', { event: 'leave' }, handlePresenceChange);
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({
+          user: {
+            id: user.id,
+            name: user.name,
+            initials: user.initials,
+            avatar_url: user.avatar_url,
+          },
+          online_at: new Date().toISOString(),
+        });
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const refreshUser = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
@@ -173,6 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     refreshUser,
     hasPermission,
+    onlineCollaborators,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
