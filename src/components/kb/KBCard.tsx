@@ -5,7 +5,6 @@ import { FileText, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface KBCardProps {
@@ -64,9 +63,18 @@ export function KBCard({ article, onEdit, onDelete }: KBCardProps) {
           </DropdownMenu>
         </div>
         
-        <p className="mt-1 text-xs text-muted-foreground line-clamp-2 flex-grow">
-          {description}
-        </p>
+        <div className="flex-grow">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+            {description}
+          </p>
+          {article.tags && article.tags.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs text-primary/80 line-clamp-1">
+                {article.tags.map(tag => `#${tag.name}`).join(' ')}
+              </p>
+            </div>
+          )}
+        </div>
 
         <div className="mt-auto pt-3 border-t flex justify-between items-center">
           {article.creator ? (
@@ -79,16 +87,6 @@ export function KBCard({ article, onEdit, onDelete }: KBCardProps) {
             </div>
           ) : (
             <div />
-          )}
-
-          {article.tags && article.tags.length > 0 && (
-            <div className="flex items-center gap-1 flex-wrap justify-end">
-              {article.tags.slice(0, 2).map((tag) => (
-                <Badge key={tag.id} variant="secondary" className="text-xs font-normal">
-                  {tag.name}
-                </Badge>
-              ))}
-            </div>
           )}
         </div>
       </div>
