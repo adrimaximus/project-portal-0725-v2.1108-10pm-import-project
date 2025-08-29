@@ -111,9 +111,7 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
           }),
         },
         "aria-label": "Address",
-        ariaLiveMessages: {
-          onFocus: () => '',
-        },
+        screenReaderStatus: () => '',
       }}
     />
   );
