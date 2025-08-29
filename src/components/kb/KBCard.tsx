@@ -64,12 +64,12 @@ export function KBCard({ article, onEdit, onDelete }: KBCardProps) {
         </div>
         
         <div className="flex-grow">
-          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-3">
             {description}
           </p>
           {article.tags && article.tags.length > 0 && (
             <div className="mt-2">
-              <p className="text-xs text-primary/80 line-clamp-1">
+              <p className="text-xs text-primary/80 line-clamp-2">
                 {article.tags.map(tag => `#${tag.name}`).join(' ')}
               </p>
             </div>
