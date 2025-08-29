@@ -14,6 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import FolderGridView from '@/components/kb/FolderGridView';
 import PageGridView from '@/components/kb/PageGridView';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 
 type DialogState = 
   | { type: 'edit-page', data: KbArticle }
@@ -136,7 +137,10 @@ const FolderDetailPage = () => {
 
         <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">{folder.name}</h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-bold">{folder.name}</h1>
+              {folder.category && <Badge variant="secondary">{folder.category}</Badge>}
+            </div>
             <p className="text-muted-foreground mt-2">{folder.description}</p>
           </div>
           <Button onClick={() => setDialog({ type: 'create-page' })} className="w-full sm:w-auto flex-shrink-0">
