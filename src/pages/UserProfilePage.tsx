@@ -26,7 +26,7 @@ const fetchUserProfile = async (userId: string): Promise<User | null> => {
     id: data.id,
     name: fullName || data.email,
     email: data.email,
-    avatar: data.avatar_url,
+    avatar_url: data.avatar_url,
     initials: getInitials(fullName, data.email) || 'NN',
     role: data.role,
   };
@@ -90,7 +90,7 @@ const UserProfilePage = () => {
         <Card>
           <CardHeader className="items-center text-center">
             <Avatar className="h-24 w-24 mb-4">
-              <AvatarImage src={profile.avatar} alt={profile.name} />
+              <AvatarImage src={profile.avatar_url} alt={profile.name} />
               <AvatarFallback className="text-3xl">{profile.initials}</AvatarFallback>
             </Avatar>
             <CardTitle className="text-2xl">{profile.name}</CardTitle>

@@ -58,7 +58,7 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
                   <Tooltip key={user.id}>
                     <TooltipTrigger asChild>
                       <Avatar className="h-7 w-7 border-2 border-background">
-                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarImage src={user.avatar_url} alt={user.name} />
                         <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                       </Avatar>
                     </TooltipTrigger>

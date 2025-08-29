@@ -24,7 +24,7 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
   const aiConversationObject = useMemo((): Conversation => ({
     id: 'ai-assistant',
     userName: 'AI Assistant',
-    userAvatar: aiUser.avatar,
+    userAvatar: aiUser.avatar_url,
     isGroup: false,
     members: [currentUser!, aiUser],
     messages: conversation,

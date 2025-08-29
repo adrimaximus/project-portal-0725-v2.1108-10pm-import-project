@@ -41,7 +41,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
       return {
         id: u.id,
         display: displayName,
-        avatar: u.avatar,
+        avatar_url: u.avatar_url,
         initials: u.initials,
         email: u.email,
       };
@@ -85,7 +85,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
             renderSuggestion={(suggestion: any) => (
               <>
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={suggestion.avatar} />
+                  <AvatarImage src={suggestion.avatar_url} />
                   <AvatarFallback>{suggestion.initials}</AvatarFallback>
                 </Avatar>
                 <div>

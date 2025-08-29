@@ -385,7 +385,7 @@ const TeamSettingsPage = () => {
                         <TableRow key={member.id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <Avatar><AvatarImage src={member.avatar} /><AvatarFallback>{member.initials}</AvatarFallback></Avatar>
+                              <Avatar><AvatarImage src={member.avatar_url} /><AvatarFallback>{member.initials}</AvatarFallback></Avatar>
                               <div>
                                 <span className="font-medium">{member.name}</span>
                                 <p className="text-sm text-muted-foreground">{member.email}</p>

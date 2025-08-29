@@ -14,7 +14,7 @@ const fetchTeamMembers = async (): Promise<User[]> => {
       id: profile.id,
       name: fullName || profile.email || 'No name',
       email: profile.email,
-      avatar: profile.avatar_url,
+      avatar_url: profile.avatar_url,
       role: profile.role,
       status: profile.status,
       initials: getInitials(fullName, profile.email) || 'NN',

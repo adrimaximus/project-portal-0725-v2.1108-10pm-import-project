@@ -67,7 +67,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
             return {
               id: profile.id,
               name: fullName || profile.email || 'No name',
-              avatar: profile.avatar_url,
+              avatar_url: profile.avatar_url,
               email: profile.email,
               initials: getInitials(fullName, profile.email) || 'NN',
             }
@@ -146,7 +146,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
                         <div key={user.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
                           <div className="flex items-center gap-3">
                             <Avatar>
-                              <AvatarImage src={user.avatar} />
+                              <AvatarImage src={user.avatar_url} />
                               <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                             </Avatar>
                             <div>
@@ -179,7 +179,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
             <div key={user.id} className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar>
-                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarImage src={user.avatar_url} alt={user.name} />
                   <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                 </Avatar>
                 <div>

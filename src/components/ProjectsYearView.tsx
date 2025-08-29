@@ -125,7 +125,7 @@ const ProjectsYearView = ({ projects, gcalEvents }: { projects: Project[], gcalE
                       <div className="flex -space-x-2">
                         {assignedTo.slice(0, 2).map(user => (
                           <Avatar key={user.id} className="h-5 w-5 border-2 border-background">
-                            <AvatarImage src={user.avatar} />
+                            <AvatarImage src={user.avatar_url} />
                             <AvatarFallback>{user.initials}</AvatarFallback>
                           </Avatar>
                         ))}

@@ -50,7 +50,7 @@ const ChangeOwnerDialog = ({ open, onOpenChange, project, onOwnerChange }: Chang
         const users = data.map(profile => ({
           id: profile.id,
           name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
-          avatar: profile.avatar_url,
+          avatar_url: profile.avatar_url,
           email: profile.email,
           initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
         }));
@@ -88,7 +88,7 @@ const ChangeOwnerDialog = ({ open, onOpenChange, project, onOwnerChange }: Chang
                 >
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar} />
+                      <AvatarImage src={user.avatar_url} />
                       <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                     </Avatar>
                     <div>

@@ -112,7 +112,7 @@ export const mapProfileToUser = (profile: any) => {
   return {
     id: profile.id,
     name: name || profile.email,
-    avatar: profile.avatar_url,
+    avatar_url: profile.avatar_url,
     initials: getInitials(name || profile.email),
     email: profile.email,
   };

@@ -36,7 +36,7 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
         const mappedUsers: Collaborator[] = data.map(p => ({
           id: p.id,
           name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email || 'Unnamed User',
-          avatar: p.avatar_url,
+          avatar_url: p.avatar_url,
           initials: `${p.first_name?.[0] || ''}${p.last_name?.[0] || ''}`.toUpperCase() || 'NN',
           email: p.email || '',
         }));
@@ -158,7 +158,7 @@ const GroupSettingsDialog = ({ open, onOpenChange, conversation, onUpdate }: Gro
                   <div key={member.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.avatar} />
+                        <AvatarImage src={member.avatar_url} />
                         <AvatarFallback>{member.initials}</AvatarFallback>
                       </Avatar>
                       <span className="font-medium text-sm">{member.name}</span>

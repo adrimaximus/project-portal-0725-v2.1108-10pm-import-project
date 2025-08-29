@@ -51,7 +51,7 @@ const NewConversationDialog = ({
         return {
           id: p.id,
           name: fullName || p.email || 'Unnamed User',
-          avatar: p.avatar_url,
+          avatar_url: p.avatar_url,
           initials: getInitials(fullName, p.email) || 'NN',
           email: p.email || '',
           online: false,
@@ -131,7 +131,7 @@ const NewConversationDialog = ({
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <Avatar>
-                        <AvatarImage src={collaborator.avatar} />
+                        <AvatarImage src={collaborator.avatar_url} />
                         <AvatarFallback>{collaborator.initials}</AvatarFallback>
                       </Avatar>
                       <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${onlineUsers.has(collaborator.id) ? 'bg-green-500' : 'bg-slate-500'}`} />

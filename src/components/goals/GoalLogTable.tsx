@@ -30,7 +30,7 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
           newMap.set(profile.id, {
             id: profile.id,
             name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
-            avatar: profile.avatar_url,
+            avatar_url: profile.avatar_url,
             email: profile.email,
             initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
             first_name: profile.first_name,
@@ -73,7 +73,7 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
                   {achiever ? (
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={achiever.avatar || undefined} />
+                        <AvatarImage src={achiever.avatar_url || undefined} />
                         <AvatarFallback style={generateVibrantGradient(achiever.id)}>{achiever.initials}</AvatarFallback>
                       </Avatar>
                       <span className="text-sm font-medium">{achiever.name}</span>

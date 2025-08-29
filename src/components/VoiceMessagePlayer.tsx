@@ -92,7 +92,7 @@ const VoiceMessagePlayer = ({ src, sender, timestamp, isCurrentUser }: VoiceMess
     <div className="flex items-center gap-2 w-full max-w-[280px] min-w-[240px] p-2">
       <audio ref={audioRef} src={src} preload="metadata" />
       <Avatar className="h-8 w-8 flex-shrink-0">
-        <AvatarImage src={sender.avatar} />
+        <AvatarImage src={sender.avatar_url} />
         <AvatarFallback style={generateVibrantGradient(sender.id)}>{sender.initials}</AvatarFallback>
       </Avatar>
       <Button variant="ghost" size="icon" onClick={togglePlayPause} className="h-8 w-8 flex-shrink-0">

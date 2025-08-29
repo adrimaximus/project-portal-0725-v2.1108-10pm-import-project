@@ -167,7 +167,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                         <div className="flex flex-shrink-0 -space-x-2">
                           {project.assignedTo.slice(0, 3).map((user) => (
                             <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
-                              <AvatarImage src={user.avatar} alt={user.name} />
+                              <AvatarImage src={user.avatar_url} alt={user.name} />
                               <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                             </Avatar>
                           ))}

@@ -96,7 +96,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
               )}
               {!isCurrentUser && !isSameSenderAsPrevious && (
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={sender.avatar} />
+                  <AvatarImage src={sender.avatar_url} />
                   <AvatarFallback style={generateVibrantGradient(sender.id)}>{sender.initials}</AvatarFallback>
                 </Avatar>
               )}
@@ -194,7 +194,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
       {isLoading && aiUser && (
         <div className="flex items-end gap-2 justify-start mt-4">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={aiUser.avatar} />
+            <AvatarImage src={aiUser.avatar_url} />
             <AvatarFallback style={generateVibrantGradient(aiUser.id)}>{aiUser.initials}</AvatarFallback>
           </Avatar>
           <div className="max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 bg-muted flex items-center gap-2">

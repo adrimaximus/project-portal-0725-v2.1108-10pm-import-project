@@ -90,7 +90,7 @@ const ProjectActivityFeed = ({ activities }: { activities: Activity[] }) => {
               <div className="relative flex items-start space-x-4">
                 <div className="relative">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={activity.user.avatar} />
+                    <AvatarImage src={activity.user.avatar_url} />
                     <AvatarFallback style={generateVibrantGradient(activity.user.id)}>{activity.user.initials}</AvatarFallback>
                   </Avatar>
                   <span className="absolute -bottom-2 -right-2 h-5 w-5 rounded-full bg-muted flex items-center justify-center ring-4 ring-background">

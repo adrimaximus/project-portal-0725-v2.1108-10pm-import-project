@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: profile.id,
           email: supabaseUser.email,
           name: fullName || supabaseUser.email || 'No name',
-          avatar: profile.avatar_url || undefined,
+          avatar_url: profile.avatar_url || undefined,
           initials: getInitials(fullName, supabaseUser.email) || 'NN',
           first_name: profile.first_name,
           last_name: profile.last_name,

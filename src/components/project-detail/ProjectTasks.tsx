@@ -80,7 +80,7 @@ const ProjectTasks = ({
               {(task.assignedTo && task.assignedTo.length > 0) 
                 ? task.assignedTo.map((user) => (
                   <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
-                    <AvatarImage src={user.avatar} />
+                    <AvatarImage src={user.avatar_url} />
                     <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                   </Avatar>
                 ))
@@ -89,7 +89,7 @@ const ProjectTasks = ({
                     <Tooltip>
                       <TooltipTrigger>
                         <Avatar key={task.createdBy.id} className="h-6 w-6 border-2 border-background opacity-50">
-                          <AvatarImage src={task.createdBy.avatar} />
+                          <AvatarImage src={task.createdBy.avatar_url} />
                           <AvatarFallback style={generateVibrantGradient(task.createdBy.id)}>{task.createdBy.initials}</AvatarFallback>
                         </Avatar>
                       </TooltipTrigger>

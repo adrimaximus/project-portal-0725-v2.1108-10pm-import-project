@@ -33,7 +33,7 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
           return {
             id: profile.id,
             name: fullName || profile.email || 'No name',
-            avatar: profile.avatar_url,
+            avatar_url: profile.avatar_url,
             email: profile.email,
             initials: getInitials(fullName, profile.email) || 'NN',
             first_name: profile.first_name,
@@ -98,7 +98,7 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
             </div>
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
-                <AvatarImage src={project.created_by.avatar} />
+                <AvatarImage src={project.created_by.avatar_url} />
                 <AvatarFallback style={generateVibrantGradient(project.created_by.id)}>{project.created_by.initials}</AvatarFallback>
               </Avatar>
               <div>
@@ -125,7 +125,7 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
                   {teamMembers.map(member => (
                     <div key={member.id} className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
-                        <AvatarImage src={member.avatar} />
+                        <AvatarImage src={member.avatar_url} />
                         <AvatarFallback style={generateVibrantGradient(member.id)}>{member.initials}</AvatarFallback>
                       </Avatar>
                       <div>

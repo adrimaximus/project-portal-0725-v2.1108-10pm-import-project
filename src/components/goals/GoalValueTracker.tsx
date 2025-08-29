@@ -127,7 +127,7 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
                     {achieverSummary.map(achiever => (
                         <li key={achiever.id} className="flex items-center gap-3">
                             <Avatar className="w-9 h-9">
-                                <AvatarImage src={achiever.avatar} alt={achiever.name} />
+                                <AvatarImage src={achiever.avatar_url} alt={achiever.name} />
                                 <AvatarFallback style={generateVibrantGradient(achiever.id)}>{achiever.initials}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">

@@ -36,7 +36,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
       return {
         id: u.id,
         display: displayName,
-        avatar: u.avatar,
+        avatar_url: u.avatar_url,
         initials: u.initials,
         email: u.email,
       };
@@ -158,7 +158,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             return (
               <div key={item.id} className="flex items-start space-x-4">
                 <Avatar>
-                  <AvatarImage src={item.author.avatar} />
+                  <AvatarImage src={item.author.avatar_url} />
                   <AvatarFallback style={generateVibrantGradient(item.author.id)}>{item.author.initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">

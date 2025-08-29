@@ -102,7 +102,7 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
               <div className="flex -space-x-2">
                 {project.assignedTo.slice(0, 3).map(user => (
                   <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
-                    <AvatarImage src={user.avatar} />
+                    <AvatarImage src={user.avatar_url} />
                     <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                   </Avatar>
                 ))}

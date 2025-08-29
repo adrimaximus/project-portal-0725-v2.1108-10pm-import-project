@@ -76,7 +76,7 @@ const GoalRow = ({ goal, onDeleteGoal }: { goal: Goal, onDeleteGoal: (goalId: st
               <Tooltip key={user.id}>
                 <TooltipTrigger asChild>
                   <Avatar className="h-8 w-8 border-2 border-background">
-                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarImage src={user.avatar_url} alt={user.name} />
                     <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>

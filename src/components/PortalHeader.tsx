@@ -139,7 +139,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
         <DropdownMenuTrigger asChild>
           <Button variant="secondary" size="icon" className="rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={user.avatar} alt={user.name} />
+              <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
               <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
             </Avatar>
             <span className="sr-only">Toggle user menu</span>

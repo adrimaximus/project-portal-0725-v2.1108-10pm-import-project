@@ -44,7 +44,7 @@ const SearchPage = () => {
           return {
             id: profile.id,
             name: fullName || profile.email || 'No name',
-            avatar: profile.avatar_url,
+            avatar_url: profile.avatar_url,
             email: profile.email,
             initials: getInitials(fullName, profile.email) || 'NN',
             first_name: profile.first_name,
@@ -117,7 +117,7 @@ const SearchPage = () => {
                     {users.map(user => (
                       <div key={user.id} className="flex items-center gap-3 p-3 -mx-3">
                         <Avatar>
-                          <AvatarImage src={user.avatar} />
+                          <AvatarImage src={user.avatar_url} />
                           <AvatarFallback>{user.initials}</AvatarFallback>
                         </Avatar>
                         <div>

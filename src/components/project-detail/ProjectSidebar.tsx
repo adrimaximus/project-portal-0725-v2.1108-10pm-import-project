@@ -21,7 +21,7 @@ const ProjectSidebar = ({ project }: ProjectSidebarProps) => {
                   <TooltipTrigger asChild>
                     <div className="relative">
                       <Avatar className="h-10 w-10 border-2 border-card">
-                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarImage src={user.avatar_url} alt={user.name} />
                         <AvatarFallback>{user.initials || user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                       </Avatar>
                     </div>

@@ -31,7 +31,7 @@ const Profile = () => {
     if (user) {
       setFirstName(user.first_name || "");
       setLastName(user.last_name || "");
-      setAvatarPreview(user.avatar || null);
+      setAvatarPreview(user.avatar_url || null);
     }
   }, [user]);
 
@@ -52,7 +52,7 @@ const Profile = () => {
   };
 
   const handleSaveChanges = async () => {
-    let avatar_url = user.avatar;
+    let avatar_url = user.avatar_url;
 
     if (avatarFile) {
       const fileExt = avatarFile.name.split('.').pop();

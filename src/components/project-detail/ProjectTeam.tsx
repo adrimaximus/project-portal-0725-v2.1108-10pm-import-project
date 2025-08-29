@@ -13,7 +13,7 @@ const ProjectTeam = ({ team }: ProjectTeamProps) => {
         {team.map(member => (
           <div key={member.id} className="flex items-center">
             <Avatar>
-              <AvatarImage src={member.avatar} />
+              <AvatarImage src={member.avatar_url} />
               <AvatarFallback>{member.initials}</AvatarFallback>
             </Avatar>
             <div className="ml-2">

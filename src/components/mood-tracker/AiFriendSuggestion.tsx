@@ -168,7 +168,7 @@ const AiFriendSuggestion: React.FC<AiFriendSuggestionProps> = ({ data, period, u
             </div>
             {msg.sender === 'user' && user && (
               <Avatar className="h-6 w-6 border">
-                <AvatarImage src={user.avatar} />
+                <AvatarImage src={user.avatar_url} />
                 <AvatarFallback>{user.initials}</AvatarFallback>
               </Avatar>
             )}
