@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Person, Project, Tag, ContactProperty } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
 import AddressAutocompleteInput from './AddressAutocompleteInput';
+import PhoneNumberInput from '../PhoneNumberInput';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -156,7 +157,13 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                 <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="phone" render={({ field }) => (
-                <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem>
+                  <FormLabel>Phone</FormLabel>
+                  <FormControl>
+                    <PhoneNumberInput {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )} />
             </div>
             <FormField control={form.control} name="address" render={({ field }) => (

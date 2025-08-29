@@ -13,15 +13,14 @@ import { Loader2 } from 'lucide-react';
 interface PropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (property: Omit<ContactProperty, 'id' | 'is_default'>) => void;
+  onSave: (property: Omit<ContactProperty, 'id' | 'is_default' | 'company_logo_url'>) => void;
   property?: ContactProperty | null;
   isSaving: boolean;
 }
 
 const propertySchema = z.object({
   label: z.string().min(1, "Label is required."),
-  type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number']),
-  company_logo_url: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
+  type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image']),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
@@ -38,13 +37,11 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
       form.reset({
         label: property.label,
         type: property.type,
-        company_logo_url: property.company_logo_url || '',
       });
     } else if (open) {
       form.reset({
         label: '',
         type: 'text',
-        company_logo_url: '',
       });
     }
   }, [property, open, form]);
@@ -52,11 +49,9 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
   const onSubmit = (values: PropertyFormValues) => {
     const machineName = values.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     onSave({
-      ...property,
       name: machineName,
       label: values.label,
       type: values.type,
-      company_logo_url: values.company_logo_url,
     });
   };
 
@@ -78,13 +73,6 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
                 <FormMessage />
               </FormItem>
             )} />
-            <FormField control={form.control} name="company_logo_url" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Company Logo URL</FormLabel>
-                <FormControl><Input {...field} placeholder="https://example.com/logo.png" /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
             <FormField control={form.control} name="type" render={({ field }) => (
               <FormItem>
                 <FormLabel>Field Type</FormLabel>
@@ -98,6 +86,7 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
                     <SelectItem value="email">Email</SelectItem>
                     <SelectItem value="phone">Phone</SelectItem>
                     <SelectItem value="url">URL</SelectItem>
+                    <SelectItem value="image">Image</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

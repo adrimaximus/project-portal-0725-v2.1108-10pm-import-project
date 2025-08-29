@@ -12,7 +12,6 @@ export interface ContactProperty {
   id: string;
   name: string;
   label: string;
-  type: 'text' | 'email' | 'phone' | 'url' | 'date' | 'textarea' | 'number';
+  type: 'text' | 'email' | 'phone' | 'url' | 'date' | 'textarea' | 'number' | 'image';
   is_default: boolean;
-  company_logo_url?: string | null;
 }

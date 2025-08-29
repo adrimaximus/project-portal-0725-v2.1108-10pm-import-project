@@ -4,7 +4,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, MoreHorizontal, Trash2, Building } from "lucide-react";
+import { PlusCircle, Edit, MoreHorizontal, Trash2 } from "lucide-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -14,7 +14,6 @@ import { ContactProperty } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PropertyFormDialog from '@/components/settings/PropertyFormDialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const ContactPropertiesPage = () => {
   const queryClient = useQueryClient();
@@ -42,7 +41,7 @@ const ContactPropertiesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleSave = async (propertyData: Omit<ContactProperty, 'id' | 'is_default'>) => {
+  const handleSave = async (propertyData: Omit<ContactProperty, 'id' | 'is_default' | 'company_logo_url'>) => {
     setIsSaving(true);
     const { id, is_default, ...dataToSave } = propertyToEdit || {};
     const upsertData = { ...dataToSave, ...propertyData };
@@ -105,7 +104,6 @@ const ContactPropertiesPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[80px]">Logo</TableHead>
                   <TableHead>Label</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -113,17 +111,11 @@ const ContactPropertiesPage = () => {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={4} className="text-center">Loading properties...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={3} className="text-center">Loading properties...</TableCell></TableRow>
                 ) : properties.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center h-24">No custom properties found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={3} className="text-center h-24">No custom properties found.</TableCell></TableRow>
                 ) : properties.map(prop => (
                   <TableRow key={prop.id}>
-                    <TableCell>
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={prop.company_logo_url || undefined} alt={prop.label} />
-                        <AvatarFallback><Building className="h-4 w-4" /></AvatarFallback>
-                      </Avatar>
-                    </TableCell>
                     <TableCell className="font-medium">{prop.label}</TableCell>
                     <TableCell><Badge variant="outline" className="capitalize">{prop.type}</Badge></TableCell>
                     <TableCell className="text-right">
