@@ -59,7 +59,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[30%] cursor-pointer hover:bg-muted/50 sticky left-0 bg-background z-10" onClick={() => requestSort('title')}>
+            <TableHead className="w-[40%] sm:w-[30%] cursor-pointer hover:bg-muted/50 sticky left-0 bg-background z-10" onClick={() => requestSort('title')}>
               Task
             </TableHead>
             <TableHead className="w-[20%]">Project</TableHead>
@@ -82,7 +82,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
             const priorityStyle = getPriorityStyles(task.priority);
             return (
               <TableRow key={task.id} data-state={task.completed ? "completed" : ""}>
-                <TableCell className="font-medium sticky left-0 bg-background z-10 w-[30%]">
+                <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%] sm:w-[30%]">
                   <div className="flex items-start gap-3">
                     <Checkbox
                       id={`task-${task.id}`}
