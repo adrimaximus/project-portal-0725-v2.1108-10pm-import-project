@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import PeopleKanbanColumn from './PeopleKanbanColumn';
 import PeopleKanbanCard from './PeopleKanbanCard';
 
-const PeopleKanbanView = ({ people, tags, onEditPerson }: { people: Person[], tags: Tag[], onEditPerson: (person: Person) => void }) => {
+const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { people: Person[], tags: Tag[], onEditPerson: (person: Person) => void, onDeletePerson: (person: Person) => void }) => {
   const queryClient = useQueryClient();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const dragHappened = useRef(false);
@@ -123,6 +123,7 @@ const PeopleKanbanView = ({ people, tags, onEditPerson }: { people: Person[], ta
               people={peopleInColumn}
               dragHappened={dragHappened}
               onEditPerson={onEditPerson}
+              onDeletePerson={onDeletePerson}
               isCollapsed={isColumnCollapsed}
               onToggleCollapse={toggleColumnCollapse}
             />
@@ -132,7 +133,7 @@ const PeopleKanbanView = ({ people, tags, onEditPerson }: { people: Person[], ta
       <DragOverlay dropAnimation={null}>
         {activePerson ? (
           <div className="w-72">
-            <PeopleKanbanCard person={activePerson} dragHappened={dragHappened} onEdit={() => {}} />
+            <PeopleKanbanCard person={activePerson} dragHappened={dragHappened} onEdit={() => {}} onDelete={() => {}} />
           </div>
         ) : null}
       </DragOverlay>

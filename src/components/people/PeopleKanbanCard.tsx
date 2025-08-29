@@ -5,10 +5,14 @@ import { Person } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, generateVibrantGradient, formatInJakarta } from '@/lib/utils';
-import { User as UserIcon, Mail, Phone, GitBranch, Cake } from 'lucide-react';
+import { User as UserIcon, Mail, Phone, GitBranch, Cake, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '../ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
-const PeopleKanbanCard = ({ person, dragHappened, onEdit }: { person: Person, dragHappened: React.MutableRefObject<boolean>, onEdit: (person: Person) => void }) => {
+const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: Person, dragHappened: React.MutableRefObject<boolean>, onEdit: (person: Person) => void, onDelete: (person: Person) => void }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: person.id });
+  const navigate = useNavigate();
   
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -17,7 +21,7 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit }: { person: Person, dr
 
   const handleClick = () => {
     if (!dragHappened.current) {
-      onEdit(person);
+      navigate(`/people/${person.id}`);
     }
   };
 
@@ -30,19 +34,36 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit }: { person: Person, dr
       <Card className="mb-3 hover:shadow-md transition-shadow cursor-pointer" onClick={handleClick}>
         <CardContent className="p-4 space-y-3">
           {/* Top Section */}
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={person.avatar_url} />
-              <AvatarFallback style={generateVibrantGradient(person.id)}>
-                <UserIcon className="h-5 w-5 text-white" />
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <h4 className="font-semibold text-sm leading-snug truncate">{person.full_name}</h4>
-              <p className="text-xs text-muted-foreground truncate">
-                {person.updated_at ? `Updated ${formatInJakarta(person.updated_at, 'MMM d, yyyy')}` : ''}
-              </p>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={person.avatar_url} />
+                <AvatarFallback style={generateVibrantGradient(person.id)}>
+                  <UserIcon className="h-5 w-5 text-white" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <h4 className="font-semibold text-sm leading-snug truncate">{person.full_name}</h4>
+                <p className="text-xs text-muted-foreground truncate">
+                  {person.updated_at ? `Updated ${formatInJakarta(person.updated_at, 'MMM d, yyyy')}` : ''}
+                </p>
+              </div>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onEdit(person); }}>
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); onDelete(person); }} className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Separator */}

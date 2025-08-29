@@ -21,6 +21,7 @@ interface PropertyFormDialogProps {
 const propertySchema = z.object({
   label: z.string().min(1, "Label is required."),
   type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number']),
+  company_logo_url: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
@@ -37,11 +38,13 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
       form.reset({
         label: property.label,
         type: property.type,
+        company_logo_url: property.company_logo_url || '',
       });
     } else if (open) {
       form.reset({
         label: '',
         type: 'text',
+        company_logo_url: '',
       });
     }
   }, [property, open, form]);
@@ -53,6 +56,7 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
       name: machineName,
       label: values.label,
       type: values.type,
+      company_logo_url: values.company_logo_url,
     });
   };
 
@@ -71,6 +75,13 @@ const PropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: 
               <FormItem>
                 <FormLabel>Field Label</FormLabel>
                 <FormControl><Input {...field} placeholder="e.g., Home Address" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="company_logo_url" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Company Logo URL</FormLabel>
+                <FormControl><Input {...field} placeholder="https://example.com/logo.png" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />

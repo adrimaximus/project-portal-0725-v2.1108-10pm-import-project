@@ -369,7 +369,7 @@ const PeoplePage = () => {
               </Table>
             </div>
           ) : viewMode === 'kanban' ? (
-            <PeopleKanbanView people={filteredPeople} tags={tags} onEditPerson={handleViewProfile} />
+            <PeopleKanbanView people={filteredPeople} tags={tags} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
           ) : (
             <div className="overflow-y-auto h-full">
               <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} onViewProfile={handleViewProfile} />

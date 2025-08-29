@@ -14,4 +14,5 @@ export interface ContactProperty {
   label: string;
   type: 'text' | 'email' | 'phone' | 'url' | 'date' | 'textarea' | 'number';
   is_default: boolean;
+  company_logo_url?: string | null;
 }
