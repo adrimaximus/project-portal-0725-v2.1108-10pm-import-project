@@ -234,7 +234,15 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
+                    <Calendar 
+                      mode="single" 
+                      selected={field.value || undefined} 
+                      onSelect={field.onChange} 
+                      initialFocus 
+                      captionLayout="dropdown-buttons"
+                      fromYear={new Date().getFullYear() - 100}
+                      toYear={new Date().getFullYear()}
+                    />
                   </PopoverContent>
                 </Popover><FormMessage />
               </FormItem>
