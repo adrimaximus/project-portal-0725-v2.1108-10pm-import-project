@@ -10,10 +10,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import PageEditorDialog from '@/components/kb/PageEditorDialog';
 import KnowledgeBaseHeader from '@/components/kb/KnowledgeBaseHeader';
 import FolderGridView from '@/components/kb/FolderGridView';
-import FolderListView from '@/components/kb/FolderListView';
-import PageGridView from '@/components/kb/PageGridView';
-import PageListView from '@/components/kb/PageListView';
+import AllArticlesView from '@/components/kb/AllArticlesView';
 import { useAuth } from '@/contexts/AuthContext';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
+import { ChevronDown } from 'lucide-react';
 
 type DialogState = 
   | { type: 'edit-folder', data: KbFolder }
@@ -29,23 +30,7 @@ const KnowledgeBasePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [displayMode, setDisplayMode] = useState<'folders' | 'articles'>(() => {
-    const saved = localStorage.getItem('kb_display_mode') as 'folders' | 'articles';
-    return saved || 'folders';
-  });
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
-    const saved = localStorage.getItem('kb_view_mode') as 'grid' | 'list';
-    return saved || 'grid';
-  });
-  const [sortConfig, setSortConfig] = useState<{ key: keyof KbFolder | null; direction: 'ascending' | 'descending' }>({ key: 'name', direction: 'ascending' });
-
-  useEffect(() => {
-    localStorage.setItem('kb_display_mode', displayMode);
-  }, [displayMode]);
-
-  useEffect(() => {
-    localStorage.setItem('kb_view_mode', viewMode);
-  }, [viewMode]);
+  const [isFoldersOpen, setIsFoldersOpen] = useState(true);
 
   const { data: folders = [], isLoading: isLoadingFolders, error: foldersError } = useQuery({
     queryKey: ['kb_folders'],
@@ -83,17 +68,13 @@ const KnowledgeBasePage = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'kb_folders' },
         () => {
-          console.log('KB folders change detected, refetching.');
           queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
-          queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'kb_articles' },
         () => {
-          console.log('KB articles change detected, refetching.');
-          queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
           queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
         }
       )
@@ -101,9 +82,7 @@ const KnowledgeBasePage = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'kb_folder_collaborators' },
         () => {
-          console.log('KB collaborators change detected, refetching.');
           queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
-          queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
         }
       )
       .subscribe();
@@ -126,30 +105,6 @@ const KnowledgeBasePage = () => {
       article.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [articles, searchTerm]);
-
-  const requestSort = (key: keyof KbFolder) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-        direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const sortedFolders = useMemo(() => {
-    let sortableItems = [...filteredFolders];
-    if (sortConfig.key !== null) {
-        sortableItems.sort((a, b) => {
-            const aValue = a[sortConfig.key!];
-            const bValue = b[sortConfig.key!];
-            if (aValue === null || aValue === undefined) return 1;
-            if (bValue === null || bValue === undefined) return -1;
-            if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) return sortConfig.direction === 'ascending' ? 1 : -1;
-            return 0;
-        });
-    }
-    return sortableItems;
-  }, [filteredFolders, sortConfig]);
 
   const handleDeleteFolder = async () => {
     if (dialog?.type !== 'delete-folder') return;
@@ -175,63 +130,55 @@ const KnowledgeBasePage = () => {
 
   const isLoading = isLoadingFolders || isLoadingArticles;
 
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
-        </div>
-      );
-    }
-
-    if (displayMode === 'folders') {
-      if (viewMode === 'grid') {
-        return <FolderGridView 
-                  folders={sortedFolders} 
-                  onEdit={(folder) => setDialog({ type: 'edit-folder', data: folder })}
-                  onDelete={(folder) => setDialog({ type: 'delete-folder', data: folder })}
-                />;
-      }
-      return <FolderListView 
-                folders={sortedFolders} 
-                onEdit={folder => setDialog({ type: 'edit-folder', data: folder })} 
-                onDelete={folder => setDialog({ type: 'delete-folder', data: folder })} 
-                requestSort={requestSort} 
-              />;
-    }
-
-    if (displayMode === 'articles') {
-      if (viewMode === 'grid') {
-        return <PageGridView 
-                  articles={filteredArticles} 
-                  onEdit={(article) => setDialog({ type: 'edit-page', data: article })} 
-                  onDelete={(article) => setDialog({ type: 'delete-page', data: article })} 
-                />;
-      }
-      return <PageListView 
-                articles={filteredArticles} 
-                onEdit={(article) => setDialog({ type: 'edit-page', data: article })} 
-                onDelete={(article) => setDialog({ type: 'delete-page', data: article })} 
-              />;
-    }
-
-    return null;
-  };
-
   return (
     <PortalLayout>
       <div className="space-y-6">
         <KnowledgeBaseHeader
           searchTerm={searchTerm}
           onSearchTermChange={setSearchTerm}
-          displayMode={displayMode}
-          onDisplayModeChange={setDisplayMode}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
           onAddNewFolder={() => setDialog({ type: 'create-folder' })}
           onAddNewArticle={() => setDialog({ type: 'create-page' })}
         />
-        {renderContent()}
+        
+        {isLoading ? (
+          <div className="space-y-6">
+            <Skeleton className="h-10 w-48" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
+            </div>
+            <Skeleton className="h-10 w-48 mt-6" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-48" />)}
+            </div>
+          </div>
+        ) : (
+          <>
+            <Collapsible open={isFoldersOpen} onOpenChange={setIsFoldersOpen} className="border-t pt-6">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between px-0 text-lg font-semibold mb-4 hover:bg-transparent">
+                  Folders
+                  <ChevronDown className={`h-5 w-5 transition-transform ${isFoldersOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <FolderGridView 
+                  folders={filteredFolders} 
+                  onEdit={(folder) => setDialog({ type: 'edit-folder', data: folder })}
+                  onDelete={(folder) => setDialog({ type: 'delete-folder', data: folder })}
+                />
+              </CollapsibleContent>
+            </Collapsible>
+
+            <div className="border-t pt-6">
+              <h2 className="text-2xl font-bold mb-4">All Pages</h2>
+              <AllArticlesView
+                articles={filteredArticles}
+                onEdit={(article) => setDialog({ type: 'edit-page', data: article })}
+                onDelete={(article) => setDialog({ type: 'delete-page', data: article })}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       <FolderFormDialog
