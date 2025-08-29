@@ -112,7 +112,7 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
         },
         "aria-label": "Address",
         ariaLiveMessages: {
-          onFocus: () => '', // This removes the verbose instructions on focus
+          onFocus: () => '',
         },
       }}
     />
