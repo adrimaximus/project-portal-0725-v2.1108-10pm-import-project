@@ -139,6 +139,8 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     }
   };
 
+  const isUser = !!person?.user_id;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -148,11 +150,21 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6">
             <FormField control={form.control} name="full_name" render={({ field }) => (
-              <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem>
+                <FormLabel>Full Name</FormLabel>
+                <FormControl><Input {...field} disabled={isUser} /></FormControl>
+                {isUser && <p className="text-xs text-muted-foreground">Nama dikelola oleh profil pengguna.</p>}
+                <FormMessage />
+              </FormItem>
             )} />
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="email" render={({ field }) => (
-                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl><Input type="email" {...field} disabled={isUser} /></FormControl>
+                  {isUser && <p className="text-xs text-muted-foreground">Email dikelola oleh profil pengguna.</p>}
+                  <FormMessage />
+                </FormItem>
               )} />
               <FormField control={form.control} name="phone" render={({ field }) => (
                 <FormItem>

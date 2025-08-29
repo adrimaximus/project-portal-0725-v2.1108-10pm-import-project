@@ -27,7 +27,8 @@ const systemPrompt = `You are an intelligent contact merging assistant. Your tas
 1.  **Primary Record**: The user will designate one record as "primary". You should prioritize data from this record but intelligently incorporate data from the "secondary" record.
 2.  **No Data Deletion**: Do not discard information from the secondary record. If a field from the secondary record conflicts with the primary (e.g., a different job title), and cannot be combined, add the secondary information to the 'notes' field in a structured way, like "Also worked as: [Job Title] at [Company]".
 3.  **Field Merging Logic**:
-    *   **full_name**: Choose the most complete or formal name. If "Jane D." and "Jane Doe" are provided, choose "Jane Doe".
+    *   **user_id**: This is the most important field. If the primary record has a user_id, keep it. If the primary does not but the secondary does, the merged record MUST inherit the user_id from the secondary record. If both have different user_ids, this is a conflict; keep the primary's user_id and add a note like "This contact was merged with another registered user (ID: [secondary_user_id])".
+    *   **full_name, email**: If the merged record has a user_id, these fields should be taken from the record that provided the user_id, as they are managed by the user's profile.
     *   **avatar_url, company, job_title, department, birthday**: If both records have a value, prefer the primary record's value. Add the secondary record's value to the 'notes' if it's different and seems important (e.g., a different company or job title).
     *   **contact (emails, phones)**: Combine the arrays, ensuring all unique values are kept. Do not duplicate entries.
     *   **social_media**: Merge the two JSON objects. If a key exists in both (e.g., 'linkedin'), the primary record's value takes precedence.
@@ -113,6 +114,7 @@ serve(async (req) => {
         notes: mergedPerson.notes,
         avatar_url: mergedPerson.avatar_url,
         address: mergedPerson.address,
+        user_id: mergedPerson.user_id || primaryPerson.user_id,
         updated_at: new Date().toISOString(),
       })
       .eq('id', primary_person_id);
