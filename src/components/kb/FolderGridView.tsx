@@ -5,8 +5,8 @@ import { Button } from '../ui/button';
 
 interface FolderGridViewProps {
   folders: KbFolder[];
-  onEdit: (folder: KbFolder) => void;
-  onDelete: (folder: KbFolder) => void;
+  onEdit?: (folder: KbFolder) => void;
+  onDelete?: (folder: KbFolder) => void;
 }
 
 const FOLDERS_PREVIEW_LIMIT = 8;
@@ -23,7 +23,7 @@ const FolderGridView = ({ folders, onEdit, onDelete }: FolderGridViewProps) => {
   if (folders.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-        <p>No folders found.</p>
+        <p>No other folders found.</p>
       </div>
     );
   }

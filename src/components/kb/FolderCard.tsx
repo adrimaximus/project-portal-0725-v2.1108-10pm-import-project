@@ -8,8 +8,8 @@ import { Button } from '../ui/button';
 
 interface FolderCardProps {
   folder: KbFolder;
-  onEdit: (folder: KbFolder) => void;
-  onDelete: (folder: KbFolder) => void;
+  onEdit?: (folder: KbFolder) => void;
+  onDelete?: (folder: KbFolder) => void;
 }
 
 const FolderCard = ({ folder, onEdit, onDelete }: FolderCardProps) => {
@@ -22,21 +22,23 @@ const FolderCard = ({ folder, onEdit, onDelete }: FolderCardProps) => {
           <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" style={{ color: folder.color }} />
           <span className="font-medium truncate text-sm group-hover:underline">{folder.name}</span>
         </Link>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => onEdit(folder)}>
-              <Edit className="mr-2 h-4 w-4" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onDelete(folder)} className="text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {onEdit && onDelete && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onEdit(folder)}>
+                <Edit className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onDelete(folder)} className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </CardContent>
     </Card>
   );
