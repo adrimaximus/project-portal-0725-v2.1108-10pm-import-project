@@ -89,29 +89,33 @@ export const useNotifications = () => {
   const notifications = data?.pages.flatMap(page => page) ?? [];
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const updateNotificationStatus = (notificationId: string, read: boolean) => {
+    queryClient.setQueryData<InfiniteData<Notification[]>>(queryKey, (oldData) => {
+      if (!oldData) return undefined;
+      return {
+        ...oldData,
+        pages: oldData.pages.map(page =>
+          page.map(notification =>
+            notification.id === notificationId
+              ? { ...notification, read }
+              : notification
+          )
+        )
+      };
+    });
+  };
+
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
       const { error } = await supabase.functions.invoke('update-notification', {
-        body: { notificationId },
+        body: { notificationId, isRead: true },
       });
       if (error) throw error;
     },
     onMutate: async (notificationId: string) => {
       await queryClient.cancelQueries({ queryKey });
       const previousNotifications = queryClient.getQueryData<InfiniteData<Notification[]>>(queryKey);
-      queryClient.setQueryData<InfiniteData<Notification[]>>(queryKey, (oldData) => {
-        if (!oldData) return undefined;
-        return {
-          ...oldData,
-          pages: oldData.pages.map(page =>
-            page.map(notification =>
-              notification.id === notificationId
-                ? { ...notification, read: true }
-                : notification
-            )
-          )
-        };
-      });
+      updateNotificationStatus(notificationId, true);
       return { previousNotifications };
     },
     onError: (err, notificationId, context) => {
@@ -119,6 +123,30 @@ export const useNotifications = () => {
         queryClient.setQueryData(queryKey, context.previousNotifications);
       }
       toast.error("Failed to mark notification as read.");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const markAsUnreadMutation = useMutation({
+    mutationFn: async (notificationId: string) => {
+      const { error } = await supabase.functions.invoke('update-notification', {
+        body: { notificationId, isRead: false },
+      });
+      if (error) throw error;
+    },
+    onMutate: async (notificationId: string) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousNotifications = queryClient.getQueryData<InfiniteData<Notification[]>>(queryKey);
+      updateNotificationStatus(notificationId, false);
+      return { previousNotifications };
+    },
+    onError: (err, notificationId, context) => {
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(queryKey, context.previousNotifications);
+      }
+      toast.error("Failed to mark notification as unread.");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -166,6 +194,7 @@ export const useNotifications = () => {
     isLoading,
     unreadCount,
     markAsRead: markAsReadMutation.mutate,
+    markAsUnread: markAsUnreadMutation.mutate,
     markAllAsRead: markAllAsReadMutation.mutate,
     fetchNextPage,
     hasNextPage,

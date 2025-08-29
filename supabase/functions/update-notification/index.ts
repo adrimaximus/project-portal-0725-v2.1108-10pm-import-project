@@ -9,13 +9,11 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Create a Supabase client with the user's auth token
     const supabaseClient = createClient(
       // @ts-ignore
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -24,7 +22,6 @@ serve(async (req) => {
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
 
-    // Get the current user
     const { data: { user } } = await supabaseClient.auth.getUser()
     if (!user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -33,28 +30,23 @@ serve(async (req) => {
       })
     }
 
-    const { notificationId, markAll } = await req.json()
+    const { notificationId, markAll, isRead } = await req.json()
 
     if (markAll) {
-      // Mark all notifications as read for the user
       const { error } = await supabaseClient
         .from('notification_recipients')
         .update({ read_at: new Date().toISOString() })
         .eq('user_id', user.id)
         .is('read_at', null)
-
       if (error) throw error
-
     } else if (notificationId) {
-      // Mark a single notification as read
+      const newReadAt = isRead ? new Date().toISOString() : null;
       const { error } = await supabaseClient
         .from('notification_recipients')
-        .update({ read_at: new Date().toISOString() })
+        .update({ read_at: newReadAt })
         .eq('notification_id', notificationId)
         .eq('user_id', user.id)
-
       if (error) throw error
-
     } else {
       return new Response(JSON.stringify({ error: 'Invalid request body' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

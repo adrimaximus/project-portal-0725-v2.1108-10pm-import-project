@@ -26,7 +26,8 @@ const NotificationsPage = () => {
     notifications, 
     isLoading, 
     unreadCount, 
-    markAsRead, 
+    markAsRead,
+    markAsUnread,
     markAllAsRead,
     fetchNextPage,
     hasNextPage,
@@ -88,7 +89,15 @@ const NotificationsPage = () => {
                           {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: id })}
                         </p>
                       </div>
-                      {!notification.read && (
+                      {notification.read ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => markAsUnread(notification.id)}
+                        >
+                          Mark as unread
+                        </Button>
+                      ) : (
                         <Button
                           variant="ghost"
                           size="sm"
