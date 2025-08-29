@@ -11,47 +11,13 @@ interface AddressAutocompleteInputProps {
   disabled?: boolean;
 }
 
-const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocompleteInputProps) => {
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [loadingKey, setLoadingKey] = useState(true);
-
-  useEffect(() => {
-    const fetchKey = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('get-google-maps-key');
-        if (error) throw error;
-        if (data.apiKey) {
-          setApiKey(data.apiKey);
-        } else {
-          throw new Error("Kunci API tidak dikembalikan dari fungsi.");
-        }
-      } catch (error: any) {
-        console.error("Gagal mengambil kunci API Google Maps:", error.message);
-      } finally {
-        setLoadingKey(false);
-      }
-    };
-    fetchKey();
-  }, []);
-
+const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: string, value: any, onChange: (address: any) => void, disabled?: boolean }) => {
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey || '',
+    googleMapsApiKey: apiKey,
     libraries: ['places'],
     preventGoogleFontsLoading: true,
   });
 
-  if (loadingKey) {
-    return <Skeleton className="h-10 w-full" />;
-  }
-
-  if (!apiKey) {
-    return (
-      <div className="p-3 text-center text-sm text-red-700 bg-red-100 border border-red-200 rounded-md">
-        Kunci API Google Maps tidak dikonfigurasi di server. Silakan hubungi administrator.
-      </div>
-    );
-  }
-  
   if (loadError) {
     console.error("Google Maps API Load Error:", loadError);
     return (
@@ -146,6 +112,44 @@ const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocomp
       }}
     />
   );
+};
+
+const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocompleteInputProps) => {
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [loadingKey, setLoadingKey] = useState(true);
+
+  useEffect(() => {
+    const fetchKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-google-maps-key');
+        if (error) throw error;
+        if (data.apiKey) {
+          setApiKey(data.apiKey);
+        } else {
+          throw new Error("Kunci API tidak dikembalikan dari fungsi.");
+        }
+      } catch (error: any) {
+        console.error("Gagal mengambil kunci API Google Maps:", error.message);
+      } finally {
+        setLoadingKey(false);
+      }
+    };
+    fetchKey();
+  }, []);
+
+  if (loadingKey) {
+    return <Skeleton className="h-10 w-full" />;
+  }
+
+  if (!apiKey) {
+    return (
+      <div className="p-3 text-center text-sm text-red-700 bg-red-100 border border-red-200 rounded-md">
+        Kunci API Google Maps tidak dikonfigurasi di server. Silakan hubungi administrator.
+      </div>
+    );
+  }
+
+  return <AutocompleteCore apiKey={apiKey} value={value} onChange={onChange} disabled={disabled} />;
 };
 
 export default AddressAutocompleteInput;
