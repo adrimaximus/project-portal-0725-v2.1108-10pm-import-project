@@ -14,14 +14,6 @@ import { useTeamSettingsData } from '@/hooks/useTeamSettingsData';
 import { useTeamSettingsMutations } from '@/hooks/useTeamSettingsMutations';
 import ConfirmationDialog from '@/components/settings/ConfirmationDialog';
 
-type DialogState = 
-  | { type: 'deleteMember', data: User }
-  | { type: 'deleteRole', data: Role }
-  | { type: 'editRole', data: Role }
-  | { type: 'createRole' }
-  | { type: 'addUser' }
-  | { type: null };
-
 const TeamSettingsPage = () => {
   const { user: currentUser } = useAuth();
   const { features: workspaceFeatures } = useFeatures();
@@ -38,83 +30,22 @@ const TeamSettingsPage = () => {
     resendInvite 
   } = useTeamSettingsMutations(fetchData);
 
-  const [dialogState, setDialogState] = useState<DialogState>({ type: null });
+  const [memberToDelete, setMemberToDelete] = useState<User | null>(null);
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
+  const [roleToEdit, setRoleToEdit] = useState<Role | null>(null);
+  const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
 
   const isMasterAdmin = currentUser?.role === 'master admin';
   const isAdmin = currentUser?.role === 'admin' || isMasterAdmin;
 
   const handleSaveRole = (role: Role) => {
     saveRole(role, {
-      onSuccess: () => setDialogState({ type: null }),
+      onSuccess: () => {
+        setRoleToEdit(null);
+        setIsCreateRoleOpen(false);
+      },
     });
-  };
-
-  const renderDialogs = () => {
-    switch (dialogState.type) {
-      case 'deleteMember': {
-        const { data } = dialogState;
-        return (
-          <ConfirmationDialog
-            open={true}
-            onOpenChange={() => setDialogState({ type: null })}
-            onConfirm={() => deleteMember(data)}
-            title="Are you sure?"
-            description={
-              data.status === 'Pending invite'
-                ? `This will cancel the invitation for ${data.email}. They will not be able to join the team with the current link.`
-                : `This will permanently delete ${data.name} from the team. This action cannot be undone.`
-            }
-            confirmText={data.status === 'Pending invite' ? 'Cancel Invite' : 'Delete'}
-          />
-        );
-      }
-      case 'deleteRole': {
-        const { data } = dialogState;
-        return (
-          <ConfirmationDialog
-            open={true}
-            onOpenChange={() => setDialogState({ type: null })}
-            onConfirm={() => deleteRole(data)}
-            title="Are you sure?"
-            description={`This will permanently delete the "${data.name}" role. This action cannot be undone.`}
-            confirmText="Delete"
-          />
-        );
-      }
-      case 'editRole': {
-        const { data } = dialogState;
-        return (
-          <RoleManagerDialog
-            open={true}
-            onOpenChange={() => setDialogState({ type: null })}
-            onSave={handleSaveRole}
-            role={data}
-            workspaceFeatures={workspaceFeatures}
-          />
-        );
-      }
-      case 'createRole':
-        return (
-          <RoleManagerDialog
-            open={true}
-            onOpenChange={() => setDialogState({ type: null })}
-            onSave={handleSaveRole}
-            role={null}
-            workspaceFeatures={workspaceFeatures}
-          />
-        );
-      case 'addUser':
-        return (
-          <AddUserDialog
-            open={true}
-            onOpenChange={() => setDialogState({ type: null })}
-            onUserAdded={fetchData}
-            roles={validRoles.filter(r => isMasterAdmin || r.name !== 'master admin')}
-          />
-        );
-      default:
-        return null;
-    }
   };
 
   return (
@@ -135,16 +66,16 @@ const TeamSettingsPage = () => {
 
         <RolesCard
           roles={roles}
-          onCreateRole={() => setDialogState({ type: 'createRole' })}
-          onEditRole={(role) => setDialogState({ type: 'editRole', data: role })}
-          onDeleteRole={(role) => setDialogState({ type: 'deleteRole', data: role })}
+          onCreateRole={() => setIsCreateRoleOpen(true)}
+          onEditRole={(role) => setRoleToEdit(role)}
+          onDeleteRole={(role) => setRoleToDelete(role)}
         />
 
         {isAdmin && (
           <InviteCard
             roles={validRoles}
             onSendInvites={(invites) => sendInvites(invites)}
-            onAddManually={() => setDialogState({ type: 'addUser' })}
+            onAddManually={() => setIsAddUserOpen(true)}
             isMasterAdmin={isMasterAdmin}
           />
         )}
@@ -156,12 +87,55 @@ const TeamSettingsPage = () => {
           isLoading={isLoading}
           onRoleChange={(memberId, newRole) => changeRole({ memberId, newRole })}
           onToggleSuspend={toggleSuspend}
-          onDeleteMember={(member) => setDialogState({ type: 'deleteMember', data: member })}
+          onDeleteMember={(member) => setMemberToDelete(member)}
           onResendInvite={resendInvite}
         />
       </div>
 
-      {renderDialogs()}
+      {/* Dialogs */}
+      {memberToDelete && (
+        <ConfirmationDialog
+          open={!!memberToDelete}
+          onOpenChange={() => setMemberToDelete(null)}
+          onConfirm={() => deleteMember(memberToDelete)}
+          title="Are you sure?"
+          description={
+            memberToDelete.status === 'Pending invite'
+              ? `This will cancel the invitation for ${memberToDelete.email}. They will not be able to join the team with the current link.`
+              : `This will permanently delete ${memberToDelete.name} from the team. This action cannot be undone.`
+          }
+          confirmText={memberToDelete.status === 'Pending invite' ? 'Cancel Invite' : 'Delete'}
+        />
+      )}
+
+      {roleToDelete && (
+        <ConfirmationDialog
+          open={!!roleToDelete}
+          onOpenChange={() => setRoleToDelete(null)}
+          onConfirm={() => deleteRole(roleToDelete)}
+          title="Are you sure?"
+          description={`This will permanently delete the "${roleToDelete.name}" role. This action cannot be undone.`}
+          confirmText="Delete"
+        />
+      )}
+
+      <RoleManagerDialog
+        open={isCreateRoleOpen || !!roleToEdit}
+        onOpenChange={() => {
+          setIsCreateRoleOpen(false);
+          setRoleToEdit(null);
+        }}
+        onSave={handleSaveRole}
+        role={roleToEdit}
+        workspaceFeatures={workspaceFeatures}
+      />
+
+      <AddUserDialog
+        open={isAddUserOpen}
+        onOpenChange={setIsAddUserOpen}
+        onUserAdded={fetchData}
+        roles={validRoles.filter(r => isMasterAdmin || r.name !== 'master admin')}
+      />
     </PortalLayout>
   );
 };
