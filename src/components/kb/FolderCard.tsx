@@ -44,11 +44,6 @@ const FolderCard = ({ folder, onEdit, onDelete }: FolderCardProps) => {
             </DropdownMenu>
           )}
         </div>
-        {folder.category && (
-          <div className="mt-2 ml-8">
-            <Badge variant="secondary" className="text-xs font-normal">{folder.category}</Badge>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
