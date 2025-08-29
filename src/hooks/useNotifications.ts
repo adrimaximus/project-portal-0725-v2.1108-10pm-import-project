@@ -98,11 +98,32 @@ export const useNotifications = () => {
         .eq('user_id', user!.id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+    onMutate: async (notificationId: string) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousNotifications = queryClient.getQueryData<InfiniteData<Notification[]>>(queryKey);
+      queryClient.setQueryData<InfiniteData<Notification[]>>(queryKey, (oldData) => {
+        if (!oldData) return undefined;
+        return {
+          ...oldData,
+          pages: oldData.pages.map(page =>
+            page.map(notification =>
+              notification.id === notificationId
+                ? { ...notification, read: true }
+                : notification
+            )
+          )
+        };
+      });
+      return { previousNotifications };
     },
-    onError: () => {
+    onError: (err, notificationId, context) => {
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(queryKey, context.previousNotifications);
+      }
       toast.error("Failed to mark notification as read.");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 
@@ -116,12 +137,31 @@ export const useNotifications = () => {
         .is('read_at', null);
       if (error) throw error;
     },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousNotifications = queryClient.getQueryData<InfiniteData<Notification[]>>(queryKey);
+      queryClient.setQueryData<InfiniteData<Notification[]>>(queryKey, (oldData) => {
+        if (!oldData) return undefined;
+        return {
+          ...oldData,
+          pages: oldData.pages.map(page =>
+            page.map(notification => ({ ...notification, read: true }))
+          )
+        };
+      });
+      return { previousNotifications };
+    },
     onSuccess: () => {
       toast.success("All notifications marked as read.");
-      queryClient.invalidateQueries({ queryKey });
     },
-    onError: () => {
+    onError: (err, variables, context) => {
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(queryKey, context.previousNotifications);
+      }
       toast.error("Failed to mark all notifications as read.");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 
