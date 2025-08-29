@@ -100,11 +100,11 @@ const TeamSettingsPage = () => {
           onConfirm={() => deleteMember(dialogState.data)}
           title="Are you sure?"
           description={
-            dialogState.data?.status === 'Pending invite'
-              ? `This will cancel the invitation for ${dialogState.data?.email}. They will not be able to join the team with the current link.`
-              : `This will permanently delete ${dialogState.data?.name} from the team. This action cannot be undone.`
+            dialogState.data.status === 'Pending invite'
+              ? `This will cancel the invitation for ${dialogState.data.email}. They will not be able to join the team with the current link.`
+              : `This will permanently delete ${dialogState.data.name} from the team. This action cannot be undone.`
           }
-          confirmText={dialogState.data?.status === 'Pending invite' ? 'Cancel Invite' : 'Delete'}
+          confirmText={dialogState.data.status === 'Pending invite' ? 'Cancel Invite' : 'Delete'}
         />
       )}
 
@@ -114,7 +114,7 @@ const TeamSettingsPage = () => {
           onOpenChange={() => setDialogState({ type: null })}
           onConfirm={() => deleteRole(dialogState.data)}
           title="Are you sure?"
-          description={`This will permanently delete the "${dialogState.data?.name}" role. This action cannot be undone.`}
+          description={`This will permanently delete the "${dialogState.data.name}" role. This action cannot be undone.`}
           confirmText="Delete"
         />
       )}
