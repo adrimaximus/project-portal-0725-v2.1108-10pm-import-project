@@ -134,12 +134,12 @@ const FolderDetailPage = () => {
           </BreadcrumbList>
         </Breadcrumb>
 
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
           <div>
-            <h1 className="text-3xl font-bold">{folder.name}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">{folder.name}</h1>
             <p className="text-muted-foreground mt-2">{folder.description}</p>
           </div>
-          <Button onClick={() => setDialog({ type: 'create-page' })}>
+          <Button onClick={() => setDialog({ type: 'create-page' })} className="w-full sm:w-auto flex-shrink-0">
             <PlusCircle className="mr-2 h-4 w-4" />
             New Page
           </Button>
@@ -160,7 +160,7 @@ const FolderDetailPage = () => {
         <div className="border-t pt-6">
           <h2 className="text-2xl font-bold mb-4">Pages in this Folder</h2>
           {isLoadingArticles ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48" />)}
             </div>
           ) : articles.length > 0 ? (

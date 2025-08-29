@@ -8,8 +8,8 @@ interface PageGridViewProps {
 }
 
 const PageGridView = ({ articles, onEdit, onDelete }: PageGridViewProps) => {
-  return articles.length > 0 ? (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
       {articles.map((article) => (
         <KBCard
           key={article.id}
@@ -18,10 +18,6 @@ const PageGridView = ({ articles, onEdit, onDelete }: PageGridViewProps) => {
           onDelete={onDelete}
         />
       ))}
-    </div>
-  ) : (
-    <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-      <p>No pages found.</p>
     </div>
   );
 };

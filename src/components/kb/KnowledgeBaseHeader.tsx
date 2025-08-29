@@ -19,10 +19,10 @@ const KnowledgeBaseHeader = ({
     <>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Knowledge Base</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Knowledge Base</h1>
           <p className="text-muted-foreground">Find and manage your team's pages and documentation.</p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
           <Button onClick={onAddNewArticle} variant="outline" className="w-full">
             <FilePlus className="mr-2 h-4 w-4" /> New Page
           </Button>
