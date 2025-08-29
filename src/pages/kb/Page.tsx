@@ -19,6 +19,13 @@ const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
       kb_folders (
         name,
         slug
+      ),
+      kb_article_tags (
+        tags (
+          id,
+          name,
+          color
+        )
       )
     `)
     .eq('slug', slug)
@@ -30,7 +37,10 @@ const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
     console.error(error);
     return null;
   }
-  return data as Article;
+
+  const { kb_article_tags, ...rest } = data;
+  const tags = kb_article_tags.map((t: any) => t.tags).filter(Boolean);
+  return { ...rest, tags } as Article;
 };
 
 const Page = () => {
@@ -146,6 +156,7 @@ const Page = () => {
           queryClient.invalidateQueries({ queryKey: ['kb_article', slug] });
           queryClient.invalidateQueries({ queryKey: ['kb_articles', article.folder_id] });
           queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
+          queryClient.invalidateQueries({ queryKey: ['tags'] });
         }}
       />
     </PortalLayout>

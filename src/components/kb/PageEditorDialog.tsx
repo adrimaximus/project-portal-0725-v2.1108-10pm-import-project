@@ -5,19 +5,21 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Image as ImageIcon, X, Sparkles, ListCollapse } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
-import { KbFolder, KbArticle as Article } from '@/types';
+import { KbFolder, KbArticle as Article, Tag } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import UnsplashImagePicker from './UnsplashImagePicker';
 import ReactQuill from 'react-quill';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { useTags } from '@/hooks/useTags';
+import { KbTagInput } from './KbTagInput';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ArticleValues {
   id?: string;
@@ -25,6 +27,7 @@ interface ArticleValues {
   content: any;
   folder_id: string;
   header_image_url?: string;
+  tags?: Tag[];
 }
 
 interface PageEditorDialogProps {
@@ -56,6 +59,8 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
   const [isSummarizing, setIsSummarizing] = useState(false);
   const editorRef = useRef<ReactQuill>(null);
   const [debouncedTitle, setDebouncedTitle] = useState('');
+  const { data: allTags = [] } = useTags();
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -73,7 +78,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
       if (titleValue) {
         setDebouncedTitle(titleValue);
       }
-    }, 500); // 500ms debounce delay
+    }, 500);
 
     return () => {
       clearTimeout(handler);
@@ -88,6 +93,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
           content: article.content?.html || article.content || '',
           folder_id: article.folder_id,
         });
+        setSelectedTags(article.tags || []);
         setImagePreview(article.header_image_url || null);
       } else {
         form.reset({
@@ -95,12 +101,23 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
           content: '',
           folder_id: folder?.id || '',
         });
+        setSelectedTags([]);
         setImagePreview(null);
       }
       setImageFile(null);
       setIsRemovingImage(false);
     }
   }, [article, folder, open, form]);
+
+  const handleTagCreate = (tagName: string): Tag => {
+    const newTagObject: Tag = {
+      id: `custom-${uuidv4()}`,
+      name: tagName,
+      color: '#808080',
+      user_id: user?.id || '',
+    };
+    return newTagObject;
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -294,18 +311,20 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
         return;
     }
     
-    const articleData = {
-      title: values.title,
-      content: values.content ? { html: values.content } : null,
-      folder_id: finalFolderId,
-      header_image_url: header_image_url,
+    const existingTagIds = selectedTags.filter(t => !t.id.startsWith('custom-')).map(t => t.id);
+    const newCustomTags = selectedTags.filter(t => t.id.startsWith('custom-')).map(t => ({ name: t.name, color: t.color }));
+
+    const rpcParams = {
+        p_id: isEditMode ? article?.id : null,
+        p_title: values.title,
+        p_content: values.content ? { html: values.content } : null,
+        p_folder_id: finalFolderId,
+        p_header_image_url: header_image_url,
+        p_tags: existingTagIds,
+        p_custom_tags: newCustomTags.length > 0 ? newCustomTags : null,
     };
 
-    const promise = isEditMode && article?.id
-      ? supabase.from('kb_articles').update(articleData).eq('id', article.id)
-      : supabase.from('kb_articles').insert(articleData);
-
-    const { error } = await promise;
+    const { error } = await supabase.rpc('upsert_article_with_tags', rpcParams);
     setIsSaving(false);
 
     if (error) {
@@ -402,6 +421,15 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                 </FormItem>
               )}
             />
+            <FormItem>
+              <FormLabel>Tags</FormLabel>
+              <KbTagInput
+                allTags={allTags}
+                selectedTags={selectedTags}
+                onTagsChange={setSelectedTags}
+                onTagCreate={handleTagCreate}
+              />
+            </FormItem>
             <FormField control={form.control} name="content" render={({ field }) => (
               <FormItem>
                 <div className="flex justify-between items-center">
