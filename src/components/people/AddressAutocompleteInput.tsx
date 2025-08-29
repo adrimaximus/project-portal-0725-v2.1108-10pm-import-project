@@ -111,7 +111,8 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
           }),
         },
         "aria-label": "Address",
-        screenReaderStatus: () => '',
+        // PERBAIKAN DEFINITIF: Mengosongkan semua pesan aksesibilitas untuk mencegah renderingnya
+        ariaLiveMessages: {},
       }}
     />
   );
