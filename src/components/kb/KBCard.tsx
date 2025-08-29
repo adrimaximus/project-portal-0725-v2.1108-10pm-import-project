@@ -5,6 +5,8 @@ import { FileText, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface KBCardProps {
   article: KbArticle;
@@ -66,10 +68,28 @@ export function KBCard({ article, onEdit, onDelete }: KBCardProps) {
           {description}
         </p>
 
-        <div className="mt-3 flex justify-end">
-          <Button size="sm" variant="secondary" className="rounded-full h-7 px-3 text-xs" asChild>
-            <Link to={`/knowledge-base/pages/${article.slug}`}>View</Link>
-          </Button>
+        <div className="mt-auto pt-3 border-t flex justify-between items-center">
+          {article.creator ? (
+            <div className="flex items-center space-x-2 min-w-0">
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={article.creator.avatar_url} alt={article.creator.name} />
+                <AvatarFallback className="text-xs">{article.creator.initials}</AvatarFallback>
+              </Avatar>
+              <span className="text-xs text-muted-foreground truncate">{article.creator.name}</span>
+            </div>
+          ) : (
+            <div />
+          )}
+
+          {article.tags && article.tags.length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap justify-end">
+              {article.tags.slice(0, 2).map((tag) => (
+                <Badge key={tag.id} variant="secondary" className="text-xs font-normal">
+                  {tag.name}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </Card>
