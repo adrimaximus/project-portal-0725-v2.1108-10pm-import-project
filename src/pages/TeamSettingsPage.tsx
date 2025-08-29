@@ -51,42 +51,48 @@ const TeamSettingsPage = () => {
 
   const renderDialogs = () => {
     switch (dialogState.type) {
-      case 'deleteMember':
+      case 'deleteMember': {
+        const { data } = dialogState;
         return (
           <ConfirmationDialog
             open={true}
             onOpenChange={() => setDialogState({ type: null })}
-            onConfirm={() => deleteMember(dialogState.data)}
+            onConfirm={() => deleteMember(data)}
             title="Are you sure?"
             description={
-              dialogState.data.status === 'Pending invite'
-                ? `This will cancel the invitation for ${dialogState.data.email}. They will not be able to join the team with the current link.`
-                : `This will permanently delete ${dialogState.data.name} from the team. This action cannot be undone.`
+              data.status === 'Pending invite'
+                ? `This will cancel the invitation for ${data.email}. They will not be able to join the team with the current link.`
+                : `This will permanently delete ${data.name} from the team. This action cannot be undone.`
             }
-            confirmText={dialogState.data.status === 'Pending invite' ? 'Cancel Invite' : 'Delete'}
+            confirmText={data.status === 'Pending invite' ? 'Cancel Invite' : 'Delete'}
           />
         );
-      case 'deleteRole':
+      }
+      case 'deleteRole': {
+        const { data } = dialogState;
         return (
           <ConfirmationDialog
             open={true}
             onOpenChange={() => setDialogState({ type: null })}
-            onConfirm={() => deleteRole(dialogState.data)}
+            onConfirm={() => deleteRole(data)}
             title="Are you sure?"
-            description={`This will permanently delete the "${dialogState.data.name}" role. This action cannot be undone.`}
+            description={`This will permanently delete the "${data.name}" role. This action cannot be undone.`}
             confirmText="Delete"
           />
         );
-      case 'editRole':
+      }
+      case 'editRole': {
+        const { data } = dialogState;
         return (
           <RoleManagerDialog
             open={true}
             onOpenChange={() => setDialogState({ type: null })}
             onSave={handleSaveRole}
-            role={dialogState.data}
+            role={data}
             workspaceFeatures={workspaceFeatures}
           />
         );
+      }
       case 'createRole':
         return (
           <RoleManagerDialog
