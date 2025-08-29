@@ -74,6 +74,7 @@ const ProjectsPage = () => {
     sortConfig, requestSort, sortedProjects
   } = useProjectFilters(projects);
 
+  const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'due_date', direction: 'asc' });
 
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
@@ -82,6 +83,16 @@ const ProjectsPage = () => {
     orderBy: view === 'tasks-kanban' ? 'kanban_order' : taskSortConfig.key,
     orderDirection: view === 'tasks-kanban' ? 'asc' : taskSortConfig.direction,
   });
+
+  const filteredTasks = useMemo(() => {
+    if (!taskSearchTerm) return tasks;
+    const lowercasedFilter = taskSearchTerm.toLowerCase();
+    return tasks.filter(task => 
+      task.title.toLowerCase().includes(lowercasedFilter) ||
+      (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
+      (task.projects?.name && task.projects.name.toLowerCase().includes(lowercasedFilter))
+    );
+  }, [tasks, taskSearchTerm]);
 
   useEffect(() => {
     if (!user) return;
@@ -344,6 +355,8 @@ const ProjectsPage = () => {
     });
   };
 
+  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
+
   return (
     <PortalLayout>
       <div className="flex flex-col h-full">
@@ -425,9 +438,9 @@ const ProjectsPage = () => {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search projects..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder={isTaskView ? "Search tasks..." : "Search projects..."}
+                    value={isTaskView ? taskSearchTerm : searchTerm}
+                    onChange={(e) => isTaskView ? setTaskSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
                     className="pl-9 w-full"
                   />
                 </div>
@@ -442,7 +455,7 @@ const ProjectsPage = () => {
             <ProjectViewContainer
               view={view}
               projects={sortedProjects}
-              tasks={tasks}
+              tasks={filteredTasks}
               isLoading={isLoading}
               isTasksLoading={tasksLoading}
               onDeleteProject={handleDeleteProject}
