@@ -11,6 +11,7 @@ interface AddressAutocompleteInputProps {
   disabled?: boolean;
 }
 
+// Komponen ini hanya akan dirender setelah kunci API tersedia.
 const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: string, value: any, onChange: (address: any) => void, disabled?: boolean }) => {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: apiKey,
