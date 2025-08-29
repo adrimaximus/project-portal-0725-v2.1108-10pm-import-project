@@ -49,6 +49,68 @@ const TeamSettingsPage = () => {
     });
   };
 
+  const renderDialogs = () => {
+    switch (dialogState.type) {
+      case 'deleteMember':
+        return (
+          <ConfirmationDialog
+            open={true}
+            onOpenChange={() => setDialogState({ type: null })}
+            onConfirm={() => deleteMember(dialogState.data)}
+            title="Are you sure?"
+            description={
+              dialogState.data.status === 'Pending invite'
+                ? `This will cancel the invitation for ${dialogState.data.email}. They will not be able to join the team with the current link.`
+                : `This will permanently delete ${dialogState.data.name} from the team. This action cannot be undone.`
+            }
+            confirmText={dialogState.data.status === 'Pending invite' ? 'Cancel Invite' : 'Delete'}
+          />
+        );
+      case 'deleteRole':
+        return (
+          <ConfirmationDialog
+            open={true}
+            onOpenChange={() => setDialogState({ type: null })}
+            onConfirm={() => deleteRole(dialogState.data)}
+            title="Are you sure?"
+            description={`This will permanently delete the "${dialogState.data.name}" role. This action cannot be undone.`}
+            confirmText="Delete"
+          />
+        );
+      case 'editRole':
+        return (
+          <RoleManagerDialog
+            open={true}
+            onOpenChange={() => setDialogState({ type: null })}
+            onSave={handleSaveRole}
+            role={dialogState.data}
+            workspaceFeatures={workspaceFeatures}
+          />
+        );
+      case 'createRole':
+        return (
+          <RoleManagerDialog
+            open={true}
+            onOpenChange={() => setDialogState({ type: null })}
+            onSave={handleSaveRole}
+            role={null}
+            workspaceFeatures={workspaceFeatures}
+          />
+        );
+      case 'addUser':
+        return (
+          <AddUserDialog
+            open={true}
+            onOpenChange={() => setDialogState({ type: null })}
+            onUserAdded={fetchData}
+            roles={validRoles.filter(r => isMasterAdmin || r.name !== 'master admin')}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -93,46 +155,7 @@ const TeamSettingsPage = () => {
         />
       </div>
 
-      {dialogState.type === 'deleteMember' && (
-        <ConfirmationDialog
-          open={true}
-          onOpenChange={() => setDialogState({ type: null })}
-          onConfirm={() => deleteMember(dialogState.data)}
-          title="Are you sure?"
-          description={
-            dialogState.data.status === 'Pending invite'
-              ? `This will cancel the invitation for ${dialogState.data.email}. They will not be able to join the team with the current link.`
-              : `This will permanently delete ${dialogState.data.name} from the team. This action cannot be undone.`
-          }
-          confirmText={dialogState.data.status === 'Pending invite' ? 'Cancel Invite' : 'Delete'}
-        />
-      )}
-
-      {dialogState.type === 'deleteRole' && (
-        <ConfirmationDialog
-          open={true}
-          onOpenChange={() => setDialogState({ type: null })}
-          onConfirm={() => deleteRole(dialogState.data)}
-          title="Are you sure?"
-          description={`This will permanently delete the "${dialogState.data.name}" role. This action cannot be undone.`}
-          confirmText="Delete"
-        />
-      )}
-
-      <RoleManagerDialog
-        open={dialogState.type === 'createRole' || dialogState.type === 'editRole'}
-        onOpenChange={() => setDialogState({ type: null })}
-        onSave={handleSaveRole}
-        role={dialogState.type === 'editRole' ? dialogState.data : null}
-        workspaceFeatures={workspaceFeatures}
-      />
-
-      <AddUserDialog
-        open={dialogState.type === 'addUser'}
-        onOpenChange={() => setDialogState({ type: null })}
-        onUserAdded={fetchData}
-        roles={validRoles.filter(r => isMasterAdmin || r.name !== 'master admin')}
-      />
+      {renderDialogs()}
     </PortalLayout>
   );
 };

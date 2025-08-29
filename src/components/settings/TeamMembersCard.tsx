@@ -184,7 +184,7 @@ const TeamMembersCard = ({
                         )}
                       </TableCell>
                     </TableRow>
-                  );
+                    );
                   })}
                 </TableBody>
               </Table>
