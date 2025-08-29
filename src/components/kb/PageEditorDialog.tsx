@@ -356,7 +356,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                 e.preventDefault();
               }
             }}
-            className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4"
+            className="space-y-4 p-4 max-h-[70vh] overflow-y-auto"
           >
             <FormField control={form.control} name="title" render={({ field }) => (
               <FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>

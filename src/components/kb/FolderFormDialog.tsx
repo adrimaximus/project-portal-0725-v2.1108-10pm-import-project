@@ -166,7 +166,7 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4 max-h-[70vh] overflow-y-auto">
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem><FormLabel>Folder Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
@@ -228,7 +228,7 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
               />
             </div>
 
-            <DialogFooter className="pt-4 sticky bottom-0 bg-background -mx-6 px-6 pb-6">
+            <DialogFooter className="pt-4 sticky bottom-0 bg-background -mx-4 -mb-4 px-4 pb-4 border-t">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
