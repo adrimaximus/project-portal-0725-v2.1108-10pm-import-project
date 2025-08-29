@@ -19,6 +19,7 @@ import { MultiSelect } from '../ui/multi-select';
 import { getInitials } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { allIcons } from '@/data/icons';
+import { CategoryInput } from './CategoryInput';
 
 interface FolderFormDialogProps {
   open: boolean;
@@ -173,9 +174,20 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
             <FormField control={form.control} name="description" render={({ field }) => (
               <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            <FormField control={form.control} name="category" render={({ field }) => (
-              <FormItem><FormLabel>Category</FormLabel><FormControl><Input placeholder="e.g., Internal Docs" {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Category</FormLabel>
+                  <CategoryInput 
+                    value={field.value || ''} 
+                    onChange={field.onChange} 
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField control={form.control} name="icon" render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-2">
