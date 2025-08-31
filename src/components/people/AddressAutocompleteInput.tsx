@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import GooglePlacesAutocomplete, { geocodeByAddress, getLatLng } from 'react-google-places-autocomplete';
+import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 import { toast } from 'sonner';
-import { useJsApiLoader } from '@react-google-maps/api';
 import { Skeleton } from '../ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import { Input } from '../ui/input';
 
 interface AddressAutocompleteInputProps {
   value: any;
@@ -19,6 +19,62 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
     preventGoogleFontsLoading: true,
   });
 
+  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+  const [inputValue, setInputValue] = useState('');
+
+  const getDisplayLabel = (val: any): string => {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object' && val !== null) {
+      return val.label || val.formatted_address || '';
+    }
+    return '';
+  };
+
+  useEffect(() => {
+    setInputValue(getDisplayLabel(value));
+  }, [value]);
+
+  const onLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
+    setAutocomplete(autocompleteInstance);
+  };
+
+  const onPlaceChanged = () => {
+    if (autocomplete !== null) {
+      const place = autocomplete.getPlace();
+      
+      if (!place || !place.geometry || !place.geometry.location) {
+        toast.warning("Lokasi tidak valid. Silakan pilih dari daftar atau coba lagi.");
+        onChange(null);
+        return;
+      }
+
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      const components = place.address_components || [];
+      const get = (type: string) => components.find((c: any) => c.types.includes(type))?.long_name || '';
+
+      const structuredAddress = {
+        label: place.name || place.formatted_address,
+        place_id: place.place_id,
+        formatted_address: place.formatted_address,
+        lat: lat,
+        lng: lng,
+        street: [get('route'), get('street_number')].filter(Boolean).join(' '),
+        suburb: get('sublocality') || get('sublocality_level_1'),
+        city: get('locality') || get('administrative_area_level_2'),
+        province: get('administrative_area_level_1'),
+        postal_code: get('postal_code'),
+        country: get('country'),
+      };
+      
+      onChange(structuredAddress);
+      setInputValue(place.formatted_address || place.name || '');
+    } else {
+      console.error('Autocomplete is not loaded yet!');
+    }
+  };
+
   if (loadError) {
     console.error("Google Maps API Load Error:", loadError);
     return (
@@ -32,89 +88,29 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
     return <Skeleton className="h-10 w-full" />;
   }
 
-  const handleSelect = async (place: any) => {
-    if (!place) {
-      onChange(null);
-      return;
-    }
-
-    try {
-      const results = await geocodeByAddress(place.label);
-      const latLng = await getLatLng(results[0]);
-      const components = results[0].address_components;
-
-      const get = (type: string) => components.find((c: any) => c.types.includes(type))?.long_name || '';
-
-      const structuredAddress = {
-        label: place.label,
-        place_id: results[0].place_id,
-        formatted_address: results[0].formatted_address,
-        lat: latLng.lat,
-        lng: latLng.lng,
-        street: [get('route'), get('street_number')].filter(Boolean).join(' '),
-        suburb: get('sublocality') || get('sublocality_level_1'),
-        city: get('locality') || get('administrative_area_level_2'),
-        province: get('administrative_area_level_1'),
-        postal_code: get('postal_code'),
-        country: get('country'),
-      };
-      onChange(structuredAddress);
-    } catch (error) {
-      console.error("Error getting address details:", error);
-      toast.error("Could not fetch address details.");
-      onChange({ label: place.label, formatted_address: place.label });
-    }
-  };
-
-  const getDisplayLabel = (val: any): string | undefined => {
-    if (!val) return undefined;
-    if (typeof val === 'string') return val;
-    if (typeof val === 'object' && val !== null) {
-      return val.label || val.formatted_address;
-    }
-    return undefined;
-  };
-
-  const displayLabel = getDisplayLabel(value);
-  const formattedValue = displayLabel ? { label: displayLabel, value: displayLabel } : null;
-
   return (
-    <GooglePlacesAutocomplete
-      selectProps={{
-        value: formattedValue,
-        onChange: handleSelect,
-        isDisabled: disabled,
-        placeholder: 'Start typing an address...',
-        styles: {
-          control: (provided) => ({
-            ...provided,
-            borderColor: 'hsl(var(--border))',
-            backgroundColor: 'hsl(var(--background))',
-            minHeight: '40px',
-          }),
-          input: (provided) => ({
-            ...provided,
-            color: 'hsl(var(--foreground))',
-          }),
-          option: (provided, state) => ({
-            ...provided,
-            backgroundColor: state.isFocused ? 'hsl(var(--accent))' : 'hsl(var(--background))',
-            color: 'hsl(var(--foreground))',
-          }),
-          singleValue: (provided) => ({
-            ...provided,
-            color: 'hsl(var(--foreground))',
-          }),
-          menu: (provided) => ({
-            ...provided,
-            zIndex: 50,
-          }),
-        },
-        "aria-label": "Address",
-        // This prevents the accessibility instruction text from being rendered.
-        ariaLiveMessages: {},
+    <Autocomplete
+      onLoad={onLoad}
+      onPlaceChanged={onPlaceChanged}
+      options={{
+        types: ['establishment', 'geocode'],
+        componentRestrictions: { country: 'id' },
+        fields: ['place_id', 'geometry', 'name', 'formatted_address', 'address_components'],
       }}
-    />
+    >
+      <Input
+        type="text"
+        placeholder="Mulai ketik alamat..."
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onBlur={() => {
+          if (inputValue !== getDisplayLabel(value)) {
+            onChange(inputValue);
+          }
+        }}
+        disabled={disabled}
+      />
+    </Autocomplete>
   );
 };
 
