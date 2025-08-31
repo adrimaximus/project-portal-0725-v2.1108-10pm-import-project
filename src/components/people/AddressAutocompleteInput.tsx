@@ -112,11 +112,7 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
         },
         "aria-label": "Address",
         // This prevents the accessibility instruction text from being rendered.
-        ariaLiveMessages: {
-          onFocus: () => '',
-          onFilter: () => '',
-          onChange: () => '',
-        },
+        ariaLiveMessages: {},
       }}
     />
   );
