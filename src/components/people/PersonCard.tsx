@@ -2,9 +2,8 @@ import { Person } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User as UserIcon, Linkedin, Twitter, Instagram, Briefcase, Mail } from 'lucide-react';
-import { generateVibrantGradient, formatInJakarta } from '@/lib/utils';
+import { generateVibrantGradient } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import WhatsappIcon from '../icons/WhatsappIcon';
 
 interface PersonCardProps {
@@ -27,12 +26,6 @@ const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
 
 const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   const navigate = useNavigate();
-
-  const handleCopy = (e: React.MouseEvent, text: string, message: string) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(text);
-    toast.success(message);
-  };
 
   const firstPhone = person.contact?.phones?.[0];
   const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForWhatsApp(firstPhone)}` : null;
@@ -64,7 +57,11 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
         
         {(person.company || person.job_title) && (
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-            <Briefcase className="h-3 w-3 flex-shrink-0" />
+            {person.company_logo_url ? (
+              <img src={person.company_logo_url} alt={person.company} className="h-4 w-4 rounded-full object-contain" />
+            ) : (
+              <Briefcase className="h-3 w-3 flex-shrink-0" />
+            )}
             <p className="truncate">
               {person.job_title}{person.job_title && person.company ? ' at ' : ''}{person.company}
             </p>
@@ -73,9 +70,11 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
 
         <div className="mt-auto pt-3 flex items-center gap-1">
           {whatsappLink && (
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => handleCopy(e, whatsappLink, 'WhatsApp link copied!')}>
-              <WhatsappIcon className="h-4 w-4" />
-            </Button>
+            <a href={whatsappLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <WhatsappIcon className="h-4 w-4" />
+              </Button>
+            </a>
           )}
           {emailLink && (
             <a href={emailLink} onClick={(e) => e.stopPropagation()}>
@@ -85,19 +84,25 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
             </a>
           )}
           {person.social_media?.linkedin && (
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => handleCopy(e, person.social_media!.linkedin!, 'LinkedIn link copied!')}>
-              <Linkedin className="h-4 w-4" />
-            </Button>
+            <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Linkedin className="h-4 w-4" />
+              </Button>
+            </a>
           )}
           {person.social_media?.twitter && (
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => handleCopy(e, person.social_media!.twitter!, 'Twitter link copied!')}>
-              <Twitter className="h-4 w-4" />
-            </Button>
+            <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Twitter className="h-4 w-4" />
+              </Button>
+            </a>
           )}
           {person.social_media?.instagram && (
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => handleCopy(e, person.social_media!.instagram!, 'Instagram link copied!')}>
-              <Instagram className="h-4 w-4" />
-            </Button>
+            <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Instagram className="h-4 w-4" />
+              </Button>
+            </a>
           )}
         </div>
       </div>
