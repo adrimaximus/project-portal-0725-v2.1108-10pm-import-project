@@ -56,9 +56,13 @@ const Profile = () => {
 
     if (avatarFile) {
       const fileExt = avatarFile.name.split('.').pop();
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, avatarFile);
+      const filePath = `${user.id}/avatar.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, avatarFile, {
+          cacheControl: '3600',
+          upsert: true,
+        });
 
       if (uploadError) {
         toast.error("Failed to upload avatar.");
@@ -67,7 +71,7 @@ const Profile = () => {
       }
 
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      avatar_url = data.publicUrl;
+      avatar_url = `${data.publicUrl}?t=${new Date().getTime()}`;
     }
 
     const { error } = await supabase
