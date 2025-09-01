@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Person } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,15 @@ const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
 
 const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   const navigate = useNavigate();
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [person.avatar_url]);
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
 
   const firstPhone = person.contact?.phones?.[0];
   const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForWhatsApp(firstPhone)}` : null;
@@ -38,10 +48,11 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
       onClick={() => onViewProfile(person)}
     >
       <div className="aspect-[16/9] w-full overflow-hidden relative">
-        {person.avatar_url ? (
+        {person.avatar_url && !imageError ? (
           <img
             src={person.avatar_url}
             alt={person.full_name}
+            onError={handleImageError}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
