@@ -28,6 +28,10 @@ serve(async (req) => {
     if (!file || !targetUserId) {
       throw new Error('Missing file or targetUserId')
     }
+    
+    if (typeof file !== 'string') {
+      throw new Error(`File data must be a base64 string. Received type: ${typeof file}`);
+    }
 
     // 3. Check permissions
     const { data: authProfile, error: profileError } = await supabaseClient
@@ -50,11 +54,13 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const matches = file.match(/^data:image\/(\w+);base64,/);
+    // Regex to handle various image types like jpeg, png, svg+xml, etc.
+    const matches = file.match(/^data:image\/([a-zA-Z0-9\-\+]+);base64,/);
     if (!matches || matches.length < 2) {
-      throw new Error('Invalid image data URL format. Expected "data:image/[type];base64,[data]".');
+      throw new Error(`Invalid image data URL format. It should start with "data:image/...;base64,". Received: "${file.substring(0, 60)}..."`);
     }
     const fileExt = matches[1];
+    
     const base64Data = file.substring(matches[0].length);
     const fileContent = decode(base64Data);
     
