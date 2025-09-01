@@ -60,15 +60,12 @@ const Profile = () => {
 
     if (avatarFile) {
       try {
-        const reader = new FileReader();
-        reader.readAsDataURL(avatarFile);
-        const fileBase64 = await new Promise<string>((resolve, reject) => {
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-        });
+        const formData = new FormData();
+        formData.append('file', avatarFile);
+        formData.append('targetUserId', user.id);
 
-        const { data, error: invokeError } = await supabase.functions.invoke('upload-avatar', {
-          body: { file: fileBase64, targetUserId: user.id },
+        const { data, error: invokeError } = await supabase.functions.invoke('upload-avatar-fixed', {
+          body: formData,
         });
 
         if (invokeError) throw invokeError;

@@ -141,15 +141,12 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
 
       // Now, if there's an avatar file, upload it.
       if (avatarFile && personId) {
-        const reader = new FileReader();
-        reader.readAsDataURL(avatarFile);
-        const fileBase64 = await new Promise<string>((resolve, reject) => {
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-        });
+        const formData = new FormData();
+        formData.append('file', avatarFile);
+        formData.append('targetUserId', personId);
 
         const { data, error: invokeError } = await supabase.functions.invoke('upload-avatar-fixed', {
-            body: { file: fileBase64, targetUserId: personId }, // targetUserId is personId here
+            body: formData,
         });
 
         if (invokeError) throw invokeError;

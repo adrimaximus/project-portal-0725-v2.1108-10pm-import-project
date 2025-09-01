@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { decode } from "https://deno.land/std@0.203.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,14 +22,16 @@ serve(async (req) => {
     const { data: { user: authUser } } = await supabaseClient.auth.getUser()
     if (!authUser) throw new Error('User not authenticated')
 
-    // 2. Get payload
-    const { file, targetUserId } = await req.json()
+    // 2. Get payload from FormData
+    const formData = await req.formData();
+    const file = formData.get('file');
+    const targetUserId = formData.get('targetUserId'); // This is the ID of the person or user profile
+
     if (!file || !targetUserId) {
-      throw new Error('Missing file or targetUserId')
+      throw new Error('Missing file or targetUserId in FormData');
     }
-    
-    if (typeof file !== 'string') {
-      throw new Error(`File data must be a base64 string. Received type: ${typeof file}`);
+    if (!(file instanceof File)) {
+      throw new Error('Uploaded item is not a valid file.');
     }
 
     // 3. Check permissions
@@ -45,7 +46,7 @@ serve(async (req) => {
     const isAdmin = authProfile.role === 'admin' || authProfile.role === 'master admin'
 
     if (!isSelf && !isAdmin) {
-      throw new Error('Unauthorized: You can only update your own avatar.')
+      throw new Error('Unauthorized: You can only update your own avatar or you must be an admin.')
     }
 
     // 4. Upload file using admin client
@@ -54,29 +55,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const mimeTypeRegex = /^data:(image\/[a-zA-Z0-9\-\.+]+);base64,/;
-    const matches = file.match(mimeTypeRegex);
-
-    if (!matches || matches.length < 2) {
-      throw new Error(`Invalid image data URL format. Received: "${file.substring(0, 60)}..."`);
-    }
-
-    const mimeType = matches[1];
-    const base64Data = file.substring(matches[0].length);
-    const fileContent = decode(base64Data);
-
-    const extensionMap = {
-      'image/jpeg': 'jpg',
-      'image/png': 'png',
-      'image/gif': 'gif',
-      'image/svg+xml': 'svg',
-      'image/webp': 'webp',
-    };
-    const fileExt = extensionMap[mimeType] || mimeType.split('/')[1].split('+')[0];
-
-    if (!fileExt) {
-        throw new Error(`Unsupported image type: ${mimeType}`);
-    }
+    const fileContent = await file.arrayBuffer();
+    const mimeType = file.type;
+    const fileExt = mimeType.split('/')[1];
     
     const filePath = `${targetUserId}/avatar.${fileExt}`;
 
@@ -88,15 +69,9 @@ serve(async (req) => {
       })
     if (uploadError) throw uploadError
 
-    // 5. Get public URL and update person record
+    // 5. Get public URL and return it
     const { data: urlData } = supabaseAdmin.storage.from('avatars').getPublicUrl(filePath)
     const avatar_url = `${urlData.publicUrl}?t=${new Date().getTime()}`
-
-    const { error: updateError } = await supabaseAdmin
-      .from('people')
-      .update({ avatar_url, updated_at: new Date().toISOString() })
-      .eq('id', targetUserId)
-    if (updateError) throw updateError
 
     return new Response(JSON.stringify({ avatar_url }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
