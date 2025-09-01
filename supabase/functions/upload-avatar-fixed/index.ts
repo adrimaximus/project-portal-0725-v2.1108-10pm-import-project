@@ -88,12 +88,12 @@ serve(async (req) => {
       })
     if (uploadError) throw uploadError
 
-    // 5. Get public URL and update profile
+    // 5. Get public URL and update person record
     const { data: urlData } = supabaseAdmin.storage.from('avatars').getPublicUrl(filePath)
     const avatar_url = `${urlData.publicUrl}?t=${new Date().getTime()}`
 
     const { error: updateError } = await supabaseAdmin
-      .from('profiles')
+      .from('people')
       .update({ avatar_url, updated_at: new Date().toISOString() })
       .eq('id', targetUserId)
     if (updateError) throw updateError
