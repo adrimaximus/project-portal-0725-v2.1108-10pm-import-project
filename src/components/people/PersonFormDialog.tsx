@@ -14,7 +14,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Person, Project, Tag, ContactProperty } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
-import AddressAutocompleteInput from './AddressAutocompleteInput';
 import PhoneNumberInput from '../PhoneNumberInput';
 import AntDatePicker from './AntDatePicker';
 
@@ -38,7 +37,7 @@ const personSchema = z.object({
   notes: z.string().optional(),
   project_ids: z.array(z.string()).optional(),
   tag_ids: z.array(z.string()).optional(),
-  address: z.any().optional(),
+  address: z.string().optional(),
   custom_properties: z.record(z.any()).optional(),
 });
 
@@ -56,7 +55,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     defaultValues: {
       full_name: '', email: '', phone: '', company: '', job_title: '',
       department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-      notes: '', project_ids: [], tag_ids: [], address: null, custom_properties: {},
+      notes: '', project_ids: [], tag_ids: [], address: '', custom_properties: {},
     }
   });
 
@@ -92,14 +91,14 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         notes: person.notes || '',
         project_ids: person.projects?.map(p => p.id) || [],
         tag_ids: person.tags?.map(t => t.id) || [],
-        address: person.address || null,
+        address: person.address?.formatted_address || '',
         custom_properties: person.custom_properties || {},
       });
     } else {
       form.reset({
         full_name: '', email: '', phone: '', company: '', job_title: '',
         department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-        notes: '', project_ids: [], tag_ids: [], address: null, custom_properties: {},
+        notes: '', project_ids: [], tag_ids: [], address: '', custom_properties: {},
       });
     }
   }, [person, form, open]);
@@ -124,7 +123,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       p_existing_tag_ids: values.tag_ids,
       p_custom_tags: [],
       p_avatar_url: person?.avatar_url,
-      p_address: values.address || null,
+      p_address: values.address ? { formatted_address: values.address } : null,
       p_custom_properties: custom_properties,
     });
     setIsSaving(false);
@@ -180,9 +179,9 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
               <FormItem>
                 <FormLabel>Address</FormLabel>
                 <FormControl>
-                  <AddressAutocompleteInput
-                    value={field.value}
-                    onChange={field.onChange}
+                  <Input
+                    placeholder="Enter address"
+                    {...field}
                   />
                 </FormControl>
                 <FormMessage />

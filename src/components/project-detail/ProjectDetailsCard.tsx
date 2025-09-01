@@ -10,7 +10,7 @@ import { formatInJakarta, cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
-import AddressAutocompleteInput from '../people/AddressAutocompleteInput';
+import { Input } from '../ui/input';
 
 interface ProjectDetailsCardProps {
   project: Project;
@@ -111,9 +111,10 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
             <div className="w-full">
               <p className="font-medium">Venue</p>
               {isEditing ? (
-                <AddressAutocompleteInput
-                  value={project.venue}
-                  onChange={(address) => onFieldChange('venue', address?.formatted_address || address?.label || '')}
+                <Input
+                  value={project.venue || ''}
+                  onChange={(e) => onFieldChange('venue', e.target.value)}
+                  placeholder="Enter venue address"
                 />
               ) : (
                 <p className="text-muted-foreground">
