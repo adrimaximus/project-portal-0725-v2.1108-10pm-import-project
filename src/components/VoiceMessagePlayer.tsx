@@ -5,13 +5,10 @@ import { Slider } from './ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { User } from '@/types';
 import { generateVibrantGradient } from '@/lib/utils';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 
 interface VoiceMessagePlayerProps {
   src: string;
   sender: User;
-  timestamp: string;
   isCurrentUser: boolean;
 }
 
@@ -22,17 +19,7 @@ const formatTime = (time: number) => {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
-const formatTimestamp = (timestamp: string) => {
-    try {
-      const date = new Date(timestamp);
-      if (isNaN(date.getTime())) return "";
-      return new Intl.DateTimeFormat('default', { hour: 'numeric', minute: 'numeric', hour12: true }).format(date);
-    } catch (e) {
-      return "";
-    }
-};
-
-const VoiceMessagePlayer = ({ src, sender, timestamp, isCurrentUser }: VoiceMessagePlayerProps) => {
+const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerProps) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -91,34 +78,33 @@ const VoiceMessagePlayer = ({ src, sender, timestamp, isCurrentUser }: VoiceMess
   return (
     <div className="flex items-center gap-2 w-full max-w-[280px] min-w-[240px] p-2">
       <audio ref={audioRef} src={src} preload="metadata" />
-      <Avatar className="h-8 w-8 flex-shrink-0">
-        <AvatarImage src={sender.avatar_url} />
-        <AvatarFallback style={generateVibrantGradient(sender.id)}>{sender.initials}</AvatarFallback>
-      </Avatar>
-      <Button variant="ghost" size="icon" onClick={togglePlayPause} className="h-8 w-8 flex-shrink-0">
-        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+      <Button 
+        variant="default"
+        size="icon" 
+        onClick={togglePlayPause} 
+        className="h-9 w-9 flex-shrink-0 rounded-full bg-blue-500 hover:bg-blue-600 text-white"
+      >
+        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
       </Button>
-      <div className="flex-1 flex flex-col justify-center gap-1 relative pt-2">
+      <div className="flex-1 flex flex-col justify-center gap-1.5">
         <Slider
           value={[currentTime]}
           max={duration || 1}
           step={0.1}
           onValueChange={handleSliderChange}
-          className="w-full [&>span:first-child]:h-1 [&>span:first-child>span]:h-1 [&>span:last-child]:h-3 [&>span:last-child]:w-3"
+          className="w-full [&>span:first-child]:h-1 [&>span:first-child>span]:bg-blue-500 [&>span:last-child]:h-3 [&>span:last-child]:w-3 [&>span:last-child]:bg-blue-500"
         />
-        <div className="flex justify-between items-center mt-1">
-            <span className="text-xs font-mono">{formatTime(currentTime)}</span>
-            <div className="flex items-center gap-2">
-                <span className="text-xs font-mono">{formatTime(duration)}</span>
-                <span className={cn(
-                    "text-xs",
-                    isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
-                )}>
-                    {formatTimestamp(timestamp)}
-                </span>
-            </div>
+        <div className="flex justify-between items-center">
+            <span className="text-xs font-mono text-muted-foreground">{formatTime(currentTime)}</span>
+            <span className="text-xs font-mono text-muted-foreground">{formatTime(duration)}</span>
         </div>
       </div>
+      {!isCurrentUser && (
+        <Avatar className="h-8 w-8 flex-shrink-0 ml-2">
+          <AvatarImage src={sender.avatar_url} />
+          <AvatarFallback style={generateVibrantGradient(sender.id)}>{sender.initials}</AvatarFallback>
+        </Avatar>
+      )}
     </div>
   );
 };

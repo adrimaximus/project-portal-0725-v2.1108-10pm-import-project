@@ -142,7 +142,6 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                   <VoiceMessagePlayer 
                     src={message.attachment!.url} 
                     sender={message.sender} 
-                    timestamp={message.timestamp}
                     isCurrentUser={isCurrentUser}
                   />
                 ) : (
