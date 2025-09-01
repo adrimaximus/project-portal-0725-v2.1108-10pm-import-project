@@ -1,8 +1,8 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { List, Table as TableIcon, Kanban, CalendarPlus, ListChecks, LayoutGrid } from "lucide-react";
+import { List, Table as TableIcon, Kanban, ListChecks, LayoutGrid } from "lucide-react";
 
-type ViewMode = 'table' | 'list' | 'kanban' | 'calendar' | 'tasks' | 'tasks-kanban';
+type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 interface ProjectsToolbarProps {
   view: ViewMode;
@@ -25,7 +25,6 @@ const ProjectsToolbar = ({
             <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Kanban View</p></TooltipContent></Tooltip>
             <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="tasks" aria-label="Tasks view"><ListChecks className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Tasks List View</p></TooltipContent></Tooltip>
             <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="tasks-kanban" aria-label="Tasks Kanban view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Tasks Kanban View</p></TooltipContent></Tooltip>
-            <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="calendar" aria-label="Calendar Import view"><CalendarPlus className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Calendar Import</p></TooltipContent></Tooltip>
           </ToggleGroup>
         </div>
       </TooltipProvider>

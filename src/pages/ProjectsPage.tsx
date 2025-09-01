@@ -3,7 +3,7 @@ import { Project } from "@/types";
 import { useNavigate } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, RefreshCw, Sparkles, Loader2, Search } from "lucide-react";
+import { PlusCircle, RefreshCw, Search } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -33,18 +33,7 @@ import { Input } from "@/components/ui/input";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 
-interface CalendarEvent {
-    id: string;
-    summary: string;
-    start: { dateTime?: string; date?: string; };
-    end: { dateTime?: string; date?:string; };
-    htmlLink: string;
-    status: string;
-    location?: string;
-    description?: string;
-}
-
-type ViewMode = 'table' | 'list' | 'kanban' | 'calendar' | 'tasks' | 'tasks-kanban';
+type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
@@ -55,10 +44,8 @@ const ProjectsPage = () => {
   });
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'payment_status'>('status');
   const createProjectMutation = useCreateProject();
-  const [isAiImporting, setIsAiImporting] = useState(false);
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const [scrollToProjectId, setScrollToProjectId] = useState<string | null>(null);
   const initialTableScrollDone = useRef(false);
@@ -77,7 +64,6 @@ const ProjectsPage = () => {
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'due_date', direction: 'asc' });
 
-  const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
   const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ 
     enabled: view === 'tasks' || view === 'tasks-kanban',
     orderBy: view === 'tasks-kanban' ? 'kanban_order' : taskSortConfig.key,
@@ -164,29 +150,6 @@ const ProjectsPage = () => {
     }
   };
 
-  const refreshCalendarEvents = async () => {
-    toast.info("Refreshing calendar events...");
-    try {
-      const { data, error } = await supabase.from('calendar_events').select('*').order('start_time', { ascending: true });
-      if (error) throw error;
-      setCalendarEvents(data);
-      toast.success(`Fetched ${data.length} events!`);
-    } catch (error: any) {
-      toast.error("Failed to refresh events.", { description: error.message });
-    }
-  };
-
-  useEffect(() => {
-    if (view === 'calendar') {
-      refreshCalendarEvents();
-    }
-  }, [view]);
-
-  const importableEvents = useMemo(() => {
-    const importedEventIds = new Set(projects.map(p => p.origin_event_id?.substring(4)).filter(Boolean));
-    return calendarEvents.filter(event => !importedEventIds.has(event.id));
-  }, [projects, calendarEvents]);
-
   const handleDeleteProject = (projectId: string) => {
     const project = projects.find(p => p.id === projectId);
     if (project) setProjectToDelete(project);
@@ -204,69 +167,8 @@ const ProjectsPage = () => {
     }
   };
 
-  const handleImportEvent = async (event: CalendarEvent) => {
-    const startDateStr = event.start.date || event.start.dateTime;
-    let dueDateStr = event.end.date || event.end.dateTime || startDateStr;
-    if (!startDateStr) {
-        toast.error("Cannot import event without a start date.");
-        return;
-    }
-    const isAllDay = !!event.start.date;
-    const finalStartDate = new Date(startDateStr);
-    let finalDueDate = new Date(dueDateStr);
-    if (isAllDay) finalDueDate.setDate(finalDueDate.getDate() - 1);
-
-    createProjectMutation.mutate({
-      name: event.summary || "Untitled Event",
-      category: 'Imported Event',
-      startDate: finalStartDate.toISOString(),
-      dueDate: finalDueDate.toISOString(),
-      origin_event_id: `cal-${event.id}`,
-      venue: event.location,
-    }, {
-      onSuccess: () => setCalendarEvents(prev => prev.filter(e => e.id !== event.id)),
-      onError: (error) => {
-        if (error.message.includes('duplicate key')) {
-          toast.info(`"${event.summary}" has already been imported.`);
-          setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
-        }
-      }
-    });
-  };
-
-  const handleAiImport = async () => {
-    if (importableEvents.length === 0) {
-      toast.info("No new calendar events to analyze.");
-      return;
-    }
-    setIsAiImporting(true);
-    toast.info("AI is analyzing your calendar events...");
-    try {
-      const { data, error } = await supabase.functions.invoke('ai-handler', {
-        body: { feature: 'ai-select-calendar-events', payload: { events: importableEvents, existingProjects: projects.map(p => p.name) } }
-      });
-      if (error) throw error;
-      const { event_ids_to_import } = data.result;
-      if (!event_ids_to_import || event_ids_to_import.length === 0) {
-        toast.success("AI analysis complete. No new projects were found to import.");
-        return;
-      }
-      toast.info(`AI has selected ${event_ids_to_import.length} event(s) to import. Starting import...`);
-      const eventsToImport = importableEvents.filter(e => event_ids_to_import.includes(e.id));
-      await Promise.all(eventsToImport.map(event => handleImportEvent(event)));
-      toast.success(`Successfully imported ${eventsToImport.length} new project(s)!`);
-    } catch (error: any) {
-      toast.error("AI import failed.", { description: error.message });
-    } finally {
-      setIsAiImporting(false);
-    }
-  };
-
   const handleRefresh = () => {
     switch (view) {
-      case 'calendar':
-        refreshCalendarEvents();
-        break;
       case 'tasks':
       case 'tasks-kanban':
         refetchTasks();
@@ -399,12 +301,6 @@ const ProjectsPage = () => {
                       New Task
                     </Button>
                   )}
-                  {view === 'calendar' && (
-                    <Button variant="outline" size="sm" onClick={handleAiImport} disabled={isAiImporting}>
-                      {isAiImporting ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Sparkles className="h-4 w-4 sm:mr-2" />}
-                      <span className="hidden sm:inline">Ask AI to Import</span>
-                    </Button>
-                  )}
                   <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
                       <span className="sr-only">Refresh data</span>
                       <RefreshCw className="h-4 w-4" />
@@ -463,8 +359,6 @@ const ProjectsPage = () => {
               requestSort={requestSort}
               rowRefs={rowRefs}
               kanbanGroupBy={kanbanGroupBy}
-              importableEvents={importableEvents}
-              onImportEvent={handleImportEvent}
               onEditTask={handleEditTask}
               onDeleteTask={handleDeleteTask}
               onToggleTaskCompletion={handleToggleTaskCompletion}

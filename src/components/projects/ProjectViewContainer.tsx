@@ -4,22 +4,10 @@ import { Task } from '@/types/task';
 import TableView from './TableView';
 import ListView from './ListView';
 import KanbanView from './KanbanView';
-import CalendarImportView from './CalendarImportView';
 import TasksView from './TasksView';
 import TasksKanbanView from './TasksKanbanView';
 
-type ViewMode = 'table' | 'list' | 'kanban' | 'calendar' | 'tasks' | 'tasks-kanban';
-
-interface CalendarEvent {
-    id: string;
-    summary: string;
-    start: { dateTime?: string; date?: string; };
-    end: { dateTime?: string; date?: string; };
-    htmlLink: string;
-    status: string;
-    location?: string;
-    description?: string;
-}
+type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 interface ProjectViewContainerProps {
   view: ViewMode;
@@ -32,8 +20,6 @@ interface ProjectViewContainerProps {
   requestSort: (key: keyof Project) => void;
   rowRefs: React.MutableRefObject<Map<string, HTMLTableRowElement>>;
   kanbanGroupBy: 'status' | 'payment_status';
-  importableEvents: CalendarEvent[];
-  onImportEvent: (event: CalendarEvent) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
@@ -44,7 +30,7 @@ interface ProjectViewContainerProps {
 
 const ProjectViewContainer = ({
   view, projects, tasks, isLoading, isTasksLoading, onDeleteProject, sortConfig, requestSort, rowRefs,
-  kanbanGroupBy, importableEvents, onImportEvent, onEditTask, onDeleteTask, onToggleTaskCompletion,
+  kanbanGroupBy, onEditTask, onDeleteTask, onToggleTaskCompletion,
   taskSortConfig, requestTaskSort, onTaskStatusChange
 }: ProjectViewContainerProps) => {
   switch (view) {
@@ -54,8 +40,6 @@ const ProjectViewContainer = ({
       return <ListView projects={projects} onDeleteProject={onDeleteProject} />;
     case 'kanban':
       return <KanbanView projects={projects} groupBy={kanbanGroupBy} />;
-    case 'calendar':
-      return <CalendarImportView events={importableEvents} onImportEvent={onImportEvent} />;
     case 'tasks':
       return <TasksView 
         tasks={tasks} 

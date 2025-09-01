@@ -35,7 +35,6 @@ const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const GitHubPage = lazy(() => import("./pages/integrations/GitHubPage"));
 const SlackPage = lazy(() => import("./pages/integrations/SlackPage"));
 const GoogleDrivePage = lazy(() => import("./pages/integrations/GoogleDrivePage"));
-const GoogleCalendarPage = lazy(() => import("./pages/integrations/GoogleCalendarPage"));
 const PeoplePage = lazy(() => import("./pages/PeoplePage"));
 const PersonProfilePage = lazy(() => import("./pages/people/PersonProfilePage"));
 const KnowledgeBasePage = lazy(() => import("./pages/KnowledgeBasePage"));
@@ -83,7 +82,6 @@ function App() {
             <Route path="/settings/integrations/github" element={<PermissionGuard permission="module:settings"><GitHubPage /></PermissionGuard>} />
             <Route path="/settings/integrations/slack" element={<PermissionGuard permission="module:settings"><SlackPage /></PermissionGuard>} />
             <Route path="/settings/integrations/google-drive" element={<PermissionGuard permission="module:settings"><GoogleDrivePage /></PermissionGuard>} />
-            <Route path="/settings/integrations/google-calendar" element={<MasterAdminGuard><GoogleCalendarPage /></MasterAdminGuard>} />
             <Route path="/settings/navigation" element={<PermissionGuard permission="module:settings"><NavigationSettingsPage /></PermissionGuard>} />
 
             {/* Routes accessible to all authenticated users */}
