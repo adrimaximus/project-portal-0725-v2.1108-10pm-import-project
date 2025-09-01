@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Project, User, Tag, Person } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import PortalLayout from "@/components/PortalLayout";
@@ -164,14 +164,23 @@ const PeoplePage = () => {
 
   const handleDelete = async () => {
     if (!personToDelete) return;
+
+    await queryClient.cancelQueries({ queryKey: ['people'] });
+    const previousPeople = queryClient.getQueryData<Person[]>(['people']);
+    queryClient.setQueryData<Person[]>(['people'], (old) =>
+      old ? old.filter((p) => p.id !== personToDelete.id) : []
+    );
+    setPersonToDelete(null);
+
     const { error } = await supabase.from('people').delete().eq('id', personToDelete.id);
+
     if (error) {
+      queryClient.setQueryData(['people'], previousPeople);
       toast.error(`Failed to delete ${personToDelete.full_name}.`);
     } else {
       toast.success(`${personToDelete.full_name} has been deleted.`);
       queryClient.invalidateQueries({ queryKey: ['people'] });
     }
-    setPersonToDelete(null);
   };
 
   const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {

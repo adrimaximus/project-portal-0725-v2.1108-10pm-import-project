@@ -103,15 +103,24 @@ const PersonProfilePage = () => {
 
   const handleDelete = async () => {
     if (!person) return;
+
+    setIsDeleteDialogOpen(false);
+    await queryClient.cancelQueries({ queryKey: ['people'] });
+    const previousPeople = queryClient.getQueryData<Person[]>(['people']);
+    queryClient.setQueryData<Person[]>(['people'], (old) =>
+      old ? old.filter((p) => p.id !== person.id) : []
+    );
+    navigate('/people');
+
     const { error } = await supabase.from('people').delete().eq('id', person.id);
+
     if (error) {
+      queryClient.setQueryData(['people'], previousPeople);
       toast.error(`Failed to delete ${person.full_name}.`);
     } else {
       toast.success(`${person.full_name} has been deleted.`);
       queryClient.invalidateQueries({ queryKey: ['people'] });
-      navigate('/people');
     }
-    setIsDeleteDialogOpen(false);
   };
 
   if (isLoading) return <PersonProfileSkeleton />;
