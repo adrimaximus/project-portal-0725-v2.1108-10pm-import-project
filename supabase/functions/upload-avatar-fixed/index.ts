@@ -25,16 +25,16 @@ serve(async (req) => {
     // 2. Get payload from FormData
     const formData = await req.formData();
     const file = formData.get('file');
-    const targetUserId = formData.get('targetUserId'); // This is the ID of the person or user profile
+    const targetPersonId = formData.get('targetUserId'); // ID of the person profile
 
-    if (!file || !targetUserId) {
-      throw new Error('Missing file or targetUserId in FormData');
+    if (!file || !targetPersonId) {
+      throw new Error('Missing file or targetPersonId in FormData');
     }
     if (!(file instanceof File)) {
       throw new Error('Uploaded item is not a valid file.');
     }
 
-    // 3. Check permissions
+    // 3. Check permissions - ONLY ADMINS can upload avatars for 'people'
     const { data: authProfile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('role')
@@ -42,11 +42,10 @@ serve(async (req) => {
       .single()
     if (profileError) throw profileError
 
-    const isSelf = authUser.id === targetUserId
     const isAdmin = authProfile.role === 'admin' || authProfile.role === 'master admin'
 
-    if (!isSelf && !isAdmin) {
-      throw new Error('Unauthorized: You can only update your own avatar or you must be an admin.')
+    if (!isAdmin) {
+      throw new Error('Unauthorized: You must be an admin to upload avatars for contacts.')
     }
 
     // 4. Upload file using admin client
@@ -57,9 +56,9 @@ serve(async (req) => {
 
     const fileContent = await file.arrayBuffer();
     const mimeType = file.type;
-    const fileExt = mimeType.split('/')[1];
+    const fileExt = mimeType.split('/')[1] || 'png';
     
-    const filePath = `${targetUserId}/avatar.${fileExt}`;
+    const filePath = `${targetPersonId}/avatar.${fileExt}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from('avatars')
