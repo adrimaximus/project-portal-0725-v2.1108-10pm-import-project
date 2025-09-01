@@ -50,8 +50,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const fileContent = decode(file.split(',')[1]);
-    const fileExt = file.match(/data:image\/(.+);/)[1];
+    const matches = file.match(/^data:image\/(\w+);base64,/);
+    if (!matches || matches.length < 2) {
+      throw new Error('Invalid image data URL format. Expected "data:image/[type];base64,[data]".');
+    }
+    const fileExt = matches[1];
+    const base64Data = file.substring(matches[0].length);
+    const fileContent = decode(base64Data);
+    
     const filePath = `${targetUserId}/avatar.${fileExt}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
