@@ -123,37 +123,57 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
   };
 
   const onSubmit = async (values: PersonFormValues) => {
-    if (!person && !isSaving) { // Logic for creating a new person
-      // ... existing creation logic
-    } else if (person) { // Logic for updating an existing person
-      setIsSaving(true);
-      let avatar_url = person.avatar_url;
+    setIsSaving(true);
+    try {
+      let personId = person?.id;
+      let avatar_url = person?.avatar_url || null;
+      const isNewPerson = !personId;
 
-      if (avatarFile) {
-        try {
-            const reader = new FileReader();
-            reader.readAsDataURL(avatarFile);
-            const fileBase64 = await new Promise<string>((resolve, reject) => {
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = error => reject(error);
-            });
+      // Step 1: If it's a new person, create them first to get an ID.
+      if (isNewPerson) {
+        const { data: newPerson, error: createError } = await supabase.rpc('upsert_person_with_details', {
+          p_id: null,
+          p_full_name: values.full_name,
+          p_contact: { emails: values.email ? [values.email] : [], phones: values.phone ? [values.phone] : [] },
+          p_company: values.company,
+          p_job_title: values.job_title,
+          p_department: values.department,
+          p_social_media: { linkedin: values.linkedin, twitter: values.twitter, instagram: values.instagram },
+          p_birthday: values.birthday ? format(values.birthday, 'yyyy-MM-dd') : null,
+          p_notes: values.notes,
+          p_project_ids: values.project_ids,
+          p_existing_tag_ids: values.tag_ids,
+          p_custom_tags: [],
+          p_avatar_url: null,
+          p_address: values.address ? { formatted_address: values.address } : null,
+          p_custom_properties: values.custom_properties,
+        }).single();
 
-            const { data, error: invokeError } = await supabase.functions.invoke('upload-avatar', {
-                body: { file: fileBase64, targetUserId: person.id },
-            });
-
-            if (invokeError) throw invokeError;
-            avatar_url = data.avatar_url;
-        } catch (error: any) {
-            toast.error("Failed to upload avatar.", { description: error.message });
-            setIsSaving(false);
-            return;
-        }
+        if (createError) throw createError;
+        if (!newPerson) throw new Error("Failed to create person record.");
+        personId = (newPerson as any).id;
       }
 
-      const { custom_properties, ...standardValues } = values;
+      // Step 2: Handle avatar upload if there is a file and we have a personId.
+      if (avatarFile && personId) {
+        const reader = new FileReader();
+        reader.readAsDataURL(avatarFile);
+        const fileBase64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+        });
+
+        const { data, error: invokeError } = await supabase.functions.invoke('upload-avatar', {
+            body: { file: fileBase64, targetUserId: personId },
+        });
+
+        if (invokeError) throw invokeError;
+        avatar_url = data.avatar_url;
+      }
+
+      // Step 3: Upsert all details using the RPC. This will be an update for both new and existing users.
       const { error } = await supabase.rpc('upsert_person_with_details', {
-        p_id: person.id,
+        p_id: personId,
         p_full_name: values.full_name,
         p_contact: { 
           emails: values.email ? [values.email] : [],
@@ -170,18 +190,22 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         p_custom_tags: [],
         p_avatar_url: avatar_url,
         p_address: values.address ? { formatted_address: values.address } : null,
-        p_custom_properties: custom_properties,
+        p_custom_properties: values.custom_properties,
       });
-      setIsSaving(false);
 
-      if (error) {
-        toast.error(`Failed to save: ${error.message}`);
-      } else {
-        toast.success(`Successfully saved ${values.full_name}.`);
-        queryClient.invalidateQueries({ queryKey: ['people'] });
-        queryClient.invalidateQueries({ queryKey: ['person', person.id] });
-        onOpenChange(false);
+      if (error) throw error;
+
+      toast.success(`Successfully saved ${values.full_name}.`);
+      queryClient.invalidateQueries({ queryKey: ['people'] });
+      if (personId) {
+        queryClient.invalidateQueries({ queryKey: ['person', personId] });
       }
+      onOpenChange(false);
+
+    } catch (error: any) {
+      toast.error(`Failed to save: ${error.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
