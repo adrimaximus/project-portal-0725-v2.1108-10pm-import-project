@@ -3,7 +3,7 @@ import { Person } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User as UserIcon, Linkedin, Twitter, Instagram, Briefcase, Mail } from 'lucide-react';
-import { generateVibrantGradient } from '@/lib/utils';
+import { generateVibrantGradient, getInstagramUsername } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import WhatsappIcon from '../icons/WhatsappIcon';
 
@@ -37,10 +37,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     setImageError(true);
   };
 
-  const firstPhone = person.contact?.phones?.[0];
-  const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForWhatsApp(firstPhone)}` : null;
-  const firstEmail = person.contact?.emails?.[0];
-  const emailLink = firstEmail ? `mailto:${firstEmail}` : null;
+  const instagramUsername = getInstagramUsername(person.social_media?.instagram);
 
   return (
     <Card 
@@ -67,52 +64,20 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
         </div>
         
         {(person.company || person.job_title) && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-            {person.company_logo_url ? (
-              <img src={person.company_logo_url} alt={person.company} className="h-4 w-4 rounded-full object-contain" />
-            ) : (
-              <Briefcase className="h-3 w-3 flex-shrink-0" />
-            )}
-            <p className="truncate">
-              {person.job_title}{person.job_title && person.company ? ' at ' : ''}{person.company}
-            </p>
+          <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
+            <Briefcase className="h-3 w-3 flex-shrink-0 mt-0.5" />
+            <div className="flex flex-col">
+              <p className="truncate">{person.job_title}</p>
+              {person.company && <p className="truncate">at {person.company}</p>}
+            </div>
           </div>
         )}
 
-        <div className="mt-auto pt-3 flex items-center gap-1">
-          {whatsappLink && (
-            <a href={whatsappLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <WhatsappIcon className="h-4 w-4" />
-              </Button>
-            </a>
-          )}
-          {emailLink && (
-            <a href={emailLink} onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <Mail className="h-4 w-4" />
-              </Button>
-            </a>
-          )}
-          {person.social_media?.linkedin && (
-            <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <Linkedin className="h-4 w-4" />
-              </Button>
-            </a>
-          )}
-          {person.social_media?.twitter && (
-            <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <Twitter className="h-4 w-4" />
-              </Button>
-            </a>
-          )}
+        <div className="mt-auto pt-3 flex flex-col gap-2">
           {person.social_media?.instagram && (
-            <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <Instagram className="h-4 w-4" />
-              </Button>
+            <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+              <Instagram className="h-4 w-4" />
+              {instagramUsername && <span>{instagramUsername}</span>}
             </a>
           )}
         </div>

@@ -157,3 +157,17 @@ export const isOverdue = (dateString: string | null | undefined): boolean => {
   dueDate.setHours(0, 0, 0, 0);
   return dueDate <= today;
 };
+
+export const getInstagramUsername = (url: string | undefined): string | null => {
+  if (!url) return null;
+  try {
+    const path = new URL(url).pathname;
+    const parts = path.split('/').filter(p => p);
+    return parts[0] ? `@${parts[0]}` : null;
+  } catch (e) {
+    if (typeof url === 'string' && !url.includes('/')) {
+      return `@${url}`;
+    }
+    return null;
+  }
+};
