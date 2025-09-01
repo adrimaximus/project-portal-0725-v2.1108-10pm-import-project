@@ -7,13 +7,14 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Briefcase, Cake, Edit, Globe, Instagram, Linkedin, Mail, MapPin, Phone, Twitter, User as UserIcon, Users } from 'lucide-react';
+import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, Phone, Twitter, User as UserIcon, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generateVibrantGradient } from '@/lib/utils';
 import PersonFormDialog from '@/components/people/PersonFormDialog';
 import { Person, ContactProperty } from '@/types';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import WhatsappIcon from '@/components/icons/WhatsappIcon';
 
 const PersonProfileSkeleton = () => (
   <PortalLayout>
@@ -30,6 +31,17 @@ const PersonProfileSkeleton = () => (
     </div>
   </PortalLayout>
 );
+
+const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
+  if (!phone) return '';
+  let cleaned = phone.replace(/\D/g, '');
+  if (cleaned.startsWith('0')) {
+    cleaned = '62' + cleaned.substring(1);
+  } else if (!cleaned.startsWith('62')) {
+    cleaned = '62' + cleaned;
+  }
+  return cleaned;
+};
 
 const PersonProfilePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -56,6 +68,7 @@ const PersonProfilePage = () => {
 
   const firstEmail = person.contact?.emails?.[0];
   const firstPhone = person.contact?.phones?.[0];
+  const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForWhatsApp(firstPhone)}` : null;
 
   const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name]);
 
@@ -91,6 +104,7 @@ const PersonProfilePage = () => {
               <CardContent className="space-y-3 text-sm">
                 {firstEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${firstEmail}`} className="truncate hover:underline">{firstEmail}</a></div>}
                 {firstPhone && <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground" /><span className="truncate">{firstPhone}</span></div>}
+                {whatsappLink && <div className="flex items-center gap-3"><WhatsappIcon className="h-4 w-4 text-muted-foreground" /><a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">Chat on WhatsApp</a></div>}
                 {person.address?.formatted_address && <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" /><span>{person.address.formatted_address}</span></div>}
                 {person.birthday && <div className="flex items-center gap-3"><Cake className="h-4 w-4 text-muted-foreground" /><span>{formatInJakarta(person.birthday, 'MMMM d, yyyy')}</span></div>}
               </CardContent>
