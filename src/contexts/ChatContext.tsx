@@ -100,7 +100,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         attachment = {
           name: file.name,
           url: urlData.publicUrl,
-          type: file.type.startsWith('image/') ? 'image' : 'file',
+          type: file.type,
         };
       }
       
