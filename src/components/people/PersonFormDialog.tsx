@@ -16,6 +16,7 @@ import { Person, Project, Tag, ContactProperty } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
 import PhoneNumberInput from '../PhoneNumberInput';
 import AntDatePicker from './AntDatePicker';
+import AddressAutocompleteInput from '../AddressAutocompleteInput';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -179,9 +180,9 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
               <FormItem>
                 <FormLabel>Address</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="Enter address"
-                    {...field}
+                  <AddressAutocompleteInput
+                    value={field.value || ''}
+                    onChange={field.onChange}
                   />
                 </FormControl>
                 <FormMessage />
