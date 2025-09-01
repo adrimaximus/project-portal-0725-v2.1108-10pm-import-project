@@ -67,7 +67,7 @@ const PersonProfilePage = () => {
   }
 
   const firstEmail = person.contact?.emails?.[0];
-  const firstPhone = person.contact?.phones?.[0];
+  const firstPhone = person.contact?.phones?.[0] || person.phone;
   const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForWhatsApp(firstPhone)}` : null;
 
   const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name]);
