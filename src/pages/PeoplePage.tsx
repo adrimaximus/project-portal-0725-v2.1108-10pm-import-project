@@ -304,8 +304,8 @@ const PeoplePage = () => {
                           <TableCell colSpan={6} className="bg-muted/50" />
                         </TableRow>
                         {peopleInGroup.map(person => (
-                          <TableRow key={person.id} className="cursor-pointer" onClick={() => handleViewProfile(person)}>
-                            <TableCell className="sticky left-0 bg-card z-10">
+                          <TableRow key={person.id}>
+                            <TableCell className="sticky left-0 bg-card z-10 cursor-pointer" onClick={() => handleViewProfile(person)}>
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
                                   <AvatarImage src={person.avatar_url} />
@@ -319,16 +319,16 @@ const PeoplePage = () => {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell">
+                            <TableCell className="hidden sm:table-cell cursor-pointer" onClick={() => handleViewProfile(person)}>
                               <p className="font-medium">{person.job_title || '-'}</p>
                               <p className="text-sm text-muted-foreground">
                                 {person.department}{person.department && person.company ? ' at ' : ''}{person.company}
                               </p>
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell max-w-[200px] truncate text-sm text-muted-foreground">
+                            <TableCell className="hidden lg:table-cell max-w-[200px] truncate text-sm text-muted-foreground cursor-pointer" onClick={() => handleViewProfile(person)}>
                               {person.address?.formatted_address || '-'}
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">
+                            <TableCell className="hidden md:table-cell cursor-pointer" onClick={() => handleViewProfile(person)}>
                               <div className="flex items-center gap-3">
                                 {person.contact?.phones?.[0] && (
                                   <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.contact.phones[0])}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
@@ -346,7 +346,7 @@ const PeoplePage = () => {
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell">
+                            <TableCell className="hidden sm:table-cell cursor-pointer" onClick={() => handleViewProfile(person)}>
                               <div className="flex flex-wrap gap-1">
                                 {(person.tags || []).map(tag => (
                                   <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
@@ -355,17 +355,17 @@ const PeoplePage = () => {
                                 ))}
                               </div>
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                            <TableCell className="hidden lg:table-cell text-sm text-muted-foreground cursor-pointer" onClick={() => handleViewProfile(person)}>
                               {formatDistanceToNow(new Date(person.updated_at), { addSuffix: true })}
                             </TableCell>
                             <TableCell className="text-right sticky right-0 bg-card z-10">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button>
+                                  <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleEdit(person); }}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                                  <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); setPersonToDelete(person); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => handleEdit(person)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => setPersonToDelete(person)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>
