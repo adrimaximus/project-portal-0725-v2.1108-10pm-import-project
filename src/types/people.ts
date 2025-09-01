@@ -5,6 +5,7 @@ export interface Person {
   phone?: string;
   contact?: { emails?: string[]; phones?: string[] };
   company?: string;
+  company_logo_url?: string;
   job_title?: string;
   department?: string;
   social_media?: { linkedin?: string; twitter?: string; instagram?: string };
