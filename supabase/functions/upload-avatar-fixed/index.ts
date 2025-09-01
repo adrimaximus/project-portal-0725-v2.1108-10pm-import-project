@@ -54,22 +54,36 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Regex to handle various image types like jpeg, png, svg+xml, etc.
-    const matches = file.match(/^data:image\/([a-zA-Z0-9\-\+]+);base64,/);
+    const mimeTypeRegex = /^data:(image\/[a-zA-Z0-9\-\.+]+);base64,/;
+    const matches = file.match(mimeTypeRegex);
+
     if (!matches || matches.length < 2) {
-      throw new Error(`Invalid image data URL format. It should start with "data:image/...;base64,". Received: "${file.substring(0, 60)}..."`);
+      throw new Error(`Invalid image data URL format. Received: "${file.substring(0, 60)}..."`);
     }
-    const fileExt = matches[1];
-    
+
+    const mimeType = matches[1];
     const base64Data = file.substring(matches[0].length);
     const fileContent = decode(base64Data);
+
+    const extensionMap = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/svg+xml': 'svg',
+      'image/webp': 'webp',
+    };
+    const fileExt = extensionMap[mimeType] || mimeType.split('/')[1].split('+')[0];
+
+    if (!fileExt) {
+        throw new Error(`Unsupported image type: ${mimeType}`);
+    }
     
     const filePath = `${targetUserId}/avatar.${fileExt}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from('avatars')
       .upload(filePath, fileContent, {
-        contentType: `image/${fileExt}`,
+        contentType: mimeType,
         upsert: true,
       })
     if (uploadError) throw uploadError

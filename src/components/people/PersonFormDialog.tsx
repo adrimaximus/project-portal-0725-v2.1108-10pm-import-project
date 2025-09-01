@@ -163,7 +163,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
             reader.onerror = error => reject(error);
         });
 
-        const { data, error: invokeError } = await supabase.functions.invoke('upload-avatar', {
+        const { data, error: invokeError } = await supabase.functions.invoke('upload-avatar-fixed', {
             body: { file: fileBase64, targetUserId: personId },
         });
 
