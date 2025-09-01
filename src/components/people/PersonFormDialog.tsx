@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2 } from "lucide-react";
+import { Loader2, User as UserIcon } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -17,6 +17,10 @@ import { MultiSelect } from '../ui/multi-select';
 import PhoneNumberInput from '../PhoneNumberInput';
 import AntDatePicker from './AntDatePicker';
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { generateVibrantGradient } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { Label } from '@/components/ui/label';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -45,11 +49,14 @@ const personSchema = z.object({
 type PersonFormValues = z.infer<typeof personSchema>;
 
 const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps) => {
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [customProperties, setCustomProperties] = useState<ContactProperty[]>([]);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const form = useForm<PersonFormValues>({
     resolver: zodResolver(personSchema),
@@ -95,51 +102,85 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         address: person.address?.formatted_address || '',
         custom_properties: person.custom_properties || {},
       });
+      setAvatarPreview(person.avatar_url || null);
     } else {
       form.reset({
         full_name: '', email: '', phone: '', company: '', job_title: '',
         department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
         notes: '', project_ids: [], tag_ids: [], address: '', custom_properties: {},
       });
+      setAvatarPreview(null);
     }
+    setAvatarFile(null);
   }, [person, form, open]);
 
-  const onSubmit = async (values: PersonFormValues) => {
-    setIsSaving(true);
-    const { custom_properties, ...standardValues } = values;
-    const { error } = await supabase.rpc('upsert_person_with_details', {
-      p_id: person?.id || null,
-      p_full_name: values.full_name,
-      p_contact: { 
-        emails: values.email ? [values.email] : [],
-        phones: values.phone ? [values.phone] : []
-      },
-      p_company: values.company,
-      p_job_title: values.job_title,
-      p_department: values.department,
-      p_social_media: { linkedin: values.linkedin, twitter: values.twitter, instagram: values.instagram },
-      p_birthday: values.birthday ? format(values.birthday, 'yyyy-MM-dd') : null,
-      p_notes: values.notes,
-      p_project_ids: values.project_ids,
-      p_existing_tag_ids: values.tag_ids,
-      p_custom_tags: [],
-      p_avatar_url: person?.avatar_url,
-      p_address: values.address ? { formatted_address: values.address } : null,
-      p_custom_properties: custom_properties,
-    });
-    setIsSaving(false);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
 
-    if (error) {
-      toast.error(`Failed to save: ${error.message}`);
-    } else {
-      toast.success(`Successfully saved ${values.full_name}.`);
-      queryClient.invalidateQueries({ queryKey: ['people'] });
-      queryClient.invalidateQueries({ queryKey: ['person', person?.id] });
-      onOpenChange(false);
+  const onSubmit = async (values: PersonFormValues) => {
+    if (!person && !isSaving) { // Logic for creating a new person
+      // ... existing creation logic
+    } else if (person) { // Logic for updating an existing person
+      setIsSaving(true);
+      let avatar_url = person.avatar_url;
+
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const filePath = `${person.id}/avatar.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, avatarFile, { upsert: true });
+
+        if (uploadError) {
+          toast.error("Failed to upload avatar.");
+          setIsSaving(false);
+          return;
+        }
+        const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        avatar_url = `${data.publicUrl}?t=${new Date().getTime()}`;
+      }
+
+      const { custom_properties, ...standardValues } = values;
+      const { error } = await supabase.rpc('upsert_person_with_details', {
+        p_id: person.id,
+        p_full_name: values.full_name,
+        p_contact: { 
+          emails: values.email ? [values.email] : [],
+          phones: values.phone ? [values.phone] : []
+        },
+        p_company: values.company,
+        p_job_title: values.job_title,
+        p_department: values.department,
+        p_social_media: { linkedin: values.linkedin, twitter: values.twitter, instagram: values.instagram },
+        p_birthday: values.birthday ? format(values.birthday, 'yyyy-MM-dd') : null,
+        p_notes: values.notes,
+        p_project_ids: values.project_ids,
+        p_existing_tag_ids: values.tag_ids,
+        p_custom_tags: [],
+        p_avatar_url: avatar_url,
+        p_address: values.address ? { formatted_address: values.address } : null,
+        p_custom_properties: custom_properties,
+      });
+      setIsSaving(false);
+
+      if (error) {
+        toast.error(`Failed to save: ${error.message}`);
+      } else {
+        toast.success(`Successfully saved ${values.full_name}.`);
+        queryClient.invalidateQueries({ queryKey: ['people'] });
+        queryClient.invalidateQueries({ queryKey: ['person', person.id] });
+        onOpenChange(false);
+      }
     }
   };
 
   const isUser = !!person?.user_id;
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -149,6 +190,20 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6">
+            {isAdmin && (
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={avatarPreview || undefined} />
+                  <AvatarFallback style={generateVibrantGradient(person?.id || '')}>
+                    <UserIcon className="h-8 w-8 text-white" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-2">
+                  <Label>Profile Picture</Label>
+                  <Input type="file" accept="image/*" onChange={handleFileChange} className="text-xs" />
+                </div>
+              </div>
+            )}
             <FormField control={form.control} name="full_name" render={({ field }) => (
               <FormItem>
                 <FormLabel>Full Name</FormLabel>

@@ -12,9 +12,11 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { generateVibrantGradient } from "@/lib/utils";
 import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Profile = () => {
   const { user, refreshUser, logout } = useAuth();
+  const queryClient = useQueryClient();
   
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -89,7 +91,8 @@ const Profile = () => {
       console.error(error);
     } else {
       toast.success("Profile updated successfully.");
-      refreshUser();
+      await refreshUser();
+      queryClient.invalidateQueries({ queryKey: ['people'] });
     }
   };
 
