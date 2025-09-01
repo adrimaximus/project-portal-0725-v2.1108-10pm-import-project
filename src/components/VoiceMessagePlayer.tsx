@@ -30,10 +30,18 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
     if (!audio) return;
 
     const setAudioData = () => {
-      setDuration(audio.duration);
-      setCurrentTime(audio.currentTime);
+      if (isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
+      if (isFinite(audio.currentTime)) {
+        setCurrentTime(audio.currentTime);
+      }
     };
-    const setAudioTime = () => setCurrentTime(audio.currentTime);
+    const setAudioTime = () => {
+      if (isFinite(audio.currentTime)) {
+        setCurrentTime(audio.currentTime);
+      }
+    };
     const onEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
@@ -69,7 +77,7 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
 
   const handleSliderChange = (value: number[]) => {
     const audio = audioRef.current;
-    if (audio) {
+    if (audio && isFinite(value[0])) {
       audio.currentTime = value[0];
       setCurrentTime(value[0]);
     }
