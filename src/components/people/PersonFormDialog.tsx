@@ -191,7 +191,6 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     }
   };
 
-  const isUser = !!person?.user_id;
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
 
   return (
@@ -211,11 +210,11 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
               </Avatar>
               <div className="space-y-2">
                 <Label>Profile Picture</Label>
-                {isAdmin && !isUser ? (
+                {isAdmin ? (
                   <Input type="file" accept="image/*" onChange={handleFileChange} className="text-xs" />
                 ) : (
                   <p className="text-xs text-muted-foreground pt-2">
-                    {isUser ? "Avatar is managed by the user's profile." : "You don't have permission to change this."}
+                    You don't have permission to change this.
                   </p>
                 )}
               </div>
@@ -223,8 +222,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
             <FormField control={form.control} name="full_name" render={({ field }) => (
               <FormItem>
                 <FormLabel>Full Name</FormLabel>
-                <FormControl><Input {...field} disabled={isUser} /></FormControl>
-                {isUser && <p className="text-xs text-muted-foreground">Nama dikelola oleh profil pengguna.</p>}
+                <FormControl><Input {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
@@ -232,8 +230,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
               <FormField control={form.control} name="email" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Email</FormLabel>
-                  <FormControl><Input type="email" {...field} disabled={isUser} /></FormControl>
-                  {isUser && <p className="text-xs text-muted-foreground">Email dikelola oleh profil pengguna.</p>}
+                  <FormControl><Input type="email" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />

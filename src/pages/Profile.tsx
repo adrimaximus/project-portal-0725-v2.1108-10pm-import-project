@@ -97,7 +97,6 @@ const Profile = () => {
     } else {
       toast.success("Profile updated successfully.");
       await refreshUser();
-      queryClient.invalidateQueries({ queryKey: ['people'] });
     }
   };
 
