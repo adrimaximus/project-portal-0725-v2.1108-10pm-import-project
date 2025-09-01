@@ -28,6 +28,7 @@ const Profile = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -54,26 +55,31 @@ const Profile = () => {
   };
 
   const handleSaveChanges = async () => {
+    setIsSaving(true);
     let avatar_url = user.avatar_url;
 
     if (avatarFile) {
-      const fileExt = avatarFile.name.split('.').pop();
-      const filePath = `${user.id}/avatar.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, avatarFile, {
-          cacheControl: '3600',
-          upsert: true,
+      try {
+        const reader = new FileReader();
+        reader.readAsDataURL(avatarFile);
+        const fileBase64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
         });
 
-      if (uploadError) {
-        toast.error("Failed to upload avatar.");
-        console.error(uploadError);
+        const { data, error: invokeError } = await supabase.functions.invoke('upload-avatar', {
+          body: { file: fileBase64, targetUserId: user.id },
+        });
+
+        if (invokeError) throw invokeError;
+        avatar_url = data.avatar_url;
+
+      } catch (error: any) {
+        toast.error("Failed to upload avatar.", { description: error.message });
+        console.error(error);
+        setIsSaving(false);
         return;
       }
-
-      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      avatar_url = `${data.publicUrl}?t=${new Date().getTime()}`;
     }
 
     const { error } = await supabase
@@ -85,6 +91,8 @@ const Profile = () => {
         updated_at: new Date().toISOString(),
       })
       .eq('id', user.id);
+
+    setIsSaving(false);
 
     if (error) {
       toast.error("Failed to update profile.");
@@ -180,7 +188,10 @@ const Profile = () => {
                 <Input id="email" type="email" value={user.email || ''} disabled />
               </div>
             </div>
-            <Button onClick={handleSaveChanges}>Save Changes</Button>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
           </CardContent>
         </Card>
 

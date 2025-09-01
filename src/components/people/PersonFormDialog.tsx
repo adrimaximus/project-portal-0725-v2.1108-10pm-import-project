@@ -130,19 +130,25 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       let avatar_url = person.avatar_url;
 
       if (avatarFile) {
-        const fileExt = avatarFile.name.split('.').pop();
-        const filePath = `${person.id}/avatar.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, avatarFile, { upsert: true });
+        try {
+            const reader = new FileReader();
+            reader.readAsDataURL(avatarFile);
+            const fileBase64 = await new Promise<string>((resolve, reject) => {
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = error => reject(error);
+            });
 
-        if (uploadError) {
-          toast.error("Failed to upload avatar.");
-          setIsSaving(false);
-          return;
+            const { data, error: invokeError } = await supabase.functions.invoke('upload-avatar', {
+                body: { file: fileBase64, targetUserId: person.id },
+            });
+
+            if (invokeError) throw invokeError;
+            avatar_url = data.avatar_url;
+        } catch (error: any) {
+            toast.error("Failed to upload avatar.", { description: error.message });
+            setIsSaving(false);
+            return;
         }
-        const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-        avatar_url = `${data.publicUrl}?t=${new Date().getTime()}`;
       }
 
       const { custom_properties, ...standardValues } = values;
