@@ -31,7 +31,7 @@ export const useGoals = () => {
         { event: '*', schema: 'public', table: 'goals' },
         (payload) => {
           console.log('Goals table change received, refetching goals.', payload);
-          queryClient.invalidateQueries({ queryKey: ['goals'] });
+          queryClient.invalidateQueries({ queryKey: ['goals', user.id] });
         }
       )
       .on(
@@ -39,7 +39,7 @@ export const useGoals = () => {
         { event: '*', schema: 'public', table: 'goal_collaborators' },
         (payload) => {
           console.log('Goal collaborators change received, refetching goals.', payload);
-          queryClient.invalidateQueries({ queryKey: ['goals'] });
+          queryClient.invalidateQueries({ queryKey: ['goals', user.id] });
         }
       )
       .subscribe();
@@ -50,7 +50,8 @@ export const useGoals = () => {
   }, [user, queryClient]);
 
   return useQuery<Goal[], Error>({
-    queryKey: ['goals'],
+    queryKey: ['goals', user?.id],
     queryFn: fetchGoals,
+    enabled: !!user,
   });
 };

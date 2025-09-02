@@ -34,7 +34,7 @@ export const useProjects = () => {
         { event: '*', schema: 'public', table: 'project_members' },
         (payload) => {
           console.log('Project members change received, refetching projects.', payload);
-          queryClient.invalidateQueries({ queryKey: ['projects'] });
+          queryClient.invalidateQueries({ queryKey: ['projects', user.id] });
         }
       )
       .on(
@@ -42,7 +42,7 @@ export const useProjects = () => {
         { event: '*', schema: 'public', table: 'projects' },
         (payload) => {
           console.log('Projects table change received, refetching projects.', payload);
-          queryClient.invalidateQueries({ queryKey: ['projects'] });
+          queryClient.invalidateQueries({ queryKey: ['projects', user.id] });
         }
       )
       .subscribe();
@@ -53,7 +53,8 @@ export const useProjects = () => {
   }, [user, queryClient]);
 
   return useQuery<Project[], Error>({
-    queryKey: ['projects'],
+    queryKey: ['projects', user?.id],
     queryFn: fetchProjects,
+    enabled: !!user,
   });
 };

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { User, SupabaseSession, SupabaseUser, Collaborator } from '@/types';
 import { toast } from 'sonner';
 import { getInitials } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ProfileWithPermissions {
   id: string;
@@ -40,9 +41,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [realUser, setRealUser] = useState<User | null>(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const stopImpersonation = useCallback(async (showToast = true) => {
+    const realSessionString = localStorage.getItem('realUserSession');
+    if (!realSessionString) return;
+
+    const realSession = JSON.parse(realSessionString);
+    const { error } = await supabase.auth.setSession(realSession);
+    
+    localStorage.removeItem('realUserSession');
+    setIsImpersonating(false);
+    setRealUser(null);
+
+    if (error) {
+      toast.error("Failed to restore session. Please log in again.");
+      // The onAuthStateChange listener will handle the full logout if the session is truly broken.
+      navigate('/login', { replace: true }); 
+    } else {
+      if (showToast) {
+        toast.info("Returned to your admin account.");
+      }
+      await queryClient.invalidateQueries();
+    }
+  }, [navigate, queryClient]);
 
   const logout = useCallback(async () => {
-    await stopImpersonation(false); // Stop impersonation if active, without refresh
+    await stopImpersonation(false);
     const { error } = await supabase.auth.signOut({ scope: 'global' });
     if (error) {
       console.error("Error logging out:", error);
@@ -52,9 +77,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(null);
       localStorage.removeItem('lastUserName');
       localStorage.removeItem('realUserSession');
+      queryClient.clear();
       navigate('/', { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, stopImpersonation, queryClient]);
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser, retries = 3, delay = 500) => {
     for (let i = 0; i < retries; i++) {
@@ -134,6 +160,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (sessionErrorSet) throw sessionErrorSet;
 
       setIsImpersonating(true);
+      await queryClient.invalidateQueries();
       navigate('/dashboard', { replace: true });
       toast.success(`You are now viewing as ${targetUser.name}.`);
     } catch (error: any) {
@@ -151,27 +178,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast.error("Failed to start impersonation.", { description });
     }
   };
-
-  const stopImpersonation = useCallback(async (showToast = true) => {
-    const realSessionString = localStorage.getItem('realUserSession');
-    if (!realSessionString) return;
-
-    const realSession = JSON.parse(realSessionString);
-    const { error } = await supabase.auth.setSession(realSession);
-    
-    localStorage.removeItem('realUserSession');
-    setIsImpersonating(false);
-    setRealUser(null);
-
-    if (error) {
-      toast.error("Failed to restore session. Please log in again.");
-      await logout();
-    } else {
-      if (showToast) {
-        toast.info("Returned to your admin account.");
-      }
-    }
-  }, [logout]);
 
   useEffect(() => {
     const realSessionString = localStorage.getItem('realUserSession');
