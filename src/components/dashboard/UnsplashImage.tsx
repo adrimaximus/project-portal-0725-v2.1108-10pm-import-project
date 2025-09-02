@@ -43,11 +43,11 @@ const UnsplashImage = () => {
             if (captionError) throw captionError;
             setCaption(data.caption);
           } catch (captionErr: any) {
-            console.warn("Failed to generate AI caption, falling back to default.", captionErr);
-            setCaption(`Photo by ${fetchedPhoto.user.name}`);
+            console.warn("Failed to generate AI caption, falling back to alt description.", captionErr);
+            setCaption(fetchedPhoto.alt_description);
           }
-        } else if (fetchedPhoto.user.name) {
-          setCaption(`Photo by ${fetchedPhoto.user.name}`);
+        } else {
+          setCaption(''); // No description available
         }
       } else {
         throw new Error(response.errors.join(', '));
@@ -94,14 +94,25 @@ const UnsplashImage = () => {
           <img src={photo.urls.regular} alt={photo.alt_description || 'Photo from Unsplash'} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" />
           
           <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/80 to-transparent p-4 flex items-end justify-between gap-4">
-            <div className="flex-1 pointer-events-none">
+            <div className="flex-1">
               {caption ? (
                 <p className="text-white text-sm font-medium line-clamp-2">{caption}</p>
               ) : (
-                <Skeleton className="h-4 w-3/4 bg-white/20" />
+                <Skeleton className="h-4 w-3/4 bg-white/20 mb-2" />
               )}
+              <p className="text-white/70 text-xs mt-1">
+                Photo by{' '}
+                <a
+                  href={`${photo.user.links.html}?utm_source=dashboard&utm_medium=referral`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-white transition-colors"
+                >
+                  {photo.user.name}
+                </a>
+              </p>
             </div>
-            <a href={photo.links.html} target="_blank" rel="noopener noreferrer" className="no-underline opacity-50 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <a href={`${photo.links.html}?utm_source=dashboard&utm_medium=referral`} target="_blank" rel="noopener noreferrer" className="no-underline opacity-50 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white h-8 w-8">
                 <ExternalLink className="h-4 w-4" />
               </Button>
