@@ -5,6 +5,7 @@ import ProtectedRouteLayout from "./components/ProtectedRouteLayout";
 import PermissionGuard from "./components/PermissionGuard";
 import MasterAdminGuard from "./components/MasterAdminGuard";
 import LoadingScreen from "./components/LoadingScreen";
+import ImpersonationBanner from "./components/ImpersonationBanner";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const DashboardPage = lazy(() => import("./pages/Dashboard"));
@@ -97,6 +98,7 @@ function App() {
         </Routes>
       </Suspense>
       <Toaster />
+      <ImpersonationBanner />
     </>
   );
 }

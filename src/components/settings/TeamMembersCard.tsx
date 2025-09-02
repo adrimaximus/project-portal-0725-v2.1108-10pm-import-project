@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, Search, Send, Trash2, ChevronsUpDown } from 'lucide-react';
+import { MoreHorizontal, Search, Send, Trash2, ChevronsUpDown, User as UserIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,6 +14,7 @@ import { User } from '@/types';
 import { Role } from './RoleManagerDialog';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TeamMembersCardProps {
   members: User[];
@@ -38,6 +39,7 @@ const TeamMembersCard = ({
 }: TeamMembersCardProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { startImpersonation } = useAuth();
 
   const filteredMembers = useMemo(() => {
     return members.filter(member =>
@@ -155,6 +157,15 @@ const TeamMembersCard = ({
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              {isMasterAdmin && (
+                                <>
+                                  <DropdownMenuItem onSelect={() => startImpersonation(member)}>
+                                    <UserIcon className="mr-2 h-4 w-4" />
+                                    Lihat sebagai Pengguna
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
                               {member.status === 'Pending invite' ? (
                                 <>
                                   <DropdownMenuItem onSelect={() => onResendInvite(member)}>
@@ -170,12 +181,12 @@ const TeamMembersCard = ({
                               ) : (
                                 <>
                                   <DropdownMenuItem onSelect={() => onToggleSuspend(member)} disabled={member.role === 'master admin' && !isMasterAdmin}>
-                                    {member.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
+                                    {member.status === 'suspended' ? 'Unsuspend Member' : 'Suspend Member'}
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem className="text-red-600" onSelect={() => onDeleteMember(member)} disabled={(member.role === 'master admin' && !isMasterAdmin)}>
                                     <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
+                                    Delete Member
                                   </DropdownMenuItem>
                                 </>
                               )}

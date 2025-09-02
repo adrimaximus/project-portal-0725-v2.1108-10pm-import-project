@@ -24,6 +24,10 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   onlineCollaborators: Collaborator[];
+  isImpersonating: boolean;
+  realUser: User | null;
+  startImpersonation: (targetUser: User) => Promise<void>;
+  stopImpersonation: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,9 +37,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [realUser, setRealUser] = useState<User | null>(null);
   const navigate = useNavigate();
 
   const logout = useCallback(async () => {
+    await stopImpersonation(false); // Hentikan impersonasi jika ada, tanpa me-refresh
     const { error } = await supabase.auth.signOut({ scope: 'global' });
     if (error) {
       console.error("Error logging out:", error);
@@ -44,6 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setSession(null);
       localStorage.removeItem('lastUserName');
+      localStorage.removeItem('realUserSession');
       navigate('/', { replace: true });
     }
   }, [navigate]);
@@ -72,7 +80,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           permissions: profile.permissions || [],
         };
         setUser(userToSet);
-        localStorage.setItem('lastUserName', userToSet.name);
+        if (!isImpersonating) {
+          localStorage.setItem('lastUserName', userToSet.name);
+        }
         return;
       }
 
@@ -91,9 +101,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.warn(`Could not fetch user profile for ${supabaseUser.id} after ${retries} attempts. Logging out.`);
     toast.error("Could not retrieve your user profile. Please try logging in again.");
     await logout();
-  }, [logout]);
+  }, [logout, isImpersonating]);
+
+  const startImpersonation = async (targetUser: User) => {
+    if (user?.role !== 'master admin') {
+      toast.error("You do not have permission to do this.");
+      return;
+    }
+    toast.info(`Memulai sesi sebagai ${targetUser.name}...`);
+    try {
+      const { data, error } = await supabase.functions.invoke('impersonate-user', {
+        body: { target_user_id: targetUser.id },
+      });
+      if (error) throw error;
+
+      const realSession = await supabase.auth.getSession();
+      if (realSession.data.session) {
+        localStorage.setItem('realUserSession', JSON.stringify(realSession.data.session));
+        setRealUser(user);
+      }
+
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+      if (sessionError) throw sessionError;
+
+      setIsImpersonating(true);
+      navigate('/dashboard', { replace: true });
+      toast.success(`Anda sekarang melihat sebagai ${targetUser.name}.`);
+    } catch (error: any) {
+      toast.error("Gagal memulai impersonasi.", { description: error.message });
+    }
+  };
+
+  const stopImpersonation = async (showToast = true) => {
+    const realSessionString = localStorage.getItem('realUserSession');
+    if (!realSessionString) return;
+
+    const realSession = JSON.parse(realSessionString);
+    const { error } = await supabase.auth.setSession(realSession);
+    
+    localStorage.removeItem('realUserSession');
+    setIsImpersonating(false);
+    setRealUser(null);
+
+    if (error) {
+      toast.error("Gagal mengembalikan sesi. Silakan login kembali.");
+      await logout();
+    } else {
+      if (showToast) {
+        toast.info("Kembali ke akun admin Anda.");
+      }
+      navigate('/dashboard', { replace: true });
+    }
+  };
 
   useEffect(() => {
+    const realSessionString = localStorage.getItem('realUserSession');
+    if (realSessionString) {
+      setIsImpersonating(true);
+    }
+
     const getSessionAndListen = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
@@ -228,6 +297,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refreshUser,
     hasPermission,
     onlineCollaborators,
+    isImpersonating,
+    realUser,
+    startImpersonation,
+    stopImpersonation,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
