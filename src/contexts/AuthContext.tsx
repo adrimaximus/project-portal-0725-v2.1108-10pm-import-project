@@ -108,7 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast.error("You do not have permission to do this.");
       return;
     }
-    toast.info(`Memulai sesi sebagai ${targetUser.name}...`);
+    toast.info(`Starting session as ${targetUser.name}...`);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -137,7 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setIsImpersonating(true);
       navigate('/dashboard', { replace: true });
-      toast.success(`Anda sekarang melihat sebagai ${targetUser.name}.`);
+      toast.success(`You are now viewing as ${targetUser.name}.`);
     } catch (error: any) {
       let description = error.message;
       if (error.context && typeof error.context.json === 'function') {
@@ -150,7 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // ignore parsing error
         }
       }
-      toast.error("Gagal memulai impersonasi.", { description });
+      toast.error("Failed to start impersonation.", { description });
     }
   };
 
@@ -166,11 +166,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRealUser(null);
 
     if (error) {
-      toast.error("Gagal mengembalikan sesi. Silakan login kembali.");
+      toast.error("Failed to restore session. Please log in again.");
       await logout();
     } else {
       if (showToast) {
-        toast.info("Kembali ke akun admin Anda.");
+        toast.info("Returned to your admin account.");
       }
     }
   };

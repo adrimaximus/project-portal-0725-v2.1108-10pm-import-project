@@ -161,7 +161,7 @@ const TeamMembersCard = ({
                                 <>
                                   <DropdownMenuItem onSelect={() => startImpersonation(member)}>
                                     <UserIcon className="mr-2 h-4 w-4" />
-                                    Lihat sebagai Pengguna
+                                    Impersonate
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                 </>

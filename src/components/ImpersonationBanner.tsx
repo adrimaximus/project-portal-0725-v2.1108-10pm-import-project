@@ -15,7 +15,7 @@ const ImpersonationBanner = () => {
         <div className="flex items-center gap-3">
           <AlertTriangle className="h-5 w-5" />
           <p className="text-sm font-semibold">
-            Anda sedang melihat sebagai <span className="font-bold">{user?.name || 'pengguna'}</span>.
+            You are viewing as <span className="font-bold">{user?.name || 'user'}</span>.
           </p>
         </div>
         <Button
@@ -24,7 +24,7 @@ const ImpersonationBanner = () => {
           onClick={stopImpersonation}
           className="text-yellow-800 dark:text-yellow-300 hover:bg-yellow-400/30 hover:text-yellow-900 dark:hover:text-yellow-200"
         >
-          Kembali ke Akun Admin
+          Return to Admin Account
         </Button>
       </div>
     </div>
