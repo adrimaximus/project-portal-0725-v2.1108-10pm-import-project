@@ -255,7 +255,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
     }
     setIsSaving(true);
     
-    let header_image_url = article?.header_image_url;
+    let header_image_url: string | null | undefined = article?.header_image_url;
 
     if (imageFile) {
       const sanitizedFileName = imageFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
@@ -269,7 +269,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
       const { data } = supabase.storage.from('kb-images').getPublicUrl(filePath);
       header_image_url = data.publicUrl;
     } else if (isRemovingImage) {
-      header_image_url = undefined;
+      header_image_url = null;
     } else if (imagePreview && imagePreview !== article?.header_image_url) {
       header_image_url = imagePreview;
     }
