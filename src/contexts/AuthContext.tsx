@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
 
   const logout = useCallback(async () => {
-    await stopImpersonation(false); // Hentikan impersonasi jika ada, tanpa me-refresh
+    await stopImpersonation(false); // Stop impersonation if active, without refresh
     const { error } = await supabase.auth.signOut({ scope: 'global' });
     if (error) {
       console.error("Error logging out:", error);
@@ -110,7 +110,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     toast.info(`Starting session as ${targetUser.name}...`);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error("Auth session missing! Please try logging in again.");
       }
