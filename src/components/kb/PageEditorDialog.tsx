@@ -302,7 +302,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
         p_title: values.title,
         p_content: values.content ? { html: values.content } : null,
         p_folder_id: finalFolderId,
-        p_header_image_url: header_image_url,
+        p_header_image_url: header_image_url || null,
         p_tags: existingTagIds,
         p_custom_tags: newCustomTags.length > 0 ? newCustomTags : null,
     };
