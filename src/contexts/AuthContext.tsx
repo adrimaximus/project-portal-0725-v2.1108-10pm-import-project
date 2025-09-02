@@ -110,7 +110,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     toast.info(`Memulai sesi sebagai ${targetUser.name}...`);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Auth session missing! Please try logging in again.");
+      }
+
       const { data, error } = await supabase.functions.invoke('impersonate-user', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: { target_user_id: targetUser.id },
       });
       if (error) throw error;
@@ -131,7 +139,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       navigate('/dashboard', { replace: true });
       toast.success(`Anda sekarang melihat sebagai ${targetUser.name}.`);
     } catch (error: any) {
-      toast.error("Gagal memulai impersonasi.", { description: error.message });
+      let description = error.message;
+      if (error.context && typeof error.context.json === 'function') {
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody.error) {
+            description = errorBody.error;
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+      toast.error("Gagal memulai impersonasi.", { description });
     }
   };
 
