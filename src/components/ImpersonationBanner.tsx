@@ -14,7 +14,7 @@ const ImpersonationBanner = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <AlertTriangle className="h-5 w-5" />
-          <p className="text-sm font-semibold">
+          <p data-dyad-active="true" className="text-sm font-semibold">
             You are viewing as <span className="font-bold">{user?.name || 'user'}</span>.
           </p>
         </div>
