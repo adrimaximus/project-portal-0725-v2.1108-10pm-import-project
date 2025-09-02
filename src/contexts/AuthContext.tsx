@@ -172,7 +172,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (showToast) {
         toast.info("Kembali ke akun admin Anda.");
       }
-      navigate('/dashboard', { replace: true });
     }
   };
 
