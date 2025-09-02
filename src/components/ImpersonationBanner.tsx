@@ -24,7 +24,7 @@ const ImpersonationBanner = () => {
           onClick={stopImpersonation}
           className="text-yellow-800 dark:text-yellow-300 hover:bg-yellow-400/30 hover:text-yellow-900 dark:hover:text-yellow-200"
         >
-          Return to Admin Account
+          Return
         </Button>
       </div>
     </div>
