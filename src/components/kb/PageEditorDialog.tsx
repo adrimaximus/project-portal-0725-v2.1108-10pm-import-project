@@ -277,32 +277,15 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
     let finalFolderId = values.folder_id;
 
     if (!isEditMode && !finalFolderId) {
-        try {
-            const { data: existingFolder, error: findError } = await supabase
-                .from('kb_folders')
-                .select('id')
-                .eq('name', 'Uncategorized')
-                .eq('user_id', user.id)
-                .single();
-
-            if (findError && findError.code !== 'PGRST116') throw findError;
-
-            if (existingFolder) {
-                finalFolderId = existingFolder.id;
-            } else {
-                const { data: newFolder, error: createError } = await supabase
-                    .from('kb_folders')
-                    .insert({ name: 'Uncategorized', icon: 'Archive', color: '#9ca3af', user_id: user.id })
-                    .select('id')
-                    .single();
-                if (createError) throw createError;
-                finalFolderId = newFolder!.id;
-            }
-        } catch (error: any) {
-            toast.error("Failed to manage default folder for the page.", { description: error.message });
-            setIsSaving(false);
-            return;
-        }
+      try {
+        const { data: folderId, error: rpcError } = await supabase.rpc('create_default_kb_folder');
+        if (rpcError) throw rpcError;
+        finalFolderId = folderId;
+      } catch (error: any) {
+        toast.error("Failed to manage default folder for the page.", { description: error.message });
+        setIsSaving(false);
+        return;
+      }
     }
 
     if (!finalFolderId) {
@@ -461,7 +444,7 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
                 <FormMessage />
               </FormItem>
             )} />
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-4 sticky bottom-0 bg-background -mx-4 -mb-4 px-4 pb-4 border-t">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
