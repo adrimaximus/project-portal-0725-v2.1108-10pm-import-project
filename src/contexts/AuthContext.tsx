@@ -43,44 +43,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const logout = useCallback(async () => {
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
+    setUser(null);
+    setSession(null);
+    setIsImpersonating(false);
+    setRealUser(null);
+    localStorage.removeItem('lastUserName');
+    localStorage.removeItem('realUserSession');
+    queryClient.clear();
+    if (error) {
+      console.error("Error logging out:", error);
+      toast.error("Logout failed. Please try again.");
+    }
+    navigate('/', { replace: true });
+  }, [navigate, queryClient]);
+
   const stopImpersonation = useCallback(async (showToast = true) => {
     const realSessionString = localStorage.getItem('realUserSession');
     if (!realSessionString) return;
 
     const realSession = JSON.parse(realSessionString);
-    const { error } = await supabase.auth.setSession(realSession);
-    
+
+    // Update UI state immediately for responsiveness
     localStorage.removeItem('realUserSession');
     setIsImpersonating(false);
     setRealUser(null);
 
+    const { error } = await supabase.auth.setSession(realSession);
+
     if (error) {
-      toast.error("Failed to restore session. Please log in again.");
-      // The onAuthStateChange listener will handle the full logout if the session is truly broken.
-      navigate('/login', { replace: true }); 
+      toast.error("Failed to restore your original session. Logging you out for security.");
+      await logout();
     } else {
       if (showToast) {
         toast.info("Returned to your admin account.");
       }
+      // The onAuthStateChange listener will handle fetching the new user profile.
+      // We still need to invalidate other data, like projects, goals, etc.
       await queryClient.invalidateQueries();
     }
-  }, [navigate, queryClient]);
-
-  const logout = useCallback(async () => {
-    await stopImpersonation(false);
-    const { error } = await supabase.auth.signOut({ scope: 'global' });
-    if (error) {
-      console.error("Error logging out:", error);
-      toast.error("Logout failed. Please try again.");
-    } else {
-      setUser(null);
-      setSession(null);
-      localStorage.removeItem('lastUserName');
-      localStorage.removeItem('realUserSession');
-      queryClient.clear();
-      navigate('/', { replace: true });
-    }
-  }, [navigate, stopImpersonation, queryClient]);
+  }, [logout, queryClient]);
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser, retries = 3, delay = 500) => {
     for (let i = 0; i < retries; i++) {
@@ -106,7 +109,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           permissions: profile.permissions || [],
         };
         setUser(userToSet);
-        if (!isImpersonating) {
+        // Check against localStorage because state update might not be immediate
+        if (!localStorage.getItem('realUserSession')) {
           localStorage.setItem('lastUserName', userToSet.name);
         }
         return;
@@ -127,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.warn(`Could not fetch user profile for ${supabaseUser.id} after ${retries} attempts. Logging out.`);
     toast.error("Could not retrieve your user profile. Please try logging in again.");
     await logout();
-  }, [logout, isImpersonating]);
+  }, [logout]);
 
   const startImpersonation = async (targetUser: User) => {
     if (user?.role !== 'master admin') {
