@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Buat klien Supabase menggunakan header otorisasi pemohon untuk verifikasi
+    // 1. Authenticate user
     const userSupabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -23,13 +23,13 @@ serve(async (req) => {
     const { data: { user: authUser } } = await userSupabase.auth.getUser();
     if (!authUser) throw new Error("User not authenticated.");
 
-    // 2. Buat klien admin untuk melakukan operasi yang memerlukan hak istimewa
+    // 2. Create admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 3. Periksa izin: HANYA master admin yang dapat melakukan ini
+    // 3. Check permissions: ONLY master admins can do this
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
@@ -40,22 +40,38 @@ serve(async (req) => {
       throw new Error("Forbidden: You do not have permission to impersonate users.");
     }
 
-    // 4. Dapatkan ID pengguna target dari permintaan
+    // 4. Get target user ID from the request
     const { target_user_id } = await req.json();
     if (!target_user_id) {
       throw new Error("target_user_id is required.");
     }
 
-    // 5. Buat tautan masuk ajaib untuk pengguna target untuk mendapatkan token
-    const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    // 5. Get target user's email safely
+    const { data: targetUserData, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(target_user_id);
+    
+    if (getUserError) {
+      throw new Error(`Could not find target user: ${getUserError.message}`);
+    }
+    if (!targetUserData || !targetUserData.user || !targetUserData.user.email) {
+      throw new Error(`Target user with ID ${target_user_id} does not exist or has no email.`);
+    }
+    const targetEmail = targetUserData.user.email;
+
+    // 6. Generate magic link for the target user to get tokens
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
-      email: (await supabaseAdmin.auth.admin.getUserById(target_user_id)).data.user.email,
+      email: targetEmail,
     });
-    if (linkError) throw linkError;
+    if (linkError) {
+      throw new Error(`Could not generate impersonation link: ${linkError.message}`);
+    }
+    if (!linkData || !linkData.properties || !linkData.properties.access_token) {
+        throw new Error('Failed to generate session properties for impersonation.');
+    }
 
-    const { access_token, refresh_token } = data.properties;
+    const { access_token, refresh_token } = linkData.properties;
 
-    // 6. Kembalikan token sesi baru
+    // 7. Return the new session tokens
     return new Response(JSON.stringify({ access_token, refresh_token }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
