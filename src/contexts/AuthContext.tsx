@@ -110,29 +110,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     toast.info(`Starting session as ${targetUser.name}...`);
     try {
-      if (!session) {
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw new Error(`Could not get current session: ${sessionError.message}`);
+      if (!currentSession) {
         throw new Error("Auth session missing! Please try logging in again.");
       }
 
       const { data, error } = await supabase.functions.invoke('impersonate-user', {
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${currentSession.access_token}`,
         },
         body: { target_user_id: targetUser.id },
       });
       if (error) throw error;
 
-      const realSession = await supabase.auth.getSession();
-      if (realSession.data.session) {
-        localStorage.setItem('realUserSession', JSON.stringify(realSession.data.session));
-        setRealUser(user);
-      }
+      localStorage.setItem('realUserSession', JSON.stringify(currentSession));
+      setRealUser(user);
 
-      const { error: sessionError } = await supabase.auth.setSession({
+      const { error: sessionErrorSet } = await supabase.auth.setSession({
         access_token: data.access_token,
         refresh_token: data.refresh_token,
       });
-      if (sessionError) throw sessionError;
+      if (sessionErrorSet) throw sessionErrorSet;
 
       setIsImpersonating(true);
       navigate('/dashboard', { replace: true });
@@ -153,7 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const stopImpersonation = async (showToast = true) => {
+  const stopImpersonation = useCallback(async (showToast = true) => {
     const realSessionString = localStorage.getItem('realUserSession');
     if (!realSessionString) return;
 
@@ -172,7 +171,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast.info("Returned to your admin account.");
       }
     }
-  };
+  }, [logout]);
 
   useEffect(() => {
     const realSessionString = localStorage.getItem('realUserSession');
