@@ -76,6 +76,9 @@ const getAnalyzeProjectsSystemPrompt = (context, userName) => `You are an expert
       - You: (You must now create the task 'Draft Q3 blog post' in the 'marketing project', not do something else with "Draft Q3 blog post".)
 8.  **DIRECT ACTION FOR OTHER COMMANDS:** For all other non-sensitive actions (CREATE_PROJECT, UPDATE_PROJECT, etc.), you should act directly by responding with ONLY the action JSON.
 9.  **QUESTION ANSWERING:** If the user's request is clearly a question seeking information (and not an action), then and only then should you answer in natural language.
+10. **WEB & MAPS SEARCH:** You can search for information about real-world places or websites.
+    - Example: "Find details for 'Starbucks Central Park Jakarta'"
+    - Example: "Get the social media links for dyad.sh"
 
 **Your entire process is:**
 1. Analyze the user's latest message and any attached image or document.
@@ -141,6 +144,9 @@ You can perform several types of actions. When you decide to perform an action, 
 {"action": "CREATE_FOLDER", "folder_details": {"name": "<folder name>", "description": "<desc>", "icon": "IconName", "color": "#RRGGBB", "category": "<category>"}}
 - If the user only provides a name, you MUST infer the other details.
 - Suggest a relevant 'icon' from the 'Available Icons' list and a suitable 'color'.
+
+13. SEARCH_MAPS_AND_WEBSITE:
+{"action": "SEARCH_MAPS_AND_WEBSITE", "query": "<search query for a place or a website URL>"}
 
 CONTEXT:
 - Current Date & Time: ${new Date().toISOString()}
@@ -447,6 +453,62 @@ async function executeAction(actionData, context) {
                 if (error) return `I failed to delete the article. The database said: ${error.message}`;
                 return `I've deleted the article "${article_title}".`;
             }
+            case 'SEARCH_MAPS_AND_WEBSITE': {
+                const { query } = actionData;
+                if (!query) return "I need a place name or website to search for.";
+
+                const { data, error } = await userSupabase.functions.invoke('scrape-url', {
+                    body: { query },
+                });
+
+                if (error) {
+                    return `I had trouble searching for that. The error was: ${error.message}`;
+                }
+                if (data.error) {
+                    return `I had trouble searching for that. The error was: ${data.error}`;
+                }
+
+                const details = data.result;
+                let response = `### ${details.Name}\n`;
+                if (details.Average_Rating) {
+                    response += `**Rating:** ${details.Average_Rating} ⭐ (${details.Review_Count} reviews)\n`;
+                }
+                if (details.Categories) {
+                    response += `**Categories:** ${details.Categories.join(', ').replace(/_/g, ' ')}\n`;
+                }
+                response += `\n**Address:** ${details.Fulladdress}\n`;
+                if (details.Phone) {
+                    response += `**Phone:** ${details.Phone}\n`;
+                }
+                if (details.Website) {
+                    response += `**Website:** [${details.Domain}](${details.Website})\n`;
+                }
+                if (details.Email) {
+                    response += `**Email:** ${details.Email}\n`;
+                }
+                if (details.Opening_Hours) {
+                    response += `\n**Hours:**\n${details.Opening_Hours.map(h => `- ${h}`).join('\n')}\n`;
+                }
+                
+                const socialLinks = [
+                    details.instagram && `[Instagram](${details.instagram})`,
+                    details.facebook && `[Facebook](${details.facebook})`,
+                    details.twitter && `[Twitter](${details.twitter})`,
+                    details.youtube && `[YouTube](${details.youtube})`,
+                ].filter(Boolean);
+
+                if (socialLinks.length > 0) {
+                    response += `\n**Socials:** ${socialLinks.join(' | ')}\n`;
+                }
+
+                response += `\n[View on Google Maps](${details.Google_Maps_URL})\n`;
+
+                if (details.Featured_Image) {
+                    response += `\n![Featured Image](${details.Featured_Image})\n`;
+                }
+
+                return response;
+            }
             default:
                 return "I'm not sure how to perform that action. Can you clarify?";
         }
@@ -649,7 +711,8 @@ async function aiMergeContacts(payload, context) {
 1.  **Primary Record**: The user will designate one record as "primary". You should prioritize data from this record but intelligently incorporate data from the "secondary" record.
 2.  **No Data Deletion**: Do not discard information from the secondary record. If a field from the secondary record conflicts with the primary (e.g., a different job title), and cannot be combined, add the secondary information to the 'notes' field in a structured way, like "Also worked as: [Job Title] at [Company]".
 3.  **Field Merging Logic**:
-    *   **full_name**: Choose the most complete or formal name. If "Jane D." and "Jane Doe" are provided, choose "Jane Doe".
+    *   **user_id**: This is the most important field. If the primary record has a user_id, keep it. If the primary does not but the secondary does, the merged record MUST inherit the user_id from the secondary record. If both have different user_ids, this is a conflict; keep the primary's user_id and add a note like "This contact was merged with another registered user (ID: [secondary_user_id])".
+    *   **full_name, email**: If the merged record has a user_id, these fields should be taken from the record that provided the user_id, as they are managed by the user's profile.
     *   **avatar_url, company, job_title, department, birthday**: If both records have a value, prefer the primary record's value. Add the secondary record's value to the 'notes' if it's different and seems important (e.g., a different company or job title).
     *   **contact (emails, phones)**: Combine the arrays, ensuring all unique values are kept. Do not duplicate entries.
     *   **social_media**: Merge the two JSON objects. If a key exists in both (e.g., 'linkedin'), the primary record's value takes precedence.

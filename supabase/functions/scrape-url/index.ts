@@ -1,0 +1,143 @@
+// @ts-nocheck
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+// Basic HTML parser to find links
+const findSocialLinks = (html) => {
+  const links = {
+    email: null,
+    instagram: null,
+    facebook: null,
+    youtube: null,
+    twitter: null,
+  };
+  const emailRegex = /mailto:([a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6})/gi;
+  const socialRegex = /href=["'](https?:\/\/(?:www\.)?(instagram|facebook|youtube|twitter)\.com\/[^"']+)["']/gi;
+
+  let match;
+  while ((match = emailRegex.exec(html)) !== null) {
+    if (match[1]) {
+      links.email = match[1];
+      break; // Find first email
+    }
+  }
+  while ((match = socialRegex.exec(html)) !== null) {
+    const platform = match[2];
+    if (match[1] && !links[platform]) {
+      links[platform] = match[1];
+    }
+  }
+  return links;
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const { query } = await req.json();
+    if (!query) {
+      throw new Error('A search query or URL is required.');
+    }
+
+    const GOOGLE_MAPS_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY');
+    if (!GOOGLE_MAPS_API_KEY) {
+      throw new Error('Google Maps API key is not configured.');
+    }
+
+    // --- Google Maps Search ---
+    const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}`;
+    const searchResponse = await fetch(searchUrl);
+    const searchData = await searchResponse.json();
+
+    if (searchData.status !== 'OK' || !searchData.results || searchData.results.length === 0) {
+      throw new Error(`Could not find any results for "${query}" on Google Maps.`);
+    }
+
+    const placeId = searchData.results[0].place_id;
+
+    // --- Google Maps Place Details ---
+    const fields = [
+      'name', 'formatted_address', 'address_components', 'type', 'formatted_phone_number',
+      'rating', 'user_ratings_total', 'url', 'geometry', 'website',
+      'opening_hours', 'price_level', 'photo', 'place_id'
+    ].join(',');
+    
+    const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${GOOGLE_MAPS_API_KEY}`;
+    const detailsResponse = await fetch(detailsUrl);
+    const detailsData = await detailsResponse.json();
+
+    if (detailsData.status !== 'OK' || !detailsData.result) {
+      throw new Error('Failed to fetch details for the location.');
+    }
+
+    const place = detailsData.result;
+    const street = place.address_components?.find(c => c.types.includes('route'))?.long_name || '';
+
+    let featuredImage = null;
+    if (place.photos && place.photos.length > 0) {
+      const photoReference = place.photos[0].photo_reference;
+      featuredImage = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photoReference}&key=${GOOGLE_MAPS_API_KEY}`;
+    }
+
+    const result = {
+      Name: place.name,
+      Fulladdress: place.formatted_address,
+      Street: street,
+      Categories: place.types,
+      Phone: place.formatted_phone_number,
+      Review_Count: place.user_ratings_total,
+      Average_Rating: place.rating,
+      Google_Maps_URL: place.url,
+      Latitude: place.geometry?.location?.lat,
+      Longitude: place.geometry?.location?.lng,
+      Website: place.website,
+      Domain: place.website ? new URL(place.website).hostname : null,
+      Opening_Hours: place.opening_hours?.weekday_text,
+      Price: place.price_level,
+      Featured_Image: featuredImage,
+      Place_Id: place.place_id,
+      Email: null,
+      instagram: null,
+      facebook: null,
+      youtube: null,
+      twitter: null,
+    };
+
+    // --- Website Scraping for Socials/Email ---
+    if (result.Website) {
+      try {
+        const webResponse = await fetch(result.Website);
+        if (webResponse.ok) {
+          const html = await webResponse.text();
+          const socialLinks = findSocialLinks(html);
+          result.Email = socialLinks.email;
+          result.instagram = socialLinks.instagram;
+          result.facebook = socialLinks.facebook;
+          result.youtube = socialLinks.youtube;
+          result.twitter = socialLinks.twitter;
+        }
+      } catch (e) {
+        console.warn(`Could not scrape website ${result.Website}: ${e.message}`);
+      }
+    }
+
+    return new Response(JSON.stringify({ result }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    });
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
+    });
+  }
+});
