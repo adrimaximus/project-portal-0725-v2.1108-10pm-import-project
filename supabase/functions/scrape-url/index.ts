@@ -42,6 +42,17 @@ serve(async (req) => {
   }
 
   try {
+    // Add authentication check to ensure only logged-in users can use this function
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      throw new Error('Unauthorized: User not authenticated');
+    }
+
     const { query } = await req.json();
     if (!query) {
       throw new Error('A search query or URL is required.');
@@ -135,9 +146,10 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    const status = error.message.includes('Unauthorized') ? 401 : 500;
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status,
     });
   }
 });
