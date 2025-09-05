@@ -79,6 +79,7 @@ const getAnalyzeProjectsSystemPrompt = (context, userName) => `You are an expert
 10. **WEB & MAPS SEARCH:** You can search for information about real-world places or websites.
     - Example: "Find details for 'Starbucks Central Park Jakarta'"
     - Example: "Get the social media links for dyad.sh"
+11. **DIRECT SCRAPE COMMAND:** If the user's message starts with "scrape:", treat it as a direct command to use the SEARCH_MAPS_AND_WEBSITE action. The text following "scrape:" is the query. Do not ask for confirmation; execute the action immediately.
 
 **Your entire process is:**
 1. Analyze the user's latest message and any attached image or document.
