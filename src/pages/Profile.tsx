@@ -56,10 +56,10 @@ const Profile = () => {
 
   const handleSaveChanges = async () => {
     setIsSaving(true);
-    let avatar_url = user.avatar_url;
+    try {
+      let avatar_url = user.avatar_url;
 
-    if (avatarFile) {
-      try {
+      if (avatarFile) {
         const formData = new FormData();
         formData.append('file', avatarFile);
         formData.append('targetUserId', user.id);
@@ -70,33 +70,27 @@ const Profile = () => {
 
         if (invokeError) throw invokeError;
         avatar_url = data.avatar_url;
-
-      } catch (error: any) {
-        toast.error("Failed to upload avatar.", { description: error.message });
-        console.error(error);
-        setIsSaving(false);
-        return;
       }
-    }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        first_name: firstName, 
-        last_name: lastName,
-        avatar_url: avatar_url,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          first_name: firstName, 
+          last_name: lastName,
+          avatar_url: avatar_url,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
 
-    setIsSaving(false);
+      if (error) throw error;
 
-    if (error) {
-      toast.error("Failed to update profile.");
-      console.error(error);
-    } else {
       toast.success("Profile updated successfully.");
       await refreshUser();
+    } catch (error: any) {
+      toast.error("Failed to update profile.", { description: error.message });
+      console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -111,15 +105,18 @@ const Profile = () => {
     }
 
     setIsPasswordUpdating(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setIsPasswordUpdating(false);
-
-    if (error) {
-      toast.error(`Gagal memperbarui password: ${error.message}`);
-    } else {
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        throw error;
+      }
       toast.success("Permintaan pembaruan kata sandi Anda telah berhasil diproses.");
       setNewPassword("");
       setConfirmPassword("");
+    } catch (error: any) {
+      toast.error(`Gagal memperbarui password: ${error.message}`);
+    } finally {
+      setIsPasswordUpdating(false);
     }
   };
 
