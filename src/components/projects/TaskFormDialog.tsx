@@ -152,7 +152,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
 
     if (newTagsToCreate.length > 0) {
         const createTagPromises = newTagsToCreate.map(tag => 
-            supabase.from('tags').insert({ name: tag.name, color: tag.color, user_id: currentUser?.id }).select().single()
+            supabase.rpc('create_tag', { p_name: tag.name, p_color: tag.color }).select().single()
         );
         const results = await Promise.all(createTagPromises);
         for (const res of results) {
