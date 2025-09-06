@@ -36,7 +36,7 @@ serve(async (req) => {
 
     if (mode === "invite") {
       const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-        redirectTo,
+        redirectTo: redirectTo || `${Deno.env.get('VITE_APP_URL')}/reset-password`,
         data: app_metadata,
       });
       if (error) throw error;
