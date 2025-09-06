@@ -11,7 +11,6 @@ const corsHeaders = {
 const isUrl = (str) => {
   if (!str) return false;
   const trimmedStr = str.trim();
-  // Don't treat multi-word strings as URLs unless they start with http/www
   if (trimmedStr.includes(' ') && !trimmedStr.startsWith('http') && !trimmedStr.startsWith('www.')) {
       return false;
   }
@@ -20,7 +19,6 @@ const isUrl = (str) => {
     return true;
   } catch (_) {
     try {
-        // Try adding a protocol for cases like 'example.com'
         new URL('https://' + trimmedStr);
         return true;
     } catch (e) {
@@ -33,7 +31,7 @@ const getValidUrl = (url) => {
   if (!url) return null;
   const trimmedUrl = url.trim();
   if (trimmedUrl.startsWith('http')) return trimmedUrl;
-  return `https://${trimmedUrl}`; // Default to https
+  return `https://${trimmedUrl}`;
 };
 
 const findSocialLinks = (html) => {
@@ -108,7 +106,10 @@ serve(async (req) => {
       const searchResponse = await fetch(searchUrl);
       const searchData = await searchResponse.json();
 
-      if (searchData.status !== 'OK' || !searchData.results || searchData.results.length === 0) {
+      if (searchData.status !== 'OK') {
+        throw new Error(`Google Maps API Error: ${searchData.status}. ${searchData.error_message || 'Please check your API key and ensure the Places API is enabled.'}`);
+      }
+      if (!searchData.results || searchData.results.length === 0) {
         throw new Error(`Could not find any results for "${query}" on Google Maps.`);
       }
       const placeId = searchData.results[0].place_id;
@@ -118,8 +119,8 @@ serve(async (req) => {
       const detailsResponse = await fetch(detailsUrl);
       const detailsData = await detailsResponse.json();
 
-      if (detailsData.status !== 'OK' || !detailsData.result) {
-        throw new Error('Failed to fetch details for the location.');
+      if (detailsData.status !== 'OK') {
+        throw new Error(`Google Maps Details API Error: ${detailsData.status}. ${detailsData.error_message || ''}`);
       }
       const place = detailsData.result;
       const street = place.address_components?.find(c => c.types.includes('route'))?.long_name || '';
