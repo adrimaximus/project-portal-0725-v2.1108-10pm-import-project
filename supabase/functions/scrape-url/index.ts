@@ -10,20 +10,30 @@ const corsHeaders = {
 
 const isUrl = (str) => {
   if (!str) return false;
+  const trimmedStr = str.trim();
+  // Don't treat multi-word strings as URLs unless they start with http/www
+  if (trimmedStr.includes(' ') && !trimmedStr.startsWith('http') && !trimmedStr.startsWith('www.')) {
+      return false;
+  }
   try {
-    // Check for full URLs
-    new URL(str);
+    new URL(trimmedStr);
     return true;
   } catch (_) {
-    // Check for common cases without protocol like 'example.com' or 'www.example.com'
-    return /^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?/.test(str) || str.startsWith('www.');
+    try {
+        // Try adding a protocol for cases like 'example.com'
+        new URL('https://' + trimmedStr);
+        return true;
+    } catch (e) {
+        return false;
+    }
   }
 };
 
 const getValidUrl = (url) => {
   if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `https://${url}`; // Default to https
+  const trimmedUrl = url.trim();
+  if (trimmedUrl.startsWith('http')) return trimmedUrl;
+  return `https://${trimmedUrl}`; // Default to https
 };
 
 const findSocialLinks = (html) => {
