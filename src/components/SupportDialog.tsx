@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { FileUp } from "lucide-react";
 
 interface SupportDialogProps {
   isOpen: boolean;
@@ -30,31 +32,62 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
   const { user } = useAuth();
   const [reportType, setReportType] = useState("bug");
   const [description, setDescription] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      toast.error("You must be logged in to submit a report.");
+      return;
+    }
     if (!description) {
       toast.error("Please provide a description.");
       return;
     }
 
     setIsSubmitting(true);
-    // Simulate sending the report
-    console.log("Support Report:", {
-      name: user?.name,
-      email: user?.email,
-      reportType,
-      description,
-    });
+    let attachmentUrl: string | null = null;
 
-    // In a real app, you would send this data to a support service or backend
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      if (attachment) {
+        const filePath = `support/${user.id}/${Date.now()}-${attachment.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('support-attachments')
+          .upload(filePath, attachment);
 
-    setIsSubmitting(false);
-    toast.success("Your report has been sent. Thank you!");
-    onOpenChange(false);
-    setDescription("");
+        if (uploadError) {
+          throw new Error(`Failed to upload attachment: ${uploadError.message}`);
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('support-attachments')
+          .getPublicUrl(filePath);
+        
+        attachmentUrl = urlData.publicUrl;
+      }
+
+      const { error } = await supabase.from('support_tickets').insert({
+        user_id: user.id,
+        user_name: user.name,
+        user_email: user.email,
+        report_type: reportType,
+        description,
+        attachment_url: attachmentUrl,
+      });
+
+      if (error) throw error;
+
+      toast.success("Your report has been sent. Thank you!");
+      onOpenChange(false);
+      setDescription("");
+      setAttachment(null);
+    } catch (error: any) {
+      toast.error("Failed to submit your report.", { description: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!user) return null;
@@ -108,6 +141,30 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
                 onChange={(e) => setDescription(e.target.value)}
                 required
               />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="attachment" className="text-right">
+                Attachment
+              </Label>
+              <div className="col-span-3">
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                  <FileUp className="mr-2 h-4 w-4" />
+                  {attachment ? "Change file" : "Upload screenshot"}
+                </Button>
+                <Input
+                  id="attachment"
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => setAttachment(e.target.files ? e.target.files[0] : null)}
+                />
+                {attachment && (
+                    <p className="text-xs text-muted-foreground mt-2 truncate">
+                        {attachment.name}
+                    </p>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>
