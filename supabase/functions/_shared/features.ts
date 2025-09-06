@@ -6,6 +6,37 @@ import * as pdfjs from 'https://esm.sh/pdfjs-dist@4.4.168';
 import mammoth from 'https://esm.sh/mammoth@1.7.2';
 import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
 
+async function sendEmail(to, subject, html, text) {
+  const emailFrom = Deno.env.get('EMAIL_FROM') || "Betterworks <no-reply@mail.betterworks.id>";
+  const emailitApiKey = Deno.env.get('EMAILIT_API_KEY');
+
+  if (!emailitApiKey) {
+    console.error("Emailit API key is not configured on the server.");
+    return; // Don't throw, just log the error, as this is a secondary action.
+  }
+
+  const payload = { from: emailFrom, to, subject, html, text };
+
+  try {
+    const response = await fetch("https://api.emailit.com/v1/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${emailitApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error(`Failed to send email via Emailit: HTTP ${response.status}`, errorData);
+    } else {
+      console.log(`Email sent successfully to ${to}`);
+    }
+  } catch (e) {
+    console.error(`Error sending email: ${e.message}`);
+  }
+}
+
 export async function analyzeProjects(payload, context) {
   console.log("[DIAGNOSTIC] analyzeProjects: Starting analysis.");
   const { openai, user, userSupabase, supabaseAdmin } = context;
@@ -125,6 +156,28 @@ export async function analyzeProjects(payload, context) {
     });
   }
   console.log("[DIAGNOSTIC] analyzeProjects: Saved AI response to history.");
+
+  // Send email on first interaction
+  if (history.length === 1 && history[0].sender === 'user') {
+    const userQuestion = history[0].content;
+    const aiAnswer = responseText;
+    const userEmail = user.email;
+    const userName = currentUserName;
+
+    const emailSubject = `AI Assistant Interaction: ${userName}`;
+    const emailHtml = `
+      <p>A user has interacted with the AI assistant.</p>
+      <p><strong>User:</strong> ${userName} (${userEmail})</p>
+      <hr>
+      <p><strong>Question:</strong></p>
+      <p>${userQuestion}</p>
+      <br>
+      <p><strong>AI Answer:</strong></p>
+      <p>${aiAnswer.replace(/\n/g, '<br>')}</p>
+    `;
+    
+    await sendEmail('adri@7inked.com', emailSubject, emailHtml);
+  }
 
   try {
       const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```|({[\s\S]*})/);
