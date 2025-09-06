@@ -68,13 +68,13 @@ const LoginPage = () => {
         </div>
 
         {/* Right Panel */}
-        <div className="bg-black/50 backdrop-blur-md p-8 sm:p-12 flex flex-col justify-center text-white">
+        <div className="bg-black/50 backdrop-blur-md p-8 sm:p-12 flex flex-col justify-center">
           <div className="w-full max-w-md mx-auto">
             <div className="flex items-center gap-2 mb-8">
               <Package className="h-7 w-7 text-white" />
-              <span className="text-xl font-bold">Client Portal</span>
+              <span className="text-xl font-bold text-white">Client Portal</span>
             </div>
-            <h1 className="text-3xl font-serif font-bold mb-2">
+            <h1 className="text-3xl font-serif font-bold mb-2 text-white">
               Welcome Back{lastUserName ? `, ${lastUserName}` : ''}!👋
             </h1>
             <p className="text-white/80 mb-8">Enter your credentials to access your account.</p>
@@ -88,6 +88,9 @@ const LoginPage = () => {
                     colors: {
                       brand: 'hsl(var(--primary))',
                       brandAccent: 'hsl(var(--primary))',
+                      brandButtonText: 'hsl(var(--primary-foreground))',
+                      anchorTextColor: 'white',
+                      anchorTextHoverColor: '#d1d5db',
                     },
                   },
                 },
