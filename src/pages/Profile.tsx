@@ -108,11 +108,17 @@ const Profile = () => {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) {
-        throw error;
+        // Supabase sering mengembalikan pesan ini untuk galat kata sandi yang sama
+        if (error.message.includes("should be different from the old password")) {
+          toast.error("Password baru harus berbeda dari password lama Anda.");
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success("Permintaan pembaruan kata sandi Anda telah berhasil diproses.");
+        setNewPassword("");
+        setConfirmPassword("");
       }
-      toast.success("Permintaan pembaruan kata sandi Anda telah berhasil diproses.");
-      setNewPassword("");
-      setConfirmPassword("");
     } catch (error: any) {
       toast.error(`Gagal memperbarui password: ${error.message}`);
     } finally {
