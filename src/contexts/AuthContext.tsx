@@ -208,6 +208,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
         if (event === 'PASSWORD_RECOVERY') {
           navigate('/reset-password');
+          return;
         }
         if (event === 'SIGNED_OUT') {
           toast.success("You have been successfully logged out.");
