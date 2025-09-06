@@ -14,6 +14,11 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Request received:", req.url);
+    console.info("Request method:", req.method);
+    console.warn("This is a warning log");
+    console.error("This is an error log");
+    
     const responseData = {
       status: 'ok',
       message: 'Health check successful! The function environment is running.',
