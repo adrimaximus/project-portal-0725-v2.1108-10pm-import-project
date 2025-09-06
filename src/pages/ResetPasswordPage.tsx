@@ -40,8 +40,8 @@ const ResetPasswordPage = () => {
     if (error) {
       toast.error(`Failed to update password: ${error.message}`);
     } else {
-      toast.success("Your password has been updated successfully!");
-      setTimeout(() => navigate("/login"), 2000);
+      toast.success("Your password has been updated successfully! Redirecting you to the dashboard...");
+      setTimeout(() => navigate("/dashboard"), 2000);
     }
   };
 
