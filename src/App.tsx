@@ -80,11 +80,11 @@ function App() {
             <Route path="/settings/workspace" element={<MasterAdminGuard><WorkspaceSettingsPage /></MasterAdminGuard>} />
             <Route path="/settings/team" element={<PermissionGuard permission="users:manage"><TeamSettingsPage /></PermissionGuard>} />
             <Route path="/settings/people-properties" element={<PermissionGuard permission="users:manage"><ContactPropertiesPage /></PermissionGuard>} />
-            <Route path="/settings/integrations" element={<PermissionGuard permission="module:settings"><IntegrationsPage /></PermissionGuard>} />
-            <Route path="/settings/integrations/openai" element={<PermissionGuard permission="module:settings"><OpenAiIntegrationPage /></PermissionGuard>} />
-            <Route path="/settings/integrations/github" element={<PermissionGuard permission="module:settings"><GitHubPage /></PermissionGuard>} />
-            <Route path="/settings/integrations/slack" element={<PermissionGuard permission="module:settings"><SlackPage /></PermissionGuard>} />
-            <Route path="/settings/integrations/google-drive" element={<PermissionGuard permission="module:settings"><GoogleDrivePage /></PermissionGuard>} />
+            <Route path="/settings/integrations" element={<PermissionGuard permission="settings:manage_integrations"><IntegrationsPage /></PermissionGuard>} />
+            <Route path="/settings/integrations/openai" element={<PermissionGuard permission="settings:manage_integrations"><OpenAiIntegrationPage /></PermissionGuard>} />
+            <Route path="/settings/integrations/github" element={<PermissionGuard permission="settings:manage_integrations"><GitHubPage /></PermissionGuard>} />
+            <Route path="/settings/integrations/slack" element={<PermissionGuard permission="settings:manage_integrations"><SlackPage /></PermissionGuard>} />
+            <Route path="/settings/integrations/google-drive" element={<PermissionGuard permission="settings:manage_integrations"><GoogleDrivePage /></PermissionGuard>} />
             <Route path="/settings/navigation" element={<PermissionGuard permission="module:settings"><NavigationSettingsPage /></PermissionGuard>} />
 
             {/* Routes accessible to all authenticated users */}

@@ -26,7 +26,7 @@ const WorkspaceSettingsCard = () => {
 };
 
 const SettingsPage = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { isFeatureEnabled } = useFeatures();
   const isMasterAdmin = user?.role === 'master admin';
   const isAdmin = isMasterAdmin || user?.role === 'admin';
@@ -45,7 +45,7 @@ const SettingsPage = () => {
           <NavigationCard />
           
           {/* Conditionally available */}
-          {isFeatureEnabled('integrations') && <IntegrationCard />}
+          {isFeatureEnabled('integrations') && hasPermission('settings:manage_integrations') && <IntegrationCard />}
           
           {/* Role-based */}
           {isAdmin && <TeamCard />}
