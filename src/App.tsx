@@ -78,7 +78,7 @@ function App() {
             {/* Settings are a special group */}
             <Route path="/settings" element={<PermissionGuard permission="module:settings"><SettingsPage /></PermissionGuard>} />
             <Route path="/settings/workspace" element={<MasterAdminGuard><WorkspaceSettingsPage /></MasterAdminGuard>} />
-            <Route path="/settings/team" element={<PermissionGuard permission="module:settings"><TeamSettingsPage /></PermissionGuard>} />
+            <Route path="/settings/team" element={<PermissionGuard permission="users:manage"><TeamSettingsPage /></PermissionGuard>} />
             <Route path="/settings/people-properties" element={<PermissionGuard permission="users:manage"><ContactPropertiesPage /></PermissionGuard>} />
             <Route path="/settings/integrations" element={<PermissionGuard permission="module:settings"><IntegrationsPage /></PermissionGuard>} />
             <Route path="/settings/integrations/openai" element={<PermissionGuard permission="module:settings"><OpenAiIntegrationPage /></PermissionGuard>} />
