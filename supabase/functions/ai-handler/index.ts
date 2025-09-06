@@ -463,7 +463,18 @@ async function executeAction(actionData, context) {
                 });
 
                 if (error) {
-                    return `I had trouble searching for that. The error was: ${error.message}`;
+                    let errorMessage = error.message;
+                    if (error.context && typeof error.context.json === 'function') {
+                        try {
+                            const errorBody = await error.context.json();
+                            if (errorBody.error) {
+                                errorMessage = errorBody.error;
+                            }
+                        } catch (e) {
+                            // ignore parsing error, stick with original message
+                        }
+                    }
+                    return `I had trouble searching for that. The error was: ${errorMessage}`;
                 }
                 if (data.error) {
                     return `I had trouble searching for that. The error was: ${data.error}`;
