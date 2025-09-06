@@ -117,7 +117,7 @@ const Profile = () => {
     if (error) {
       toast.error(`Gagal memperbarui password: ${error.message}`);
     } else {
-      toast.success("Password berhasil diperbarui. Anda sekarang dapat login dengan password baru Anda.");
+      toast.success("Permintaan pembaruan kata sandi Anda telah berhasil diproses.");
       setNewPassword("");
       setConfirmPassword("");
     }
