@@ -5,6 +5,8 @@ import { User } from '@/types';
 import { Role } from '@/components/settings/RoleManagerDialog';
 import { Invite } from '@/components/settings/InviteCard';
 
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const useTeamSettingsMutations = (fetchData: () => void) => {
   const { mutate: sendInvites, isPending: isSendingInvites } = useMutation({
     mutationFn: async (invites: Invite[]) => {
@@ -25,6 +27,9 @@ export const useTeamSettingsMutations = (fetchData: () => void) => {
           toast.error(`Failed to send invite to ${invite.email}: ${error.message}`);
         } else {
           successCount++;
+        }
+        if (validInvites.length > 1) {
+            await wait(500);
         }
       }
       return successCount;
