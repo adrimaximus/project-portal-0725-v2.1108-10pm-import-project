@@ -8,6 +8,13 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+const sanitizeUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('https://')) return url;
+  if (url.startsWith('http://')) return url.replace('http://', 'https://');
+  return `https://${url.replace(/^ttps?:\/\//, '')}`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -25,9 +32,12 @@ serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
+    const appUrl = Deno.env.get('VITE_APP_URL') || Deno.env.get('SUPABASE_URL');
+    const redirectTo = `${sanitizeUrl(appUrl)}/reset-password`;
+
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: { role: role },
-      redirectTo: `${Deno.env.get('VITE_APP_URL') || Deno.env.get('SUPABASE_URL')}/reset-password`
+      redirectTo: redirectTo
     })
 
     if (error) {

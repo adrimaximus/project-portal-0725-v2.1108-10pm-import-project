@@ -8,6 +8,13 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST,OPTIONS",
 };
 
+const sanitizeUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('https://')) return url;
+  if (url.startsWith('http://')) return url.replace('http://', 'https://');
+  return `https://${url.replace(/^ttps?:\/\//, '')}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -21,7 +28,7 @@ serve(async (req) => {
       email_confirm = true,
       user_metadata = {},
       app_metadata = {},
-      redirectTo,
+      redirectTo: providedRedirectTo,
     } = await req.json();
 
     if (!email) {
@@ -35,8 +42,11 @@ serve(async (req) => {
     );
 
     if (mode === "invite") {
+      const appUrl = Deno.env.get('VITE_APP_URL') || Deno.env.get('SUPABASE_URL');
+      const redirectTo = providedRedirectTo || `${sanitizeUrl(appUrl)}/reset-password`;
+      
       const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-        redirectTo: redirectTo || `${Deno.env.get('VITE_APP_URL')}/reset-password`,
+        redirectTo: redirectTo,
         data: app_metadata,
       });
       if (error) throw error;
