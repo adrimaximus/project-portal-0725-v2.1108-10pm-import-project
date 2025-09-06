@@ -47,7 +47,8 @@ export const useProjectMutations = (slug: string) => {
         mutationFn: async ({ files, project, user }: { files: File[], project: Project, user: User }) => {
             toast.info(`Uploading ${files.length} file(s)...`);
             for (const file of files) {
-                const filePath = `${project.id}/${Date.now()}-${file.name}`;
+                const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+                const filePath = `${project.id}/${Date.now()}-${sanitizedFileName}`;
                 const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
                 if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
                 
@@ -138,7 +139,8 @@ export const useProjectMutations = (slug: string) => {
         mutationFn: async ({ project, user, text, isTicket, attachment }: { project: Project, user: User, text: string, isTicket: boolean, attachment: File | null }) => {
             let attachment_url = null, attachment_name = null;
             if (attachment) {
-                const filePath = `${project.id}/comments/${Date.now()}-${attachment.name}`;
+                const sanitizedFileName = attachment.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+                const filePath = `${project.id}/comments/${Date.now()}-${sanitizedFileName}`;
                 const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, attachment);
                 if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
                 
