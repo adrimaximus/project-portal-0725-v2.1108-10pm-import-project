@@ -7,7 +7,8 @@ const AccessDenied = () => {
   const navigate = useNavigate();
   useEffect(() => {
     toast.error("You do not have permission to access this page.");
-    navigate('/dashboard', { replace: true });
+    // Redirect to a safe page that all users should have access to, like their profile.
+    navigate('/profile', { replace: true }); 
   }, [navigate]);
   return <LoadingScreen />;
 };
