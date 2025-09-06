@@ -43,6 +43,7 @@ const FolderDetailPage = lazy(() => import("./pages/kb/FolderDetailPage"));
 const Page = lazy(() => import("./pages/kb/Page"));
 const WorkspaceSettingsPage = lazy(() => import("./pages/WorkspaceSettingsPage"));
 const ContactPropertiesPage = lazy(() => import("./pages/ContactPropertiesPage"));
+const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
 
 function App() {
   return (
@@ -55,6 +56,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           
           {/* Protected Routes */}
           <Route element={<ProtectedRouteLayout />}>
