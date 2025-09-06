@@ -111,7 +111,7 @@ export async function analyzeProjects(payload, context) {
   if (historyError) throw historyError;
   console.log("[DIAGNOSTIC] analyzeProjects: Fetched chat history.");
 
-  const actionContext = await buildContext(supabaseAdmin, user);
+  const actionContext = await buildContext(userSupabase, user);
   const currentUserProfile = actionContext.userList.find(u => u.id === user.id);
   const currentUserName = currentUserProfile ? currentUserProfile.name : 'there';
   const systemPrompt = getAnalyzeProjectsSystemPrompt(actionContext, currentUserName);
