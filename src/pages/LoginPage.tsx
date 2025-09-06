@@ -96,6 +96,7 @@ const LoginPage = () => {
                 },
               }}
               providers={[]}
+              magicLink={true}
               redirectTo={`${window.location.origin}/dashboard`}
               socialLayout="horizontal"
             />
