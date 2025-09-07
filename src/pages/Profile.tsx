@@ -44,7 +44,7 @@ const Profile = () => {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        toast.error("File is too large. Maximum size is 2MB.");
+        toast.error("Ukuran file terlalu besar. Maksimal 2MB.");
         return;
     }
 
@@ -85,12 +85,12 @@ const Profile = () => {
 
         if (updateError) throw updateError;
 
-        toast.success("Avatar updated successfully.");
+        toast.success("Avatar berhasil diperbarui.");
         await refreshUser();
         queryClient.invalidateQueries({ queryKey: ['user', user.id] });
 
     } catch (error: any) {
-        toast.error("Failed to upload avatar.", { description: error.message });
+        toast.error("Gagal mengunggah avatar.", { description: error.message });
         console.error(error);
     } finally {
         setIsUploading(false);
@@ -111,10 +111,10 @@ const Profile = () => {
 
       if (error) throw error;
 
-      toast.success("Profile updated successfully.");
+      toast.success("Profil berhasil diperbarui.");
       await refreshUser();
     } catch (error: any) {
-      toast.error("Failed to update profile.", { description: error.message });
+      toast.error("Gagal memperbarui profil.", { description: error.message });
       console.error(error);
     } finally {
       setIsSaving(false);
@@ -123,11 +123,11 @@ const Profile = () => {
 
   const handlePasswordChange = async () => {
     if (newPassword.length < 8) {
-      toast.error("Password baru harus terdiri dari minimal 8 karakter.");
+      toast.error("Password minimal 8 karakter.");
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error("Password baru tidak cocok.");
+      toast.error("Konfirmasi password tidak cocok.");
       return;
     }
 
@@ -136,19 +136,20 @@ const Profile = () => {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
 
       if (error) {
-        // @ts-ignore
-        if (error.status === 422 && error.message.includes("should be different")) {
-          toast.error("Password baru harus berbeda dari password lama Anda.");
-        } else {
-          toast.error(`Gagal memperbarui password: ${error.message}`);
-        }
-      } else {
-        toast.success("Permintaan pembaruan kata sandi Anda telah berhasil diproses.");
-        setNewPassword("");
-        setConfirmPassword("");
+        throw error;
       }
-    } catch (e: any) {
-      toast.error("An unexpected error occurred. Please try again.");
+      
+      toast.success("Password berhasil diperbarui.");
+      setNewPassword("");
+      setConfirmPassword("");
+
+    } catch (error: any) {
+      console.error("Password update error:", error);
+      if (error.message.includes("should be different")) {
+        toast.error("Password baru harus berbeda dari password lama.");
+      } else {
+        toast.error("Gagal memperbarui password.", { description: error.message });
+      }
     } finally {
       setIsPasswordUpdating(false);
     }
