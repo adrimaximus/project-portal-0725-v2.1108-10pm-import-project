@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link } from "react-router-dom";
@@ -14,13 +14,13 @@ import { CSS } from '@dnd-kit/utilities';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import EditNavItemDialog from "@/components/settings/EditNavItemDialog";
 import IconPicker from "@/components/IconPicker";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import FolderFormDialog, { FolderData } from "@/components/settings/FolderFormDialog";
 import { Textarea } from "@/components/ui/textarea";
+import { defaultNavItems } from "@/lib/defaultNavItems";
 
 export interface NavItem {
   id: string;
@@ -31,6 +31,8 @@ export interface NavItem {
   is_enabled: boolean;
   icon: string | null;
   folder_id: string | null;
+  is_deletable?: boolean;
+  is_editable?: boolean;
 }
 
 export interface NavFolder extends FolderData {
@@ -42,6 +44,9 @@ export interface NavFolder extends FolderData {
 const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { item: NavItem, onDelete: (id: string) => void, isDeleting: boolean, onToggle: (id: string, enabled: boolean) => void, onEdit: (item: NavItem) => void }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, data: { type: 'item', item } });
     const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : 0, position: 'relative' as 'relative' };
+    const canEdit = item.is_editable ?? true;
+    const canDelete = item.is_deletable ?? true;
+
     return (
         <div ref={setNodeRef} style={style} className="flex items-center justify-between p-2 border rounded-md bg-background">
             <div className="flex items-center gap-2 truncate">
@@ -53,8 +58,8 @@ const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { 
             </div>
             <div className="flex items-center gap-1 sm:gap-2">
                 <Switch checked={item.is_enabled} onCheckedChange={(checked) => onToggle(item.id, checked)} />
-                <Button variant="ghost" size="icon" onClick={() => onEdit(item)}><Edit className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} disabled={isDeleting}>{isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</Button>
+                <Button variant="ghost" size="icon" onClick={() => onEdit(item)} disabled={!canEdit}><Edit className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} disabled={isDeleting || !canDelete}>{isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</Button>
             </div>
         </div>
     )
@@ -118,6 +123,40 @@ const NavigationSettingsPage = () => {
     }
   });
 
+  const { mutate: backfillNavItems } = useMutation({
+    mutationFn: async () => {
+        if (!user) return;
+        const itemsToInsert = defaultNavItems.map((item, index) => ({
+            user_id: user.id,
+            name: item.name,
+            url: item.url,
+            icon: item.icon,
+            position: index,
+            is_enabled: true,
+            is_deletable: false,
+            is_editable: false,
+        }));
+        const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert);
+        if (error) throw error;
+    },
+    onSuccess: () => {
+        toast.success("Default navigation items have been set up.");
+        queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (error: any) => {
+        toast.error("Failed to set up default navigation.", { description: error.message });
+    }
+  });
+
+  useEffect(() => {
+    if (user && !isLoadingItems) {
+        const hasDefaultItems = navItems.some(item => item.is_deletable === false);
+        if (!hasDefaultItems) {
+            backfillNavItems();
+        }
+    }
+  }, [user, navItems, isLoadingItems, backfillNavItems, queryClient, queryKey]);
+
   const { mutate: upsertFolder, isPending: isSavingFolder } = useMutation({ mutationFn: async (folder: Partial<NavFolder>) => { const { error } = await supabase.from('navigation_folders').upsert(folder); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['navigation_folders', user?.id] }) });
   const { mutate: deleteItem, isPending: isDeletingItem } = useMutation({ mutationFn: async (id: string) => { setDeletingId(id); const { error } = await supabase.from('user_navigation_items').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Item removed"); queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user?.id] }); }, onError: (e: any) => toast.error(e.message), onSettled: () => setDeletingId(null) });
   const { mutate: deleteFolder } = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('navigation_folders').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Folder removed"); queryClient.invalidateQueries({ queryKey: ['navigation_folders', user?.id] }); } });
@@ -128,7 +167,7 @@ const NavigationSettingsPage = () => {
       const newPosition = navItems.filter(i => !i.folder_id).length;
       const { data, error } = await supabase
         .from('user_navigation_items')
-        .insert({ name, url, user_id: user.id, position: newPosition, is_enabled: true, icon })
+        .insert({ name, url, user_id: user.id, position: newPosition, is_enabled: true, icon, is_deletable: true, is_editable: true })
         .select()
         .single();
       if (error) throw error;
@@ -222,7 +261,7 @@ const NavigationSettingsPage = () => {
     }
   };
 
-  const itemsWithoutFolder = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
+  const itemsWithoutFolder = useMemo(() => navItems.filter(item => !item.folder_id).sort((a, b) => a.position - b.position), [navItems]);
 
   return (
     <PortalLayout>
@@ -231,7 +270,7 @@ const NavigationSettingsPage = () => {
         <div><h1 className="text-2xl font-bold tracking-tight">Customize Navigation</h1><p className="text-muted-foreground">Add or remove custom pages from your sidebar.</p></div>
         
         <Card>
-          <CardHeader><CardTitle>Custom Navigation Items</CardTitle><CardDescription>Drag and drop to reorder items or move them into folders.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Navigation Items</CardTitle><CardDescription>Drag and drop to reorder items or move them into folders.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <div className="space-y-2">
@@ -239,13 +278,13 @@ const NavigationSettingsPage = () => {
                   <DroppableFolder key={folder.id} folder={folder} onEdit={(f) => { setEditingFolder(f); setIsFolderFormOpen(true); }} onDelete={deleteFolder}>
                     <SortableContext id={folder.id} items={navItems.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
                       <div className="space-y-2">
-                        {navItems.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
+                        {navItems.filter(i => i.folder_id === folder.id).sort((a, b) => a.position - b.position).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
                       </div>
                     </SortableContext>
                   </DroppableFolder>
                 ))}
               </div>
-              <div className="border-t pt-4">
+              <div className="border-t pt-4 mt-4">
                 <h3 className="text-sm font-semibold text-muted-foreground mb-2">Top-Level Items</h3>
                 <SortableContext id="root" items={itemsWithoutFolder.map(i => i.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
@@ -261,7 +300,7 @@ const NavigationSettingsPage = () => {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Add New Item</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Add New Custom Item</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2"><Label htmlFor="icon">Icon</Label><IconPicker value={newItemIcon} onChange={setNewItemIcon} /></div>
             <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" /></div>
