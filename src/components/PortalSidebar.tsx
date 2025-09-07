@@ -65,10 +65,20 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       .filter(item => item.is_enabled)
       .map(item => {
         const isEmbed = !item.url.startsWith('/');
-        const href = isEmbed ? `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}` : item.url;
+        let href = isEmbed ? `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}` : item.url;
         let badge;
-        if (item.name.toLowerCase() === 'chat') badge = totalUnreadChatCount > 0 ? totalUnreadChatCount : undefined;
-        if (item.name.toLowerCase() === 'notifications') badge = unreadNotificationCount > 0 ? unreadNotificationCount : undefined;
+
+        // Fix for incorrect URLs from database
+        const itemNameLower = item.name.toLowerCase();
+        if (itemNameLower === 'knowledge base' && href === '/kb') {
+            href = '/knowledge-base';
+        }
+        if (itemNameLower === 'requests' && href === '/request') {
+            href = '/requests';
+        }
+
+        if (itemNameLower === 'chat') badge = totalUnreadChatCount > 0 ? totalUnreadChatCount : undefined;
+        if (itemNameLower === 'notifications') badge = unreadNotificationCount > 0 ? unreadNotificationCount : undefined;
         
         return {
           id: item.id,
