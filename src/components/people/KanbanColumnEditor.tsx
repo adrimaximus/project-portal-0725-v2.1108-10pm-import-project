@@ -15,9 +15,9 @@ const SortableTagItem = ({ tag, isVisible, onVisibilityChange }: { tag: Tag, isV
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted">
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 p-1 rounded-md hover:bg-muted">
       <div {...attributes} {...listeners} className="cursor-grab p-1">
-        <GripVertical className="h-5 w-5 text-muted-foreground" />
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
       <Checkbox
         id={`vis-${tag.id}`}
@@ -27,7 +27,7 @@ const SortableTagItem = ({ tag, isVisible, onVisibilityChange }: { tag: Tag, isV
       <label htmlFor={`vis-${tag.id}`} className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
         {tag.name}
       </label>
-      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: tag.color }} />
+      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
     </div>
   );
 };
@@ -65,9 +65,9 @@ const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettings
   };
 
   return (
-    <div className="p-4">
-      <h4 className="text-lg font-semibold mb-2">Customize Columns</h4>
-      <p className="text-sm text-muted-foreground mb-4">
+    <div className="p-2">
+      <h4 className="text-base font-semibold mb-2">Customize Columns</h4>
+      <p className="text-xs text-muted-foreground mb-3">
         Check which columns to show and drag to reorder them.
       </p>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

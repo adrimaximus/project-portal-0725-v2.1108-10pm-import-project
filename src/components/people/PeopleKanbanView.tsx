@@ -160,7 +160,7 @@ const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { peop
                 <Settings className="h-5 w-5" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80">
+            <PopoverContent className="w-64">
               <KanbanColumnEditor
                 allTags={tags}
                 columnOrder={columnOrder}
