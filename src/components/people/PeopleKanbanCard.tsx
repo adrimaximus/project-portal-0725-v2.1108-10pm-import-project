@@ -89,11 +89,11 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
         <CardContent className="p-3 space-y-2">
           {/* Top Section */}
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Avatar className="h-10 w-10">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Avatar className="h-8 w-8">
                 <AvatarImage src={person.avatar_url} />
                 <AvatarFallback style={generatePastelColor(person.id)}>
-                  <UserIcon className="h-5 w-5 text-white" />
+                  <UserIcon className="h-4 w-4 text-white" />
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
@@ -119,6 +119,8 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          <hr />
 
           {/* Bottom Section */}
           <div className="flex justify-between items-center">
