@@ -182,7 +182,6 @@ const PersonProfilePage = () => {
               <CardHeader><CardTitle>Contact Info</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {firstEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${firstEmail}`} className="truncate hover:underline">{firstEmail}</a></div>}
-                {firstPhone && <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground" /><span className="truncate">{firstPhone}</span></div>}
                 {whatsappLink && <div className="flex items-center gap-3"><WhatsappIcon className="h-4 w-4 text-muted-foreground" /><a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstPhone}</a></div>}
                 {person.address?.formatted_address && <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" /><span>{person.address.formatted_address}</span></div>}
                 {person.birthday && <div className="flex items-center gap-3"><Cake className="h-4 w-4 text-muted-foreground" /><span>{formatInJakarta(person.birthday, 'MMMM d, yyyy')}</span></div>}
