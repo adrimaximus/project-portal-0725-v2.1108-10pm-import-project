@@ -101,8 +101,8 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                 const FolderIconComponent = folder.icon ? Icons[folder.icon] : FolderIcon;
                 return (
                   <Collapsible key={folder.id} defaultOpen>
-                    <CollapsibleTrigger className="w-full">
-                      <div className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary group", isCollapsed && "justify-center")}>
+                    <CollapsibleTrigger className="w-full group">
+                      <div className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", isCollapsed && "justify-center")}>
                         <FolderIconComponent className="h-4 w-4" style={{ color: folder.color || undefined }} />
                         {!isCollapsed && <span className="flex-1 text-left">{folder.name}</span>}
                         {!isCollapsed && <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />}
