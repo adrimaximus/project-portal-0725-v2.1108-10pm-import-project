@@ -29,43 +29,52 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
+  const [companyAddress, setCompanyAddress] = useState<string | null>(null);
 
   useEffect(() => {
     setImageError(false);
   }, [person.avatar_url]);
 
   useEffect(() => {
-    const fetchCompanyLogo = async () => {
+    const fetchCompanyDetails = async () => {
       if (person.company) {
         const { data, error } = await supabase
           .from('companies')
-          .select('logo_url')
+          .select('logo_url, address')
           .eq('name', person.company)
           .single();
 
         if (error) {
-          console.error('Error fetching company logo:', error.message);
+          console.error('Error fetching company details:', error.message);
           setCompanyLogoUrl(null);
+          setCompanyAddress(null);
         } else if (data) {
           setCompanyLogoUrl(data.logo_url);
+          setCompanyAddress(data.address);
         } else {
           setCompanyLogoUrl(null);
+          setCompanyAddress(null);
         }
       } else {
         setCompanyLogoUrl(null);
+        setCompanyAddress(null);
       }
     };
 
-    fetchCompanyLogo();
+    fetchCompanyDetails();
   }, [person.company]);
 
   const handleImageError = () => {
     setImageError(true);
   };
 
+  const googleMapsUrl = companyAddress 
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(companyAddress)}`
+    : '#';
+
   return (
     <Card 
-      className="group h-full flex flex-col transition-shadow hover:shadow-lg cursor-pointer rounded-2xl" 
+      className="group h-full flex flex-col transition-shadow hover-shadow-lg cursor-pointer rounded-2xl" 
       onClick={() => onViewProfile(person)}
     >
       <div className="relative">
@@ -84,13 +93,30 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           )}
         </div>
         {companyLogoUrl && (
-          <div className="absolute -bottom-6 left-4 bg-background p-1 rounded-lg border flex items-center justify-center">
-            <img
-              src={companyLogoUrl}
-              alt={`${person.company} logo`}
-              className="h-10 w-10 object-contain rounded-md"
-            />
-          </div>
+          companyAddress ? (
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="absolute -bottom-6 left-4 bg-background p-1 rounded-lg border flex items-center justify-center"
+              title={`Get directions to ${person.company}`}
+            >
+              <img
+                src={companyLogoUrl}
+                alt={`${person.company} logo`}
+                className="h-10 w-10 object-contain rounded-md"
+              />
+            </a>
+          ) : (
+            <div className="absolute -bottom-6 left-4 bg-background p-1 rounded-lg border flex items-center justify-center">
+              <img
+                src={companyLogoUrl}
+                alt={`${person.company} logo`}
+                className="h-10 w-10 object-contain rounded-md"
+              />
+            </div>
+          )
         )}
       </div>
       <div className="p-3 border-t bg-background flex-grow flex flex-col rounded-b-2xl">
