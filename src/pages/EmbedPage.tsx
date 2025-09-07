@@ -11,40 +11,55 @@ const EmbedPage = () => {
   const content = searchParams.get('url');
   const title = searchParams.get('title') || 'Custom Page';
 
-  const finalUrl = useMemo(() => {
-    if (!content) return null;
+  const decodedContent = useMemo(() => content ? decodeURIComponent(content) : null, [content]);
 
-    const decodedContent = decodeURIComponent(content);
-    if (decodedContent.trim().startsWith('<iframe')) {
-      return null; // Akan ditangani oleh dangerouslySetInnerHTML
+  const finalContent = useMemo(() => {
+    if (!decodedContent) return null;
+
+    const isIframe = decodedContent.trim().startsWith('<iframe');
+    const isGoogleCalendar = decodedContent.includes('calendar.google.com/calendar/embed');
+
+    if (isGoogleCalendar) {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      const effectiveTheme = theme === "system" ? systemTheme : theme;
+      const bgColor = effectiveTheme === 'dark' ? '#222222' : '#FFFFFF';
+      const encodedBgColor = encodeURIComponent(bgColor);
+
+      if (isIframe) {
+        return decodedContent
+          .replace(/src="([^"]+)"/, (match, srcUrl) => {
+            let newSrcUrl = srcUrl.replace(/&?bgcolor=([^&]*)/, '');
+            newSrcUrl += `&bgcolor=${encodedBgColor}`;
+            return `src="${newSrcUrl}"`;
+          })
+          .replace(/width="[^"]*"/g, 'width="100%"')
+          .replace(/height="[^"]*"/g, 'height="100%"');
+      } else {
+        let urlString = decodedContent;
+        if (!/^https?:\/\//i.test(urlString)) {
+          urlString = `https://${urlString}`;
+        }
+        urlString = urlString.replace(/&?bgcolor=([^&]*)/, '');
+        urlString += `&bgcolor=${encodedBgColor}`;
+        return urlString;
+      }
+    }
+
+    if (isIframe) {
+      return decodedContent
+        .replace(/width="[^"]*"/g, 'width="100%"')
+        .replace(/height="[^"]*"/g, 'height="100%"');
     }
 
     let urlString = decodedContent;
     if (!/^https?:\/\//i.test(urlString)) {
       urlString = `https://${urlString}`;
     }
-
-    // Khusus untuk Google Kalender, sesuaikan tema
-    if (urlString.includes('calendar.google.com/calendar/embed')) {
-      try {
-        const url = new URL(urlString);
-        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-        const effectiveTheme = theme === "system" ? systemTheme : theme;
-        
-        const bgColor = effectiveTheme === 'dark' ? '#222222' : '#FFFFFF';
-        url.searchParams.set('bgcolor', encodeURIComponent(bgColor));
-        
-        return url.toString();
-      } catch (e) {
-        console.error("URL tidak valid untuk penyesuaian tema:", urlString);
-        return urlString; // Kembali ke URL asli jika terjadi kesalahan
-      }
-    }
-
     return urlString;
-  }, [content, theme]);
 
-  if (!content) {
+  }, [decodedContent, theme]);
+
+  if (!finalContent) {
     return (
       <PortalLayout>
         <Alert variant="destructive">
@@ -56,21 +71,14 @@ const EmbedPage = () => {
     );
   }
 
-  const decodedContent = decodeURIComponent(content);
-  const isIframe = decodedContent.trim().startsWith('<iframe');
+  const isFinalContentIframe = finalContent.trim().startsWith('<iframe');
 
-  if (isIframe) {
-    const sanitizedContent = decodedContent
-      .replace(/width="[^"]*"/g, 'width="100%"')
-      .replace(/height="[^"]*"/g, 'height="100%"');
-    
+  if (isFinalContentIframe) {
     return (
       <PortalLayout noPadding disableMainScroll>
         <div
           className="w-full h-full"
-          dangerouslySetInnerHTML={{
-            __html: sanitizedContent,
-          }}
+          dangerouslySetInnerHTML={{ __html: finalContent }}
         />
       </PortalLayout>
     );
@@ -79,7 +87,7 @@ const EmbedPage = () => {
   return (
     <PortalLayout noPadding disableMainScroll>
       <iframe
-        src={finalUrl || ''}
+        src={finalContent}
         className="w-full h-full border-0"
         title={title}
         sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts"
