@@ -20,7 +20,7 @@ type NavItem = { id: string; href: string; label: string; icon: LucideIcon; badg
 const Icons = LucideIcons as unknown as { [key: string]: LucideIcons.LucideIcon };
 
 const NavLink = ({ item, isCollapsed, location }: { item: NavItem, isCollapsed: boolean, location: any }) => {
-  const isActive = location.pathname.startsWith(item.href) && item.href !== '/' || location.pathname === item.href;
+  const isActive = location.pathname.startsWith(item.href) && (item.href !== '/' && item.href !== '/dashboard') || location.pathname === item.href;
   if (isCollapsed) {
     return (
       <Tooltip>
@@ -45,12 +45,11 @@ const NavLink = ({ item, isCollapsed, location }: { item: NavItem, isCollapsed: 
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
-  const { isFeatureEnabled } = useFeatures();
   const { unreadCount: unreadNotificationCount } = useNotifications();
   const queryClient = useQueryClient();
-  const totalUnreadChatCount = 0;
+  const totalUnreadChatCount = 0; // Placeholder for chat unread count
 
   const { data: customNavItems = [] } = useQuery({ queryKey: ['user_navigation_items', user?.id], queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('user_navigation_items').select('*').eq('user_id', user.id).order('position'); if (error) return []; return data as DbNavItem[]; }, enabled: !!user });
   const { data: folders = [] } = useQuery({ queryKey: ['navigation_folders', user?.id], queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); if (error) return []; return data as NavFolder[]; }, enabled: !!user });
@@ -62,28 +61,25 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   }, [user, queryClient]);
 
   const navItems = useMemo(() => {
-    const defaultItems: NavItem[] = [
-      { id: "dashboard", href: "/dashboard", label: "Dashboard", icon: Home, folder_id: null },
-      { id: "projects", href: "/projects", label: "Projects", icon: Package, folder_id: null },
-      { id: "request", href: "/request", label: "Request", icon: LayoutGrid, folder_id: null },
-      { id: "chat", href: "/chat", label: "Chat", icon: MessageSquare, badge: totalUnreadChatCount > 0 ? totalUnreadChatCount : undefined, folder_id: null },
-      { id: "mood-tracker", href: "/mood-tracker", label: "Mood Tracker", icon: Smile, folder_id: null },
-      { id: "goals", href: "/goals", label: "Goals", icon: Target, folder_id: null },
-      { id: "billing", href: "/billing", label: "Billing", icon: CreditCard, folder_id: null },
-      { id: "people", href: "/people", label: "People", icon: Users, folder_id: null },
-      { id: "knowledge-base", href: "/knowledge-base", label: "Knowledge Base", icon: BookOpen, folder_id: null },
-    ];
-    const settingsItem = { id: "settings", href: "/settings", label: "Settings", icon: Settings, folder_id: null };
-
-    const visibleDefaultItems = defaultItems.filter(item => isFeatureEnabled(item.id) && hasPermission(`module:${item.id}`));
-    if (isFeatureEnabled('settings') && hasPermission('module:settings')) {
-      visibleDefaultItems.push(settingsItem);
-    }
-
-    const customItems: NavItem[] = customNavItems.filter(item => item.is_enabled).map(item => ({ id: item.id, href: `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}`, label: item.name, icon: item.icon ? Icons[item.icon] || LinkIcon : LinkIcon, folder_id: item.folder_id }));
-    
-    return [...visibleDefaultItems, ...customItems];
-  }, [user, isFeatureEnabled, totalUnreadChatCount, unreadNotificationCount, hasPermission, customNavItems]);
+    return customNavItems
+      .filter(item => item.is_enabled)
+      .map(item => {
+        const isEmbed = !item.url.startsWith('/');
+        const href = isEmbed ? `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}` : item.url;
+        let badge;
+        if (item.name.toLowerCase() === 'chat') badge = totalUnreadChatCount > 0 ? totalUnreadChatCount : undefined;
+        if (item.name.toLowerCase() === 'notifications') badge = unreadNotificationCount > 0 ? unreadNotificationCount : undefined;
+        
+        return {
+          id: item.id,
+          href: href,
+          label: item.name,
+          icon: item.icon ? Icons[item.icon] || LinkIcon : LinkIcon,
+          folder_id: item.folder_id,
+          badge,
+        };
+      });
+  }, [customNavItems, totalUnreadChatCount, unreadNotificationCount]);
 
   const topLevelItems = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
 
@@ -101,6 +97,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
               {topLevelItems.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} location={location} />)}
               {folders.map(folder => {
                 const itemsInFolder = navItems.filter(item => item.folder_id === folder.id);
+                if (itemsInFolder.length === 0) return null;
                 const FolderIconComponent = folder.icon ? Icons[folder.icon] : FolderIcon;
                 return (
                   <Collapsible key={folder.id} defaultOpen>
