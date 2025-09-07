@@ -2,7 +2,7 @@ import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { isPast as isPastDate, endOfDay } from 'date-fns';
 import { format as formatTz, toZonedTime } from 'date-fns-tz';
-import { color } from '@uiw/color-convert';
+import * as color from '@uiw/color-convert';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -24,8 +24,7 @@ export const getAvatarUrl = (avatarUrl: string | null | undefined, seed: string)
   const s = 70;
   const l = 90;
   
-  const colorObject = color(`hsl(${h}, ${s}%, ${l}%)`);
-  const pastelHex = colorObject.hex.substring(1);
+  const pastelHex = color.hslToHex({ h, s, l, a: 1 }).substring(1);
 
   return `https://api.dicebear.com/7.x/initials/svg?seed=${seedString}&backgroundColor=${pastelHex}&backgroundType=solid`;
 };
