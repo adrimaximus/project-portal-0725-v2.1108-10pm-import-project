@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, MoreHorizontal, Trash2, Building } from "lucide-react";
+import { PlusCircle, Edit, MoreHorizontal, Trash2, Building, Search } from "lucide-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import CompanyFormDialog, { CompanyFormValues } from '@/components/companies/CompanyFormDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { Input } from '@/components/ui/input';
 
 const useCompanies = () => {
   return useQuery({
@@ -34,8 +35,19 @@ const CompaniesPage = () => {
   const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: companies = [], isLoading } = useCompanies();
+
+  const filteredCompanies = useMemo(() => {
+    if (!searchTerm) return companies;
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return companies.filter(company => 
+      company.name.toLowerCase().includes(lowercasedFilter) ||
+      (company.legal_name && company.legal_name.toLowerCase().includes(lowercasedFilter)) ||
+      (company.address && company.address.toLowerCase().includes(lowercasedFilter))
+    );
+  }, [companies, searchTerm]);
 
   const handleAddNew = () => {
     setCompanyToEdit(null);
@@ -115,8 +127,21 @@ const CompaniesPage = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Company Directory</CardTitle>
-            <CardDescription>A list of all companies in your database.</CardDescription>
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <div>
+                <CardTitle>Company Directory</CardTitle>
+                <CardDescription>A list of all companies in your database.</CardDescription>
+              </div>
+              <div className="relative w-full sm:w-auto sm:max-w-xs">
+                <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search companies..." 
+                  className="pl-8" 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -131,9 +156,9 @@ const CompaniesPage = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow><TableCell colSpan={4} className="text-center">Loading companies...</TableCell></TableRow>
-                ) : companies.length === 0 ? (
+                ) : filteredCompanies.length === 0 ? (
                   <TableRow><TableCell colSpan={4} className="text-center h-24">No companies found.</TableCell></TableRow>
-                ) : companies.map(company => (
+                ) : filteredCompanies.map(company => (
                   <TableRow key={company.id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
