@@ -324,13 +324,13 @@ const ProjectsPage = () => {
               {/* Mobile: Row 2 - Buttons */}
               <div className="sm:hidden flex items-center gap-2">
                 <Button onClick={() => navigate('/request')} size="sm" className="flex-1">
-                  <PlusCircle className="mr-1 h-4 w-4" />
-                  + Project
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  New Project
                 </Button>
                 {(view === 'tasks' || view === 'tasks-kanban') && (
                   <Button size="sm" onClick={handleCreateTask} className="flex-1">
-                    <PlusCircle className="mr-1 h-4 w-4" />
-                    + Task
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    New Task
                   </Button>
                 )}
                 <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
