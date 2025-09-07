@@ -82,6 +82,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     : '#';
 
   const emailToDisplay = person.contact?.emails?.[0] || person.email;
+  const phoneToDisplay = (person.contact as any)?.phones?.[0] || person.phone;
 
   return (
     <Card 
@@ -142,8 +143,8 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
                 <Mail className="h-4 w-4" />
               </button>
             )}
-            {person.phone && (
-              <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.phone)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
+            {phoneToDisplay && (
+              <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(phoneToDisplay)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
                 <WhatsappIcon className="h-4 w-4" />
               </a>
             )}
