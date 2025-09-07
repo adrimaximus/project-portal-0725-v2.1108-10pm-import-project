@@ -93,13 +93,13 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           </div>
         )}
       </div>
-      <div className="p-4 border-t bg-background flex-grow flex flex-col rounded-b-2xl">
-        <div className={`min-w-0 ${companyLogoUrl ? 'pt-8' : ''}`}>
-          <h3 className="font-bold text-base truncate">{person.full_name}</h3>
+      <div className="p-3 border-t bg-background flex-grow flex flex-col rounded-b-2xl">
+        <div className={`min-w-0 ${companyLogoUrl ? 'pt-6' : ''}`}>
+          <h3 className="font-bold text-sm truncate">{person.full_name}</h3>
         </div>
         
         {(person.company || person.job_title) && (
-          <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
+          <div className="mt-1 flex items-start gap-2 text-xs text-muted-foreground">
             <Briefcase className="h-3 w-3 flex-shrink-0 mt-0.5" />
             <p>
               {person.job_title}
@@ -110,7 +110,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           </div>
         )}
 
-        <div className="mt-auto pt-3 flex items-center gap-3">
+        <div className="mt-auto pt-2 flex items-center gap-3">
           {person.social_media?.instagram && (
             <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
               <Instagram className="h-4 w-4" />
