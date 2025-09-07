@@ -6,7 +6,7 @@ import { generateVibrantGradient, getPriorityStyles, isOverdue, cn } from '@/lib
 import { Link } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CheckCircle, Ticket, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { CheckCircle, Ticket, MoreHorizontal, Edit, Trash2, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -40,6 +40,8 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const handleDropdownClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
+
+  const hasSupportTag = task.tags?.some(tag => tag.name.toLowerCase() === 'support');
 
   return (
     <Card 
@@ -111,11 +113,29 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
               : <div className="h-6 w-6" />
             }
           </div>
-          {task.due_date && (
-            <div className={cn("text-xs text-muted-foreground", isOverdue(task.due_date) && "text-red-600 font-bold")}>
-              due {format(new Date(task.due_date), "MMM d")}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {hasSupportTag && task.attachment_url && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <a href={task.attachment_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{task.attachment_name || 'View Attachment'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {task.due_date && (
+              <div className={cn("text-xs text-muted-foreground", isOverdue(task.due_date) && "text-red-600 font-bold")}>
+                due {format(new Date(task.due_date), "MMM d")}
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -47,4 +47,6 @@ export interface Task {
     created_at: string;
     tags: Tag[];
     originTicketId?: string;
+    attachment_url?: string;
+    attachment_name?: string;
 }

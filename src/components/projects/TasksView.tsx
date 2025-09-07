@@ -8,7 +8,7 @@ import { generateVibrantGradient, getPriorityStyles, getTaskStatusStyles, isOver
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Edit, Trash2, Ticket } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -80,6 +80,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
           {tasks.map(task => {
             const statusStyle = getTaskStatusStyles(task.status);
             const priorityStyle = getPriorityStyles(task.priority);
+            const hasSupportTag = task.tags?.some(tag => tag.name.toLowerCase() === 'support');
             return (
               <TableRow key={task.id} data-state={task.completed ? "completed" : ""}>
                 <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%] sm:w-[30%]">
@@ -95,6 +96,20 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                       <div className="flex items-center gap-2">
                         {task.originTicketId && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
                         <span className={`font-semibold ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.title}</span>
+                        {hasSupportTag && task.attachment_url && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <a href={task.attachment_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-block">
+                                  <Paperclip className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                                </a>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{task.attachment_name || 'View Attachment'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                       {task.description && <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>}
                       <div className="flex gap-1 flex-wrap mt-2">
