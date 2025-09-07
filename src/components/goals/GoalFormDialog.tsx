@@ -8,7 +8,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import ColorPicker from './ColorPicker';
 import { Textarea } from '@/components/ui/textarea';
-import { TagInput } from './TagInput';
+import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -274,13 +274,11 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
           <div className="grid grid-cols-4 items-start gap-4">
             <Label className="text-right pt-2">Tags</Label>
             <div className="col-span-3">
-              <TagInput
-                allTags={allTags}
-                selectedTags={formData.tags}
-                onTagsChange={(v) => handleChange('tags', v)}
+              <TagsMultiselect
+                options={allTags}
+                value={formData.tags}
+                onChange={(v) => handleChange('tags', v)}
                 onTagCreate={handleTagCreate}
-                user={user}
-                onTagsUpdated={fetchTags}
               />
             </div>
           </div>

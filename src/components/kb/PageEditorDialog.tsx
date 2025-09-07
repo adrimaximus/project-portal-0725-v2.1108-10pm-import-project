@@ -18,7 +18,7 @@ import UnsplashImagePicker from './UnsplashImagePicker';
 import ReactQuill from 'react-quill';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useTags } from '@/hooks/useTags';
-import { KbTagInput } from './KbTagInput';
+import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ArticleValues {
@@ -406,10 +406,10 @@ const PageEditorDialog = ({ open, onOpenChange, folders = [], folder, article, o
             />
             <FormItem>
               <FormLabel>Tags</FormLabel>
-              <KbTagInput
-                allTags={allTags}
-                selectedTags={selectedTags}
-                onTagsChange={setSelectedTags}
+              <TagsMultiselect
+                options={allTags}
+                value={selectedTags}
+                onChange={setSelectedTags}
                 onTagCreate={handleTagCreate}
               />
             </FormItem>

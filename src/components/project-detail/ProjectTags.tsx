@@ -1,6 +1,6 @@
 import { Project, Tag, User } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { TagInput } from '@/components/goals/TagInput';
+import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -57,13 +57,11 @@ const ProjectTags = ({ project, isEditing, onTagsChange }: ProjectTagsProps) => 
   }
 
   return (
-    <TagInput
-      allTags={allTags}
-      selectedTags={project.tags || []}
-      onTagsChange={onTagsChange}
+    <TagsMultiselect
+      options={allTags}
+      value={project.tags || []}
+      onChange={onTagsChange}
       onTagCreate={handleTagCreate}
-      user={user}
-      onTagsUpdated={fetchTags}
     />
   );
 };

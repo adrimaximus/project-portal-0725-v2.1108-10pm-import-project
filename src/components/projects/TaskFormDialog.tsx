@@ -19,7 +19,7 @@ import { MultiSelect } from '@/components/ui/multi-select';
 import { Task, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from '@/types/task';
 import { UpsertTaskPayload } from '@/hooks/useTaskMutations';
 import { useTags } from '@/hooks/useTags';
-import { TagInput } from '../goals/TagInput';
+import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { Tag } from '@/types/goal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -321,13 +321,11 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
       />
       <FormItem>
         <FormLabel>Tags</FormLabel>
-        <TagInput
-          allTags={allTags}
-          selectedTags={selectedTags}
-          onTagsChange={handleTagsChange}
+        <TagsMultiselect
+          options={allTags}
+          value={selectedTags}
+          onChange={handleTagsChange}
           onTagCreate={handleCreateTag}
-          onTagsUpdated={refetchTags}
-          user={currentUser}
         />
       </FormItem>
       <FormField
