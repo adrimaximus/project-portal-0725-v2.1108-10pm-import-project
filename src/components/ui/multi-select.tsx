@@ -138,7 +138,7 @@ export function MultiSelect({
         align="start"
         sideOffset={8}
       >
-        <Command shouldFilter={false} className="rounded-xl">
+        <Command shouldFilter={false} className="flex h-full w-full flex-col overflow-hidden rounded-xl">
           <div className="p-2">
             <CommandInput
               value={query}
@@ -147,7 +147,7 @@ export function MultiSelect({
               className="rounded-lg"
             />
           </div>
-          <CommandList className={`${maxListHeightClass} overflow-auto px-1 pb-2`}>
+          <CommandList className={`${maxListHeightClass} overflow-y-auto px-1 pb-2`}>
             <CommandEmpty>
               <div className="px-3 py-2 text-sm text-muted-foreground">No results.</div>
             </CommandEmpty>

@@ -184,7 +184,7 @@ export function TagsMultiselect({
           align="start"
           sideOffset={8}
         >
-          <Command shouldFilter={false} className="rounded-xl">
+          <Command shouldFilter={false} className="flex h-full w-full flex-col overflow-hidden rounded-xl">
             <div className="p-2">
               <CommandInput
                 value={query}
@@ -193,7 +193,7 @@ export function TagsMultiselect({
                 className="rounded-lg"
               />
             </div>
-            <CommandList className={`${maxListHeightClass} overflow-auto px-1 pb-2`}>
+            <CommandList className={`${maxListHeightClass} overflow-y-auto px-1 pb-2`}>
               <CommandEmpty>
                 {allowCreate && query.trim() ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">No results. Press <kbd className="mx-0.5 rounded border px-1">Enter</kbd> to create.</div>
