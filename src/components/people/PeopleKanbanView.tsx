@@ -158,7 +158,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       const { error } = await supabase.rpc('upsert_person_with_details', {
         p_id: person.id,
         p_full_name: person.full_name,
-        p_contact: person.contact,
+        p_contact: person.contact || { emails: [], phones: [] },
         p_company: person.company,
         p_job_title: person.job_title,
         p_department: person.department,
@@ -169,8 +169,8 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
         p_existing_tag_ids: finalTags.map(t => t.id),
         p_custom_tags: [],
         p_avatar_url: person.avatar_url,
-        p_address: person.address,
-        p_custom_properties: person.custom_properties,
+        p_address: person.address || null,
+        p_custom_properties: person.custom_properties || null,
       });
 
       if (error) throw error;
