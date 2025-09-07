@@ -36,7 +36,7 @@ const Profile = () => {
   }, [user]);
 
   if (!user) {
-    return <PortalLayout><div>Loading...</div></PortalLayout>;
+    return <PortalLayout><div>Memuat...</div></PortalLayout>;
   }
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,7 +60,7 @@ const Profile = () => {
                     await supabase.storage.from('avatars').remove([oldAvatarPath]);
                 }
             } catch (e) {
-                console.warn("Could not remove old avatar.", e);
+                console.warn("Tidak dapat menghapus avatar lama.", e);
             }
         }
 
@@ -75,7 +75,7 @@ const Profile = () => {
             .getPublicUrl(filePath);
 
         if (!publicUrlData.publicUrl) {
-            throw new Error("Could not get public URL for avatar.");
+            throw new Error("Tidak bisa mendapatkan URL publik untuk avatar.");
         }
 
         const { error: updateError } = await supabase
@@ -163,17 +163,17 @@ const Profile = () => {
     <PortalLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Profile & Settings</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Profil & Pengaturan</h1>
           <p className="text-muted-foreground">
-            Manage your account settings and profile information.
+            Kelola pengaturan akun dan informasi profil Anda.
           </p>
         </div>
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Update your personal details here.</CardDescription>
+                <CardTitle>Informasi Pribadi</CardTitle>
+                <CardDescription>Perbarui detail pribadi Anda di sini.</CardDescription>
               </div>
               {user.role && (
                 <Badge variant="outline" className="capitalize text-sm">
@@ -211,11 +211,11 @@ const Profile = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="first-name">First Name</Label>
+                <Label htmlFor="first-name">Nama Depan</Label>
                 <Input id="first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="last-name">Last Name</Label>
+                <Label htmlFor="last-name">Nama Belakang</Label>
                 <Input id="last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -225,19 +225,19 @@ const Profile = () => {
             </div>
             <Button onClick={handleSaveChanges} disabled={isSaving}>
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+              Simpan Perubahan
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Security</CardTitle>
-            <CardDescription>Update your password. It's recommended to use a strong, unique password.</CardDescription>
+            <CardTitle>Keamanan</CardTitle>
+            <CardDescription>Perbarui kata sandi Anda. Disarankan untuk menggunakan kata sandi yang kuat dan unik.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
+              <Label htmlFor="new-password">Kata Sandi Baru</Label>
               <div className="relative">
                 <Input id="new-password" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                 <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowNewPassword(!showNewPassword)}>
@@ -246,7 +246,7 @@ const Profile = () => {
               </div>
             </div>
              <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
+              <Label htmlFor="confirm-password">Konfirmasi Kata Sandi Baru</Label>
               <div className="relative">
                 <Input id="confirm-password" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                 <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
@@ -256,7 +256,7 @@ const Profile = () => {
             </div>
             <Button onClick={handlePasswordChange} disabled={isPasswordUpdating}>
               {isPasswordUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Change Password
+              Ubah Kata Sandi
             </Button>
           </CardContent>
         </Card>
@@ -265,14 +265,14 @@ const Profile = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Danger Zone</CardTitle>
+            <CardTitle>Zona Berbahaya</CardTitle>
             <CardDescription>
-              These actions can have permanent consequences.
+              Tindakan ini dapat memiliki konsekuensi permanen.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="destructive" onClick={handleLogout}>
-              Logout
+              Keluar
             </Button>
           </CardContent>
         </Card>
