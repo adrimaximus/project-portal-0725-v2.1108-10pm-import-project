@@ -134,6 +134,11 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
       <div className="p-3 border-t bg-background flex-grow flex flex-col rounded-b-2xl">
         <div className="flex justify-end mb-2">
           <div className="flex items-center gap-3">
+            {person.social_media?.instagram && (
+              <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
+                <Instagram className="h-4 w-4" />
+              </a>
+            )}
             {emailToDisplay && (
               <button
                 onClick={(e) => handleCopyEmail(e, emailToDisplay)}
@@ -146,11 +151,6 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
             {phoneToDisplay && (
               <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(phoneToDisplay)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
                 <WhatsappIcon className="h-4 w-4" />
-              </a>
-            )}
-            {person.social_media?.instagram && (
-              <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
-                <Instagram className="h-4 w-4" />
               </a>
             )}
           </div>
