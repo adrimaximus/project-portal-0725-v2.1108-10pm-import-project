@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -42,8 +42,7 @@ const personSchema = z.object({
   birthday: z.date().optional().nullable(),
   notes: z.string().optional(),
   project_ids: z.array(z.string()).optional(),
-  kanban_tag_id: z.string().optional(),
-  general_tag_ids: z.array(z.string()).optional(),
+  tag_ids: z.array(z.string()).optional(),
   address: z.string().optional(),
   custom_properties: z.record(z.any()).optional(),
 });
@@ -66,19 +65,16 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     defaultValues: {
       full_name: '', email: '', phone: '', company: '', job_title: '',
       department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-      notes: '', project_ids: [], kanban_tag_id: '', general_tag_ids: [], address: '', custom_properties: {},
+      notes: '', project_ids: [], tag_ids: [], address: '', custom_properties: {},
     }
   });
-
-  const kanbanTags = useMemo(() => allTags.filter(t => t.type === 'kanban'), [allTags]);
-  const generalTags = useMemo(() => allTags.filter(t => t.type === 'general'), [allTags]);
 
   useEffect(() => {
     const fetchData = async () => {
       const { data: projectsData } = await supabase.from('projects').select('id, name');
       if (projectsData) setAllProjects(projectsData as any);
 
-      const { data: tagsData } = await supabase.from('tags').select('id, name, color, type');
+      const { data: tagsData } = await supabase.from('tags').select('id, name, color');
       if (tagsData) setAllTags(tagsData);
 
       const { data: companiesData } = await supabase.from('companies').select('id, name');
@@ -94,8 +90,6 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
 
   useEffect(() => {
     if (person) {
-      const kanbanTag = person.tags?.find(t => t.type === 'kanban');
-      const generalPersonTags = person.tags?.filter(t => t.type === 'general');
       form.reset({
         full_name: person.full_name,
         email: person.email || person.contact?.emails?.[0] || '',
@@ -109,8 +103,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         birthday: person.birthday ? new Date(person.birthday) : null,
         notes: person.notes || '',
         project_ids: person.projects?.map(p => p.id) || [],
-        kanban_tag_id: kanbanTag?.id || '',
-        general_tag_ids: generalPersonTags?.map(t => t.id) || [],
+        tag_ids: person.tags?.map(t => t.id) || [],
         address: person.address?.formatted_address || '',
         custom_properties: person.custom_properties || {},
       });
@@ -119,7 +112,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       form.reset({
         full_name: '', email: '', phone: '', company: '', job_title: '',
         department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-        notes: '', project_ids: [], kanban_tag_id: '', general_tag_ids: [], address: '', custom_properties: {},
+        notes: '', project_ids: [], tag_ids: [], address: '', custom_properties: {},
       });
       setAvatarPreview(null);
     }
@@ -140,16 +133,18 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       let personId = person?.id;
       let avatar_url = person?.avatar_url || null;
 
+      // If it's a new person and they have an avatar, we need an ID first.
       if (!personId && avatarFile) {
         const { data: newPerson, error: createError } = await supabase
           .from('people')
-          .insert({ full_name: values.full_name })
+          .insert({ full_name: values.full_name }) // insert minimal data to get an ID
           .select('id')
           .single();
         if (createError) throw createError;
         personId = newPerson.id;
       }
 
+      // Now, if there's an avatar file, upload it.
       if (avatarFile && personId) {
         const formData = new FormData();
         formData.append('file', avatarFile);
@@ -163,11 +158,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         avatar_url = data.avatar_url;
       }
 
-      const finalTagIds = [...(values.general_tag_ids || [])];
-      if (values.kanban_tag_id) {
-          finalTagIds.push(values.kanban_tag_id);
-      }
-
+      // Finally, upsert all the data.
       const { error } = await supabase.rpc('upsert_person_with_details', {
         p_id: personId || null,
         p_full_name: values.full_name,
@@ -182,7 +173,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         p_birthday: values.birthday ? format(values.birthday, 'yyyy-MM-dd') : null,
         p_notes: values.notes,
         p_project_ids: values.project_ids,
-        p_existing_tag_ids: finalTagIds,
+        p_existing_tag_ids: values.tag_ids,
         p_custom_tags: [],
         p_avatar_url: avatar_url,
         p_address: values.address ? { formatted_address: values.address } : null,
@@ -313,33 +304,10 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
             <FormField control={form.control} name="instagram" render={({ field }) => (
               <FormItem><FormLabel>Instagram URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            <FormField
-              control={form.control}
-              name="kanban_tag_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Kanban Column</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a column" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="">No Column</SelectItem>
-                      {kanbanTags.map(tag => (
-                        <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField control={form.control} name="general_tag_ids" render={({ field }) => (
+            <FormField control={form.control} name="tag_ids" render={({ field }) => (
               <FormItem><FormLabel>Tags</FormLabel>
                 <MultiSelect
-                  options={generalTags.map(t => ({ value: t.id, label: t.name }))}
+                  options={allTags.map(t => ({ value: t.id, label: t.name }))}
                   value={field.value || []}
                   onChange={field.onChange}
                   placeholder="Select tags..."
