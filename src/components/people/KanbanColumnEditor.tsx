@@ -89,12 +89,26 @@ const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettings
     })
   );
 
+  // Ensure tags are unique to prevent rendering issues from duplicate data
+  const uniqueTags = React.useMemo(() => {
+    const seen = new Set<string>();
+    return allTags.filter(tag => {
+      if (seen.has(tag.id)) {
+        return false;
+      } else {
+        seen.add(tag.id);
+        return true;
+      }
+    });
+  }, [allTags]);
+
+
   const handleVisibilityChange = (id: string, checked: boolean) => {
     const newVisibleIds = checked
       ? [...visibleColumnIds, id]
       : visibleColumnIds.filter(vid => vid !== id);
 
-    const visibleTags = allTags
+    const visibleTags = uniqueTags
       .filter(t => newVisibleIds.includes(t.id))
       .sort((a, b) => {
         const aIndex = columnOrder.indexOf(a.id);
@@ -105,7 +119,7 @@ const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettings
         return aIndex - bIndex;
       });
 
-    const hiddenTags = allTags
+    const hiddenTags = uniqueTags
       .filter(t => !newVisibleIds.includes(t.id))
       .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -129,7 +143,7 @@ const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettings
   };
 
   const { visibleTags, hiddenTags } = React.useMemo(() => {
-    const filteredTags = allTags.filter(tag =>
+    const filteredTags = uniqueTags.filter(tag =>
       tag.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -138,7 +152,9 @@ const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettings
       .sort((a, b) => {
         const aIndex = columnOrder.indexOf(a.id);
         const bIndex = columnOrder.indexOf(b.id);
-        if (aIndex === -1 || bIndex === -1) return 0;
+        if (aIndex === -1 && bIndex === -1) return a.name.localeCompare(b.name);
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
         return aIndex - bIndex;
       });
       
@@ -147,7 +163,7 @@ const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettings
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return { visibleTags: visible, hiddenTags: hidden };
-  }, [allTags, visibleColumnIds, columnOrder, searchQuery]);
+  }, [uniqueTags, visibleColumnIds, columnOrder, searchQuery]);
 
   return (
     <div className="p-2 flex flex-col h-full">
