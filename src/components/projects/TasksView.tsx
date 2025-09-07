@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
+import TaskAttachmentViewer from './TaskAttachmentViewer';
 
 interface TasksViewProps {
   tasks: Task[];
@@ -53,6 +54,46 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
   if (tasks.length === 0) {
     return <div className="text-center text-muted-foreground p-8">No tasks found.</div>;
   }
+
+  const renderAttachments = (task: Task) => {
+    const attachments = task.attachments || [];
+    if (attachments.length === 0) return null;
+
+    if (attachments.length === 1) {
+      const file = attachments[0];
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a href={file.file_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-block">
+                <Paperclip className="h-4 w-4 text-muted-foreground hover:text-primary" />
+              </a>
+            </TooltipTrigger>
+            <TooltipContent><p>{file.file_name}</p></TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return (
+      <TaskAttachmentViewer
+        attachments={attachments}
+        trigger={
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1 text-muted-foreground cursor-pointer hover:text-primary">
+                  <Paperclip className="h-4 w-4" />
+                  <span className="text-xs">{attachments.length}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent><p>{attachments.length} attachment(s)</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        }
+      />
+    );
+  };
 
   return (
     <div className="w-full overflow-x-auto">
@@ -112,21 +153,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                             </Tooltip>
                           </TooltipProvider>
                         )}
-                        {task.attachments && task.attachments.length > 0 && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <div className="flex items-center gap-1 text-muted-foreground">
-                                  <Paperclip className="h-4 w-4" />
-                                  <span className="text-xs">{task.attachments.length}</span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{task.attachments.length} attachment(s)</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
+                        {renderAttachments(task)}
                       </div>
                       {task.description && <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>}
                       <div className="flex gap-1 flex-wrap mt-2">
