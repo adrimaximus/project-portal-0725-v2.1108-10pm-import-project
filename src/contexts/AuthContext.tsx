@@ -15,6 +15,11 @@ interface ProfileWithPermissions {
   status: string | null;
   sidebar_order: string[] | null;
   permissions: string[] | null;
+  people_kanban_settings: {
+    columnOrder?: string[];
+    visibleColumnIds?: string[];
+    collapseOverrides?: Record<string, boolean>;
+  } | null;
 }
 
 interface AuthContextType {
@@ -107,6 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           status: profile.status || undefined,
           sidebar_order: profile.sidebar_order || undefined,
           permissions: profile.permissions || [],
+          people_kanban_settings: profile.people_kanban_settings || {},
         };
         setUser(userToSet);
         // Check against localStorage because state update might not be immediate

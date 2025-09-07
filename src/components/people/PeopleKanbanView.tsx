@@ -1,13 +1,14 @@
 import React, { useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent } from '@dnd-kit/core';
-import { Person, Tag } from '@/types';
+import { Person, Tag, User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import PeopleKanbanColumn from './PeopleKanbanColumn';
 import PeopleKanbanCard from './PeopleKanbanCard';
 import KanbanColumnEditor from './KanbanColumnEditor';
 import { arrayMove } from '@dnd-kit/sortable';
+import { useAuth } from '@/contexts/AuthContext';
 
 type PeopleKanbanViewProps = {
   people: Person[];
@@ -21,6 +22,7 @@ type KanbanViewHandle = {
 };
 
 const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ people, tags, onEditPerson, onDeletePerson }, ref) => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const dragHappened = useRef(false);
@@ -43,15 +45,42 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     openSettings: () => setIsSettingsOpen(true),
   }));
 
+  const { mutate: updateKanbanSettings } = useMutation({
+    mutationFn: async (settings: Partial<User['people_kanban_settings']>) => {
+      if (!user) return;
+      const currentSettings = user.people_kanban_settings || {};
+      const newSettings = { ...currentSettings, ...settings };
+      const { error } = await supabase
+        .from('profiles')
+        .update({ people_kanban_settings: newSettings })
+        .eq('id', user.id);
+      if (error) throw error;
+      return newSettings;
+    },
+    onSuccess: (newSettings) => {
+      queryClient.setQueryData(['userProfile', user?.id], (oldUser: User | undefined) => {
+        if (oldUser) {
+          return { ...oldUser, people_kanban_settings: newSettings };
+        }
+        return oldUser;
+      });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to save view settings.", { description: error.message });
+    },
+  });
+
   useEffect(() => {
-    const savedOrder = localStorage.getItem('peopleKanbanColumnOrder');
-    const savedVisible = localStorage.getItem('peopleKanbanVisibleColumns');
-    
+    const settings = user?.people_kanban_settings;
+    const savedOrder = settings?.columnOrder;
+    const savedVisible = settings?.visibleColumnIds;
+    const savedOverrides = settings?.collapseOverrides || {};
+
     const allDbTagIds = tags.map(t => t.id);
     
     let initialOrder: string[];
-    if (savedOrder) {
-      initialOrder = JSON.parse(savedOrder);
+    if (savedOrder && savedOrder.length > 0) {
+      initialOrder = [...savedOrder];
       const savedOrderSet = new Set(initialOrder);
       const newTags = allDbTagIds.filter(id => !savedOrderSet.has(id));
       initialOrder.push(...newTags);
@@ -63,24 +92,25 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     }
     setColumnOrder(initialOrder);
 
-    const initialVisible = savedVisible ? JSON.parse(savedVisible) : ['uncategorized', ...allDbTagIds];
+    const initialVisible = savedVisible && savedVisible.length > 0 ? savedVisible : ['uncategorized', ...allDbTagIds];
     setVisibleColumnIds(initialVisible);
+    setCollapseOverrides(savedOverrides);
 
-  }, [tags]);
+  }, [tags, user?.people_kanban_settings]);
 
   const handleSettingsChange = (newOrder: string[], newVisible: string[]) => {
     setColumnOrder(newOrder);
     setVisibleColumnIds(newVisible);
-    localStorage.setItem('peopleKanbanColumnOrder', JSON.stringify(newOrder));
-    localStorage.setItem('peopleKanbanVisibleColumns', JSON.stringify(newVisible));
+    updateKanbanSettings({ columnOrder: newOrder, visibleColumnIds: newVisible });
   };
 
-  useEffect(() => {
-    const savedState = localStorage.getItem('peopleKanbanCollapseOverrides');
-    if (savedState) {
-      setCollapseOverrides(JSON.parse(savedState));
-    }
-  }, []);
+  const toggleColumnCollapse = (columnId: string) => {
+    const peopleInColumn = personGroups[columnId] || [];
+    const isCurrentlyCollapsed = collapseOverrides[columnId] ?? (peopleInColumn.length === 0);
+    const newOverrides = { ...collapseOverrides, [columnId]: !isCurrentlyCollapsed };
+    setCollapseOverrides(newOverrides);
+    updateKanbanSettings({ collapseOverrides: newOverrides });
+  };
 
   const columns = useMemo(() => {
     const tagMap = new Map([...tags, uncategorizedTag].map(t => [t.id, t]));
@@ -108,14 +138,6 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     }
     return groups;
   }, [internalPeople, columns]);
-
-  const toggleColumnCollapse = (columnId: string) => {
-    const peopleInColumn = personGroups[columnId] || [];
-    const isCurrentlyCollapsed = collapseOverrides[columnId] ?? (peopleInColumn.length === 0);
-    const newOverrides = { ...collapseOverrides, [columnId]: !isCurrentlyCollapsed };
-    setCollapseOverrides(newOverrides);
-    localStorage.setItem('peopleKanbanCollapseOverrides', JSON.stringify(newOverrides));
-  };
 
   const handleDragStart = (event: DragStartEvent) => {
     dragHappened.current = true;

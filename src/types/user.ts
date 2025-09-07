@@ -22,6 +22,11 @@ export interface User {
   sidebar_order?: string[];
   updated_at?: string;
   permissions?: string[];
+  people_kanban_settings?: {
+    columnOrder?: string[];
+    visibleColumnIds?: string[];
+    collapseOverrides?: Record<string, boolean>;
+  };
 }
 
 export type Collaborator = User & { online?: boolean };
