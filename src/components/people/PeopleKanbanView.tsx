@@ -6,6 +6,10 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import PeopleKanbanColumn from './PeopleKanbanColumn';
 import PeopleKanbanCard from './PeopleKanbanCard';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Settings } from 'lucide-react';
+import KanbanColumnEditor from './KanbanColumnEditor';
 
 const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { people: Person[], tags: Tag[], onEditPerson: (person: Person) => void, onDeletePerson: (person: Person) => void }) => {
   const queryClient = useQueryClient();
@@ -13,6 +17,36 @@ const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { peop
   const dragHappened = useRef(false);
   const [activePerson, setActivePerson] = useState<Person | null>(null);
   const [collapsedColumns, setCollapsedColumns] = useState<string[]>([]);
+  
+  const [columnOrder, setColumnOrder] = useState<string[]>([]);
+  const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const savedOrder = localStorage.getItem('peopleKanbanColumnOrder');
+    const savedVisible = localStorage.getItem('peopleKanbanVisibleColumns');
+    
+    const initialOrder = savedOrder ? JSON.parse(savedOrder) : tags.map(t => t.id);
+    setColumnOrder(initialOrder);
+
+    const initialVisible = savedVisible ? JSON.parse(savedVisible) : tags.map(t => t.id);
+    setVisibleColumnIds(initialVisible);
+
+    // Ensure order contains all tags, even new ones
+    const allTagIds = new Set(tags.map(t => t.id));
+    const currentOrderIds = new Set(initialOrder);
+    const newTags = Array.from(allTagIds).filter(id => !currentOrderIds.has(id));
+    if (newTags.length > 0) {
+      setColumnOrder([...initialOrder, ...newTags]);
+    }
+
+  }, [tags]);
+
+  const handleSettingsChange = (newOrder: string[], newVisible: string[]) => {
+    setColumnOrder(newOrder);
+    setVisibleColumnIds(newVisible);
+    localStorage.setItem('peopleKanbanColumnOrder', JSON.stringify(newOrder));
+    localStorage.setItem('peopleKanbanVisibleColumns', JSON.stringify(newVisible));
+  };
 
   useEffect(() => {
     const savedState = localStorage.getItem('peopleKanbanCollapsedColumns');
@@ -30,8 +64,15 @@ const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { peop
   };
 
   const columns = useMemo(() => {
-    return [{ id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' }, ...tags];
-  }, [tags]);
+    const uncategorizedCol = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
+    const tagMap = new Map(tags.map(t => [t.id, t]));
+    
+    const visibleTags = columnOrder
+      .map(id => tagMap.get(id))
+      .filter(tag => tag && visibleColumnIds.includes(tag.id)) as Tag[];
+
+    return [uncategorizedCol, ...visibleTags];
+  }, [tags, columnOrder, visibleColumnIds]);
 
   const personGroups = useMemo(() => {
     const groups: Record<string, Person[]> = {};
@@ -112,6 +153,23 @@ const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { peop
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
       <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4 h-full">
+        <div className="pt-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <KanbanColumnEditor
+                allTags={tags}
+                columnOrder={columnOrder}
+                visibleColumnIds={visibleColumnIds}
+                onSettingsChange={handleSettingsChange}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
         {columns.map(tag => {
           const peopleInColumn = personGroups[tag.id] || [];
           const isColumnCollapsed = peopleInColumn.length === 0 && collapsedColumns.includes(tag.id);
