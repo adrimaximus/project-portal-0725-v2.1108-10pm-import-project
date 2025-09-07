@@ -177,21 +177,19 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     if (sourceContainerId === destContainerId) {
       if (activeId === overId) return;
 
-      const itemsInColumn = personGroups[sourceContainerId];
-      const oldIndex = itemsInColumn.findIndex(p => p.id === activeId);
-      const newIndex = itemsInColumn.findIndex(p => p.id === overId);
+      const oldIndex = internalPeople.findIndex((p) => p.id === activeId);
+      const newIndex = internalPeople.findIndex((p) => p.id === overId);
 
       if (oldIndex === -1 || newIndex === -1) return;
 
-      const reorderedPeople = arrayMove(itemsInColumn, oldIndex, newIndex);
-      
-      const newInternalPeople = internalPeople.map(p => {
-        const reorderedVersion = reorderedPeople.find(rp => rp.id === p.id);
-        return reorderedVersion ? { ...p, kanban_order: reorderedPeople.indexOf(reorderedVersion) } : p;
-      });
-      setInternalPeople(newInternalPeople);
+      const reorderedPeople = arrayMove(internalPeople, oldIndex, newIndex);
+      setInternalPeople(reorderedPeople);
 
-      const { error } = await supabase.rpc('update_person_kanban_order', { p_person_ids: reorderedPeople.map(p => p.id) });
+      const updatedColumnIds = reorderedPeople
+        .filter(p => (p.tags?.[0]?.id || 'uncategorized') === sourceContainerId)
+        .map(p => p.id);
+
+      const { error } = await supabase.rpc('update_person_kanban_order', { p_person_ids: updatedColumnIds });
       if (error) {
         toast.error(`Failed to reorder: ${error.message}`);
         setInternalPeople(people); // Revert on error
