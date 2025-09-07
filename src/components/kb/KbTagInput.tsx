@@ -56,16 +56,15 @@ export function KbTagInput({ allTags, selectedTags, onTagsChange, onTagCreate }:
     <div className="space-y-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
+          <div
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between h-auto min-h-[40px]"
+            className="w-full justify-between h-auto min-h-[40px] flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 cursor-pointer"
           >
             <div className="flex-1 text-left">
               {selectedTags.length > 0 ? (
-                <ScrollArea className="max-h-20 w-full pr-4">
-                  <div className="flex gap-1 flex-wrap">
+                <ScrollArea className="max-h-20 w-full">
+                  <div className="flex gap-1 flex-wrap pr-2">
                     {selectedTags.map(tag => (
                       <Badge
                         key={tag.id}
@@ -89,7 +88,7 @@ export function KbTagInput({ allTags, selectedTags, onTagsChange, onTagCreate }:
               )}
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
+          </div>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
           <Command>
