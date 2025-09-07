@@ -60,8 +60,8 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     return () => { supabase.removeChannel(channel); };
   }, [user, queryClient]);
 
-  const navItems = useMemo(() => {
-    return customNavItems
+  const { navItems, settingsItem } = useMemo(() => {
+    const allItems = customNavItems
       .filter(item => item.is_enabled)
       .map(item => {
         const isEmbed = !item.url.startsWith('/');
@@ -79,6 +79,11 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           badge,
         };
       });
+      
+    const settings = allItems.find(item => item.href === '/settings');
+    const otherItems = allItems.filter(item => item.href !== '/settings');
+
+    return { navItems: otherItems, settingsItem: settings };
   }, [customNavItems, totalUnreadChatCount, unreadNotificationCount]);
 
   const topLevelItems = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
@@ -91,33 +96,44 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6", isCollapsed && "justify-center px-2")}>
           <Link to="/" className="flex items-center gap-2 font-semibold" title="Client Portal"><Package className="h-6 w-6" /><span className={cn(isCollapsed && "sr-only")}>Client Portal</span></Link>
         </div>
-        <div className="flex-1 overflow-y-auto py-2">
-          <TooltipProvider delayDuration={0}>
-            <nav className={cn("grid items-start gap-1 text-sm font-medium", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
-              {topLevelItems.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} location={location} />)}
-              {folders.map(folder => {
-                const itemsInFolder = navItems.filter(item => item.folder_id === folder.id);
-                if (itemsInFolder.length === 0) return null;
-                const FolderIconComponent = folder.icon ? Icons[folder.icon] : FolderIcon;
-                return (
-                  <Collapsible key={folder.id} defaultOpen>
-                    <CollapsibleTrigger className="w-full group">
-                      <div className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", isCollapsed && "justify-center")}>
-                        <FolderIconComponent className="h-4 w-4" style={{ color: folder.color || undefined }} />
-                        {!isCollapsed && <span className="flex-1 text-left">{folder.name}</span>}
-                        {!isCollapsed && <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />}
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className={cn("space-y-1", !isCollapsed && "pl-4")}>
-                      {itemsInFolder.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} location={location} />)}
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
-            </nav>
-          </TooltipProvider>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto py-2">
+            <TooltipProvider delayDuration={0}>
+              <nav className={cn("grid items-start gap-1 text-sm font-medium", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
+                {topLevelItems.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} location={location} />)}
+                {folders.map(folder => {
+                  const itemsInFolder = navItems.filter(item => item.folder_id === folder.id);
+                  if (itemsInFolder.length === 0) return null;
+                  const FolderIconComponent = folder.icon ? Icons[folder.icon] : FolderIcon;
+                  return (
+                    <Collapsible key={folder.id} defaultOpen>
+                      <CollapsibleTrigger className="w-full group">
+                        <div className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", isCollapsed && "justify-center")}>
+                          <FolderIconComponent className="h-4 w-4" style={{ color: folder.color || undefined }} />
+                          {!isCollapsed && <span className="flex-1 text-left">{folder.name}</span>}
+                          {!isCollapsed && <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />}
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className={cn("space-y-1", !isCollapsed && "pl-4")}>
+                        {itemsInFolder.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} location={location} />)}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  );
+                })}
+              </nav>
+            </TooltipProvider>
+          </div>
+          {settingsItem && (
+            <div className="mt-auto border-t p-2">
+              <TooltipProvider delayDuration={0}>
+                <nav className={cn("grid items-start gap-1 text-sm font-medium", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
+                  <NavLink item={settingsItem} isCollapsed={isCollapsed} location={location} />
+                </nav>
+              </TooltipProvider>
+            </div>
+          )}
         </div>
-        <div className="mt-auto border-t"><OnlineCollaborators isCollapsed={isCollapsed} /></div>
+        <div className="border-t"><OnlineCollaborators isCollapsed={isCollapsed} /></div>
       </div>
     </div>
   );
