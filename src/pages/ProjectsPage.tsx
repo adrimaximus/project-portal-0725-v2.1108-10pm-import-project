@@ -63,6 +63,7 @@ const ProjectsPage = () => {
 
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'due_date', direction: 'asc' });
+  const [hideCompletedTasks, setHideCompletedTasks] = useState(() => localStorage.getItem('hideCompletedTasks') === 'true');
 
   const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ 
     enabled: view === 'tasks' || view === 'tasks-kanban',
@@ -71,14 +72,18 @@ const ProjectsPage = () => {
   });
 
   const filteredTasks = useMemo(() => {
-    if (!taskSearchTerm) return tasks;
+    let tasksToFilter = tasks;
+    if (hideCompletedTasks) {
+      tasksToFilter = tasksToFilter.filter(task => task.status !== 'Done');
+    }
+    if (!taskSearchTerm) return tasksToFilter;
     const lowercasedFilter = taskSearchTerm.toLowerCase();
-    return tasks.filter(task => 
+    return tasksToFilter.filter(task => 
       task.title.toLowerCase().includes(lowercasedFilter) ||
       (task.description && task.description.toLowerCase().includes(lowercasedFilter)) ||
       (task.projects?.name && task.projects.name.toLowerCase().includes(lowercasedFilter))
     );
-  }, [tasks, taskSearchTerm]);
+  }, [tasks, taskSearchTerm, hideCompletedTasks]);
 
   useEffect(() => {
     if (!user) return;
@@ -257,6 +262,14 @@ const ProjectsPage = () => {
     });
   };
 
+  const toggleHideCompleted = () => {
+    setHideCompletedTasks(prev => {
+      const newState = !prev;
+      localStorage.setItem('hideCompletedTasks', String(newState));
+      return newState;
+    });
+  };
+
   const isTaskView = view === 'tasks' || view === 'tasks-kanban';
 
   return (
@@ -345,6 +358,8 @@ const ProjectsPage = () => {
             <ProjectsToolbar
               view={view} onViewChange={handleViewChange}
               kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
+              hideCompletedTasks={hideCompletedTasks}
+              onToggleHideCompleted={toggleHideCompleted}
             />
           </div>
           <CardContent className="flex-grow min-h-0 overflow-y-auto p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6 data-[view=tasks-kanban]:p-0" data-view={view}>
