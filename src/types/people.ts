@@ -19,4 +19,5 @@ export interface Person {
   avatar_url?: string;
   user_id?: string;
   custom_properties?: Record<string, any>;
+  kanban_order?: number;
 }

@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import PeopleKanbanColumn from './PeopleKanbanColumn';
 import PeopleKanbanCard from './PeopleKanbanCard';
 import KanbanColumnEditor from './KanbanColumnEditor';
+import { arrayMove } from '@dnd-kit/sortable';
 
 type PeopleKanbanViewProps = {
   people: Person[];
@@ -101,6 +102,10 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
         groups[columnId].push(person);
       }
     });
+    // Sort each group by kanban_order
+    for (const groupId in groups) {
+      groups[groupId].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
+    }
     return groups;
   }, [internalPeople, columns]);
 
@@ -125,9 +130,10 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     }, 0);
 
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
     const activeId = String(active.id);
+    const overId = String(over.id);
     const person = internalPeople.find(p => p.id === activeId);
     if (!person) return;
 
@@ -135,9 +141,33 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     const destContainerId = over.data.current?.sortable.containerId as string || over.id as string;
 
     if (sourceContainerId === destContainerId) {
+      if (activeId === overId) return;
+
+      const itemsInColumn = personGroups[sourceContainerId];
+      const oldIndex = itemsInColumn.findIndex(p => p.id === activeId);
+      const newIndex = itemsInColumn.findIndex(p => p.id === overId);
+
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const reorderedPeople = arrayMove(itemsInColumn, oldIndex, newIndex);
+      
+      const newInternalPeople = internalPeople.map(p => {
+        const reorderedVersion = reorderedPeople.find(rp => rp.id === p.id);
+        return reorderedVersion ? { ...p, kanban_order: reorderedPeople.indexOf(reorderedVersion) } : p;
+      });
+      setInternalPeople(newInternalPeople);
+
+      const { error } = await supabase.rpc('update_person_kanban_order', { p_person_ids: reorderedPeople.map(p => p.id) });
+      if (error) {
+        toast.error(`Failed to reorder: ${error.message}`);
+        setInternalPeople(people); // Revert on error
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['people'] });
+      }
       return;
     }
 
+    // Logic for moving between columns
     const currentTags = person.tags || [];
     const destTag = tags.find(t => t.id === destContainerId);
     const otherTags = currentTags.filter(t => t.id !== sourceContainerId);
