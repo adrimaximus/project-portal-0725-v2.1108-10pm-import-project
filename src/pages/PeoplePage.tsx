@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { generateVibrantGradient, getAvatarUrl } from "@/lib/utils";
+import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import PersonFormDialog from "@/components/people/PersonFormDialog";
 import { Badge } from "@/components/ui/badge";
@@ -311,7 +311,7 @@ const PeoplePage = () => {
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
                                   <AvatarImage src={person.avatar_url} />
-                                  <AvatarFallback style={generateVibrantGradient(person.id)}>
+                                  <AvatarFallback style={generatePastelColor(person.id)}>
                                     <UserIcon className="h-5 w-5 text-white" />
                                   </AvatarFallback>
                                 </Avatar>

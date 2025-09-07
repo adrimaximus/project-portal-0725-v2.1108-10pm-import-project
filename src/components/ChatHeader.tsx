@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, MoreVertical, Trash2, UserX, Users, Settings } from "lucide-react";
 import StackedAvatar from "./StackedAvatar";
-import { getInitials, generateVibrantGradient } from "@/lib/utils";
+import { getInitials, generatePastelColor } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import GroupSettingsDialog from "./GroupSettingsDialog";
@@ -84,7 +84,7 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
         ) : (
           <Avatar className="h-10 w-10 border">
             <AvatarImage src={userAvatar} alt={userName} />
-            <AvatarFallback style={generateVibrantGradient(otherUser?.id || id)}>{getInitials(userName)}</AvatarFallback>
+            <AvatarFallback style={generatePastelColor(otherUser?.id || id)}>{getInitials(userName)}</AvatarFallback>
           </Avatar>
         )}
         <div className="ml-4 flex-1">

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { generateVibrantGradient, getPriorityStyles, getTaskStatusStyles, isOverdue, cn } from "@/lib/utils";
+import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -189,7 +189,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                             <TooltipTrigger>
                               <Avatar className="h-8 w-8 border-2 border-background">
                                 <AvatarImage src={user.avatar_url || undefined} />
-                                <AvatarFallback style={generateVibrantGradient(user.id)}>
+                                <AvatarFallback style={generatePastelColor(user.id)}>
                                   {getInitials(user)}
                                 </AvatarFallback>
                               </Avatar>
@@ -206,7 +206,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                             <TooltipTrigger>
                               <Avatar key={task.created_by.id} className="h-8 w-8 border-2 border-background opacity-50">
                                 <AvatarImage src={task.created_by.avatar_url || undefined} />
-                                <AvatarFallback style={generateVibrantGradient(task.created_by.id)}>
+                                <AvatarFallback style={generatePastelColor(task.created_by.id)}>
                                   {getInitials(task.created_by)}
                                 </AvatarFallback>
                               </Avatar>

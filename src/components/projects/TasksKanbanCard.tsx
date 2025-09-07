@@ -2,7 +2,7 @@ import { Task, TaskAssignee } from '@/types/task';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { generateVibrantGradient, getPriorityStyles, isOverdue, cn } from '@/lib/utils';
+import { generatePastelColor, getPriorityStyles, isOverdue, cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -148,7 +148,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
                     <TooltipTrigger>
                       <Avatar className="h-6 w-6 border-2 border-background">
                         <AvatarImage src={user.avatar_url || undefined} />
-                        <AvatarFallback style={generateVibrantGradient(user.id)}>
+                        <AvatarFallback style={generatePastelColor(user.id)}>
                           {getInitials(user)}
                         </AvatarFallback>
                       </Avatar>

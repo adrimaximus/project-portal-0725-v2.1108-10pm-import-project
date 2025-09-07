@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, MessageSquarePlus, MoreHorizontal, Trash2, Sparkles } from "lucide-react";
 import NewConversationDialog from "./NewConversationDialog";
-import { cn, getInitials, generateVibrantGradient } from "@/lib/utils";
+import { cn, getInitials, generatePastelColor } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
@@ -99,7 +99,7 @@ const ChatList = () => {
               >
                 <Avatar>
                   <AvatarImage src={c.userAvatar} />
-                  <AvatarFallback style={generateVibrantGradient(otherUser?.id || c.id)}>{getInitials(c.userName)}</AvatarFallback>
+                  <AvatarFallback style={generatePastelColor(otherUser?.id || c.id)}>{getInitials(c.userName)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
                   <p className="font-semibold truncate">{c.userName}</p>

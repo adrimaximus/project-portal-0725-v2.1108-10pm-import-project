@@ -2,7 +2,7 @@ import { Message, Collaborator, User } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn, generateVibrantGradient } from "@/lib/utils";
+import { cn, generatePastelColor } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
@@ -97,7 +97,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
               {!isCurrentUser && !isSameSenderAsPrevious && (
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={sender.avatar_url} />
-                  <AvatarFallback style={generateVibrantGradient(sender.id)}>{sender.initials}</AvatarFallback>
+                  <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
                 </Avatar>
               )}
               <div
@@ -194,7 +194,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
         <div className="flex items-end gap-2 justify-start mt-4">
           <Avatar className="h-8 w-8">
             <AvatarImage src={aiUser.avatar_url} />
-            <AvatarFallback style={generateVibrantGradient(aiUser.id)}>{aiUser.initials}</AvatarFallback>
+            <AvatarFallback style={generatePastelColor(aiUser.id)}>{aiUser.initials}</AvatarFallback>
           </Avatar>
           <div className="max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 bg-muted flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />

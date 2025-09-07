@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { formatInJakarta, generateVibrantGradient, getInitials, getAvatarUrl } from '@/lib/utils';
+import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl } from '@/lib/utils';
 import PersonFormDialog from '@/components/people/PersonFormDialog';
 import { Person, ContactProperty, User } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -169,7 +169,7 @@ const PersonProfilePage = () => {
               <CardContent className="pt-0 flex flex-col items-center text-center">
                 <Avatar className="h-24 w-24 mb-4">
                   <AvatarImage src={person.avatar_url} alt={person.full_name} />
-                  <AvatarFallback style={generateVibrantGradient(person.id)} className="text-3xl">
+                  <AvatarFallback style={generatePastelColor(person.id)} className="text-3xl">
                     <UserIcon className="h-10 w-10 text-white" />
                   </AvatarFallback>
                 </Avatar>

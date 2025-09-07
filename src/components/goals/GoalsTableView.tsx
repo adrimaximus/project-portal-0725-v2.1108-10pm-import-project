@@ -11,7 +11,7 @@ import GoalIcon from './GoalIcon';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '../ui/button';
-import { generateVibrantGradient } from '@/lib/utils';
+import { generatePastelColor } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -77,7 +77,7 @@ const GoalRow = ({ goal, onDeleteGoal }: { goal: Goal, onDeleteGoal: (goalId: st
                 <TooltipTrigger asChild>
                   <Avatar className="h-8 w-8 border-2 border-background">
                     <AvatarImage src={user.avatar_url} alt={user.name} />
-                    <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
+                    <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent>

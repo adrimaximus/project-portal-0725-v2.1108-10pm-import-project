@@ -5,7 +5,7 @@ import { Project } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatInJakarta, cn, generateVibrantGradient } from '@/lib/utils';
+import { formatInJakarta, cn, generatePastelColor } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { CheckCircle } from 'lucide-react';
 
@@ -103,7 +103,7 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
                 {project.assignedTo.slice(0, 3).map(user => (
                   <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
                     <AvatarImage src={user.avatar_url} />
-                    <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
+                    <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                   </Avatar>
                 ))}
               </div>

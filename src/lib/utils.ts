@@ -32,9 +32,9 @@ export const getAvatarUrl = (avatarUrl?: string | null, seed?: string | null): s
   return `https://api.dicebear.com/8.x/lorelei/svg?seed=${encodeURIComponent(finalSeed)}`;
 };
 
-export const generateVibrantGradient = (str: string): { background: string } => {
+export const generatePastelColor = (str: string): { backgroundColor: string; color: string } => {
   if (!str) {
-    return { background: 'linear-gradient(to bottom right, hsl(222, 47%, 11%), hsl(210, 40%, 98%))' };
+    return { backgroundColor: 'hsl(210, 40%, 96.1%)', color: 'hsl(215.4, 16.3%, 46.9%)' }; // muted background, muted foreground
   }
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -42,15 +42,14 @@ export const generateVibrantGradient = (str: string): { background: string } => 
     hash = hash & hash;
   }
   
-  const h1 = hash % 360;
-  const h2 = (h1 + 45) % 360;
-  const s = 75;
-  const l = 50;
+  const h = hash % 360;
+  const s = 75; // Saturation
+  const l = 85; // Lightness for pastel
 
-  const color1 = `hsl(${h1}, ${s}%, ${l}%)`;
-  const color2 = `hsl(${h2}, ${s}%, ${l-10}%)`;
+  const backgroundColor = `hsl(${h}, ${s}%, ${l}%)`;
+  const color = `hsl(${h}, ${s}%, ${l-40}%)`; // A darker color for the text/initials
 
-  return { background: `linear-gradient(to bottom right, ${color1}, ${color2})` };
+  return { backgroundColor, color };
 };
 
 export const getStatusStyles = (status: string) => {

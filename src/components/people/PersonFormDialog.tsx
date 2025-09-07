@@ -18,7 +18,7 @@ import PhoneNumberInput from '../PhoneNumberInput';
 import AntDatePicker from './AntDatePicker';
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { generateVibrantGradient } from '@/lib/utils';
+import { generatePastelColor } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Label } from '@/components/ui/label';
 
@@ -204,7 +204,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20">
                 <AvatarImage src={avatarPreview || undefined} />
-                <AvatarFallback style={generateVibrantGradient(person?.id || '')}>
+                <AvatarFallback style={generatePastelColor(person?.id || '')}>
                   <UserIcon className="h-8 w-8 text-white" />
                 </AvatarFallback>
               </Avatar>

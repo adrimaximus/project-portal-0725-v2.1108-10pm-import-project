@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Person } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn, generateVibrantGradient, formatInJakarta } from '@/lib/utils';
+import { cn, generatePastelColor, formatInJakarta } from '@/lib/utils';
 import { User as UserIcon, Mail, Phone, GitBranch, Cake, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -38,7 +38,7 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={person.avatar_url} />
-                <AvatarFallback style={generateVibrantGradient(person.id)}>
+                <AvatarFallback style={generatePastelColor(person.id)}>
                   <UserIcon className="h-5 w-5 text-white" />
                 </AvatarFallback>
               </Avatar>

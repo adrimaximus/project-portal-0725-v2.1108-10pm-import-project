@@ -10,7 +10,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { generateVibrantGradient } from "@/lib/utils";
+import { generatePastelColor } from "@/lib/utils";
 import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -158,7 +158,7 @@ const Profile = () => {
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
                 <AvatarImage src={avatarPreview || "https://github.com/shadcn.png"} alt={user.name} />
-                <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials || 'U'}</AvatarFallback>
+                <AvatarFallback style={generatePastelColor(user.id)}>{user.initials || 'U'}</AvatarFallback>
               </Avatar>
               <input
                 type="file"

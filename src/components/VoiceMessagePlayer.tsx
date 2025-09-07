@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { User } from '@/types';
-import { generateVibrantGradient } from '@/lib/utils';
+import { generatePastelColor } from '@/lib/utils';
 
 interface VoiceMessagePlayerProps {
   src: string;
@@ -137,7 +137,7 @@ const VoiceMessagePlayer = ({ src, sender, isCurrentUser }: VoiceMessagePlayerPr
       {!isCurrentUser && (
         <Avatar className="h-8 w-8 flex-shrink-0 ml-2">
           <AvatarImage src={sender.avatar_url} />
-          <AvatarFallback style={generateVibrantGradient(sender.id)}>{sender.initials}</AvatarFallback>
+          <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
         </Avatar>
       )}
     </div>

@@ -10,7 +10,7 @@ import { Button } from "../ui/button";
 import ChangeOwnerDialog from "./ChangeOwnerDialog";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { getInitials, generateVibrantGradient } from "@/lib/utils";
+import { getInitials, generatePastelColor } from "@/lib/utils";
 
 interface ProjectTeamCardProps {
   project: Project;
@@ -99,7 +99,7 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
                 <AvatarImage src={project.created_by.avatar_url} />
-                <AvatarFallback style={generateVibrantGradient(project.created_by.id)}>{project.created_by.initials}</AvatarFallback>
+                <AvatarFallback style={generatePastelColor(project.created_by.id)}>{project.created_by.initials}</AvatarFallback>
               </Avatar>
               <div>
                 <p className="text-sm font-medium">{project.created_by.name}</p>
@@ -126,7 +126,7 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
                     <div key={member.id} className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={member.avatar_url} />
-                        <AvatarFallback style={generateVibrantGradient(member.id)}>{member.initials}</AvatarFallback>
+                        <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="text-sm font-medium">{member.name}</p>

@@ -3,7 +3,7 @@ import { DndContext, MouseSensor, TouchSensor, useSensor, useSensors, DragOverla
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatInJakarta, generateVibrantGradient } from '@/lib/utils';
+import { formatInJakarta, generatePastelColor } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { CheckCircle } from 'lucide-react';
 import KanbanColumn from './KanbanColumn';
@@ -148,7 +148,7 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
                     {activeProject.assignedTo.slice(0, 3).map(user => (
                       <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
                         <AvatarImage src={user.avatar_url} />
-                        <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
+                        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                       </Avatar>
                     ))}
                   </div>

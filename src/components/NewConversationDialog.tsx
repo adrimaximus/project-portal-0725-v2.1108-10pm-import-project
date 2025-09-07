@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Collaborator } from "@/types";
 import { toast } from "sonner";
 import { Label } from "./ui/label";
-import { getInitials } from "@/lib/utils";
+import { getInitials, generatePastelColor } from "@/lib/utils";
 
 interface NewConversationDialogProps {
   open: boolean;
@@ -132,7 +132,7 @@ const NewConversationDialog = ({
                     <div className="relative">
                       <Avatar>
                         <AvatarImage src={collaborator.avatar_url} />
-                        <AvatarFallback>{collaborator.initials}</AvatarFallback>
+                        <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
                       </Avatar>
                       <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-background ${onlineUsers.has(collaborator.id) ? 'bg-green-500' : 'bg-slate-500'}`} />
                     </div>

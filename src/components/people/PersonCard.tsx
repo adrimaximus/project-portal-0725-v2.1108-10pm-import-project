@@ -3,7 +3,7 @@ import { Person } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User as UserIcon, Linkedin, Twitter, Instagram, Briefcase, Mail } from 'lucide-react';
-import { generateVibrantGradient, getInstagramUsername } from '@/lib/utils';
+import { generatePastelColor, getInstagramUsername } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import WhatsappIcon from '../icons/WhatsappIcon';
 
@@ -53,7 +53,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center" style={generateVibrantGradient(person.id)}>
+          <div className="w-full h-full flex items-center justify-center" style={generatePastelColor(person.id)}>
             <UserIcon className="h-16 w-16 text-white/50" />
           </div>
         )}

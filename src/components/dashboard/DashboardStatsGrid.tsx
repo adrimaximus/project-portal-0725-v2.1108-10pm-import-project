@@ -4,7 +4,7 @@ import StatCard from './StatCard';
 import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { generateVibrantGradient } from '@/lib/utils';
+import { generatePastelColor } from '@/lib/utils';
 
 interface DashboardStatsGridProps {
   projects: Project[];
@@ -25,7 +25,7 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
     <div className="flex items-center gap-2 sm:gap-4 pt-2">
       <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
         <AvatarImage src={user.avatar_url} alt={user.name} />
-        <AvatarFallback style={generateVibrantGradient(user.id)}>{user.initials}</AvatarFallback>
+        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
       </Avatar>
       <div>
         <div className="text-base sm:text-lg font-bold leading-tight">{user.name}</div>
