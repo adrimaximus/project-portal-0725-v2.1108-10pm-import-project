@@ -135,6 +135,21 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
                 </Tooltip>
               </TooltipProvider>
             )}
+            {task.attachments && task.attachments.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Paperclip className="h-3 w-3" />
+                      <span className="text-xs">{task.attachments.length}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{task.attachments.length} attachment(s)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             {task.due_date && (
               <div className={cn("text-xs text-muted-foreground", isOverdue(task.due_date) && "text-red-600 font-bold")}>
                 due {format(new Date(task.due_date), "MMM d")}

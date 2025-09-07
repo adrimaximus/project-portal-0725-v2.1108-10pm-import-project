@@ -112,6 +112,21 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                             </Tooltip>
                           </TooltipProvider>
                         )}
+                        {task.attachments && task.attachments.length > 0 && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Paperclip className="h-4 w-4" />
+                                  <span className="text-xs">{task.attachments.length}</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{task.attachments.length} attachment(s)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                       {task.description && <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>}
                       <div className="flex gap-1 flex-wrap mt-2">

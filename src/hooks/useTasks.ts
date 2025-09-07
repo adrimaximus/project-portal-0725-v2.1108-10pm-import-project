@@ -60,6 +60,7 @@ export function useTasks(options: UseTasksOptions = {}) {
       originTicketId: task.origin_ticket_id,
       attachment_url: task.attachment_url,
       attachment_name: task.attachment_name,
+      attachments: task.attachments,
     }));
     
     return formattedTasks || [];
