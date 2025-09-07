@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { useFeatures } from "@/contexts/FeaturesContext";
+import TagsCard from "@/components/settings/TagsCard";
 
 const WorkspaceSettingsCard = () => {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ const SettingsPage = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Available to all members */}
           <NavigationCard />
+          <TagsCard />
           
           {/* Conditionally available */}
           {isFeatureEnabled('integrations') && hasPermission('settings:manage_integrations') && <IntegrationCard />}

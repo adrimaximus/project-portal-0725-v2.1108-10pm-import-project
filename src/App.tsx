@@ -45,6 +45,7 @@ const WorkspaceSettingsPage = lazy(() => import("./pages/WorkspaceSettingsPage")
 const ContactPropertiesPage = lazy(() => import("./pages/ContactPropertiesPage"));
 const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
 const CompaniesPage = lazy(() => import("./pages/CompaniesPage"));
+const TagsSettingsPage = lazy(() => import("./pages/TagsSettingsPage"));
 
 function App() {
   return (
@@ -88,6 +89,7 @@ function App() {
             <Route path="/settings/integrations/slack" element={<PermissionGuard permission="settings:manage_integrations"><SlackPage /></PermissionGuard>} />
             <Route path="/settings/integrations/google-drive" element={<PermissionGuard permission="settings:manage_integrations"><GoogleDrivePage /></PermissionGuard>} />
             <Route path="/settings/navigation" element={<PermissionGuard permission="module:settings"><NavigationSettingsPage /></PermissionGuard>} />
+            <Route path="/settings/tags" element={<PermissionGuard permission="module:settings"><TagsSettingsPage /></PermissionGuard>} />
 
             {/* Routes accessible to all authenticated users */}
             <Route path="/notifications" element={<NotificationsPage />} />
