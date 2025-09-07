@@ -254,6 +254,9 @@ const PeoplePage = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => navigate('/settings/tags')}>
+                    Manage Tags
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => navigate('/settings/people-properties')}>
                     Manage Properties
                   </DropdownMenuItem>
