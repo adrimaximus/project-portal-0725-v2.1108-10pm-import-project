@@ -1,43 +1,40 @@
-import { Collaborator } from './user';
+import { Tag } from './tag';
 
-export type GoalType = 'frequency' | 'quantity' | 'value';
-export type GoalPeriod = 'Weekly' | 'Monthly';
+export interface UserProfile {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  initials: string;
+  email?: string;
+}
 
 export interface GoalCompletion {
   id: string;
   date: string;
   value: number;
-  notes?: string;
+  notes: string | null;
   userId: string;
-}
-
-export interface Tag {
-  id: string;
-  name: string;
-  color: string;
-  user_id?: string;
-  isNew?: boolean;
 }
 
 export interface Goal {
   id: string;
   user_id: string;
   title: string;
-  description: string;
+  description: string | null;
   icon: string;
-  icon_url?: string;
+  icon_url: string | null;
   color: string;
-  type: GoalType;
-  target_quantity?: number;
-  target_value?: number;
-  frequency: 'Daily' | 'Weekly';
-  target_period?: GoalPeriod;
-  unit?: string;
-  specific_days?: string[];
+  type: string;
+  target_quantity: number | null;
+  target_value: number | null;
+  frequency: string | null;
+  target_period: string | null;
+  unit: string | null;
+  specific_days: string[] | null;
   created_at: string;
   updated_at: string;
   slug: string;
-  tags: Tag[];
-  collaborators: Collaborator[];
+  tags: Tag[] | null;
+  collaborators: UserProfile[] | null;
   completions: GoalCompletion[];
 }

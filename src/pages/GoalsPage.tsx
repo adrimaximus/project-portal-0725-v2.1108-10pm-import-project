@@ -1,190 +1,172 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import PortalLayout from '@/components/PortalLayout';
-import { Button } from '@/components/ui/button';
-import { Plus, LayoutGrid, Table as TableIcon } from 'lucide-react';
-import { Goal } from '@/types';
-import GoalFormDialog from '@/components/goals/GoalFormDialog';
-import GoalCard from '@/components/goals/GoalCard';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import GoalsTableView from '@/components/goals/GoalsTableView';
-import { useQueryClient } from '@tanstack/react-query';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Goal } from "@/types/goal";
+import PortalLayout from "@/components/PortalLayout";
+import { Button } from "@/components/ui/button";
+import { PlusCircle, Loader2 } from "lucide-react";
+import GoalCard from "@/components/goals/GoalCard";
+import GoalFormModal from "@/components/goals/GoalFormModal";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const fetchGoals = async (): Promise<Goal[]> => {
+  const { data, error } = await supabase.rpc('get_user_goals');
+  if (error) throw new Error(error.message);
+  return data as Goal[];
+};
 
 const GoalsPage = () => {
-  const [isNewGoalDialogOpen, setIsNewGoalDialogOpen] = useState(false);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
-    const savedView = localStorage.getItem('goals_view_mode') as 'card' | 'table';
-    return savedView || 'card';
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
+
+  const { data: goals, isLoading } = useQuery<Goal[]>({
+    queryKey: ['goals'],
+    queryFn: fetchGoals,
   });
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Goal | null; direction: 'ascending' | 'descending' }>({ key: 'title', direction: 'ascending' });
 
-  useEffect(() => {
-    localStorage.setItem('goals_view_mode', viewMode);
-  }, [viewMode]);
-
-  const fetchGoals = useCallback(async () => {
-    if (!user) return;
-    const { data, error } = await supabase.rpc('get_user_goals');
-    if (error) {
-      toast.error('Failed to fetch goals.');
-      console.error(error);
-    } else {
-      setGoals(data || []);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchGoals();
-  }, [fetchGoals]);
-
-  const handleDeleteGoal = async (goalId: string) => {
-    const { error } = await supabase.from('goals').delete().eq('id', goalId);
-    if (error) {
-      toast.error("Failed to delete goal.");
-    } else {
+  const deleteMutation = useMutation({
+    mutationFn: async (goalId: string) => {
+      const { error } = await supabase.from('goals').delete().eq('id', goalId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
       toast.success("Goal deleted successfully.");
-      setGoals(prevGoals => prevGoals.filter(g => g.id !== goalId));
       queryClient.invalidateQueries({ queryKey: ['goals'] });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to delete goal.", { description: error.message });
+    },
+    onSettled: () => {
+      setIsDeleteDialogOpen(false);
+      setGoalToDelete(null);
+    }
+  });
+
+  const handleCreateNew = () => {
+    setSelectedGoal(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditGoal = (goal: Goal) => {
+    setSelectedGoal(goal);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteGoal = (goalId: string) => {
+    setGoalToDelete(goalId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (goalToDelete) {
+      deleteMutation.mutate(goalToDelete);
     }
   };
 
-  const requestSort = (key: keyof Goal) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const sortedGoals = useMemo(() => {
-    let sortableItems = [...goals];
-    if (sortConfig.key !== null) {
-      sortableItems.sort((a, b) => {
-        const aValue = a[sortConfig.key!];
-        const bValue = b[sortConfig.key!];
-
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-
-        if (String(aValue).toLowerCase() < String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (String(aValue).toLowerCase() > String(bValue).toLowerCase()) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [goals, sortConfig]);
-
-  const { specialGoals, otherGoals } = useMemo(() => {
-    const specialTags = ['office', '7inked', 'betterworks.id'];
-    const sGoals: Goal[] = [];
-    const oGoals: Goal[] = [];
-
-    if (sortedGoals) {
-      sortedGoals.forEach(goal => {
-        const hasSpecialTag = goal.tags && goal.tags.some(tag => specialTags.includes(tag.name.toLowerCase()));
-        if (hasSpecialTag) {
-          sGoals.push(goal);
-        } else {
-          oGoals.push(goal);
-        }
-      });
-    }
-    return { specialGoals: sGoals, otherGoals: oGoals };
-  }, [sortedGoals]);
-
-  const handleSuccess = (newGoal: Goal) => {
-    setIsNewGoalDialogOpen(false);
-    navigate(`/goals/${newGoal.slug}`);
-    fetchGoals();
-  };
-
-  const handleViewChange = (value: 'card' | 'table' | null) => {
-    if (value) {
-      setViewMode(value);
-    }
-  };
+  const specialGoals = goals?.filter(g => ['Read a book', 'Learn a new skill'].includes(g.title)) || [];
+  const otherGoals = goals?.filter(g => !['Read a book', 'Learn a new skill'].includes(g.title)) || [];
 
   return (
     <PortalLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">My Goals</h1>
-        <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <ToggleGroup type="single" value={viewMode} onValueChange={handleViewChange}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="card" aria-label="Card view">
-                    <LayoutGrid className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Card View</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ToggleGroupItem value="table" aria-label="Table view">
-                    <TableIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </TooltipTrigger>
-                <TooltipContent><p>Table View</p></TooltipContent>
-              </Tooltip>
-            </ToggleGroup>
-          </TooltipProvider>
-          <Button onClick={() => setIsNewGoalDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> New Goal
-          </Button>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">My Goals</h1>
+          <p className="text-muted-foreground">Track your personal and professional objectives.</p>
         </div>
+        <Button onClick={handleCreateNew}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          New Goal
+        </Button>
       </div>
 
-      {viewMode === 'card' ? (
-        <>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-64 w-full" />)}
+        </div>
+      ) : (
+        <div className="space-y-8">
           {specialGoals.length > 0 && (
-            <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4 border-b pb-2">Team Goals</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Suggestions</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {specialGoals.map(goal => (
-                  <GoalCard key={goal.id} goal={goal} />
+                  <GoalCard 
+                    key={goal.id} 
+                    goal={goal} 
+                    onEdit={handleEditGoal}
+                    onDelete={handleDeleteGoal}
+                  />
                 ))}
               </div>
             </div>
           )}
+
           {otherGoals.length > 0 && (
             <div>
-              <h2 className="text-2xl font-semibold mb-4 border-b pb-2">Personal Goals</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <h2 className="text-xl font-semibold mb-4">Your Goals</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {otherGoals.map(goal => (
-                  <GoalCard key={goal.id} goal={goal} />
+                  <GoalCard 
+                    key={goal.id} 
+                    goal={goal} 
+                    onEdit={handleEditGoal}
+                    onDelete={handleDeleteGoal}
+                  />
                 ))}
               </div>
             </div>
           )}
-          {goals.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>You haven't created any goals yet.</p>
-              <p>Click "New Goal" to get started!</p>
+
+          {(!goals || goals.length === 0) && (
+            <div className="text-center py-16 border-2 border-dashed rounded-lg">
+              <h3 className="text-lg font-medium">No goals yet!</h3>
+              <p className="text-muted-foreground mt-2">Start tracking your progress by creating a new goal.</p>
+              <Button onClick={handleCreateNew} className="mt-4">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create Your First Goal
+              </Button>
             </div>
           )}
-        </>
-      ) : (
-        <GoalsTableView goals={sortedGoals} sortConfig={sortConfig} requestSort={requestSort} onDeleteGoal={handleDeleteGoal} />
+        </div>
       )}
 
-      <GoalFormDialog
-        open={isNewGoalDialogOpen}
-        onOpenChange={setIsNewGoalDialogOpen}
-        onSuccess={handleSuccess}
+      <GoalFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        goal={selectedGoal}
       />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your goal and all of its data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PortalLayout>
   );
 };
