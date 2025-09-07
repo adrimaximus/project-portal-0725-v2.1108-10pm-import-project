@@ -1,14 +1,45 @@
+import { useState } from 'react';
 import { TaskAttachment } from "@/types/task";
 import FileIcon from "../FileIcon";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "../ui/button";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
+import { toast } from 'sonner';
 
 interface TaskAttachmentListProps {
   attachments: TaskAttachment[];
 }
 
 const TaskAttachmentList = ({ attachments }: TaskAttachmentListProps) => {
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const handleDownload = async (e: React.MouseEvent, file: TaskAttachment) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDownloadingId(file.id);
+    try {
+      const response = await fetch(file.file_url);
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.statusText}`);
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = file.file_name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error: any) {
+      console.error("Download failed:", error);
+      toast.error("Download failed", { description: error.message });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   return (
     <>
       <DialogHeader>
@@ -26,10 +57,18 @@ const TaskAttachmentList = ({ attachments }: TaskAttachmentListProps) => {
                 </p>
               </div>
             </div>
-            <Button asChild variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-              <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 flex-shrink-0"
+              onClick={(e) => handleDownload(e, file)}
+              disabled={downloadingId === file.id}
+            >
+              {downloadingId === file.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
                 <Download className="h-4 w-4" />
-              </a>
+              )}
             </Button>
           </li>
         ))}
