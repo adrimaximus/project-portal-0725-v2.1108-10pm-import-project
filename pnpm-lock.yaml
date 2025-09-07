@@ -152,9 +152,6 @@ importers:
       '@types/react-mentions':
         specifier: ^4.4.1
         version: 4.4.1
-      '@types/react-select':
-        specifier: ^5.0.1
-        version: 5.0.1(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@types/recharts':
         specifier: ^2.0.1
         version: 2.0.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -254,9 +251,6 @@ importers:
       react-router-dom:
         specifier: ^6.26.2
         version: 6.30.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react-select:
-        specifier: ^5.10.2
-        version: 5.10.2(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       recharts:
         specifier: ^2.12.7
         version: 2.15.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -774,8 +768,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.30':
     resolution: {integrity: sha512-GQ7Nw5G2lTu/BtHTKfXhKHok2WGetd4XYcVKGx00SjAk8GMwgJM3zr6zORiPGuOE+/vkc90KtTosSSvaCjKb2Q==}
 
-  '@maxim_mazurok/gapi.client.calendar-v3@0.1.20250901':
-    resolution: {integrity: sha512-zcedmJhpVLmnUqoROC7/eRsJw1gO5zNTb0AAbbIESX8Cus1YETfdUTZVEQ2KxOb91dEwRHG6WcmxnyhRjUUuJA==}
+  '@maxim_mazurok/gapi.client.calendar-v3@0.1.20250819':
+    resolution: {integrity: sha512-I3mU0Z5q3wwgYCtv+PmFD3nF29TsZqUxtBgMVzOfEIdC2aII5J/blttVyZYN43lgbMyJON44uLQYHjvoFlWVMA==}
 
   '@maxim_mazurok/gapi.client.discovery-v1@0.4.20200806':
     resolution: {integrity: sha512-Jeo/KZqK39DI6ExXHcJ4lqnn1O/wEqboQ6eQ8WnNpu5eJ7wUnX/C5KazOgs1aRhnIB/dVzDe8wm62nmtkMIoaw==}
@@ -1987,10 +1981,6 @@ packages:
 
   '@types/react-mentions@4.4.1':
     resolution: {integrity: sha512-65QdcZYkGe2I4GnOLY2OhlXCGz/Csd8NhytwE5r59CoFeYafMltAE/WqFB/Y6SoPU8LvF7EyUrq6Rxrf0Kzxkg==}
-
-  '@types/react-select@5.0.1':
-    resolution: {integrity: sha512-h5Im0AP0dr4AVeHtrcvQrLV+gmPa7SA0AGdxl2jOhtwiE6KgXBFSogWw8az32/nusE6AQHlCOHQWjP1S/+oMWA==}
-    deprecated: This is a stub types definition. react-select provides its own type definitions, so you do not need this installed.
 
   '@types/react-transition-group@4.4.12':
     resolution: {integrity: sha512-8TV6R3h2j7a91c+1DXdJi3Syo69zzIZbz7Lg5tORM5LEJG7X/E6a1V3drRyBRZq7/utz7A+c4OgYLiLcYGHG6w==}
@@ -4160,7 +4150,7 @@ snapshots:
   '@babel/helper-module-imports@7.27.1':
     dependencies:
       '@babel/traverse': 7.28.3
-      '@babel/types': 7.28.2
+      '@babel/types': 7.27.6
     transitivePeerDependencies:
       - supports-color
 
@@ -4514,7 +4504,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@maxim_mazurok/gapi.client.calendar-v3@0.1.20250901':
+  '@maxim_mazurok/gapi.client.calendar-v3@0.1.20250819':
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -5709,7 +5699,7 @@ snapshots:
 
   '@types/gapi.client.calendar@3.0.12':
     dependencies:
-      '@maxim_mazurok/gapi.client.calendar-v3': 0.1.20250901
+      '@maxim_mazurok/gapi.client.calendar-v3': 0.1.20250819
 
   '@types/gapi.client.discovery-v1@0.0.4':
     dependencies:
@@ -5775,15 +5765,6 @@ snapshots:
   '@types/react-mentions@4.4.1':
     dependencies:
       '@types/react': 18.3.20
-
-  '@types/react-select@5.0.1(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      react-select: 5.10.2(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-    transitivePeerDependencies:
-      - '@types/react'
-      - react
-      - react-dom
-      - supports-color
 
   '@types/react-transition-group@4.4.12(@types/react@18.3.20)':
     dependencies:
