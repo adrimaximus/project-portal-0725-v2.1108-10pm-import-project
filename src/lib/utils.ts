@@ -3,6 +3,25 @@ import { twMerge } from "tailwind-merge"
 import { formatInTimeZone } from 'date-fns-tz'
 import { id } from 'date-fns/locale'
 
+const pastelColors = [
+  'a8e6cf', 'dcedc1', 'ffd3b6', 'ffaaa5', 'ff8b94',
+  'bde0fe', 'a2d2ff', 'cdb4db', 'ffc8dd', 'ffafcc',
+  'b2e2f2', 'f1cbff', 'f9d5e5', 'fff2cc', 'd4a5a5'
+];
+
+const getConsistentPastelColor = (str: string): string => {
+  if (!str) {
+    return pastelColors[0];
+  }
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash;
+  }
+  const index = Math.abs(hash % pastelColors.length);
+  return pastelColors[index];
+};
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
@@ -29,27 +48,28 @@ export const getAvatarUrl = (avatarUrl?: string | null, seed?: string | null): s
     return avatarUrl;
   }
   const finalSeed = seed || 'default-avatar';
-  return `https://api.dicebear.com/8.x/lorelei/svg?seed=${encodeURIComponent(finalSeed)}`;
+  const bgColor = getConsistentPastelColor(finalSeed);
+  return `https://api.dicebear.com/8.x/lorelei/svg?seed=${encodeURIComponent(finalSeed)}&backgroundColor=${bgColor}`;
 };
 
 export const generatePastelColor = (str: string): { backgroundColor: string; color: string } => {
   if (!str) {
-    return { backgroundColor: 'hsl(210, 40%, 96.1%)', color: 'hsl(215.4, 16.3%, 46.9%)' }; // muted background, muted foreground
+    return { backgroundColor: '#e2e8f0', color: '#475569' }; // slate-200, slate-600
   }
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    hash = hash & hash;
-  }
+  const hexBg = getConsistentPastelColor(str);
   
-  const h = hash % 360;
-  const s = 75; // Saturation
-  const l = 85; // Lightness for pastel
+  let r = parseInt(hexBg.substring(0, 2), 16);
+  let g = parseInt(hexBg.substring(2, 4), 16);
+  let b = parseInt(hexBg.substring(4, 6), 16);
 
-  const backgroundColor = `hsl(${h}, ${s}%, ${l}%)`;
-  const color = `hsl(${h}, ${s}%, ${l-40}%)`; // A darker color for the text/initials
+  // Darken the color for text
+  r = Math.max(0, r - 100);
+  g = Math.max(0, g - 100);
+  b = Math.max(0, b - 100);
 
-  return { backgroundColor, color };
+  const toHex = (c: number) => c.toString(16).padStart(2, '0');
+
+  return { backgroundColor: `#${hexBg}`, color: `#${toHex(r)}${toHex(g)}${toHex(b)}` };
 };
 
 export const getStatusStyles = (status: string) => {
