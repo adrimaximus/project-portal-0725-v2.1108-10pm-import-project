@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User, SupabaseSession, SupabaseUser, Collaborator } from '@/types';
 import { toast } from 'sonner';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface ProfileWithPermissions {
@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: profile.id,
           email: supabaseUser.email,
           name: fullName || supabaseUser.email || 'No name',
-          avatar_url: profile.avatar_url || undefined,
+          avatar_url: getAvatarUrl(profile.avatar_url, profile.id),
           initials: getInitials(fullName, supabaseUser.email) || 'NN',
           first_name: profile.first_name,
           last_name: profile.last_name,
@@ -272,7 +272,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (id !== user.id) {
           const presences = newState[id];
           if (presences && presences.length > 0 && presences[0].user) {
-            collaborators.push({ ...presences[0].user, online: true });
+            const collaboratorUser = presences[0].user;
+            collaborators.push({ 
+              ...collaboratorUser, 
+              avatar_url: getAvatarUrl(collaboratorUser.avatar_url, collaboratorUser.id),
+              online: true 
+            });
           }
         }
       }

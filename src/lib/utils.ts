@@ -24,6 +24,14 @@ export const getInitials = (name: string = "", email?: string): string => {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 };
 
+export const getAvatarUrl = (avatarUrl?: string | null, seed?: string | null): string => {
+  if (avatarUrl) {
+    return avatarUrl;
+  }
+  const finalSeed = seed || 'default-avatar';
+  return `https://api.dicebear.com/8.x/lorelei/svg?seed=${encodeURIComponent(finalSeed)}`;
+};
+
 export const generateVibrantGradient = (str: string): { background: string } => {
   if (!str) {
     return { background: 'linear-gradient(to bottom right, hsl(222, 47%, 11%), hsl(210, 40%, 98%))' };

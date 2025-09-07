@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { formatInJakarta, generateVibrantGradient, getInitials } from '@/lib/utils';
+import { formatInJakarta, generateVibrantGradient, getInitials, getAvatarUrl } from '@/lib/utils';
 import PersonFormDialog from '@/components/people/PersonFormDialog';
 import { Person, ContactProperty, User } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -48,7 +48,7 @@ const fetchUserProfile = async (userId: string): Promise<User | null> => {
     id: data.id,
     name: fullName || data.email,
     email: data.email,
-    avatar_url: data.avatar_url,
+    avatar_url: getAvatarUrl(data.avatar_url, data.id),
     initials: getInitials(fullName, data.email) || 'NN',
     role: data.role,
   };

@@ -1,17 +1,19 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Conversation, Message, Attachment } from '@/types';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 
 const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
   id: c.conversation_id,
   userName: c.conversation_name || 'Chat',
-  userAvatar: c.conversation_avatar,
+  userAvatar: getAvatarUrl(c.conversation_avatar, c.other_user_id || c.conversation_id),
   lastMessage: c.last_message_content || "No messages yet.",
   lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
   unreadCount: 0,
   isGroup: c.is_group,
   members: (c.participants || []).map((p: any) => ({
-    id: p.id, name: p.name, avatar_url: p.avatar_url, initials: p.initials,
+    id: p.id, name: p.name, 
+    avatar_url: getAvatarUrl(p.avatar_url, p.id), 
+    initials: p.initials,
   })),
   created_by: c.created_by,
 });
@@ -44,7 +46,7 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
       sender: {
         id: m.sender_id,
         name: senderName || m.sender_email,
-        avatar_url: m.sender_avatar_url,
+        avatar_url: getAvatarUrl(m.sender_avatar_url, m.sender_id),
         initials: getInitials(senderName, m.sender_email) || 'NN',
         email: m.sender_email,
       },

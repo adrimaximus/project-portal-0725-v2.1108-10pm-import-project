@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Project, User, Tag, Person } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import PortalLayout from "@/components/PortalLayout";
@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { generateVibrantGradient } from "@/lib/utils";
+import { generateVibrantGradient, getAvatarUrl } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import PersonFormDialog from "@/components/people/PersonFormDialog";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,6 @@ import PeopleGridView from "@/components/people/PeopleGridView";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
 import MergeDialog from "@/components/people/MergeDialog";
-import React from "react";
 
 const PeoplePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,7 +51,10 @@ const PeoplePage = () => {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_people_with_details');
       if (error) throw error;
-      return data as Person[];
+      return (data as Person[]).map(person => ({
+        ...person,
+        avatar_url: getAvatarUrl(person.avatar_url, person.id)
+      }));
     }
   });
 

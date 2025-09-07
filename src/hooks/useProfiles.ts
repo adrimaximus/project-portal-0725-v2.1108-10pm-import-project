@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/types/user';
-import { getInitials } from '@/lib/utils';
+import { getInitials, getAvatarUrl } from '@/lib/utils';
 
 const fetchProfiles = async (): Promise<Profile[]> => {
   const { data, error } = await supabase.from('profiles').select('*');
@@ -12,7 +12,7 @@ const fetchProfiles = async (): Promise<Profile[]> => {
       id: profile.id,
       name: fullName || profile.email || 'No name',
       email: profile.email,
-      avatar_url: profile.avatar_url,
+      avatar_url: getAvatarUrl(profile.avatar_url, profile.id),
       role: profile.role,
       status: profile.status,
       initials: getInitials(fullName, profile.email) || 'NN',

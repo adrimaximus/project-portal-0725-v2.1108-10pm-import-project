@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Person } from '@/types';
+import { getAvatarUrl } from '@/lib/utils';
 
 const fetchPerson = async (id: string): Promise<Person | null> => {
   const { data, error } = await supabase
@@ -14,7 +15,11 @@ const fetchPerson = async (id: string): Promise<Person | null> => {
     console.error("Error fetching person:", error);
     throw new Error(error.message);
   }
-  return data as Person | null;
+  if (!data) return null;
+
+  const personData = data as Person;
+  personData.avatar_url = getAvatarUrl(personData.avatar_url, personData.id);
+  return personData;
 };
 
 export const usePerson = (id: string) => {
