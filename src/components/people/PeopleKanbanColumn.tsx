@@ -42,7 +42,7 @@ const PeopleKanbanColumn = ({ tag, people, dragHappened, onEditPerson, onDeleteP
 
         {/* Content */}
         {isCollapsed ? (
-          <div className="flex-grow min-h-0 flex items-center justify-center cursor-pointer" onClick={() => onToggleCollapse(tag.id)}>
+          <div className="flex-grow min-h-0 flex items-center justify-center cursor-pointer p-3" onClick={() => onToggleCollapse(tag.id)}>
             <div className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap flex items-center gap-2 text-sm font-medium">
               <span className="truncate">{tag.name}</span>
               <Badge variant="secondary">{people.length}</Badge>
