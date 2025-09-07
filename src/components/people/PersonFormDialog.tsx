@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Person, Project, Tag, ContactProperty } from '@/types';
+import { Person, Project, Tag, ContactProperty, Company } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
 import PhoneNumberInput from '../PhoneNumberInput';
 import AntDatePicker from './AntDatePicker';
@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { generatePastelColor } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -54,6 +55,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
   const [isSaving, setIsSaving] = useState(false);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [customProperties, setCustomProperties] = useState<ContactProperty[]>([]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -74,6 +76,9 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
 
       const { data: tagsData } = await supabase.from('tags').select('id, name, color');
       if (tagsData) setAllTags(tagsData);
+
+      const { data: companiesData } = await supabase.from('companies').select('id, name');
+      if (companiesData) setAllCompanies(companiesData as any);
 
       const { data: customPropsData } = await supabase.from('contact_properties').select('*').eq('is_default', false);
       if (customPropsData) setCustomProperties(customPropsData);
@@ -264,9 +269,30 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                 <FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
-            <FormField control={form.control} name="company" render={({ field }) => (
-              <FormItem><FormLabel>Company</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="company"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a company" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {allCompanies.map((company) => (
+                        <SelectItem key={company.id} value={company.name}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="linkedin" render={({ field }) => (
                 <FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
