@@ -37,6 +37,28 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const getTaskTitle = (type: string) => {
+    switch (type) {
+      case 'bug':
+        return 'Bug Report';
+      case 'suggestion':
+        return 'Idea / Suggestion';
+      default:
+        return 'Support: Other';
+    }
+  };
+
+  const getPlaceholder = (type: string) => {
+    switch (type) {
+      case 'bug':
+        return "What's the bug? What did you expect?";
+      case 'suggestion':
+        return "What's your idea or suggestion? How would it help?";
+      default:
+        return "Please describe the issue.";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -154,7 +176,7 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
         .insert({
           project_id: projectId,
           created_by: user.id,
-          title: reportType === 'bug' ? 'Bug Report' : 'Support: Other',
+          title: getTaskTitle(reportType),
           description: description,
           status: 'To do',
           priority: 'Normal',
@@ -228,6 +250,7 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="bug">Bug Report</SelectItem>
+                  <SelectItem value="suggestion">Idea / Suggestion</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
@@ -238,7 +261,7 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
               </Label>
               <Textarea
                 id="description"
-                placeholder={reportType === 'bug' ? "What's the bug? What did you expect?" : "Please describe the issue."}
+                placeholder={getPlaceholder(reportType)}
                 className="col-span-3"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
