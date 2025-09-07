@@ -5,7 +5,7 @@ import { Person } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, generatePastelColor, formatInJakarta } from '@/lib/utils';
-import { User as UserIcon, Mail, MoreHorizontal, Edit, Trash2, Instagram } from 'lucide-react';
+import { User as UserIcon, Mail, MoreHorizontal, Edit, Trash2, Instagram, Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -126,20 +126,31 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
           {/* Bottom Section */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              {companyLogoUrl ? (
-                <a
-                  href={googleMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="bg-background p-0.5 rounded-md shadow-sm flex items-center justify-center"
-                  title={`Get directions to ${person.company}`}
-                >
-                  <img src={companyLogoUrl} alt={`${person.company} logo`} className="h-8 w-8 object-contain rounded-sm" />
-                </a>
-              ) : <div className="h-8 w-8" /> /* Placeholder */}
+              <div className="flex items-center gap-2 min-w-0">
+                {companyLogoUrl ? (
+                  <a
+                    href={googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-background p-0.5 rounded-md shadow-sm flex items-center justify-center flex-shrink-0"
+                    title={`Get directions to ${person.company}`}
+                  >
+                    <img src={companyLogoUrl} alt={`${person.company} logo`} className="h-8 w-8 object-contain rounded-sm" />
+                  </a>
+                ) : person.company ? (
+                  <div className="h-8 w-8 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="h-8 w-8 flex-shrink-0" /> /* Placeholder */
+                )}
+                {person.company && (
+                  <span className="text-sm font-medium text-muted-foreground truncate">{person.company}</span>
+                )}
+              </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-shrink-0">
                 {emailToDisplay && (
                   <button onClick={(e) => handleCopyEmail(e, emailToDisplay)} className="text-muted-foreground hover:text-primary transition-colors" title="Copy email address">
                     <Mail className="h-4 w-4" />
