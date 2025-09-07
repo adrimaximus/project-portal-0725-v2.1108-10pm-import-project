@@ -99,7 +99,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="absolute -bottom-6 left-4 bg-background p-1 rounded-lg border flex items-center justify-center"
+              className="absolute -bottom-6 left-4 bg-background p-0.5 rounded-lg shadow-md flex items-center justify-center"
               title={`Get directions to ${person.company}`}
             >
               <img
@@ -109,7 +109,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
               />
             </a>
           ) : (
-            <div className="absolute -bottom-6 left-4 bg-background p-1 rounded-lg border flex items-center justify-center">
+            <div className="absolute -bottom-6 left-4 bg-background p-0.5 rounded-lg shadow-md flex items-center justify-center">
               <img
                 src={companyLogoUrl}
                 alt={`${person.company} logo`}
