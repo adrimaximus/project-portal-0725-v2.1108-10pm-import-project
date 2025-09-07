@@ -92,11 +92,11 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     }
     setColumnOrder(initialOrder);
 
-    const initialVisible = savedVisible && savedVisible.length > 0 ? savedVisible : ['uncategorized', ...allDbTagIds];
+    const initialVisible = savedVisible !== undefined ? savedVisible : ['uncategorized', ...allDbTagIds];
     setVisibleColumnIds(initialVisible);
     setCollapseOverrides(savedOverrides);
 
-  }, [tags, user?.people_kanban_settings]);
+  }, [tags, user]);
 
   const handleSettingsChange = (newOrder: string[], newVisible: string[]) => {
     setColumnOrder(newOrder);
