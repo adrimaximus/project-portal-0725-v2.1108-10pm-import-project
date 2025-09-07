@@ -131,11 +131,8 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
         )}
       </div>
       <div className="p-3 border-t bg-background flex-grow flex flex-col rounded-b-2xl">
-        <div className={`flex justify-between items-start ${companyLogoUrl ? 'pt-4' : ''}`}>
-          <div className="min-w-0">
-            <h3 className="font-bold text-sm truncate">{person.full_name}</h3>
-          </div>
-          <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+        <div className="flex justify-end mb-2">
+          <div className="flex items-center gap-3">
             {emailToDisplay && (
               <button
                 onClick={(e) => handleCopyEmail(e, emailToDisplay)}
@@ -156,6 +153,10 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
               </a>
             )}
           </div>
+        </div>
+        
+        <div className={`min-w-0 ${companyLogoUrl ? 'pt-4' : ''}`}>
+          <h3 className="font-bold text-sm truncate">{person.full_name}</h3>
         </div>
         
         {(person.company || person.job_title) && (
