@@ -24,7 +24,8 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const dragHappened = useRef(false);
   const [activePerson, setActivePerson] = useState<Person | null>(null);
-  const [collapsedColumns, setCollapsedColumns] = useState<string[]>([]);
+  
+  const [collapseOverrides, setCollapseOverrides] = useState<Record<string, boolean>>({});
   
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
@@ -44,7 +45,6 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     const initialVisible = savedVisible ? JSON.parse(savedVisible) : tags.map(t => t.id);
     setVisibleColumnIds(initialVisible);
 
-    // Ensure order contains all tags, even new ones
     const allTagIds = new Set(tags.map(t => t.id));
     const currentOrderIds = new Set(initialOrder);
     const newTags = Array.from(allTagIds).filter(id => !currentOrderIds.has(id));
@@ -62,19 +62,11 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   };
 
   useEffect(() => {
-    const savedState = localStorage.getItem('peopleKanbanCollapsedColumns');
+    const savedState = localStorage.getItem('peopleKanbanCollapseOverrides');
     if (savedState) {
-      setCollapsedColumns(JSON.parse(savedState));
+      setCollapseOverrides(JSON.parse(savedState));
     }
   }, []);
-
-  const toggleColumnCollapse = (columnId: string) => {
-    const newCollapsedColumns = collapsedColumns.includes(columnId)
-      ? collapsedColumns.filter(id => id !== columnId)
-      : [...collapsedColumns, columnId];
-    setCollapsedColumns(newCollapsedColumns);
-    localStorage.setItem('peopleKanbanCollapsedColumns', JSON.stringify(newCollapsedColumns));
-  };
 
   const columns = useMemo(() => {
     const uncategorizedCol = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
@@ -93,15 +85,20 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       groups[col.id] = [];
     });
     people.forEach(person => {
-      const tagId = person.tags?.[0]?.id || 'uncategorized';
-      if (groups[tagId]) {
-        groups[tagId].push(person);
-      } else {
-        groups['uncategorized'].push(person);
-      }
+      const tagId = person.tags?.[0]?.id;
+      const columnId = tagId && groups.hasOwnProperty(tagId) ? tagId : 'uncategorized';
+      groups[columnId].push(person);
     });
     return groups;
   }, [people, columns]);
+
+  const toggleColumnCollapse = (columnId: string) => {
+    const peopleInColumn = personGroups[columnId] || [];
+    const isCurrentlyCollapsed = collapseOverrides[columnId] ?? (peopleInColumn.length === 0);
+    const newOverrides = { ...collapseOverrides, [columnId]: !isCurrentlyCollapsed };
+    setCollapseOverrides(newOverrides);
+    localStorage.setItem('peopleKanbanCollapseOverrides', JSON.stringify(newOverrides));
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     dragHappened.current = true;
@@ -180,7 +177,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
         {columns.map(tag => {
           const peopleInColumn = personGroups[tag.id] || [];
-          const isColumnCollapsed = peopleInColumn.length === 0 && collapsedColumns.includes(tag.id);
+          const isColumnCollapsed = collapseOverrides[tag.id] ?? (peopleInColumn.length === 0);
 
           return (
             <PeopleKanbanColumn
