@@ -73,6 +73,8 @@ const PeoplePage = () => {
     }
   });
 
+  const kanbanTags = useMemo(() => tags.filter(t => t.type === 'kanban'), [tags]);
+
   const findAndAnalyzeDuplicates = async () => {
     setIsFindingDuplicates(true);
     toast.info("Searching for duplicates...");
@@ -403,7 +405,7 @@ const PeoplePage = () => {
               </Table>
             </div>
           ) : viewMode === 'kanban' ? (
-            <PeopleKanbanView ref={kanbanViewRef} people={filteredPeople} tags={tags} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
+            <PeopleKanbanView ref={kanbanViewRef} people={filteredPeople} tags={kanbanTags} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
           ) : viewMode === 'grid' ? (
             <div className="overflow-y-auto h-full">
               <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} onViewProfile={handleViewProfile} />

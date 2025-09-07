@@ -1,3 +1,5 @@
+import { Tag } from './goal';
+
 export interface Person {
   id: string;
   full_name: string;
@@ -14,7 +16,7 @@ export interface Person {
   created_at: string;
   updated_at: string;
   projects?: { id: string; name: string, slug: string }[];
-  tags?: { id: string; name: string; color: string }[];
+  tags?: Tag[];
   address?: { formatted_address?: string; } | null;
   avatar_url?: string;
   user_id?: string;

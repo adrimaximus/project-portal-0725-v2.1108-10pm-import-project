@@ -17,6 +17,7 @@ export interface Tag {
   color: string;
   user_id?: string;
   isNew?: boolean;
+  type?: 'kanban' | 'general';
 }
 
 export interface Goal {
