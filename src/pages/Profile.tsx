@@ -132,19 +132,24 @@ const Profile = () => {
     }
 
     setIsPasswordUpdating(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setIsPasswordUpdating(false);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
 
-    if (error) {
-      if (error.message.includes('New password should be different from the old password')) {
-        toast.info("Password baru sama dengan password lama. Tidak ada perubahan yang dilakukan.");
+      if (error) {
+        if (error.message.includes('New password should be different from the old password')) {
+          toast.info("Password baru sama dengan password lama. Tidak ada perubahan yang dilakukan.");
+        } else {
+          toast.error("Gagal memperbarui password.", { description: error.message });
+        }
       } else {
-        toast.error("Gagal memperbarui password.", { description: error.message });
+        toast.success("Password berhasil diperbarui.");
+        setNewPassword("");
+        setConfirmPassword("");
       }
-    } else {
-      toast.success("Password berhasil diperbarui.");
-      setNewPassword("");
-      setConfirmPassword("");
+    } catch (e: any) {
+      toast.error("Terjadi kesalahan tak terduga saat memperbarui password.", { description: e.message });
+    } finally {
+      setIsPasswordUpdating(false);
     }
   };
 
