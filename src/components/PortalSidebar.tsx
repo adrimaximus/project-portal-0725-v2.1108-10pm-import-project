@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, BookOpen, Folder as FolderIcon, ChevronUp } from "lucide-react";
+import { Bell, Home, Package, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, BookOpen, Folder as FolderIcon, ChevronDown } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "react-router-dom";
@@ -105,7 +105,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                       <div className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary group", isCollapsed && "justify-center")}>
                         <FolderIconComponent className="h-4 w-4" style={{ color: folder.color || undefined }} />
                         {!isCollapsed && <span className="flex-1 text-left">{folder.name}</span>}
-                        {!isCollapsed && <ChevronUp className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />}
+                        {!isCollapsed && <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />}
                       </div>
                     </CollapsibleTrigger>
                     <CollapsibleContent className={cn("space-y-1", !isCollapsed && "pl-4")}>
