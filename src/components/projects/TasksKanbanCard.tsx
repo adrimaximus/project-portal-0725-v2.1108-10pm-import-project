@@ -53,7 +53,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <a href={file.file_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+              <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center gap-1 text-muted-foreground hover:text-primary">
                   <Paperclip className="h-3 w-3" />
                   <span className="text-xs">1</span>
@@ -170,10 +170,8 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <a href={task.attachment_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-6 w-6">
-                        <Paperclip className="h-4 w-4" />
-                      </Button>
+                    <a href={task.attachment_url} download={task.attachment_name} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-block">
+                      <Paperclip className="h-4 w-4 text-muted-foreground hover:text-primary" />
                     </a>
                   </TooltipTrigger>
                   <TooltipContent>

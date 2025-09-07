@@ -66,7 +66,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <a href={file.file_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-block">
+              <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-block">
                 <Paperclip className="h-4 w-4 text-muted-foreground hover:text-primary" />
               </a>
             </TooltipTrigger>
@@ -146,7 +146,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <a href={task.attachment_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-block">
+                                <a href={task.attachment_url} download={task.attachment_name} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-block">
                                   <Paperclip className="h-4 w-4 text-muted-foreground hover:text-primary" />
                                 </a>
                               </TooltipTrigger>
