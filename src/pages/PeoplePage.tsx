@@ -239,10 +239,18 @@ const PeoplePage = () => {
                 />
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => navigate('/settings/people-properties')}>
-                <Settings className="mr-2 h-4 w-4" />
-                Manage Properties
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={() => navigate('/settings/people-properties')}>
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Manage Properties</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban' | 'grid')}} className="w-full sm:w-auto justify-center sm:justify-end">
                   <TooltipProvider>
                       <Tooltip>
