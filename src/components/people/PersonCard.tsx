@@ -94,7 +94,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
         )}
       </div>
       <div className="p-3 border-t bg-background flex-grow flex flex-col rounded-b-2xl">
-        <div className={`min-w-0 ${companyLogoUrl ? 'pt-6' : ''}`}>
+        <div className={`min-w-0 ${companyLogoUrl ? 'pt-4' : ''}`}>
           <h3 className="font-bold text-sm truncate">{person.full_name}</h3>
         </div>
         
