@@ -84,7 +84,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           )}
         </div>
         {companyLogoUrl && (
-          <div className="absolute -bottom-6 left-4 bg-background p-1 rounded-lg shadow-md flex items-center justify-center">
+          <div className="absolute -bottom-6 left-4 bg-background p-1 rounded-lg border flex items-center justify-center">
             <img
               src={companyLogoUrl}
               alt={`${person.company} logo`}
