@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Person } from '@/types';
 import PortalLayout from '@/components/PortalLayout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User as UserIcon, Loader2 } from 'lucide-react';
+import { User as UserIcon } from 'lucide-react';
 import { generatePastelColor } from '@/lib/utils';
+import FullPageSpinner from '@/components/FullPageSpinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
