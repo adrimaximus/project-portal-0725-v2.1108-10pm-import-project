@@ -66,10 +66,12 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
         {(person.company || person.job_title) && (
           <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
             <Briefcase className="h-3 w-3 flex-shrink-0 mt-0.5" />
-            <div className="flex flex-col">
-              <p>{person.job_title}</p>
-              {person.company && <p>at {person.company}</p>}
-            </div>
+            <p>
+              {person.job_title}
+              {person.job_title && person.company && ' at '}
+              {!person.job_title && person.company && 'at '}
+              {person.company}
+            </p>
           </div>
         )}
 
