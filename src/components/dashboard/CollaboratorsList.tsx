@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronsUpDown } from "lucide-react";
-import { generatePastelColor } from '@/lib/utils';
+import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 
 interface CollaboratorsListProps {
   projects: Project[];
@@ -63,7 +63,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                       <Tooltip key={c.id}>
                         <TooltipTrigger asChild>
                           <Avatar className="h-8 w-8 border-2 border-card">
-                            <AvatarImage src={c.avatar_url} alt={c.name} />
+                            <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
                             <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
                           </Avatar>
                         </TooltipTrigger>
@@ -94,7 +94,7 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                   <TableCell>
                                       <div className="flex items-center gap-3">
                                           <Avatar className="h-8 w-8">
-                                              <AvatarImage src={c.avatar_url} alt={c.name} />
+                                              <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
                                               <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
                                           </Avatar>
                                           <span className="font-medium whitespace-nowrap">{c.name}</span>
