@@ -4,7 +4,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, MoreHorizontal, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, MoreHorizontal, Trash2, Search } from "lucide-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import TagFormDialog from '@/components/settings/TagFormDialog';
+import { Input } from '@/components/ui/input';
 
 const TagsSettingsPage = () => {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ const TagsSettingsPage = () => {
   const [tagToEdit, setTagToEdit] = useState<Tag | null>(null);
   const [tagToDelete, setTagToDelete] = useState<Tag | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: tags = [], isLoading } = useQuery({
     queryKey: ['tags', user?.id],
@@ -33,6 +35,10 @@ const TagsSettingsPage = () => {
     },
     enabled: !!user,
   });
+
+  const filteredTags = tags.filter(tag =>
+    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleAddNew = () => {
     setTagToEdit(null);
@@ -96,8 +102,21 @@ const TagsSettingsPage = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Your Tags</CardTitle>
-            <CardDescription>These tags are available for you to use across the application.</CardDescription>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>Your Tags</CardTitle>
+                <CardDescription>These tags are available for you to use across the application.</CardDescription>
+              </div>
+              <div className="relative w-full max-w-xs">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search tags..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -111,9 +130,11 @@ const TagsSettingsPage = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow><TableCell colSpan={3} className="text-center">Loading tags...</TableCell></TableRow>
-                ) : tags.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center h-24">No tags created yet.</TableCell></TableRow>
-                ) : tags.map(tag => (
+                ) : filteredTags.length === 0 ? (
+                  <TableRow><TableCell colSpan={3} className="text-center h-24">
+                    {searchQuery ? `No tags found for "${searchQuery}"` : "No tags created yet."}
+                  </TableCell></TableRow>
+                ) : filteredTags.map(tag => (
                   <TableRow key={tag.id}>
                     <TableCell className="font-medium">{tag.name}</TableCell>
                     <TableCell>
