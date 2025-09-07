@@ -92,7 +92,9 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     people.forEach(person => {
       const tagId = person.tags?.[0]?.id;
       const columnId = tagId && groups.hasOwnProperty(tagId) ? tagId : 'uncategorized';
-      groups[columnId].push(person);
+      if (groups[columnId]) {
+        groups[columnId].push(person);
+      }
     });
     return groups;
   }, [people, columns]);
