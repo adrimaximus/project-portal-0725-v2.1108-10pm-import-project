@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { getProgress } from '@/lib/progress';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { generatePastelColor } from '@/lib/utils';
+import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 
 const GoalCard = ({ goal }: { goal: Goal }) => {
   const { percentage } = getProgress(goal);
@@ -58,7 +58,7 @@ const GoalCard = ({ goal }: { goal: Goal }) => {
                   <Tooltip key={user.id}>
                     <TooltipTrigger asChild>
                       <Avatar className="h-7 w-7 border-2 border-background">
-                        <AvatarImage src={user.avatar_url} alt={user.name} />
+                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
                         <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                       </Avatar>
                     </TooltipTrigger>
