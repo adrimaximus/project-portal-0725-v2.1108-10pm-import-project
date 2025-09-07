@@ -47,25 +47,6 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
     const attachments = task.attachments || [];
     if (attachments.length === 0) return null;
 
-    if (attachments.length === 1) {
-      const file = attachments[0];
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center gap-1 text-muted-foreground hover:text-primary">
-                  <Paperclip className="h-3 w-3" />
-                  <span className="text-xs">1</span>
-                </div>
-              </a>
-            </TooltipTrigger>
-            <TooltipContent><p>{file.file_name}</p></TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-
     return (
       <Dialog>
         <TooltipProvider>

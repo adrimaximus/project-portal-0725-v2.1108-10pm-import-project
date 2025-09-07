@@ -60,22 +60,6 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
     const attachments = task.attachments || [];
     if (attachments.length === 0) return null;
 
-    if (attachments.length === 1) {
-      const file = attachments[0];
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-block">
-                <Paperclip className="h-4 w-4 text-muted-foreground hover:text-primary" />
-              </a>
-            </TooltipTrigger>
-            <TooltipContent><p>{file.file_name}</p></TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-
     return (
       <Dialog>
         <TooltipProvider>
