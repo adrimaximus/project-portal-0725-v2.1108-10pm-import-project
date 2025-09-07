@@ -81,13 +81,20 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
         </div>
       </CardHeader>
       <CardContent className="p-3 pt-0">
-        {task.projects && task.projects.name !== 'General Tasks' && (
-          <div className="text-xs text-muted-foreground mb-2">
-            <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary truncate max-w-[120px]">
-              {task.projects.name}
-            </Link>
-          </div>
-        )}
+        <div className="space-y-2">
+          {task.projects && task.projects.name !== 'General Tasks' && (
+            <div className="text-xs text-muted-foreground">
+              <Link to={`/projects/${task.projects.slug}`} className="hover:underline text-primary truncate max-w-[120px]">
+                {task.projects.name}
+              </Link>
+            </div>
+          )}
+          {task.description && (
+            <p className="text-xs text-muted-foreground line-clamp-2" title={task.description}>
+              {task.description}
+            </p>
+          )}
+        </div>
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center -space-x-2">
             {(task.assignees && task.assignees.length > 0)
