@@ -24,6 +24,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const dragHappened = useRef(false);
   const [activePerson, setActivePerson] = useState<Person | null>(null);
+  const [internalPeople, setInternalPeople] = useState<Person[]>(people);
   
   const [collapseOverrides, setCollapseOverrides] = useState<Record<string, boolean>>({});
   
@@ -32,6 +33,10 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
+
+  useEffect(() => {
+    setInternalPeople(people);
+  }, [people]);
 
   useImperativeHandle(ref, () => ({
     openSettings: () => setIsSettingsOpen(true),
@@ -89,7 +94,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     columns.forEach(col => {
       groups[col.id] = [];
     });
-    people.forEach(person => {
+    internalPeople.forEach(person => {
       const tagId = person.tags?.[0]?.id;
       const columnId = tagId && groups.hasOwnProperty(tagId) ? tagId : 'uncategorized';
       if (groups[columnId]) {
@@ -97,7 +102,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       }
     });
     return groups;
-  }, [people, columns]);
+  }, [internalPeople, columns]);
 
   const toggleColumnCollapse = (columnId: string) => {
     const peopleInColumn = personGroups[columnId] || [];
@@ -110,7 +115,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const handleDragStart = (event: DragStartEvent) => {
     dragHappened.current = true;
     const { active } = event;
-    setActivePerson(people.find(p => p.id === active.id) || null);
+    setActivePerson(internalPeople.find(p => p.id === active.id) || null);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -123,7 +128,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     if (!over || active.id === over.id) return;
 
     const activeId = String(active.id);
-    const person = people.find(p => p.id === activeId);
+    const person = internalPeople.find(p => p.id === activeId);
     if (!person) return;
 
     const sourceContainerId = active.data.current?.sortable.containerId as string;
@@ -133,27 +138,20 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       return;
     }
 
-    // Calculate the new tags array
     const currentTags = person.tags || [];
     const destTag = tags.find(t => t.id === destContainerId);
-    
-    // Remove the old primary tag (the one corresponding to the source column)
     const otherTags = currentTags.filter(t => t.id !== sourceContainerId);
-    
-    // Prepend the new primary tag (if it's not 'uncategorized')
     const finalTags = destTag ? [destTag, ...otherTags] : otherTags;
 
-    // Optimistic Update
-    const originalPeople = [...people];
-    const updatedPeople = people.map(p => {
+    const originalPeople = [...internalPeople];
+    const updatedPeople = internalPeople.map(p => {
       if (p.id === activeId) {
         return { ...p, tags: finalTags };
       }
       return p;
     });
-    queryClient.setQueryData(['people'], updatedPeople);
+    setInternalPeople(updatedPeople);
 
-    // Persist changes to the database
     try {
       const { error } = await supabase.rpc('upsert_person_with_details', {
         p_id: person.id,
@@ -180,7 +178,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
     } catch (error: any) {
       toast.error(`Failed to update tags: ${error.message}`);
-      queryClient.setQueryData(['people'], originalPeople);
+      setInternalPeople(originalPeople);
     }
   };
 
