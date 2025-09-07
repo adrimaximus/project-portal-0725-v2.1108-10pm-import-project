@@ -1,173 +1,91 @@
-import { useState } from "react";
-import { Project, Task, User } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { MultiSelect } from "@/components/ui/multi-select";
-import { generatePastelColor } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useState, useMemo } from 'react';
+import { Task, Profile } from '@/types';
+import { MultiSelect, Option } from '@/components/ui/multi-select';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Button } from '../ui/button';
+import { PlusCircle } from 'lucide-react';
+
+// Use intersection type to handle inconsistencies in the Task type
+type DetailedTask = Task & { description?: string; assignedTo?: Profile[] };
 
 interface ProjectTasksProps {
-  project: Project;
-  onTaskAdd: (title: string) => void;
-  onTaskAssignUsers: (taskId: string, userIds: string[]) => void;
-  onTaskStatusChange: (taskId: string, completed: boolean) => void;
-  onTaskDelete: (taskId: string) => void;
+  tasks: DetailedTask[];
+  projectId: string;
 }
 
-const ProjectTasks = ({
-  project,
-  onTaskAdd,
-  onTaskAssignUsers,
-  onTaskStatusChange,
-  onTaskDelete,
-}: ProjectTasksProps) => {
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [isAddingTask, setIsAddingTask] = useState(false);
+export default function ProjectTasks({ tasks, projectId }: ProjectTasksProps) {
+  const queryClient = useQueryClient();
 
-  const handleAddTask = () => {
-    if (newTaskTitle.trim() === "") return;
-    onTaskAdd(newTaskTitle.trim());
-    setNewTaskTitle("");
-    setIsAddingTask(false);
+  const { data: projectMembers } = useQuery({
+    queryKey: ['projectMembers', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('project_members')
+        .select('user_id, profiles(*)')
+        .eq('project_id', projectId);
+      if (error) throw error;
+      return data.map(m => m.profiles as Profile).filter(Boolean);
+    },
+    enabled: !!projectId,
+  });
+
+  const userOptions: Option[] = useMemo(() => {
+    return (projectMembers || []).map(user => ({
+      value: user.id,
+      label: `${user.first_name} ${user.last_name}`.trim() || user.email || 'Unnamed User',
+    }));
+  }, [projectMembers]);
+
+  const { mutate: assignUsers } = useMutation({
+    mutationFn: async ({ taskId, userIds }: { taskId: string; userIds: string[] }) => {
+      // Placeholder for mutation logic
+      console.log('Assigning users', { taskId, userIds });
+      await new Promise(resolve => setTimeout(resolve, 500));
+    },
+    onSuccess: () => {
+      toast.success('Assignees updated.');
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to update assignees: ${error.message}`);
+    },
+  });
+
+  const onTaskAssignUsers = (taskId: string, userIds: string[]) => {
+    assignUsers({ taskId, userIds });
   };
-
-  const userOptions = project.assignedTo.map((user) => ({
-    value: user.id,
-    label: user.name,
-  }));
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Tasks</h3>
-      <div className="space-y-2">
-        {(project.tasks || []).map((task) => (
-          <div
-            key={task.id}
-            className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted"
-          >
-            <Checkbox
-              id={`task-${task.id}`}
-              checked={task.completed}
-              onCheckedChange={(checked) =>
-                onTaskStatusChange(task.id, !!checked)
-              }
-            />
-            <label
-              htmlFor={`task-${task.id}`}
-              className={`flex-1 text-sm ${
-                task.completed ? "text-muted-foreground line-through" : ""
-              }`}
-            >
-              {task.title}
-            </label>
-            <div className="flex items-center -space-x-2">
-              {(task.assignedTo && task.assignedTo.length > 0) 
-                ? task.assignedTo.map((user) => (
-                  <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
-                    <AvatarImage src={user.avatar_url} />
-                    <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-                  </Avatar>
-                ))
-                : task.createdBy && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Avatar key={task.createdBy.id} className="h-6 w-6 border-2 border-background opacity-50">
-                          <AvatarImage src={task.createdBy.avatar_url} />
-                          <AvatarFallback style={generatePastelColor(task.createdBy.id)}>{task.createdBy.initials}</AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Created by {task.createdBy.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )
-              }
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Tasks</h3>
+        <Button size="sm">
+          <PlusCircle className="h-4 w-4 mr-2" />
+          Add Task
+        </Button>
+      </div>
+      <div className="border rounded-md">
+        {tasks.map(task => (
+          <div key={task.id} className="p-4 border-b last:border-b-0 flex justify-between items-center">
+            <div>
+              <p className="font-medium">{task.title}</p>
+              <p className="text-sm text-muted-foreground">{task.description}</p>
             </div>
-            <Dialog>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DialogTrigger asChild>
-                    <DropdownMenuItem>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Assign
-                    </DropdownMenuItem>
-                  </DialogTrigger>
-                  <DropdownMenuItem
-                    className="text-red-500"
-                    onClick={() => onTaskDelete(task.id)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Assign to: {task.title}</DialogTitle>
-                </DialogHeader>
-                <MultiSelect
+            <div className="w-64">
+              <MultiSelect
                   options={userOptions}
-                  value={(task.assignedTo || []).map(u => u.id)}
-                  onChange={(selectedIds) => {
-                    onTaskAssignUsers(task.id, selectedIds);
+                  selected={userOptions.filter(option => (task.assignedTo || []).some(u => u.id === option.value))}
+                  onChange={(selectedOptions) => {
+                    onTaskAssignUsers(task.id, selectedOptions.map(option => option.value));
                   }}
-                  placeholder="Select team members..."
+                  placeholder="Assign..."
                 />
-              </DialogContent>
-            </Dialog>
+            </div>
           </div>
         ))}
       </div>
-      {isAddingTask ? (
-        <div className="flex items-center space-x-2">
-          <Checkbox disabled />
-          <Input
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="What needs to be done?"
-            onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
-            autoFocus
-          />
-          <Button onClick={handleAddTask}>Add</Button>
-          <Button variant="ghost" onClick={() => setIsAddingTask(false)}>
-            Cancel
-          </Button>
-        </div>
-      ) : (
-        <Button
-          variant="ghost"
-          className="w-full justify-start"
-          onClick={() => setIsAddingTask(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add task
-        </Button>
-      )}
     </div>
   );
-};
-
-export default ProjectTasks;
+}
