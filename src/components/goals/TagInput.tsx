@@ -114,24 +114,28 @@ export function TagInput({ allTags, selectedTags, onTagsChange, onTagCreate, onT
               aria-expanded={open}
               className="w-full justify-between h-auto min-h-[40px]"
             >
-              <div className="flex gap-1 flex-wrap">
+              <div className="flex-1 text-left">
                 {selectedTags.length > 0 ? (
-                  selectedTags.map(tag => (
-                    <Badge
-                      key={tag.id}
-                      variant="secondary"
-                      className="mr-1"
-                      style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}
-                    >
-                      {tag.name}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleToggleTag(tag); }}
-                        className="ml-1.5 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))
+                  <ScrollArea className="max-h-20 w-full pr-4">
+                    <div className="flex gap-1 flex-wrap">
+                      {selectedTags.map(tag => (
+                        <Badge
+                          key={tag.id}
+                          variant="secondary"
+                          className="mr-1"
+                          style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}
+                        >
+                          {tag.name}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleToggleTag(tag); }}
+                            className="ml-1.5 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 ) : (
                   <span className="text-muted-foreground font-normal">Select tags...</span>
                 )}
