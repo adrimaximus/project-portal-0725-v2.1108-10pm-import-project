@@ -133,37 +133,54 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       return;
     }
 
-    const tagToRemoveId = sourceContainerId === 'uncategorized' ? null : sourceContainerId;
-    const tagToAddId = destContainerId === 'uncategorized' ? null : destContainerId;
+    // Calculate the new tags array
+    const currentTags = person.tags || [];
+    const destTag = tags.find(t => t.id === destContainerId);
+    
+    // Remove the old primary tag (the one corresponding to the source column)
+    const otherTags = currentTags.filter(t => t.id !== sourceContainerId);
+    
+    // Prepend the new primary tag (if it's not 'uncategorized')
+    const finalTags = destTag ? [destTag, ...otherTags] : otherTags;
 
+    // Optimistic Update
     const originalPeople = [...people];
     const updatedPeople = people.map(p => {
       if (p.id === activeId) {
-        let newTags = p.tags ? p.tags.filter(t => t.id !== tagToRemoveId) : [];
-        if (tagToAddId) {
-          const tagToAdd = tags.find(t => t.id === tagToAddId);
-          if (tagToAdd) {
-            newTags = [tagToAdd, ...newTags];
-          }
-        }
-        return { ...p, tags: newTags };
+        return { ...p, tags: finalTags };
       }
       return p;
     });
     queryClient.setQueryData(['people'], updatedPeople);
 
-    const { error } = await supabase.rpc('update_person_tags', {
-      p_person_id: person.id,
-      p_tag_to_remove_id: tagToRemoveId,
-      p_tag_to_add_id: tagToAddId,
-    });
+    // Persist changes to the database
+    try {
+      const { error } = await supabase.rpc('upsert_person_with_details', {
+        p_id: person.id,
+        p_full_name: person.full_name,
+        p_contact: person.contact,
+        p_company: person.company,
+        p_job_title: person.job_title,
+        p_department: person.department,
+        p_social_media: person.social_media,
+        p_birthday: person.birthday,
+        p_notes: person.notes,
+        p_project_ids: person.projects?.map(p => p.id) || [],
+        p_existing_tag_ids: finalTags.map(t => t.id),
+        p_custom_tags: [],
+        p_avatar_url: person.avatar_url,
+        p_address: person.address,
+        p_custom_properties: person.custom_properties,
+      });
 
-    if (error) {
-      toast.error(`Failed to update tags: ${error.message}`);
-      queryClient.setQueryData(['people'], originalPeople);
-    } else {
+      if (error) throw error;
+
       toast.success(`Moved ${person.full_name}.`);
       queryClient.invalidateQueries({ queryKey: ['people'] });
+
+    } catch (error: any) {
+      toast.error(`Failed to update tags: ${error.message}`);
+      queryClient.setQueryData(['people'], originalPeople);
     }
   };
 
