@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import PeopleKanbanColumn from './PeopleKanbanColumn';
 import PeopleKanbanCard from './PeopleKanbanCard';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
 import KanbanColumnEditor from './KanbanColumnEditor';
@@ -20,6 +19,7 @@ const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { peop
   
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     const savedOrder = localStorage.getItem('peopleKanbanColumnOrder');
@@ -153,23 +153,24 @@ const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { peop
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
       <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4 h-full">
-        <div className="pt-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Settings className="h-5 w-5" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64">
-              <KanbanColumnEditor
-                allTags={tags}
-                columnOrder={columnOrder}
-                visibleColumnIds={visibleColumnIds}
-                onSettingsChange={handleSettingsChange}
-              />
-            </PopoverContent>
-          </Popover>
+        <div className="pt-2 sticky left-0 bg-background z-10">
+          <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(!isSettingsOpen)}>
+            <Settings className="h-5 w-5" />
+          </Button>
         </div>
+        
+        <div className={`transition-all duration-300 ease-in-out flex-shrink-0 ${isSettingsOpen ? 'w-64' : 'w-0'} overflow-hidden`}>
+          <div className="w-64 h-full bg-muted/50 rounded-lg border">
+            <KanbanColumnEditor
+              allTags={tags}
+              columnOrder={columnOrder}
+              visibleColumnIds={visibleColumnIds}
+              onSettingsChange={handleSettingsChange}
+              onClose={() => setIsSettingsOpen(false)}
+            />
+          </div>
+        </div>
+
         {columns.map(tag => {
           const peopleInColumn = personGroups[tag.id] || [];
           const isColumnCollapsed = peopleInColumn.length === 0 && collapsedColumns.includes(tag.id);

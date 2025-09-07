@@ -4,7 +4,8 @@ import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities';
 import { Tag } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
-import { GripVertical } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { GripVertical, X } from 'lucide-react';
 
 const SortableTagItem = ({ tag, isVisible, onVisibilityChange }: { tag: Tag, isVisible: boolean, onVisibilityChange: (id: string, checked: boolean) => void }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: tag.id });
@@ -37,9 +38,10 @@ interface KanbanColumnEditorProps {
   columnOrder: string[];
   visibleColumnIds: string[];
   onSettingsChange: (newOrder: string[], newVisible: string[]) => void;
+  onClose: () => void;
 }
 
-const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettingsChange }: KanbanColumnEditorProps) => {
+const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettingsChange, onClose }: KanbanColumnEditorProps) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const sortedTags = React.useMemo(() => {
@@ -65,25 +67,29 @@ const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettings
   };
 
   return (
-    <div className="p-2">
-      <h4 className="text-base font-semibold mb-2">Customize Columns</h4>
-      <p className="text-xs text-muted-foreground mb-3">
-        Check which columns to show and drag to reorder them.
-      </p>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={columnOrder} strategy={verticalListSortingStrategy}>
-          <div className="space-y-1 max-h-[250px] overflow-y-auto pr-2">
-            {sortedTags.map(tag => (
-              <SortableTagItem
-                key={tag.id}
-                tag={tag}
-                isVisible={visibleColumnIds.includes(tag.id)}
-                onVisibilityChange={handleVisibilityChange}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+    <div className="p-2 flex flex-col h-full">
+      <div className="flex justify-between items-center mb-2">
+        <h4 className="text-base font-semibold px-2">Customize Columns</h4>
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="flex-1 overflow-y-auto pr-2 max-h-[calc(100vh-200px)]">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={columnOrder} strategy={verticalListSortingStrategy}>
+            <div className="space-y-1">
+              {sortedTags.map(tag => (
+                <SortableTagItem
+                  key={tag.id}
+                  tag={tag}
+                  isVisible={visibleColumnIds.includes(tag.id)}
+                  onVisibilityChange={handleVisibilityChange}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      </div>
     </div>
   );
 };
