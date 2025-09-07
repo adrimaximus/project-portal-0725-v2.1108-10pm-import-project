@@ -86,7 +86,7 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn(isDragging && "opacity-30")}>
       <Card className="mb-3 hover:shadow-md transition-shadow cursor-pointer" onClick={handleClick}>
-        <CardContent className="p-4 space-y-3">
+        <CardContent className="p-3 space-y-2">
           {/* Top Section */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -99,7 +99,7 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
               <div className="min-w-0">
                 <h4 className="font-semibold text-sm leading-snug truncate">{person.full_name}</h4>
                 <p className="text-xs text-muted-foreground truncate">
-                  {person.updated_at ? `Updated ${formatInJakarta(person.updated_at, 'MMM d, yyyy')}` : ''}
+                  {person.updated_at ? `Updated ${formatInJakarta(person.updated_at, 'MMM d')}` : ''}
                 </p>
               </div>
             </div>
@@ -120,53 +120,48 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
             </DropdownMenu>
           </div>
 
-          {/* Separator */}
-          <hr />
-
           {/* Bottom Section */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2 min-w-0">
-                {companyLogoUrl ? (
-                  <a
-                    href={googleMapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="bg-background p-0.5 rounded-md shadow-sm flex items-center justify-center flex-shrink-0"
-                    title={`Get directions to ${person.company}`}
-                  >
-                    <img src={companyLogoUrl} alt={`${person.company} logo`} className="h-8 w-8 object-contain rounded-sm" />
-                  </a>
-                ) : person.company ? (
-                  <div className="h-8 w-8 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
-                      <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div className="h-8 w-8 flex-shrink-0" /> /* Placeholder */
-                )}
-                {person.company && (
-                  <span className="text-sm font-medium text-muted-foreground truncate">{person.company}</span>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-3 flex-shrink-0">
-                {emailToDisplay && (
-                  <button onClick={(e) => handleCopyEmail(e, emailToDisplay)} className="text-muted-foreground hover:text-primary transition-colors" title="Copy email address">
-                    <Mail className="h-4 w-4" />
-                  </button>
-                )}
-                {person.phone && (
-                  <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.phone)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
-                    <WhatsappIcon className="h-4 w-4" />
-                  </a>
-                )}
-                {person.social_media?.instagram && (
-                  <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
-                    <Instagram className="h-4 w-4" />
-                  </a>
-                )}
-              </div>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2 min-w-0">
+              {companyLogoUrl ? (
+                <a
+                  href={googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-background p-0.5 rounded-md shadow-sm flex items-center justify-center flex-shrink-0"
+                  title={`Get directions to ${person.company}`}
+                >
+                  <img src={companyLogoUrl} alt={`${person.company} logo`} className="h-6 w-6 object-contain rounded-sm" />
+                </a>
+              ) : person.company ? (
+                <div className="h-6 w-6 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
+                    <Briefcase className="h-3 w-3 text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="h-6 w-6 flex-shrink-0" /> /* Placeholder */
+              )}
+              {person.company && (
+                <span className="text-xs font-medium text-muted-foreground truncate">{person.company}</span>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {emailToDisplay && (
+                <button onClick={(e) => handleCopyEmail(e, emailToDisplay)} className="text-muted-foreground hover:text-primary transition-colors" title="Copy email address">
+                  <Mail className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {person.phone && (
+                <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.phone)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
+                  <WhatsappIcon className="h-3.5 w-3.5" />
+                </a>
+              )}
+              {person.social_media?.instagram && (
+                <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
+                  <Instagram className="h-3.5 w-3.5" />
+                </a>
+              )}
             </div>
           </div>
         </CardContent>
