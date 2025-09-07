@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Person } from '@/types';
 import { Card } from '@/components/ui/card';
-import { User as UserIcon, Instagram, Briefcase } from 'lucide-react';
+import { User as UserIcon, Instagram, Briefcase, Mail } from 'lucide-react';
 import { generatePastelColor } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import WhatsappIcon from '../icons/WhatsappIcon';
 import { supabase } from '@/integrations/supabase/client';
+import toast from 'react-hot-toast';
 
 interface PersonCardProps {
   person: Person;
@@ -66,6 +67,14 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
 
   const handleImageError = () => {
     setImageError(true);
+  };
+
+  const handleCopyEmail = (e: React.MouseEvent, email: string) => {
+    e.stopPropagation();
+    if (email) {
+      navigator.clipboard.writeText(email);
+      toast.success('Email address copied!');
+    }
   };
 
   const googleMapsUrl = companyAddress 
@@ -137,6 +146,15 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
         )}
 
         <div className="mt-auto pt-2 flex items-center gap-3">
+          {person.email && (
+            <button
+              onClick={(e) => handleCopyEmail(e, person.email!)}
+              className="text-muted-foreground hover:text-primary transition-colors"
+              title="Copy email address"
+            >
+              <Mail className="h-4 w-4" />
+            </button>
+          )}
           {person.social_media?.instagram && (
             <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
               <Instagram className="h-4 w-4" />
