@@ -148,7 +148,7 @@ export const SupportDialog = ({ isOpen, onOpenChange }: SupportDialogProps) => {
       const commentId = newComment.id;
 
       // 7. Create the task
-      const dueDate = addDays(new Date(), 7).toISOString();
+      const dueDate = new Date().toISOString();
       const { data: newTask, error: taskError } = await supabase
         .from('tasks')
         .insert({
