@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import * as LucideIcons from "lucide-react";
 import { useState } from "react";
 import { Input } from "./ui/input";
+import { ScrollArea } from "./ui/scroll-area";
 
 const iconNames = [
   "Activity", "Airplay", "AlarmClock", "AlertCircle", "Archive", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight",
@@ -47,25 +48,27 @@ const IconPicker = ({ value, onChange }: { value?: string; onChange: (icon: stri
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <div className="grid grid-cols-6 gap-2 max-h-64 overflow-y-auto">
-            {filteredIcons.map(name => {
-              const IconComponent = Icons[name];
-              if (!IconComponent) return null;
-              return (
-                <Button
-                  key={name}
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    onChange(name);
-                    setIsOpen(false);
-                  }}
-                >
-                  <IconComponent className="h-5 w-5" />
-                </Button>
-              );
-            })}
-          </div>
+          <ScrollArea className="h-64">
+            <div className="grid grid-cols-6 gap-2 p-2">
+              {filteredIcons.map(name => {
+                const IconComponent = Icons[name];
+                if (!IconComponent) return null;
+                return (
+                  <Button
+                    key={name}
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      onChange(name);
+                      setIsOpen(false);
+                    }}
+                  >
+                    <IconComponent className="h-5 w-5" />
+                  </Button>
+                );
+              })}
+            </div>
+          </ScrollArea>
         </div>
       </PopoverContent>
     </Popover>
