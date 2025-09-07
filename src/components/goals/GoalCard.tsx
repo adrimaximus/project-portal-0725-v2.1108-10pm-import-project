@@ -8,6 +8,8 @@ import { Link } from "react-router-dom";
 import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { Edit, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
+import GoalIcon from "./GoalIcon";
+import { getProgress } from "@/lib/progress";
 
 interface GoalCardProps {
   goal: Goal;
@@ -16,19 +18,20 @@ interface GoalCardProps {
 }
 
 const GoalCard = ({ goal, onEdit, onDelete }: GoalCardProps) => {
-  const progress = goal.target_quantity ? (goal.completions.length / goal.target_quantity) * 100 : 0;
+  const { percentage, current, target } = getProgress(goal);
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col group">
       <CardHeader>
         <div className="flex justify-between items-start">
-          <div className="flex items-center gap-3">
-            <div className="text-2xl" style={{ color: goal.color }}>{goal.icon}</div>
-            <CardTitle className="text-lg font-semibold">
-              <Link to={`/goals/${goal.slug}`} className="hover:underline">{goal.title}</Link>
-            </CardTitle>
-          </div>
-          <div className="flex items-center gap-2">
+          <Link to={`/goals/${goal.slug}`} className="flex items-center gap-3 group/link flex-1 min-w-0">
+            <GoalIcon goal={goal} className="h-10 w-10 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base font-semibold group-hover/link:underline truncate">{goal.title}</CardTitle>
+              <p className="text-sm text-muted-foreground truncate">{goal.description}</p>
+            </div>
+          </Link>
+          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(goal)}>
               <Edit className="h-4 w-4" />
             </Button>
@@ -37,24 +40,24 @@ const GoalCard = ({ goal, onEdit, onDelete }: GoalCardProps) => {
             </Button>
           </div>
         </div>
-        {goal.description && <p className="text-sm text-muted-foreground pt-2">{goal.description}</p>}
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
         {goal.tags && goal.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {goal.tags.map(tag => (
-              <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>
+          <div className="flex flex-wrap gap-1">
+            {goal.tags.slice(0, 3).map(tag => (
+              <Badge key={tag.id} variant="outline" className="text-xs" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
                 {tag.name}
               </Badge>
             ))}
+            {goal.tags.length > 3 && <Badge variant="outline" className="text-xs">+{goal.tags.length - 3}</Badge>}
           </div>
         )}
         <div>
           <div className="flex justify-between items-center mb-1">
             <span className="text-xs font-medium text-muted-foreground">Progress</span>
-            <span className="text-xs font-semibold">{goal.completions.length} / {goal.target_quantity || '∞'}</span>
+            <span className="text-xs font-semibold">{current} / {target || '∞'}</span>
           </div>
-          <Progress value={progress} />
+          <Progress value={percentage} indicatorStyle={{ backgroundColor: goal.color }} />
         </div>
       </CardContent>
       <CardFooter>

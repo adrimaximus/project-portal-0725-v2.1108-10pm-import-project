@@ -1,5 +1,10 @@
 import { Tag } from './tag';
 
+export type { Tag };
+
+export type GoalType = 'frequency' | 'quantity' | 'value';
+export type GoalPeriod = 'Weekly' | 'Monthly';
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -24,11 +29,11 @@ export interface Goal {
   icon: string;
   icon_url: string | null;
   color: string;
-  type: string;
+  type: GoalType;
   target_quantity: number | null;
   target_value: number | null;
   frequency: string | null;
-  target_period: string | null;
+  target_period: GoalPeriod | null;
   unit: string | null;
   specific_days: string[] | null;
   created_at: string;

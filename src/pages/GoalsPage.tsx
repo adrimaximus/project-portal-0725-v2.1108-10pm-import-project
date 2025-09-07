@@ -6,7 +6,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
 import GoalCard from "@/components/goals/GoalCard";
-import GoalFormModal from "@/components/goals/GoalFormModal";
+import GoalFormDialog from "@/components/goals/GoalFormDialog";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -144,9 +144,13 @@ const GoalsPage = () => {
         </div>
       )}
 
-      <GoalFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+      <GoalFormDialog
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onSuccess={() => {
+          setIsModalOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['goals'] });
+        }}
         goal={selectedGoal}
       />
 

@@ -72,7 +72,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       const { data: projectsData } = await supabase.from('projects').select('id, name');
       if (projectsData) setAllProjects(projectsData as any);
 
-      const { data: tagsData } = await supabase.from('tags').select('id, name, color');
+      const { data: tagsData } = await supabase.from('tags').select('*');
       if (tagsData) setAllTags(tagsData);
 
       const { data: customPropsData } = await supabase.from('contact_properties').select('*').eq('is_default', false);

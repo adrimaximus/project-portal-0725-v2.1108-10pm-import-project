@@ -6,6 +6,7 @@ export * from './chat';
 export * from './notifications';
 export * from './kb';
 export * from './people';
+export * from './tag';
 
 export interface ContactProperty {
   id: string;
