@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
@@ -30,22 +30,20 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <Suspense fallback={<FullPageSpinner />}>
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/people" element={<ProtectedRoute><PeoplePage /></ProtectedRoute>} />
-                <Route path="/people/:id" element={<ProtectedRoute><PersonDetailPage /></ProtectedRoute>} />
-                <Route path="/settings/tags" element={<ProtectedRoute><TagsSettingsPage /></ProtectedRoute>} />
-                
-                {/* Default route */}
-                <Route path="*" element={<Navigate to="/people" replace />} />
-              </Routes>
-            </Suspense>
-            <Toaster />
-          </AuthProvider>
-        </BrowserRouter>
+        <AuthProvider>
+          <Suspense fallback={<FullPageSpinner />}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/people" element={<ProtectedRoute><PeoplePage /></ProtectedRoute>} />
+              <Route path="/people/:id" element={<ProtectedRoute><PersonDetailPage /></ProtectedRoute>} />
+              <Route path="/settings/tags" element={<ProtectedRoute><TagsSettingsPage /></ProtectedRoute>} />
+              
+              {/* Default route */}
+              <Route path="*" element={<Navigate to="/people" replace />} />
+            </Routes>
+          </Suspense>
+          <Toaster />
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
