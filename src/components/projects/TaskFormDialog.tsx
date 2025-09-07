@@ -28,7 +28,6 @@ import { Profile } from '@/types/user';
 import { Project } from '@/types/project';
 import { useIsMobile } from '@/hooks/use-mobile';
 import TaskFileUpload from './TaskFileUpload';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -57,7 +56,7 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
   const { data: allTags = [], refetch: refetchTags } = useTags();
   const { data: allProfiles = [], isLoading: isLoadingProfiles } = useProfiles();
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  const { user: currentUser } = useAuth();
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [assignableUsers, setAssignableUsers] = useState<Profile[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
@@ -77,6 +76,15 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
   });
 
   const selectedProjectId = useWatch({ control: form.control, name: 'project_id' });
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user!.id).single();
+      setCurrentUser(profile);
+    }
+    getUser();
+  }, []);
 
   useEffect(() => {
     if (selectedProjectId && projects.length > 0 && allProfiles.length > 0) {

@@ -1,169 +1,200 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { isPast as isPastDate, endOfDay } from 'date-fns';
-import { format as formatTz, toZonedTime } from 'date-fns-tz';
-import * as color from '@uiw/color-convert';
+import { formatInTimeZone } from 'date-fns-tz'
+import { id } from 'date-fns/locale'
+
+const pastelColors = [
+  'a8e6cf', 'dcedc1', 'ffd3b6', 'ffaaa5', 'ff8b94',
+  'bde0fe', 'a2d2ff', 'cdb4db', 'ffc8dd', 'ffafcc',
+  'b2e2f2', 'f1cbff', 'f9d5e5', 'fff2cc', 'd4a5a5'
+];
+
+const getConsistentPastelColor = (str: string): string => {
+  if (!str) {
+    return pastelColors[0];
+  }
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash;
+  }
+  const index = Math.abs(hash % pastelColors.length);
+  return pastelColors[index];
+};
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const getAvatarUrl = (avatarUrl: string | null | undefined, seed: string): string => {
+export const getInitials = (name: string = "", email?: string): string => {
+  const names = name.trim().split(' ').filter(Boolean);
+  
+  if (names.length === 0) {
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return "";
+  }
+
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  
+  const firstName = names[0];
+  const lastName = names[names.length - 1];
+  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+};
+
+export const getAvatarUrl = (avatarUrl?: string | null, seed?: string | null): string => {
   if (avatarUrl) {
     return avatarUrl;
   }
-  
-  let hash = 0;
-  const seedString = String(seed || '');
-  if (seedString) {
-    for (let i = 0; i < seedString.length; i++) {
-      hash = seedString.charCodeAt(i) + ((hash << 5) - hash);
-    }
-  }
-  const h = hash % 360;
-  const s = 70;
-  const l = 90;
-  
-  const pastelHex = color.hslToHex({ h, s, l, a: 1 }).substring(1);
-
-  return `https://api.dicebear.com/7.x/initials/svg?seed=${seedString}&backgroundColor=${pastelHex}&backgroundType=solid`;
+  const finalSeed = seed || 'default-avatar';
+  const bgColor = getConsistentPastelColor(finalSeed);
+  return `https://api.dicebear.com/8.x/lorelei/svg?seed=${encodeURIComponent(finalSeed)}&backgroundColor=${bgColor}`;
 };
 
-export const generatePastelColor = (seed: string) => {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+export const generatePastelColor = (str: string): { backgroundColor: string; color: string } => {
+  if (!str) {
+    return { backgroundColor: '#e2e8f0', color: '#475569' }; // slate-200, slate-600
   }
-  const h = hash % 360;
-  return { backgroundColor: `hsl(${h}, 70%, 90%)`, color: `hsl(${h}, 70%, 30%)` };
-};
+  const hexBg = getConsistentPastelColor(str);
+  
+  let r = parseInt(hexBg.substring(0, 2), 16);
+  let g = parseInt(hexBg.substring(2, 4), 16);
+  let b = parseInt(hexBg.substring(4, 6), 16);
 
-export const getInitials = (fullName?: string | null, email?: string | null): string => {
-  if (fullName && fullName.trim()) {
-    const names = fullName.trim().split(' ');
-    if (names.length > 1) {
-      return `${names[0].charAt(0)}${names[names.length - 1].charAt(0)}`.toUpperCase();
-    }
-    return fullName.substring(0, 2).toUpperCase();
-  }
-  if (email) {
-    return email.substring(0, 2).toUpperCase();
-  }
-  return 'NN';
+  // Darken the color for text
+  r = Math.max(0, r - 100);
+  g = Math.max(0, g - 100);
+  b = Math.max(0, b - 100);
+
+  const toHex = (c: number) => c.toString(16).padStart(2, '0');
+
+  return { backgroundColor: `#${hexBg}`, color: `#${toHex(r)}${toHex(g)}${toHex(b)}` };
 };
 
 export const getStatusStyles = (status: string) => {
-  const styles: { [key: string]: { hex: string; tw: string } } = {
-    'Requested': { hex: '#64748b', tw: 'bg-slate-100 text-slate-800' },
-    'In Progress': { hex: '#2563eb', tw: 'bg-blue-100 text-blue-800' },
-    'In Review': { hex: '#ca8a04', tw: 'bg-yellow-100 text-yellow-800' },
-    'On Hold': { hex: '#64748b', tw: 'bg-slate-100 text-slate-800' },
-    'Completed': { hex: '#16a34a', tw: 'bg-green-100 text-green-800' },
-    'Cancelled': { hex: '#dc2626', tw: 'bg-red-100 text-red-800' },
-    'Default': { hex: '#64748b', tw: 'bg-slate-100 text-slate-800' },
-  };
-  return styles[status] || styles['Default'];
+  switch (status) {
+    case 'Completed':
+      return { tw: 'bg-green-100 text-green-800 border-green-200', hex: '#16a34a' };
+    case 'In Progress':
+      return { tw: 'bg-blue-100 text-blue-800 border-blue-200', hex: '#2563eb' };
+    case 'In Review':
+      return { tw: 'bg-purple-100 text-purple-800 border-purple-200', hex: '#9333ea' };
+    case 'On Hold':
+      return { tw: 'bg-yellow-100 text-yellow-800 border-yellow-200', hex: '#ca8a04' };
+    case 'Cancelled':
+      return { tw: 'bg-red-100 text-red-800 border-red-200', hex: '#dc2626' };
+    case 'Requested':
+      return { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' };
+    default:
+      return { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' };
+  }
+};
+
+export const paymentStatusConfig: Record<string, { tw: string; hex: string }> = {
+  'Paid': { tw: 'bg-green-100 text-green-800 border-green-200', hex: '#16a34a' },
+  'Pending': { tw: 'bg-yellow-100 text-yellow-800 border-yellow-200', hex: '#ca8a04' },
+  'In Process': { tw: 'bg-purple-100 text-purple-800 border-purple-200', hex: '#9333ea' },
+  'Overdue': { tw: 'bg-red-100 text-red-800 border-red-200', hex: '#dc2626' },
+  'Proposed': { tw: 'bg-blue-100 text-blue-800 border-blue-200', hex: '#2563eb' },
+  'Cancelled': { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' },
+  'Unpaid': { tw: 'bg-orange-100 text-orange-800 border-orange-200', hex: '#f97316' },
 };
 
 export const getPaymentStatusStyles = (status: string) => {
-    const styles: { [key: string]: { hex: string; tw: string } } = {
-        'Paid': { hex: '#16a34a', tw: 'bg-green-100 text-green-800' },
-        'Unpaid': { hex: '#dc2626', tw: 'bg-red-100 text-red-800' },
-        'Pending': { hex: '#f97316', tw: 'bg-orange-100 text-orange-800' },
-        'In Process': { hex: '#6366f1', tw: 'bg-indigo-100 text-indigo-800' },
-        'Overdue': { hex: '#e11d48', tw: 'bg-rose-100 text-rose-800' },
-        'Proposed': { hex: '#0ea5e9', tw: 'bg-sky-100 text-sky-800' },
-        'Cancelled': { hex: '#64748b', tw: 'bg-slate-100 text-slate-800' },
-        'Default': { hex: '#64748b', tw: 'bg-slate-100 text-slate-800' },
-    };
-    return styles[status] || styles['Default'];
+  return paymentStatusConfig[status] || { tw: 'bg-gray-100 text-gray-800 border-gray-200', hex: '#6b7280' };
 };
 
-export const formatInJakarta = (date: Date | string | number, formatString: string = 'dd MMM yyyy, HH:mm'): string => {
-  try {
-    const timeZone = 'Asia/Jakarta';
-    const zonedDate = toZonedTime(date, timeZone);
-    return formatTz(zonedDate, formatString, { timeZone });
-  } catch (error) {
-    console.error("Error formatting date:", error);
-    return "Invalid Date";
+export const getTaskStatusStyles = (status: string) => {
+  switch (status) {
+    case 'Done':
+      return { tw: 'text-green-600 font-medium', hex: '#16a34a' };
+    case 'In Progress':
+      return { tw: 'text-blue-600 font-medium', hex: '#2563eb' };
+    case 'Cancelled':
+      return { tw: 'text-red-600 font-medium', hex: '#dc2626' };
+    case 'To do':
+    default:
+      return { tw: 'text-gray-600 font-medium', hex: '#6b7280' };
   }
 };
 
 export const getPriorityStyles = (priority: string | null) => {
-    const styles: { [key: string]: { hex: string; tw: string; } } = {
-        'Urgent': { hex: '#dc2626', tw: 'bg-red-100 text-red-800' },
-        'High': { hex: '#f97316', tw: 'bg-orange-100 text-orange-800' },
-        'Normal': { hex: '#2563eb', tw: 'bg-blue-100 text-blue-800' },
-        'Low': { hex: '#64748b', tw: 'bg-slate-100 text-slate-800' },
-        'Default': { hex: '#64748b', tw: 'bg-slate-100 text-slate-800' },
-    };
-    return styles[priority || 'Default'] || styles['Default'];
-};
-
-export const getTaskStatusStyles = (status: string) => {
-    const styles: { [key: string]: { hex: string; tw: string; } } = {
-        'To do': { hex: '#64748b', tw: 'text-slate-600' },
-        'In Progress': { hex: '#2563eb', tw: 'text-blue-600' },
-        'Done': { hex: '#16a34a', tw: 'text-green-600' },
-        'Cancelled': { hex: '#dc2626', tw: 'text-red-600' },
-        'Default': { hex: '#64748b', tw: 'text-slate-600' },
-    };
-    return styles[status] || styles['Default'];
-};
-
-export const isOverdue = (dueDate: string | Date | null | undefined): boolean => {
-  if (!dueDate) return false;
-  return isPastDate(endOfDay(new Date(dueDate)));
-};
-
-export const getInstagramUsername = (url: string): string | null => {
-  if (!url) return null;
-  try {
-    const urlObject = new URL(url);
-    if (urlObject.hostname.includes('instagram.com')) {
-      const pathParts = urlObject.pathname.split('/').filter(part => part);
-      return pathParts[0] || null;
-    }
-  } catch (e) {
-    // Not a valid URL, maybe it's just a username
-    if (!url.includes('/') && !url.includes('.')) {
-      return url;
-    }
+  switch (priority) {
+    case 'Urgent':
+      return { tw: 'bg-red-600 text-white border-transparent', hex: '#dc2626' };
+    case 'High':
+      return { tw: 'bg-orange-500 text-white border-transparent', hex: '#f97316' };
+    case 'Normal':
+      return { tw: 'bg-blue-500 text-white border-transparent', hex: '#2563eb' };
+    case 'Low':
+    default:
+      return { tw: 'bg-gray-400 text-white border-transparent', hex: '#6b7280' };
   }
-  return null;
 };
 
-export const getColorForTag = (tagName: string): { bg: string; text: string; border: string } => {
+export const mapProfileToUser = (profile: any) => {
+  if (!profile) return null;
+  const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+  return {
+    id: profile.id,
+    name: name || profile.email,
+    avatar_url: profile.avatar_url,
+    initials: getInitials(name || profile.email),
+    email: profile.email,
+  };
+};
+
+const tagColors = [
+  { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' },
+  { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200' },
+  { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-200' },
+  { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' },
+  { bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-200' },
+  { bg: 'bg-pink-100', text: 'text-pink-800', border: 'border-pink-200' },
+  { bg: 'bg-indigo-100', text: 'text-indigo-800', border: 'border-indigo-200' },
+  { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-200' },
+];
+
+export const getColorForTag = (tagName: string) => {
+  if (!tagName) return tagColors[tagColors.length - 1];
   let hash = 0;
   for (let i = 0; i < tagName.length; i++) {
     hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const h = hash % 360;
-  return {
-    bg: `hsl(${h}, 90%, 95%)`,
-    text: `hsl(${h}, 70%, 30%)`,
-    border: `hsl(${h}, 80%, 85%)`,
-  };
+  const index = Math.abs(hash % tagColors.length);
+  return tagColors[index];
 };
 
-export const getStatusColor = (status: string) => {
-  const statusColors: { [key: string]: { color: string; } } = {
-    'On Track': { color: '#16a34a' },
-    'Completed': { color: '#16a34a' },
-    'Done': { color: '#16a34a' },
-    'At Risk': { color: '#f97316' },
-    'Off Track': { color: '#dc2626' },
-    'On Hold': { color: '#64748b' },
-    'To Do': { color: '#64748b' },
-    'In Progress': { color: '#2563eb' },
-    'Default': { color: '#64748b' },
-  };
+export const formatInJakarta = (dateString: string | Date | null | undefined, formatStr: string): string => {
+    if (!dateString) return 'N/A';
+    try {
+        return formatInTimeZone(dateString, 'Asia/Jakarta', formatStr, { locale: id });
+    } catch (error) {
+        console.error("Error formatting date:", error);
+        return "Invalid Date";
+    }
+}
 
-  const style = statusColors[status] || statusColors['Default'];
-  return {
-    color: style.color,
-    borderColor: style.color,
-    backgroundColor: `${style.color}1A`, // 10% opacity
-  };
+export const isOverdue = (dateString: string | null | undefined): boolean => {
+  if (!dateString) return false;
+  const today = new Date();
+  const dueDate = new Date(dateString);
+  today.setHours(0, 0, 0, 0);
+  dueDate.setHours(0, 0, 0, 0);
+  return dueDate <= today;
+};
+
+export const getInstagramUsername = (url: string | undefined): string | null => {
+  if (!url) return null;
+  try {
+    const path = new URL(url).pathname;
+    const parts = path.split('/').filter(p => p);
+    return parts[0] ? `@${parts[0]}` : null;
+  } catch (e) {
+    if (typeof url === 'string' && !url.includes('/')) {
+      return `@${url}`;
+    }
+    return null;
+  }
 };
