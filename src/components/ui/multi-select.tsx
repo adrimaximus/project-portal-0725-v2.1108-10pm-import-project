@@ -1,189 +1,175 @@
-"use client";
-
 import * as React from "react";
-import { X } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
+import { Check, ChevronsUpDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Command,
+  CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Command as CommandPrimitive } from "cmdk";
-import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Badge } from "./badge";
 
-export type Option = {
+export type MultiSelectOption = {
   value: string;
   label: string;
-  [key: string]: any;
 };
 
 interface MultiSelectProps {
-  options: Option[];
+  options: MultiSelectOption[];
   value: string[];
   onChange: (value: string[]) => void;
-  onCreate?: (label: string) => Promise<Option | undefined>;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  maxListHeightClass?: string;
 }
 
-const MultiSelect = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive>,
-  MultiSelectProps
->(({ options, value, onChange, onCreate, placeholder, className, disabled }, ref) => {
-  const inputRef = React.useRef<HTMLInputElement>(null);
+export function MultiSelect({
+  options,
+  value,
+  onChange,
+  placeholder = "Select options...",
+  className,
+  disabled,
+  maxListHeightClass = "max-h-64",
+}: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
-  const [inputValue, setInputValue] = React.useState("");
+  const [query, setQuery] = React.useState("");
 
-  const handleUnselect = (optionValue: string) => {
-    onChange(value.filter((v) => v !== optionValue));
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const input = inputRef.current;
-    if (input) {
-      if (e.key === "Delete" || e.key === "Backspace") {
-        if (input.value === "") {
-          const newSelected = [...value];
-          newSelected.pop();
-          onChange(newSelected);
-        }
-      }
-      if (e.key === "Escape") {
-        input.blur();
-      }
-    }
-  };
-
-  const selectedObjects = React.useMemo(() => {
-    // Ensure we only show selected items that exist in the options
-    const optionMap = new Map(options.map(opt => [opt.value, opt]));
-    return value.map(val => optionMap.get(val)).filter(Boolean) as Option[];
+  const selectedOptions = React.useMemo(() => {
+    return options.filter((option) => value.includes(option.value));
   }, [options, value]);
 
   const filteredOptions = React.useMemo(() => {
-    return options.filter(
-      (option) =>
-        !value.includes(option.value) &&
-        option.label.toLowerCase().includes(inputValue.toLowerCase())
+    if (!query) return options;
+    return options.filter((opt) =>
+      opt.label.toLowerCase().includes(query.toLowerCase())
     );
-  }, [options, value, inputValue]);
+  }, [options, query]);
 
-  const handleCreate = async () => {
-    if (onCreate && inputValue) {
-      const newOption = await onCreate(inputValue);
-      if (newOption) {
-        onChange([...value, newOption.value]);
-      }
-      setInputValue("");
+  function toggleSelect(optionValue: string) {
+    let next: string[];
+    if (value.includes(optionValue)) {
+      next = value.filter((v) => v !== optionValue);
+    } else {
+      next = [...value, optionValue];
     }
-  };
+    onChange(next);
+  }
 
-  const showCreateOption = onCreate && inputValue && !options.some(option => option.label.toLowerCase() === inputValue.toLowerCase());
+  function removeOption(optionValue: string) {
+    onChange(value.filter((v) => v !== optionValue));
+  }
+
+  function clearAll() {
+    onChange([]);
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!!disabled}
           className={cn(
-            "group flex min-h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-            className,
-            disabled && "cursor-not-allowed opacity-50"
+            "w-full justify-between gap-2 rounded-lg border-input bg-background px-3 py-2 text-left shadow-sm hover:bg-accent/40 data-[state=open]:ring-2 data-[state=open]:ring-ring",
+            { "opacity-60 cursor-not-allowed": disabled },
+            className
           )}
         >
-          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-            {selectedObjects.map((option) => (
-              <Badge
-                key={option.value}
-                variant="secondary"
-                className="rounded-sm"
-              >
-                {option.label}
-                <button
-                  className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleUnselect(option.value);
-                    }
-                  }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onClick={() => handleUnselect(option.value)}
-                  disabled={disabled}
+          <div className="flex min-h-6 flex-1 flex-wrap items-center gap-1">
+            {selectedOptions.length === 0 ? (
+              <span className="text-muted-foreground/70">{placeholder}</span>
+            ) : (
+              selectedOptions.map((option) => (
+                <Badge
+                  key={option.value}
+                  variant="secondary"
+                  className="group gap-1 rounded-md px-2 py-1 text-xs"
                 >
-                  <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                </button>
-              </Badge>
-            ))}
-            <CommandPrimitive
-              onKeyDown={handleKeyDown}
-              ref={ref}
-              className="flex-1"
-            >
-              <CommandPrimitive.Input
-                ref={inputRef}
-                value={inputValue}
-                onValueChange={setInputValue}
-                onBlur={() => setOpen(false)}
-                onFocus={() => setOpen(true)}
-                placeholder={placeholder || "Select..."}
-                className="ml-2 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
-                disabled={disabled}
-              />
-            </CommandPrimitive>
-          </div>
-        </div>
-      </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-        <Command>
-          <CommandList>
-            {filteredOptions.length > 0 && (
-              <CommandGroup>
-                {filteredOptions.map((option) => (
-                  <CommandItem
-                    key={option.value}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
+                  {option.label}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${option.label}`}
+                    onClick={(e) => {
                       e.stopPropagation();
+                      removeOption(option.value);
                     }}
-                    onSelect={() => {
-                      setInputValue("");
-                      onChange([...value, option.value]);
-                    }}
-                    className={"cursor-pointer"}
+                    className="ml-1 rounded-full p-0.5 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   >
-                    {option.label}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </Badge>
+              ))
             )}
-            {showCreateOption && (
-              <CommandItem
-                onMouseDown={(e) => {
-                  e.preventDefault();
+          </div>
+          <div className="flex items-center gap-1">
+            {selectedOptions.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
                   e.stopPropagation();
+                  clearAll();
                 }}
-                onSelect={handleCreate}
-                className="cursor-pointer"
+                className="rounded-full p-1 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                aria-label="Clear all"
               >
-                Create "{inputValue}"
-              </CommandItem>
+                <X className="h-4 w-4" />
+              </button>
             )}
-            {!showCreateOption && filteredOptions.length === 0 && (
-              <div className="py-6 text-center text-sm">No results found.</div>
-            )}
+            <ChevronsUpDown
+              className="h-4 w-4 text-muted-foreground transition-transform duration-150 data-[state=open]:rotate-180"
+              data-state={open ? "open" : "closed"}
+            />
+          </div>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0 rounded-xl border bg-popover shadow-xl"
+        align="start"
+        sideOffset={8}
+      >
+        <Command shouldFilter={false} className="rounded-xl">
+          <div className="p-2">
+            <CommandInput
+              value={query}
+              onValueChange={setQuery}
+              placeholder="Type to search…"
+              className="rounded-lg"
+            />
+          </div>
+          <CommandList className={`${maxListHeightClass} overflow-auto px-1 pb-2`}>
+            <CommandEmpty>
+              <div className="px-3 py-2 text-sm text-muted-foreground">No results.</div>
+            </CommandEmpty>
+            <CommandGroup>
+              {filteredOptions.map((opt) => {
+                const active = value.includes(opt.value);
+                return (
+                  <CommandItem
+                    key={opt.value}
+                    value={opt.value}
+                    onSelect={() => toggleSelect(opt.value)}
+                    className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm"
+                  >
+                    <span className="truncate">{opt.label}</span>
+                    {active ? <Check className="h-4 w-4" /> : null}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
           </CommandList>
         </Command>
       </PopoverContent>
     </Popover>
   );
-});
-
-MultiSelect.displayName = "MultiSelect";
-
-export { MultiSelect };
+}
