@@ -20,6 +20,7 @@ import EditNavItemDialog from "@/components/settings/EditNavItemDialog";
 import IconPicker from "@/components/IconPicker";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import FolderFormDialog, { FolderData } from "@/components/settings/FolderFormDialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface NavItem {
   id: string;
@@ -84,7 +85,7 @@ const NavigationSettingsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [newItemName, setNewItemName] = useState("");
-  const [newItemUrl, setNewItemUrl] = useState("");
+  const [newItemContent, setNewItemContent] = useState("");
   const [newItemIcon, setNewItemIcon] = useState<string | undefined>(undefined);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<NavItem | null>(null);
@@ -130,7 +131,7 @@ const NavigationSettingsPage = () => {
     onSuccess: (newItem) => {
       queryClient.setQueryData(queryKey, (old: NavItem[] | undefined) => [...(old || []), newItem]);
       setNewItemName("");
-      setNewItemUrl("");
+      setNewItemContent("");
       setNewItemIcon(undefined);
       toast.success("Navigation item added");
     },
@@ -140,16 +141,14 @@ const NavigationSettingsPage = () => {
   });
 
   const handleAddItem = () => {
-    if (newItemName.trim() && newItemUrl.trim()) {
-      try {
-        new URL(newItemUrl);
-        addItemMutation.mutate({ name: newItemName.trim(), url: newItemUrl.trim(), icon: newItemIcon });
-      } catch (_) { toast.error("Invalid URL format."); }
+    if (newItemName.trim() && newItemContent.trim()) {
+      addItemMutation.mutate({ name: newItemName.trim(), url: newItemContent.trim(), icon: newItemIcon });
     }
   };
 
   const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => {
-    try { new URL(url); await upsertItems([{ id, name, url, icon }]); setEditingItem(null); } catch (_) { toast.error("Invalid URL format."); }
+    await upsertItems([{ id, name, url, icon }]);
+    setEditingItem(null);
   };
 
   const handleSaveFolder = (data: FolderData) => {
@@ -180,7 +179,6 @@ const NavigationSettingsPage = () => {
 
     const itemsToUpdate: Partial<NavItem>[] = [];
 
-    // Optimistically update UI
     queryClient.setQueryData(queryKey, (currentItems: NavItem[] = []) => {
       let newItems = [...currentItems];
       const activeIndex = newItems.findIndex(i => i.id === activeId);
@@ -261,10 +259,13 @@ const NavigationSettingsPage = () => {
           <CardContent className="space-y-4">
             <div className="grid gap-2"><Label htmlFor="icon">Icon</Label><IconPicker value={newItemIcon} onChange={setNewItemIcon} /></div>
             <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" /></div>
-            <div className="grid gap-2"><Label htmlFor="url">URL</Label><Input id="url" value={newItemUrl} onChange={(e) => setNewItemUrl(e.target.value)} placeholder="https://example.com/dashboard" /></div>
+            <div className="grid gap-2">
+              <Label htmlFor="url">URL or Embed Code</Label>
+              <Textarea id="url" value={newItemContent} onChange={(e) => setNewItemContent(e.target.value)} placeholder="https://example.com or <iframe ...></iframe>" />
+            </div>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button onClick={handleAddItem} disabled={!newItemName.trim() || !newItemUrl.trim() || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Item</Button>
+            <Button onClick={handleAddItem} disabled={!newItemName.trim() || !newItemContent.trim() || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Item</Button>
             <Button variant="outline" onClick={() => { setEditingFolder(null); setIsFolderFormOpen(true); }}><FolderPlus className="mr-2 h-4 w-4" /> Add Folder</Button>
           </CardFooter>
         </Card>
