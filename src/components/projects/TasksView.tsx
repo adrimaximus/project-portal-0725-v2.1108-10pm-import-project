@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskAttachmentList from './TaskAttachmentList';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { TaskAttachment } from "@/types/task";
 
 interface TasksViewProps {
   tasks: Task[];
@@ -57,8 +58,23 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
   }
 
   const renderAttachments = (task: Task) => {
-    const attachments = task.attachments || [];
-    if (attachments.length === 0) return null;
+    const allAttachments: TaskAttachment[] = [...(task.attachments || [])];
+
+    if (task.originTicketId && task.attachment_url) {
+      if (!allAttachments.some(att => att.file_url === task.attachment_url)) {
+        allAttachments.unshift({
+          id: `origin-${task.originTicketId}`,
+          file_name: task.attachment_name || 'Ticket Attachment',
+          file_url: task.attachment_url,
+          file_type: '',
+          file_size: 0,
+          storage_path: '',
+          created_at: task.created_at,
+        });
+      }
+    }
+
+    if (allAttachments.length === 0) return null;
 
     return (
       <Dialog>
@@ -68,15 +84,15 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
               <DialogTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center gap-1 text-muted-foreground cursor-pointer hover:text-primary">
                   <Paperclip className="h-4 w-4" />
-                  <span className="text-xs">{attachments.length}</span>
+                  <span className="text-xs">{allAttachments.length}</span>
                 </div>
               </DialogTrigger>
             </TooltipTrigger>
-            <TooltipContent><p>{attachments.length} attachment(s)</p></TooltipContent>
+            <TooltipContent><p>{allAttachments.length} attachment(s)</p></TooltipContent>
           </Tooltip>
         </TooltipProvider>
         <DialogContent>
-          <TaskAttachmentList attachments={attachments} />
+          <TaskAttachmentList attachments={allAttachments} />
         </DialogContent>
       </Dialog>
     );
@@ -126,20 +142,6 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                       <div className="flex items-center gap-2">
                         {task.originTicketId && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
                         <span className={`font-semibold ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.title}</span>
-                        {task.originTicketId && task.attachment_url && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <a href={task.attachment_url} download={task.attachment_name} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-block">
-                                  <Paperclip className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                                </a>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{task.attachment_name || 'View Attachment'}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
                         {renderAttachments(task)}
                       </div>
                       {task.description && <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>}
