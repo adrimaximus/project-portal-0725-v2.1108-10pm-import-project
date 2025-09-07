@@ -11,7 +11,7 @@ const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
   unreadCount: 0,
   isGroup: c.is_group,
   members: (c.participants || []).map((p: any) => ({
-    id: p.id, name: p.name, avatar: p.avatar_url, initials: p.initials,
+    id: p.id, name: p.name, avatar_url: p.avatar_url, initials: p.initials,
   })),
   created_by: c.created_by,
 });
@@ -44,7 +44,7 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
       sender: {
         id: m.sender_id,
         name: senderName || m.sender_email,
-        avatar: m.sender_avatar_url,
+        avatar_url: m.sender_avatar_url,
         initials: getInitials(senderName, m.sender_email) || 'NN',
         email: m.sender_email,
       },
