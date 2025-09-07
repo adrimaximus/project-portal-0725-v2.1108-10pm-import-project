@@ -4,7 +4,7 @@ import StatCard from './StatCard';
 import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { generatePastelColor } from '@/lib/utils';
+import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 
 interface DashboardStatsGridProps {
   projects: Project[];
@@ -24,7 +24,7 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
   return (
     <div className="flex items-center gap-2 sm:gap-4 pt-2">
       <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-        <AvatarImage src={user.avatar_url} alt={user.name} />
+        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
         <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
       </Avatar>
       <div>

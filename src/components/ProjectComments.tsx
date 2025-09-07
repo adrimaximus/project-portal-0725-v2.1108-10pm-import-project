@@ -9,7 +9,7 @@ import { id } from "date-fns/locale";
 import { Mention, MentionsInput } from "react-mentions";
 import { Badge } from "./ui/badge";
 import CommentRenderer from "./CommentRenderer";
-import { generatePastelColor } from "@/lib/utils";
+import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -158,7 +158,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             return (
               <div key={item.id} className="flex items-start space-x-4">
                 <Avatar>
-                  <AvatarImage src={item.author.avatar_url} />
+                  <AvatarImage src={getAvatarUrl(item.author.avatar_url, item.author.id)} />
                   <AvatarFallback style={generatePastelColor(item.author.id)}>{item.author.initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">

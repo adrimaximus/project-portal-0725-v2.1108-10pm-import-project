@@ -2,7 +2,7 @@ import { Task, TaskAssignee } from '@/types/task';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { generatePastelColor, getPriorityStyles, isOverdue, cn } from '@/lib/utils';
+import { generatePastelColor, getPriorityStyles, isOverdue, cn, getAvatarUrl, getInitials } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -18,15 +18,6 @@ interface TasksKanbanCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
-}
-
-const getInitials = (user: TaskAssignee) => {
-    const firstNameInitial = user.first_name?.[0] || '';
-    const lastNameInitial = user.last_name?.[0] || '';
-    if (firstNameInitial && lastNameInitial) {
-        return `${firstNameInitial}${lastNameInitial}`.toUpperCase();
-    }
-    return (user.email?.[0] || 'U').toUpperCase();
 }
 
 const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
@@ -147,9 +138,9 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
                   <Tooltip>
                     <TooltipTrigger>
                       <Avatar className="h-6 w-6 border-2 border-background">
-                        <AvatarImage src={user.avatar_url || undefined} />
+                        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
                         <AvatarFallback style={generatePastelColor(user.id)}>
-                          {getInitials(user)}
+                          {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
                         </AvatarFallback>
                       </Avatar>
                     </TooltipTrigger>

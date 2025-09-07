@@ -1,5 +1,6 @@
 import { AssignedUser } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { getAvatarUrl, generatePastelColor } from '@/lib/utils';
 
 interface ProjectTeamProps {
   team: AssignedUser[];
@@ -13,8 +14,8 @@ const ProjectTeam = ({ team }: ProjectTeamProps) => {
         {team.map(member => (
           <div key={member.id} className="flex items-center">
             <Avatar>
-              <AvatarImage src={member.avatar_url} />
-              <AvatarFallback>{member.initials}</AvatarFallback>
+              <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
+              <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
             </Avatar>
             <div className="ml-2">
               <p>{member.name}</p>

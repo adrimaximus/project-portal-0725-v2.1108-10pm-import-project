@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn } from "@/lib/utils";
+import { generatePastelColor, getPriorityStyles, getTaskStatusStyles, isOverdue, cn, getAvatarUrl, getInitials } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -23,15 +23,6 @@ interface TasksViewProps {
   onToggleTaskCompletion: (task: Task, completed: boolean) => void;
   sortConfig: { key: string; direction: 'asc' | 'desc' };
   requestSort: (key: string) => void;
-}
-
-const getInitials = (user: TaskAssignee) => {
-    const firstNameInitial = user.first_name?.[0] || '';
-    const lastNameInitial = user.last_name?.[0] || '';
-    if (firstNameInitial && lastNameInitial) {
-        return `${firstNameInitial}${lastNameInitial}`.toUpperCase();
-    }
-    return (user.email?.[0] || 'U').toUpperCase();
 }
 
 const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion, sortConfig, requestSort }: TasksViewProps) => {
@@ -188,9 +179,9 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                           <Tooltip>
                             <TooltipTrigger>
                               <Avatar className="h-8 w-8 border-2 border-background">
-                                <AvatarImage src={user.avatar_url || undefined} />
+                                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
                                 <AvatarFallback style={generatePastelColor(user.id)}>
-                                  {getInitials(user)}
+                                  {getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}
                                 </AvatarFallback>
                               </Avatar>
                             </TooltipTrigger>
@@ -205,9 +196,9 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                           <Tooltip>
                             <TooltipTrigger>
                               <Avatar key={task.created_by.id} className="h-8 w-8 border-2 border-background opacity-50">
-                                <AvatarImage src={task.created_by.avatar_url || undefined} />
+                                <AvatarImage src={getAvatarUrl(task.created_by.avatar_url, task.created_by.id)} />
                                 <AvatarFallback style={generatePastelColor(task.created_by.id)}>
-                                  {getInitials(task.created_by)}
+                                  {getInitials([task.created_by.first_name, task.created_by.last_name].filter(Boolean).join(' '), task.created_by.email || undefined)}
                                 </AvatarFallback>
                               </Avatar>
                             </TooltipTrigger>
