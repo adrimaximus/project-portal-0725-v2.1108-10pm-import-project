@@ -66,7 +66,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     defaultValues: {
       full_name: '', email: '', phone: '', company: '', job_title: '',
       department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-      notes: '', project_ids: [], kanban_tag_id: undefined, general_tag_ids: [], address: '', custom_properties: {},
+      notes: '', project_ids: [], kanban_tag_id: '', general_tag_ids: [], address: '', custom_properties: {},
     }
   });
 
@@ -109,7 +109,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
         birthday: person.birthday ? new Date(person.birthday) : null,
         notes: person.notes || '',
         project_ids: person.projects?.map(p => p.id) || [],
-        kanban_tag_id: kanbanTag?.id || undefined,
+        kanban_tag_id: kanbanTag?.id || '',
         general_tag_ids: generalPersonTags?.map(t => t.id) || [],
         address: person.address?.formatted_address || '',
         custom_properties: person.custom_properties || {},
@@ -119,7 +119,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       form.reset({
         full_name: '', email: '', phone: '', company: '', job_title: '',
         department: '', linkedin: '', twitter: '', instagram: '', birthday: null,
-        notes: '', project_ids: [], kanban_tag_id: undefined, general_tag_ids: [], address: '', custom_properties: {},
+        notes: '', project_ids: [], kanban_tag_id: '', general_tag_ids: [], address: '', custom_properties: {},
       });
       setAvatarPreview(null);
     }
@@ -164,7 +164,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       }
 
       const finalTagIds = [...(values.general_tag_ids || [])];
-      if (values.kanban_tag_id && values.kanban_tag_id !== 'none') {
+      if (values.kanban_tag_id) {
           finalTagIds.push(values.kanban_tag_id);
       }
 
@@ -326,7 +326,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="none">No Column</SelectItem>
+                      <SelectItem value="">No Column</SelectItem>
                       {kanbanTags.map(tag => (
                         <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>
                       ))}
