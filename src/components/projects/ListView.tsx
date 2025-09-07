@@ -11,15 +11,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getStatusStyles, formatInJakarta, generatePastelColor } from '@/lib/utils';
+import { getStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { format } from 'date-fns';
-import { isSameDay, getMonth, getYear } from 'date-fns';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { useProfiles } from "@/hooks/useProfiles";
 
 const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
   const navigate = useNavigate();
@@ -27,9 +21,30 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
   const dayRefs = useRef(new Map<string, HTMLDivElement>());
   const [scrollToDate, setScrollToDate] = useState<string | null>(null);
   const initialScrollDone = useRef(false);
+  const { data: allProfiles = [] } = useProfiles();
 
   const dayEntries = useMemo(() => {
-    const sortedProjects = projects
+    const profilesMap = allProfiles.length > 0 ? new Map(allProfiles.map(p => [p.id, p])) : null;
+
+    const enrichedProjects = projects.map(project => {
+      if (!profilesMap) return project;
+      return {
+        ...project,
+        assignedTo: project.assignedTo.map(userFromProject => {
+          const freshProfile = profilesMap.get(userFromProject.id);
+          if (!freshProfile) return userFromProject;
+
+          return {
+            ...userFromProject,
+            avatar_url: freshProfile.avatar_url,
+            name: [freshProfile.first_name, freshProfile.last_name].filter(Boolean).join(' ') || freshProfile.email?.split('@')[0] || 'No Name',
+            initials: `${freshProfile.first_name?.[0] || ''}${freshProfile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
+          };
+        })
+      };
+    });
+
+    const sortedProjects = enrichedProjects
       .filter(p => p.start_date)
       .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
 
@@ -43,7 +58,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
     }, {} as Record<string, Project[]>);
 
     return Object.entries(groupedByDay);
-  }, [projects]);
+  }, [projects, allProfiles]);
 
   useEffect(() => {
     if (dayEntries.length === 0 || initialScrollDone.current) return;
@@ -174,7 +189,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                         <div className="flex flex-shrink-0 -space-x-2">
                           {project.assignedTo.slice(0, 3).map((user) => (
                             <Avatar key={user.id} className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-card">
-                              <AvatarImage src={user.avatar_url} alt={user.name} />
+                              <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
                               <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                             </Avatar>
                           ))}
