@@ -31,6 +31,8 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
+
   useImperativeHandle(ref, () => ({
     openSettings: () => setIsSettingsOpen(true),
   }));
@@ -39,18 +41,24 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     const savedOrder = localStorage.getItem('peopleKanbanColumnOrder');
     const savedVisible = localStorage.getItem('peopleKanbanVisibleColumns');
     
-    const initialOrder = savedOrder ? JSON.parse(savedOrder) : tags.map(t => t.id);
+    const allDbTagIds = tags.map(t => t.id);
+    
+    let initialOrder: string[];
+    if (savedOrder) {
+      initialOrder = JSON.parse(savedOrder);
+      const savedOrderSet = new Set(initialOrder);
+      const newTags = allDbTagIds.filter(id => !savedOrderSet.has(id));
+      initialOrder.push(...newTags);
+    } else {
+      initialOrder = ['uncategorized', ...allDbTagIds];
+    }
+    if (!initialOrder.includes('uncategorized')) {
+      initialOrder.unshift('uncategorized');
+    }
     setColumnOrder(initialOrder);
 
-    const initialVisible = savedVisible ? JSON.parse(savedVisible) : tags.map(t => t.id);
+    const initialVisible = savedVisible ? JSON.parse(savedVisible) : ['uncategorized', ...allDbTagIds];
     setVisibleColumnIds(initialVisible);
-
-    const allTagIds = new Set(tags.map(t => t.id));
-    const currentOrderIds = new Set(initialOrder);
-    const newTags = Array.from(allTagIds).filter(id => !currentOrderIds.has(id));
-    if (newTags.length > 0) {
-      setColumnOrder([...initialOrder, ...newTags]);
-    }
 
   }, [tags]);
 
@@ -69,15 +77,12 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   }, []);
 
   const columns = useMemo(() => {
-    const uncategorizedCol = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
-    const tagMap = new Map(tags.map(t => [t.id, t]));
-    
-    const visibleTags = columnOrder
+    const tagMap = new Map([...tags, uncategorizedTag].map(t => [t.id, t]));
+    return columnOrder
+      .filter(id => visibleColumnIds.includes(id))
       .map(id => tagMap.get(id))
-      .filter(tag => tag && visibleColumnIds.includes(tag.id)) as Tag[];
-
-    return [uncategorizedCol, ...visibleTags];
-  }, [tags, columnOrder, visibleColumnIds]);
+      .filter(Boolean) as Tag[];
+  }, [tags, columnOrder, visibleColumnIds, uncategorizedTag]);
 
   const personGroups = useMemo(() => {
     const groups: Record<string, Person[]> = {};
@@ -160,13 +165,15 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     }
   };
 
+  const allTagsForEditor = [uncategorizedTag, ...tags];
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
       <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4 h-full">
         <div className={`transition-all duration-300 ease-in-out flex-shrink-0 ${isSettingsOpen ? 'w-64' : 'w-0'} overflow-hidden`}>
           <div className="w-64 h-full bg-muted/50 rounded-lg border">
             <KanbanColumnEditor
-              allTags={tags}
+              allTags={allTagsForEditor}
               columnOrder={columnOrder}
               visibleColumnIds={visibleColumnIds}
               onSettingsChange={handleSettingsChange}
