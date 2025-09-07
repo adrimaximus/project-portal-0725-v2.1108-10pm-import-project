@@ -37,8 +37,6 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     setImageError(true);
   };
 
-  const instagramUsername = getInstagramUsername(person.social_media?.instagram);
-
   return (
     <Card 
       className="group h-full flex flex-col transition-shadow hover:shadow-lg cursor-pointer rounded-2xl overflow-hidden" 
@@ -75,11 +73,15 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           </div>
         )}
 
-        <div className="mt-auto pt-3 flex flex-col gap-2">
+        <div className="mt-auto pt-3 flex items-center gap-3">
           {person.social_media?.instagram && (
-            <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+            <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
               <Instagram className="h-4 w-4" />
-              {instagramUsername && <span>{instagramUsername}</span>}
+            </a>
+          )}
+          {person.phone && (
+            <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.phone)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
+              <WhatsappIcon className="h-4 w-4" />
             </a>
           )}
         </div>
