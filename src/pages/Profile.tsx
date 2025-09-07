@@ -137,11 +137,7 @@ const Profile = () => {
 
     if (error) {
       console.error("Password update error:", error);
-      if (error.message.includes("should be different")) {
-        toast.error("Password baru harus berbeda dari password lama.");
-      } else {
-        toast.error("Gagal memperbarui password.", { description: error.message });
-      }
+      toast.error("Gagal memperbarui password.", { description: error.message });
     } else {
       toast.success("Password berhasil diperbarui.");
       setNewPassword("");
