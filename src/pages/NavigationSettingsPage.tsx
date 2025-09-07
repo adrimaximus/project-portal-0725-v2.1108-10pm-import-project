@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, GripVertical, Loader2, Edit, Folder as FolderIcon, FolderPlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay, useDroppable } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -39,7 +39,7 @@ export interface NavFolder extends FolderData {
 }
 
 const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { item: NavItem, onDelete: (id: string) => void, isDeleting: boolean, onToggle: (id: string, enabled: boolean) => void, onEdit: (item: NavItem) => void }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, data: { type: 'item' } });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, data: { type: 'item', item } });
     const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : 0, position: 'relative' as 'relative' };
     return (
         <div ref={setNodeRef} style={style} className="flex items-center justify-between p-2 border rounded-md bg-background">
@@ -56,6 +56,27 @@ const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { 
                 <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} disabled={isDeleting}>{isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</Button>
             </div>
         </div>
+    )
+}
+
+const DroppableFolder = ({ folder, children, onEdit, onDelete }: { folder: NavFolder, children: React.ReactNode, onEdit: (folder: NavFolder) => void, onDelete: (id: string) => void }) => {
+    const { setNodeRef } = useDroppable({ id: folder.id, data: { type: 'folder' } });
+
+    return (
+        <Collapsible defaultOpen>
+            <CollapsibleTrigger asChild>
+                <div ref={setNodeRef} className="flex items-center justify-between p-2 border rounded-md bg-muted/50 cursor-pointer">
+                    <div className="flex items-center gap-2 font-semibold"><FolderIcon className="h-5 w-5" style={{ color: folder.color }} /> {folder.name}</div>
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(folder); }}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
+                </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="p-2 pl-6 border-l-2 ml-4">
+                {children}
+            </CollapsibleContent>
+        </Collapsible>
     )
 }
 
@@ -128,13 +149,7 @@ const NavigationSettingsPage = () => {
   };
 
   const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => {
-    try {
-      new URL(url);
-      upsertItems([{ id, name, url, icon }]);
-      setEditingItem(null);
-    } catch (_) {
-      toast.error("Invalid URL format.");
-    }
+    try { new URL(url); await upsertItems([{ id, name, url, icon }]); setEditingItem(null); } catch (_) { toast.error("Invalid URL format."); }
   };
 
   const handleSaveFolder = (data: FolderData) => {
@@ -149,63 +164,57 @@ const NavigationSettingsPage = () => {
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
     const { active, over } = event;
-
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
+    if (activeId === overId) return;
 
-    const activeContainer = active.data.current?.sortable.containerId;
-    const overContainer = over.data.current?.sortable.containerId || over.id;
+    const activeItem = navItems.find(i => i.id === activeId);
+    if (!activeItem) return;
 
-    const oldFolderId = activeContainer === 'root' ? null : activeContainer;
-    const newFolderId = overContainer === 'root' ? null : overContainer;
+    const oldFolderId = activeItem.folder_id;
+    const overIsFolder = over.data.current?.type === 'folder';
+    const overItem = navItems.find(i => i.id === overId);
+    const newFolderId = overIsFolder ? overId : (overItem ? overItem.folder_id : null);
 
-    const oldItems = [...navItems];
-    let newItems = oldItems;
+    const itemsToUpdate: Partial<NavItem>[] = [];
 
-    const activeIndex = oldItems.findIndex(i => i.id === activeId);
-    if (activeIndex === -1) return;
-
-    if (oldFolderId === newFolderId) {
-      const itemsInList = oldItems.filter(i => i.folder_id === oldFolderId).sort((a, b) => a.position - b.position);
-      const oldListIndex = itemsInList.findIndex(i => i.id === activeId);
-      const newListIndex = itemsInList.findIndex(i => i.id === overId);
+    // Optimistically update UI
+    queryClient.setQueryData(queryKey, (currentItems: NavItem[] = []) => {
+      let newItems = [...currentItems];
+      const activeIndex = newItems.findIndex(i => i.id === activeId);
       
-      if (oldListIndex !== newListIndex) {
-        const reorderedList = arrayMove(itemsInList, oldListIndex, newListIndex);
-        const updates = reorderedList.map((item, index) => ({ ...item, position: index }));
-        newItems = oldItems.filter(i => i.folder_id !== oldFolderId).concat(updates);
+      if (oldFolderId === newFolderId) {
+        const itemsInList = newItems.filter(i => i.folder_id === oldFolderId).sort((a, b) => a.position - b.position);
+        const oldListIndex = itemsInList.findIndex(i => i.id === activeId);
+        const newListIndex = itemsInList.findIndex(i => i.id === overId);
+        if (oldListIndex === -1 || newListIndex === -1) return currentItems;
+        
+        const reordered = arrayMove(itemsInList, oldListIndex, newListIndex);
+        reordered.forEach((item, index) => {
+          const originalItem = newItems.find(i => i.id === item.id)!;
+          originalItem.position = index;
+          itemsToUpdate.push({ id: item.id, position: index });
+        });
+      } else {
+        const movedItem = newItems[activeIndex];
+        movedItem.folder_id = newFolderId;
+
+        const itemsInNewList = newItems.filter(i => i.folder_id === newFolderId && i.id !== activeId).sort((a, b) => a.position - b.position);
+        const overIndexInNewList = overItem ? itemsInNewList.findIndex(i => i.id === overId) : itemsInNewList.length;
+        itemsInNewList.splice(overIndexInNewList, 0, movedItem);
+        
+        const itemsInOldList = newItems.filter(i => i.folder_id === oldFolderId && i.id !== activeId).sort((a, b) => a.position - b.position);
+
+        itemsInOldList.forEach((item, index) => { item.position = index; itemsToUpdate.push({ id: item.id, position: index }); });
+        itemsInNewList.forEach((item, index) => { item.position = index; itemsToUpdate.push({ id: item.id, position: index, folder_id: newFolderId }); });
       }
-    } else {
-      const activeItem = { ...oldItems[activeIndex], folder_id: newFolderId };
-      
-      const itemsInNewList = oldItems.filter(i => i.folder_id === newFolderId).sort((a, b) => a.position - b.position);
-      const overIndexInNewList = itemsInNewList.findIndex(i => i.id === overId);
-      const newIndex = overIndexInNewList >= 0 ? overIndexInNewList : itemsInNewList.length;
-      itemsInNewList.splice(newIndex, 0, activeItem);
+      return newItems;
+    });
 
-      const itemsInOldList = oldItems.filter(i => i.folder_id === oldFolderId && i.id !== activeId).sort((a, b) => a.position - b.position);
-
-      const updatedNewList = itemsInNewList.map((item, index) => ({ ...item, position: index }));
-      const updatedOldList = itemsInOldList.map((item, index) => ({ ...item, position: index }));
-      
-      newItems = oldItems
-        .filter(i => i.folder_id !== oldFolderId && i.folder_id !== newFolderId)
-        .concat(updatedOldList, updatedNewList);
-    }
-
-    queryClient.setQueryData(queryKey, newItems);
-
-    const updatesToDb = newItems
-      .filter(newItem => {
-        const oldItem = oldItems.find(i => i.id === newItem.id);
-        return !oldItem || oldItem.position !== newItem.position || oldItem.folder_id !== newItem.folder_id;
-      })
-      .map(({ id, position, folder_id }) => ({ id, position, folder_id }));
-
-    if (updatesToDb.length > 0) {
-      upsertItems(updatesToDb);
+    if (itemsToUpdate.length > 0) {
+      upsertItems(itemsToUpdate);
     }
   };
 
@@ -223,24 +232,13 @@ const NavigationSettingsPage = () => {
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <div className="space-y-2">
                 {folders.map(folder => (
-                  <Collapsible key={folder.id} defaultOpen>
-                    <CollapsibleTrigger className="w-full">
-                      <div className="flex items-center justify-between p-2 border rounded-md bg-muted/50">
-                        <div className="flex items-center gap-2 font-semibold"><FolderIcon className="h-5 w-5" style={{ color: folder.color }} /> {folder.name}</div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setEditingFolder(folder); setIsFolderFormOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </div>
+                  <DroppableFolder key={folder.id} folder={folder} onEdit={(f) => { setEditingFolder(f); setIsFolderFormOpen(true); }} onDelete={deleteFolder}>
+                    <SortableContext id={folder.id} items={navItems.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-2">
+                        {navItems.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => upsertItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
                       </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="p-2 pl-6 border-l-2 ml-4">
-                      <SortableContext id={folder.id} items={navItems.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-2">
-                          {navItems.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => upsertItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
-                        </div>
-                      </SortableContext>
-                    </CollapsibleContent>
-                  </Collapsible>
+                    </SortableContext>
+                  </DroppableFolder>
                 ))}
               </div>
               <div className="border-t pt-4">
