@@ -41,8 +41,6 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
     e.stopPropagation();
   };
 
-  const hasSupportTag = task.tags?.some(tag => tag.name.toLowerCase() === 'support');
-
   return (
     <Card 
       ref={setNodeRef} 
@@ -114,7 +112,7 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
             }
           </div>
           <div className="flex items-center gap-2">
-            {hasSupportTag && task.attachment_url && (
+            {task.originTicketId && task.attachment_url && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>

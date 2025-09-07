@@ -80,7 +80,6 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
           {tasks.map(task => {
             const statusStyle = getTaskStatusStyles(task.status);
             const priorityStyle = getPriorityStyles(task.priority);
-            const hasSupportTag = task.tags?.some(tag => tag.name.toLowerCase() === 'support');
             return (
               <TableRow key={task.id} data-state={task.completed ? "completed" : ""}>
                 <TableCell className="font-medium sticky left-0 bg-background z-10 w-[40%] sm:w-[30%]">
@@ -96,7 +95,7 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                       <div className="flex items-center gap-2">
                         {task.originTicketId && <Ticket className={`h-4 w-4 flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-red-500'}`} />}
                         <span className={`font-semibold ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.title}</span>
-                        {hasSupportTag && task.attachment_url && (
+                        {task.originTicketId && task.attachment_url && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
