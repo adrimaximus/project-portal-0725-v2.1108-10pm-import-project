@@ -68,6 +68,10 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         let href = isEmbed ? `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}` : item.url;
         let badge;
 
+        if (href === '/') {
+          href = '/dashboard';
+        }
+
         // Fix for incorrect URLs from database
         const itemNameLower = item.name.toLowerCase();
         if (itemNameLower === 'knowledge base' && href !== '/knowledge-base') {
@@ -107,7 +111,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     <div className="h-screen border-r bg-muted/40 transition-all duration-300 ease-in-out" onDoubleClick={onToggle}>
       <div className="flex h-full max-h-screen flex-col">
         <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6", isCollapsed && "justify-center px-2")}>
-          <Link to="/" className="flex items-center gap-2 font-semibold" title="Client Portal"><Package className="h-6 w-6" /><span className={cn(isCollapsed && "sr-only")}>Client Portal</span></Link>
+          <Link to="/dashboard" className="flex items-center gap-2 font-semibold" title="Client Portal"><Package className="h-6 w-6" /><span className={cn(isCollapsed && "sr-only")}>Client Portal</span></Link>
         </div>
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto py-2">
