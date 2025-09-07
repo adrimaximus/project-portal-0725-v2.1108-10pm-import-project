@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { getAvatarUrl } from "@/lib/utils";
 
 interface KBCardProps {
   article: KbArticle;
@@ -80,7 +81,7 @@ export function KBCard({ article, onEdit, onDelete }: KBCardProps) {
           {article.creator ? (
             <div className="flex items-center space-x-2 min-w-0">
               <Avatar className="h-6 w-6">
-                <AvatarImage src={article.creator.avatar_url} alt={article.creator.name} />
+                <AvatarImage src={getAvatarUrl(article.creator.avatar_url, article.creator.id)} alt={article.creator.name} />
                 <AvatarFallback className="text-xs">{article.creator.initials}</AvatarFallback>
               </Avatar>
               <span className="text-xs text-muted-foreground truncate">{article.creator.name}</span>
