@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Bell, Home, Package, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, BookOpen } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,6 @@ type PortalSidebarProps = {
   onToggle: () => void;
 };
 
-// Define a local type for sidebar navigation items that includes rendering properties
 type NavItem = {
   id: string;
   href: string;
@@ -49,6 +49,8 @@ type NavItem = {
   badge?: number;
   isCustom?: boolean;
 };
+
+const Icons = LucideIcons as unknown as { [key: string]: LucideIcons.LucideIcon };
 
 const NavLink = ({ item, isCollapsed, location }: { item: NavItem, isCollapsed: boolean, location: any }) => {
   if (isCollapsed) {
@@ -192,13 +194,16 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
     const customItems: NavItem[] = (customNavItems || [])
       .filter(item => item.is_enabled)
-      .map(item => ({
-        id: item.id,
-        href: `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}`,
-        label: item.name,
-        icon: LinkIcon,
-        isCustom: true,
-      }));
+      .map(item => {
+        const IconComponent = item.icon ? Icons[item.icon] : LinkIcon;
+        return {
+          id: item.id,
+          href: `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}`,
+          label: item.name,
+          icon: IconComponent || LinkIcon,
+          isCustom: true,
+        };
+      });
 
     const allAvailableItems = [...visibleDefaultItems, ...customItems];
     const itemsById = new Map(allAvailableItems.map(item => [item.id, item]));

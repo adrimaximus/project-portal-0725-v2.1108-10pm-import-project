@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical, Loader2, Edit, Pencil, Link as LinkIcon } from "lucide-react";
+import { Plus, Trash2, GripVertical, Loader2, Edit } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DndContext,
@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import EditNavItemDialog from "@/components/settings/EditNavItemDialog";
+import IconPicker from "@/components/IconPicker";
 
 export interface NavItem {
   id: string;
@@ -39,6 +40,7 @@ export interface NavItem {
   position: number;
   user_id: string;
   is_enabled: boolean;
+  icon: string | null;
 }
 
 const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { item: NavItem, onDelete: (id: string) => void, isDeleting: boolean, onToggle: (id: string, enabled: boolean) => void, onEdit: (item: NavItem) => void }) => {
@@ -92,6 +94,7 @@ const NavigationSettingsPage = () => {
   const queryClient = useQueryClient();
   const [newItemName, setNewItemName] = useState("");
   const [newItemUrl, setNewItemUrl] = useState("");
+  const [newItemIcon, setNewItemIcon] = useState<string | undefined>(undefined);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<NavItem | null>(null);
 
@@ -113,12 +116,12 @@ const NavigationSettingsPage = () => {
   });
 
   const addItemMutation = useMutation({
-    mutationFn: async ({ name, url }: { name: string, url: string }) => {
+    mutationFn: async ({ name, url, icon }: { name: string, url: string, icon?: string }) => {
       if (!user) throw new Error("User not authenticated");
       const newPosition = navItems.length;
       const { data, error } = await supabase
         .from('user_navigation_items')
-        .insert({ name, url, user_id: user.id, position: newPosition, is_enabled: true })
+        .insert({ name, url, user_id: user.id, position: newPosition, is_enabled: true, icon })
         .select()
         .single();
       if (error) throw error;
@@ -128,6 +131,7 @@ const NavigationSettingsPage = () => {
       queryClient.setQueryData(queryKey, (old: NavItem[] | undefined) => [...(old || []), newItem]);
       setNewItemName("");
       setNewItemUrl("");
+      setNewItemIcon(undefined);
       toast.success("Navigation item added");
     },
     onError: (error) => {
@@ -210,7 +214,7 @@ const NavigationSettingsPage = () => {
     if (newItemName.trim() && newItemUrl.trim()) {
       try {
         new URL(newItemUrl);
-        addItemMutation.mutate({ name: newItemName.trim(), url: newItemUrl.trim() });
+        addItemMutation.mutate({ name: newItemName.trim(), url: newItemUrl.trim(), icon: newItemIcon });
       } catch (_) {
         toast.error("Invalid URL format.");
         return;
@@ -218,10 +222,10 @@ const NavigationSettingsPage = () => {
     }
   };
 
-  const handleSaveEdit = async (id: string, name: string, url: string) => {
+  const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => {
     try {
         new URL(url);
-        await updateItemMutation.mutateAsync({ id, name, url });
+        await updateItemMutation.mutateAsync({ id, name, url, icon });
     } catch (_) {
         toast.error("Invalid URL format.");
     }
@@ -311,18 +315,16 @@ const NavigationSettingsPage = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
+              <Label htmlFor="icon">Icon</Label>
+              <IconPicker value={newItemIcon} onChange={setNewItemIcon} />
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="name">Name</Label>
-              <div className="relative">
-                <Pencil className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" className="pl-10" />
-              </div>
+              <Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="url">URL</Label>
-              <div className="relative">
-                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="url" value={newItemUrl} onChange={(e) => setNewItemUrl(e.target.value)} placeholder="https://example.com/dashboard" className="pl-10" />
-              </div>
+              <Input id="url" value={newItemUrl} onChange={(e) => setNewItemUrl(e.target.value)} placeholder="https://example.com/dashboard" />
             </div>
           </CardContent>
           <CardFooter>
