@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical, Loader2 } from "lucide-react";
+import { Plus, Trash2, GripVertical, Loader2, Edit } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DndContext,
@@ -29,6 +29,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import EditNavItemDialog from "@/components/settings/EditNavItemDialog";
 
 export interface NavItem {
   id: string;
@@ -36,9 +38,10 @@ export interface NavItem {
   url: string;
   position: number;
   user_id: string;
+  is_enabled: boolean;
 }
 
-const SortableNavItemRow = ({ item, onDelete, isDeleting }: { item: NavItem, onDelete: (id: string) => void, isDeleting: boolean }) => {
+const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { item: NavItem, onDelete: (id: string) => void, isDeleting: boolean, onToggle: (id: string, enabled: boolean) => void, onEdit: (item: NavItem) => void }) => {
     const {
       attributes,
       listeners,
@@ -67,9 +70,19 @@ const SortableNavItemRow = ({ item, onDelete, isDeleting }: { item: NavItem, onD
                     <p className="text-sm text-muted-foreground truncate">{item.url}</p>
                 </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} disabled={isDeleting}>
-                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            </Button>
+            <div className="flex items-center gap-1 sm:gap-2">
+                <Switch
+                    checked={item.is_enabled}
+                    onCheckedChange={(checked) => onToggle(item.id, checked)}
+                    aria-label="Toggle navigation item"
+                />
+                <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
+                    <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} disabled={isDeleting}>
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                </Button>
+            </div>
         </div>
     )
 }
@@ -80,6 +93,7 @@ const NavigationSettingsPage = () => {
   const [newItemName, setNewItemName] = useState("");
   const [newItemUrl, setNewItemUrl] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<NavItem | null>(null);
 
   const queryKey = ['user_navigation_items', user?.id];
 
@@ -104,7 +118,7 @@ const NavigationSettingsPage = () => {
       const newPosition = navItems.length;
       const { data, error } = await supabase
         .from('user_navigation_items')
-        .insert({ name, url, user_id: user.id, position: newPosition })
+        .insert({ name, url, user_id: user.id, position: newPosition, is_enabled: true })
         .select()
         .single();
       if (error) throw error;
@@ -138,6 +152,32 @@ const NavigationSettingsPage = () => {
     onSettled: () => {
       setDeletingId(null);
     }
+  });
+
+  const updateItemMutation = useMutation({
+    mutationFn: async (updatedFields: Partial<NavItem> & { id: string }) => {
+        const { id, ...fieldsToUpdate } = updatedFields;
+        const { data, error } = await supabase
+            .from('user_navigation_items')
+            .update(fieldsToUpdate)
+            .eq('id', id)
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    },
+    onSuccess: (updatedItem) => {
+        queryClient.setQueryData(queryKey, (old: NavItem[] | undefined) =>
+            old?.map(item => item.id === updatedItem.id ? updatedItem : item) || []
+        );
+        toast.success("Item updated");
+        if (editingItem?.id === updatedItem.id) {
+          setEditingItem(null);
+        }
+    },
+    onError: (error) => {
+        toast.error("Failed to update item", { description: error.message });
+    },
   });
 
   const updateOrderMutation = useMutation({
@@ -175,6 +215,15 @@ const NavigationSettingsPage = () => {
         toast.error("Invalid URL format.");
         return;
       }
+    }
+  };
+
+  const handleSaveEdit = async (id: string, name: string, url: string) => {
+    try {
+        new URL(url);
+        await updateItemMutation.mutateAsync({ id, name, url });
+    } catch (_) {
+        toast.error("Invalid URL format.");
     }
   };
 
@@ -224,7 +273,7 @@ const NavigationSettingsPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>Custom Navigation Items</CardTitle>
-            <CardDescription>Drag and drop to reorder items.</CardDescription>
+            <CardDescription>Drag and drop to reorder items. Use the toggle to show or hide them in the sidebar.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
@@ -245,6 +294,8 @@ const NavigationSettingsPage = () => {
                             item={item} 
                             onDelete={deleteItemMutation.mutate}
                             isDeleting={deleteItemMutation.isPending && deletingId === item.id}
+                            onToggle={(id, is_enabled) => updateItemMutation.mutate({ id, is_enabled })}
+                            onEdit={setEditingItem}
                           />
                       ))}
                   </SortableContext>
@@ -276,6 +327,13 @@ const NavigationSettingsPage = () => {
           </CardFooter>
         </Card>
       </div>
+      <EditNavItemDialog
+        item={editingItem}
+        open={!!editingItem}
+        onOpenChange={(open) => !open && setEditingItem(null)}
+        onSave={handleSaveEdit}
+        isSaving={updateItemMutation.isPending && !!editingItem}
+      />
     </PortalLayout>
   );
 };
