@@ -58,6 +58,8 @@ export function useTasks(options: UseTasksOptions = {}) {
       status: task.status,
       tags: task.tags,
       originTicketId: task.origin_ticket_id,
+      attachment_url: task.attachment_url,
+      attachment_name: task.attachment_name,
     }));
     
     return formattedTasks || [];
