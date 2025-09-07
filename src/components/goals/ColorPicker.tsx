@@ -8,6 +8,11 @@ interface ColorPickerProps {
   setColor: (color: string) => void;
 }
 
+const pastelColors = [
+  '#FFDDC1', '#FFABAB', '#FFC3A0', '#B5EAD7',
+  '#C7CEEA', '#E2F0CB', '#A7C7E7', '#F3E5AB',
+];
+
 const ColorPicker = ({ color, setColor }: ColorPickerProps) => {
   return (
     <Popover>
@@ -33,6 +38,20 @@ const ColorPicker = ({ color, setColor }: ColorPickerProps) => {
               onChange={setColor}
               prefixed
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Suggestions</Label>
+            <div className="grid grid-cols-8 gap-2">
+              {pastelColors.map((pastel) => (
+                <button
+                  key={pastel}
+                  className="h-6 w-6 rounded-full border cursor-pointer transition-transform hover:scale-110"
+                  style={{ backgroundColor: pastel }}
+                  onClick={() => setColor(pastel)}
+                  title={pastel}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </PopoverContent>
