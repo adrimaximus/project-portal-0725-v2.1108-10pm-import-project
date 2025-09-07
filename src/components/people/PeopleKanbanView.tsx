@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent, MouseSensor, TouchSensor } from '@dnd-kit/core';
 import { Person, Tag, User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -7,7 +7,7 @@ import { useQueryClient, useMutation } from '@tanstack/react-query';
 import PeopleKanbanColumn from './PeopleKanbanColumn';
 import PeopleKanbanCard from './PeopleKanbanCard';
 import KanbanColumnEditor from './KanbanColumnEditor';
-import { arrayMove } from '@dnd-kit/sortable';
+import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useAuth } from '@/contexts/AuthContext';
 
 type PeopleKanbanViewProps = {
@@ -24,7 +24,19 @@ type KanbanViewHandle = {
 const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ people, tags, onEditPerson, onDeletePerson }, ref) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    })
+  );
   const dragHappened = useRef(false);
   const [activePerson, setActivePerson] = useState<Person | null>(null);
   const [internalPeople, setInternalPeople] = useState<Person[]>(people);
