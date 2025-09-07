@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, GripVertical, Loader2, Edit, Folder as FolderIcon, FolderPlus } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay, useDroppable } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -41,6 +42,8 @@ export interface NavFolder extends FolderData {
   user_id?: string;
 }
 
+const Icons = LucideIcons as unknown as { [key: string]: LucideIcons.LucideIcon };
+
 const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { item: NavItem, onDelete: (id: string) => void, isDeleting: boolean, onToggle: (id: string, enabled: boolean) => void, onEdit: (item: NavItem) => void }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, data: { type: 'item', item } });
     const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : 0, position: 'relative' as 'relative' };
@@ -67,12 +70,13 @@ const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { 
 
 const DroppableFolder = ({ folder, children, onEdit, onDelete }: { folder: NavFolder, children: React.ReactNode, onEdit: (folder: NavFolder) => void, onDelete: (id: string) => void }) => {
     const { setNodeRef } = useDroppable({ id: folder.id, data: { type: 'folder' } });
+    const FolderIconComponent = folder.icon && Icons[folder.icon] ? Icons[folder.icon] : FolderIcon;
 
     return (
         <Collapsible defaultOpen>
             <CollapsibleTrigger asChild>
                 <div ref={setNodeRef} className="flex items-center justify-between p-2 border rounded-md bg-muted/50 cursor-pointer">
-                    <div className="flex items-center gap-2 font-semibold"><FolderIcon className="h-5 w-5" style={{ color: folder.color }} /> {folder.name}</div>
+                    <div className="flex items-center gap-2 font-semibold"><FolderIconComponent className="h-5 w-5" style={{ color: folder.color }} /> {folder.name}</div>
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(folder); }}><Edit className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
