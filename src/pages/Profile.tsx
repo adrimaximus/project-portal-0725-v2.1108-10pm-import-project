@@ -132,12 +132,15 @@ const Profile = () => {
     }
 
     setIsPasswordUpdating(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    const { data, error } = await supabase.functions.invoke('update-user-password', {
+      body: { password: newPassword }
+    });
     setIsPasswordUpdating(false);
 
     if (error) {
       console.error("Password update error:", error);
-      toast.error("Gagal memperbarui password.", { description: error.message });
+      const errorMessage = data?.error || error.message;
+      toast.error("Gagal memperbarui password.", { description: errorMessage });
     } else {
       toast.success("Password berhasil diperbarui.");
       setNewPassword("");
