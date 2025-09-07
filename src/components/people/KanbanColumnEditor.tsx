@@ -5,7 +5,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Tag } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { GripVertical, X } from 'lucide-react';
+import { GripVertical, X, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 const SortableTagItem = ({ tag, isVisible, onVisibilityChange }: { tag: Tag, isVisible: boolean, onVisibilityChange: (id: string, checked: boolean) => void }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: tag.id });
@@ -43,11 +44,21 @@ interface KanbanColumnEditorProps {
 
 const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettingsChange, onClose }: KanbanColumnEditorProps) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const sortedTags = React.useMemo(() => {
     const tagMap = new Map(allTags.map(t => [t.id, t]));
     return columnOrder.map(id => tagMap.get(id)).filter(Boolean) as Tag[];
   }, [allTags, columnOrder]);
+
+  const filteredSortedTags = React.useMemo(() => {
+    if (!searchQuery) {
+      return sortedTags;
+    }
+    return sortedTags.filter(tag =>
+      tag.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [sortedTags, searchQuery]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -74,11 +85,20 @@ const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettings
           <X className="h-4 w-4" />
         </Button>
       </div>
-      <div className="flex-1 overflow-y-auto pr-2 max-h-[calc(100vh-200px)]">
+      <div className="relative mb-2 px-1">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search columns..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-8 h-8"
+        />
+      </div>
+      <div className="flex-1 overflow-y-auto pr-2 max-h-[calc(100vh-240px)]">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={columnOrder} strategy={verticalListSortingStrategy}>
             <div className="space-y-1">
-              {sortedTags.map(tag => (
+              {filteredSortedTags.map(tag => (
                 <SortableTagItem
                   key={tag.id}
                   tag={tag}
