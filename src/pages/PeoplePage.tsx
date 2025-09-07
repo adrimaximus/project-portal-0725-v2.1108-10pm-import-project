@@ -24,6 +24,7 @@ import PeopleGridView from "@/components/people/PeopleGridView";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
 import MergeDialog from "@/components/people/MergeDialog";
+import CompaniesView from "@/components/people/CompaniesView";
 
 const PeoplePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,8 +34,8 @@ const PeoplePage = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [sortConfig, setSortConfig] = useState<{ key: keyof Person | null; direction: 'ascending' | 'descending' }>({ key: 'updated_at', direction: 'descending' });
-  const [viewMode, setViewMode] = useState<'table' | 'kanban' | 'grid'>(() => {
-    const savedView = localStorage.getItem('people_view_mode') as 'table' | 'kanban' | 'grid';
+  const [viewMode, setViewMode] = useState<'table' | 'kanban' | 'grid' | 'companies'>(() => {
+    const savedView = localStorage.getItem('people_view_mode') as 'table' | 'kanban' | 'grid' | 'companies';
     return savedView || 'grid';
   });
   const [isFindingDuplicates, setIsFindingDuplicates] = useState(false);
@@ -211,17 +212,16 @@ const PeoplePage = () => {
     <PortalLayout>
       <div className="flex flex-col h-full space-y-6">
         <div className="flex-shrink-0">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 flex-wrap">
             <div>
               <h1 className="text-3xl font-bold">People</h1>
               <p className="text-muted-foreground">Manage your contacts and connections.</p>
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => navigate('/people/companies')}><Building className="mr-2 h-4 w-4" /> Manage Companies</Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end sm:justify-start">
               <Button variant="outline" size="icon" onClick={findAndAnalyzeDuplicates} disabled={isFindingDuplicates} className="flex-shrink-0">
                 {isFindingDuplicates ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitMerge className="h-4 w-4" />}
               </Button>
-              <Button onClick={handleAddNew} className="w-full">
+              <Button onClick={handleAddNew} className="flex-grow sm:flex-grow-0">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Person
               </Button>
@@ -229,7 +229,7 @@ const PeoplePage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0 flex-wrap">
             <div className="relative w-full sm:flex-1 sm:max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -252,7 +252,7 @@ const PeoplePage = () => {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban' | 'grid')}} className="w-full sm:w-auto justify-center sm:justify-end">
+              <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban' | 'grid' | 'companies')}} className="w-full sm:w-auto justify-center sm:justify-end">
                   <TooltipProvider>
                       <Tooltip>
                           <TooltipTrigger asChild>
@@ -271,6 +271,12 @@ const PeoplePage = () => {
                               <ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem>
                           </TooltipTrigger>
                           <TooltipContent><p>Kanban View</p></TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                          <TooltipTrigger asChild>
+                              <ToggleGroupItem value="companies" aria-label="Companies view"><Building className="h-4 w-4" /></ToggleGroupItem>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Companies View</p></TooltipContent>
                       </Tooltip>
                   </TooltipProvider>
               </ToggleGroup>
@@ -390,10 +396,12 @@ const PeoplePage = () => {
             </div>
           ) : viewMode === 'kanban' ? (
             <PeopleKanbanView people={filteredPeople} tags={tags} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
-          ) : (
+          ) : viewMode === 'grid' ? (
             <div className="overflow-y-auto h-full">
               <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} onViewProfile={handleViewProfile} />
             </div>
+          ) : (
+            <CompaniesView />
           )}
         </div>
       </div>
