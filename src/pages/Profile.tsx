@@ -132,7 +132,7 @@ const Profile = () => {
     }
 
     setIsPasswordUpdating(true);
-    const { data, error } = await supabase.functions.invoke('update-user-password', {
+    const { data, error } = await supabase.functions.invoke('update-user-password-improved', {
       body: { password: newPassword }
     });
     setIsPasswordUpdating(false);
