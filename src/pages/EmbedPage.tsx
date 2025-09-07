@@ -5,22 +5,42 @@ import { AlertTriangle } from 'lucide-react';
 
 const EmbedPage = () => {
   const [searchParams] = useSearchParams();
-  const url = searchParams.get('url');
+  const content = searchParams.get('url');
   const title = searchParams.get('title') || 'Custom Page';
 
-  if (!url) {
+  if (!content) {
     return (
       <PortalLayout>
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>No URL was provided to embed.</AlertDescription>
+          <AlertDescription>No URL or embed code was provided.</AlertDescription>
         </Alert>
       </PortalLayout>
     );
   }
 
-  let finalUrl = decodeURIComponent(url);
+  const decodedContent = decodeURIComponent(content);
+  const isIframe = decodedContent.trim().startsWith('<iframe');
+
+  if (isIframe) {
+    const sanitizedContent = decodedContent
+      .replace(/width="[^"]*"/g, 'width="100%"')
+      .replace(/height="[^"]*"/g, 'height="100%"');
+    
+    return (
+      <PortalLayout noPadding disableMainScroll>
+        <div
+          className="w-full h-full"
+          dangerouslySetInnerHTML={{
+            __html: sanitizedContent,
+          }}
+        />
+      </PortalLayout>
+    );
+  }
+
+  let finalUrl = decodedContent;
   if (!/^https?:\/\//i.test(finalUrl)) {
     finalUrl = `https://${finalUrl}`;
   }
