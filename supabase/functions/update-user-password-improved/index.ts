@@ -43,15 +43,32 @@ serve(async (req) => {
     )
 
     if (error) {
+      // Check for the specific "same password" error from Supabase Auth
+      if (error.message.includes('New password should be different from the old password')) {
+        // Return a success response with an informational message
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: 'The new password is the same as the old one. No changes were made.' 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        })
+      }
+      // For any other error, throw it to be caught by the catch block
       throw error
     }
 
-    return new Response(JSON.stringify({ success: true, data }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Password updated successfully.',
+      data 
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Error in update-user-password-improved:', error.message);
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     })

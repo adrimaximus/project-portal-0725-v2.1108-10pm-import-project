@@ -142,7 +142,11 @@ const Profile = () => {
       const errorMessage = data?.error || error.message;
       toast.error("Gagal memperbarui password.", { description: errorMessage });
     } else {
-      toast.success("Password berhasil diperbarui.");
+      if (data.message.includes('same as the old one')) {
+        toast.info(data.message);
+      } else {
+        toast.success(data.message);
+      }
       setNewPassword("");
       setConfirmPassword("");
     }
