@@ -140,7 +140,7 @@ const PersonProfilePage = () => {
   return (
     <PortalLayout>
       <div className="space-y-6">
-        <Button variant="ghost" className="text-muted-foreground" onClick={() => navigate(-1)}>
+        <Button variant="ghost" className="text-muted-foreground" onClick={() => navigate('/people')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to People
         </Button>
