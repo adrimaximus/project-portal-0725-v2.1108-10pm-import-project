@@ -147,31 +147,26 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           </div>
         )}
 
-        <div className="mt-auto pt-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {emailToDisplay && (
-              <button
-                onClick={(e) => handleCopyEmail(e, emailToDisplay)}
-                className="text-muted-foreground hover:text-primary transition-colors"
-                title="Copy email address"
-              >
-                <Mail className="h-4 w-4" />
-              </button>
-            )}
-            {person.phone && (
-              <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.phone)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
-                <WhatsappIcon className="h-4 w-4" />
-              </a>
-            )}
-          </div>
-          
-          <div>
-            {person.social_media?.instagram && (
-              <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
-                <Instagram className="h-4 w-4" />
-              </a>
-            )}
-          </div>
+        <div className="mt-auto pt-2 flex items-center gap-3">
+          {emailToDisplay && (
+            <button
+              onClick={(e) => handleCopyEmail(e, emailToDisplay)}
+              className="text-muted-foreground hover:text-primary transition-colors"
+              title="Copy email address"
+            >
+              <Mail className="h-4 w-4" />
+            </button>
+          )}
+          {person.phone && (
+            <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.phone)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
+              <WhatsappIcon className="h-4 w-4" />
+            </a>
+          )}
+          {person.social_media?.instagram && (
+            <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
+              <Instagram className="h-4 w-4" />
+            </a>
+          )}
         </div>
       </div>
     </Card>
