@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link } from "react-router-dom";
@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2, GripVertical, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DndContext,
@@ -25,14 +25,20 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface NavItem {
   id: string;
   name: string;
   url: string;
+  position: number;
+  user_id: string;
 }
 
-const SortableNavItemRow = ({ item, onDelete }: { item: NavItem, onDelete: (id: string) => void }) => {
+const SortableNavItemRow = ({ item, onDelete, isDeleting }: { item: NavItem, onDelete: (id: string) => void, isDeleting: boolean }) => {
     const {
       attributes,
       listeners,
@@ -61,8 +67,8 @@ const SortableNavItemRow = ({ item, onDelete }: { item: NavItem, onDelete: (id: 
                     <p className="text-sm text-muted-foreground truncate">{item.url}</p>
                 </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)}>
-                <Trash2 className="h-4 w-4" />
+            <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} disabled={isDeleting}>
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             </Button>
         </div>
     )
@@ -70,51 +76,106 @@ const SortableNavItemRow = ({ item, onDelete }: { item: NavItem, onDelete: (id: 
 
 const NavigationSettingsPage = () => {
   const { user } = useAuth();
-  const [navItems, setNavItems] = useState<NavItem[]>([]);
+  const queryClient = useQueryClient();
   const [newItemName, setNewItemName] = useState("");
   const [newItemUrl, setNewItemUrl] = useState("");
-  const localStorageKey = user ? `customNavItems_${user.id}` : null;
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!localStorageKey) return;
-    try {
-      const items = localStorage.getItem(localStorageKey);
-      if (items) {
-        setNavItems(JSON.parse(items));
+  const queryKey = ['user_navigation_items', user?.id];
+
+  const { data: navItems = [], isLoading } = useQuery({
+    queryKey: queryKey,
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('user_navigation_items')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('position', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const addItemMutation = useMutation({
+    mutationFn: async ({ name, url }: { name: string, url: string }) => {
+      if (!user) throw new Error("User not authenticated");
+      const newPosition = navItems.length;
+      const { data, error } = await supabase
+        .from('user_navigation_items')
+        .insert({ name, url, user_id: user.id, position: newPosition })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (newItem) => {
+      queryClient.setQueryData(queryKey, (old: NavItem[] | undefined) => [...(old || []), newItem]);
+      setNewItemName("");
+      setNewItemUrl("");
+      toast.success("Navigation item added");
+    },
+    onError: (error) => {
+      toast.error("Failed to add item", { description: error.message });
+    }
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setDeletingId(id);
+      const { error } = await supabase.from('user_navigation_items').delete().eq('id', id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: (deletedId) => {
+      queryClient.setQueryData(queryKey, (old: NavItem[] | undefined) => old?.filter(item => item.id !== deletedId) || []);
+      toast.success("Navigation item removed");
+    },
+    onError: (error) => {
+      toast.error("Failed to remove item", { description: error.message });
+    },
+    onSettled: () => {
+      setDeletingId(null);
+    }
+  });
+
+  const updateOrderMutation = useMutation({
+    mutationFn: async (orderedItems: NavItem[]) => {
+      const updates = orderedItems.map((item, index) => ({
+        id: item.id,
+        position: index,
+      }));
+      const { error } = await supabase.from('user_navigation_items').upsert(updates);
+      if (error) throw error;
+    },
+    onMutate: async (orderedItems: NavItem[]) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousItems = queryClient.getQueryData(queryKey);
+      queryClient.setQueryData(queryKey, orderedItems);
+      return { previousItems };
+    },
+    onError: (err, newItems, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(queryKey, context.previousItems);
       }
-    } catch (error) {
-      console.error("Failed to parse nav items from localStorage", error);
-    }
-  }, [localStorageKey]);
-
-  useEffect(() => {
-    if (!localStorageKey) return;
-    try {
-      localStorage.setItem(localStorageKey, JSON.stringify(navItems));
-    } catch (error) {
-      console.error("Failed to save nav items to localStorage", error);
-    }
-  }, [navItems]);
+      toast.error("Failed to reorder items", { description: err.message });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
 
   const handleAddItem = () => {
     if (newItemName.trim() && newItemUrl.trim()) {
       try {
         new URL(newItemUrl);
+        addItemMutation.mutate({ name: newItemName.trim(), url: newItemUrl.trim() });
       } catch (_) {
+        toast.error("Invalid URL format.");
         return;
       }
-      
-      setNavItems([
-        ...navItems,
-        { id: crypto.randomUUID(), name: newItemName.trim(), url: newItemUrl.trim() },
-      ]);
-      setNewItemName("");
-      setNewItemUrl("");
     }
-  };
-
-  const handleDeleteItem = (id: string) => {
-    setNavItems(navItems.filter((item) => item.id !== id));
   };
 
   const sensors = useSensors(
@@ -125,15 +186,12 @@ const NavigationSettingsPage = () => {
   );
 
   function handleDragEnd(event: DragEndEvent) {
-    const {active, over} = event;
-    
+    const { active, over } = event;
     if (over && active.id !== over.id) {
-      setNavItems((items) => {
-        const oldIndex = items.findIndex(item => item.id === active.id);
-        const newIndex = items.findIndex(item => item.id === over.id);
-        
-        return arrayMove(items, oldIndex, newIndex);
-      });
+      const oldIndex = navItems.findIndex(item => item.id === active.id);
+      const newIndex = navItems.findIndex(item => item.id === over.id);
+      const newOrder = arrayMove(navItems, oldIndex, newIndex);
+      updateOrderMutation.mutate(newOrder);
     }
   }
 
@@ -170,14 +228,28 @@ const NavigationSettingsPage = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-              {navItems.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No custom items yet.</p>}
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={navItems} strategy={verticalListSortingStrategy}>
-                    {navItems.map((item) => (
-                        <SortableNavItemRow key={item.id} item={item} onDelete={handleDeleteItem} />
-                    ))}
-                </SortableContext>
-              </DndContext>
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              ) : navItems.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No custom items yet.</p>
+              ) : (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={navItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                      {navItems.map((item) => (
+                          <SortableNavItemRow 
+                            key={item.id} 
+                            item={item} 
+                            onDelete={deleteItemMutation.mutate}
+                            isDeleting={deleteItemMutation.isPending && deletingId === item.id}
+                          />
+                      ))}
+                  </SortableContext>
+                </DndContext>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -197,8 +269,9 @@ const NavigationSettingsPage = () => {
             </div>
           </CardContent>
           <CardFooter>
-            <Button onClick={handleAddItem} disabled={!newItemName.trim() || !newItemUrl.trim()}>
-                <Plus className="mr-2 h-4 w-4" /> Add Item
+            <Button onClick={handleAddItem} disabled={!newItemName.trim() || !newItemUrl.trim() || addItemMutation.isPending}>
+                {addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                Add Item
             </Button>
           </CardFooter>
         </Card>
