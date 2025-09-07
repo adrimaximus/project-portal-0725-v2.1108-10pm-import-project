@@ -16,7 +16,7 @@ import { Label } from '../ui/label';
 interface CompanyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: Omit<Company, 'id' | 'created_at' | 'updated_at'>, file: File | null) => void;
+  onSave: (data: CompanyFormValues, file: File | null) => void;
   company: Company | null;
   isSaving: boolean;
 }
@@ -28,7 +28,7 @@ const companySchema = z.object({
   billing_address: z.string().optional(),
 });
 
-type CompanyFormValues = z.infer<typeof companySchema>;
+export type CompanyFormValues = z.infer<typeof companySchema>;
 
 const CompanyFormDialog = ({ open, onOpenChange, onSave, company, isSaving }: CompanyFormDialogProps) => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -67,7 +67,7 @@ const CompanyFormDialog = ({ open, onOpenChange, onSave, company, isSaving }: Co
   };
 
   const onSubmit = (values: CompanyFormValues) => {
-    onSave({ ...values, logo_url: company?.logo_url }, logoFile);
+    onSave(values, logoFile);
   };
 
   return (

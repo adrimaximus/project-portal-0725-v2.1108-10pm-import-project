@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Company } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import CompanyFormDialog from '@/components/companies/CompanyFormDialog';
+import CompanyFormDialog, { CompanyFormValues } from '@/components/companies/CompanyFormDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -47,7 +47,7 @@ const CompaniesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleSave = async (companyData: Omit<Company, 'id' | 'created_at' | 'updated_at'>, file: File | null) => {
+  const handleSave = async (companyData: CompanyFormValues, file: File | null) => {
     setIsSaving(true);
     try {
       let companyId = companyToEdit?.id;
