@@ -77,7 +77,19 @@ const NavigationSettingsPage = () => {
   const { data: navItems = [], isLoading: isLoadingItems } = useQuery({ queryKey: queryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('user_navigation_items').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data; }, enabled: !!user });
   const { data: folders = [], isLoading: isLoadingFolders } = useQuery({ queryKey: foldersQueryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data; }, enabled: !!user });
 
-  const { mutate: upsertItem } = useMutation({ mutationFn: async (item: Partial<NavItem>) => { const { error } = await supabase.from('user_navigation_items').upsert(item); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user?.id] }) });
+  const { mutate: upsertItems } = useMutation({
+    mutationFn: async (items: Partial<NavItem>[]) => {
+      const { error } = await supabase.from('user_navigation_items').upsert(items);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user?.id] });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to save changes", { description: error.message });
+    }
+  });
+
   const { mutate: upsertFolder, isPending: isSavingFolder } = useMutation({ mutationFn: async (folder: Partial<NavFolder>) => { const { error } = await supabase.from('navigation_folders').upsert(folder); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['navigation_folders', user?.id] }) });
   const { mutate: deleteItem, isPending: isDeletingItem } = useMutation({ mutationFn: async (id: string) => { setDeletingId(id); const { error } = await supabase.from('user_navigation_items').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Item removed"); queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user?.id] }); }, onError: (e: any) => toast.error(e.message), onSettled: () => setDeletingId(null) });
   const { mutate: deleteFolder } = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('navigation_folders').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Folder removed"); queryClient.invalidateQueries({ queryKey: ['navigation_folders', user?.id] }); } });
@@ -116,7 +128,13 @@ const NavigationSettingsPage = () => {
   };
 
   const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => {
-    try { new URL(url); await upsertItem({ id, name, url, icon }); setEditingItem(null); } catch (_) { toast.error("Invalid URL format."); }
+    try {
+      new URL(url);
+      upsertItems([{ id, name, url, icon }]);
+      setEditingItem(null);
+    } catch (_) {
+      toast.error("Invalid URL format.");
+    }
   };
 
   const handleSaveFolder = (data: FolderData) => {
@@ -131,30 +149,63 @@ const NavigationSettingsPage = () => {
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
     const { active, over } = event;
-    if (!over) return;
+
+    if (!over || active.id === over.id) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
-    const overIsFolder = over.data.current?.type === 'folder';
-    const overFolderId = overIsFolder ? overId : over.data.current?.sortable.containerId;
 
-    const activeItem = navItems.find(i => i.id === activeId);
-    if (!activeItem) return;
+    const activeContainer = active.data.current?.sortable.containerId;
+    const overContainer = over.data.current?.sortable.containerId || over.id;
 
-    const oldFolderId = activeItem.folder_id;
-    const newFolderId = overFolderId === 'root' ? null : overFolderId;
+    const oldFolderId = activeContainer === 'root' ? null : activeContainer;
+    const newFolderId = overContainer === 'root' ? null : overContainer;
 
-    if (oldFolderId === newFolderId) { // Reordering within the same container
-      const itemsInContainer = navItems.filter(i => i.folder_id === oldFolderId).sort((a, b) => a.position - b.position);
-      const oldIndex = itemsInContainer.findIndex(i => i.id === activeId);
-      const newIndex = itemsInContainer.findIndex(i => i.id === overId);
-      if (oldIndex !== newIndex) {
-        const reordered = arrayMove(itemsInContainer, oldIndex, newIndex);
-        reordered.forEach((item, index) => upsertItem({ id: item.id, position: index }));
+    const oldItems = [...navItems];
+    let newItems = oldItems;
+
+    const activeIndex = oldItems.findIndex(i => i.id === activeId);
+    if (activeIndex === -1) return;
+
+    if (oldFolderId === newFolderId) {
+      const itemsInList = oldItems.filter(i => i.folder_id === oldFolderId).sort((a, b) => a.position - b.position);
+      const oldListIndex = itemsInList.findIndex(i => i.id === activeId);
+      const newListIndex = itemsInList.findIndex(i => i.id === overId);
+      
+      if (oldListIndex !== newListIndex) {
+        const reorderedList = arrayMove(itemsInList, oldListIndex, newListIndex);
+        const updates = reorderedList.map((item, index) => ({ ...item, position: index }));
+        newItems = oldItems.filter(i => i.folder_id !== oldFolderId).concat(updates);
       }
-    } else { // Moving to a new container
-      const itemsInNewContainer = navItems.filter(i => i.folder_id === newFolderId);
-      upsertItem({ id: activeId, folder_id: newFolderId, position: itemsInNewContainer.length });
+    } else {
+      const activeItem = { ...oldItems[activeIndex], folder_id: newFolderId };
+      
+      const itemsInNewList = oldItems.filter(i => i.folder_id === newFolderId).sort((a, b) => a.position - b.position);
+      const overIndexInNewList = itemsInNewList.findIndex(i => i.id === overId);
+      const newIndex = overIndexInNewList >= 0 ? overIndexInNewList : itemsInNewList.length;
+      itemsInNewList.splice(newIndex, 0, activeItem);
+
+      const itemsInOldList = oldItems.filter(i => i.folder_id === oldFolderId && i.id !== activeId).sort((a, b) => a.position - b.position);
+
+      const updatedNewList = itemsInNewList.map((item, index) => ({ ...item, position: index }));
+      const updatedOldList = itemsInOldList.map((item, index) => ({ ...item, position: index }));
+      
+      newItems = oldItems
+        .filter(i => i.folder_id !== oldFolderId && i.folder_id !== newFolderId)
+        .concat(updatedOldList, updatedNewList);
+    }
+
+    queryClient.setQueryData(queryKey, newItems);
+
+    const updatesToDb = newItems
+      .filter(newItem => {
+        const oldItem = oldItems.find(i => i.id === newItem.id);
+        return !oldItem || oldItem.position !== newItem.position || oldItem.folder_id !== newItem.folder_id;
+      })
+      .map(({ id, position, folder_id }) => ({ id, position, folder_id }));
+
+    if (updatesToDb.length > 0) {
+      upsertItems(updatesToDb);
     }
   };
 
@@ -185,7 +236,7 @@ const NavigationSettingsPage = () => {
                     <CollapsibleContent className="p-2 pl-6 border-l-2 ml-4">
                       <SortableContext id={folder.id} items={navItems.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
                         <div className="space-y-2">
-                          {navItems.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => upsertItem({ id, is_enabled })} onEdit={setEditingItem} />)}
+                          {navItems.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => upsertItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
                         </div>
                       </SortableContext>
                     </CollapsibleContent>
@@ -196,7 +247,7 @@ const NavigationSettingsPage = () => {
                 <h3 className="text-sm font-semibold text-muted-foreground mb-2">Top-Level Items</h3>
                 <SortableContext id="root" items={itemsWithoutFolder.map(i => i.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
-                    {itemsWithoutFolder.map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => upsertItem({ id, is_enabled })} onEdit={setEditingItem} />)}
+                    {itemsWithoutFolder.map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => upsertItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
                   </div>
                 </SortableContext>
               </div>
