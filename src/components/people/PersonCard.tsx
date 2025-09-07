@@ -6,7 +6,7 @@ import { generatePastelColor } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import WhatsappIcon from '../icons/WhatsappIcon';
 import { supabase } from '@/integrations/supabase/client';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface PersonCardProps {
   person: Person;
@@ -81,6 +81,8 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(companyAddress)}`
     : '#';
 
+  const firstEmail = person.contact?.emails?.[0];
+
   return (
     <Card 
       className="group h-full flex flex-col transition-shadow hover-shadow-lg cursor-pointer rounded-2xl" 
@@ -146,9 +148,9 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
         )}
 
         <div className="mt-auto pt-2 flex items-center gap-3">
-          {person.email && (
+          {firstEmail && (
             <button
-              onClick={(e) => handleCopyEmail(e, person.email!)}
+              onClick={(e) => handleCopyEmail(e, firstEmail)}
               className="text-muted-foreground hover:text-primary transition-colors"
               title="Copy email address"
             >
