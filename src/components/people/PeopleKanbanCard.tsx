@@ -79,6 +79,7 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
   };
 
   const emailToDisplay = person.contact?.emails?.[0] || person.email;
+  const phoneToDisplay = (person.contact as any)?.phones?.[0] || person.phone;
   const googleMapsUrl = companyAddress 
     ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(companyAddress)}`
     : '#';
@@ -154,8 +155,8 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
                   <Mail className="h-3.5 w-3.5" />
                 </button>
               )}
-              {person.phone && (
-                <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(person.phone)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
+              {phoneToDisplay && (
+                <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(phoneToDisplay)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
                   <WhatsappIcon className="h-3.5 w-3.5" />
                 </a>
               )}
