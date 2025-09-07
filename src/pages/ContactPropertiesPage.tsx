@@ -91,7 +91,7 @@ const ContactPropertiesPage = () => {
             <p className="text-muted-foreground">Modify and create contact properties.</p>
           </div>
           <Button onClick={handleAddNew}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Create New Property
+            <PlusCircle className="mr-2 h-4 w-4" /> New Property
           </Button>
         </div>
 
