@@ -32,12 +32,15 @@ import { CSS } from '@dnd-kit/utilities';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { NavItem as DbNavItem } from "@/pages/NavigationSettingsPage";
 
 type PortalSidebarProps = {
   isCollapsed: boolean;
   onToggle: () => void;
 };
 
+// Define a local type for sidebar navigation items that includes rendering properties
 type NavItem = {
   id: string;
   href: string;
@@ -118,10 +121,52 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const location = useLocation();
   const { isFeatureEnabled } = useFeatures();
   const [navItems, setNavItems] = useState<NavItem[]>([]);
-  const [customItemsTrigger, setCustomItemsTrigger] = useState(0);
   const { unreadCount: unreadNotificationCount } = useNotifications();
+  const queryClient = useQueryClient();
 
   const totalUnreadChatCount = 0;
+
+  const { data: customNavItems } = useQuery({
+    queryKey: ['user_navigation_items', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('user_navigation_items')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('position', { ascending: true });
+      if (error) {
+        console.error("Error fetching custom nav items:", error);
+        return [];
+      }
+      return data as DbNavItem[];
+    },
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`user-nav-items:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_navigation_items',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   useEffect(() => {
     if (!user) return;
@@ -145,23 +190,15 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       return hasPermission(`module:${item.id}`);
     });
 
-    let customItems: NavItem[] = [];
-    const customNavItemsKey = `customNavItems_${user.id}`;
-    if (isFeatureEnabled('custom-links')) {
-      try {
-        const stored = localStorage.getItem(customNavItemsKey);
-        if (stored) {
-          const parsed: {id: string, name: string, url: string}[] = JSON.parse(stored);
-          customItems = parsed.map(item => ({
-            id: item.id,
-            href: `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}`,
-            label: item.name,
-            icon: LinkIcon,
-            isCustom: true,
-          }));
-        }
-      } catch (e) { console.error("Failed to parse custom nav items", e); }
-    }
+    const customItems: NavItem[] = (customNavItems || [])
+      .filter(item => item.is_enabled)
+      .map(item => ({
+        id: item.id,
+        href: `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}`,
+        label: item.name,
+        icon: LinkIcon,
+        isCustom: true,
+      }));
 
     const allAvailableItems = [...visibleDefaultItems, ...customItems];
     const itemsById = new Map(allAvailableItems.map(item => [item.id, item]));
@@ -187,19 +224,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     
     setNavItems([...ordered, ...newItems]);
 
-  }, [user, isFeatureEnabled, customItemsTrigger, totalUnreadChatCount, unreadNotificationCount, hasPermission]);
-
-  useEffect(() => {
-    const customNavItemsKey = user ? `customNavItems_${user.id}` : null;
-    if (!customNavItemsKey) return;
-    const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === customNavItemsKey) {
-            setCustomItemsTrigger(c => c + 1);
-        }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [user]);
+  }, [user, isFeatureEnabled, totalUnreadChatCount, unreadNotificationCount, hasPermission, customNavItems]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
