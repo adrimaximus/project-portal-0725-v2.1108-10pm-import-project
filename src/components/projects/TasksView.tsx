@@ -72,6 +72,9 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
             <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('due_date')}>
               Due Date
             </TableHead>
+            <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('created_at')}>
+              Created
+            </TableHead>
             <TableHead>Assignees</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -138,6 +141,13 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                       {format(new Date(task.due_date), "MMM d, yyyy")}
                     </span>
                   ) : <span className="text-muted-foreground text-xs">No due date</span>}
+                </TableCell>
+                <TableCell>
+                  {task.created_at ? (
+                    <span className="text-muted-foreground text-xs">
+                      {format(new Date(task.created_at), "MMM d, yyyy")}
+                    </span>
+                  ) : <span className="text-muted-foreground text-xs">-</span>}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center -space-x-2">
