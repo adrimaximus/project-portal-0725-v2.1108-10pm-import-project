@@ -14,9 +14,10 @@ export const getAvatarUrl = (avatarUrl: string | null | undefined, seed: string)
   }
   
   let hash = 0;
-  if (seed) {
-    for (let i = 0; i < seed.length; i++) {
-      hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+  const seedString = String(seed || '');
+  if (seedString) {
+    for (let i = 0; i < seedString.length; i++) {
+      hash = seedString.charCodeAt(i) + ((hash << 5) - hash);
     }
   }
   const h = hash % 360;
@@ -25,7 +26,7 @@ export const getAvatarUrl = (avatarUrl: string | null | undefined, seed: string)
   
   const pastelHex = color(`hsl(${h}, ${s}%, ${l}%)`).hex.substring(1);
 
-  return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=${pastelHex}&backgroundType=solid`;
+  return `https://api.dicebear.com/7.x/initials/svg?seed=${seedString}&backgroundColor=${pastelHex}&backgroundType=solid`;
 };
 
 export const generatePastelColor = (seed: string) => {
