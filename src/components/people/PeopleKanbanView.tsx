@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { Person, Tag } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,11 +6,20 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import PeopleKanbanColumn from './PeopleKanbanColumn';
 import PeopleKanbanCard from './PeopleKanbanCard';
-import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
 import KanbanColumnEditor from './KanbanColumnEditor';
 
-const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { people: Person[], tags: Tag[], onEditPerson: (person: Person) => void, onDeletePerson: (person: Person) => void }) => {
+type PeopleKanbanViewProps = {
+  people: Person[];
+  tags: Tag[];
+  onEditPerson: (person: Person) => void;
+  onDeletePerson: (person: Person) => void;
+};
+
+type KanbanViewHandle = {
+  openSettings: () => void;
+};
+
+const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ people, tags, onEditPerson, onDeletePerson }, ref) => {
   const queryClient = useQueryClient();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const dragHappened = useRef(false);
@@ -20,6 +29,10 @@ const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { peop
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    openSettings: () => setIsSettingsOpen(true),
+  }));
 
   useEffect(() => {
     const savedOrder = localStorage.getItem('peopleKanbanColumnOrder');
@@ -153,10 +166,6 @@ const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { peop
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
       <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4 h-full">
-        <Button variant="outline" size="icon" onClick={() => setIsSettingsOpen(!isSettingsOpen)} className="sticky top-2 left-0 z-10 bg-background mt-2">
-          <Settings className="h-4 w-4" />
-        </Button>
-        
         <div className={`transition-all duration-300 ease-in-out flex-shrink-0 ${isSettingsOpen ? 'w-64' : 'w-0'} overflow-hidden`}>
           <div className="w-64 h-full bg-muted/50 rounded-lg border">
             <KanbanColumnEditor
@@ -196,6 +205,6 @@ const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { peop
       </DragOverlay>
     </DndContext>
   );
-};
+});
 
 export default PeopleKanbanView;

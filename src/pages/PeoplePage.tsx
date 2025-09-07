@@ -26,6 +26,10 @@ import DuplicateSummaryDialog from "@/components/people/DuplicateSummaryDialog";
 import MergeDialog from "@/components/people/MergeDialog";
 import CompaniesView from "@/components/people/CompaniesView";
 
+type KanbanViewHandle = {
+  openSettings: () => void;
+};
+
 const PeoplePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -42,6 +46,7 @@ const PeoplePage = () => {
   const [duplicateData, setDuplicateData] = useState<{ summary: string; pairs: DuplicatePair[] } | null>(null);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [selectedMergePair, setSelectedMergePair] = useState<DuplicatePair | null>(null);
+  const kanbanViewRef = useRef<KanbanViewHandle>(null);
 
   useEffect(() => {
     localStorage.setItem('people_view_mode', viewMode);
@@ -240,18 +245,21 @@ const PeoplePage = () => {
                 />
             </div>
             <div className="flex items-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={() => navigate('/settings/people-properties')}>
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Manage Properties</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => navigate('/settings/people-properties')}>
+                    Manage Properties
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => kanbanViewRef.current?.openSettings()} disabled={viewMode !== 'kanban'}>
+                    Customize Kanban Columns
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban' | 'grid' | 'companies')}} className="w-full sm:w-auto justify-center sm:justify-end">
                   <TooltipProvider>
                       <Tooltip>
@@ -395,7 +403,7 @@ const PeoplePage = () => {
               </Table>
             </div>
           ) : viewMode === 'kanban' ? (
-            <PeopleKanbanView people={filteredPeople} tags={tags} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
+            <PeopleKanbanView ref={kanbanViewRef} people={filteredPeople} tags={tags} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} />
           ) : viewMode === 'grid' ? (
             <div className="overflow-y-auto h-full">
               <PeopleGridView people={filteredPeople} onEditPerson={handleEdit} onDeletePerson={setPersonToDelete} onViewProfile={handleViewProfile} />
