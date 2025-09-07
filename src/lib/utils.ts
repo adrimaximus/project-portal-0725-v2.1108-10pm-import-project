@@ -23,7 +23,7 @@ export const getAvatarUrl = (avatarUrl: string | null | undefined, seed: string)
   const s = 70;
   const l = 90;
   
-  const pastelHex = color({ h, s, l }).hex.substring(1);
+  const pastelHex = color(`hsl(${h}, ${s}%, ${l}%)`).hex.substring(1);
 
   return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=${pastelHex}&backgroundType=solid`;
 };
