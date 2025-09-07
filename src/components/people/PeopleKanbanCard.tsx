@@ -5,7 +5,7 @@ import { Person } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, generatePastelColor, formatInJakarta } from '@/lib/utils';
-import { User as UserIcon, Mail, MoreHorizontal, Edit, Trash2, Instagram, Briefcase } from 'lucide-react';
+import { User as UserIcon, Mail, MoreHorizontal, Edit, Trash2, Instagram } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -157,18 +157,6 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
                 )}
               </div>
             </div>
-
-            {(person.company || person.job_title) && (
-              <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                <Briefcase className="h-3 w-3 flex-shrink-0 mt-0.5" />
-                <p>
-                  {person.job_title}
-                  {person.job_title && person.company && ' at '}
-                  {!person.job_title && person.company && 'at '}
-                  {person.company}
-                </p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
