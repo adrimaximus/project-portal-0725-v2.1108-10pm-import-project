@@ -72,7 +72,7 @@ const KanbanColumnEditor = ({ allTags, columnOrder, visibleColumnIds, onSettings
       </p>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={columnOrder} strategy={verticalListSortingStrategy}>
-          <div className="space-y-1">
+          <div className="space-y-1 max-h-[250px] overflow-y-auto pr-2">
             {sortedTags.map(tag => (
               <SortableTagItem
                 key={tag.id}
