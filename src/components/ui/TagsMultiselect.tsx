@@ -23,7 +23,7 @@ export interface TagsMultiselectProps {
   /** Available options to pick from */
   options: Tag[];
   /** Callback when a new tag is created */
-  onTagCreate?: (label: string) => Tag;
+  onTagCreate?: (label: string) => Promise<Tag | undefined> | Tag;
   /** Placeholder on the trigger */
   placeholder?: string;
   /** Allow creating new tags when not found */
@@ -38,19 +38,6 @@ export interface TagsMultiselectProps {
 
 /** Utility */
 const normalize = (s: string) => s.trim().toLowerCase();
-
-function uniqueBy<T>(arr: T[], key: (t: T) => string): T[] {
-  const seen = new Set<string>();
-  const out: T[] = [];
-  for (const it of arr) {
-    const k = key(it);
-    if (!seen.has(k)) {
-      seen.add(k);
-      out.push(it);
-    }
-  }
-  return out;
-}
 
 /**
  * TagsMultiselect: multi-select + creatable + scrollable dropdown.
@@ -110,11 +97,13 @@ export function TagsMultiselect({
     onChange([]);
   }
 
-  function createTag(label: string) {
+  async function createTag(label: string) {
     if (!onTagCreate) return;
-    const newTag = onTagCreate(label);
-    onChange([...value, newTag]);
-    setQuery("");
+    const newTag = await onTagCreate(label);
+    if (newTag) {
+      onChange([...value, newTag]);
+      setQuery("");
+    }
   }
 
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -219,7 +208,7 @@ export function TagsMultiselect({
                 {allowCreate && query.trim() && !existsLabel(query) && (
                   <CommandItem
                     value={`__create__${query}`}
-                    onSelect={() => createTag(query)}
+                    onSelect={() => { void createTag(query); }}
                     className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
                   >
                     <Plus className="h-4 w-4" />
