@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Pencil, Link as LinkIcon } from 'lucide-react';
 import { NavItem } from '@/pages/NavigationSettingsPage';
 
 interface EditNavItemDialogProps {
@@ -48,11 +48,17 @@ const EditNavItemDialog = ({ item, open, onOpenChange, onSave, isSaving }: EditN
         <div className="space-y-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="edit-name">Name</Label>
-            <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Analytics Dashboard" />
+            <div className="relative">
+              <Pencil className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Analytics Dashboard" className="pl-10" />
+            </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="edit-url">URL</Label>
-            <Input id="edit-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/dashboard" />
+            <div className="relative">
+              <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input id="edit-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/dashboard" className="pl-10" />
+            </div>
           </div>
         </div>
         <DialogFooter>
