@@ -177,17 +177,23 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     if (sourceContainerId === destContainerId) {
       if (activeId === overId) return;
 
-      const oldIndex = internalPeople.findIndex((p) => p.id === activeId);
-      const newIndex = internalPeople.findIndex((p) => p.id === overId);
+      const itemsInColumn = personGroups[sourceContainerId];
+      const oldIndexInColumn = itemsInColumn.findIndex(p => p.id === activeId);
+      const newIndexInColumn = itemsInColumn.findIndex(p => p.id === overId);
 
-      if (oldIndex === -1 || newIndex === -1) return;
+      if (oldIndexInColumn === -1 || newIndexInColumn === -1) return;
 
-      const reorderedPeople = arrayMove(internalPeople, oldIndex, newIndex);
-      setInternalPeople(reorderedPeople);
+      const reorderedColumnItems = arrayMove(itemsInColumn, oldIndexInColumn, newIndexInColumn);
+      
+      const newPersonGroups = { ...personGroups, [sourceContainerId]: reorderedColumnItems };
+      
+      const newInternalPeople = columns.flatMap(col => newPersonGroups[col.id] || []);
+      const peopleInVisibleColumns = new Set(newInternalPeople.map(p => p.id));
+      const peopleNotInVisibleColumns = internalPeople.filter(p => !peopleInVisibleColumns.has(p.id));
+      
+      setInternalPeople([...newInternalPeople, ...peopleNotInVisibleColumns]);
 
-      const updatedColumnIds = reorderedPeople
-        .filter(p => (p.tags?.[0]?.id || 'uncategorized') === sourceContainerId)
-        .map(p => p.id);
+      const updatedColumnIds = reorderedColumnItems.map(p => p.id);
 
       const { error } = await supabase.rpc('update_person_kanban_order', { p_person_ids: updatedColumnIds });
       if (error) {
