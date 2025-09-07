@@ -153,9 +153,9 @@ const PeopleKanbanView = ({ people, tags, onEditPerson, onDeletePerson }: { peop
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
       <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4 h-full">
-        <div className="p-2 sticky left-0 bg-muted/50 z-10 rounded-lg border h-fit">
-          <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(!isSettingsOpen)}>
-            <Settings className="h-5 w-5" />
+        <div className="pt-2 sticky left-0 bg-background z-10">
+          <Button variant="outline" size="icon" onClick={() => setIsSettingsOpen(!isSettingsOpen)}>
+            <Settings className="h-4 w-4" />
           </Button>
         </div>
         
