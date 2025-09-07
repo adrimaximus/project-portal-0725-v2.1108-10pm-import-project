@@ -90,30 +90,30 @@ const TagsSettingsPage = () => {
           </BreadcrumbList>
         </Breadcrumb>
         
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Manage Tags</h1>
             <p className="text-muted-foreground">Create and manage your personal tags.</p>
           </div>
-          <Button onClick={handleAddNew}>
+          <Button onClick={handleAddNew} className="w-full md:w-auto">
             <PlusCircle className="mr-2 h-4 w-4" /> New Tag
           </Button>
         </div>
 
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
               <div>
                 <CardTitle>Your Tags</CardTitle>
                 <CardDescription>These tags are available for you to use across the application.</CardDescription>
               </div>
-              <div className="relative w-full max-w-xs">
+              <div className="relative w-full md:max-w-xs">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search tags..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8"
+                  className="pl-8 w-full md:w-64"
                 />
               </div>
             </div>
@@ -140,7 +140,7 @@ const TagsSettingsPage = () => {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded-full" style={{ backgroundColor: tag.color }} />
-                        <span className="font-mono text-sm">{tag.color}</span>
+                        <span className="font-mono text-sm hidden sm:inline">{tag.color}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
