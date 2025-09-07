@@ -10,7 +10,8 @@ import { CheckCircle, Ticket, MoreHorizontal, Edit, Trash2, Paperclip } from 'lu
 import { format } from 'date-fns';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import TaskAttachmentViewer from './TaskAttachmentViewer';
+import TaskAttachmentList from './TaskAttachmentList';
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface TasksKanbanCardProps {
   task: Task;
@@ -66,22 +67,24 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
     }
 
     return (
-      <TaskAttachmentViewer
-        attachments={attachments}
-        trigger={
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
+      <Dialog>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center gap-1 text-muted-foreground cursor-pointer hover:text-primary">
                   <Paperclip className="h-3 w-3" />
                   <span className="text-xs">{attachments.length}</span>
                 </div>
-              </TooltipTrigger>
-              <TooltipContent><p>{attachments.length} attachment(s)</p></TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        }
-      />
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent><p>{attachments.length} attachment(s)</p></TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <DialogContent>
+          <TaskAttachmentList attachments={attachments} />
+        </DialogContent>
+      </Dialog>
     );
   };
 

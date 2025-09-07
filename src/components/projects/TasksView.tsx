@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Edit, Trash2, Ticket, Paperclip } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
-import TaskAttachmentViewer from './TaskAttachmentViewer';
+import TaskAttachmentList from './TaskAttachmentList';
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface TasksViewProps {
   tasks: Task[];
@@ -76,22 +77,24 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
     }
 
     return (
-      <TaskAttachmentViewer
-        attachments={attachments}
-        trigger={
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
+      <Dialog>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center gap-1 text-muted-foreground cursor-pointer hover:text-primary">
                   <Paperclip className="h-4 w-4" />
                   <span className="text-xs">{attachments.length}</span>
                 </div>
-              </TooltipTrigger>
-              <TooltipContent><p>{attachments.length} attachment(s)</p></TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        }
-      />
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent><p>{attachments.length} attachment(s)</p></TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <DialogContent>
+          <TaskAttachmentList attachments={attachments} />
+        </DialogContent>
+      </Dialog>
     );
   };
 
