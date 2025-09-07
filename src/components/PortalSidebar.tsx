@@ -70,11 +70,14 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
         // Fix for incorrect URLs from database
         const itemNameLower = item.name.toLowerCase();
-        if (itemNameLower === 'knowledge base' && href === '/kb') {
+        if (itemNameLower === 'knowledge base' && href !== '/knowledge-base') {
             href = '/knowledge-base';
         }
-        if (itemNameLower === 'requests' && href === '/request') {
-            href = '/requests';
+        if (itemNameLower === 'requests' && href !== '/request') {
+            href = '/request';
+        }
+        if (itemNameLower === 'mood trackers' && href !== '/mood-tracker') {
+            href = '/mood-tracker';
         }
 
         if (itemNameLower === 'chat') badge = totalUnreadChatCount > 0 ? totalUnreadChatCount : undefined;
