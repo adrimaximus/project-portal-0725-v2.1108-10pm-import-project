@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import PortalLayout from "@/components/PortalLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
@@ -26,6 +26,7 @@ const Profile = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -37,6 +38,64 @@ const Profile = () => {
   if (!user) {
     return <PortalLayout><div>Loading...</div></PortalLayout>;
   }
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast.error("File is too large. Maximum size is 2MB.");
+        return;
+    }
+
+    setIsUploading(true);
+    try {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+
+        if (user.avatar_url && !user.avatar_url.includes('dicebear.com')) {
+            try {
+                const oldAvatarPath = new URL(user.avatar_url).pathname.split('/avatars/')[1];
+                if (oldAvatarPath) {
+                    await supabase.storage.from('avatars').remove([oldAvatarPath]);
+                }
+            } catch (e) {
+                console.warn("Could not remove old avatar.", e);
+            }
+        }
+
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+
+        if (!publicUrlData.publicUrl) {
+            throw new Error("Could not get public URL for avatar.");
+        }
+
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ avatar_url: publicUrlData.publicUrl, updated_at: new Date().toISOString() })
+            .eq('id', user.id);
+
+        if (updateError) throw updateError;
+
+        toast.success("Avatar updated successfully.");
+        await refreshUser();
+        queryClient.invalidateQueries({ queryKey: ['user', user.id] });
+
+    } catch (error: any) {
+        toast.error("Failed to upload avatar.", { description: error.message });
+        console.error(error);
+    } finally {
+        setIsUploading(false);
+    }
+  };
 
   const handleSaveChanges = async () => {
     setIsSaving(true);
@@ -124,10 +183,30 @@ const Profile = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
-                <AvatarFallback style={generatePastelColor(user.id)}>{user.initials || 'U'}</AvatarFallback>
-              </Avatar>
+              <div className="relative group">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
+                  <AvatarFallback style={generatePastelColor(user.id)}>{user.initials || 'U'}</AvatarFallback>
+                </Avatar>
+                <label 
+                    htmlFor="avatar-upload" 
+                    className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                    {isUploading ? (
+                        <Loader2 className="h-6 w-6 text-white animate-spin" />
+                    ) : (
+                        <Camera className="h-6 w-6 text-white" />
+                    )}
+                    <input 
+                        id="avatar-upload" 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/png, image/jpeg, image/gif"
+                        onChange={handleAvatarUpload}
+                        disabled={isUploading}
+                    />
+                </label>
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
