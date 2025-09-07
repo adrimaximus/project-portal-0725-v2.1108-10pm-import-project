@@ -99,10 +99,16 @@ const NavigationSettingsPage = () => {
   const { data: navItems = [], isLoading: isLoadingItems } = useQuery({ queryKey: queryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('user_navigation_items').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data; }, enabled: !!user });
   const { data: folders = [], isLoading: isLoadingFolders } = useQuery({ queryKey: foldersQueryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data; }, enabled: !!user });
 
-  const { mutate: upsertItems } = useMutation({
+  const { mutate: updateItems } = useMutation({
     mutationFn: async (items: Partial<NavItem>[]) => {
-      const { error } = await supabase.from('user_navigation_items').upsert(items);
-      if (error) throw error;
+      const promises = items.map(item => {
+        const { id, ...updateData } = item;
+        if (!id) return Promise.resolve({ error: null });
+        return supabase.from('user_navigation_items').update(updateData).eq('id', id);
+      });
+      const results = await Promise.all(promises);
+      const firstError = results.find(res => res.error);
+      if (firstError) throw firstError.error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user?.id] });
@@ -147,7 +153,7 @@ const NavigationSettingsPage = () => {
   };
 
   const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => {
-    await upsertItems([{ id, name, url, icon }]);
+    await updateItems([{ id, name, url, icon }]);
     setEditingItem(null);
   };
 
@@ -212,7 +218,7 @@ const NavigationSettingsPage = () => {
     });
 
     if (itemsToUpdate.length > 0) {
-      upsertItems(itemsToUpdate);
+      updateItems(itemsToUpdate);
     }
   };
 
@@ -233,7 +239,7 @@ const NavigationSettingsPage = () => {
                   <DroppableFolder key={folder.id} folder={folder} onEdit={(f) => { setEditingFolder(f); setIsFolderFormOpen(true); }} onDelete={deleteFolder}>
                     <SortableContext id={folder.id} items={navItems.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
                       <div className="space-y-2">
-                        {navItems.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => upsertItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
+                        {navItems.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
                       </div>
                     </SortableContext>
                   </DroppableFolder>
@@ -243,7 +249,7 @@ const NavigationSettingsPage = () => {
                 <h3 className="text-sm font-semibold text-muted-foreground mb-2">Top-Level Items</h3>
                 <SortableContext id="root" items={itemsWithoutFolder.map(i => i.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
-                    {itemsWithoutFolder.map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => upsertItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
+                    {itemsWithoutFolder.map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
                   </div>
                 </SortableContext>
               </div>
