@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { generatePastelColor } from "@/lib/utils";
+import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -20,9 +20,6 @@ const Profile = () => {
   
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -34,7 +31,6 @@ const Profile = () => {
     if (user) {
       setFirstName(user.first_name || "");
       setLastName(user.last_name || "");
-      setAvatarPreview(user.avatar_url || null);
     }
   }, [user]);
 
@@ -42,42 +38,14 @@ const Profile = () => {
     return <PortalLayout><div>Loading...</div></PortalLayout>;
   }
 
-  const handlePhotoChangeClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
-    }
-  };
-
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-      let avatar_url = user.avatar_url;
-
-      if (avatarFile) {
-        const formData = new FormData();
-        formData.append('file', avatarFile);
-        formData.append('targetUserId', user.id);
-
-        const { data, error: invokeError } = await supabase.functions.invoke('upload-avatar-fixed', {
-          body: formData,
-        });
-
-        if (invokeError) throw invokeError;
-        avatar_url = data.avatar_url;
-      }
-
       const { error } = await supabase
         .from('profiles')
         .update({ 
           first_name: firstName, 
           last_name: lastName,
-          avatar_url: avatar_url,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
@@ -157,17 +125,9 @@ const Profile = () => {
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarPreview || "https://github.com/shadcn.png"} alt={user.name} />
+                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
                 <AvatarFallback style={generatePastelColor(user.id)}>{user.initials || 'U'}</AvatarFallback>
               </Avatar>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept="image/*"
-              />
-              <Button variant="outline" onClick={handlePhotoChangeClick}>Change Photo</Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
