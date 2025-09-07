@@ -13,6 +13,8 @@ export type UpsertTaskPayload = {
   status?: string;
   assignee_ids?: string[];
   tag_ids?: string[];
+  new_files?: File[];
+  deleted_files?: string[];
 };
 
 export const useTaskMutations = () => {
@@ -20,7 +22,9 @@ export const useTaskMutations = () => {
 
   const upsertTaskMutation = useMutation({
     mutationFn: async (taskData: UpsertTaskPayload) => {
-      const { assignee_ids, tag_ids, id, ...taskFields } = taskData;
+      const { assignee_ids, tag_ids, id, new_files, deleted_files, ...taskFields } = taskData;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
       
       // 1. Upsert tugas itu sendiri
       const { data: taskResult, error: taskError } = await supabase
@@ -74,6 +78,51 @@ export const useTaskMutations = () => {
             .insert(newTaskTags);
           if (insertTagsError) throw insertTagsError;
         }
+      }
+
+      // 4. Handle file deletions
+      if (deleted_files && deleted_files.length > 0) {
+        const { data: filesToDeleteData, error: selectError } = await supabase
+            .from('task_attachments')
+            .select('id, storage_path')
+            .in('id', deleted_files);
+        
+        if (selectError) throw new Error(`Could not fetch files to delete: ${selectError.message}`);
+
+        if (filesToDeleteData && filesToDeleteData.length > 0) {
+            const storagePaths = filesToDeleteData.map(f => f.storage_path);
+            await supabase.storage.from('task-attachments').remove(storagePaths);
+            await supabase.from('task_attachments').delete().in('id', deleted_files);
+        }
+      }
+
+      // 5. Handle file uploads
+      if (new_files && new_files.length > 0) {
+        const uploadPromises = new_files.map(async (file) => {
+            const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+            const filePath = `tasks/${taskId}/${Date.now()}-${sanitizedFileName}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from('task-attachments')
+                .upload(filePath, file);
+            if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+
+            const { data: urlData } = supabase.storage.from('task-attachments').getPublicUrl(filePath);
+
+            return {
+                task_id: taskId,
+                uploaded_by: user.id,
+                file_name: file.name,
+                file_url: urlData.publicUrl,
+                storage_path: filePath,
+                file_type: file.type,
+                file_size: file.size,
+            };
+        });
+
+        const newAttachments = await Promise.all(uploadPromises);
+        const { error: insertAttachmentsError } = await supabase.from('task_attachments').insert(newAttachments);
+        if (insertAttachmentsError) throw insertAttachmentsError;
       }
       
       return taskResult;

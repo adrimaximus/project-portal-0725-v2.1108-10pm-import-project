@@ -1,5 +1,15 @@
 import { Tag } from './goal';
 
+export interface TaskAttachment {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  file_size: number;
+  storage_path: string;
+  created_at: string;
+}
+
 export interface TaskAssignee {
     id: string;
     first_name: string | null;
@@ -49,4 +59,5 @@ export interface Task {
     originTicketId?: string;
     attachment_url?: string;
     attachment_name?: string;
+    attachments?: TaskAttachment[];
 }

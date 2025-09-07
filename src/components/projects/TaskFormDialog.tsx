@@ -27,6 +27,7 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { Profile } from '@/types/user';
 import { Project } from '@/types/project';
 import { useIsMobile } from '@/hooks/use-mobile';
+import TaskFileUpload from './TaskFileUpload';
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -57,6 +58,8 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [assignableUsers, setAssignableUsers] = useState<Profile[]>([]);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
@@ -101,31 +104,35 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
   }, [selectedProjectId, projects, allProfiles]);
 
   useEffect(() => {
-    if (open && task) {
-      form.reset({
-        title: task.title,
-        project_id: task.project_id,
-        description: task.description,
-        due_date: task.due_date ? new Date(task.due_date) : null,
-        priority: task.priority || 'Normal',
-        status: task.status,
-        assignee_ids: task.assignees?.map(a => a.id) || [],
-        tag_ids: task.tags?.map(t => t.id) || [],
-      });
-      setSelectedTags(task.tags || []);
-    } else if (open && !task) {
-      const generalTasksProject = projects.find(p => p.slug === 'general-tasks');
-      form.reset({
-        title: '',
-        project_id: generalTasksProject?.id || '',
-        description: '',
-        due_date: null,
-        priority: 'Normal',
-        status: 'To do',
-        assignee_ids: [],
-        tag_ids: [],
-      });
-      setSelectedTags([]);
+    if (open) {
+      setNewFiles([]);
+      setFilesToDelete([]);
+      if (task) {
+        form.reset({
+          title: task.title,
+          project_id: task.project_id,
+          description: task.description,
+          due_date: task.due_date ? new Date(task.due_date) : null,
+          priority: task.priority || 'Normal',
+          status: task.status,
+          assignee_ids: task.assignees?.map(a => a.id) || [],
+          tag_ids: task.tags?.map(t => t.id) || [],
+        });
+        setSelectedTags(task.tags || []);
+      } else {
+        const generalTasksProject = projects.find(p => p.slug === 'general-tasks');
+        form.reset({
+          title: '',
+          project_id: generalTasksProject?.id || '',
+          description: '',
+          due_date: null,
+          priority: 'Normal',
+          status: 'To do',
+          assignee_ids: [],
+          tag_ids: [],
+        });
+        setSelectedTags([]);
+      }
     }
   }, [task, open, form, projects]);
 
@@ -144,6 +151,10 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
     };
     toast.info(`New tag "${tagName}" will be created upon saving.`);
     return newTag;
+  };
+
+  const handleExistingFileDelete = (fileId: string) => {
+    setFilesToDelete(prev => [...prev, fileId]);
   };
 
   const handleSubmit = async (values: TaskFormValues) => {
@@ -179,6 +190,8 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
       assignee_ids: values.assignee_ids,
       due_date: values.due_date ? values.due_date.toISOString() : null,
       tag_ids: finalTagIds,
+      new_files: newFiles,
+      deleted_files: filesToDelete,
     };
 
     onSubmit(payload);
@@ -355,6 +368,15 @@ const TaskFormDialog = ({ open, onOpenChange, onSubmit, isSubmitting, task }: Ta
           </FormItem>
         )}
       />
+      <FormItem>
+        <FormLabel>Attachments</FormLabel>
+        <TaskFileUpload
+          existingFiles={(task?.attachments || []).filter(f => !filesToDelete.includes(f.id))}
+          newFiles={newFiles}
+          onNewFilesChange={setNewFiles}
+          onExistingFileDelete={handleExistingFileDelete}
+        />
+      </FormItem>
     </div>
   );
 
