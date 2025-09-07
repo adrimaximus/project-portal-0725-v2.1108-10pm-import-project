@@ -44,9 +44,6 @@ export const getInitials = (name: string = "", email?: string): string => {
 };
 
 export const getAvatarUrl = (avatarUrl?: string | null, seed?: string | null): string => {
-  if (avatarUrl) {
-    return avatarUrl;
-  }
   const finalSeed = seed || 'default-avatar';
   const bgColor = getConsistentPastelColor(finalSeed);
   return `https://api.dicebear.com/8.x/lorelei/svg?seed=${encodeURIComponent(finalSeed)}&backgroundColor=${bgColor}`;
