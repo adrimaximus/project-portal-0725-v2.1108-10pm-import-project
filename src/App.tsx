@@ -44,6 +44,7 @@ const Page = lazy(() => import("./pages/kb/Page"));
 const WorkspaceSettingsPage = lazy(() => import("./pages/WorkspaceSettingsPage"));
 const ContactPropertiesPage = lazy(() => import("./pages/ContactPropertiesPage"));
 const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
+const CompaniesPage = lazy(() => import("./pages/CompaniesPage"));
 
 function App() {
   return (
@@ -70,6 +71,7 @@ function App() {
             <Route path="/goals/:slug" element={<PermissionGuard permission="module:goals"><GoalDetailPage /></PermissionGuard>} />
             <Route path="/billing" element={<PermissionGuard permission="module:billing"><Billing /></PermissionGuard>} />
             <Route path="/people" element={<PermissionGuard permission="module:people"><PeoplePage /></PermissionGuard>} />
+            <Route path="/people/companies" element={<PermissionGuard permission="module:people"><CompaniesPage /></PermissionGuard>} />
             <Route path="/people/:id" element={<PermissionGuard permission="module:people"><PersonProfilePage /></PermissionGuard>} />
             <Route path="/knowledge-base" element={<PermissionGuard permission="module:knowledge-base"><KnowledgeBasePage /></PermissionGuard>} />
             <Route path="/knowledge-base/folders/:slug" element={<PermissionGuard permission="module:knowledge-base"><FolderDetailPage /></PermissionGuard>} />
