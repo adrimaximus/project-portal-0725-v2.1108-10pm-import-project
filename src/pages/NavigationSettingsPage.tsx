@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link } from "react-router-dom";
@@ -97,6 +97,7 @@ const NavigationSettingsPage = () => {
   const [editingFolder, setEditingFolder] = useState<NavFolder | null>(null);
   const [isFolderFormOpen, setIsFolderFormOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const backfillAttempted = useRef(false);
 
   const queryKey = ['user_navigation_items', user?.id];
   const foldersQueryKey = ['navigation_folders', user?.id];
@@ -149,13 +150,16 @@ const NavigationSettingsPage = () => {
   });
 
   useEffect(() => {
-    if (user && !isLoadingItems) {
+    if (user && !isLoadingItems && !backfillAttempted.current) {
         const hasDefaultItems = navItems.some(item => item.is_deletable === false);
         if (!hasDefaultItems) {
+            backfillAttempted.current = true;
             backfillNavItems();
+        } else {
+            backfillAttempted.current = true;
         }
     }
-  }, [user, navItems, isLoadingItems, backfillNavItems, queryClient, queryKey]);
+  }, [user, navItems, isLoadingItems, backfillNavItems]);
 
   const { mutate: upsertFolder, isPending: isSavingFolder } = useMutation({ mutationFn: async (folder: Partial<NavFolder>) => { const { error } = await supabase.from('navigation_folders').upsert(folder); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['navigation_folders', user?.id] }) });
   const { mutate: deleteItem, isPending: isDeletingItem } = useMutation({ mutationFn: async (id: string) => { setDeletingId(id); const { error } = await supabase.from('user_navigation_items').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Item removed"); queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user?.id] }); }, onError: (e: any) => toast.error(e.message), onSettled: () => setDeletingId(null) });
