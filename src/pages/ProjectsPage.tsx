@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Project } from "@/types";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, RefreshCw, Search } from "lucide-react";
@@ -37,8 +37,14 @@ type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data: projects = [], isLoading, refetch } = useProjects();
   const [view, setView] = useState<ViewMode>(() => {
+    const viewFromUrl = searchParams.get('view') as ViewMode;
+    if (viewFromUrl && ['table', 'list', 'kanban', 'tasks', 'tasks-kanban'].includes(viewFromUrl)) {
+        localStorage.setItem('project_view_mode', viewFromUrl);
+        return viewFromUrl;
+    }
     const savedView = localStorage.getItem('project_view_mode') as ViewMode;
     return savedView || 'list';
   });

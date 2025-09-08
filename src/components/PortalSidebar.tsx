@@ -19,8 +19,30 @@ type NavItem = { id: string; href: string; label: string; icon: LucideIcon; badg
 
 const Icons = LucideIcons as unknown as { [key: string]: LucideIcons.LucideIcon };
 
-const NavLink = ({ item, isCollapsed, location }: { item: NavItem, isCollapsed: boolean, location: any }) => {
-  const isActive = location.pathname.startsWith(item.href) && (item.href !== '/' && item.href !== '/dashboard') || location.pathname === item.href;
+const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean }) => {
+  const location = useLocation();
+  const [itemPath, itemQuery] = item.href.split('?');
+  
+  let isActive = false;
+  if (itemQuery) {
+      isActive = location.pathname === itemPath && location.search === `?${itemQuery}`;
+  } else {
+      if (location.pathname.startsWith(itemPath) && itemPath !== '/') {
+          const isCompetingQueryLinkActive = location.pathname === itemPath && location.search;
+          if (isCompetingQueryLinkActive) {
+              isActive = false;
+          } else {
+              isActive = true;
+          }
+      } else {
+          isActive = location.pathname === itemPath;
+      }
+  }
+
+  if (item.href === '/dashboard' && location.pathname === '/') {
+      isActive = true;
+  }
+
   if (isCollapsed) {
     return (
       <Tooltip>
@@ -46,7 +68,6 @@ const NavLink = ({ item, isCollapsed, location }: { item: NavItem, isCollapsed: 
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { user } = useAuth();
-  const location = useLocation();
   const { unreadCount: unreadNotificationCount } = useNotifications();
   const queryClient = useQueryClient();
   const totalUnreadChatCount = 0; // Placeholder for chat unread count
@@ -117,7 +138,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
           <div className="flex-1 overflow-y-auto py-2">
             <TooltipProvider delayDuration={0}>
               <nav className={cn("grid items-start gap-1 text-sm font-medium", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
-                {topLevelItems.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} location={location} />)}
+                {topLevelItems.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} />)}
                 {folders.map(folder => {
                   const itemsInFolder = navItems.filter(item => item.folder_id === folder.id);
                   if (itemsInFolder.length === 0) return null;
@@ -132,7 +153,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                         </div>
                       </CollapsibleTrigger>
                       <CollapsibleContent className={cn("space-y-1", !isCollapsed && "pl-4")}>
-                        {itemsInFolder.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} location={location} />)}
+                        {itemsInFolder.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} />)}
                       </CollapsibleContent>
                     </Collapsible>
                   );
@@ -144,7 +165,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             <div className="mt-auto border-t p-2">
               <TooltipProvider delayDuration={0}>
                 <nav className={cn("grid items-start gap-1 text-sm font-medium", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
-                  <NavLink item={settingsItem} isCollapsed={isCollapsed} location={location} />
+                  <NavLink item={settingsItem} isCollapsed={isCollapsed} />
                 </nav>
               </TooltipProvider>
             </div>
