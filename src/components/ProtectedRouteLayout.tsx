@@ -1,7 +1,7 @@
 import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingScreen from "./LoadingScreen";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useLocationSaver } from '@/hooks/useLocationSaver';
 import { supabase } from '@/integrations/supabase/client';
 import { defaultNavItems } from '@/lib/defaultNavItems';
@@ -13,60 +13,84 @@ const ProtectedRouteLayout = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   useLocationSaver();
+  const navSyncAttempted = useRef(false);
 
   useEffect(() => {
-    const backfillNavItems = async () => {
-      if (!user) return;
+    const syncDefaultNavItems = async () => {
+      if (!user || navSyncAttempted.current) return;
+      navSyncAttempted.current = true;
 
       const { data: existingItems, error: fetchError } = await supabase
         .from('user_navigation_items')
-        .select('name, position')
+        .select('*')
         .eq('user_id', user.id);
 
       if (fetchError) {
-        console.error("Error checking nav items:", fetchError);
+        console.error("Error fetching nav items:", fetchError);
         return;
       }
 
-      const existingDefaultItemNames = new Set(
-        existingItems.map(item => item.name)
-      );
+      let itemsChanged = false;
+      const itemsToUpsert = [];
+      const idsToDelete = [];
       
       const highestPosition = existingItems.reduce((max, item) => Math.max(max, item.position), -1);
+      let positionCounter = 1;
 
-      const missingDefaultItems = defaultNavItems.filter(
-        defaultItem => !existingDefaultItemNames.has(defaultItem.name)
-      );
+      for (const defaultItem of defaultNavItems) {
+        const matchingItems = existingItems.filter(item => item.name === defaultItem.name);
 
-      if (missingDefaultItems.length > 0) {
-        console.log("Missing default navigation items found, backfilling:", missingDefaultItems.map(i => i.name));
-        
-        const itemsToInsert = missingDefaultItems.map((item, index) => ({
-          user_id: user.id,
-          name: item.name,
-          url: item.url,
-          icon: item.icon,
-          position: highestPosition + 1 + index,
-          is_enabled: true,
-          is_deletable: false,
-          is_editable: false,
-        }));
-
-        const { error: insertError } = await supabase
-          .from('user_navigation_items')
-          .insert(itemsToInsert);
-
-        if (insertError) {
-          console.error("Error backfilling nav items:", insertError);
+        if (matchingItems.length === 0) {
+          itemsToUpsert.push({
+            user_id: user.id,
+            name: defaultItem.name,
+            url: defaultItem.url,
+            icon: defaultItem.icon,
+            position: highestPosition + positionCounter++,
+            is_enabled: true,
+            is_deletable: false,
+            is_editable: false,
+          });
+          itemsChanged = true;
         } else {
-          toast.success("Navigation updated with new items.");
-          queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user.id] });
+          const primaryItem = matchingItems[0];
+          const updates: any = {};
+
+          if (primaryItem.url !== defaultItem.url) updates.url = defaultItem.url;
+          if (primaryItem.is_deletable !== false) updates.is_deletable = false;
+          if (primaryItem.is_editable !== false) updates.is_editable = false;
+          if (primaryItem.icon !== defaultItem.icon) updates.icon = defaultItem.icon;
+
+          if (Object.keys(updates).length > 0) {
+            itemsToUpsert.push({ id: primaryItem.id, ...updates });
+            itemsChanged = true;
+          }
+
+          if (matchingItems.length > 1) {
+            idsToDelete.push(...matchingItems.slice(1).map(d => d.id));
+            itemsChanged = true;
+          }
         }
+      }
+
+      if (idsToDelete.length > 0) {
+        const { error } = await supabase.from('user_navigation_items').delete().in('id', idsToDelete);
+        if (error) console.error("Error deleting duplicate nav items:", error);
+      }
+
+      if (itemsToUpsert.length > 0) {
+        const { error } = await supabase.from('user_navigation_items').upsert(itemsToUpsert);
+        if (error) console.error("Error upserting nav items:", error);
+      }
+
+      if (itemsChanged) {
+        toast.info("Your navigation sidebar has been updated.");
+        queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user.id] });
       }
     };
 
     if (user && !loading) {
-      backfillNavItems();
+      syncDefaultNavItems();
     }
   }, [user, loading, queryClient]);
 
