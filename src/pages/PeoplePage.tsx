@@ -59,7 +59,8 @@ const PeoplePage = () => {
       if (error) throw error;
       return (data as Person[]).map(person => ({
         ...person,
-        avatar_url: getAvatarUrl(person.avatar_url, person.id)
+        avatar_url: getAvatarUrl(person.avatar_url, person.id),
+        tags: person.tags ? [...person.tags].sort((a, b) => a.name.localeCompare(b.name)) : [],
       }));
     }
   });
