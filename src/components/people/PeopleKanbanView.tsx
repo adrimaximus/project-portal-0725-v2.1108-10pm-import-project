@@ -170,8 +170,10 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
     if (!sourceContainerId || !destContainerId) return;
 
-    // Optimistic update
     const previousPeople = queryClient.getQueryData<Person[]>(['people']);
+
+    // Perform optimistic update
+    let newOptimisticState: Person[] | undefined;
     queryClient.setQueryData<Person[]>(['people'], (oldPeople = []) => {
       const activeIndex = oldPeople.findIndex(p => p.id === activeId);
       if (activeIndex === -1) return oldPeople;
@@ -179,53 +181,70 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       let newPeople = [...oldPeople];
       const [movedItem] = newPeople.splice(activeIndex, 1);
 
-      if (sourceContainerId === destContainerId) {
-        const overIndex = newPeople.findIndex(p => p.id === overId);
-        if (overIndex !== -1) {
-          newPeople.splice(overIndex, 0, movedItem);
-        } else {
-          newPeople.push(movedItem);
-        }
-      } else {
+      if (sourceContainerId !== destContainerId) {
         const destTag = tags.find(t => t.id === destContainerId);
-        const otherTags = (movedItem.tags || []).filter(t => t.id !== sourceContainerId);
-        movedItem.tags = destTag ? [destTag, ...otherTags] : otherTags;
-        
-        const overIndex = newPeople.findIndex(p => p.id === overId);
-        if (overIndex !== -1) {
-          newPeople.splice(overIndex, 0, movedItem);
+        movedItem.tags = destTag ? [destTag] : [];
+      }
+
+      const overIndex = newPeople.findIndex(p => p.id === overId);
+      if (overIsItem && overIndex !== -1) {
+        newPeople.splice(overIndex, 0, movedItem);
+      } else {
+        const itemsInDest = newPeople.filter(p => (p.tags?.[0]?.id || 'uncategorized') === destContainerId);
+        if (itemsInDest.length > 0) {
+          const lastItem = itemsInDest[itemsInDest.length - 1];
+          const lastItemIndex = newPeople.findIndex(p => p.id === lastItem.id);
+          newPeople.splice(lastItemIndex + 1, 0, movedItem);
         } else {
           newPeople.push(movedItem);
         }
       }
+      newOptimisticState = newPeople;
       return newPeople;
     });
 
-    // Server update
+    if (!newOptimisticState) {
+      queryClient.setQueryData(['people'], previousPeople);
+      return;
+    }
+
+    const newPersonGroups = newOptimisticState.reduce((acc, p) => {
+      const tagId = p.tags?.[0]?.id || 'uncategorized';
+      if (!acc[tagId]) acc[tagId] = [];
+      acc[tagId].push(p);
+      return acc;
+    }, {} as Record<string, Person[]>);
+
     try {
       if (sourceContainerId === destContainerId) {
-        const columnItems = personGroups[sourceContainerId];
-        const oldIndex = columnItems.findIndex(p => p.id === activeId);
-        const newIndex = columnItems.findIndex(p => p.id === overId);
-        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
-        const reorderedItems = arrayMove(columnItems, oldIndex, newIndex);
-        const { error } = await supabase.rpc('update_person_kanban_order', { p_person_ids: reorderedItems.map(p => p.id) });
+        const reorderedIds = (newPersonGroups[sourceContainerId] || []).map(p => p.id);
+        const { error } = await supabase.rpc('update_person_kanban_order', { p_person_ids: reorderedIds });
         if (error) throw error;
       } else {
-        const destTag = tags.find(t => t.id === destContainerId);
-        const otherTags = (person.tags || []).filter(t => t.id !== sourceContainerId);
-        const finalTags = destTag ? [destTag, ...otherTags] : otherTags;
-        
-        const { error } = await supabase.rpc('update_person_tags', {
+        const { error: tagError } = await supabase.rpc('update_person_tags', {
           p_person_id: person.id,
           p_tag_to_remove_id: sourceContainerId === 'uncategorized' ? null : sourceContainerId,
           p_tag_to_add_id: destContainerId === 'uncategorized' ? null : destContainerId,
         });
-        if (error) throw error;
+        if (tagError) throw tagError;
+
+        const sourceIds = (newPersonGroups[sourceContainerId] || []).map(p => p.id);
+        const destIds = (newPersonGroups[destContainerId] || []).map(p => p.id);
+
+        const promises = [];
+        if (sourceIds.length > 0) {
+          promises.push(supabase.rpc('update_person_kanban_order', { p_person_ids: sourceIds }));
+        }
+        promises.push(supabase.rpc('update_person_kanban_order', { p_person_ids: destIds }));
+        
+        const results = await Promise.all(promises);
+        for (const result of results) {
+          if (result.error) throw result.error;
+        }
       }
     } catch (error: any) {
       toast.error(`Failed to move person: ${error.message}`);
-      queryClient.setQueryData(['people'], previousPeople); // Revert on error
+      queryClient.setQueryData(['people'], previousPeople);
     }
   };
 
