@@ -157,94 +157,84 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     setTimeout(() => { dragHappened.current = false; }, 0);
 
     const { active, over } = event;
-    if (!over) return;
+    if (!over || active.id === over.id) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
-    const person = people.find(p => p.id === activeId);
-    if (!person) return;
-
+    
     const sourceContainerId = active.data.current?.sortable.containerId as string;
     const overIsItem = !!over.data.current?.sortable;
     const destContainerId = overIsItem ? over.data.current?.sortable.containerId as string : overId;
 
     if (!sourceContainerId || !destContainerId) return;
 
-    const previousPeople = queryClient.getQueryData<Person[]>(['people']);
+    const previousPeople = queryClient.getQueryData<Person[]>(['people']) || [];
+    
+    // 1. Find active item and its index
+    const activeIndex = previousPeople.findIndex(p => p.id === activeId);
+    if (activeIndex === -1) return;
 
-    // Perform optimistic update
-    let newOptimisticState: Person[] | undefined;
-    queryClient.setQueryData<Person[]>(['people'], (oldPeople = []) => {
-      const activeIndex = oldPeople.findIndex(p => p.id === activeId);
-      if (activeIndex === -1) return oldPeople;
+    // 2. Create a new array and splice the active item out
+    let newPeople = [...previousPeople];
+    const [movedItem] = newPeople.splice(activeIndex, 1);
 
-      let newPeople = [...oldPeople];
-      const [movedItem] = newPeople.splice(activeIndex, 1);
-
-      if (sourceContainerId !== destContainerId) {
+    // 3. Update its tag if it moved columns
+    if (sourceContainerId !== destContainerId) {
         const destTag = tags.find(t => t.id === destContainerId);
-        movedItem.tags = destTag ? [destTag] : [];
-      }
-
-      const overIndex = newPeople.findIndex(p => p.id === overId);
-      if (overIsItem && overIndex !== -1) {
-        newPeople.splice(overIndex, 0, movedItem);
-      } else {
-        const itemsInDest = newPeople.filter(p => (p.tags?.[0]?.id || 'uncategorized') === destContainerId);
-        if (itemsInDest.length > 0) {
-          const lastItem = itemsInDest[itemsInDest.length - 1];
-          const lastItemIndex = newPeople.findIndex(p => p.id === lastItem.id);
-          newPeople.splice(lastItemIndex + 1, 0, movedItem);
-        } else {
-          newPeople.push(movedItem);
-        }
-      }
-      newOptimisticState = newPeople;
-      return newPeople;
-    });
-
-    if (!newOptimisticState) {
-      queryClient.setQueryData(['people'], previousPeople);
-      return;
+        const otherTags = (movedItem.tags || []).filter(t => t.id !== sourceContainerId);
+        movedItem.tags = destTag ? [destTag, ...otherTags] : otherTags;
     }
 
-    const newPersonGroups = newOptimisticState.reduce((acc, p) => {
-      const tagId = p.tags?.[0]?.id || 'uncategorized';
-      if (!acc[tagId]) acc[tagId] = [];
-      acc[tagId].push(p);
-      return acc;
-    }, {} as Record<string, Person[]>);
+    // 4. Find the new index for insertion
+    const overIndex = newPeople.findIndex(p => p.id === overId);
+    if (overIsItem && overIndex !== -1) {
+        newPeople.splice(overIndex, 0, movedItem);
+    } else {
+        const itemsInDest = newPeople.filter(p => (p.tags?.[0]?.id || 'uncategorized') === destContainerId);
+        if (itemsInDest.length > 0) {
+            const lastItem = itemsInDest[itemsInDest.length - 1];
+            const lastItemIndex = newPeople.findIndex(p => p.id === lastItem.id);
+            newPeople.splice(lastItemIndex + 1, 0, movedItem);
+        } else {
+            newPeople.push(movedItem);
+        }
+    }
 
+    // 5. Optimistically update the UI
+    queryClient.setQueryData(['people'], newPeople);
+
+    // 6. Prepare and execute server updates
     try {
-      if (sourceContainerId === destContainerId) {
-        const reorderedIds = (newPersonGroups[sourceContainerId] || []).map(p => p.id);
-        const { error } = await supabase.rpc('update_person_kanban_order', { p_person_ids: reorderedIds });
-        if (error) throw error;
-      } else {
-        const { error: tagError } = await supabase.rpc('update_person_tags', {
-          p_person_id: person.id,
-          p_tag_to_remove_id: sourceContainerId === 'uncategorized' ? null : sourceContainerId,
-          p_tag_to_add_id: destContainerId === 'uncategorized' ? null : destContainerId,
-        });
-        if (tagError) throw tagError;
+        if (sourceContainerId !== destContainerId) {
+            const { error: tagError } = await supabase.rpc('update_person_tags', {
+                p_person_id: activeId,
+                p_tag_to_remove_id: sourceContainerId === 'uncategorized' ? null : sourceContainerId,
+                p_tag_to_add_id: destContainerId === 'uncategorized' ? null : destContainerId,
+            });
+            if (tagError) throw tagError;
+        }
 
-        const sourceIds = (newPersonGroups[sourceContainerId] || []).map(p => p.id);
-        const destIds = (newPersonGroups[destContainerId] || []).map(p => p.id);
+        const sourceColumnIds = newPeople
+            .filter(p => (p.tags?.[0]?.id || 'uncategorized') === sourceContainerId)
+            .map(p => p.id);
+        
+        const destColumnIds = newPeople
+            .filter(p => (p.tags?.[0]?.id || 'uncategorized') === destContainerId)
+            .map(p => p.id);
 
         const promises = [];
-        if (sourceIds.length > 0) {
-          promises.push(supabase.rpc('update_person_kanban_order', { p_person_ids: sourceIds }));
+        if (sourceContainerId !== destContainerId && sourceColumnIds.length > 0) {
+            promises.push(supabase.rpc('update_person_kanban_order', { p_person_ids: sourceColumnIds }));
         }
-        promises.push(supabase.rpc('update_person_kanban_order', { p_person_ids: destIds }));
+        promises.push(supabase.rpc('update_person_kanban_order', { p_person_ids: destColumnIds }));
         
         const results = await Promise.all(promises);
         for (const result of results) {
-          if (result.error) throw result.error;
+            if (result.error) throw result.error;
         }
-      }
     } catch (error: any) {
-      toast.error(`Failed to move person: ${error.message}`);
-      queryClient.setQueryData(['people'], previousPeople);
+        toast.error(`Failed to move person: ${error.message}`);
+        queryClient.setQueryData(['people'], previousPeople);
     }
   };
 
