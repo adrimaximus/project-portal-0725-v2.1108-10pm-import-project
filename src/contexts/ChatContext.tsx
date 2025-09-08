@@ -158,14 +158,27 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!currentUser) return;
-    const channel = supabase.channel('chat-room')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-        queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-      })
+    const channel = supabase.channel('chat-room-realtime-listener')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          const newMessage = payload.new as { conversation_id: string };
+          // Always invalidate conversations list for sidebar updates
+          queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+          // If the user is viewing the conversation that got a new message, refresh it
+          if (newMessage.conversation_id === selectedConversationId) {
+            queryClient.invalidateQueries({ queryKey: ['messages', newMessage.conversation_id] });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'conversations' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
+        }
+      )
       .on('broadcast', { event: 'typing' }, (payload: any) => {
         if (payload?.userId !== currentUser?.id && payload.conversationId === selectedConversationId) {
           setIsSomeoneTyping(true);
@@ -174,7 +187,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentUser, selectedConversationId, queryClient]);
 
   useEffect(() => {
