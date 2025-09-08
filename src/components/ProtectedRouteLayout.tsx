@@ -85,7 +85,6 @@ const ProtectedRouteLayout = () => {
       }
 
       if (itemsChanged) {
-        toast.info("Your navigation sidebar has been updated.");
         queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user.id] });
       }
     };
