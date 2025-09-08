@@ -1,14 +1,6 @@
 import { User, AssignedUser } from './user';
 import { Tag } from './goal';
-
-export interface Task {
-  id: string;
-  title: string;
-  completed: boolean;
-  assignedTo: User[];
-  originTicketId?: string;
-  createdBy?: User;
-}
+import { Task } from './task';
 
 export interface Comment {
   id: string;
