@@ -37,7 +37,7 @@ type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: projects = [], isLoading, refetch } = useProjects();
   const [view, setView] = useState<ViewMode>(() => {
     const viewFromUrl = searchParams.get('view') as ViewMode;
@@ -125,6 +125,16 @@ const ProjectsPage = () => {
   }, [user, queryClient]);
 
   useEffect(() => {
+    const viewFromUrl = searchParams.get('view') as ViewMode;
+    if (viewFromUrl && ['table', 'list', 'kanban', 'tasks', 'tasks-kanban'].includes(viewFromUrl)) {
+      if (viewFromUrl !== view) {
+        setView(viewFromUrl);
+        localStorage.setItem('project_view_mode', viewFromUrl);
+      }
+    }
+  }, [searchParams, view]);
+
+  useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       let targetProject = sortedProjects.find(p => p.start_date && formatInJakarta(p.start_date, 'yyyy-MM-dd') >= todayStr);
@@ -158,6 +168,7 @@ const ProjectsPage = () => {
     if (newView) {
       setView(newView);
       localStorage.setItem('project_view_mode', newView);
+      setSearchParams({ view: newView }, { replace: true });
     }
   };
 
