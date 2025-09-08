@@ -39,7 +39,6 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   );
   const dragHappened = useRef(false);
   const [activePerson, setActivePerson] = useState<Person | null>(null);
-  const [personGroups, setPersonGroups] = useState<Record<string, Person[]>>({});
   
   const [collapseOverrides, setCollapseOverrides] = useState<Record<string, boolean>>({});
   
@@ -49,7 +48,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
   const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
 
-  useEffect(() => {
+  const personGroups = useMemo(() => {
     const groups: Record<string, Person[]> = {};
     const allCols = [uncategorizedTag, ...tags];
     allCols.forEach(col => {
@@ -65,7 +64,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     for (const groupId in groups) {
       groups[groupId].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
     }
-    setPersonGroups(groups);
+    return groups;
   }, [people, tags]);
 
   useImperativeHandle(ref, () => ({
@@ -171,72 +170,62 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
     if (!sourceContainerId || !destContainerId) return;
 
-    const originalGroups = { ...personGroups };
+    // Optimistic update
+    const previousPeople = queryClient.getQueryData<Person[]>(['people']);
+    queryClient.setQueryData<Person[]>(['people'], (oldPeople = []) => {
+      const activeIndex = oldPeople.findIndex(p => p.id === activeId);
+      if (activeIndex === -1) return oldPeople;
 
-    if (sourceContainerId === destContainerId) {
-      const columnItems = personGroups[sourceContainerId];
-      const oldIndex = columnItems.findIndex(p => p.id === activeId);
-      const newIndex = columnItems.findIndex(p => p.id === overId);
+      let newPeople = [...oldPeople];
+      const [movedItem] = newPeople.splice(activeIndex, 1);
 
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
-
-      const reorderedItems = arrayMove(columnItems, oldIndex, newIndex);
-      setPersonGroups(current => ({ ...current, [sourceContainerId]: reorderedItems }));
-
-      const { error } = await supabase.rpc('update_person_kanban_order', { p_person_ids: reorderedItems.map(p => p.id) });
-      if (error) {
-        toast.error(`Failed to reorder: ${error.message}`);
-        setPersonGroups(originalGroups);
+      if (sourceContainerId === destContainerId) {
+        const overIndex = newPeople.findIndex(p => p.id === overId);
+        if (overIndex !== -1) {
+          newPeople.splice(overIndex, 0, movedItem);
+        } else {
+          newPeople.push(movedItem);
+        }
       } else {
-        queryClient.invalidateQueries({ queryKey: ['people'] });
+        const destTag = tags.find(t => t.id === destContainerId);
+        const otherTags = (movedItem.tags || []).filter(t => t.id !== sourceContainerId);
+        movedItem.tags = destTag ? [destTag, ...otherTags] : otherTags;
+        
+        const overIndex = newPeople.findIndex(p => p.id === overId);
+        if (overIndex !== -1) {
+          newPeople.splice(overIndex, 0, movedItem);
+        } else {
+          newPeople.push(movedItem);
+        }
       }
-    } else {
-      const sourceItems = [...personGroups[sourceContainerId]];
-      const destItems = [...personGroups[destContainerId]];
-      
-      const activeIndex = sourceItems.findIndex(p => p.id === activeId);
-      if (activeIndex === -1) return;
+      return newPeople;
+    });
 
-      const [movedItem] = sourceItems.splice(activeIndex, 1);
-      
-      let newIndexInDest = overIsItem ? destItems.findIndex(p => p.id === overId) : destItems.length;
-      if (newIndexInDest === -1) newIndexInDest = destItems.length;
-
-      destItems.splice(newIndexInDest, 0, movedItem);
-
-      setPersonGroups(current => ({
-        ...current,
-        [sourceContainerId]: sourceItems,
-        [destContainerId]: destItems,
-      }));
-
-      const currentTags = person.tags || [];
-      const destTag = tags.find(t => t.id === destContainerId);
-      const otherTags = currentTags.filter(t => t.id !== sourceContainerId);
-      const finalTags = destTag ? [destTag, ...otherTags] : otherTags;
-
-      try {
-        const { error } = await supabase.rpc('upsert_person_with_details', {
-          p_id: person.id, p_full_name: person.full_name, p_contact: person.contact || { emails: [], phones: [] },
-          p_company: person.company, p_job_title: person.job_title, p_department: person.department,
-          p_social_media: person.social_media, p_birthday: person.birthday, p_notes: person.notes,
-          p_project_ids: person.projects?.map(p => p.id) || [], p_existing_tag_ids: finalTags.map(t => t.id),
-          p_custom_tags: [], p_avatar_url: person.avatar_url, p_address: person.address || null,
-          p_custom_properties: person.custom_properties || null,
+    // Server update
+    try {
+      if (sourceContainerId === destContainerId) {
+        const columnItems = personGroups[sourceContainerId];
+        const oldIndex = columnItems.findIndex(p => p.id === activeId);
+        const newIndex = columnItems.findIndex(p => p.id === overId);
+        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+        const reorderedItems = arrayMove(columnItems, oldIndex, newIndex);
+        const { error } = await supabase.rpc('update_person_kanban_order', { p_person_ids: reorderedItems.map(p => p.id) });
+        if (error) throw error;
+      } else {
+        const destTag = tags.find(t => t.id === destContainerId);
+        const otherTags = (person.tags || []).filter(t => t.id !== sourceContainerId);
+        const finalTags = destTag ? [destTag, ...otherTags] : otherTags;
+        
+        const { error } = await supabase.rpc('update_person_tags', {
+          p_person_id: person.id,
+          p_tag_to_remove_id: sourceContainerId === 'uncategorized' ? null : sourceContainerId,
+          p_tag_to_add_id: destContainerId === 'uncategorized' ? null : destContainerId,
         });
         if (error) throw error;
-
-        const { error: orderErrorSource } = await supabase.rpc('update_person_kanban_order', { p_person_ids: sourceItems.map(p => p.id) });
-        if (orderErrorSource) throw orderErrorSource;
-        const { error: orderErrorDest } = await supabase.rpc('update_person_kanban_order', { p_person_ids: destItems.map(p => p.id) });
-        if (orderErrorDest) throw orderErrorDest;
-
-        toast.success(`Moved ${person.full_name}.`);
-        queryClient.invalidateQueries({ queryKey: ['people'] });
-      } catch (error: any) {
-        toast.error(`Failed to move person: ${error.message}`);
-        setPersonGroups(originalGroups);
       }
+    } catch (error: any) {
+      toast.error(`Failed to move person: ${error.message}`);
+      queryClient.setQueryData(['people'], previousPeople); // Revert on error
     }
   };
 
