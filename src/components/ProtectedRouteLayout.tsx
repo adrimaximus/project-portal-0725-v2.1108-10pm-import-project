@@ -6,6 +6,7 @@ import { useLocationSaver } from '@/hooks/useLocationSaver';
 import { supabase } from '@/integrations/supabase/client';
 import { defaultNavItems } from '@/lib/defaultNavItems';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from "sonner";
 
 const ProtectedRouteLayout = () => {
   const { session, user, loading } = useAuth();
@@ -17,24 +18,35 @@ const ProtectedRouteLayout = () => {
     const backfillNavItems = async () => {
       if (!user) return;
 
-      const { count, error: countError } = await supabase
+      const { data: existingItems, error: fetchError } = await supabase
         .from('user_navigation_items')
-        .select('*', { count: 'exact', head: true })
+        .select('name, position')
         .eq('user_id', user.id);
 
-      if (countError) {
-        console.error("Error checking nav items:", countError);
+      if (fetchError) {
+        console.error("Error checking nav items:", fetchError);
         return;
       }
 
-      if (count === 0) {
-        console.log("No navigation items found for user, backfilling defaults.");
-        const itemsToInsert = defaultNavItems.map((item, index) => ({
+      const existingDefaultItemNames = new Set(
+        existingItems.map(item => item.name)
+      );
+      
+      const highestPosition = existingItems.reduce((max, item) => Math.max(max, item.position), -1);
+
+      const missingDefaultItems = defaultNavItems.filter(
+        defaultItem => !existingDefaultItemNames.has(defaultItem.name)
+      );
+
+      if (missingDefaultItems.length > 0) {
+        console.log("Missing default navigation items found, backfilling:", missingDefaultItems.map(i => i.name));
+        
+        const itemsToInsert = missingDefaultItems.map((item, index) => ({
           user_id: user.id,
           name: item.name,
           url: item.url,
           icon: item.icon,
-          position: index,
+          position: highestPosition + 1 + index,
           is_enabled: true,
           is_deletable: false,
           is_editable: false,
@@ -47,6 +59,7 @@ const ProtectedRouteLayout = () => {
         if (insertError) {
           console.error("Error backfilling nav items:", insertError);
         } else {
+          toast.success("Navigation updated with new items.");
           queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user.id] });
         }
       }
