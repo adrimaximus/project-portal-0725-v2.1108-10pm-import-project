@@ -21,3 +21,24 @@ export interface Person {
   custom_properties?: Record<string, any>;
   kanban_order?: number;
 }
+
+export interface Company {
+  id: string;
+  name: string;
+  legal_name: string | null;
+  address: string | null;
+  billing_address: string | null;
+  logo_url: string | null;
+  created_at: string;
+  updated_at: string;
+  user_id: string | null;
+}
+
+export interface ContactProperty {
+  id: string;
+  name: string;
+  label: string;
+  type: 'text' | 'email' | 'phone' | 'url' | 'date' | 'textarea' | 'number' | 'image';
+  is_default: boolean;
+  created_at?: string;
+}

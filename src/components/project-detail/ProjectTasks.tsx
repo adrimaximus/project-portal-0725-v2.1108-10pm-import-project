@@ -19,7 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { generatePastelColor } from "@/lib/utils";
+import { generatePastelColor, getInitials } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProjectTasksProps {
@@ -77,28 +77,34 @@ const ProjectTasks = ({
               {task.title}
             </label>
             <div className="flex items-center -space-x-2">
-              {(task.assignedTo && task.assignedTo.length > 0) 
-                ? task.assignedTo.map((user) => (
-                  <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
-                    <AvatarImage src={user.avatar_url} />
-                    <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-                  </Avatar>
-                ))
-                : task.createdBy && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Avatar key={task.createdBy.id} className="h-6 w-6 border-2 border-background opacity-50">
-                          <AvatarImage src={task.createdBy.avatar_url} />
-                          <AvatarFallback style={generatePastelColor(task.createdBy.id)}>{task.createdBy.initials}</AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Created by {task.createdBy.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )
+              {(task.assignees && task.assignees.length > 0)
+                ? task.assignees.map((user) => {
+                  const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+                  return (
+                    <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
+                      <AvatarImage src={user.avatar_url} />
+                      <AvatarFallback style={generatePastelColor(user.id)}>{getInitials(fullName, user.email)}</AvatarFallback>
+                    </Avatar>
+                  )
+                })
+                : task.created_by && (() => {
+                  const createdByFullName = `${task.created_by.first_name || ''} ${task.created_by.last_name || ''}`.trim() || task.created_by.email;
+                  return (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Avatar key={task.created_by.id} className="h-6 w-6 border-2 border-background opacity-50">
+                            <AvatarImage src={task.created_by.avatar_url} />
+                            <AvatarFallback style={generatePastelColor(task.created_by.id)}>{getInitials(createdByFullName, task.created_by.email)}</AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Created by {createdByFullName}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )
+                })()
               }
             </div>
             <Dialog>
@@ -130,7 +136,7 @@ const ProjectTasks = ({
                 </DialogHeader>
                 <MultiSelect
                   options={userOptions}
-                  value={(task.assignedTo || []).map(u => u.id)}
+                  value={(task.assignees || []).map(u => u.id)}
                   onChange={(selectedIds) => {
                     onTaskAssignUsers(task.id, selectedIds);
                   }}
