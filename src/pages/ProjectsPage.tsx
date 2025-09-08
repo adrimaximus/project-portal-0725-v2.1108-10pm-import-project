@@ -40,13 +40,13 @@ const ProjectsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: projects = [], isLoading, refetch } = useProjects();
 
+  const viewFromUrl = searchParams.get('view') as ViewMode;
   const view: ViewMode = useMemo(() => {
-    const viewFromUrl = searchParams.get('view') as ViewMode;
     if (viewFromUrl && ['table', 'list', 'kanban', 'tasks', 'tasks-kanban'].includes(viewFromUrl)) {
       return viewFromUrl;
     }
     return 'list';
-  }, [searchParams]);
+  }, [viewFromUrl]);
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -334,7 +334,7 @@ const ProjectsPage = () => {
                 </Button>
                 {(view === 'tasks' || view === 'tasks-kanban') && (
                   <Button size="sm" onClick={handleCreateTask} className="flex-1">
-                    <PlusCircle className="mr-2 h-4 w-4" />
+                    <PlusCircle className="h-4 w-4" />
                     New Task
                   </Button>
                 )}

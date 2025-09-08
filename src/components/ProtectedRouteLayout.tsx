@@ -38,7 +38,8 @@ const ProtectedRouteLayout = () => {
       let positionCounter = 1;
 
       for (const defaultItem of defaultNavItems) {
-        const matchingItems = existingItems.filter(item => item.name === defaultItem.name);
+        // Match only top-level items that are not in a folder
+        const matchingItems = existingItems.filter(item => item.name.trim() === defaultItem.name && !item.folder_id);
 
         if (matchingItems.length === 0) {
           itemsToUpsert.push({
