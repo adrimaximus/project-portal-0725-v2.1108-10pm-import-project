@@ -39,7 +39,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   );
   const dragHappened = useRef(false);
   const [activePerson, setActivePerson] = useState<Person | null>(null);
-  const [internalPeople, setInternalPeople] = useState<Person[]>(people);
+  const [personGroups, setPersonGroups] = useState<Record<string, Person[]>>({});
   
   const [collapseOverrides, setCollapseOverrides] = useState<Record<string, boolean>>({});
   
@@ -50,16 +50,12 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
   const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
 
   useEffect(() => {
-    setInternalPeople(people);
-  }, [people]);
-
-  const personGroups = useMemo(() => {
     const groups: Record<string, Person[]> = {};
     const allCols = [uncategorizedTag, ...tags];
     allCols.forEach(col => {
       groups[col.id] = [];
     });
-    internalPeople.forEach(person => {
+    people.forEach(person => {
       const tagId = person.tags?.[0]?.id;
       const columnId = tagId && Object.prototype.hasOwnProperty.call(groups, tagId) ? tagId : 'uncategorized';
       if (groups[columnId]) {
@@ -69,8 +65,8 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     for (const groupId in groups) {
       groups[groupId].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
     }
-    return groups;
-  }, [internalPeople, tags]);
+    setPersonGroups(groups);
+  }, [people, tags]);
 
   useImperativeHandle(ref, () => ({
     openSettings: () => setIsSettingsOpen(true),
@@ -175,7 +171,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
 
     if (!sourceContainerId || !destContainerId) return;
 
-    const originalPeople = [...internalPeople];
+    const originalGroups = { ...personGroups };
 
     if (sourceContainerId === destContainerId) {
       const columnItems = personGroups[sourceContainerId];
@@ -185,35 +181,41 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
       const reorderedItems = arrayMove(columnItems, oldIndex, newIndex);
-      
-      const newPersonGroups = { ...personGroups, [sourceContainerId]: reorderedItems };
-      const newInternalPeople = columns.flatMap(col => newPersonGroups[col.id] || []);
-      const peopleInVisibleColumns = new Set(newInternalPeople.map(p => p.id));
-      const peopleNotInVisibleColumns = internalPeople.filter(p => !peopleInVisibleColumns.has(p.id));
-      
-      setInternalPeople([...newInternalPeople, ...peopleNotInVisibleColumns]);
+      setPersonGroups(current => ({ ...current, [sourceContainerId]: reorderedItems }));
 
       const { error } = await supabase.rpc('update_person_kanban_order', { p_person_ids: reorderedItems.map(p => p.id) });
       if (error) {
         toast.error(`Failed to reorder: ${error.message}`);
-        setInternalPeople(originalPeople);
+        setPersonGroups(originalGroups);
       } else {
         queryClient.invalidateQueries({ queryKey: ['people'] });
       }
     } else {
-      const updatedPeople = internalPeople.map(p => {
-        if (p.id === activeId) {
-          const destTag = tags.find(t => t.id === destContainerId);
-          const otherTags = (p.tags || []).filter(t => t.id !== sourceContainerId);
-          const finalTags = destTag ? [destTag, ...otherTags] : otherTags;
-          return { ...p, tags: finalTags };
-        }
-        return p;
-      });
-      setInternalPeople(updatedPeople);
+      const sourceItems = [...personGroups[sourceContainerId]];
+      const destItems = [...personGroups[destContainerId]];
+      
+      const activeIndex = sourceItems.findIndex(p => p.id === activeId);
+      if (activeIndex === -1) return;
+
+      const [movedItem] = sourceItems.splice(activeIndex, 1);
+      
+      let newIndexInDest = overIsItem ? destItems.findIndex(p => p.id === overId) : destItems.length;
+      if (newIndexInDest === -1) newIndexInDest = destItems.length;
+
+      destItems.splice(newIndexInDest, 0, movedItem);
+
+      setPersonGroups(current => ({
+        ...current,
+        [sourceContainerId]: sourceItems,
+        [destContainerId]: destItems,
+      }));
+
+      const currentTags = person.tags || [];
+      const destTag = tags.find(t => t.id === destContainerId);
+      const otherTags = currentTags.filter(t => t.id !== sourceContainerId);
+      const finalTags = destTag ? [destTag, ...otherTags] : otherTags;
 
       try {
-        const finalTags = updatedPeople.find(p => p.id === activeId)?.tags || [];
         const { error } = await supabase.rpc('upsert_person_with_details', {
           p_id: person.id, p_full_name: person.full_name, p_contact: person.contact || { emails: [], phones: [] },
           p_company: person.company, p_job_title: person.job_title, p_department: person.department,
@@ -224,8 +226,6 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
         });
         if (error) throw error;
 
-        const sourceItems = personGroups[sourceContainerId].filter(p => p.id !== activeId);
-        const destItems = [...personGroups[destContainerId], person];
         const { error: orderErrorSource } = await supabase.rpc('update_person_kanban_order', { p_person_ids: sourceItems.map(p => p.id) });
         if (orderErrorSource) throw orderErrorSource;
         const { error: orderErrorDest } = await supabase.rpc('update_person_kanban_order', { p_person_ids: destItems.map(p => p.id) });
@@ -235,7 +235,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
         queryClient.invalidateQueries({ queryKey: ['people'] });
       } catch (error: any) {
         toast.error(`Failed to move person: ${error.message}`);
-        setInternalPeople(originalPeople);
+        setPersonGroups(originalGroups);
       }
     }
   };
