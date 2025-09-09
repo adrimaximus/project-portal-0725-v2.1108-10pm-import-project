@@ -45,15 +45,15 @@ serve(async (req) => {
       body: { prompt },
     });
     if (articleError) throw articleError;
-    const { title, content } = articleData;
+    const { title, content, unsplash_keywords } = articleData;
 
     // 3. Search for a relevant image using Unsplash
     let imageUrl = null;
     const unsplashApiKey = Deno.env.get('VITE_UNSPLASH_ACCESS_KEY');
-    if (unsplashApiKey) {
+    if (unsplashApiKey && unsplash_keywords && unsplash_keywords.length > 0) {
       try {
         const unsplash = createApi({ accessKey: unsplashApiKey });
-        const query = title.split(' ').slice(0, 5).join(' ');
+        const query = unsplash_keywords.join(' ');
         const result = await unsplash.search.getPhotos({ query, perPage: 1, orientation: 'landscape' });
         if (result.type === 'success' && result.response.results.length > 0) {
           imageUrl = result.response.results[0].urls.regular;

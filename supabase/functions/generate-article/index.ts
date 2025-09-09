@@ -35,13 +35,15 @@ The article must be structured as follows:
     *   Key insights and valuable information.
     *   Actionable steps, presented as a numbered or bulleted list (e.g., using <ol> or <ul>).
     *   A concluding summary.
+3.  **Unsplash Keywords**: An array of exactly two English keywords that are most contextual and powerful for finding a header image for this article on Unsplash.
 
-Your final output MUST be a single, valid JSON object containing two keys: "title" and "content". Do not include any other text or explanations outside of the JSON object.
+Your final output MUST be a single, valid JSON object containing three keys: "title", "content", and "unsplash_keywords". Do not include any other text or explanations outside of the JSON object.
 
 Example output format:
 {
   "title": "Judul Artikel Contoh",
-  "content": "<h1>Judul Artikel Contoh</h1><p>Ini adalah pendahuluan.</p><h2>Wawasan Utama</h2><ul><li>Wawasan 1</li><li>Wawasan 2</li></ul><h2>Langkah-langkah yang Dapat Dilakukan</h2><ol><li>Langkah 1</li><li>Langkah 2</li></ol><p>Ini adalah kesimpulan.</p>"
+  "content": "<h1>Judul Artikel Contoh</h1><p>Ini adalah pendahuluan.</p><h2>Wawasan Utama</h2><ul><li>Wawasan 1</li><li>Wawasan 2</li></ul><h2>Langkah-langkah yang Dapat Dilakukan</h2><ol><li>Langkah 1</li><li>Langkah 2</li></ol><p>Ini adalah kesimpulan.</p>",
+  "unsplash_keywords": ["example", "concept"]
 }
 `;
 

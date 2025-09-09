@@ -86,7 +86,7 @@ You can perform several types of actions. When you decide to perform an action, 
 9. CREATE_ARTICLE:
 {"action": "CREATE_ARTICLE", "article_details": {"title": "<article title>", "content": "<HTML content>", "folder_name": "<optional folder name>", "header_image_search_query": "<optional image search query>"}}
 - If folder_name is not provided or does not exist, it will be placed in a default "Uncategorized" folder for the user.
-- If 'header_image_search_query' is provided, I will find an image on Unsplash and set it as the article's header image.
+- If the user asks for an image, you MUST provide a 'header_image_search_query' with 2 strong, contextual keywords in English.
 
 10. UPDATE_ARTICLE:
 {"action": "UPDATE_ARTICLE", "article_title": "<title of article to update>", "updates": {"title": "<new title>", "content": "<new HTML content>", "folder_name": "<new folder name>", "header_image_search_query": "<optional image search query>"}}
