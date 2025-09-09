@@ -29,15 +29,24 @@ const createSupabaseAdmin = () => {
 };
 
 const getOpenAIClient = async (supabaseAdmin) => {
+  console.log("Attempting to fetch OpenAI API key from app_config...");
   const { data: config, error: configError } = await supabaseAdmin
     .from('app_config')
     .select('value')
     .eq('key', 'OPENAI_API_KEY')
-    .single();
+    .maybeSingle(); // Use maybeSingle for robustness, same as the connection checker
 
-  if (configError || !config?.value) {
+  if (configError) {
+    console.error("Error fetching OpenAI key from DB:", configError.message);
+    throw new Error("Database error while fetching API key.");
+  }
+
+  if (!config?.value) {
+    console.error("OpenAI API key not found in app_config table.");
     throw new Error("OpenAI API key is not configured by an administrator.");
   }
+  
+  console.log("Successfully fetched OpenAI API key.");
   return new OpenAI({ apiKey: config.value });
 };
 
