@@ -131,13 +131,23 @@ export async function executeAction(actionData, context) {
                 return `I've created the folder "${newFolder.name}". You can view it at /knowledge-base/folders/${newFolder.slug}`;
             }
             case 'CREATE_ARTICLE': {
-                const { title, content, folder_name, header_image_search_query } = actionData.article_details;
+                const { title: prompt, folder_name } = actionData.article_details;
+                if (!prompt) return "I need a title or topic to create an article.";
+
+                const { data: articleData, error: articleError } = await userSupabase.functions.invoke('generate-article', {
+                    body: { prompt },
+                });
+                if (articleError) return `I failed to generate the article content. The error was: ${articleError.message}`;
+                
+                const { title, content, unsplash_keywords } = articleData;
+
                 let folder_id = folders.find(f => f.name.toLowerCase() === folder_name?.toLowerCase())?.id;
                 let header_image_url = null;
 
-                if (header_image_search_query) {
+                if (unsplash_keywords && unsplash_keywords.length > 0) {
                     const unsplash = createApi({ accessKey: Deno.env.get('VITE_UNSPLASH_ACCESS_KEY')! });
-                    const photo = await unsplash.search.getPhotos({ query: header_image_search_query, perPage: 1 });
+                    const query = unsplash_keywords.join(' ');
+                    const photo = await unsplash.search.getPhotos({ query, perPage: 1, orientation: 'landscape' });
                     if (photo.response?.results[0]) {
                         header_image_url = photo.response.results[0].urls.regular;
                     }
@@ -146,7 +156,7 @@ export async function executeAction(actionData, context) {
                 if (!folder_id) {
                     const { data: defaultFolderData, error: folderError } = await userSupabase.rpc('create_default_kb_folder').single();
                     if (folderError || !defaultFolderData) return `I couldn't find or create a default folder for the article: ${folderError?.message}`;
-                    folder_id = defaultFolderData.id;
+                    folder_id = defaultFolderData;
                 }
 
                 const { data: newArticle, error } = await userSupabase.from('kb_articles').insert({

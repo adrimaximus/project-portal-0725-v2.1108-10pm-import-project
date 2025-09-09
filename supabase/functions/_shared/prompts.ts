@@ -84,9 +84,8 @@ You can perform several types of actions. When you decide to perform an action, 
 - For 'add_tags' and 'remove_tags', the value should be an array of tag names.
 
 9. CREATE_ARTICLE:
-{"action": "CREATE_ARTICLE", "article_details": {"title": "<article title>", "content": "<HTML content>", "folder_name": "<optional folder name>", "header_image_search_query": "<optional image search query>"}}
-- If folder_name is not provided or does not exist, it will be placed in a default "Uncategorized" folder for the user.
-- If the user asks for an image, you MUST provide a 'header_image_search_query' with 2 strong, contextual keywords in English.
+{"action": "CREATE_ARTICLE", "article_details": {"title": "<The user's topic for the article>", "folder_name": "<optional folder name>"}}
+- When creating an article, just provide the topic as the title. The system will generate the full content and find a relevant image.
 
 10. UPDATE_ARTICLE:
 {"action": "UPDATE_ARTICLE", "article_title": "<title of article to update>", "updates": {"title": "<new title>", "content": "<new HTML content>", "folder_name": "<new folder name>", "header_image_search_query": "<optional image search query>"}}

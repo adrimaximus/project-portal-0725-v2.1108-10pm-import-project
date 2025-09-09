@@ -196,7 +196,7 @@ export async function analyzeProjects(payload, context) {
       const actionData = JSON.parse(jsonString);
       console.log("[DIAGNOSTIC] analyzeProjects: Parsed JSON action:", actionData.action);
 
-      const actionResult = await executeAction(actionData, { ...actionContext, userSupabase, user });
+      const actionResult = await executeAction(actionData, { ...actionContext, userSupabase, user, originalRequest: request });
       console.log("[DIAGNOSTIC] analyzeProjects: Action executed. Result:", actionResult);
       
       await userSupabase.from('ai_chat_history').insert({ user_id: user.id, sender: 'ai', content: actionResult });
