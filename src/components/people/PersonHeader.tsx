@@ -41,15 +41,14 @@ const PersonHeader = ({ person, onEdit, onDelete, isAdmin }: PersonHeaderProps) 
           .from('companies')
           .select('logo_url, address')
           .ilike('name', companyName)
-          .limit(1)
-          .single();
+          .limit(1);
 
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
           console.error('Error fetching company details:', error.message);
           toast.error("Could not fetch company logo.");
-        } else if (data) {
-          setCompanyLogoUrl(data.logo_url);
-          setCompanyAddress(data.address);
+        } else if (data && data.length > 0) {
+          setCompanyLogoUrl(data[0].logo_url);
+          setCompanyAddress(data[0].address);
         } else {
           setCompanyLogoUrl(null);
           setCompanyAddress(null);
