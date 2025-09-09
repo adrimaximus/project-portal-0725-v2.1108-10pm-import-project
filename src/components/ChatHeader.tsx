@@ -79,12 +79,14 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
             <span className="sr-only">Back</span>
           </Button>
         )}
-        {isGroup && members && members.length > 0 ? (
+        {isGroup && members && members.length > 1 ? (
           <StackedAvatar members={members} />
         ) : (
           <Avatar className="h-10 w-10 border">
             <AvatarImage src={userAvatar} alt={userName} />
-            <AvatarFallback style={generatePastelColor(otherUser?.id || id)}>{getInitials(userName)}</AvatarFallback>
+            <AvatarFallback style={generatePastelColor(isGroup ? id : otherUser?.id || id)}>
+              {isGroup ? <Users className="h-5 w-5" /> : getInitials(userName)}
+            </AvatarFallback>
           </Avatar>
         )}
         <div className="ml-4 flex-1">
