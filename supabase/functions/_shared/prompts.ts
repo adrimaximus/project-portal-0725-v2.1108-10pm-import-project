@@ -79,6 +79,7 @@ You can perform several types of actions. When you decide to perform an action, 
 
 9. CREATE_ARTICLE:
 {"action": "CREATE_ARTICLE", "article_details": {"title": "<article title>", "content": "<HTML content>", "folder_name": "<optional folder name>", "header_image_search_query": "<optional image search query>"}}
+- When creating an article, the 'content' MUST be well-structured HTML. It should include an engaging introduction, key insights, actionable steps in a list format (<ul> or <ol>), and a concluding summary. The content should be comprehensive and valuable.
 - If folder_name is not provided or does not exist, it will be placed in a default "Uncategorized" folder for the user.
 - If 'header_image_search_query' is provided, I will find an image on Unsplash and set it as the article's header image.
 
