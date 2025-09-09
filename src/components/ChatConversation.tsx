@@ -1,9 +1,9 @@
-import { Message, Collaborator, User } from "@/types";
+import { Message, Collaborator } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn, generatePastelColor } from "@/lib/utils";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
@@ -16,6 +16,7 @@ interface ChatConversationProps {
   members: Collaborator[];
   isLoading?: boolean;
   onReply: (message: Message) => void;
+  onActionConfirm?: (messageId: string, decision: 'approve' | 'decline', actionType: string) => void;
 }
 
 const formatTimestamp = (timestamp: string) => {
@@ -39,9 +40,10 @@ const formatDateSeparator = (timestamp: string) => {
   }
 };
 
-export const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
+export const ChatConversation = ({ messages, members, isLoading, onReply, onActionConfirm }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [handledActions, setHandledActions] = useState<string[]>([]);
 
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -59,6 +61,12 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
         element.classList.remove('bg-primary/10', 'transition-colors', 'duration-1000');
       }, 2000);
     }
+  };
+
+  const handleAction = (messageId: string, decision: 'approve' | 'decline', actionType: string) => {
+    if (!onActionConfirm) return;
+    setHandledActions(prev => [...prev, messageId]);
+    onActionConfirm(messageId, decision, actionType);
   };
 
   if (!currentUser) {
@@ -80,6 +88,13 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
         const isImageAttachment = message.attachment?.type.startsWith('image/');
         const isAudioAttachment = message.attachment?.type.startsWith('audio/');
 
+        const isAiMessage = message.sender.id === 'ai-assistant';
+        const actionMatch = isAiMessage && message.text ? message.text.match(/\[AI_ACTION_APPROVAL type="([^"]+)"\]/) : null;
+        const isAiAction = !!actionMatch;
+        const actionType = actionMatch ? actionMatch[1] : null;
+        const actionText = isAiAction && message.text ? message.text.replace(actionMatch[0], '').trim() : message.text;
+        const isActionHandled = handledActions.includes(message.id || '');
+
         return (
           <div key={message.id || index} id={`message-${message.id}`} className="rounded-lg">
             {showDateSeparator && (
@@ -94,120 +109,134 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                 </div>
               </div>
             )}
-            <div
-              className={cn(
-                "flex items-end gap-2 group",
-                isCurrentUser ? "justify-end" : "justify-start",
-                isSameSenderAsPrevious ? "mt-1" : "mt-4"
-              )}
-            >
-              {isCurrentUser && (
-                <Button variant="ghost" size="icon" className="h-7 w-7 invisible group-hover:visible" onClick={() => onReply(message)}>
-                  <CornerUpLeft className="h-4 w-4" />
-                </Button>
-              )}
-              {!isCurrentUser && !isSameSenderAsPrevious && (
-                sender.id === 'ai-assistant' ? (
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      <Sparkles className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={sender.avatar_url} />
-                    <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
-                  </Avatar>
-                )
-              )}
+            <div>
               <div
                 className={cn(
-                  "max-w-xs md:max-w-md lg:max-w-lg rounded-lg",
-                  isCurrentUser
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted",
-                  isImageAttachment ? "p-1 overflow-hidden" : "px-3 py-2",
-                  isAudioAttachment ? "p-0" : "",
-                  !isCurrentUser && isSameSenderAsPrevious && "ml-10"
+                  "flex items-end gap-2 group",
+                  isCurrentUser ? "justify-end" : "justify-start",
+                  isSameSenderAsPrevious ? "mt-1" : "mt-4"
                 )}
               >
-                {!isCurrentUser && !isSameSenderAsPrevious && sender.id !== 'ai-assistant' && (
-                  <p className="text-sm font-semibold mb-1">{sender.name}</p>
+                {isCurrentUser && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7 invisible group-hover:visible" onClick={() => onReply(message)}>
+                    <CornerUpLeft className="h-4 w-4" />
+                  </Button>
                 )}
-                
-                {message.repliedMessage && (
-                  <button
-                    onClick={() => handleScrollToMessage(message.reply_to_message_id)}
-                    className="w-full text-left p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors cursor-pointer"
-                  >
-                    <p className="font-semibold">{message.repliedMessage.senderName}</p>
-                    <p className="text-xs line-clamp-2 opacity-80">
-                      {message.repliedMessage.isDeleted ? "This message was deleted." : message.repliedMessage.content}
-                    </p>
-                  </button>
+                {!isCurrentUser && !isSameSenderAsPrevious && (
+                  sender.id === 'ai-assistant' ? (
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        <Sparkles className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={sender.avatar_url} />
+                      <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
+                    </Avatar>
+                  )
                 )}
+                <div
+                  className={cn(
+                    "max-w-xs md:max-w-md lg:max-w-lg rounded-lg",
+                    isCurrentUser
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted",
+                    isImageAttachment ? "p-1 overflow-hidden" : "px-3 py-2",
+                    isAudioAttachment ? "p-0" : "",
+                    !isCurrentUser && isSameSenderAsPrevious && "ml-10"
+                  )}
+                >
+                  {!isCurrentUser && !isSameSenderAsPrevious && sender.id !== 'ai-assistant' && (
+                    <p className="text-sm font-semibold mb-1">{sender.name}</p>
+                  )}
+                  
+                  {message.repliedMessage && (
+                    <button
+                      onClick={() => handleScrollToMessage(message.reply_to_message_id)}
+                      className="w-full text-left p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors cursor-pointer"
+                    >
+                      <p className="font-semibold">{message.repliedMessage.senderName}</p>
+                      <p className="text-xs line-clamp-2 opacity-80">
+                        {message.repliedMessage.isDeleted ? "This message was deleted." : message.repliedMessage.content}
+                      </p>
+                    </button>
+                  )}
 
-                {isImageAttachment ? (
-                  <div className="relative">
-                    <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
-                      <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
-                    </a>
-                    <div className="absolute bottom-1 right-1 flex items-end gap-2 w-full p-1 justify-end">
-                      <div className="flex-grow min-w-0">
-                        {message.text && <p className="text-white text-sm break-words">{message.text}</p>}
+                  {isImageAttachment ? (
+                    <div className="relative">
+                      <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
+                        <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
+                      </a>
+                      <div className="absolute bottom-1 right-1 flex items-end gap-2 w-full p-1 justify-end">
+                        <div className="flex-grow min-w-0">
+                          {actionText && <p className="text-white text-sm break-words">{actionText}</p>}
+                        </div>
+                        <span className="text-xs text-white/90 bg-black/40 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                          {formatTimestamp(message.timestamp)}
+                        </span>
                       </div>
-                      <span className="text-xs text-white/90 bg-black/40 rounded-full px-1.5 py-0.5 flex-shrink-0">
-                        {formatTimestamp(message.timestamp)}
+                    </div>
+                  ) : isAudioAttachment ? (
+                    <VoiceMessagePlayer 
+                      src={message.attachment!.url} 
+                      sender={message.sender} 
+                      isCurrentUser={isCurrentUser}
+                    />
+                  ) : (
+                    <div className="flex items-end gap-2">
+                      <div className="min-w-0">
+                        {actionText && (
+                          <div className={cn(
+                            "text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none",
+                            isCurrentUser ? "prose-p:text-primary-foreground" : "",
+                            "[&_p]:my-0"
+                          )}>
+                            <ReactMarkdown
+                              components={{
+                                a: ({ node, ...props }) => {
+                                  const href = props.href || '';
+                                  if (href.startsWith('/')) {
+                                    return <Link to={href} {...props} className="text-inherit hover:text-inherit font-medium underline" />;
+                                  }
+                                  return <a {...props} target="_blank" rel="noopener noreferrer" className="text-inherit hover:text-inherit font-medium underline" />;
+                                }
+                              }}
+                            >
+                              {actionText}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+                        {message.attachment && (
+                          <MessageAttachment attachment={message.attachment} />
+                        )}
+                      </div>
+                      <span className={cn(
+                          "text-xs self-end flex-shrink-0",
+                          isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                      )}>
+                          {formatTimestamp(message.timestamp)}
                       </span>
                     </div>
-                  </div>
-                ) : isAudioAttachment ? (
-                  <VoiceMessagePlayer 
-                    src={message.attachment!.url} 
-                    sender={message.sender} 
-                    isCurrentUser={isCurrentUser}
-                  />
-                ) : (
-                  <div className="flex items-end gap-2">
-                    <div className="min-w-0">
-                      {message.text && (
-                        <div className={cn(
-                          "text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none",
-                          isCurrentUser ? "prose-p:text-primary-foreground" : "",
-                          "[&_p]:my-0"
-                        )}>
-                          <ReactMarkdown
-                            components={{
-                              a: ({ node, ...props }) => {
-                                const href = props.href || '';
-                                if (href.startsWith('/')) {
-                                  return <Link to={href} {...props} className="text-inherit hover:text-inherit font-medium underline" />;
-                                }
-                                return <a {...props} target="_blank" rel="noopener noreferrer" className="text-inherit hover:text-inherit font-medium underline" />;
-                              }
-                            }}
-                          >
-                            {message.text}
-                          </ReactMarkdown>
-                        </div>
-                      )}
-                      {message.attachment && (
-                        <MessageAttachment attachment={message.attachment} />
-                      )}
-                    </div>
-                    <span className={cn(
-                        "text-xs self-end flex-shrink-0",
-                        isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
-                    )}>
-                        {formatTimestamp(message.timestamp)}
-                    </span>
-                  </div>
+                  )}
+                </div>
+                {!isCurrentUser && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7 invisible group-hover:visible" onClick={() => onReply(message)}>
+                    <CornerUpLeft className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
-              {!isCurrentUser && (
-                <Button variant="ghost" size="icon" className="h-7 w-7 invisible group-hover:visible" onClick={() => onReply(message)}>
-                  <CornerUpLeft className="h-4 w-4" />
-                </Button>
+              {isAiAction && actionType && !isActionHandled && (
+                <div className="flex items-center gap-2 mt-2 ml-10">
+                  <p className="text-sm text-muted-foreground flex-grow">Apakah Anda ingin melanjutkan?</p>
+                  <Button variant="ghost" size="sm" onClick={() => handleAction(message.id || '', 'decline', actionType)}>
+                    Batal
+                  </Button>
+                  <Button size="sm" onClick={() => handleAction(message.id || '', 'approve', actionType)}>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Buat Artikel
+                  </Button>
+                </div>
               )}
             </div>
           </div>
