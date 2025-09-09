@@ -62,7 +62,7 @@ serve(async (req) => {
     }
     console.log("[DIAGNOSTIC] Request body parsed. Feature:", feature);
 
-    const userSupabase = createSupabaseUserClient(req);
+    const userSupabase = await createSupabaseUserClient(req);
     const { data: { user }, error: authError } = await userSupabase.auth.getUser();
     if (authError) throw authError;
     if (!user) throw new Error("User not authenticated.");
@@ -73,7 +73,7 @@ serve(async (req) => {
       throw new Error(`Unknown feature: ${feature}`);
     }
 
-    const supabaseAdmin = createSupabaseAdmin();
+    const supabaseAdmin = await createSupabaseAdmin();
     const openai = await getOpenAIClient(supabaseAdmin);
     console.log("[DIAGNOSTIC] OpenAI client initialized.");
     
