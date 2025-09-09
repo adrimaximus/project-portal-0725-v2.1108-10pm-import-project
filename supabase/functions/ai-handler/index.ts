@@ -42,7 +42,6 @@ serve(async (req) => {
   try {
     console.log("[DIAGNOSTIC] Request received.");
     
-    // Robust body parsing and validation
     let body;
     if (req.headers.get("content-type")?.includes("application/json")) {
       try {
@@ -97,7 +96,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("[DIAGNOSTIC] CRITICAL ERROR in main handler:", error);
-    let status = 400; // Default to Bad Request for validation errors
+    let status = 400;
     let message = error.message;
 
     if (error.status === 401) {

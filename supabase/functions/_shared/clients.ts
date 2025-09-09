@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { createClient as createSupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
+import { createClient as createSupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import OpenAI from 'https://esm.sh/openai@4.29.2';
 
 export const createSupabaseAdmin = () => {
