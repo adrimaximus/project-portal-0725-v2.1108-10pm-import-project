@@ -192,23 +192,20 @@ CONTEXT:
 // --- MODULE: CONTEXT BUILDER ---
 const ContextBuilder = {
   buildContext: async (supabaseClient, user) => {
-    const handleResult = (result, name) => {
-      if (result.error) {
-        console.warn(`[CONTEXT_BUILDER] Failed to fetch ${name}:`, result.error.message);
+    const handleSettledResult = (result, name) => {
+      if (result.status === 'rejected') {
+        console.warn(`[CONTEXT_BUILDER] Promise for ${name} rejected:`, result.reason);
         return [];
       }
-      return result.data;
+      if (result.value.error) {
+        console.warn(`[CONTEXT_BUILDER] Failed to fetch ${name}:`, result.value.error.message);
+        return [];
+      }
+      return result.value.data;
     };
 
     try {
-      const [
-        projectsRes,
-        usersRes,
-        goalsRes,
-        allTagsRes,
-        articlesRes,
-        foldersRes
-      ] = await Promise.all([
+      const results = await Promise.allSettled([
         supabaseClient.rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 }),
         supabaseClient.from('profiles').select('id, first_name, last_name, email'),
         supabaseClient.rpc('get_user_goals'),
@@ -217,12 +214,12 @@ const ContextBuilder = {
         supabaseClient.from('kb_folders').select('id, name')
       ]);
 
-      const projectsData = handleResult(projectsRes, 'projects');
-      const usersData = handleResult(usersRes, 'users');
-      const goalsData = handleResult(goalsRes, 'goals');
-      const allTagsData = handleResult(allTagsRes, 'tags');
-      const articlesData = handleResult(articlesRes, 'articles');
-      const foldersData = handleResult(foldersRes, 'folders');
+      const projectsData = handleSettledResult(results[0], 'projects');
+      const usersData = handleSettledResult(results[1], 'users');
+      const goalsData = handleSettledResult(results[2], 'goals');
+      const allTagsData = handleSettledResult(results[3], 'tags');
+      const articlesData = handleSettledResult(results[4], 'articles');
+      const foldersData = handleSettledResult(results[5], 'folders');
 
       const summarizedProjects = projectsData.map(p => ({
           name: p.name,
@@ -766,6 +763,11 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    console.error('!!! TOP LEVEL CATCH IN AI-HANDLER !!!');
+    console.error('Error Name:', error.name);
+    console.error('Error Message:', error.message);
+    console.error('Error Stack:', error.stack);
+    
     let status = 500;
     let message = error.message;
     if (error.status === 401) {
