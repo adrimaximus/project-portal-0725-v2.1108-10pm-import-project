@@ -17,7 +17,7 @@ import PersonHeader from '@/components/people/PersonHeader';
 import PersonDetailsTab from '@/components/people/PersonDetailsTab';
 import PersonProjectsTab from '@/components/people/PersonProjectsTab';
 import PersonNotesTab from '@/components/people/PersonNotesTab';
-import PersonSidebar from '@/components/people/PersonSidebar';
+import AssociatedUserCard from '@/components/people/AssociatedUserCard';
 
 const PersonProfileSkeleton = () => (
   <PortalLayout>
@@ -92,14 +92,15 @@ const PersonProfilePage = () => {
           Back to People
         </Button>
 
+        <PersonHeader
+          person={person}
+          isAdmin={isAdmin}
+          onEdit={() => setIsFormOpen(true)}
+          onDelete={() => setIsDeleteDialogOpen(true)}
+        />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
-            <PersonHeader
-              person={person}
-              isAdmin={isAdmin}
-              onEdit={() => setIsFormOpen(true)}
-              onDelete={() => setIsDeleteDialogOpen(true)}
-            />
             <Tabs defaultValue="details" className="w-full">
               <TabsList>
                 <TabsTrigger value="details">Details</TabsTrigger>
@@ -118,7 +119,7 @@ const PersonProfilePage = () => {
             </Tabs>
           </div>
           <div className="lg:col-span-1 space-y-6">
-            <PersonSidebar person={person} />
+            {person.user_id && <AssociatedUserCard userId={person.user_id} />}
           </div>
         </div>
       </div>

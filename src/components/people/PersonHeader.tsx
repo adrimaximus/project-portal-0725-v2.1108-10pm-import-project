@@ -1,9 +1,7 @@
 import { Person } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Edit, MoreVertical, Trash2, User as UserIcon, Mail, Instagram } from 'lucide-react';
-import WhatsappIcon from '../icons/WhatsappIcon';
-import { toast } from 'sonner';
+import { Edit, MoreVertical, Trash2, User as UserIcon, MapPin } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { generatePastelColor } from '@/lib/utils';
+import { Badge } from '../ui/badge';
+import { Card } from '@/components/ui/card';
 
 interface PersonHeaderProps {
   person: Person;
@@ -19,68 +19,17 @@ interface PersonHeaderProps {
   isAdmin: boolean;
 }
 
-const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
-  if (!phone) return '';
-  let cleaned = phone.replace(/\D/g, '');
-  if (cleaned.startsWith('0')) {
-    cleaned = '62' + cleaned.substring(1);
-  } else if (!cleaned.startsWith('62')) {
-    cleaned = '62' + cleaned;
-  }
-  return cleaned;
-};
-
 const PersonHeader = ({ person, onEdit, onDelete, isAdmin }: PersonHeaderProps) => {
-  const firstEmail = person.contact?.emails?.[0];
-  const firstPhone = person.contact?.phones?.[0] || person.phone;
-  const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForWhatsApp(firstPhone)}` : null;
-
-  const handleCopyEmail = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (firstEmail) {
-      navigator.clipboard.writeText(firstEmail);
-      toast.success('Email address copied!');
-    }
-  };
-
   return (
-    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-      <Avatar className="h-24 w-24 border">
-        <AvatarImage src={person.avatar_url} alt={person.full_name} />
-        <AvatarFallback style={generatePastelColor(person.id)} className="text-3xl">
-          <UserIcon className="h-10 w-10 text-white" />
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex-1 text-center sm:text-left">
-        <h2 className="text-3xl font-bold">{person.full_name}</h2>
-        <p className="text-muted-foreground">{person.job_title || 'No title specified'}</p>
-        <div className="flex items-center justify-center sm:justify-start gap-2 mt-4">
-          {firstEmail && (
-            <Button variant="outline" size="sm" onClick={handleCopyEmail}>
-              <Mail className="mr-2 h-4 w-4" /> Email
-            </Button>
-          )}
-          {whatsappLink && (
-            <Button variant="outline" size="sm" asChild>
-              <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-                <WhatsappIcon className="mr-2 h-4 w-4" /> WhatsApp
-              </a>
-            </Button>
-          )}
-          {person.social_media?.instagram && (
-            <Button variant="outline" size="icon" asChild>
-              <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer">
-                <Instagram className="h-4 w-4" />
-              </a>
-            </Button>
-          )}
-        </div>
-      </div>
-      {isAdmin && (
-        <div className="flex-shrink-0">
+    <Card className="overflow-hidden">
+      {/* Banner */}
+      <div className="relative h-32 sm:h-40 bg-gradient-to-r from-sky-400 via-rose-400 to-lime-400">
+        {isAdmin && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5" /></Button>
+              <Button variant="outline" size="icon" className="absolute top-4 right-4 h-8 w-8 bg-black/20 text-white border-white/50 hover:bg-black/40">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={onEdit}>
@@ -91,9 +40,58 @@ const PersonHeader = ({ person, onEdit, onDelete, isAdmin }: PersonHeaderProps) 
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        )}
+      </div>
+
+      {/* Main Content */}
+      <div className="p-6 pt-0">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:gap-6 -mt-12 sm:-mt-16">
+          {/* Avatar */}
+          <div className="relative flex-shrink-0 self-center sm:self-end">
+            <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background bg-background">
+              <AvatarImage src={person.avatar_url} alt={person.full_name} />
+              <AvatarFallback style={generatePastelColor(person.id)} className="text-4xl">
+                <UserIcon className="h-12 w-12 text-white" />
+              </AvatarFallback>
+            </Avatar>
+          </div>
+
+          {/* Info and Actions */}
+          <div className="flex-1 flex flex-col sm:flex-row justify-between items-start sm:items-end w-full mt-4 sm:mt-0">
+            {/* Left side: Name, Title, Location, Buttons */}
+            <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
+              <h2 className="text-2xl font-bold">{person.full_name}</h2>
+              <p className="text-muted-foreground">{person.job_title || 'No title specified'}</p>
+              <p className="text-sm text-muted-foreground flex items-center gap-1 justify-center sm:justify-start">
+                <MapPin className="h-3 w-3" />
+                {person.address?.formatted_address || 'No location specified'}
+              </p>
+              <div className="pt-2 flex gap-2 justify-center sm:justify-start">
+                <Button onClick={onEdit}>Edit Profile</Button>
+              </div>
+            </div>
+
+            {/* Right side: Role & Skills */}
+            <div className="space-y-4 text-left sm:text-right mt-4 sm:mt-0 w-full sm:w-auto">
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Current Role</h4>
+                <p className="text-sm font-medium">{person.company || 'N/A'}</p>
+              </div>
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Skills</h4>
+                <div className="flex flex-wrap gap-1 justify-start sm:justify-end pt-1">
+                  {person.tags && person.tags.length > 0 ? (
+                    person.tags.map(tag => (
+                      <Badge key={tag.id} variant="secondary">{tag.name}</Badge>
+                    ))
+                  ) : <p className="text-xs text-muted-foreground">No skills listed.</p>}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </Card>
   );
 };
 

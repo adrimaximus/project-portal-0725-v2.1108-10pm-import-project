@@ -1,6 +1,5 @@
-import { Person, User } from '@/types';
+import { User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
@@ -58,24 +57,4 @@ const AssociatedUserCard = ({ userId }: { userId: string }) => {
   );
 };
 
-const PersonSidebar = ({ person }: { person: Person }) => {
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader><CardTitle>Tags</CardTitle></CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          {person.tags && person.tags.length > 0 ? (
-            person.tags.map(tag => (
-              <Badge key={tag.id} variant="outline" style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color }}>
-                {tag.name}
-              </Badge>
-            ))
-          ) : <p className="text-sm text-muted-foreground">No tags assigned.</p>}
-        </CardContent>
-      </Card>
-      {person.user_id && <AssociatedUserCard userId={person.user_id} />}
-    </div>
-  );
-};
-
-export default PersonSidebar;
+export default AssociatedUserCard;
