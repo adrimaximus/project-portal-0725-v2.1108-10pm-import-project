@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createSupabaseUserClient, createSupabaseAdmin, getOpenAIClient } from '../_shared/clients.ts';
+import { createSupabaseUserClient, createSupabaseAdmin, getOpenAIClient } from '../lib/clients.ts';
 import {
   analyzeProjects,
   analyzeDuplicates,
@@ -11,7 +11,7 @@ import {
   suggestIcon,
   generateInsight,
   aiSelectCalendarEvents,
-} from '../_shared/features.ts';
+} from '../lib/features.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
