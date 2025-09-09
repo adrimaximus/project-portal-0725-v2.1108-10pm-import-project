@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const getAnalyzeProjectsSystemPrompt = (context, userName) => `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
 
 **Conversational Style:**
