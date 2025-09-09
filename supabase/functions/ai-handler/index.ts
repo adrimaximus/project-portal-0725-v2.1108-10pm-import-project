@@ -12,6 +12,36 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
 };
 
+// --- MODULE: CLIENT HELPERS ---
+const createSupabaseUserClient = (req) => {
+  return createSupabaseClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+  );
+};
+
+const createSupabaseAdmin = () => {
+  return createSupabaseClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+};
+
+const getOpenAIClient = async (supabaseAdmin) => {
+  const { data: config, error: configError } = await supabaseAdmin
+    .from('app_config')
+    .select('value')
+    .eq('key', 'OPENAI_API_KEY')
+    .single();
+
+  if (configError || !config?.value) {
+    throw new Error("OpenAI API key is not configured by an administrator.");
+  }
+  return new OpenAI({ apiKey: config.value });
+};
+
+
 // --- MODULE: PROMPTS ---
 // Contains the large system prompt strings.
 const Prompts = {
