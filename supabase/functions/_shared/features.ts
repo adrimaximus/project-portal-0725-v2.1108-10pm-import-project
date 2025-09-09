@@ -40,7 +40,7 @@ async function sendEmail(to, subject, html, text) {
 export async function analyzeProjects(payload, context) {
   console.log("[DIAGNOSTIC] analyzeProjects: Starting analysis.");
   const { openai, user, userSupabase, supabaseAdmin } = context;
-  let { request, attachmentUrl, attachmentType, replyToMessageId } = payload;
+  let { request, conversationHistory, attachmentUrl, attachmentType, replyToMessageId } = payload;
   
   if (!request && !attachmentUrl) {
     throw new Error("An analysis request is required.");
@@ -102,14 +102,21 @@ export async function analyzeProjects(payload, context) {
     }
   }
 
-  const { data: history, error: historyError } = await userSupabase
-    .from('ai_chat_history')
-    .select('sender, content')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: true })
-    .limit(20);
-  if (historyError) throw historyError;
-  console.log("[DIAGNOSTIC] analyzeProjects: Fetched chat history.");
+  let history;
+  if (conversationHistory && Array.isArray(conversationHistory)) {
+      history = conversationHistory;
+      console.log(`[DIAGNOSTIC] analyzeProjects: Using ${conversationHistory.length} messages from client-provided history.`);
+  } else {
+      const { data: dbHistory, error: historyError } = await userSupabase
+        .from('ai_chat_history')
+        .select('sender, content')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+        .limit(20);
+      if (historyError) throw historyError;
+      history = dbHistory;
+      console.log(`[DIAGNOSTIC] analyzeProjects: Fetched ${history ? history.length : 0} messages from DB.`);
+  }
 
   const actionContext = await buildContext(userSupabase, user);
   const currentUserProfile = actionContext.userList.find(u => u.id === user.id);
@@ -176,7 +183,7 @@ export async function analyzeProjects(payload, context) {
       <p>${aiAnswer.replace(/\n/g, '<br>')}</p>
     `;
     
-    await sendEmail('adri@7inked.com', emailSubject, emailHtml);
+    await sendEmail('adri@7inked.com', emailSubject, emailHtml, null);
   }
 
   try {
