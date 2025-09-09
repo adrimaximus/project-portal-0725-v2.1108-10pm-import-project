@@ -94,8 +94,7 @@ const PeoplePage = () => {
     toast.info(`Found ${pairs.length} potential duplicate(s). Asking AI for analysis...`);
 
     const { data: aiData, error: aiError } = await supabase.functions.invoke('aihandler', {
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ feature: 'analyze-duplicates', payload: { duplicates: pairs } }),
+      body: { feature: 'analyze-duplicates', payload: { duplicates: pairs } },
     });
 
     if (aiError) {
