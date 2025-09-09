@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Person } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,8 @@ import {
 import { generatePastelColor } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Card } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface PersonHeaderProps {
   person: Person;
@@ -20,6 +23,38 @@ interface PersonHeaderProps {
 }
 
 const PersonHeader = ({ person, onEdit, onDelete, isAdmin }: PersonHeaderProps) => {
+  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
+  const [companyAddress, setCompanyAddress] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCompanyDetails = async () => {
+      if (person.company) {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('logo_url, address')
+          .eq('name', person.company)
+          .single();
+
+        if (data) {
+          setCompanyLogoUrl(data.logo_url);
+          setCompanyAddress(data.address);
+        } else {
+          setCompanyLogoUrl(null);
+          setCompanyAddress(null);
+        }
+      } else {
+        setCompanyLogoUrl(null);
+        setCompanyAddress(null);
+      }
+    };
+
+    fetchCompanyDetails();
+  }, [person.company]);
+
+  const googleMapsUrl = companyAddress 
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(companyAddress)}`
+    : '#';
+
   return (
     <Card className="overflow-hidden">
       {/* Banner */}
@@ -60,7 +95,23 @@ const PersonHeader = ({ person, onEdit, onDelete, isAdmin }: PersonHeaderProps) 
           <div className="flex-1 flex flex-col sm:flex-row justify-between items-start sm:items-end w-full mt-4 sm:mt-0">
             {/* Left side: Name, Title, Location, Buttons */}
             <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
-              <h2 className="text-2xl font-bold">{person.full_name}</h2>
+              <div className="flex items-center gap-3 justify-center sm:justify-start">
+                <h2 className="text-2xl font-bold">{person.full_name}</h2>
+                {companyLogoUrl && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-background p-0.5 rounded-md shadow-sm flex items-center justify-center">
+                          <img src={companyLogoUrl} alt={`${person.company} logo`} className="h-8 w-8 object-contain rounded-sm" />
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>View {person.company} on map</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
               <p className="text-muted-foreground">{person.job_title || 'No title specified'}</p>
               <p className="text-sm text-muted-foreground flex items-center gap-1 justify-center sm:justify-start">
                 <MapPin className="h-3 w-3" />
