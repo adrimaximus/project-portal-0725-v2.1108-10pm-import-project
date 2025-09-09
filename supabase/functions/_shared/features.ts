@@ -40,10 +40,10 @@ async function sendEmail(to, subject, html, text) {
 export async function analyzeProjects(payload, context) {
   console.log("[DIAGNOSTIC] analyzeProjects: Starting analysis.");
   const { openai, user, userSupabase, supabaseAdmin } = context;
-  let { request, attachmentUrl, attachmentType, replyToMessageId } = payload;
+  let { prompt, attachmentUrl, attachmentType, replyToMessageId } = payload;
   
-  if (!request && !attachmentUrl) {
-    throw new Error("An analysis request is required.");
+  if (!prompt && !attachmentUrl) {
+    throw new Error("An analysis prompt is required.");
   }
 
   let documentContext = '';
@@ -85,12 +85,12 @@ export async function analyzeProjects(payload, context) {
         model: "whisper-1",
       });
       
-      request = transcription.text;
-      console.log("[DIAGNOSTIC] analyzeProjects: Transcription successful. Text:", request);
+      prompt = transcription.text;
+      console.log("[DIAGNOSTIC] analyzeProjects: Transcription successful. Text:", prompt);
       
       const { error: updateError } = await userSupabase
         .from('ai_chat_history')
-        .update({ content: `(Voice Message): ${request}` })
+        .update({ content: `(Voice Message): ${prompt}` })
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1);
@@ -118,7 +118,7 @@ export async function analyzeProjects(payload, context) {
   console.log("[DIAGNOSTIC] analyzeProjects: System prompt generated.");
 
   const userContent = [];
-  let combinedRequest = request || '';
+  let combinedRequest = prompt || '';
   if (documentContext) {
     combinedRequest += `\n\n--- Attached Document Content ---\n${documentContext}`;
   }

@@ -41,24 +41,35 @@ serve(async (req) => {
 
   try {
     console.log("[DIAGNOSTIC] Request received.");
+    
+    // Robust body parsing and validation
+    let body;
+    if (req.headers.get("content-type")?.includes("application/json")) {
+      try {
+        body = await req.json();
+      } catch (e) {
+        console.error("validation_failed: invalid_json", e.message);
+        throw new Error("Invalid JSON body.");
+      }
+    } else {
+        console.error("validation_failed: invalid_body_non_json");
+        throw new Error("Request must have Content-Type: application/json");
+    }
+
+    const { feature, payload } = body;
+    if (!feature || typeof feature !== 'string') {
+        console.error("validation_failed: missing_feature");
+        throw new Error("Request body must include a 'feature' string.");
+    }
+    console.log("[DIAGNOSTIC] Request body parsed. Feature:", feature);
+
     const userSupabase = createSupabaseUserClient(req);
     const { data: { user }, error: authError } = await userSupabase.auth.getUser();
     if (authError) throw authError;
     if (!user) throw new Error("User not authenticated.");
     console.log("[DIAGNOSTIC] User authenticated:", user.id);
 
-    const bodyText = await req.text();
-    let body;
-    try {
-      body = bodyText ? JSON.parse(bodyText) : {};
-    } catch (e) {
-      throw new Error(`Invalid JSON body: ${e.message}`);
-    }
-    console.log("[DIAGNOSTIC] Request body parsed. Feature:", body.feature);
-
-    const { feature, payload } = body;
     const handler = featureHandlers[feature];
-
     if (!handler) {
       throw new Error(`Unknown feature: ${feature}`);
     }
@@ -86,7 +97,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("[DIAGNOSTIC] CRITICAL ERROR in main handler:", error);
-    let status = 500;
+    let status = 400; // Default to Bad Request for validation errors
     let message = error.message;
 
     if (error.status === 401) {
@@ -95,6 +106,8 @@ serve(async (req) => {
     } else if (error.status === 429) {
       status = 429;
       message = "You've exceeded your OpenAI quota or have a billing issue. Please check your OpenAI account.";
+    } else if (error.message.includes("User not authenticated")) {
+      status = 401;
     }
 
     return new Response(JSON.stringify({ error: message }), {
