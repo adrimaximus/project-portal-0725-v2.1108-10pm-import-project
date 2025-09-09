@@ -8,7 +8,7 @@ const invokeOpenAiGenerator = async (feature: string, payload: any) => {
     throw new Error("User not authenticated for AI function call.");
   }
 
-  const { data, error } = await supabase.functions.invoke('ai-handler', {
+  const { data, error } = await supabase.functions.invoke('aihandler', {
     body: { feature, payload },
   });
 

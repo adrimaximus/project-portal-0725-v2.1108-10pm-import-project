@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createSupabaseUserClient, createSupabaseAdmin, getOpenAIClient } from '../_shared/clients.ts';
+import { createSupabaseUserClient, createSupabaseAdmin, getOpenAIClient } from './clients.ts';
 import {
   analyzeProjects,
   analyzeDuplicates,
@@ -11,7 +11,7 @@ import {
   suggestIcon,
   generateInsight,
   aiSelectCalendarEvents,
-} from '../_shared/features.ts';
+} from './features.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,7 +62,7 @@ serve(async (req) => {
     }
     console.log("[DIAGNOSTIC] Request body parsed. Feature:", feature);
 
-    const userSupabase = await createSupabaseUserClient(req);
+    const userSupabase = createSupabaseUserClient(req);
     const { data: { user }, error: authError } = await userSupabase.auth.getUser();
     if (authError) throw authError;
     if (!user) throw new Error("User not authenticated.");
@@ -73,7 +73,7 @@ serve(async (req) => {
       throw new Error(`Unknown feature: ${feature}`);
     }
 
-    const supabaseAdmin = await createSupabaseAdmin();
+    const supabaseAdmin = createSupabaseAdmin();
     const openai = await getOpenAIClient(supabaseAdmin);
     console.log("[DIAGNOSTIC] OpenAI client initialized.");
     
