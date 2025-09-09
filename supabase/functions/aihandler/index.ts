@@ -12,7 +12,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
 };
 
-// --- CLIENTS LOGIC (from clients.ts) ---
+// --- CLIENTS LOGIC ---
 const createSupabaseAdmin = () => {
   return createSupabaseClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -45,7 +45,7 @@ const createSupabaseUserClient = (req) => {
     );
 };
 
-// --- FEATURES LOGIC (from features.ts) ---
+// --- FEATURES LOGIC ---
 const getAnalyzeProjectsSystemPrompt = (context, userName) => `You are an expert project and goal management AI assistant. Your purpose is to execute actions for the user. You will receive a conversation history and context data.
 
 **Conversational Style:**
