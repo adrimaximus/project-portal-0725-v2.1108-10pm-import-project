@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
 import { Person } from '@/types';
 import { Card } from '@/components/ui/card';
 import { User as UserIcon, Instagram, Briefcase, Mail } from 'lucide-react';
 import { generatePastelColor } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import WhatsappIcon from '../icons/WhatsappIcon';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface PersonCardProps {
@@ -28,46 +26,6 @@ const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
 
 const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   const navigate = useNavigate();
-  const [imageError, setImageError] = useState(false);
-  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
-  const [companyAddress, setCompanyAddress] = useState<string | null>(null);
-
-  useEffect(() => {
-    setImageError(false);
-  }, [person.avatar_url]);
-
-  useEffect(() => {
-    const fetchCompanyDetails = async () => {
-      if (person.company) {
-        const { data, error } = await supabase
-          .from('companies')
-          .select('logo_url, address')
-          .eq('name', person.company)
-          .single();
-
-        if (error) {
-          console.error('Error fetching company details:', error.message);
-          setCompanyLogoUrl(null);
-          setCompanyAddress(null);
-        } else if (data) {
-          setCompanyLogoUrl(data.logo_url);
-          setCompanyAddress(data.address);
-        } else {
-          setCompanyLogoUrl(null);
-          setCompanyAddress(null);
-        }
-      } else {
-        setCompanyLogoUrl(null);
-        setCompanyAddress(null);
-      }
-    };
-
-    fetchCompanyDetails();
-  }, [person.company]);
-
-  const handleImageError = () => {
-    setImageError(true);
-  };
 
   const handleCopyEmail = (e: React.MouseEvent, email: string) => {
     e.stopPropagation();
@@ -77,8 +35,8 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     }
   };
 
-  const googleMapsUrl = companyAddress 
-    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(companyAddress)}`
+  const googleMapsUrl = person.company_address 
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(person.company_address)}`
     : '#';
 
   const emailToDisplay = person.contact?.emails?.[0] || person.email;
@@ -91,11 +49,10 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     >
       <div className="relative">
         <div className="aspect-[16/9] w-full overflow-hidden rounded-t-2xl">
-          {person.avatar_url && !imageError ? (
+          {person.avatar_url ? (
             <img
               src={person.avatar_url}
               alt={person.full_name}
-              onError={handleImageError}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
@@ -104,8 +61,8 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
             </div>
           )}
         </div>
-        {companyLogoUrl && (
-          companyAddress ? (
+        {person.company_logo_url && (
+          person.company_address ? (
             <a
               href={googleMapsUrl}
               target="_blank"
@@ -115,7 +72,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
               title={`Get directions to ${person.company}`}
             >
               <img
-                src={companyLogoUrl}
+                src={person.company_logo_url}
                 alt={`${person.company} logo`}
                 className="h-10 w-10 object-contain rounded-md"
               />
@@ -123,7 +80,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           ) : (
             <div className="absolute -bottom-6 left-4 bg-background p-0.5 rounded-lg shadow-md flex items-center justify-center">
               <img
-                src={companyLogoUrl}
+                src={person.company_logo_url}
                 alt={`${person.company} logo`}
                 className="h-10 w-10 object-contain rounded-md"
               />
@@ -156,7 +113,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           </div>
         </div>
         
-        <div className={`min-w-0 ${companyLogoUrl ? 'pt-2' : ''}`}>
+        <div className={`min-w-0 ${person.company_logo_url ? 'pt-2' : ''}`}>
           <h3 className="font-bold text-sm truncate">{person.full_name}</h3>
         </div>
         
