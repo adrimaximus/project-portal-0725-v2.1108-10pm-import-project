@@ -1,7 +1,32 @@
 // @ts-nocheck
-import { corsHeaders } from 'shared/cors.ts';
-import { createSupabaseAdmin } from 'shared/supabase-clients.ts';
-import { getOpenAIClient } from 'shared/openai-client.ts';
+import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
+import OpenAI from 'npm:openai@4.29.2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+const createSupabaseAdmin = () => {
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+};
+
+const getOpenAIClient = async (supabaseAdmin) => {
+  const { data: config, error: configError } = await supabaseAdmin
+    .from('app_config')
+    .select('value')
+    .eq('key', 'OPENAI_API_KEY')
+    .single();
+
+  if (configError || !config?.value) {
+    throw new Error("OpenAI API key is not configured by an administrator.");
+  }
+  return new OpenAI({ apiKey: config.value });
+};
 
 const systemPrompt = `You are an AI assistant that suggests the best icon for a given title from a list. Your response must be ONLY the name of the icon from the list provided, with no extra text, explanation, or punctuation.`;
 
