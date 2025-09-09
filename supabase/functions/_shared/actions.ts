@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
+
 export const executeAction = async (actionData, context) => {
     console.log("[DIAGNOSTIC] executeAction: Starting action execution for", actionData.action);
     const { userSupabase, user, projects, users, goals, allTags, articles, folders } = context;
