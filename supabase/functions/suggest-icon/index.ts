@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { corsHeaders } from '../_shared/cors.ts';
-import { createSupabaseAdmin } from '../_shared/supabase-clients.ts';
-import { getOpenAIClient } from '../_shared/openai-client.ts';
+import { corsHeaders } from 'shared/cors.ts';
+import { createSupabaseAdmin } from 'shared/supabase-clients.ts';
+import { getOpenAIClient } from 'shared/openai-client.ts';
 
 const systemPrompt = `You are an AI assistant that suggests the best icon for a given title from a list. Your response must be ONLY the name of the icon from the list provided, with no extra text, explanation, or punctuation.`;
 

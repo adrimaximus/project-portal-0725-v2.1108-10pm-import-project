@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { corsHeaders } from '../_shared/cors.ts';
-import { createSupabaseAdmin } from '../_shared/supabase-clients.ts';
-import { getOpenAIClient } from '../_shared/openai-client.ts';
+import { corsHeaders } from 'shared/cors.ts';
+import { createSupabaseAdmin } from 'shared/supabase-clients.ts';
+import { getOpenAIClient } from 'shared/openai-client.ts';
 
 const systemPrompt = `You are an AI that generates a short, inspiring, one-line caption for an image. The caption should be suitable for a professional dashboard related to events, marketing, and project management. Respond with ONLY the caption, no extra text or quotes. Keep it under 12 words.`;
 
