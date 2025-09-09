@@ -14,6 +14,7 @@ import { Badge } from '../ui/badge';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { toast } from 'sonner';
 
 interface PersonHeaderProps {
   person: Person;
@@ -40,9 +41,13 @@ const PersonHeader = ({ person, onEdit, onDelete, isAdmin }: PersonHeaderProps) 
           .from('companies')
           .select('logo_url, address')
           .ilike('name', companyName)
+          .limit(1)
           .single();
 
-        if (data) {
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching company details:', error.message);
+          toast.error("Could not fetch company logo.");
+        } else if (data) {
           setCompanyLogoUrl(data.logo_url);
           setCompanyAddress(data.address);
         } else {

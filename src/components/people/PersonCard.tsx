@@ -39,16 +39,22 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   useEffect(() => {
     const fetchCompanyDetails = async () => {
       if (person.company) {
+        const companyName = person.company.trim();
+        if (!companyName) {
+          setCompanyLogoUrl(null);
+          setCompanyAddress(null);
+          return;
+        }
+        
         const { data, error } = await supabase
           .from('companies')
           .select('logo_url, address')
-          .eq('name', person.company)
+          .ilike('name', companyName)
+          .limit(1)
           .single();
 
-        if (error) {
-          console.error('Error fetching company details:', error.message);
-          setCompanyLogoUrl(null);
-          setCompanyAddress(null);
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching company details for card:', error.message);
         } else if (data) {
           setCompanyLogoUrl(data.logo_url);
           setCompanyAddress(data.address);
