@@ -28,7 +28,8 @@ const systemPrompt = `You are a powerful and helpful AI assistant integrated int
 - **Confirm Actions**: After successfully using a tool, confirm the action to the user. For example, "I've created the article for you. You can view it here."
 - **Seek Clarification**: If a request is ambiguous, ask for more details.
 - **Default to Chat**: If you cannot fulfill a request with a tool, or if it's a general question, respond as a helpful chatbot.
-- **Language**: Respond in the user's language. The default is Indonesian.`;
+- **Language**: Respond in the user's language. The default is Indonesian.
+- **Article Creation**: When creating an article, you MUST also provide relevant 'unsplash_search_terms' for finding a header image.`;
 
 const tools = [
   {
@@ -47,8 +48,13 @@ const tools = [
             type: "string",
             description: "The full content of the article, formatted as a single HTML string.",
           },
+          unsplash_search_terms: {
+            type: "array",
+            items: { type: "string" },
+            description: "An array of 2-3 relevant keywords to search for a header image on Unsplash."
+          }
         },
-        required: ["title", "content_html"],
+        required: ["title", "content_html", "unsplash_search_terms"],
       },
     },
   },
@@ -98,40 +104,43 @@ Deno.serve(async (req) => {
 
     if (toolCalls) {
       const availableFunctions = { create_kb_article: createKbArticle };
-      
       messages.push(responseMessage);
 
-      for (const toolCall of toolCalls) {
-        const functionName = toolCall.function.name;
-        const functionToCall = availableFunctions[functionName];
-        const functionArgs = JSON.parse(toolCall.function.arguments);
-        
-        const functionResponse = await functionToCall({
-          ...functionArgs,
-          supabaseAdmin,
-          user,
-        });
+      const toolCall = toolCalls[0]; // Assuming one tool call for now
+      const functionName = toolCall.function.name;
+      const functionToCall = availableFunctions[functionName];
+      const functionArgs = JSON.parse(toolCall.function.arguments);
+      
+      const functionResponse = await functionToCall({
+        ...functionArgs,
+        supabaseAdmin,
+        user,
+      });
 
-        messages.push({
-          tool_call_id: toolCall.id,
-          role: "tool",
-          name: functionName,
-          content: functionResponse,
-        });
-      }
+      messages.push({
+        tool_call_id: toolCall.id,
+        role: "tool",
+        name: functionName,
+        content: JSON.stringify(functionResponse),
+      });
 
       const secondResponse = await openai.chat.completions.create({
         model: "gpt-4-turbo",
         messages: messages,
       });
 
-      return new Response(JSON.stringify({ result: secondResponse.choices[0].message.content }), {
+      return new Response(JSON.stringify({
+        type: 'article_created',
+        content: secondResponse.choices[0].message.content,
+        articleSlug: functionResponse.slug,
+        unsplashSearchTerms: functionArgs.unsplash_search_terms,
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
     }
 
-    return new Response(JSON.stringify({ result: responseMessage.content }), {
+    return new Response(JSON.stringify({ type: 'chat', content: responseMessage.content }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
@@ -160,14 +169,13 @@ async function createKbArticle({ title, content_html, supabaseAdmin, user }) {
         p_custom_tags: null,
         p_user_id: user.id,
       })
-      .select('slug')
+      .select('id, slug')
       .single();
 
     if (articleError) throw new Error(`Failed to create article in DB: ${articleError.message}`);
     
-    const articleLink = `/knowledge-base/pages/${newArticle.slug}`;
-    return JSON.stringify({ success: true, message: `Article created successfully. You can view it here: [${title}](${articleLink})` });
+    return { success: true, id: newArticle.id, slug: newArticle.slug };
   } catch (e) {
-    return JSON.stringify({ success: false, error: e.message });
+    return { success: false, error: e.message };
   }
 }

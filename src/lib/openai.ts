@@ -52,12 +52,10 @@ export const generateAiIcon = async (prompt: string): Promise<string> => {
   return result;
 };
 
-export const getAiChatResponse = async (prompt: string, conversationHistory?: { sender: 'user' | 'ai', content: string }[], attachmentUrl?: string | null, attachmentType?: string | null): Promise<string> => {
-  const { result } = await invokeAiFunction('ai-handler', { 
-    feature: 'chat-with-ai', 
+export const getAiChatResponse = async (prompt: string, conversationHistory?: { sender: 'user' | 'ai', content: string }[], attachmentUrl?: string | null, attachmentType?: string | null) => {
+  return await invokeAiFunction('ai-handler', { 
     payload: { prompt, conversationHistory, attachmentUrl, attachmentType } 
   });
-  return result;
 };
 
 export const diagnoseProjectVisibility = async (): Promise<string> => {

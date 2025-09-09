@@ -3,12 +3,13 @@ import { useAiChat } from "@/hooks/useAiChat";
 import ChatHeader from "./ChatHeader";
 import { ChatConversation } from "./ChatConversation";
 import { ChatInput } from "./ChatInput";
-import { forwardRef, useMemo, useState } from "react";
+import { forwardRef, useMemo, useState, useEffect } from "react";
 import { Conversation, Message } from "@/types";
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Loader2 } from 'lucide-react';
+import ImageSelectionDialog from "./kb/ImageSelectionDialog";
 
 interface AiChatViewProps {
   onBack?: () => void;
@@ -16,7 +17,7 @@ interface AiChatViewProps {
 
 const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack }, ref) => {
   const { user: currentUser } = useAuth();
-  const { conversation, isLoading, sendMessage, aiUser, isConnected, isCheckingConnection } = useAiChat(currentUser);
+  const { conversation, isLoading, sendMessage, aiUser, isConnected, isCheckingConnection, articleCreationData, setArticleCreationData } = useAiChat(currentUser);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
 
   if (!currentUser) return null;
@@ -71,26 +72,36 @@ const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack },
   }
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden">
-      <ChatHeader
-        onBack={onBack}
-        conversation={aiConversationObject}
-      />
-      <ChatConversation
-        messages={conversation}
-        members={[currentUser, aiUser]}
-        isLoading={isLoading}
-        onReply={setReplyTo}
-      />
-      <ChatInput 
-        ref={ref} 
-        onSendMessage={handleSendMessage}
-        isSending={isLoading}
-        conversationId="ai-assistant"
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
-      />
-    </div>
+    <>
+      <div className="flex flex-col h-full bg-background overflow-hidden">
+        <ChatHeader
+          onBack={onBack}
+          conversation={aiConversationObject}
+        />
+        <ChatConversation
+          messages={conversation}
+          members={[currentUser, aiUser]}
+          isLoading={isLoading}
+          onReply={setReplyTo}
+        />
+        <ChatInput 
+          ref={ref} 
+          onSendMessage={handleSendMessage}
+          isSending={isLoading}
+          conversationId="ai-assistant"
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+        />
+      </div>
+      {articleCreationData && (
+        <ImageSelectionDialog
+          open={!!articleCreationData}
+          onOpenChange={() => setArticleCreationData(null)}
+          articleSlug={articleCreationData.slug}
+          searchTerms={articleCreationData.searchTerms}
+        />
+      )}
+    </>
   );
 });
 
