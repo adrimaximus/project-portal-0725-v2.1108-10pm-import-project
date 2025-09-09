@@ -49,6 +49,18 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
     }
   }, [messages, isLoading]);
 
+  const handleReplyClick = (messageId: string | null | undefined) => {
+    if (!messageId) return;
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('bg-primary/10', 'transition-colors', 'duration-1000', 'rounded-lg');
+      setTimeout(() => {
+        element.classList.remove('bg-primary/10', 'transition-colors', 'duration-1000');
+      }, 2000);
+    }
+  };
+
   if (!currentUser) {
     return <div>Loading...</div>;
   }
@@ -83,6 +95,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
               </div>
             )}
             <div
+              id={`message-${message.id}`}
               className={cn(
                 "flex items-end gap-2 group",
                 isCurrentUser ? "justify-end" : "justify-start",
@@ -116,7 +129,10 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                 )}
                 
                 {message.repliedMessage && (
-                  <div className="p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary">
+                  <div 
+                    className="p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary cursor-pointer hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
+                    onClick={() => handleReplyClick(message.reply_to_message_id)}
+                  >
                     <p className="font-semibold">{message.repliedMessage.senderName}</p>
                     <p className="text-xs line-clamp-2 opacity-80">
                       {message.repliedMessage.isDeleted ? "This message was deleted." : message.repliedMessage.content}
