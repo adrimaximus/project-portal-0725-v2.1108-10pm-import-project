@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, MoreVertical, Trash2, UserX, Users, Settings } from "lucide-react";
+import { ArrowLeft, MoreVertical, Trash2, UserX, Users, Settings, Sparkles } from "lucide-react";
 import StackedAvatar from "./StackedAvatar";
 import { getInitials, generatePastelColor } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -79,7 +79,13 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
             <span className="sr-only">Back</span>
           </Button>
         )}
-        {isGroup && members && members.length > 1 ? (
+        {id === 'ai-assistant' ? (
+          <Avatar className="h-10 w-10 border">
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              <Sparkles className="h-5 w-5" />
+            </AvatarFallback>
+          </Avatar>
+        ) : isGroup && members && members.length > 1 ? (
           <StackedAvatar members={members} />
         ) : (
           <Avatar className="h-10 w-10 border">
@@ -91,7 +97,9 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
         )}
         <div className="ml-4 flex-1">
           <p className="text-lg font-semibold">{userName}</p>
-          {isGroup ? (
+          {id === 'ai-assistant' ? (
+            <p className="text-sm text-muted-foreground">Ready to help</p>
+          ) : isGroup ? (
             <p className="text-sm text-muted-foreground">{members?.length} members</p>
           ) : (
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
@@ -117,7 +125,14 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {isGroup ? (
+                {id === 'ai-assistant' ? (
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem className="text-red-500 focus:text-red-500" onSelect={(e) => e.preventDefault()}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      <span>Clear Chat</span>
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                ) : isGroup ? (
                   <>
                     <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
                       <Settings className="mr-2 h-4 w-4" />
@@ -159,14 +174,16 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {isGroup
+                  {id === 'ai-assistant'
+                    ? "This will permanently delete your conversation with the AI Assistant. This action cannot be undone."
+                    : isGroup
                     ? "You will be removed from this group and will no longer receive messages. Are you sure?"
                     : "This will permanently delete all messages in this conversation. This action cannot be undone."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => isGroup ? onLeaveGroup?.(id) : onClearChat?.(id)}>
+                <AlertDialogAction onClick={() => id === 'ai-assistant' ? onClearChat?.(id) : isGroup ? onLeaveGroup?.(id) : onClearChat?.(id)}>
                   {isGroup ? "Leave" : "Continue"}
                 </AlertDialogAction>
               </AlertDialogFooter>
