@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { createClient as createPexelsClient } from 'https://esm.sh/pexels@1.4.0';
+import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,19 +47,19 @@ serve(async (req) => {
     if (articleError) throw articleError;
     const { title, content } = articleData;
 
-    // 3. Search for a relevant image using Pexels
+    // 3. Search for a relevant image using Unsplash
     let imageUrl = null;
-    const pexelsApiKey = Deno.env.get('PEXELS_API_KEY');
-    if (pexelsApiKey) {
+    const unsplashApiKey = Deno.env.get('VITE_UNSPLASH_ACCESS_KEY');
+    if (unsplashApiKey) {
       try {
-        const pexelsClient = createPexelsClient(pexelsApiKey);
+        const unsplash = createApi({ accessKey: unsplashApiKey });
         const query = title.split(' ').slice(0, 5).join(' ');
-        const result = await pexelsClient.photos.search({ query, per_page: 1 });
-        if ('photos' in result && result.photos.length > 0) {
-          imageUrl = result.photos[0].src.large2x;
+        const result = await unsplash.search.getPhotos({ query, perPage: 1, orientation: 'landscape' });
+        if (result.type === 'success' && result.response.results.length > 0) {
+          imageUrl = result.response.results[0].urls.regular;
         }
       } catch (e) {
-        console.error("Failed to fetch image from Pexels:", e.message);
+        console.error("Failed to fetch image from Unsplash:", e.message);
       }
     }
 
