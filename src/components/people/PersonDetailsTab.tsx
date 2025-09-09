@@ -1,8 +1,9 @@
+import { useState, useEffect } from 'react';
 import { Person, ContactProperty } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Briefcase, Cake, Linkedin, Mail, MapPin, Phone, Twitter, Users, Instagram } from 'lucide-react';
 import { formatInJakarta } from '@/lib/utils';
-import WhatsappIcon from '../icons/WhatsappIcon';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PersonDetailsTabProps {
   person: Person;
@@ -27,10 +28,38 @@ const DetailRow = ({ icon, label, value, href }: { icon: React.ReactNode, label:
 };
 
 const PersonDetailsTab = ({ person, customProperties }: PersonDetailsTabProps) => {
+  const [companyAddress, setCompanyAddress] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCompanyAddress = async () => {
+      if (person.company) {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('address')
+          .eq('name', person.company)
+          .single();
+
+        if (data && data.address) {
+          setCompanyAddress(data.address);
+        } else {
+          setCompanyAddress(null);
+        }
+      } else {
+        setCompanyAddress(null);
+      }
+    };
+
+    fetchCompanyAddress();
+  }, [person.company]);
+
   const firstEmail = person.contact?.emails?.[0];
   const firstPhone = person.contact?.phones?.[0] || person.phone;
 
   const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name]);
+
+  const companyMapsUrl = companyAddress 
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(companyAddress)}`
+    : undefined;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -48,7 +77,7 @@ const PersonDetailsTab = ({ person, customProperties }: PersonDetailsTabProps) =
         <CardContent className="space-y-4">
           <DetailRow icon={<Briefcase className="h-4 w-4" />} label="Job Title" value={person.job_title} />
           <DetailRow icon={<Users className="h-4 w-4" />} label="Department" value={person.department} />
-          <DetailRow icon={<Briefcase className="h-4 w-4" />} label="Company" value={person.company} />
+          <DetailRow icon={<Briefcase className="h-4 w-4" />} label="Company" value={person.company} href={companyMapsUrl} />
         </CardContent>
       </Card>
       <Card>
