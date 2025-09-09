@@ -12,7 +12,7 @@ const invokeOpenAiGenerator = async (feature: string, payload: any) => {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: { feature, payload },
+    body: JSON.stringify({ feature, payload }),
   });
 
   if (error) {

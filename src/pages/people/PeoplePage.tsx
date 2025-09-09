@@ -95,7 +95,7 @@ const PeoplePage = () => {
 
     const { data: aiData, error: aiError } = await supabase.functions.invoke('aihandler', {
       headers: { 'Content-Type': 'application/json' },
-      body: { feature: 'analyze-duplicates', payload: { duplicates: pairs } },
+      body: JSON.stringify({ feature: 'analyze-duplicates', payload: { duplicates: pairs } }),
     });
 
     if (aiError) {
