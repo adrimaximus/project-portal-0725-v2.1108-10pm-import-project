@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Anthropic from 'npm:@anthropic-ai/sdk@^0.24.2';
 
@@ -45,7 +46,7 @@ Example output format:
 `;
 
     const msg = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-3-sonnet-20240229',
       max_tokens: 2048,
       system: systemPrompt,
       messages: [
