@@ -29,10 +29,17 @@ const PersonHeader = ({ person, onEdit, onDelete, isAdmin }: PersonHeaderProps) 
   useEffect(() => {
     const fetchCompanyDetails = async () => {
       if (person.company) {
+        const companyName = person.company.trim();
+        if (!companyName) {
+          setCompanyLogoUrl(null);
+          setCompanyAddress(null);
+          return;
+        }
+        
         const { data, error } = await supabase
           .from('companies')
           .select('logo_url, address')
-          .eq('name', person.company)
+          .ilike('name', companyName)
           .single();
 
         if (data) {
