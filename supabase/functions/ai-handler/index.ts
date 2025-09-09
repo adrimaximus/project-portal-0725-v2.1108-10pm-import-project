@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
 
 async function createKbArticle({ title, content_html, supabaseAdmin, user }) {
   try {
-    const { data: folderId, error: folderError } = await supabaseAdmin.rpc('create_default_kb_folder');
+    const { data: folderId, error: folderError } = await supabaseAdmin.rpc('create_default_kb_folder', { p_user_id: user.id });
     if (folderError) throw new Error(`Failed to get default folder: ${folderError.message}`);
 
     const { data: newArticle, error: articleError } = await supabaseAdmin
