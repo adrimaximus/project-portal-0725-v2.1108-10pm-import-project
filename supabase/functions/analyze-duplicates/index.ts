@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { corsHeaders } from 'shared/cors.ts';
-import { createSupabaseAdmin } from 'shared/supabase-clients.ts';
-import { getOpenAIClient } from 'shared/openai-client.ts';
+import { corsHeaders } from '../_shared/cors.ts';
+import { createSupabaseAdmin } from '../_shared/supabase-clients.ts';
+import { getOpenAIClient } from '../_shared/openai-client.ts';
 
 const systemPrompt = `You are a data quality assistant. Here is a list of potential duplicate contacts. Summarize the findings in a friendly, concise paragraph in markdown format. Mention the total number of pairs found and the common reasons (e.g., 'similar names or shared emails'). Then, recommend that the user review and merge them to keep their contact list clean.`;
 
