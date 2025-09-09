@@ -9,6 +9,9 @@ const invokeOpenAiGenerator = async (feature: string, payload: any) => {
   }
 
   const { data, error } = await supabase.functions.invoke('aihandler', {
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: { feature, payload },
   });
 
