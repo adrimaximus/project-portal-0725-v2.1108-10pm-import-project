@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
-import { Loader2, CornerUpLeft } from "lucide-react";
+import { Loader2, CornerUpLeft, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 
@@ -95,10 +95,18 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                 </Button>
               )}
               {!isCurrentUser && !isSameSenderAsPrevious && (
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={sender.avatar_url} />
-                  <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
-                </Avatar>
+                sender.id === 'ai-assistant' ? (
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      <Sparkles className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={sender.avatar_url} />
+                    <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
+                  </Avatar>
+                )
               )}
               <div
                 className={cn(
