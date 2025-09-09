@@ -2,14 +2,6 @@
 import { createClient as createSupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 import OpenAI from 'https://esm.sh/openai@4.29.2';
 
-export const createSupabaseUserClient = (req) => {
-  return createSupabaseClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-  );
-};
-
 export const createSupabaseAdmin = () => {
   return createSupabaseClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -22,17 +14,22 @@ export const getOpenAIClient = async (supabaseAdmin) => {
     .from('app_config')
     .select('value')
     .eq('key', 'OPENAI_API_KEY')
-    .maybeSingle();
+    .single();
 
-  if (configError) {
-    console.error("Error fetching OpenAI key from DB:", configError.message);
-    throw new Error("Database error while fetching API key.");
-  }
-
-  if (!config?.value) {
-    console.error("OpenAI API key not found in app_config table.");
+  if (configError || !config?.value) {
     throw new Error("OpenAI API key is not configured by an administrator.");
   }
-  
   return new OpenAI({ apiKey: config.value });
+};
+
+export const createSupabaseUserClient = (req) => {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Missing Authorization header');
+    }
+    return createSupabaseClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
 };

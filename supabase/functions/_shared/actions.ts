@@ -1,7 +1,9 @@
 // @ts-nocheck
-export const ActionHandlers = {
-  executeAction: async (actionData, context) => {
-    const { userSupabase, user, projects, users, goals, articles, folders } = context;
+import { createApi } from 'https://esm.sh/unsplash-js@7.0.19';
+
+export async function executeAction(actionData, context) {
+    console.log("[DIAGNOSTIC] executeAction: Starting action execution for", actionData.action);
+    const { userSupabase, user, projects, users, goals, allTags, articles, folders } = context;
 
     try {
         switch (actionData.action) {
@@ -10,7 +12,13 @@ export const ActionHandlers = {
                 if (!name) return "I need a name to create a project.";
 
                 const { data: newProject, error: projectError } = await userSupabase.from('projects').insert({
-                    name, description, start_date, due_date, venue, budget, created_by: user.id,
+                    name,
+                    description,
+                    start_date,
+                    due_date,
+                    venue,
+                    budget,
+                    created_by: user.id,
                 }).select().single();
 
                 if (projectError) return `I failed to create the project. The database said: ${projectError.message}`;
@@ -57,7 +65,7 @@ export const ActionHandlers = {
                     p_payment_status: updates.payment_status || project.payment_status,
                     p_payment_due_date: updates.payment_due_date || project.payment_due_date,
                     p_venue: updates.venue || project.venue,
-                    p_member_ids: project.assignedTo.map(m => m.id),
+                    p_member_ids: project.assignedTo.map(m => m.id), // This RPC requires all members, not just changes
                     p_service_titles: updates.services || project.services,
                     p_existing_tags: (updates.tags || project.tags || []).map(t => t.id),
                     p_custom_tags: [],
@@ -69,11 +77,19 @@ export const ActionHandlers = {
             case 'CREATE_GOAL': {
                 const { goal_details } = actionData;
                 const { data: newGoal, error } = await userSupabase.rpc('create_goal_and_link_tags', {
-                    p_title: goal_details.title, p_description: goal_details.description, p_icon: goal_details.icon,
-                    p_color: goal_details.color, p_type: goal_details.type, p_frequency: goal_details.frequency,
-                    p_specific_days: goal_details.specific_days, p_target_quantity: goal_details.target_quantity,
-                    p_target_period: goal_details.target_period, p_target_value: goal_details.target_value,
-                    p_unit: goal_details.unit, p_existing_tags: [], p_custom_tags: goal_details.tags || [],
+                    p_title: goal_details.title,
+                    p_description: goal_details.description,
+                    p_icon: goal_details.icon,
+                    p_color: goal_details.color,
+                    p_type: goal_details.type,
+                    p_frequency: goal_details.frequency,
+                    p_specific_days: goal_details.specific_days,
+                    p_target_quantity: goal_details.target_quantity,
+                    p_target_period: goal_details.target_period,
+                    p_target_value: goal_details.target_value,
+                    p_unit: goal_details.unit,
+                    p_existing_tags: [],
+                    p_custom_tags: goal_details.tags || [],
                 }).single();
 
                 if (error) return `I failed to create the goal. The database said: ${error.message}`;
@@ -86,12 +102,20 @@ export const ActionHandlers = {
                 if (!goal) return `I couldn't find a goal named "${goal_title}".`;
 
                 const { error } = await userSupabase.rpc('update_goal_with_tags', {
-                    p_goal_id: goal.id, p_title: updates.title, p_description: updates.description,
-                    p_icon: updates.icon, p_color: updates.color, p_type: updates.type,
-                    p_frequency: updates.frequency, p_specific_days: updates.specific_days,
-                    p_target_quantity: updates.target_quantity, p_target_period: updates.target_period,
-                    p_target_value: updates.target_value, p_unit: updates.unit,
-                    p_tags: (updates.tags || goal.tags || []).map(t => t.id), p_custom_tags: [],
+                    p_goal_id: goal.id,
+                    p_title: updates.title,
+                    p_description: updates.description,
+                    p_icon: updates.icon,
+                    p_color: updates.color,
+                    p_type: updates.type,
+                    p_frequency: updates.frequency,
+                    p_specific_days: updates.specific_days,
+                    p_target_quantity: updates.target_quantity,
+                    p_target_period: updates.target_period,
+                    p_target_value: updates.target_value,
+                    p_unit: updates.unit,
+                    p_tags: (updates.tags || goal.tags || []).map(t => t.id),
+                    p_custom_tags: [],
                 });
 
                 if (error) return `I failed to update the goal. The database said: ${error.message}`;
@@ -107,26 +131,22 @@ export const ActionHandlers = {
                 return `I've created the folder "${newFolder.name}". You can view it at /knowledge-base/folders/${newFolder.slug}`;
             }
             case 'CREATE_ARTICLE': {
-                const { title: prompt, folder_name } = actionData.article_details;
-                if (!prompt) return "I need a title or topic to create an article.";
-
-                const { data: articleData, error: articleError } = await userSupabase.functions.invoke('generate-article', { body: { prompt } });
-                if (articleError) return `I failed to generate the article content. The error was: ${articleError.message}`;
-                
-                const { title, content, unsplash_keywords } = articleData;
+                const { title, content, folder_name, header_image_search_query } = actionData.article_details;
                 let folder_id = folders.find(f => f.name.toLowerCase() === folder_name?.toLowerCase())?.id;
                 let header_image_url = null;
 
-                if (unsplash_keywords?.length > 0) {
+                if (header_image_search_query) {
                     const unsplash = createApi({ accessKey: Deno.env.get('VITE_UNSPLASH_ACCESS_KEY')! });
-                    const photo = await unsplash.search.getPhotos({ query: unsplash_keywords.join(' '), perPage: 1, orientation: 'landscape' });
-                    if (photo.response?.results[0]) header_image_url = photo.response.results[0].urls.regular;
+                    const photo = await unsplash.search.getPhotos({ query: header_image_search_query, perPage: 1 });
+                    if (photo.response?.results[0]) {
+                        header_image_url = photo.response.results[0].urls.regular;
+                    }
                 }
 
                 if (!folder_id) {
                     const { data: defaultFolderData, error: folderError } = await userSupabase.rpc('create_default_kb_folder').single();
                     if (folderError || !defaultFolderData) return `I couldn't find or create a default folder for the article: ${folderError?.message}`;
-                    folder_id = defaultFolderData;
+                    folder_id = defaultFolderData.id;
                 }
 
                 const { data: newArticle, error } = await userSupabase.from('kb_articles').insert({
@@ -146,7 +166,9 @@ export const ActionHandlers = {
                 if (updates.header_image_search_query) {
                     const unsplash = createApi({ accessKey: Deno.env.get('VITE_UNSPLASH_ACCESS_KEY')! });
                     const photo = await unsplash.search.getPhotos({ query: updates.header_image_search_query, perPage: 1 });
-                    if (photo.response?.results[0]) header_image_url = photo.response.results[0].urls.regular;
+                    if (photo.response?.results[0]) {
+                        header_image_url = photo.response.results[0].urls.regular;
+                    }
                 }
 
                 const { error } = await userSupabase.from('kb_articles').update({
@@ -171,24 +193,49 @@ export const ActionHandlers = {
                 const { query } = actionData;
                 if (!query) return "I need a place name or website to search for.";
 
-                const { data, error } = await userSupabase.functions.invoke('scrape-url', { body: { query } });
+                const { data, error } = await userSupabase.functions.invoke('scrape-url', {
+                    body: { query },
+                });
 
                 if (error) {
                     let errorMessage = error.message;
-                    if (error.context?.json) errorMessage = (await error.context.json()).error || errorMessage;
+                    if (error.context && typeof error.context.json === 'function') {
+                        try {
+                            const errorBody = await error.context.json();
+                            if (errorBody.error) {
+                                errorMessage = errorBody.error;
+                            }
+                        } catch (e) {
+                            // ignore parsing error, stick with original message
+                        }
+                    }
                     return `I had trouble searching for that. The error was: ${errorMessage}`;
                 }
-                if (data.error) return `I had trouble searching for that. The error was: ${data.error}`;
+                if (data.error) {
+                    return `I had trouble searching for that. The error was: ${data.error}`;
+                }
 
                 const details = data.result;
                 let response = `### ${details.Name}\n`;
-                if (details.Average_Rating) response += `**Rating:** ${details.Average_Rating} ⭐ (${details.Review_Count} reviews)\n`;
-                if (details.Categories) response += `**Categories:** ${details.Categories.join(', ').replace(/_/g, ' ')}\n`;
+                if (details.Average_Rating) {
+                    response += `**Rating:** ${details.Average_Rating} ⭐ (${details.Review_Count} reviews)\n`;
+                }
+                if (details.Categories) {
+                    response += `**Categories:** ${details.Categories.join(', ').replace(/_/g, ' ')}\n`;
+                }
                 response += `\n**Address:** ${details.Fulladdress}\n`;
-                if (details.Phone) response += `**Phone:** ${details.Phone}\n`;
-                if (details.Website) response += `**Website:** [${details.Domain}](${details.Website})\n`;
-                if (details.Email) response += `**Email:** ${details.Email}\n`;
-                if (details.Opening_Hours) response += `\n**Hours:**\n${details.Opening_Hours.map(h => `- ${h}`).join('\n')}\n`;
+                if (details.Phone) {
+                    response += `**Phone:** ${details.Phone}\n`;
+                }
+                if (details.Website) {
+                    response += `**Website:** [${details.Domain}](${details.Website})\n`;
+                }
+                if (details.Email) {
+                    response += `**Email:** ${details.Email}\n`;
+                }
+                if (details.Opening_Hours) {
+                    response += `\n**Hours:**\n${details.Opening_Hours.map(h => `- ${h}`).join('\n')}\n`;
+                }
                 
                 const socialLinks = [
                     details.instagram && `[Instagram](${details.instagram})`,
@@ -197,9 +244,15 @@ export const ActionHandlers = {
                     details.youtube && `[YouTube](${details.youtube})`,
                 ].filter(Boolean);
 
-                if (socialLinks.length > 0) response += `\n**Socials:** ${socialLinks.join(' | ')}\n`;
+                if (socialLinks.length > 0) {
+                    response += `\n**Socials:** ${socialLinks.join(' | ')}\n`;
+                }
+
                 response += `\n[View on Google Maps](${details.Google_Maps_URL})\n`;
-                if (details.Featured_Image) response += `\n![Featured Image](${details.Featured_Image})\n`;
+
+                if (details.Featured_Image) {
+                    response += `\n![Featured Image](${details.Featured_Image})\n`;
+                }
 
                 return response;
             }
@@ -210,5 +263,4 @@ export const ActionHandlers = {
         console.error(`[DIAGNOSTIC] executeAction: CRITICAL ERROR during ${actionData.action}:`, error);
         return `I encountered an unexpected error while trying to perform the action: ${error.message}`;
     }
-  },
-};
+}

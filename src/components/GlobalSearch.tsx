@@ -126,6 +126,7 @@ export function GlobalSearch() {
   const handleSendMessage = async (message: string) => {
     if (!message.trim()) return;
   
+    const oldConversation = [...conversation];
     const newConversationForUi: ConversationMessage[] = [...conversation, { sender: 'user', content: message }];
     setConversation(newConversationForUi);
     setQuery("");
@@ -134,14 +135,7 @@ export function GlobalSearch() {
     setLoading(false);
   
     try {
-      const historyForAi = newConversationForUi
-        .slice(0, -1) // Exclude the current message being sent
-        .map(msg => ({
-            sender: msg.sender,
-            content: msg.content,
-        }));
-
-      const result = await analyzeProjects(message, historyForAi);
+      const result = await analyzeProjects(message, oldConversation);
       
       const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made'];
       if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {

@@ -159,8 +159,7 @@ export const useAiChat = (currentUser: User | null) => {
         }
     }
 
-    const newConversationForUi = [...conversation, userMessage];
-    setConversation(newConversationForUi);
+    setConversation(prev => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
@@ -188,15 +187,7 @@ export const useAiChat = (currentUser: User | null) => {
         console.error("Failed to save user message:", dbError);
       }
 
-      const historyForAi: { sender: 'user' | 'ai'; content: string }[] = newConversationForUi
-        .slice(0, -1) // Exclude the current message being sent
-        .filter(msg => msg.id !== 'ai-initial-message')
-        .map(msg => ({
-            sender: msg.sender.id === currentUser.id ? 'user' : 'ai',
-            content: msg.text,
-        }));
-
-      const result = await analyzeProjects(text, historyForAi, attachmentUrl, attachmentType);
+      const result = await analyzeProjects(text, undefined, attachmentUrl, attachmentType);
       
       const aiMessage: Message = {
         id: uuidv4(),
