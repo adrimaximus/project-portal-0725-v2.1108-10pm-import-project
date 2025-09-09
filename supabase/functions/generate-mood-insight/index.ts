@@ -1,7 +1,32 @@
 // @ts-nocheck
-import { corsHeaders } from 'shared/cors.ts';
-import { createSupabaseAdmin } from 'shared/supabase-clients.ts';
-import { getOpenAIClient } from 'shared/openai-client.ts';
+import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
+import OpenAI from 'npm:openai@4.29.2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+const createSupabaseAdmin = () => {
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+};
+
+const getOpenAIClient = async (supabaseAdmin) => {
+  const { data: config, error: configError } = await supabaseAdmin
+    .from('app_config')
+    .select('value')
+    .eq('key', 'OPENAI_API_KEY')
+    .single();
+
+  if (configError || !config?.value) {
+    throw new Error("OpenAI API key is not configured by an administrator.");
+  }
+  return new OpenAI({ apiKey: config.value });
+};
 
 const systemPrompt = `Anda adalah seorang teman AI yang suportif, empatik, dan berwawasan luas. Tujuan Anda adalah untuk terlibat dalam percakapan yang mendukung dengan pengguna tentang suasana hati dan perasaan mereka. Anda akan menerima riwayat percakapan. Tugas Anda adalah memberikan respons berikutnya dalam percakapan tersebut. Pertahankan nada yang positif dan memotivasi. Sapa pengguna dengan nama mereka jika ini adalah awal percakapan. Jaga agar respons tetap sangat ringkas, maksimal 2 kalimat, dan terasa seperti percakapan alami. Jangan mengulangi diri sendiri. Fokus percakapan ini adalah murni pada kesejahteraan emosional. Jangan membahas topik lain seperti proyek, tugas, atau tujuan kerja kecuali jika pengguna secara eksplisit mengungkitnya terlebih dahulu dalam konteks perasaan mereka. Selalu berikan respons dalam Bahasa Indonesia.`;
 
