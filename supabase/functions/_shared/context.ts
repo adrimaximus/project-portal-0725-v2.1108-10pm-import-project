@@ -10,7 +10,8 @@ export const buildContext = async (supabaseClient, user) => {
       articlesRes,
       foldersRes
     ] = await Promise.all([
-      supabaseClient.rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0 }),
+      // Using a simpler query to avoid potential RPC errors for now.
+      supabaseClient.from('projects').select('name, status, description').limit(100),
       supabaseClient.from('profiles').select('id, first_name, last_name, email'),
       supabaseClient.rpc('get_user_goals'),
       supabaseClient.from('tags').select('id, name'),
@@ -30,12 +31,7 @@ export const buildContext = async (supabaseClient, user) => {
     const summarizedProjects = projectsRes.data.map(p => ({
         name: p.name,
         status: p.status,
-        tags: (p.tags || []).map(t => t.name),
-        tasks: (p.tasks || []).map(t => ({
-            title: t.title,
-            completed: t.completed,
-            assignedTo: (t.assignedTo || []).map(a => a.name)
-        }))
+        description: p.description ? p.description.substring(0, 100) + '...' : '',
     }));
     const summarizedGoals = goalsRes.data.map(g => ({
         title: g.title,
