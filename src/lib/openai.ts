@@ -52,8 +52,11 @@ export const generateAiIcon = async (prompt: string): Promise<string> => {
   return result;
 };
 
-export const analyzeProjects = async (prompt: string, conversationHistory?: { sender: 'user' | 'ai', content: string }[], attachmentUrl?: string | null, attachmentType?: string | null): Promise<string> => {
-  const { result } = await invokeAiFunction('analyze-projects', { prompt, conversationHistory, attachmentUrl, attachmentType });
+export const getAiChatResponse = async (prompt: string, conversationHistory?: { sender: 'user' | 'ai', content: string }[], attachmentUrl?: string | null, attachmentType?: string | null): Promise<string> => {
+  const { result } = await invokeAiFunction('ai-handler', { 
+    feature: 'chat-with-ai', 
+    payload: { prompt, conversationHistory, attachmentUrl, attachmentType } 
+  });
   return result;
 };
 

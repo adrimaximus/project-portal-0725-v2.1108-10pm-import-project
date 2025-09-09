@@ -8,7 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// Function to get OpenAI client, ensuring API key is configured
 const getOpenAIClient = async (supabaseAdmin) => {
   const { data: config, error: configError } = await supabaseAdmin
     .from('app_config')
@@ -22,16 +21,38 @@ const getOpenAIClient = async (supabaseAdmin) => {
   return new OpenAI({ apiKey: config.value });
 };
 
-// Prompts for different features
-const prompts = {
-  'generate-mood-insight': `Anda adalah seorang teman AI yang suportif, empatik, dan berwawasan luas. Tujuan Anda adalah untuk terlibat dalam percakapan yang mendukung dengan pengguna tentang suasana hati dan perasaan mereka. Anda akan menerima riwayat percakapan. Tugas Anda adalah memberikan respons berikutnya dalam percakapan tersebut. Pertahankan nada yang positif dan memotivasi. Sapa pengguna dengan nama mereka jika ini adalah awal percakapan. Jaga agar respons tetap sangat ringkas, maksimal 2 kalimat, dan terasa seperti percakapan alami. Jangan mengulangi diri sendiri. Fokus percakapan ini adalah murni pada kesejahteraan emosional. Jangan membahas topik lain seperti proyek, tugas, atau tujuan kerja kecuali jika pengguna secara eksplisit mengungkitnya terlebih dahulu dalam konteks perasaan mereka. Selalu berikan respons dalam Bahasa Indonesia.`,
-  'analyze-duplicates': `You are a data quality assistant. Here is a list of potential duplicate contacts. Summarize the findings in a friendly, concise paragraph in markdown format. Mention the total number of pairs found and the common reasons (e.g., 'similar names or shared emails'). Then, recommend that the user review and merge them to keep their contact list clean.`,
-  'generate-article-from-title': `You are an expert writer. Generate a well-structured, high-quality article in HTML format based on the provided title. The article should have an introduction, several paragraphs with valuable insights, and a conclusion. Use headings (h2, h3) and lists (ul, ol) where appropriate.`,
-  'expand-article-text': `You are an expert writer. The user has provided an entire article and a selected piece of text from it. Your task is to expand upon the selected text, adding more detail, examples, or depth, while maintaining the tone and context of the full article. Return only the new, expanded HTML content for the selected portion.`,
-  'improve-article-content': `You are an expert writer and editor. Review the following article content (in HTML format) and improve it. Focus on clarity, engagement, grammar, and structure. Return the improved article content in the same HTML format.`,
-  'summarize-article-content': `You are an expert writer. Summarize the following article content (in HTML format) into a concise paragraph or a short bulleted list. Return the summary in HTML format.`,
-  'suggest-icon': `You are an AI assistant that suggests the best icon for a given title from a list. Your response must be ONLY the name of the icon from the list provided, with no extra text, explanation, or punctuation.`,
-};
+const systemPrompt = `You are a powerful and helpful AI assistant integrated into a project management application. Your primary role is to assist users by answering questions and performing actions using the tools available to you.
+
+- **Be Conversational and Helpful**: Maintain a friendly and professional tone.
+- **Use Your Tools**: When a user asks you to perform an action (like creating something), use the appropriate tool. You MUST generate the necessary content (like an article body) BEFORE calling the tool.
+- **Confirm Actions**: After successfully using a tool, confirm the action to the user. For example, "I've created the article for you. You can view it here."
+- **Seek Clarification**: If a request is ambiguous, ask for more details.
+- **Default to Chat**: If you cannot fulfill a request with a tool, or if it's a general question, respond as a helpful chatbot.
+- **Language**: Respond in the user's language. The default is Indonesian.`;
+
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "create_kb_article",
+      description: "Creates a new knowledge base article. The AI should generate the content for the article itself.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description: "The title of the article.",
+          },
+          content_html: {
+            type: "string",
+            description: "The full content of the article, formatted as a single HTML string.",
+          },
+        },
+        required: ["title", "content_html"],
+      },
+    },
+  },
+];
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -39,10 +60,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { feature, payload } = await req.json();
-    if (!feature || !prompts[feature]) {
-      throw new Error(`Invalid or missing feature: ${feature}`);
-    }
+    const { payload } = await req.json();
+    const { prompt, conversationHistory } = payload;
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -50,58 +69,69 @@ Deno.serve(async (req) => {
     );
     const openai = await getOpenAIClient(supabaseAdmin);
 
-    let userPrompt = "";
-    let messages = [{ role: "system", content: prompts[feature] }];
+    const userSupabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+    const { data: { user } } = await userSupabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated.");
 
-    switch (feature) {
-      case 'generate-mood-insight':
-        userPrompt = payload.prompt;
-        messages = [
-          ...messages,
-          ...(payload.conversationHistory || []).map(msg => ({
-            role: msg.sender === 'ai' ? 'assistant' : 'user',
-            content: msg.content
-          })),
-          { role: "user", content: userPrompt }
-        ];
-        break;
-      case 'analyze-duplicates':
-        userPrompt = `Analyze these potential duplicates:\n${JSON.stringify(payload.duplicates, null, 2)}`;
-        messages.push({ role: "user", content: userPrompt });
-        break;
-      case 'generate-article-from-title':
-        userPrompt = `Title: "${payload.title}"`;
-        messages.push({ role: "user", content: userPrompt });
-        break;
-      case 'expand-article-text':
-        userPrompt = `Full Article Context:\n\n${payload.fullContent}\n\nExpand this selected text:\n\n"${payload.selectedText}"`;
-        messages.push({ role: "user", content: userPrompt });
-        break;
-      case 'improve-article-content':
-        userPrompt = `Improve this content:\n\n${payload.content}`;
-        messages.push({ role: "user", content: userPrompt });
-        break;
-      case 'summarize-article-content':
-        userPrompt = `Summarize this content:\n\n${payload.content}`;
-        messages.push({ role: "user", content: userPrompt });
-        break;
-      case 'suggest-icon':
-        userPrompt = `Title: "${payload.title}"\n\nIcons: [${payload.icons.join(', ')}]`;
-        messages.push({ role: "user", content: userPrompt });
-        break;
-      default:
-        throw new Error(`Unhandled feature: ${feature}`);
-    }
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...(conversationHistory || []).map(msg => ({
+        role: msg.sender === 'ai' ? 'assistant' : 'user',
+        content: msg.content
+      })),
+      { role: "user", content: prompt }
+    ];
 
     const response = await openai.chat.completions.create({
       model: "gpt-4-turbo",
       messages: messages,
-      temperature: 0.5,
+      tools: tools,
+      tool_choice: "auto",
     });
 
-    const result = response.choices[0].message.content;
+    const responseMessage = response.choices[0].message;
+    const toolCalls = responseMessage.tool_calls;
 
-    return new Response(JSON.stringify({ result }), {
+    if (toolCalls) {
+      const availableFunctions = { create_kb_article: createKbArticle };
+      
+      messages.push(responseMessage);
+
+      for (const toolCall of toolCalls) {
+        const functionName = toolCall.function.name;
+        const functionToCall = availableFunctions[functionName];
+        const functionArgs = JSON.parse(toolCall.function.arguments);
+        
+        const functionResponse = await functionToCall({
+          ...functionArgs,
+          supabaseAdmin,
+          user,
+        });
+
+        messages.push({
+          tool_call_id: toolCall.id,
+          role: "tool",
+          name: functionName,
+          content: functionResponse,
+        });
+      }
+
+      const secondResponse = await openai.chat.completions.create({
+        model: "gpt-4-turbo",
+        messages: messages,
+      });
+
+      return new Response(JSON.stringify({ result: secondResponse.choices[0].message.content }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+
+    return new Response(JSON.stringify({ result: responseMessage.content }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
@@ -113,3 +143,31 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+async function createKbArticle({ title, content_html, supabaseAdmin, user }) {
+  try {
+    const { data: folderId, error: folderError } = await supabaseAdmin.rpc('create_default_kb_folder');
+    if (folderError) throw new Error(`Failed to get default folder: ${folderError.message}`);
+
+    const { data: newArticle, error: articleError } = await supabaseAdmin
+      .rpc('upsert_article_with_tags', {
+        p_id: null,
+        p_title: title,
+        p_content: { html: content_html },
+        p_folder_id: folderId,
+        p_header_image_url: null,
+        p_tags: null,
+        p_custom_tags: null,
+        p_user_id: user.id,
+      })
+      .select('slug')
+      .single();
+
+    if (articleError) throw new Error(`Failed to create article in DB: ${articleError.message}`);
+    
+    const articleLink = `/knowledge-base/pages/${newArticle.slug}`;
+    return JSON.stringify({ success: true, message: `Article created successfully. You can view it here: [${title}](${articleLink})` });
+  } catch (e) {
+    return JSON.stringify({ success: false, error: e.message });
+  }
+}

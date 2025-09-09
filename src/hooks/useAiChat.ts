@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { Message, Attachment, User } from '@/types';
-import { analyzeProjects } from '@/lib/openai';
+import { getAiChatResponse } from '@/lib/openai';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -187,7 +187,12 @@ export const useAiChat = (currentUser: User | null) => {
         console.error("Failed to save user message:", dbError);
       }
 
-      const result = await analyzeProjects(text, undefined, attachmentUrl, attachmentType);
+      const mappedConversationHistory: { sender: 'user' | 'ai'; content: string }[] = conversation.map(msg => ({
+        sender: msg.sender.id === currentUser.id ? 'user' : 'ai',
+        content: msg.text,
+      }));
+
+      const result = await getAiChatResponse(text, mappedConversationHistory, attachmentUrl, attachmentType);
       
       const aiMessage: Message = {
         id: uuidv4(),
