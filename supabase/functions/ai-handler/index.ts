@@ -1,117 +1,97 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createSupabaseUserClient, createSupabaseAdmin, getOpenAIClient } from './clients.ts';
-import {
-  analyzeProjects,
-  analyzeDuplicates,
-  aiMergeContacts,
-  articleWriter,
-  generateCaption,
-  generateMoodInsight,
-  suggestIcon,
-  generateInsight,
-  aiSelectCalendarEvents,
-} from './features.ts';
+import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
+import OpenAI from 'npm:openai@4.29.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const featureHandlers = {
-  'analyze-duplicates': analyzeDuplicates,
-  'ai-merge-contacts': aiMergeContacts,
-  'generate-article-from-title': articleWriter,
-  'expand-article-text': articleWriter,
-  'improve-article-content': articleWriter,
-  'summarize-article-content': articleWriter,
-  'generate-caption': generateCaption,
-  'generate-mood-insight': generateMoodInsight,
-  'suggest-icon': suggestIcon,
-  'analyze-projects': analyzeProjects,
-  'generate-insight': generateInsight,
-  'ai-select-calendar-events': aiSelectCalendarEvents,
+const createSupabaseAdmin = () => {
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
 };
 
-serve(async (req) => {
+const getOpenAIClient = async (supabaseAdmin) => {
+  const { data: config, error: configError } = await supabaseAdmin
+    .from('app_config')
+    .select('value')
+    .eq('key', 'OPENAI_API_KEY')
+    .single();
+
+  if (configError || !config?.value) {
+    throw new Error("OpenAI API key is not configured by an administrator.");
+  }
+  return new OpenAI({ apiKey: config.value });
+};
+
+const featurePrompts = {
+  'generate-caption': `You are an AI that generates a short, inspiring, one-line caption for an image. The caption should be suitable for a professional dashboard related to events, marketing, and project management. Respond with ONLY the caption, no extra text or quotes. Keep it under 12 words.`,
+  'analyze-duplicates': `You are a data quality assistant. Here is a list of potential duplicate contacts. Summarize the findings in a friendly, concise paragraph in markdown format. Mention the total number of pairs found and the common reasons (e.g., 'similar names or shared emails'). Then, recommend that the user review and merge them to keep their contact list clean.`,
+  'generate-mood-insight': `Anda adalah seorang teman AI yang suportif, empatik, dan berwawasan luas. Tujuan Anda adalah untuk terlibat dalam percakapan yang mendukung dengan pengguna tentang suasana hati dan perasaan mereka. Anda akan menerima riwayat percakapan. Tugas Anda adalah memberikan respons berikutnya dalam percakapan tersebut. Pertahankan nada yang positif dan memotivasi. Sapa pengguna dengan nama mereka jika ini adalah awal percakapan. Jaga agar respons tetap sangat ringkas, maksimal 2 kalimat, dan terasa seperti percakapan alami. Jangan mengulangi diri sendiri. Fokus percakapan ini adalah murni pada kesejahteraan emosional. Jangan membahas topik lain seperti proyek, tugas, atau tujuan kerja kecuali jika pengguna secara eksplisit mengungkitnya terlebih dahulu dalam konteks perasaan mereka. Selalu berikan respons dalam Bahasa Indonesia.`,
+  'suggest-icon': `You are an AI assistant that suggests the best icon for a given title from a list. Your response must be ONLY the name of the icon from the list provided, with no extra text, explanation, or punctuation.`,
+  'generate-article-from-title': `You are an expert writer. Generate a well-structured article in HTML format based on the user's title. Include an introduction, key points in a list, and a conclusion.`,
+  'expand-article-text': `You are an expert writer. Expand upon the following selected text within the context of the full article. Maintain the original tone and seamlessly integrate the new content. Return only the expanded text in HTML format.`,
+  'improve-article-content': `You are an expert editor. Improve the clarity, engagement, and structure of the following article content. Return the full revised article in HTML format.`,
+  'summarize-article-content': `Summarize the following content into a concise paragraph. Return the summary in HTML format.`
+};
+
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    console.log("[DIAGNOSTIC] Request received.");
-    
-    let body;
-    if (req.headers.get("content-type")?.includes("application/json")) {
-      try {
-        body = await req.json();
-      } catch (e) {
-        console.error("validation_failed: invalid_json", e.message);
-        throw new Error("Invalid JSON body.");
-      }
-    } else {
-        console.error("validation_failed: invalid_body_non_json");
-        throw new Error("Request must have Content-Type: application/json");
-    }
-
-    const { feature, payload } = body;
-    if (!feature || typeof feature !== 'string') {
-        console.error("validation_failed: missing_feature");
-        throw new Error("Request body must include a 'feature' string.");
-    }
-    console.log("[DIAGNOSTIC] Request body parsed. Feature:", feature);
-
-    const userSupabase = createSupabaseUserClient(req);
-    const { data: { user }, error: authError } = await userSupabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error("User not authenticated.");
-    console.log("[DIAGNOSTIC] User authenticated:", user.id);
-
-    const handler = featureHandlers[feature];
-    if (!handler) {
-      throw new Error(`Unknown feature: ${feature}`);
+    const { feature, payload } = await req.json();
+    if (!feature || !featurePrompts[feature]) {
+      throw new Error(`Feature "${feature}" is not supported.`);
     }
 
     const supabaseAdmin = createSupabaseAdmin();
     const openai = await getOpenAIClient(supabaseAdmin);
-    console.log("[DIAGNOSTIC] OpenAI client initialized.");
-    
-    const context = {
-        req,
-        openai,
-        supabaseAdmin,
-        feature,
-        user,
-        userSupabase,
-    };
 
-    const responseData = await handler(payload, context);
-    console.log("[DIAGNOSTIC] Feature handler executed successfully.");
+    let userPrompt = "";
+    if (feature === 'generate-caption') userPrompt = `Generate a caption for an image described as: "${payload.altText}"`;
+    if (feature === 'analyze-duplicates') userPrompt = `Analyze these potential duplicates:\n${JSON.stringify(payload.duplicates, null, 2)}`;
+    if (feature === 'generate-mood-insight') userPrompt = payload.prompt;
+    if (feature === 'suggest-icon') userPrompt = `Title: "${payload.title}"\n\nIcons: [${payload.icons.join(', ')}]`;
+    if (feature === 'generate-article-from-title') userPrompt = `Title: ${payload.title}`;
+    if (feature === 'expand-article-text') userPrompt = `Full Article Context:\n${payload.fullContent}\n\nSelected Text to Expand:\n${payload.selectedText}`;
+    if (feature === 'improve-article-content') userPrompt = `Original Content:\n${payload.content}`;
+    if (feature === 'summarize-article-content') userPrompt = `Content to Summarize:\n${payload.content}`;
 
-    return new Response(JSON.stringify(responseData), {
+    const messages = [
+      { role: "system", content: featurePrompts[feature] },
+    ];
+
+    if (feature === 'generate-mood-insight' && payload.conversationHistory) {
+      messages.push(...payload.conversationHistory.map(msg => ({
+        role: msg.sender === 'ai' ? 'assistant' : 'user',
+        content: msg.content
+      })));
+    }
+    messages.push({ role: "user", content: userPrompt });
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: messages,
+      temperature: 0.5,
+    });
+
+    const result = response.choices[0].message.content?.trim();
+
+    return new Response(JSON.stringify({ result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error) {
-    console.error("[DIAGNOSTIC] CRITICAL ERROR in main handler:", error);
-    let status = 400;
-    let message = error.message;
-
-    if (error.status === 401) {
-      status = 401;
-      message = "OpenAI API key is invalid or has been revoked. Please check your key in the settings.";
-    } else if (error.status === 429) {
-      status = 429;
-      message = "You've exceeded your OpenAI quota or have a billing issue. Please check your OpenAI account.";
-    } else if (error.message.includes("User not authenticated")) {
-      status = 401;
-    }
-
-    return new Response(JSON.stringify({ error: message }), {
+    return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: status,
+      status: 500,
     });
   }
 });
