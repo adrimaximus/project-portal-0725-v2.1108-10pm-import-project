@@ -5,20 +5,13 @@ import { Person } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, generatePastelColor, formatInJakarta } from '@/lib/utils';
-import { User as UserIcon, Instagram, Briefcase, Mail, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { User as UserIcon, Mail, MoreHorizontal, Edit, Trash2, Instagram, Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import WhatsappIcon from '../icons/WhatsappIcon';
-
-interface PeopleKanbanCardProps {
-  person: Person;
-  dragHappened: React.MutableRefObject<boolean>;
-  onEdit: (person: Person) => void;
-  onDelete: (person: Person) => void;
-}
 
 const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
   if (!phone) return '';
@@ -31,7 +24,7 @@ const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
   return cleaned;
 };
 
-const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: PeopleKanbanCardProps) => {
+const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: Person, dragHappened: React.MutableRefObject<boolean>, onEdit: (person: Person) => void, onDelete: (person: Person) => void }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: person.id });
   const navigate = useNavigate();
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
@@ -40,24 +33,19 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: PeopleKanb
   useEffect(() => {
     const fetchCompanyDetails = async () => {
       if (person.company) {
-        const companyName = person.company.trim();
-        if (!companyName) {
-          setCompanyLogoUrl(null);
-          setCompanyAddress(null);
-          return;
-        }
-        
         const { data, error } = await supabase
           .from('companies')
           .select('logo_url, address')
-          .ilike('name', companyName)
-          .limit(1);
+          .eq('name', person.company)
+          .single();
 
         if (error) {
-          console.error('Error fetching company details for kanban card:', error.message);
-        } else if (data && data.length > 0) {
-          setCompanyLogoUrl(data[0].logo_url);
-          setCompanyAddress(data[0].address);
+          console.error('Error fetching company details:', error.message);
+          setCompanyLogoUrl(null);
+          setCompanyAddress(null);
+        } else if (data) {
+          setCompanyLogoUrl(data.logo_url);
+          setCompanyAddress(data.address);
         } else {
           setCompanyLogoUrl(null);
           setCompanyAddress(null);
@@ -90,12 +78,11 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: PeopleKanb
     }
   };
 
+  const emailToDisplay = person.contact?.emails?.[0] || person.email;
+  const phoneToDisplay = (person.contact as any)?.phones?.[0] || person.phone;
   const googleMapsUrl = companyAddress 
     ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(companyAddress)}`
     : '#';
-
-  const emailToDisplay = person.contact?.emails?.[0] || person.email;
-  const phoneToDisplay = (person.contact as any)?.phones?.[0] || person.phone;
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn(isDragging && "opacity-30")}>

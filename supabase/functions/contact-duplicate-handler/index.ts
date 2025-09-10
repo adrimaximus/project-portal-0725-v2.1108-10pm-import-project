@@ -1,6 +1,7 @@
 // @ts-nocheck
-import { createClient } from 'npm:@supabase/supabase-js@2.54.0';
-import OpenAI from 'npm:openai@4.29.2';
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import OpenAI from 'https://esm.sh/openai@4.29.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,7 +36,7 @@ const systemPrompt = `You are an intelligent contact merging assistant. Your tas
 4.  **Output Format**: Your response MUST be ONLY the final, merged JSON object representing the person. Do not include any explanations, markdown formatting, or other text. The JSON should be a valid object that can be parsed directly.`;
 
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -80,7 +81,7 @@ Deno.serve(async (req) => {
 
     // Ask AI to merge
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4-turbo",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: `Merge these two contacts. \n\nPrimary Contact:\n${JSON.stringify(primaryPerson, null, 2)}\n\nSecondary Contact:\n${JSON.stringify(secondaryPerson, null, 2)}` }

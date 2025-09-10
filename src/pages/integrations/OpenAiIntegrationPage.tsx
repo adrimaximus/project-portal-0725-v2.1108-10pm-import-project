@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import React, { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 const OpenAiIntegrationPage = () => {
   const [apiKey, setApiKey] = useState("");
@@ -99,18 +99,7 @@ const OpenAiIntegrationPage = () => {
             <h1 className="text-2xl font-bold tracking-tight">OpenAI Integration</h1>
             <p className="text-muted-foreground">Connect your OpenAI account to leverage AI models.</p>
           </div>
-          <div className="flex items-center gap-2">
-            {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : isConnected ? (
-              <Badge variant="secondary">Connected</Badge>
-            ) : (
-              <Badge variant="outline">Disconnected</Badge>
-            )}
-            <Button variant="ghost" size="icon" onClick={checkConnectionStatus} disabled={isLoading} aria-label="Refresh status">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </div>
+          {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : isConnected && <Badge variant="secondary">Connected</Badge>}
         </div>
         
         <Card>

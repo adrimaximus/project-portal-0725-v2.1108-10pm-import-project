@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FileText, User as UserIcon, Trophy, Sparkles, Search as SearchIcon, CreditCard, Loader2 } from "lucide-react";
 import debounce from 'lodash.debounce';
-import { getAiChatResponse } from "@/lib/openai";
+import { analyzeProjects } from "@/lib/openai";
 import ReactMarkdown from "react-markdown";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
@@ -135,7 +135,7 @@ export function GlobalSearch() {
     setLoading(false);
   
     try {
-      const result = await getAiChatResponse(message, oldConversation);
+      const result = await analyzeProjects(message, oldConversation);
       
       const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made'];
       if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {

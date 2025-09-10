@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { Message, Attachment, User } from '@/types';
-import { getAiChatResponse } from '@/lib/openai';
+import { analyzeProjects } from '@/lib/openai';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -35,7 +35,6 @@ export const useAiChat = (currentUser: User | null) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const queryClient = useQueryClient();
-  const [articleCreationData, setArticleCreationData] = useState<{ slug: string; searchTerms: string[] } | null>(null);
 
   const { data: initialHistory = [], isLoading: isLoadingHistory } = useQuery({
     queryKey: ['aiChatHistory', currentUser?.id],
@@ -176,6 +175,7 @@ export const useAiChat = (currentUser: User | null) => {
         attachmentUrl = urlData.publicUrl;
       }
 
+      // Save user message to DB first
       const { error: dbError } = await supabase.from('ai_chat_history').insert({
         id: userMessage.id,
         user_id: currentUser.id,
@@ -183,33 +183,55 @@ export const useAiChat = (currentUser: User | null) => {
         content: text,
         reply_to_message_id: replyToMessageId,
       });
-      if (dbError) console.error("Failed to save user message:", dbError);
+      if (dbError) {
+        console.error("Failed to save user message:", dbError);
+      }
 
-      const mappedConversationHistory: { sender: 'user' | 'ai'; content: string }[] = conversation.map(msg => ({
-        sender: msg.sender.id === currentUser.id ? 'user' : 'ai',
-        content: msg.text,
-      }));
-
-      const result = await getAiChatResponse(text, mappedConversationHistory, attachmentUrl, attachmentType);
+      const result = await analyzeProjects(text, undefined, attachmentUrl, attachmentType);
       
       const aiMessage: Message = {
         id: uuidv4(),
-        text: result.content,
+        text: result,
         timestamp: new Date().toISOString(),
         sender: AI_ASSISTANT_USER,
       };
       setConversation(prev => [...prev, aiMessage]);
 
-      if (result.type === 'article_created') {
-        setArticleCreationData({ slug: result.articleSlug, searchTerms: result.unsplashSearchTerms });
-        queryClient.invalidateQueries({ queryKey: ['kb_articles'] });
-        queryClient.invalidateQueries({ queryKey: ['kb_folders'] });
+      const successKeywords = ['done!', 'updated', 'created', 'changed', 'i\'ve made', 'deleted'];
+      if (successKeywords.some(keyword => result.toLowerCase().includes(keyword))) {
+        toast.info("Action successful. Refreshing data...");
+        await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['projects'] }),
+            queryClient.invalidateQueries({ queryKey: ['project'] }),
+            queryClient.invalidateQueries({ queryKey: ['kb_articles'] }),
+            queryClient.invalidateQueries({ queryKey: ['kb_article'] }),
+            queryClient.invalidateQueries({ queryKey: ['kb_folders'] }),
+            queryClient.invalidateQueries({ queryKey: ['goals'] }),
+            queryClient.invalidateQueries({ queryKey: ['goal'] }),
+        ]);
       }
   
     } catch (error: any) {
+      let description = "An unknown error occurred. Please check the console.";
+      
+      if (error.context && typeof error.context.json === 'function') {
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody.error) {
+            description = errorBody.error;
+          } else {
+            description = "The server returned an error without a specific message.";
+          }
+        } catch (e) {
+          description = "Failed to parse the error response from the server.";
+        }
+      } else {
+        description = error.message || "The server returned an error.";
+      }
+      
       const errorMessage: Message = {
         id: uuidv4(),
-        text: `Sorry, I'm having trouble: ${error.message}`,
+        text: `Sorry, I'm having trouble: ${description}`,
         timestamp: new Date().toISOString(),
         sender: AI_ASSISTANT_USER,
       };
@@ -226,7 +248,5 @@ export const useAiChat = (currentUser: User | null) => {
     aiUser: AI_ASSISTANT_USER,
     isConnected,
     isCheckingConnection,
-    articleCreationData,
-    setArticleCreationData,
   };
 };

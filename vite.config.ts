@@ -4,7 +4,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 export default defineConfig(() => ({
-  // Server configuration
   server: {
     host: "::",
     port: 32100,
