@@ -2,7 +2,6 @@ import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingScreen from "./LoadingScreen";
 import React, { useEffect, useRef } from "react";
-import { useLocationSaver } from '@/hooks/useLocationSaver';
 import { supabase } from '@/integrations/supabase/client';
 import { defaultNavItems } from '@/lib/defaultNavItems';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,7 +11,6 @@ const ProtectedRouteLayout = () => {
   const { session, user, loading } = useAuth();
   const location = useLocation();
   const queryClient = useQueryClient();
-  useLocationSaver();
   const navSyncAttempted = useRef(false);
 
   useEffect(() => {

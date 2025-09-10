@@ -10,8 +10,7 @@ const AuthCallbackPage = () => {
   useEffect(() => {
     if (!loading) {
       if (session) {
-        const lastVisitedPage = localStorage.getItem('lastVisitedPage');
-        navigate(lastVisitedPage || '/dashboard', { replace: true });
+        navigate('/dashboard', { replace: true });
       } else {
         // Jika tidak ada sesi setelah memuat, ada yang salah.
         // Kembali ke halaman login.

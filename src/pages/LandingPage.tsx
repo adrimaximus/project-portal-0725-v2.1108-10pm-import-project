@@ -11,8 +11,7 @@ const LandingPage = () => {
 
   useEffect(() => {
     if (!loading && session) {
-      const lastVisitedPage = localStorage.getItem('lastVisitedPage');
-      navigate(lastVisitedPage || '/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [session, loading, navigate]);
 
