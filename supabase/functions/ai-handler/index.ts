@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
     ];
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-3.5-turbo",
       messages: messages,
       tools: tools,
       tool_choice: "auto",
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
       });
 
       const secondResponse = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
+        model: "gpt-3.5-turbo",
         messages: messages,
       });
 

@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     const userPrompt = `Analyze these potential duplicates:\n${JSON.stringify(duplicates, null, 2)}`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
