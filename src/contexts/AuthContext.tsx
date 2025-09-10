@@ -225,17 +225,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        try {
-          setSession(newSession);
-          if (newSession) {
-            await fetchUserProfile(newSession.user);
-          } else {
-            setUser(null);
-            localStorage.removeItem('lastUserName');
+        setSession(newSession);
+        if (newSession) {
+          await fetchUserProfile(newSession.user);
+          // On a fresh sign-in, always redirect to the dashboard.
+          // This won't trigger on page refreshes (INITIAL_SESSION) or token refreshes.
+          if (event === 'SIGNED_IN') {
+            navigate('/dashboard', { replace: true });
           }
-        } catch (error) {
-          console.error("Error during auth state change:", error);
-          await logout();
+        } else {
+          setUser(null);
+          localStorage.removeItem('lastUserName');
         }
       });
 
@@ -281,7 +281,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const collaboratorUser = presences[0].user;
             collaborators.push({ 
               ...collaboratorUser, 
-              avatar_url: getAvatarUrl(collaboratorUser.avatar_url, collaboratorUser.id),
+              avatar_url: getAvatarUrl(collaboratorUser.avatar_url, collaboratorUser.id), 
               online: true 
             });
           }
