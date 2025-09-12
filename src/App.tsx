@@ -34,7 +34,6 @@ const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const GitHubPage = lazy(() => import("./pages/integrations/GitHubPage"));
-const SlackPage = lazy(() => import("./pages/integrations/SlackPage"));
 const GoogleDrivePage = lazy(() => import("./pages/integrations/GoogleDrivePage"));
 const PeoplePage = lazy(() => import("./pages/PeoplePage"));
 const PersonProfilePage = lazy(() => import("./pages/people/PersonProfilePage"));
@@ -86,7 +85,6 @@ function App() {
             <Route path="/settings/integrations" element={<PermissionGuard permission="settings:manage_integrations"><IntegrationsPage /></PermissionGuard>} />
             <Route path="/settings/integrations/openai" element={<PermissionGuard permission="settings:manage_integrations"><OpenAiIntegrationPage /></PermissionGuard>} />
             <Route path="/settings/integrations/github" element={<PermissionGuard permission="settings:manage_integrations"><GitHubPage /></PermissionGuard>} />
-            <Route path="/settings/integrations/slack" element={<PermissionGuard permission="settings:manage_integrations"><SlackPage /></PermissionGuard>} />
             <Route path="/settings/integrations/google-drive" element={<PermissionGuard permission="settings:manage_integrations"><GoogleDrivePage /></PermissionGuard>} />
             <Route path="/settings/navigation" element={<PermissionGuard permission="module:settings"><NavigationSettingsPage /></PermissionGuard>} />
             <Route path="/settings/tags" element={<PermissionGuard permission="module:settings"><TagsSettingsPage /></PermissionGuard>} />
