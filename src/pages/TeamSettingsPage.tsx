@@ -37,7 +37,7 @@ const TeamSettingsPage = () => {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
 
   const isMasterAdmin = currentUser?.role === 'master admin';
-  const isAdmin = currentUser?.role === 'admin' || isMasterAdmin;
+  const isAdmin = isMasterAdmin || currentUser?.role === 'admin';
 
   const handleSaveRole = (role: Role) => {
     saveRole(role, {
@@ -69,6 +69,7 @@ const TeamSettingsPage = () => {
           onCreateRole={() => setIsCreateRoleOpen(true)}
           onEditRole={(role) => setRoleToEdit(role)}
           onDeleteRole={(role) => setRoleToDelete(role)}
+          isMasterAdmin={isMasterAdmin}
         />
 
         {isAdmin && (

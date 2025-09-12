@@ -11,22 +11,18 @@ interface RolesCardProps {
   onEditRole: (role: Role) => void;
   onDeleteRole: (role: Role) => void;
   onCreateRole: () => void;
+  isMasterAdmin: boolean;
 }
 
-const RolesCard = ({ roles, onEditRole, onDeleteRole, onCreateRole }: RolesCardProps) => {
+const RolesCard = ({ roles, onEditRole, onDeleteRole, onCreateRole, isMasterAdmin }: RolesCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const sortedRoles = useMemo(() => {
     return [...roles].sort((a, b) => {
-      // master admin always on top
       if (a.name === 'master admin') return -1;
       if (b.name === 'master admin') return 1;
-
-      // predefined roles next
       if (a.is_predefined && !b.is_predefined) return -1;
       if (!a.is_predefined && b.is_predefined) return 1;
-
-      // then sort by name
       return a.name.localeCompare(b.name);
     });
   }, [roles]);
@@ -62,26 +58,31 @@ const RolesCard = ({ roles, onEditRole, onDeleteRole, onCreateRole }: RolesCardP
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedRoles.map((role) => (
-                  <TableRow key={role.id}>
-                    <TableCell className="font-medium">{role.name}</TableCell>
-                    <TableCell>{role.description}</TableCell>
-                    <TableCell className="text-right">
-                      {role.name !== 'master admin' && (
+                {sortedRoles.map((role) => {
+                  const canEdit = role.name !== 'master admin' && (!role.is_predefined || isMasterAdmin);
+                  const canDelete = !role.is_predefined;
+
+                  return (
+                    <TableRow key={role.id}>
+                      <TableCell className="font-medium">{role.name}</TableCell>
+                      <TableCell>{role.description}</TableCell>
+                      <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                          <Button variant="ghost" size="icon" onClick={() => onEditRole(role)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {!role.is_predefined && (
+                          {canEdit && (
+                            <Button variant="ghost" size="icon" onClick={() => onEditRole(role)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDelete && (
                             <Button variant="ghost" size="icon" onClick={() => onDeleteRole(role)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           )}
                         </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
