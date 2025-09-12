@@ -251,9 +251,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Add a focus listener to handle multi-tab scenarios better
+    const handleFocus = () => {
+      supabase.auth.getSession();
+    };
+    window.addEventListener('focus', handleFocus);
+
     return () => {
       subscriptionPromise.then(subscription => subscription?.unsubscribe());
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
     };
   }, [fetchUserProfile, logout, navigate]);
 
