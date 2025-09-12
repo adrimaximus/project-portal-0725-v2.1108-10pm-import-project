@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,6 +15,15 @@ interface RolesCardProps {
 
 const RolesCard = ({ roles, onEditRole, onDeleteRole, onCreateRole }: RolesCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const sortedRoles = useMemo(() => {
+    return [...roles].sort((a, b) => {
+      // Sort by is_predefined (true first), then by name
+      if (a.is_predefined && !b.is_predefined) return -1;
+      if (!a.is_predefined && b.is_predefined) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [roles]);
 
   return (
     <Card>
@@ -47,7 +56,7 @@ const RolesCard = ({ roles, onEditRole, onDeleteRole, onCreateRole }: RolesCardP
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {roles.map((role) => (
+                {sortedRoles.map((role) => (
                   <TableRow key={role.id}>
                     <TableCell className="font-medium">{role.name}</TableCell>
                     <TableCell>{role.description}</TableCell>
