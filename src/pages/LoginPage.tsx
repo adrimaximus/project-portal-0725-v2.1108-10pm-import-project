@@ -164,8 +164,7 @@ const LoginPage = () => {
                         className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
                       />
                     </div>
-                    <div className="relative">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <div>
                       <Input
                         id="lastName"
                         type="text"
@@ -173,7 +172,7 @@ const LoginPage = () => {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
-                        className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary"
+                        className="h-12 bg-gray-800/50 border-gray-700 text-white focus:ring-primary px-3"
                       />
                     </div>
                   </div>
