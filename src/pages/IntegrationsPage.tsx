@@ -58,7 +58,6 @@ const IntegrationsPage = () => {
             <CardDescription>Connect your tools to streamline your workflow.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <IntegrationItem name="GitHub" description="Sync your repositories and issues." icon={<GitBranch className="h-5 w-5" />} path="/settings/integrations/github" />
             <IntegrationItem 
                 name="Google Drive" 
                 description="Access your files from Google Drive." 
