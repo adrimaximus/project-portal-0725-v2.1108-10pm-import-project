@@ -18,9 +18,15 @@ const RolesCard = ({ roles, onEditRole, onDeleteRole, onCreateRole }: RolesCardP
 
   const sortedRoles = useMemo(() => {
     return [...roles].sort((a, b) => {
-      // Sort by is_predefined (true first), then by name
+      // master admin always on top
+      if (a.name === 'master admin') return -1;
+      if (b.name === 'master admin') return 1;
+
+      // predefined roles next
       if (a.is_predefined && !b.is_predefined) return -1;
       if (!a.is_predefined && b.is_predefined) return 1;
+
+      // then sort by name
       return a.name.localeCompare(b.name);
     });
   }, [roles]);
@@ -61,14 +67,16 @@ const RolesCard = ({ roles, onEditRole, onDeleteRole, onCreateRole }: RolesCardP
                     <TableCell className="font-medium">{role.name}</TableCell>
                     <TableCell>{role.description}</TableCell>
                     <TableCell className="text-right">
-                      {!role.is_predefined && (
+                      {role.name !== 'master admin' && (
                         <div className="flex gap-2 justify-end">
                           <Button variant="ghost" size="icon" onClick={() => onEditRole(role)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => onDeleteRole(role)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          {!role.is_predefined && (
+                            <Button variant="ghost" size="icon" onClick={() => onDeleteRole(role)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       )}
                     </TableCell>
