@@ -118,6 +118,7 @@ const RoleManagerDialog = ({ open, onOpenChange, onSave, role, workspaceFeatures
                           </label>
                           <p className="text-sm text-muted-foreground">
                             {permission.description}
+                            {permission.id.startsWith('module:') && ' When unchecked, users with this role will not see this module in the navigation.'}
                           </p>
                         </div>
                       </div>
