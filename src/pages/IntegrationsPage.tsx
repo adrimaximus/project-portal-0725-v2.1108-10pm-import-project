@@ -77,6 +77,12 @@ const IntegrationsPage = () => {
                     </svg>
                 } 
             />
+            <IntegrationItem 
+                name="WBIZTOOL" 
+                description="Connect your WBIZTOOL account for business automation." 
+                path="/settings/integrations/wbiztool"
+                icon={<GitBranch className="h-5 w-5" />}
+            />
           </CardContent>
         </Card>
       </div>

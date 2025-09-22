@@ -44,6 +44,7 @@ const ContactPropertiesPage = lazy(() => import("./pages/ContactPropertiesPage")
 const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
 const CompaniesPage = lazy(() => import("./pages/CompaniesPage"));
 const TagsSettingsPage = lazy(() => import("./pages/TagsSettingsPage"));
+const WbiztoolPage = lazy(() => import("./pages/integrations/WbiztoolPage"));
 
 function App() {
   return (
@@ -84,6 +85,7 @@ function App() {
             <Route path="/settings/integrations" element={<PermissionGuard permission="settings:manage_integrations"><IntegrationsPage /></PermissionGuard>} />
             <Route path="/settings/integrations/openai" element={<PermissionGuard permission="settings:manage_integrations"><OpenAiIntegrationPage /></PermissionGuard>} />
             <Route path="/settings/integrations/google-drive" element={<PermissionGuard permission="settings:manage_integrations"><GoogleDrivePage /></PermissionGuard>} />
+            <Route path="/settings/integrations/wbiztool" element={<PermissionGuard permission="settings:manage_integrations"><WbiztoolPage /></PermissionGuard>} />
             <Route path="/settings/navigation" element={<PermissionGuard permission="module:settings"><NavigationSettingsPage /></PermissionGuard>} />
             <Route path="/settings/tags" element={<PermissionGuard permission="module:settings"><TagsSettingsPage /></PermissionGuard>} />
 
