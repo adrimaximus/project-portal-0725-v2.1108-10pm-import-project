@@ -88,7 +88,7 @@ const App = () => {
           <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
           <Route path="/custom/:pageId" element={<CustomPage />} />
           <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
-          <Route path="/multipage/:slug/:itemId" element={<MultiEmbedItemPage />} />
+          <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
         </Route>
 
         {/* Not Found Route */}

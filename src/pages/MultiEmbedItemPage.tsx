@@ -14,7 +14,7 @@ import { MultiEmbedItem } from '@/components/MultiEmbedCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const MultiEmbedItemPage = () => {
-  const { slug, itemId } = useParams<{ slug: string; itemId: string }>();
+  const { slug, itemSlug } = useParams<{ slug: string; itemSlug: string }>();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -23,7 +23,7 @@ const MultiEmbedItemPage = () => {
   const { data: navItem, isLoading: isLoadingNavItem } = useQuery({
     queryKey: ['user_navigation_item', slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_navigation_items').select('name, url').eq('slug', slug!).single();
+      const { data, error } = await supabase.from('user_navigation_items').select('id, name, url').eq('slug', slug!).single();
       if (error) throw error;
       return data;
     },
@@ -31,13 +31,13 @@ const MultiEmbedItemPage = () => {
   });
 
   const { data: item, isLoading: isLoadingItem } = useQuery({
-    queryKey: ['multi_embed_item', itemId],
+    queryKey: ['multi_embed_item', navItem?.id, itemSlug],
     queryFn: async () => {
-      const { data, error } = await supabase.from('multi_embed_items').select('*').eq('id', itemId!).single();
+      const { data, error } = await supabase.from('multi_embed_items').select('*').eq('nav_item_id', navItem!.id).eq('slug', itemSlug!).single();
       if (error) throw error;
       return data as MultiEmbedItem;
     },
-    enabled: !!itemId,
+    enabled: !!itemSlug && !!navItem?.id,
   });
 
   const { mutate: deleteItem } = useMutation({

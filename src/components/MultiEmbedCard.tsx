@@ -11,6 +11,7 @@ export interface MultiEmbedItem {
   image_url?: string | null;
   tags?: string[] | null;
   embed_content: string;
+  slug?: string;
 }
 
 interface MultiEmbedCardProps {
@@ -21,7 +22,7 @@ interface MultiEmbedCardProps {
 const MultiEmbedCard: React.FC<MultiEmbedCardProps> = ({ item, parentSlug }) => {
   return (
     <Card className="group relative overflow-hidden">
-      <Link to={`/multipage/${parentSlug}/${item.id}`} className="flex items-stretch">
+      <Link to={`/multipage/${parentSlug}/${item.slug || item.id}`} className="flex items-stretch">
         <div className="w-1/3 flex-shrink-0">
           <img src={item.image_url || 'https://via.placeholder.com/200x200'} alt={item.title} className="object-cover h-full w-full" />
         </div>
