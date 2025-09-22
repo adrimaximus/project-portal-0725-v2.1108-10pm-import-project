@@ -22,7 +22,7 @@ const MultiEmbedCard: React.FC<MultiEmbedCardProps> = ({ item }) => {
     <Card className="group relative overflow-hidden">
       <Link to={`/custom-page/${item.nav_item_id}/${item.id}`} className="flex items-center">
         <div className="w-1/3 flex-shrink-0">
-          <img src={item.image_url || 'https://via.placeholder.com/200x200'} alt={item.title} className="object-cover h-full w-full aspect-square" />
+          <img src={item.image_url || 'https://via.placeholder.com/200x200'} alt={item.title} className="object-cover h-full w-full" />
         </div>
         <CardContent className="p-4 flex-grow flex flex-col justify-center w-2/3">
           <CardTitle className="text-md font-semibold mb-1 truncate">{item.title}</CardTitle>
