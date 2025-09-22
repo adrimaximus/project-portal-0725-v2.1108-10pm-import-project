@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl } from '@/lib/utils';
+import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
 import PersonFormDialog from '@/components/people/PersonFormDialog';
 import { Person, ContactProperty, User } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -70,17 +70,6 @@ const PersonProfileSkeleton = () => (
   </PortalLayout>
 );
 
-const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
-  if (!phone) return '';
-  let cleaned = phone.replace(/\D/g, '');
-  if (cleaned.startsWith('0')) {
-    cleaned = '62' + cleaned.substring(1);
-  } else if (!cleaned.startsWith('62')) {
-    cleaned = '62' + cleaned;
-  }
-  return cleaned;
-};
-
 const PersonProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -133,7 +122,7 @@ const PersonProfilePage = () => {
 
   const firstEmail = person.contact?.emails?.[0];
   const firstPhone = person.contact?.phones?.[0] || person.phone;
-  const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForWhatsApp(firstPhone)}` : null;
+  const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForApi(firstPhone)}` : null;
 
   const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name]);
 

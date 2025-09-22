@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Person } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn, generatePastelColor, formatInJakarta } from '@/lib/utils';
+import { cn, generatePastelColor, formatInJakarta, formatPhoneNumberForApi } from '@/lib/utils';
 import { User as UserIcon, Mail, MoreHorizontal, Edit, Trash2, Instagram, Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -12,17 +12,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import WhatsappIcon from '../icons/WhatsappIcon';
-
-const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
-  if (!phone) return '';
-  let cleaned = phone.replace(/\D/g, '');
-  if (cleaned.startsWith('0')) {
-    cleaned = '62' + cleaned.substring(1);
-  } else if (!cleaned.startsWith('62')) {
-    cleaned = '62' + cleaned;
-  }
-  return cleaned;
-};
 
 const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: Person, dragHappened: React.MutableRefObject<boolean>, onEdit: (person: Person) => void, onDelete: (person: Person) => void }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: person.id });
@@ -156,7 +145,7 @@ const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: 
                 </button>
               )}
               {phoneToDisplay && (
-                <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(phoneToDisplay)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
+                <a href={`https://wa.me/${formatPhoneNumberForApi(phoneToDisplay)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
                   <WhatsappIcon className="h-3.5 w-3.5" />
                 </a>
               )}

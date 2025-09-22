@@ -198,3 +198,21 @@ export const getInstagramUsername = (url: string | undefined): string | null => 
     return null;
   }
 };
+
+export const formatPhoneNumberForApi = (phone: string | undefined | null): string => {
+  if (!phone) return '';
+  // Remove all non-digit characters
+  let cleaned = phone.trim().replace(/\D/g, '');
+  
+  if (cleaned.startsWith('62')) {
+    return cleaned;
+  }
+  if (cleaned.startsWith('0')) {
+    return '62' + cleaned.substring(1);
+  }
+  // For numbers like 812... assuming it's an Indonesian number
+  if (cleaned.length > 8 && cleaned.startsWith('8')) {
+    return '62' + cleaned;
+  }
+  return cleaned; // Return as is if it doesn't match common patterns, but it will be digits only
+};

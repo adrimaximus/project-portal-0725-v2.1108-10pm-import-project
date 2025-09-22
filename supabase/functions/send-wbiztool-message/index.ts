@@ -9,14 +9,19 @@ const corsHeaders = {
 };
 
 const formatPhoneNumber = (phone) => {
-  const trimmedPhone = phone.trim();
-  if (trimmedPhone.startsWith('+62')) {
-    return '62' + trimmedPhone.substring(3);
+  if (!phone) return '';
+  let cleaned = String(phone).trim().replace(/\D/g, '');
+  
+  if (cleaned.startsWith('62')) {
+    return cleaned;
   }
-  if (trimmedPhone.startsWith('0')) {
-    return '62' + trimmedPhone.substring(1);
+  if (cleaned.startsWith('0')) {
+    return '62' + cleaned.substring(1);
   }
-  return trimmedPhone;
+  if (cleaned.length > 8 && cleaned.startsWith('8')) {
+    return '62' + cleaned;
+  }
+  return cleaned;
 };
 
 serve(async (req) => {
