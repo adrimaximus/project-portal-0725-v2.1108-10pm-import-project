@@ -4,13 +4,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import PortalLayout from '@/components/PortalLayout';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Loader2, Edit, Trash2 } from 'lucide-react';
+import { Loader2, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import EmbedRenderer from '@/components/EmbedRenderer';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import MultiEmbedItemFormDialog from '@/components/MultiEmbedItemFormDialog';
 import { toast } from 'sonner';
 import { MultiEmbedItem } from '@/components/MultiEmbedCard';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const MultiEmbedItemPage = () => {
   const { navItemId, itemId } = useParams<{ navItemId: string; itemId: string }>();
@@ -82,14 +83,23 @@ const MultiEmbedItemPage = () => {
               <BreadcrumbItem><BreadcrumbPage>{item.title}</BreadcrumbPage></BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => setIsFormOpen(true)}>
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button variant="destructive" size="icon" onClick={() => setIsDeleteDialogOpen(true)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsFormOpen(true)}>
+                <Edit className="mr-2 h-4 w-4" />
+                <span>Edit</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600 focus:text-red-600">
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Remove</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex-grow">
           <EmbedRenderer content={item.embed_content} />
