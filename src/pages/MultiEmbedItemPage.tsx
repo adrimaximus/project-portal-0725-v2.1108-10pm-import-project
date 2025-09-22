@@ -14,20 +14,20 @@ import { MultiEmbedItem } from '@/components/MultiEmbedCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const MultiEmbedItemPage = () => {
-  const { navItemId, itemId } = useParams<{ navItemId: string; itemId: string }>();
+  const { slug, itemId } = useParams<{ slug: string; itemId: string }>();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data: navItem, isLoading: isLoadingNavItem } = useQuery({
-    queryKey: ['user_navigation_item', navItemId],
+    queryKey: ['user_navigation_item', slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_navigation_items').select('name, url').eq('id', navItemId!).single();
+      const { data, error } = await supabase.from('user_navigation_items').select('name, url').eq('slug', slug!).single();
       if (error) throw error;
       return data;
     },
-    enabled: !!navItemId,
+    enabled: !!slug,
   });
 
   const { data: item, isLoading: isLoadingItem } = useQuery({
@@ -47,8 +47,8 @@ const MultiEmbedItemPage = () => {
     },
     onSuccess: () => {
       toast.success('Item deleted');
-      queryClient.invalidateQueries({ queryKey: ['multi_embed_items', navItemId] });
-      navigate(navItem?.url || `/custom-page/${navItemId}`);
+      queryClient.invalidateQueries({ queryKey: ['multi_embed_items', item?.nav_item_id] });
+      navigate(navItem?.url || `/multipage/${slug}`);
     },
     onError: (error: any) => {
       toast.error('Failed to delete item', { description: error.message });
@@ -110,7 +110,7 @@ const MultiEmbedItemPage = () => {
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         item={item}
-        navItemId={navItemId!}
+        navItemId={item.nav_item_id}
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

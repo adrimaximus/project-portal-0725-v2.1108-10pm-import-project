@@ -12,28 +12,28 @@ import MultiEmbedItemFormDialog from '@/components/MultiEmbedItemFormDialog';
 import { Input } from '@/components/ui/input';
 
 const MultiEmbedPage = () => {
-  const { navItemId } = useParams<{ navItemId: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: navItem, isLoading: isLoadingNavItem } = useQuery({
-    queryKey: ['user_navigation_item', navItemId],
+    queryKey: ['user_navigation_item', slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_navigation_items').select('name').eq('id', navItemId!).single();
+      const { data, error } = await supabase.from('user_navigation_items').select('id, name').eq('slug', slug!).single();
       if (error) throw error;
       return data;
     },
-    enabled: !!navItemId,
+    enabled: !!slug,
   });
 
   const { data: items, isLoading: isLoadingItems } = useQuery({
-    queryKey: ['multi_embed_items', navItemId],
+    queryKey: ['multi_embed_items', navItem?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('multi_embed_items').select('*').eq('nav_item_id', navItemId!).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('multi_embed_items').select('*').eq('nav_item_id', navItem!.id).order('created_at', { ascending: false });
       if (error) throw error;
       return data as MultiEmbedItem[];
     },
-    enabled: !!navItemId,
+    enabled: !!navItem?.id,
   });
 
   const handleAddNew = () => {
@@ -84,7 +84,7 @@ const MultiEmbedPage = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredItems.map(item => (
-            <MultiEmbedCard key={item.id} item={item} />
+            <MultiEmbedCard key={item.id} item={item} parentSlug={slug!} />
           ))}
         </div>
       )}
@@ -93,7 +93,7 @@ const MultiEmbedPage = () => {
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         item={null}
-        navItemId={navItemId!}
+        navItemId={navItem?.id!}
       />
     </PortalLayout>
   );

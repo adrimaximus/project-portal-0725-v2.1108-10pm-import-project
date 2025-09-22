@@ -87,8 +87,8 @@ const App = () => {
           <Route path="/settings/integrations/openai" element={<OpenAiPage />} />
           <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
           <Route path="/custom/:pageId" element={<CustomPage />} />
-          <Route path="/custom-page/:navItemId" element={<MultiEmbedPage />} />
-          <Route path="/custom-page/:navItemId/:itemId" element={<MultiEmbedItemPage />} />
+          <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
+          <Route path="/multipage/:slug/:itemId" element={<MultiEmbedItemPage />} />
         </Route>
 
         {/* Not Found Route */}
