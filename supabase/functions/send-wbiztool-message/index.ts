@@ -71,6 +71,16 @@ serve(async (req) => {
     const clientId = clientData.value;
     const apiKey = keyData.value;
 
+    // NEW: Get WhatsApp Client ID from environment variables
+    const whatsappClientIdStr = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+    if (!whatsappClientIdStr) {
+      throw new Error("WBIZTOOL WhatsApp Client ID is not configured on the server.");
+    }
+    const whatsappClientId = parseInt(whatsappClientIdStr, 10);
+    if (isNaN(whatsappClientId)) {
+      throw new Error("WBIZTOOL WhatsApp Client ID is not a valid number.");
+    }
+
     // 4. Make the API call to WBIZTOOL
     const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
       method: 'POST',
@@ -82,6 +92,7 @@ serve(async (req) => {
       body: JSON.stringify({
         phone: formattedPhone,
         message: message,
+        whatsapp_client: whatsappClientId, // NEW: Add whatsapp_client to the body
       }),
     });
 

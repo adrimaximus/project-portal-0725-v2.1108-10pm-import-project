@@ -14,6 +14,12 @@ const validateCredentials = async (clientId, apiKey) => {
     throw new Error("Invalid credentials format.");
   }
   
+  const whatsappClientIdStr = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
+  if (!whatsappClientIdStr) {
+    throw new Error("WBIZTOOL WhatsApp Client ID is not configured on the server for validation.");
+  }
+  const whatsappClientId = parseInt(whatsappClientIdStr, 10);
+
   try {
     // We make a test call. We expect an error about missing parameters if auth is successful,
     // and a 401/403 if auth fails.
@@ -24,7 +30,10 @@ const validateCredentials = async (clientId, apiKey) => {
         'X-Client-ID': clientId,
         'X-Api-Key': apiKey,
       },
-      body: JSON.stringify({}), // Sending an empty body for a validation check
+      body: JSON.stringify({
+        whatsapp_client: whatsappClientId,
+        // Sending an empty body for other params to trigger a 400 on success
+      }),
     });
 
     // If status is 401 Unauthorized or 403 Forbidden, the credentials are bad.
@@ -33,8 +42,19 @@ const validateCredentials = async (clientId, apiKey) => {
       throw new Error(errorData.message || "The provided WBIZTOOL credentials are invalid.");
     }
 
-    // Any other status (like 400 for a bad request due to missing params) implies successful authentication.
-    return true;
+    // Any other status (like 400 for a bad request due to missing phone/message) implies successful authentication.
+    if (response.status === 400) {
+        return true;
+    }
+
+    // If the response is OK for some reason (e.g. API changed), it's also a success.
+    if (response.ok) {
+        return true;
+    }
+
+    // Any other error status is a failure.
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`WBIZTOOL API returned an unexpected status: ${response.status}. ${errorData.message || ''}`);
 
   } catch (error) {
     console.error("WBIZTOOL API validation failed:", error.message);
