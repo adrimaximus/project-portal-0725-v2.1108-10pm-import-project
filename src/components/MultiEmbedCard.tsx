@@ -20,7 +20,7 @@ interface MultiEmbedCardProps {
 const MultiEmbedCard: React.FC<MultiEmbedCardProps> = ({ item }) => {
   return (
     <Card className="group relative overflow-hidden">
-      <Link to={`/custom-page/${item.nav_item_id}/${item.id}`} className="flex items-center">
+      <Link to={`/custom-page/${item.nav_item_id}/${item.id}`} className="flex items-stretch">
         <div className="w-1/3 flex-shrink-0">
           <img src={item.image_url || 'https://via.placeholder.com/200x200'} alt={item.title} className="object-cover h-full w-full" />
         </div>
