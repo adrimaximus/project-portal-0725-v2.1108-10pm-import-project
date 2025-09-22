@@ -166,7 +166,7 @@ const NavigationSettingsPage = () => {
   }, [user, navItems, isLoadingItems, backfillNavItems]);
 
   const { mutate: upsertFolder, isPending: isSavingFolder } = useMutation({ mutationFn: async (folder: Partial<NavFolder>) => { const { error } = await supabase.from('navigation_folders').upsert(folder); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['navigation_folders', user?.id] }) });
-  const { mutate: deleteItem, isPending: isDeletingItem } = useMutation({ mutationFn: async (id: string) => { setDeletingId(id); const { error } = await supabase.from('user_navigation_items').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Item removed"); queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user?.id] }); }, onError: (e: any) => toast.error(e.message), onSettled: () => setDeletingId(null) });
+  const { mutate: deleteItem, isPending: isDeletingItem } = useMutation({ mutationFn: async (id: string) => { setDeletingId(id); const { error } = await supabase.from('user_navigation_items').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Page removed"); queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user?.id] }); }, onError: (e: any) => toast.error(e.message), onSettled: () => setDeletingId(null) });
   const { mutate: deleteFolder } = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('navigation_folders').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Folder removed"); queryClient.invalidateQueries({ queryKey: ['navigation_folders', user?.id] }); } });
 
   const addItemMutation = useMutation({
@@ -186,10 +186,10 @@ const NavigationSettingsPage = () => {
       setNewItemName("");
       setNewItemContent("");
       setNewItemIcon(undefined);
-      toast.success("Navigation item added");
+      toast.success("Navigation page added");
     },
     onError: (error) => {
-      toast.error("Failed to add item", { description: error.message });
+      toast.error("Failed to add page", { description: error.message });
     }
   });
 
@@ -308,7 +308,7 @@ const NavigationSettingsPage = () => {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Add New Custom Item</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Add New Custom Page</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2"><Label htmlFor="icon">Icon</Label><IconPicker value={newItemIcon} onChange={setNewItemIcon} /></div>
             <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" /></div>
@@ -318,7 +318,7 @@ const NavigationSettingsPage = () => {
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button onClick={handleAddItem} disabled={!newItemName.trim() || !newItemContent.trim() || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Item</Button>
+            <Button onClick={handleAddItem} disabled={!newItemName.trim() || !newItemContent.trim() || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
             <Button variant="outline" onClick={() => { setEditingFolder(null); setIsFolderFormOpen(true); }}><FolderPlus className="mr-2 h-4 w-4" /> Add Folder</Button>
           </CardFooter>
         </Card>
