@@ -1,14 +1,23 @@
-import React from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import PortalLayout from '@/components/PortalLayout';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Edit, Trash2 } from 'lucide-react';
 import EmbedRenderer from '@/components/EmbedRenderer';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import MultiEmbedItemFormDialog from '@/components/MultiEmbedItemFormDialog';
+import { toast } from 'sonner';
+import { MultiEmbedItem } from '@/components/MultiEmbedCard';
 
 const MultiEmbedItemPage = () => {
   const { navItemId, itemId } = useParams<{ navItemId: string; itemId: string }>();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data: navItem, isLoading: isLoadingNavItem } = useQuery({
     queryKey: ['user_navigation_item', navItemId],
@@ -25,10 +34,32 @@ const MultiEmbedItemPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('multi_embed_items').select('*').eq('id', itemId!).single();
       if (error) throw error;
-      return data;
+      return data as MultiEmbedItem;
     },
     enabled: !!itemId,
   });
+
+  const { mutate: deleteItem } = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('multi_embed_items').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Item deleted');
+      queryClient.invalidateQueries({ queryKey: ['multi_embed_items', navItemId] });
+      navigate(navItem?.url || `/custom-page/${navItemId}`);
+    },
+    onError: (error: any) => {
+      toast.error('Failed to delete item', { description: error.message });
+    }
+  });
+
+  const handleDelete = () => {
+    if (item) {
+      deleteItem(item.id);
+    }
+    setIsDeleteDialogOpen(false);
+  };
 
   if (isLoadingNavItem || isLoadingItem) {
     return <PortalLayout><div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div></PortalLayout>;
@@ -41,19 +72,51 @@ const MultiEmbedItemPage = () => {
   return (
     <PortalLayout>
       <div className="flex flex-col h-full">
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            <BreadcrumbItem><Link to="/">Dashboard</Link></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><Link to={navItem.url}>{navItem.name}</Link></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbPage>{item.title}</BreadcrumbPage></BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+        <div className="flex justify-between items-center mb-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem><Link to="/">Dashboard</Link></BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem><Link to={navItem.url}>{navItem.name}</Link></BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem><BreadcrumbPage>{item.title}</BreadcrumbPage></BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => setIsFormOpen(true)}>
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button variant="destructive" size="icon" onClick={() => setIsDeleteDialogOpen(true)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
         <div className="flex-grow">
           <EmbedRenderer content={item.embed_content} />
         </div>
       </div>
+
+      <MultiEmbedItemFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        item={item}
+        navItemId={navItemId!}
+      />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the item "{item.title}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PortalLayout>
   );
 };
