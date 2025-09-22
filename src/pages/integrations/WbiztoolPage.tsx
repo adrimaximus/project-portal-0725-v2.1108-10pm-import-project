@@ -10,12 +10,16 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 const WbiztoolPage = () => {
   const [clientId, setClientId] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [testPhone, setTestPhone] = useState("");
+  const [testMessage, setTestMessage] = useState("");
+  const [isSendingTest, setIsSendingTest] = useState(false);
 
   const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
@@ -70,6 +74,27 @@ const WbiztoolPage = () => {
       toast.error("Failed to disconnect", { description: error.message });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSendTestMessage = async () => {
+    if (!testPhone || !testMessage) {
+      toast.error("Please enter a phone number and a message.");
+      return;
+    }
+    setIsSendingTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-wbiztool-message', {
+        body: { phone: testPhone, message: testMessage },
+      });
+      if (error) throw error;
+      toast.success("Test message sent successfully!", { description: data.message });
+      setTestPhone("");
+      setTestMessage("");
+    } catch (error: any) {
+      toast.error("Failed to send test message", { description: error.message });
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
@@ -143,6 +168,44 @@ const WbiztoolPage = () => {
             )}
           </CardFooter>
         </Card>
+
+        {isConnected && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Send a Test Message</CardTitle>
+              <CardDescription>Verify your connection by sending a test message to a WhatsApp number.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                  <Label htmlFor="test-phone">Recipient Phone Number</Label>
+                  <Input 
+                    id="test-phone" 
+                    type="text" 
+                    placeholder="e.g., 6281234567890"
+                    value={testPhone}
+                    onChange={(e) => setTestPhone(e.target.value)}
+                    disabled={isSendingTest}
+                  />
+              </div>
+              <div className="space-y-2">
+                  <Label htmlFor="test-message">Message</Label>
+                  <Textarea 
+                    id="test-message" 
+                    placeholder="Enter your test message here"
+                    value={testMessage}
+                    onChange={(e) => setTestMessage(e.target.value)}
+                    disabled={isSendingTest}
+                  />
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <Button onClick={handleSendTestMessage} disabled={!testPhone || !testMessage || isSendingTest}>
+                {isSendingTest && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send Test Message
+              </Button>
+            </CardFooter>
+          </Card>
+        )}
       </div>
     </PortalLayout>
   );
