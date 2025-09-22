@@ -22,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import FolderFormDialog, { FolderData } from "@/components/settings/FolderFormDialog";
 import { Textarea } from "@/components/ui/textarea";
 import { defaultNavItems } from "@/lib/defaultNavItems";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export interface NavItem {
   id: string;
@@ -34,6 +35,7 @@ export interface NavItem {
   folder_id: string | null;
   is_deletable?: boolean;
   is_editable?: boolean;
+  type: 'url_embed' | 'multi_embed';
 }
 
 export interface NavFolder extends FolderData {
@@ -96,6 +98,7 @@ const NavigationSettingsPage = () => {
   const [newItemName, setNewItemName] = useState("");
   const [newItemContent, setNewItemContent] = useState("");
   const [newItemIcon, setNewItemIcon] = useState<string | undefined>(undefined);
+  const [newItemType, setNewItemType] = useState<'url_embed' | 'multi_embed'>('url_embed');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<NavItem | null>(null);
   const [editingFolder, setEditingFolder] = useState<NavFolder | null>(null);
@@ -106,7 +109,7 @@ const NavigationSettingsPage = () => {
   const queryKey = ['user_navigation_items', user?.id];
   const foldersQueryKey = ['navigation_folders', user?.id];
 
-  const { data: navItems = [], isLoading: isLoadingItems } = useQuery({ queryKey: queryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('user_navigation_items').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data; }, enabled: !!user });
+  const { data: navItems = [], isLoading: isLoadingItems } = useQuery({ queryKey: queryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('user_navigation_items').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data as NavItem[]; }, enabled: !!user });
   const { data: folders = [], isLoading: isLoadingFolders } = useQuery({ queryKey: foldersQueryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data; }, enabled: !!user });
 
   const { mutate: updateItems } = useMutation({
@@ -140,6 +143,7 @@ const NavigationSettingsPage = () => {
             is_enabled: true,
             is_deletable: false,
             is_editable: false,
+            type: 'url_embed' as const,
         }));
         const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert);
         if (error) throw error;
@@ -170,22 +174,37 @@ const NavigationSettingsPage = () => {
   const { mutate: deleteFolder } = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('navigation_folders').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Folder removed"); queryClient.invalidateQueries({ queryKey: ['navigation_folders', user?.id] }); } });
 
   const addItemMutation = useMutation({
-    mutationFn: async ({ name, url, icon }: { name: string, url: string, icon?: string }) => {
+    mutationFn: async ({ name, url, icon, type }: { name: string, url: string, icon?: string, type: 'url_embed' | 'multi_embed' }) => {
       if (!user) throw new Error("User not authenticated");
       const newPosition = navItems.filter(i => !i.folder_id).length;
-      const { data, error } = await supabase
+      
+      const itemToInsert = { name, url, user_id: user.id, position: newPosition, is_enabled: true, icon, is_deletable: true, is_editable: true, type };
+      
+      const { data: newItem, error } = await supabase
         .from('user_navigation_items')
-        .insert({ name, url, user_id: user.id, position: newPosition, is_enabled: true, icon, is_deletable: true, is_editable: true })
+        .insert(itemToInsert)
         .select()
         .single();
+
       if (error) throw error;
-      return data;
+
+      if (type === 'multi_embed') {
+        const { error: updateError } = await supabase
+          .from('user_navigation_items')
+          .update({ url: `/custom-page/${newItem.id}` })
+          .eq('id', newItem.id);
+        if (updateError) throw updateError;
+        newItem.url = `/custom-page/${newItem.id}`;
+      }
+      
+      return newItem;
     },
     onSuccess: (newItem) => {
       queryClient.setQueryData(queryKey, (old: NavItem[] | undefined) => [...(old || []), newItem]);
       setNewItemName("");
       setNewItemContent("");
       setNewItemIcon(undefined);
+      setNewItemType('url_embed');
       toast.success("Navigation page added");
     },
     onError: (error) => {
@@ -194,8 +213,16 @@ const NavigationSettingsPage = () => {
   });
 
   const handleAddItem = () => {
-    if (newItemName.trim() && newItemContent.trim()) {
-      addItemMutation.mutate({ name: newItemName.trim(), url: newItemContent.trim(), icon: newItemIcon });
+    const isUrlEmbedValid = newItemType === 'url_embed' && newItemContent.trim();
+    const isMultiEmbedValid = newItemType === 'multi_embed';
+    
+    if (newItemName.trim() && (isUrlEmbedValid || isMultiEmbedValid)) {
+      addItemMutation.mutate({ 
+        name: newItemName.trim(), 
+        url: newItemContent.trim(), 
+        icon: newItemIcon,
+        type: newItemType
+      });
     }
   };
 
@@ -310,15 +337,26 @@ const NavigationSettingsPage = () => {
         <Card>
           <CardHeader><CardTitle>Add New Custom Page</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            <div className="grid gap-2"><Label htmlFor="type">Page Type</Label>
+              <Select value={newItemType} onValueChange={(value: 'url_embed' | 'multi_embed') => setNewItemType(value)}>
+                <SelectTrigger><SelectValue placeholder="Select page type" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="url_embed">URL / Embed Code</SelectItem>
+                  <SelectItem value="multi_embed">Multi Embed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid gap-2"><Label htmlFor="icon">Icon</Label><IconPicker value={newItemIcon} onChange={setNewItemIcon} /></div>
             <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" /></div>
-            <div className="grid gap-2">
-              <Label htmlFor="url">URL or Embed Code</Label>
-              <Textarea id="url" value={newItemContent} onChange={(e) => setNewItemContent(e.target.value)} placeholder="https://example.com or <iframe ...></iframe>" />
-            </div>
+            {newItemType === 'url_embed' && (
+              <div className="grid gap-2">
+                <Label htmlFor="url">URL or Embed Code</Label>
+                <Textarea id="url" value={newItemContent} onChange={(e) => setNewItemContent(e.target.value)} placeholder="https://example.com or <iframe ...></iframe>" />
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button onClick={handleAddItem} disabled={!newItemName.trim() || !newItemContent.trim() || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
+            <Button onClick={handleAddItem} disabled={!newItemName.trim() || (newItemType === 'url_embed' && !newItemContent.trim()) || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
             <Button variant="outline" onClick={() => { setEditingFolder(null); setIsFolderFormOpen(true); }}><FolderPlus className="mr-2 h-4 w-4" /> Add Folder</Button>
           </CardFooter>
         </Card>
