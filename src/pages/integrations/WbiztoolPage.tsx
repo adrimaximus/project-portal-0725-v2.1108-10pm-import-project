@@ -12,6 +12,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
+const formatPhoneNumber = (phone: string): string => {
+  const trimmedPhone = phone.trim();
+  if (trimmedPhone.startsWith('+62')) {
+    return '62' + trimmedPhone.substring(3);
+  }
+  if (trimmedPhone.startsWith('0')) {
+    return '62' + trimmedPhone.substring(1);
+  }
+  return trimmedPhone;
+};
+
 const WbiztoolPage = () => {
   const [clientId, setClientId] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -84,8 +95,9 @@ const WbiztoolPage = () => {
     }
     setIsSendingTest(true);
     try {
+      const formattedPhone = formatPhoneNumber(testPhone);
       const { data, error } = await supabase.functions.invoke('send-wbiztool-message', {
-        body: { phone: testPhone, message: testMessage },
+        body: { phone: formattedPhone, message: testMessage },
       });
       if (error) throw error;
       toast.success("Test message sent successfully!", { description: data.message });

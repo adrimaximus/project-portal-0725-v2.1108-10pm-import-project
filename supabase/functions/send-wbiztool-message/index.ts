@@ -8,6 +8,17 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const formatPhoneNumber = (phone) => {
+  const trimmedPhone = phone.trim();
+  if (trimmedPhone.startsWith('+62')) {
+    return '62' + trimmedPhone.substring(3);
+  }
+  if (trimmedPhone.startsWith('0')) {
+    return '62' + trimmedPhone.substring(1);
+  }
+  return trimmedPhone;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -29,6 +40,8 @@ serve(async (req) => {
     if (!phone || !message) {
       throw new Error("Phone number and message are required.");
     }
+    
+    const formattedPhone = formatPhoneNumber(phone);
 
     // 3. Retrieve credentials using admin client
     const supabaseAdmin = createClient(
@@ -62,7 +75,7 @@ serve(async (req) => {
         'X-Api-Key': apiKey,
       },
       body: JSON.stringify({
-        phone: phone,
+        phone: formattedPhone,
         message: message,
       }),
     });
