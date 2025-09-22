@@ -8,7 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
 };
 
-// This function now validates credentials by making a test call to the WBIZTOOL API.
 const validateCredentials = async (clientId, apiKey) => {
   if (!clientId || !apiKey) {
     throw new Error("Invalid credentials format.");
@@ -21,8 +20,6 @@ const validateCredentials = async (clientId, apiKey) => {
   const whatsappClientId = parseInt(whatsappClientIdStr, 10);
 
   try {
-    // We make a test call. We expect an error about missing parameters if auth is successful,
-    // and a 401/403 if auth fails.
     const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
       method: 'POST',
       headers: {
@@ -31,35 +28,32 @@ const validateCredentials = async (clientId, apiKey) => {
         'X-Api-Key': apiKey,
       },
       body: JSON.stringify({
+        client_id: parseInt(clientId, 10),
+        api_key: apiKey,
         whatsapp_client: whatsappClientId,
-        // Sending an empty body for other params to trigger a 400 on success
       }),
     });
 
-    // If status is 401 Unauthorized or 403 Forbidden, the credentials are bad.
     if (response.status === 401 || response.status === 403) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || "The provided WBIZTOOL credentials are invalid.");
     }
 
-    // Any other status (like 400 for a bad request due to missing phone/message) implies successful authentication.
     if (response.status === 400) {
         return true;
     }
 
-    // If the response is OK for some reason (e.g. API changed), it's also a success.
     if (response.ok) {
         return true;
     }
 
-    // Any other error status is a failure.
     const errorData = await response.json().catch(() => ({}));
     throw new Error(`WBIZTOOL API returned an unexpected status: ${response.status}. ${errorData.message || ''}`);
 
   } catch (error) {
     console.error("WBIZTOOL API validation failed:", error.message);
     if (error.message.includes("invalid")) {
-        throw error; // Re-throw specific auth errors
+        throw error;
     }
     throw new Error("Could not connect to WBIZTOOL to validate credentials. Please check your network and try again.");
   }

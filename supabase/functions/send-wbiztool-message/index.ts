@@ -71,7 +71,6 @@ serve(async (req) => {
     const clientId = clientData.value;
     const apiKey = keyData.value;
 
-    // NEW: Get WhatsApp Client ID from environment variables
     const whatsappClientIdStr = Deno.env.get('WBIZTOOL_WHATSAPP_CLIENT_ID');
     if (!whatsappClientIdStr) {
       throw new Error("WBIZTOOL WhatsApp Client ID is not configured on the server.");
@@ -90,9 +89,11 @@ serve(async (req) => {
         'X-Api-Key': apiKey,
       },
       body: JSON.stringify({
+        client_id: parseInt(clientId, 10),
+        api_key: apiKey,
         phone: formattedPhone,
         message: message,
-        whatsapp_client: whatsappClientId, // NEW: Add whatsapp_client to the body
+        whatsapp_client: whatsappClientId,
       }),
     });
 
