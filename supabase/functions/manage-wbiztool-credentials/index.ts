@@ -8,14 +8,41 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
 };
 
-// A mock validation function. In a real scenario, this would make an API call to WBIZTOOL.
+// This function now validates credentials by making a test call to the WBIZTOOL API.
 const validateCredentials = async (clientId, apiKey) => {
   if (!clientId || !apiKey) {
     throw new Error("Invalid credentials format.");
   }
-  // Here you would typically make a test API call to WBIZTOOL
-  // For now, we'll just check if they look like non-empty strings.
-  return true;
+  
+  try {
+    // We make a test call. We expect an error about missing parameters if auth is successful,
+    // and a 401/403 if auth fails.
+    const response = await fetch("https://wbiztool.com/api/v1/send_msg/", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-ID': clientId,
+        'X-Api-Key': apiKey,
+      },
+      body: JSON.stringify({}), // Sending an empty body for a validation check
+    });
+
+    // If status is 401 Unauthorized or 403 Forbidden, the credentials are bad.
+    if (response.status === 401 || response.status === 403) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "The provided WBIZTOOL credentials are invalid.");
+    }
+
+    // Any other status (like 400 for a bad request due to missing params) implies successful authentication.
+    return true;
+
+  } catch (error) {
+    console.error("WBIZTOOL API validation failed:", error.message);
+    if (error.message.includes("invalid")) {
+        throw error; // Re-throw specific auth errors
+    }
+    throw new Error("Could not connect to WBIZTOOL to validate credentials. Please check your network and try again.");
+  }
 };
 
 serve(async (req) => {
