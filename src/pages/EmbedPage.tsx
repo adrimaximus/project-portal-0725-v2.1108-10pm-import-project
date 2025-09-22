@@ -4,17 +4,17 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeProvider';
 import { useMemo } from 'react';
+import EmbedRenderer from '@/components/EmbedRenderer';
 
 const EmbedPage = () => {
   const [searchParams] = useSearchParams();
   const { theme } = useTheme();
   const content = searchParams.get('url');
-  const title = searchParams.get('title') || 'Custom Page';
-
-  const decodedContent = useMemo(() => content ? decodeURIComponent(content) : null, [content]);
 
   const finalContent = useMemo(() => {
-    if (!decodedContent) return null;
+    if (!content) return null;
+
+    const decodedContent = decodeURIComponent(content);
 
     const isIframe = decodedContent.trim().startsWith('<iframe');
     const isGoogleCalendar = decodedContent.includes('calendar.google.com/calendar/embed');
@@ -57,7 +57,7 @@ const EmbedPage = () => {
     }
     return urlString;
 
-  }, [decodedContent, theme]);
+  }, [content, theme]);
 
   if (!finalContent) {
     return (
@@ -71,27 +71,9 @@ const EmbedPage = () => {
     );
   }
 
-  const isFinalContentIframe = finalContent.trim().startsWith('<iframe');
-
-  if (isFinalContentIframe) {
-    return (
-      <PortalLayout noPadding disableMainScroll>
-        <div
-          className="w-full h-full"
-          dangerouslySetInnerHTML={{ __html: finalContent }}
-        />
-      </PortalLayout>
-    );
-  }
-
   return (
     <PortalLayout noPadding disableMainScroll>
-      <iframe
-        src={finalContent}
-        className="w-full h-full border-0"
-        title={title}
-        sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts"
-      />
+      <EmbedRenderer content={finalContent} />
     </PortalLayout>
   );
 };
