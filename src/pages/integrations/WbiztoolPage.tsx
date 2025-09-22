@@ -87,7 +87,7 @@ const WbiztoolPage = () => {
     try {
       const formattedPhone = formatPhoneNumberForApi(testPhone);
       const { data, error } = await supabase.functions.invoke('send-wbiztool-message', {
-        body: JSON.stringify({ phone: formattedPhone, message: testMessage }),
+        body: { phone: formattedPhone, message: testMessage },
       });
       if (error) throw error;
       toast.success("Test message sent successfully!", { description: data.message });
