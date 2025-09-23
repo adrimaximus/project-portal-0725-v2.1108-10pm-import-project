@@ -114,7 +114,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setOriginalSession(null);
       }
       
-      // Set loading to false on auth events as well, in case the initial check is slow.
       setLoading(false);
     });
 

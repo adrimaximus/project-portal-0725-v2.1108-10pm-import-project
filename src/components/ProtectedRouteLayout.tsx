@@ -8,7 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from "sonner";
 
 const ProtectedRouteLayout = () => {
-  const { session, user, loading, hasPermission } = useAuth();
+  const { session, user, loading, hasPermission, logout } = useAuth();
   const location = useLocation();
   const queryClient = useQueryClient();
   const navSyncAttempted = useRef(false);
@@ -96,6 +96,14 @@ const ProtectedRouteLayout = () => {
       syncDefaultNavItems();
     }
   }, [user, loading, queryClient, hasPermission]);
+
+  useEffect(() => {
+    if (!loading && session && !user) {
+      console.error("Authentication error: Session exists but user profile could not be loaded. Logging out.");
+      toast.error("Could not load your profile. Please log in again.");
+      logout();
+    }
+  }, [loading, session, user, logout]);
 
   if (loading) {
     return <LoadingScreen />;
