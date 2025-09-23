@@ -32,6 +32,7 @@ import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { Input } from "@/components/ui/input";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import ProjectDiagnostics from "@/components/projects/ProjectDiagnostics";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -309,6 +310,7 @@ const ProjectsPage = () => {
               <div className="flex items-center justify-between">
                 <CardTitle>All Projects</CardTitle>
                 <div className="hidden sm:flex items-center gap-2">
+                  <ProjectDiagnostics />
                   <Button onClick={() => navigate('/request')}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     New Project
@@ -338,6 +340,7 @@ const ProjectsPage = () => {
                     New Task
                   </Button>
                 )}
+                <ProjectDiagnostics asIcon />
                 <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
                     <span className="sr-only">Refresh data</span>
                     <RefreshCw className="h-4 w-4" />
