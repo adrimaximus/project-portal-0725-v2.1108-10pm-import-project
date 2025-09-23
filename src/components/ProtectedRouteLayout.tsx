@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { defaultNavItems } from '@/lib/defaultNavItems';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from "sonner";
+import ImpersonationBanner from "./ImpersonationBanner";
 
 const ProtectedRouteLayout = () => {
   const { session, user, loading, hasPermission } = useAuth();
@@ -105,7 +106,12 @@ const ProtectedRouteLayout = () => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <ImpersonationBanner />
+    </>
+  );
 };
 
 export default ProtectedRouteLayout;
