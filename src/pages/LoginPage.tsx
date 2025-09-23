@@ -47,14 +47,15 @@ const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) {
         toast.error(error.message);
+      } else if (data.session) {
+        navigate('/dashboard', { replace: true });
       }
-      // onAuthStateChange in AuthContext will handle navigation
     } catch (err: any) {
       toast.error(err.message || "An unexpected error occurred during login.");
     } finally {
