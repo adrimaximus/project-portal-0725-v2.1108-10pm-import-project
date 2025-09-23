@@ -85,26 +85,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchUserProfile]);
 
   useEffect(() => {
-    const initializeSession = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
-        if (currentSession) {
-          const profile = await fetchUserProfile(currentSession.user);
-          setUser(profile);
-        } else {
-          setUser(null);
-        }
-      } catch (e) {
-        console.error("Error initializing session:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeSession();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (_event === 'SIGNED_IN' && newSession) {
+        await supabase.auth.setSession(newSession);
+      }
+      
       setSession(newSession);
       const profile = await fetchUserProfile(newSession?.user ?? null);
       setUser(profile);
@@ -114,6 +99,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setOriginalSession(null);
       }
       
+      setLoading(false);
+    });
+
+    // Initial check
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      if (!session) { // Only set initial state if not already handled by onAuthStateChange
+        setSession(currentSession);
+        if (currentSession) {
+          const profile = await fetchUserProfile(currentSession.user);
+          setUser(profile);
+        } else {
+          setUser(null);
+        }
+      }
       setLoading(false);
     });
 
