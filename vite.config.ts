@@ -7,11 +7,6 @@ export default defineConfig(() => ({
   server: {
     host: "::",
     port: 32100,
-    headers: {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-    }
   },
   plugins: [dyadComponentTagger(), react()],
   resolve: {

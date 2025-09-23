@@ -167,6 +167,7 @@ async function createKbArticle({ title, content_html, supabaseAdmin, user }) {
         p_header_image_url: null,
         p_tags: null,
         p_custom_tags: null,
+        p_user_id: user.id,
       })
       .select('id, slug')
       .single();

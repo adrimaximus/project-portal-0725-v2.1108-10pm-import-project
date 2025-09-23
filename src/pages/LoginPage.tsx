@@ -46,48 +46,37 @@ const LoginPage = () => {
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) {
-        toast.error(error.message);
-      } else if (data.session) {
-        navigate('/dashboard', { replace: true });
-      }
-    } catch (err: any) {
-      toast.error(err.message || "An unexpected error occurred during login.");
-    } finally {
-      setLoading(false);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) {
+      toast.error(error.message);
     }
+    // onAuthStateChange in AuthContext will handle navigation
+    setLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignUpLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: signUpEmail,
-        password: signUpPassword,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          },
+    const { data, error } = await supabase.auth.signUp({
+      email: signUpEmail,
+      password: signUpPassword,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
         },
-      });
+      },
+    });
 
-      if (error) {
-        toast.error(error.message);
-      } else if (data.user) {
-        toast.success("Please check your email to verify your account.");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "An unexpected error occurred during sign up.");
-    } finally {
-      setSignUpLoading(false);
+    if (error) {
+      toast.error(error.message);
+    } else if (data.user) {
+      toast.success("Please check your email to verify your account.");
     }
+    setSignUpLoading(false);
   };
 
   return (
