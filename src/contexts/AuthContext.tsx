@@ -47,62 +47,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
 
-    let { data, error } = await supabase
-      .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
-      .single<UserProfileData>();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which we handle.
-      console.error("Error fetching user profile:", error);
-      return null;
-    }
-
-    // If no profile exists, create one. This handles users who signed up before the trigger was in place.
-    if (!data) {
-      console.warn(`No profile found for user ${supabaseUser.id}. Creating one now.`);
-      const { error: insertError } = await supabase.from('profiles').insert({
-        id: supabaseUser.id,
-        email: supabaseUser.email,
-        first_name: supabaseUser.user_metadata.first_name || supabaseUser.user_metadata.full_name?.split(' ')[0] || supabaseUser.email?.split('@')[0],
-        last_name: supabaseUser.user_metadata.last_name || supabaseUser.user_metadata.full_name?.split(' ').slice(1).join(' ') || '',
-        avatar_url: supabaseUser.user_metadata.avatar_url,
-      });
-
-      if (insertError) {
-        console.error("Failed to create missing user profile:", insertError);
-        toast.error("Failed to initialize your user profile. Please contact support.");
-        return null;
-      }
-
-      // Re-fetch the profile after creation to get all the joined data
-      const { data: refetchedData, error: refetchError } = await supabase
+    try {
+      let { data, error } = await supabase
         .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
         .single<UserProfileData>();
-      
-      if (refetchError || !refetchedData) {
-        console.error("Failed to refetch profile after creation:", refetchError);
-        return null;
-      }
-      data = refetchedData;
-    }
-    
-    const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-    localStorage.setItem('lastUserName', fullName || data.email);
 
-    return {
-      id: data.id,
-      name: fullName || data.email,
-      email: data.email,
-      avatar_url: getAvatarUrl(data.avatar_url, data.id),
-      initials: getInitials(fullName, data.email),
-      first_name: data.first_name,
-      last_name: data.last_name,
-      role: data.role,
-      status: data.status,
-      sidebar_order: data.sidebar_order,
-      updated_at: data.updated_at,
-      permissions: data.permissions || [],
-      people_kanban_settings: data.people_kanban_settings,
-    };
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (!data) {
+        console.warn(`No profile found for user ${supabaseUser.id}. Creating one now.`);
+        const { error: insertError } = await supabase.from('profiles').insert({
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          first_name: supabaseUser.user_metadata.first_name || supabaseUser.user_metadata.full_name?.split(' ')[0] || supabaseUser.email?.split('@')[0],
+          last_name: supabaseUser.user_metadata.last_name || supabaseUser.user_metadata.full_name?.split(' ').slice(1).join(' ') || '',
+          avatar_url: supabaseUser.user_metadata.avatar_url,
+        });
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        const { data: refetchedData, error: refetchError } = await supabase
+          .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
+          .single<UserProfileData>();
+        
+        if (refetchError || !refetchedData) {
+          throw refetchError || new Error("Failed to refetch profile after creation.");
+        }
+        data = refetchedData;
+      }
+      
+      const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+      localStorage.setItem('lastUserName', fullName || data.email);
+
+      return {
+        id: data.id,
+        name: fullName || data.email,
+        email: data.email,
+        avatar_url: getAvatarUrl(data.avatar_url, data.id),
+        initials: getInitials(fullName, data.email),
+        first_name: data.first_name,
+        last_name: data.last_name,
+        role: data.role,
+        status: data.status,
+        sidebar_order: data.sidebar_order,
+        updated_at: data.updated_at,
+        permissions: data.permissions || [],
+        people_kanban_settings: data.people_kanban_settings,
+      };
+    } catch (error: any) {
+      console.error("Critical error fetching user profile:", error);
+      toast.error("There was a problem loading your profile. Logging you out for security.", { description: error.message });
+      await supabase.auth.signOut();
+      return null;
+    }
   }, []);
 
   const refreshUser = useCallback(async () => {
