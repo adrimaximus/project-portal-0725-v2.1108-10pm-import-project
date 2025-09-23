@@ -85,7 +85,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchUserProfile]);
 
   useEffect(() => {
-    setLoading(true);
+    const initializeSession = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
+        if (currentSession) {
+          const profile = await fetchUserProfile(currentSession.user);
+          setUser(profile);
+        } else {
+          setUser(null);
+        }
+      } catch (e) {
+        console.error("Error initializing session:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
       const profile = await fetchUserProfile(newSession?.user ?? null);
@@ -96,6 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setOriginalSession(null);
       }
       
+      // Set loading to false on auth events as well, in case the initial check is slow.
       setLoading(false);
     });
 
