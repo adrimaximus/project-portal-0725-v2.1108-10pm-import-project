@@ -47,13 +47,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
       .single<UserProfileData>();
 
-    if (error || !data) {
-      console.error("Error fetching user profile with permissions:", error);
+    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which we handle.
+      console.error("Error fetching user profile:", error);
       return null;
+    }
+
+    // If no profile exists, create one. This handles users who signed up before the trigger was in place.
+    if (!data) {
+      console.warn(`No profile found for user ${supabaseUser.id}. Creating one now.`);
+      const { error: insertError } = await supabase.from('profiles').insert({
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        first_name: supabaseUser.user_metadata.first_name || supabaseUser.user_metadata.full_name?.split(' ')[0] || supabaseUser.email?.split('@')[0],
+        last_name: supabaseUser.user_metadata.last_name || supabaseUser.user_metadata.full_name?.split(' ').slice(1).join(' ') || '',
+        avatar_url: supabaseUser.user_metadata.avatar_url,
+      });
+
+      if (insertError) {
+        console.error("Failed to create missing user profile:", insertError);
+        toast.error("Failed to initialize your user profile. Please contact support.");
+        return null;
+      }
+
+      // Re-fetch the profile after creation to get all the joined data
+      const { data: refetchedData, error: refetchError } = await supabase
+        .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
+        .single<UserProfileData>();
+      
+      if (refetchError || !refetchedData) {
+        console.error("Failed to refetch profile after creation:", refetchError);
+        return null;
+      }
+      data = refetchedData;
     }
     
     const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
