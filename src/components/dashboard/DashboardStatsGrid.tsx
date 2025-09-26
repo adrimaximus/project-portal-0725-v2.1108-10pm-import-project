@@ -27,9 +27,9 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
         <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
         <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
       </Avatar>
-      <div>
-        <div className="text-base sm:text-lg font-bold leading-tight">{user.name}</div>
-        <p className="text-xs text-muted-foreground">
+      <div className="min-w-0">
+        <div className="text-base sm:text-lg font-bold leading-tight break-words">{user.name}</div>
+        <p className="text-xs text-muted-foreground break-words">
           {metricType === 'quantity'
             ? `${metric} project${metric === 1 ? '' : 's'}`
             : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(metric)}`}
@@ -158,9 +158,9 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                 const metric = viewMode === 'quantity' ? count : value;
                 if (metric === 0) return null;
                 return (
-                  <div key={option.value} className="flex justify-between">
-                    <span>{option.label}</span>
-                    <span className="font-semibold">
+                  <div key={option.value} className="flex items-start justify-between gap-2">
+                    <span className="flex-shrink-0">{option.label}</span>
+                    <span className="font-semibold text-right break-all">
                       {viewMode === 'quantity' ? count : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}`}
                     </span>
                   </div>
@@ -180,9 +180,9 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
                 const metric = viewMode === 'quantity' ? count : value;
                 if (metric === 0) return null;
                 return (
-                  <div key={option.value} className="flex justify-between">
-                    <span>{option.label}</span>
-                    <span className="font-semibold">
+                  <div key={option.value} className="flex items-start justify-between gap-2">
+                    <span className="flex-shrink-0">{option.label}</span>
+                    <span className="font-semibold text-right break-all">
                       {viewMode === 'quantity' ? count : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}`}
                     </span>
                   </div>
