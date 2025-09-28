@@ -47,9 +47,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
       .single<UserProfileData>();
+
+    // If profile doesn't exist (PGRST116), create it. This handles users created before the trigger existed.
+    if (error && error.code === 'PGRST116') {
+      console.warn("User profile not found, creating one...");
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          first_name: supabaseUser.user_metadata.first_name || '',
+          last_name: supabaseUser.user_metadata.last_name || '',
+          avatar_url: supabaseUser.user_metadata.avatar_url,
+          role: 'member', // default role
+          status: 'active',
+        });
+
+      if (insertError) {
+        console.error("Error creating user profile:", insertError);
+        toast.error("Failed to create user profile on first login.");
+        return null;
+      }
+      
+      // Now that it's created, fetch it again with permissions
+      const { data: refetchedData, error: refetchError } = await supabase
+        .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
+        .single<UserProfileData>();
+      
+      if (refetchError || !refetchedData) {
+        console.error("Error refetching newly created profile:", refetchError);
+        return null;
+      }
+      data = refetchedData;
+      error = null; // Clear the original error
+    }
 
     if (error || !data) {
       console.error("Error fetching user profile with permissions:", error);
