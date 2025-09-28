@@ -12,7 +12,7 @@ import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import TaskAttachmentList from './TaskAttachmentList';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { TaskAttachment } from '@/types/task';
+import { TaskAttachment } from "@/types/task";
 
 interface TasksKanbanCardProps {
   task: Task;
