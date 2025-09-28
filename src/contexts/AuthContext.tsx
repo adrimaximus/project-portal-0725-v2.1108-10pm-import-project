@@ -54,6 +54,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single<UserProfileData>();
       if (error || !data) {
         console.error("Error fetching user profile:", error);
+        // If profile doesn't exist, it might be a new user, sign them out to be safe
+        if (error?.code === 'PGRST116') {
+          await supabase.auth.signOut();
+        }
         return null;
       }
       const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
@@ -86,38 +90,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchUserProfile]);
 
   useEffect(() => {
-    const initializeSession = async () => {
+    setLoading(true);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        await fetchUserProfile(session.user);
+      }
+    }).catch((err) => {
+      console.error("Error getting initial session:", err);
+    }).finally(() => {
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
-        if (currentSession?.user) {
-          const profile = await fetchUserProfile(currentSession.user);
-          setUser(profile);
+        switch (event) {
+          case 'SIGNED_IN':
+          case 'TOKEN_REFRESHED':
+          case 'USER_UPDATED':
+            setSession(session);
+            if (session?.user) {
+              const profile = await fetchUserProfile(session.user);
+              setUser(profile);
+            }
+            break;
+          case 'SIGNED_OUT':
+            setSession(null);
+            setUser(null);
+            setIsImpersonating(false);
+            setOriginalSession(null);
+            SafeLocalStorage.removeItem('lastUserName');
+            if (location.pathname !== '/login') {
+              navigate('/login', { replace: true });
+            }
+            break;
         }
       } catch (error) {
-        console.error("Error initializing session:", error);
-        // If session is corrupted, sign out to clear it
-        await supabase.auth.signOut();
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      setSession(newSession);
-      if (newSession?.user) {
-        const profile = await fetchUserProfile(newSession.user);
-        setUser(profile);
-      } else {
-        setUser(null);
-        setIsImpersonating(false);
-        setOriginalSession(null);
-        SafeLocalStorage.removeItem('lastUserName');
-        if (location.pathname !== '/login') {
-          navigate('/login', { replace: true });
-        }
+        console.error("Error in onAuthStateChange handler:", error);
+        toast.error("An authentication error occurred. Please try logging in again.");
+        await logout();
       }
     });
 
