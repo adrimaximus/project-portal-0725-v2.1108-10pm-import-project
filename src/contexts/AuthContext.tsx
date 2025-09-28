@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { User, Collaborator } from '@/types';
@@ -156,7 +156,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await supabase.auth.signOut();
       SafeLocalStorage.clear();
@@ -174,15 +174,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setOriginalSession(null);
       navigate('/login', { replace: true });
     }
-  };
+  }, [navigate]);
 
-  const hasPermission = (permission: string) => {
+  const hasPermission = useCallback((permission: string) => {
     if (!user || !user.permissions) return false;
     if (user.role === 'master admin') return true;
     return user.permissions.includes(permission);
-  };
+  }, [user]);
 
-  const startImpersonation = async (targetUser: User) => {
+  const refreshUser = useCallback(async () => {
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (currentSession?.user) {
+        const profile = await fetchUserProfile(currentSession.user);
+        setUser(profile);
+      }
+    } catch (error) {
+      console.error("Error refreshing user:", error);
+    }
+  }, [fetchUserProfile]);
+
+  const startImpersonation = useCallback(async (targetUser: User) => {
     try {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       if (!currentSession) { 
@@ -208,9 +220,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       toast.error("Impersonation failed", { description: error.message });
     }
-  };
+  }, [navigate]);
 
-  const stopImpersonation = async () => {
+  const stopImpersonation = useCallback(async () => {
     try {
       if (!originalSession) { 
         toast.error("No original session found."); 
@@ -229,21 +241,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       toast.error("Failed to stop impersonation", { description: error.message });
     }
-  };
+  }, [originalSession, logout, navigate]);
 
-  const refreshUser = useCallback(async () => {
-    try {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (currentSession?.user) {
-        const profile = await fetchUserProfile(currentSession.user);
-        setUser(profile);
-      }
-    } catch (error) {
-      console.error("Error refreshing user:", error);
-    }
-  }, [fetchUserProfile]);
-
-  const value = { 
+  const value = useMemo(() => ({ 
     session, 
     user, 
     loading, 
@@ -254,7 +254,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isImpersonating, 
     startImpersonation, 
     stopImpersonation 
-  };
+  }), [session, user, loading, logout, hasPermission, refreshUser, onlineCollaborators, isImpersonating, startImpersonation, stopImpersonation]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
@@ -262,7 +262,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthContext');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
