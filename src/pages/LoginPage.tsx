@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Package, Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon, RefreshCw } from 'lucide-react';
+import { Package, Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon, RefreshCw, AlertTriangle } from 'lucide-react';
 import MagicLinkForm from '@/components/MagicLinkForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ const LoginPage = () => {
   const [showDebugger, setShowDebugger] = useState(false);
   const [showAuthTest, setShowAuthTest] = useState(false);
   const [forceRefreshCount, setForceRefreshCount] = useState(0);
+  const [isArcBrowser, setIsArcBrowser] = useState(false);
 
   // Login state
   const [email, setEmail] = useState('');
@@ -41,6 +42,9 @@ const LoginPage = () => {
     if (storedName) {
       setLastUserName(storedName);
     }
+    
+    // Detect Arc browser
+    setIsArcBrowser(navigator.userAgent.includes('Arc'));
   }, []);
 
   // Force refresh session check
@@ -58,13 +62,38 @@ const LoginPage = () => {
       
       if (currentSession?.user) {
         console.log('Session found after force refresh, redirecting...');
-        navigate('/dashboard', { replace: true });
+        // Force hard redirect for Arc browser
+        if (isArcBrowser) {
+          window.location.href = '/dashboard';
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       } else {
         toast.info('No active session found');
       }
     } catch (error: any) {
       console.error('Force refresh error:', error);
       toast.error('Failed to refresh session');
+    }
+  };
+
+  // Arc browser specific fix
+  const handleArcBrowserFix = async () => {
+    console.log('Applying Arc browser fix...');
+    
+    try {
+      // Clear any cached auth state
+      await supabase.auth.signOut();
+      
+      // Clear browser storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Force reload
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Arc browser fix error:', error);
+      toast.error('Failed to apply Arc browser fix');
     }
   };
 
@@ -75,12 +104,14 @@ const LoginPage = () => {
 
     if (session) {
       console.log('LoginPage: Session found, redirecting to dashboard');
-      // Add a small delay to ensure state is fully updated
-      setTimeout(() => {
+      // For Arc browser, use hard redirect
+      if (isArcBrowser) {
+        window.location.href = '/dashboard';
+      } else {
         navigate('/dashboard', { replace: true });
-      }, 100);
+      }
     }
-  }, [session, authContextLoading, navigate]);
+  }, [session, authContextLoading, navigate, isArcBrowser]);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,13 +159,20 @@ const LoginPage = () => {
           additional_data: {
             user_id: data.user.id,
             login_method: 'password',
+            browser: isArcBrowser ? 'Arc' : 'Other',
           },
         });
         
-        // Force redirect to dashboard immediately with a delay
-        setTimeout(() => {
-          navigate('/dashboard', { replace: true });
-        }, 500);
+        // Force redirect to dashboard - use hard redirect for Arc browser
+        if (isArcBrowser) {
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 500);
+        } else {
+          setTimeout(() => {
+            navigate('/dashboard', { replace: true });
+          }, 500);
+        }
       } else {
         console.error('Login returned no error but no user/session');
         setDebugInfo('Login returned no error but no user/session data');
@@ -200,9 +238,11 @@ const LoginPage = () => {
         if (data.session) {
           toast.success("Account created successfully!");
           // Force redirect to dashboard for successful signup
-          setTimeout(() => {
+          if (isArcBrowser) {
+            window.location.href = '/dashboard';
+          } else {
             navigate('/dashboard', { replace: true });
-          }, 500);
+          }
         } else {
           toast.success("Please check your email to verify your account.");
         }
@@ -217,6 +257,7 @@ const LoginPage = () => {
             first_name: firstName,
             last_name: lastName,
             needs_verification: !data.session,
+            browser: isArcBrowser ? 'Arc' : 'Other',
           },
         });
       }
@@ -292,6 +333,17 @@ const LoginPage = () => {
               Welcome Back{lastUserName ? `, ${lastUserName}` : ''}!👋
             </h1>
             <p className="text-white/80 mb-8">Sign in or create an account to access your portal.</p>
+            
+            {/* Arc Browser Warning */}
+            {isArcBrowser && (
+              <div className="mb-4 p-3 bg-orange-500/20 rounded text-orange-200 text-xs">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="font-semibold">Arc Browser Detected</span>
+                </div>
+                <p className="mt-1">Arc browser may block authentication cookies. If login fails, try the Arc Browser Fix below.</p>
+              </div>
+            )}
             
             {/* Debug info with force refresh */}
             <div className="mb-4 p-3 bg-yellow-500/20 rounded text-yellow-200 text-xs">
@@ -424,7 +476,13 @@ const LoginPage = () => {
                   variant="default" 
                   size="sm" 
                   className="w-full bg-green-600 hover:bg-green-700"
-                  onClick={() => navigate('/dashboard', { replace: true })}
+                  onClick={() => {
+                    if (isArcBrowser) {
+                      window.location.href = '/dashboard';
+                    } else {
+                      navigate('/dashboard', { replace: true });
+                    }
+                  }}
                 >
                   Go to Dashboard (Session Active)
                 </Button>
@@ -438,6 +496,17 @@ const LoginPage = () => {
                 <RefreshCw className="mr-2 h-3 w-3" />
                 Force Refresh Session
               </Button>
+              {isArcBrowser && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full text-orange-200 border-orange-200/50 hover:bg-orange-200/10"
+                  onClick={handleArcBrowserFix}
+                >
+                  <AlertTriangle className="mr-2 h-3 w-3" />
+                  Arc Browser Fix
+                </Button>
+              )}
               <Button 
                 variant="outline" 
                 size="sm" 

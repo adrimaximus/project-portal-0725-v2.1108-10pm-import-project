@@ -13,6 +13,7 @@ const ProtectedRouteLayout = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const navSyncAttempted = useRef(false);
+  const sessionCheckAttempted = useRef(false);
 
   useEffect(() => {
     // Debug logging
@@ -29,6 +30,38 @@ const ProtectedRouteLayout = () => {
 
     return () => clearTimeout(timeout);
   }, [loading, session, user]);
+
+  // Additional session check for Arc browser compatibility
+  useEffect(() => {
+    const checkSessionManually = async () => {
+      if (sessionCheckAttempted.current || loading || session) return;
+      
+      sessionCheckAttempted.current = true;
+      console.log('ProtectedRoute: Manually checking session for Arc browser compatibility...');
+      
+      try {
+        const { data: { session: manualSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Manual session check error:', error);
+          return;
+        }
+        
+        if (manualSession && !session) {
+          console.log('Found session manually that AuthContext missed - this might be an Arc browser issue');
+          toast.info('Detected authentication session, refreshing...');
+          window.location.reload();
+        }
+      } catch (error: any) {
+        console.error('Manual session check failed:', error);
+      }
+    };
+
+    // Only run this check if we're not loading and don't have a session
+    if (!loading && !session) {
+      setTimeout(checkSessionManually, 1000);
+    }
+  }, [loading, session]);
 
   useEffect(() => {
     const syncDefaultNavItems = async () => {
