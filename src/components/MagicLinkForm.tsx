@@ -27,17 +27,26 @@ const MagicLinkForm = () => {
     }
     setLoading(true);
     setSubmitted(false);
+    
     try {
+      // Get the current origin for redirect
+      const redirectTo = `${window.location.origin}/auth/callback`;
+      console.log('Magic link redirect URL:', redirectTo);
+      
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: redirectTo,
         },
       });
+      
       if (error) throw error;
+      
       setSubmitted(true);
       setCooldown(60); // 60 second cooldown
+      toast.success('Magic link sent! Check your email.');
     } catch (error: any) {
+      console.error('Magic link error:', error);
       toast.error(error.error_description || error.message);
     } finally {
       setLoading(false);
