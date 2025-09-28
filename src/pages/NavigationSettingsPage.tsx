@@ -206,7 +206,7 @@ const NavigationSettingsPage = () => {
       const { data: newItem, error } = await supabase
         .from('user_navigation_items')
         .insert(itemToInsert)
-        .select('*')
+        .select('id,url,position,slug')
         .single();
 
       if (error) throw error;
@@ -224,7 +224,7 @@ const NavigationSettingsPage = () => {
       return newItem;
     },
     onSuccess: (newItem) => {
-      queryClient.setQueryData(queryKey, (old: NavItem[] | undefined) => [...(old || []), newItem]);
+      queryClient.setQueryData(queryKey, (old: NavItem[] | undefined) => [...(old || []), newItem as NavItem]);
       setNewItemName("");
       setNewItemContent("");
       setNewItemIcon(undefined);
