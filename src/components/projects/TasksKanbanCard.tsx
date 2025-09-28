@@ -23,16 +23,12 @@ interface TasksKanbanCardProps {
 const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
-  const sortableStyle = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
   const priorityStyle = getPriorityStyles(task.priority);
 
   const combinedStyle = {
-    ...sortableStyle,
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
     borderLeftColor: priorityStyle.hex,
   };
 
