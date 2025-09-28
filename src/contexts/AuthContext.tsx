@@ -48,30 +48,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
-    try {
-      const { data, error } = await supabase
-        .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
-        .single<UserProfileData>();
-      if (error || !data) {
-        console.error("Error fetching user profile, signing out:", error);
-        await supabase.auth.signOut();
-        return null;
-      }
-      const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-      SafeLocalStorage.setItem('lastUserName', fullName || data.email);
-      return {
-        id: data.id, name: fullName || data.email, email: data.email,
-        avatar_url: getAvatarUrl(data.avatar_url, data.id),
-        initials: getInitials(fullName, data.email),
-        first_name: data.first_name, last_name: data.last_name,
-        role: data.role, status: data.status, sidebar_order: data.sidebar_order,
-        updated_at: data.updated_at, permissions: data.permissions || [],
-        people_kanban_settings: data.people_kanban_settings,
-      };
-    } catch (error) {
-      console.error("Critical error in fetchUserProfile:", error);
-      return null;
+
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 500; // 500ms
+
+    for (let i = 0; i < MAX_RETRIES; i++) {
+        try {
+            const { data, error } = await supabase
+                .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
+                .single<UserProfileData>();
+
+            if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which we want to retry
+                throw error;
+            }
+
+            if (data) {
+                const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+                SafeLocalStorage.setItem('lastUserName', fullName || data.email);
+                return {
+                    id: data.id, name: fullName || data.email, email: data.email,
+                    avatar_url: getAvatarUrl(data.avatar_url, data.id),
+                    initials: getInitials(fullName, data.email),
+                    first_name: data.first_name, last_name: data.last_name,
+                    role: data.role, status: data.status, sidebar_order: data.sidebar_order,
+                    updated_at: data.updated_at, permissions: data.permissions || [],
+                    people_kanban_settings: data.people_kanban_settings,
+                };
+            }
+
+            if (i < MAX_RETRIES - 1) {
+                console.log(`Profile not found for user ${supabaseUser.id}, retrying... (${i + 1}/${MAX_RETRIES})`);
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            }
+
+        } catch (error) {
+            console.error(`Critical error in fetchUserProfile (attempt ${i + 1}):`, error);
+            break;
+        }
     }
+
+    console.error("Failed to fetch user profile after multiple attempts, signing out.");
+    await supabase.auth.signOut();
+    return null;
   }, []);
 
   useEffect(() => {
