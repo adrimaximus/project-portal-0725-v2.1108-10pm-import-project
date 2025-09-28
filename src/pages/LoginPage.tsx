@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Package, Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon } from 'lucide-react';
+import { Package, Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon, RefreshCw } from 'lucide-react';
 import MagicLinkForm from '@/components/MagicLinkForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,10 +15,12 @@ import { logAuthEvent } from '@/lib/authLogger';
 const LoginPage = () => {
   const { session, loading: authContextLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [lastUserName, setLastUserName] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('');
   const [showDebugger, setShowDebugger] = useState(false);
   const [showAuthTest, setShowAuthTest] = useState(false);
+  const [forceRefreshCount, setForceRefreshCount] = useState(0);
 
   // Login state
   const [email, setEmail] = useState('');
@@ -41,6 +43,31 @@ const LoginPage = () => {
     }
   }, []);
 
+  // Force refresh session check
+  const handleForceRefresh = async () => {
+    setForceRefreshCount(prev => prev + 1);
+    console.log('Force refreshing session...');
+    
+    try {
+      const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+      console.log('Force refresh result:', { 
+        session: !!currentSession, 
+        error: error?.message,
+        userEmail: currentSession?.user?.email 
+      });
+      
+      if (currentSession?.user) {
+        console.log('Session found after force refresh, redirecting...');
+        navigate('/dashboard', { replace: true });
+      } else {
+        toast.info('No active session found');
+      }
+    } catch (error: any) {
+      console.error('Force refresh error:', error);
+      toast.error('Failed to refresh session');
+    }
+  };
+
   useEffect(() => {
     console.log('LoginPage: Auth context loading:', authContextLoading, 'Session:', !!session);
     
@@ -48,7 +75,10 @@ const LoginPage = () => {
 
     if (session) {
       console.log('LoginPage: Session found, redirecting to dashboard');
-      navigate('/dashboard', { replace: true });
+      // Add a small delay to ensure state is fully updated
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 100);
     }
   }, [session, authContextLoading, navigate]);
 
@@ -101,8 +131,10 @@ const LoginPage = () => {
           },
         });
         
-        // Force redirect to dashboard immediately
-        navigate('/dashboard', { replace: true });
+        // Force redirect to dashboard immediately with a delay
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true });
+        }, 500);
       } else {
         console.error('Login returned no error but no user/session');
         setDebugInfo('Login returned no error but no user/session data');
@@ -168,7 +200,9 @@ const LoginPage = () => {
         if (data.session) {
           toast.success("Account created successfully!");
           // Force redirect to dashboard for successful signup
-          navigate('/dashboard', { replace: true });
+          setTimeout(() => {
+            navigate('/dashboard', { replace: true });
+          }, 500);
         } else {
           toast.success("Please check your email to verify your account.");
         }
@@ -259,10 +293,23 @@ const LoginPage = () => {
             </h1>
             <p className="text-white/80 mb-8">Sign in or create an account to access your portal.</p>
             
-            {/* Debug info */}
+            {/* Debug info with force refresh */}
             <div className="mb-4 p-3 bg-yellow-500/20 rounded text-yellow-200 text-xs">
-              <div>Debug: Loading={String(authContextLoading)}, Session={String(!!session)}</div>
-              <div>Environment: {window.location.hostname}</div>
+              <div className="flex justify-between items-center">
+                <div>
+                  <div>Debug: Loading={String(authContextLoading)}, Session={String(!!session)}</div>
+                  <div>Environment: {window.location.hostname}</div>
+                  <div>Refresh Count: {forceRefreshCount}</div>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleForceRefresh}
+                  className="text-yellow-200 border-yellow-200/50 hover:bg-yellow-200/10"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              </div>
               {debugInfo && <div className="mt-2 whitespace-pre-wrap">{debugInfo}</div>}
             </div>
             
@@ -370,8 +417,27 @@ const LoginPage = () => {
               </TabsContent>
             </Tabs>
             
-            {/* Debug buttons */}
+            {/* Enhanced debug section */}
             <div className="mt-4 space-y-2">
+              {session && (
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={() => navigate('/dashboard', { replace: true })}
+                >
+                  Go to Dashboard (Session Active)
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full text-white border-white/20 hover:bg-white/10"
+                onClick={handleForceRefresh}
+              >
+                <RefreshCw className="mr-2 h-3 w-3" />
+                Force Refresh Session
+              </Button>
               <Button 
                 variant="outline" 
                 size="sm" 

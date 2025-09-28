@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { User, Collaborator } from '@/types';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { logAuthEvent } from '@/lib/authLogger';
 
@@ -30,6 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [originalSession, setOriginalSession] = useState<Session | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const createFallbackUser = useCallback((supabaseUser: SupabaseUser): User => {
     const fullName = `${supabaseUser.user_metadata?.first_name || ''} ${supabaseUser.user_metadata?.last_name || ''}`.trim();
@@ -134,6 +135,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [fetchUserProfile]);
 
+  // Force redirect to dashboard when user is authenticated but on login page
+  useEffect(() => {
+    if (!loading && session && user && location.pathname === '/login') {
+      console.log('User is authenticated but on login page, forcing redirect to dashboard');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [loading, session, user, location.pathname, navigate]);
+
   useEffect(() => {
     console.log('AuthProvider: Initializing...');
     
@@ -189,8 +198,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (mounted) {
           setUser(profile);
           setLoading(false);
-          // Force redirect to dashboard after successful login
-          navigate('/dashboard', { replace: true });
+          // Only redirect if not already on a protected route
+          if (location.pathname === '/login' || location.pathname === '/auth/callback' || location.pathname === '/') {
+            console.log('Redirecting to dashboard after sign in');
+            navigate('/dashboard', { replace: true });
+          }
         }
       } else if (event === 'SIGNED_OUT') {
         console.log('User signed out');
@@ -214,7 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, navigate]);
+  }, [fetchUserProfile, navigate, location.pathname]);
 
   useEffect(() => {
     if (!user) {
