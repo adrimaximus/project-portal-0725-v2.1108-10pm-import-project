@@ -53,13 +53,24 @@ const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { 
     const canEdit = item.is_editable ?? true;
     const canDelete = item.is_deletable ?? true;
 
+    // Generate display URL for the settings page
+    const displayUrl = useMemo(() => {
+      if (item.type === 'multi_embed') {
+        return `/multipage/${item.slug}`;
+      } else if (item.url.startsWith('/')) {
+        return item.url;
+      } else {
+        return `/custom/${item.slug}`;
+      }
+    }, [item]);
+
     return (
         <div ref={setNodeRef} style={style} className="flex items-center justify-between p-2 border rounded-md bg-background">
             <div className="flex items-center gap-2 truncate">
                 <button {...attributes} {...listeners} className="cursor-grab p-1"><GripVertical className="h-5 w-5 text-muted-foreground" /></button>
                 <div className="truncate">
                     <p className="font-medium truncate">{item.name}</p>
-                    <p className="text-sm text-muted-foreground truncate">{item.url}</p>
+                    <p className="text-sm text-muted-foreground truncate">{displayUrl}</p>
                 </div>
             </div>
             <div className="flex items-center gap-1 sm:gap-2">
@@ -179,17 +190,29 @@ const NavigationSettingsPage = () => {
       if (!user) throw new Error("User not authenticated");
       const newPosition = navItems.filter(i => !i.folder_id).length;
       
-      const itemToInsert = { name, url, user_id: user.id, position: newPosition, is_enabled: true, icon, is_deletable: true, is_editable: true, type };
+      // For multi_embed type, we'll set a placeholder URL that will be updated after slug generation
+      const itemToInsert = { 
+        name, 
+        url: type === 'multi_embed' ? '/multipage/placeholder' : url, 
+        user_id: user.id, 
+        position: newPosition, 
+        is_enabled: true, 
+        icon, 
+        is_deletable: true, 
+        is_editable: true, 
+        type 
+      };
       
       const { data: newItem, error } = await supabase
         .from('user_navigation_items')
         .insert(itemToInsert)
-        .select('*, slug')
+        .select('*')
         .single();
 
       if (error) throw error;
 
-      if (type === 'multi_embed') {
+      // For multi_embed type, update the URL to use the generated slug
+      if (type === 'multi_embed' && newItem.slug) {
         const { error: updateError } = await supabase
           .from('user_navigation_items')
           .update({ url: `/multipage/${newItem.slug}` })
@@ -228,7 +251,29 @@ const NavigationSettingsPage = () => {
   };
 
   const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => {
-    await updateItems([{ id, name, url, icon }]);
+    // Find the item to get its type
+    const item = navItems.find(i => i.id === id);
+    if (!item) return;
+
+    let finalUrl = url;
+    
+    // If it's a multi_embed type and the URL was changed, we need to handle it properly
+    if (item.type === 'multi_embed') {
+      // For multi_embed, the URL should always be based on the slug
+      // If they're trying to change the URL, we should update the name instead
+      // and regenerate the slug
+      if (url !== item.url) {
+        // Update both name and regenerate URL based on new slug
+        await updateItems([{ id, name, url: item.url }]); // Keep original URL structure
+        // The trigger will handle slug regeneration
+      } else {
+        await updateItems([{ id, name, icon }]);
+      }
+    } else {
+      // For url_embed type, allow URL changes
+      await updateItems([{ id, name, url: finalUrl, icon }]);
+    }
+    
     setEditingItem(null);
   };
 
@@ -343,9 +388,15 @@ const NavigationSettingsPage = () => {
                 <SelectTrigger><SelectValue placeholder="Select page type" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="url_embed">URL / Embed Code</SelectItem>
-                  <SelectItem value="multi_embed">Multi Embed</SelectItem>
+                  <SelectItem value="multi_embed">Multi Embed Collection</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {newItemType === 'url_embed' 
+                  ? 'Single URL or embed code that will be displayed in an iframe'
+                  : 'A collection page where you can add multiple embed items'
+                }
+              </p>
             </div>
             <div className="grid gap-2"><Label htmlFor="icon">Icon</Label><IconPicker value={newItemIcon} onChange={setNewItemIcon} /></div>
             <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" /></div>
@@ -353,6 +404,14 @@ const NavigationSettingsPage = () => {
               <div className="grid gap-2">
                 <Label htmlFor="url">URL or Embed Code</Label>
                 <Textarea id="url" value={newItemContent} onChange={(e) => setNewItemContent(e.target.value)} placeholder="https://example.com or <iframe ...></iframe>" />
+              </div>
+            )}
+            {newItemType === 'multi_embed' && (
+              <div className="p-3 bg-muted/50 rounded-md">
+                <p className="text-sm text-muted-foreground">
+                  This will create a collection page where you can add multiple embed items. 
+                  The URL will be automatically generated based on the page name.
+                </p>
               </div>
             )}
           </CardContent>

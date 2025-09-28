@@ -8,16 +8,16 @@ import { Loader2 } from 'lucide-react';
 import EmbedRenderer from '@/components/EmbedRenderer';
 
 const CustomPage = () => {
-  const { pageId } = useParams<{ pageId: string }>();
+  const { slug } = useParams<{ slug: string }>();
 
   const { data: navItem, isLoading } = useQuery({
-    queryKey: ['user_navigation_item', pageId],
+    queryKey: ['user_navigation_item_by_slug', slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_navigation_items').select('name, url').eq('id', pageId!).single();
+      const { data, error } = await supabase.from('user_navigation_items').select('name, url').eq('slug', slug!).single();
       if (error) throw error;
       return data;
     },
-    enabled: !!pageId,
+    enabled: !!slug,
   });
 
   if (isLoading) {

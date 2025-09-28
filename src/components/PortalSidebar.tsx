@@ -85,10 +85,25 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const allItems = customNavItems
       .filter(item => item.is_enabled)
       .map(item => {
-        const isEmbed = !item.url.startsWith('/');
-        let href = isEmbed ? `/custom?url=${encodeURIComponent(item.url)}&title=${encodeURIComponent(item.name)}` : item.url;
+        let href: string;
         let badge;
 
+        // Generate proper URLs based on item type and content
+        if (item.type === 'multi_embed') {
+          // Multi-embed pages use their slug
+          href = `/multipage/${item.slug}`;
+        } else if (item.url.startsWith('/')) {
+          // Internal URLs
+          href = item.url;
+        } else if (item.url.startsWith('<iframe') || item.url.startsWith('http')) {
+          // External URLs or embed codes - use custom page with slug
+          href = `/custom/${item.slug}`;
+        } else {
+          // Fallback for other cases
+          href = `/custom/${item.slug}`;
+        }
+
+        // Fix for dashboard route
         if (href === '/') {
           href = '/dashboard';
         }

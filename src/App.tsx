@@ -88,7 +88,9 @@ const App = () => {
           <Route path="/settings/integrations/google-drive" element={<GoogleDrivePage />} />
           <Route path="/settings/integrations/openai" element={<OpenAiPage />} />
           <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
-          <Route path="/custom/:pageId" element={<CustomPage />} />
+          
+          {/* Custom pages using slug-based routing */}
+          <Route path="/custom/:slug" element={<CustomPage />} />
           <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
           <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
         </Route>
