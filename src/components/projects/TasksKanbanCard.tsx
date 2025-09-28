@@ -23,13 +23,18 @@ interface TasksKanbanCardProps {
 const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
-  const style = {
+  const sortableStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
 
   const priorityStyle = getPriorityStyles(task.priority);
+
+  const combinedStyle = {
+    ...sortableStyle,
+    borderLeftColor: priorityStyle.hex,
+  };
 
   const handleDropdownClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -79,12 +84,10 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   return (
     <Card 
       ref={setNodeRef} 
-      style={style} 
+      style={combinedStyle} 
       {...attributes} 
       {...listeners}
       className="mb-4 bg-card border-l-4 cursor-grab active:cursor-grabbing"
-      // @ts-ignore
-      style={{ ...style, borderLeftColor: priorityStyle.hex }}
     >
       <CardHeader className="p-3">
         <div className="flex justify-between items-start">
