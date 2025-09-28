@@ -12,7 +12,7 @@ import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import TaskAttachmentList from './TaskAttachmentList';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { TaskAttachment } from "@/types/task";
+import { TaskAttachment } from '@/types/task';
 
 interface TasksKanbanCardProps {
   task: Task;
@@ -23,14 +23,13 @@ interface TasksKanbanCardProps {
 const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
-  const priorityStyle = getPriorityStyles(task.priority);
-
-  const combinedStyle = {
+  const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    borderLeftColor: priorityStyle.hex,
   };
+
+  const priorityStyle = getPriorityStyles(task.priority);
 
   const handleDropdownClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -80,10 +79,12 @@ const TasksKanbanCard = ({ task, onEdit, onDelete }: TasksKanbanCardProps) => {
   return (
     <Card 
       ref={setNodeRef} 
-      style={combinedStyle} 
+      style={style} 
       {...attributes} 
       {...listeners}
       className="mb-4 bg-card border-l-4 cursor-grab active:cursor-grabbing"
+      // @ts-ignore
+      style={{ ...style, borderLeftColor: priorityStyle.hex }}
     >
       <CardHeader className="p-3">
         <div className="flex justify-between items-start">

@@ -53,7 +53,8 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
       let finalImageUrl = imageUrl;
 
       if (imageFile) {
-        const filePath = `${user.id}/${Date.now()}-${imageFile.name}`;
+        const sanitizedFileName = imageFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+        const filePath = `${user.id}/${Date.now()}-${sanitizedFileName}`;
         const { error: uploadError } = await supabase.storage.from('multi_embed_images').upload(filePath, imageFile);
         if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
         
