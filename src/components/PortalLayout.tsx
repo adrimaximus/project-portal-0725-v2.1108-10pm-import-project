@@ -12,7 +12,7 @@ type PortalLayoutProps = {
   noPadding?: boolean;
 };
 
-const PortalLayout = ({ children, summary, pageHeader, disableMainScroll, noPadding }: PortalLayoutProps) => {
+export default function PortalLayout({ children, summary, pageHeader, disableMainScroll, noPadding }: PortalLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSidebar = () => {
@@ -42,6 +42,4 @@ const PortalLayout = ({ children, summary, pageHeader, disableMainScroll, noPadd
       <StorageWarning />
     </div>
   );
-};
-
-export default PortalLayout;
+}

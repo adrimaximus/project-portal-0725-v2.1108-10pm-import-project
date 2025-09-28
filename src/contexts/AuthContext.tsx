@@ -5,6 +5,7 @@ import { User, Collaborator } from '@/types';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import SafeLocalStorage from '@/lib/localStorage';
 
 export interface AuthContextType {
   session: Session | null;
@@ -42,158 +43,99 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [originalSession, setOriginalSession] = useState<Session | null>(null);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
-
     try {
       const { data, error } = await supabase
         .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
         .single<UserProfileData>();
-
       if (error || !data) {
-        console.error("Error fetching user profile with permissions:", error);
+        console.error("Error fetching user profile:", error);
         return null;
       }
-      
       const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-      localStorage.setItem('lastUserName', fullName || data.email);
-
+      SafeLocalStorage.setItem('lastUserName', fullName || data.email);
       return {
-        id: data.id,
-        name: fullName || data.email,
-        email: data.email,
+        id: data.id, name: fullName || data.email, email: data.email,
         avatar_url: getAvatarUrl(data.avatar_url, data.id),
         initials: getInitials(fullName, data.email),
-        first_name: data.first_name,
-        last_name: data.last_name,
-        role: data.role,
-        status: data.status,
-        sidebar_order: data.sidebar_order,
-        updated_at: data.updated_at,
-        permissions: data.permissions || [],
+        first_name: data.first_name, last_name: data.last_name,
+        role: data.role, status: data.status, sidebar_order: data.sidebar_order,
+        updated_at: data.updated_at, permissions: data.permissions || [],
         people_kanban_settings: data.people_kanban_settings,
       };
     } catch (error) {
-      console.error("Error in fetchUserProfile:", error);
+      console.error("Critical error in fetchUserProfile:", error);
       return null;
     }
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-    if (currentSession?.user) {
-      const profile = await fetchUserProfile(currentSession.user);
-      setUser(profile);
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (currentSession?.user) {
+        const profile = await fetchUserProfile(currentSession.user);
+        setUser(profile);
+      }
+    } catch (error) {
+      console.error("Error refreshing user:", error);
     }
   }, [fetchUserProfile]);
 
   useEffect(() => {
-    let mounted = true;
-
-    const initializeAuth = async () => {
+    const initializeSession = async () => {
       try {
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Error getting initial session:", error);
-          if (mounted) {
-            setLoading(false);
-            setInitialLoadComplete(true);
-          }
-          return;
-        }
-
-        if (mounted) {
-          setSession(initialSession);
-          
-          if (initialSession?.user) {
-            const profile = await fetchUserProfile(initialSession.user);
-            if (mounted) {
-              setUser(profile);
-            }
-          }
-          
-          setLoading(false);
-          setInitialLoadComplete(true);
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
+        if (currentSession?.user) {
+          const profile = await fetchUserProfile(currentSession.user);
+          setUser(profile);
         }
       } catch (error) {
-        console.error("Error in initializeAuth:", error);
-        if (mounted) {
-          setLoading(false);
-          setInitialLoadComplete(true);
-        }
+        console.error("Error initializing session:", error);
+        // If session is corrupted, sign out to clear it
+        await supabase.auth.signOut();
+      } finally {
+        setLoading(false);
       }
     };
 
-    initializeAuth();
+    initializeSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (!mounted) return;
-
-      console.log("Auth state change:", event, !!newSession);
-      
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
-      
       if (newSession?.user) {
         const profile = await fetchUserProfile(newSession.user);
-        if (mounted) {
-          setUser(profile);
-        }
+        setUser(profile);
       } else {
-        if (mounted) {
-          setUser(null);
-        }
-      }
-      
-      // Only handle navigation after initial load is complete
-      if (initialLoadComplete) {
-        if (event === 'SIGNED_IN' && newSession) {
-          // Only redirect to dashboard if we're on login page, root, or auth callback
-          const isOnAuthPage = ['/login', '/', '/auth/callback'].includes(location.pathname);
-          if (isOnAuthPage) {
-            navigate('/dashboard', { replace: true });
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setIsImpersonating(false);
-          setOriginalSession(null);
+        setUser(null);
+        setIsImpersonating(false);
+        setOriginalSession(null);
+        SafeLocalStorage.removeItem('lastUserName');
+        if (location.pathname !== '/login') {
           navigate('/login', { replace: true });
         }
-      }
-      
-      if (mounted) {
-        setLoading(false);
       }
     });
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, navigate, location.pathname, initialLoadComplete]);
+  }, [fetchUserProfile, navigate, location.pathname]);
 
   useEffect(() => {
     if (!user) {
       setOnlineCollaborators([]);
       return;
     }
-
-    const channel = supabase.channel('online-users', {
-      config: {
-        presence: {
-          key: user.id,
-        },
-      },
-    });
-
+    const channel = supabase.channel('online-users', { config: { presence: { key: user.id } } });
     channel
       .on('presence', { event: 'sync' }, () => {
         const presenceState = channel.presenceState<any>();
         const userIds = Object.keys(presenceState).filter(id => id !== user.id);
-        
         if (userIds.length > 0) {
           supabase.from('profiles').select('id, first_name, last_name, avatar_url, email').in('id', userIds)
             .then(({ data }) => {
@@ -201,12 +143,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const collaborators = data.map(p => {
                   const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
                   return {
-                    id: p.id,
-                    name: name || p.email,
-                    avatar_url: getAvatarUrl(p.avatar_url, p.id),
-                    initials: getInitials(name, p.email),
-                    email: p.email,
-                    online: true,
+                    id: p.id, name: name || p.email, avatar_url: getAvatarUrl(p.avatar_url, p.id),
+                    initials: getInitials(name, p.email), email: p.email, online: true,
                   };
                 });
                 setOnlineCollaborators(collaborators);
@@ -221,23 +159,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           await channel.track({ online_at: new Date().toISOString() });
         }
       });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setSession(null);
-      navigate('/login', { replace: true });
-    } catch (error) {
-      console.error("Error during logout:", error);
-      // Force navigation even if logout fails
-      navigate('/login', { replace: true });
-    }
+    await supabase.auth.signOut();
+    SafeLocalStorage.clear();
+    setUser(null);
+    setSession(null);
+    navigate('/login', { replace: true });
   };
 
   const hasPermission = (permission: string) => {
@@ -248,23 +178,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const startImpersonation = async (targetUser: User) => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();
-    if (!currentSession) {
-      toast.error("Cannot impersonate without an active session.");
-      return;
-    }
+    if (!currentSession) { toast.error("Cannot impersonate without an active session."); return; }
     setOriginalSession(currentSession);
-
-    const { data, error } = await supabase.functions.invoke('impersonate-user', {
-      body: { target_user_id: targetUser.id },
-    });
-
-    if (error) {
-      toast.error("Impersonation failed", { description: error.message });
-    } else {
+    const { data, error } = await supabase.functions.invoke('impersonate-user', { body: { target_user_id: targetUser.id } });
+    if (error) { toast.error("Impersonation failed", { description: error.message }); } 
+    else {
       const { error: sessionError } = await supabase.auth.setSession(data);
-      if (sessionError) {
-        toast.error("Failed to set impersonation session", { description: sessionError.message });
-      } else {
+      if (sessionError) { toast.error("Failed to set impersonation session", { description: sessionError.message }); } 
+      else {
         setIsImpersonating(true);
         toast.success(`Now viewing as ${targetUser.name}`);
         navigate('/dashboard', { replace: true });
@@ -273,15 +194,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const stopImpersonation = async () => {
-    if (!originalSession) {
-      toast.error("No original session found to return to.");
-      await logout();
-      return;
-    }
+    if (!originalSession) { toast.error("No original session found."); await logout(); return; }
     const { error } = await supabase.auth.setSession(originalSession);
-    if (error) {
-      toast.error("Failed to stop impersonation", { description: error.message });
-    } else {
+    if (error) { toast.error("Failed to stop impersonation", { description: error.message }); } 
+    else {
       setIsImpersonating(false);
       setOriginalSession(null);
       toast.info("Returned to your original session.");
@@ -289,24 +205,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const value = {
-    session,
-    user,
-    loading,
-    logout,
-    hasPermission,
-    refreshUser,
-    onlineCollaborators,
-    isImpersonating,
-    startImpersonation,
-    stopImpersonation,
-  };
+  const value = { session, user, loading, logout, hasPermission, refreshUser, onlineCollaborators, isImpersonating, startImpersonation, stopImpersonation };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {
