@@ -49,8 +49,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
 
-    const MAX_RETRIES = 5; // Increased from 3
-    const RETRY_DELAY = 1000; // Increased from 500ms
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY = 1000;
 
     for (let i = 0; i < MAX_RETRIES; i++) {
         try {
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
                 .single<UserProfileData>();
 
-            if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which we want to retry
+            if (error && error.code !== 'PGRST116') {
                 throw error;
             }
 
@@ -99,10 +99,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: { session: initialSession } } = await supabase.auth.getSession();
       if (mounted) {
         setSession(initialSession);
-        if (initialSession?.user) {
-          const profile = await fetchUserProfile(initialSession.user);
-          setUser(profile);
-        }
+        const profile = await fetchUserProfile(initialSession?.user ?? null);
+        setUser(profile);
         setLoading(false);
       }
     };
@@ -113,12 +111,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       async (_event, session) => {
         if (mounted) {
           setSession(session);
-          if (session?.user) {
-            const profile = await fetchUserProfile(session.user);
-            setUser(profile);
-          } else {
-            setUser(null);
-          }
+          const profile = await fetchUserProfile(session?.user ?? null);
+          setUser(profile);
+          // Also set loading to false here to handle login/logout events
+          setLoading(false);
         }
       }
     );
