@@ -2,6 +2,7 @@ import { useState, ReactNode } from "react";
 import PortalSidebar from "./PortalSidebar";
 import { cn } from "@/lib/utils";
 import PortalHeader from "./PortalHeader";
+import StorageWarning from "./StorageWarning";
 
 type PortalLayoutProps = {
   children: ReactNode;
@@ -36,6 +37,9 @@ const PortalLayout = ({ children, summary, pageHeader, disableMainScroll, noPadd
           </main>
         </div>
       </div>
+
+      {/* Storage Warning Component */}
+      <StorageWarning />
     </div>
   );
 };

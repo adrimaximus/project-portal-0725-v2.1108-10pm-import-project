@@ -3,6 +3,7 @@ import FeatureCard from "@/components/settings/FeatureCard";
 import IntegrationCard from "@/components/settings/IntegrationCard";
 import NavigationCard from "@/components/settings/NavigationCard";
 import TeamCard from "@/components/settings/TeamCard";
+import StorageCard from "@/components/settings/StorageCard";
 import { useFeatures } from "@/contexts/FeaturesContext";
 
 const SettingsPage = () => {
@@ -27,6 +28,7 @@ const SettingsPage = () => {
           <TeamCard />
           <IntegrationCard />
           <NavigationCard />
+          <StorageCard />
         </div>
       </div>
     </PortalLayout>

@@ -27,11 +27,12 @@ import NotificationsPage from "./pages/Notifications";
 import Profile from "./pages/Profile";
 import SearchPage from "./pages/SearchPage";
 import UserManagementPage from "./pages/UserManagement";
-import SettingsPage from "./pages/SettingsPage";
+import SettingsPage from "./pages/Settings";
 import NavigationSettingsPage from "./pages/NavigationSettingsPage";
 import TeamSettingsPage from "./pages/TeamSettingsPage";
 import TagsSettingsPage from "./pages/TagsSettingsPage";
 import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
+import StorageSettingsPage from "./pages/StorageSettingsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import OpenAiPage from "./pages/integrations/OpenAiPage";
@@ -82,6 +83,7 @@ const App = () => {
           <Route path="/settings/team" element={<TeamSettingsPage />} />
           <Route path="/settings/tags" element={<TagsSettingsPage />} />
           <Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
+          <Route path="/settings/storage" element={<StorageSettingsPage />} />
           <Route path="/settings/integrations" element={<IntegrationsPage />} />
           <Route path="/settings/integrations/google-drive" element={<GoogleDrivePage />} />
           <Route path="/settings/integrations/openai" element={<OpenAiPage />} />
