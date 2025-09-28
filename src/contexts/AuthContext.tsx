@@ -54,10 +54,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single<UserProfileData>();
       if (error || !data) {
         console.error("Error fetching user profile:", error);
-        // If profile doesn't exist, it might be a new user, sign them out to be safe
-        if (error?.code === 'PGRST116') {
-          await supabase.auth.signOut();
-        }
         return null;
       }
       const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
@@ -89,53 +85,101 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [fetchUserProfile]);
 
+  // Initialize session and set up auth state listener
   useEffect(() => {
-    setLoading(true);
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        await fetchUserProfile(session.user);
-      }
-    }).catch((err) => {
-      console.error("Error getting initial session:", err);
-    }).finally(() => {
-      setLoading(false);
-    });
+    let mounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+
+        if (error) {
+          console.error("Error getting initial session:", error);
+          // Clear potentially corrupted session data
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+        } else {
+          setSession(initialSession);
+          if (initialSession?.user) {
+            const profile = await fetchUserProfile(initialSession.user);
+            if (mounted) {
+              setUser(profile);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Critical error in initializeAuth:", error);
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      if (!mounted) return;
+
+      console.log('Auth state change:', event, newSession ? 'session exists' : 'no session');
+
       try {
         switch (event) {
           case 'SIGNED_IN':
-          case 'TOKEN_REFRESHED':
-          case 'USER_UPDATED':
-            setSession(session);
-            if (session?.user) {
-              const profile = await fetchUserProfile(session.user);
+            setSession(newSession);
+            if (newSession?.user) {
+              const profile = await fetchUserProfile(newSession.user);
               setUser(profile);
             }
             break;
+            
+          case 'TOKEN_REFRESHED':
+            // Handle token refresh explicitly
+            setSession(newSession);
+            // Don't refetch user profile on token refresh unless user is null
+            if (newSession?.user && !user) {
+              const profile = await fetchUserProfile(newSession.user);
+              setUser(profile);
+            }
+            break;
+            
+          case 'USER_UPDATED':
+            setSession(newSession);
+            if (newSession?.user) {
+              const profile = await fetchUserProfile(newSession.user);
+              setUser(profile);
+            }
+            break;
+            
           case 'SIGNED_OUT':
             setSession(null);
             setUser(null);
             setIsImpersonating(false);
             setOriginalSession(null);
             SafeLocalStorage.removeItem('lastUserName');
-            if (location.pathname !== '/login') {
+            if (location.pathname !== '/login' && location.pathname !== '/' && !location.pathname.startsWith('/auth')) {
               navigate('/login', { replace: true });
             }
             break;
         }
       } catch (error) {
-        console.error("Error in onAuthStateChange handler:", error);
-        toast.error("An authentication error occurred. Please try logging in again.");
-        await logout();
+        console.error("Error in auth state change handler:", error);
+        // Don't throw or show toast here, as it might cause infinite loops
       }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, navigate, location.pathname]);
+  }, [fetchUserProfile, navigate, location.pathname, user]);
 
   useEffect(() => {
     if (!user) {
@@ -148,8 +192,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const presenceState = channel.presenceState<any>();
         const userIds = Object.keys(presenceState).filter(id => id !== user.id);
         if (userIds.length > 0) {
-          supabase.from('profiles').select('id, first_name, last_name, avatar_url, email').in('id', userIds)
-            .then(({ data }) => {
+          const fetchCollaborators = async () => {
+            try {
+              const { data } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url, email').in('id', userIds);
               if (data) {
                 const collaborators = data.map(p => {
                   const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
@@ -160,25 +205,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 });
                 setOnlineCollaborators(collaborators);
               }
-            });
+            } catch (error) {
+              console.error("Error fetching online collaborators:", error);
+            }
+          };
+          fetchCollaborators();
         } else {
           setOnlineCollaborators([]);
         }
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          await channel.track({ online_at: new Date().toISOString() });
+          try {
+            await channel.track({ online_at: new Date().toISOString() });
+          } catch (error) {
+            console.error("Error tracking presence:", error);
+          }
         }
       });
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    SafeLocalStorage.clear();
-    setUser(null);
-    setSession(null);
-    navigate('/login', { replace: true });
+    try {
+      await supabase.auth.signOut();
+      SafeLocalStorage.clear();
+      setUser(null);
+      setSession(null);
+      setIsImpersonating(false);
+      setOriginalSession(null);
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Force clear everything even if signOut fails
+      SafeLocalStorage.clear();
+      setUser(null);
+      setSession(null);
+      setIsImpersonating(false);
+      setOriginalSession(null);
+      navigate('/login', { replace: true });
+    }
   };
 
   const hasPermission = (permission: string) => {
@@ -188,35 +254,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const startImpersonation = async (targetUser: User) => {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-    if (!currentSession) { toast.error("Cannot impersonate without an active session."); return; }
-    setOriginalSession(currentSession);
-    const { data, error } = await supabase.functions.invoke('impersonate-user', { body: { target_user_id: targetUser.id } });
-    if (error) { toast.error("Impersonation failed", { description: error.message }); } 
-    else {
-      const { error: sessionError } = await supabase.auth.setSession(data);
-      if (sessionError) { toast.error("Failed to set impersonation session", { description: sessionError.message }); } 
-      else {
-        setIsImpersonating(true);
-        toast.success(`Now viewing as ${targetUser.name}`);
-        navigate('/dashboard', { replace: true });
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) { 
+        toast.error("Cannot impersonate without an active session."); 
+        return; 
       }
+      setOriginalSession(currentSession);
+      const { data, error } = await supabase.functions.invoke('impersonate-user', { 
+        body: { target_user_id: targetUser.id } 
+      });
+      if (error) { 
+        toast.error("Impersonation failed", { description: error.message }); 
+      } else {
+        const { error: sessionError } = await supabase.auth.setSession(data);
+        if (sessionError) { 
+          toast.error("Failed to set impersonation session", { description: sessionError.message }); 
+        } else {
+          setIsImpersonating(true);
+          toast.success(`Now viewing as ${targetUser.name}`);
+          navigate('/dashboard', { replace: true });
+        }
+      }
+    } catch (error: any) {
+      toast.error("Impersonation failed", { description: error.message });
     }
   };
 
   const stopImpersonation = async () => {
-    if (!originalSession) { toast.error("No original session found."); await logout(); return; }
-    const { error } = await supabase.auth.setSession(originalSession);
-    if (error) { toast.error("Failed to stop impersonation", { description: error.message }); } 
-    else {
-      setIsImpersonating(false);
-      setOriginalSession(null);
-      toast.info("Returned to your original session.");
-      navigate('/dashboard', { replace: true });
+    try {
+      if (!originalSession) { 
+        toast.error("No original session found."); 
+        await logout(); 
+        return; 
+      }
+      const { error } = await supabase.auth.setSession(originalSession);
+      if (error) { 
+        toast.error("Failed to stop impersonation", { description: error.message }); 
+      } else {
+        setIsImpersonating(false);
+        setOriginalSession(null);
+        toast.info("Returned to your original session.");
+        navigate('/dashboard', { replace: true });
+      }
+    } catch (error: any) {
+      toast.error("Failed to stop impersonation", { description: error.message });
     }
   };
 
-  const value = { session, user, loading, logout, hasPermission, refreshUser, onlineCollaborators, isImpersonating, startImpersonation, stopImpersonation };
+  const value = { 
+    session, 
+    user, 
+    loading, 
+    logout, 
+    hasPermission, 
+    refreshUser, 
+    onlineCollaborators, 
+    isImpersonating, 
+    startImpersonation, 
+    stopImpersonation 
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

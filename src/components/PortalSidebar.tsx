@@ -72,16 +72,65 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const queryClient = useQueryClient();
   const totalUnreadChatCount = 0; // Placeholder for chat unread count
 
-  const { data: customNavItems = [] } = useQuery({ queryKey: ['user_navigation_items', user?.id], queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('user_navigation_items').select('*').eq('user_id', user.id).order('position'); if (error) return []; return data as DbNavItem[]; }, enabled: !!user });
-  const { data: folders = [] } = useQuery({ queryKey: ['navigation_folders', user?.id], queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); if (error) return []; return data as NavFolder[]; }, enabled: !!user });
+  const { data: customNavItems = [], error: navItemsError } = useQuery({ 
+    queryKey: ['user_navigation_items', user?.id], 
+    queryFn: async () => { 
+      if (!user) return []; 
+      const { data, error } = await supabase.from('user_navigation_items').select('*').eq('user_id', user.id).order('position'); 
+      if (error) {
+        console.error("Error fetching navigation items:", error);
+        return []; // Return empty array instead of throwing
+      }
+      return data as DbNavItem[]; 
+    }, 
+    enabled: !!user,
+    retry: false, // Don't retry on failure
+  });
+
+  const { data: folders = [], error: foldersError } = useQuery({ 
+    queryKey: ['navigation_folders', user?.id], 
+    queryFn: async () => { 
+      if (!user) return []; 
+      const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); 
+      if (error) {
+        console.error("Error fetching navigation folders:", error);
+        return []; // Return empty array instead of throwing
+      }
+      return data as NavFolder[]; 
+    }, 
+    enabled: !!user,
+    retry: false, // Don't retry on failure
+  });
 
   useEffect(() => {
     if (!user) return;
-    const channel = supabase.channel(`user-nav-items:${user.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'user_navigation_items', filter: `user_id=eq.${user.id}` }, () => queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user.id] })).on('postgres_changes', { event: '*', schema: 'public', table: 'navigation_folders', filter: `user_id=eq.${user.id}` }, () => queryClient.invalidateQueries({ queryKey: ['navigation_folders', user.id] })).subscribe();
+    const channel = supabase.channel(`user-nav-items:${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_navigation_items', filter: `user_id=eq.${user.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user.id] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'navigation_folders', filter: `user_id=eq.${user.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['navigation_folders', user.id] });
+      })
+      .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user, queryClient]);
 
   const { navItems, settingsItem } = useMemo(() => {
+    // If there are errors loading nav items, provide fallback navigation
+    if (navItemsError || foldersError) {
+      console.warn("Using fallback navigation due to errors:", { navItemsError, foldersError });
+      return {
+        navItems: [
+          { id: 'dashboard', href: '/dashboard', label: 'Dashboard', icon: Home, folder_id: null },
+          { id: 'projects', href: '/projects', label: 'Projects', icon: LayoutGrid, folder_id: null },
+          { id: 'chat', href: '/chat', label: 'Chat', icon: MessageSquare, badge: totalUnreadChatCount > 0 ? totalUnreadChatCount : undefined, folder_id: null },
+          { id: 'goals', href: '/goals', label: 'Goals', icon: Target, folder_id: null },
+          { id: 'people', href: '/people', label: 'People', icon: Users, folder_id: null },
+        ],
+        settingsItem: { id: 'settings', href: '/settings', label: 'Settings', icon: Settings, folder_id: null }
+      };
+    }
+
     const allItems = customNavItems
       .filter(item => item.is_enabled)
       .map(item => {
@@ -137,7 +186,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const otherItems = allItems.filter(item => item.href !== '/settings');
 
     return { navItems: otherItems, settingsItem: settings };
-  }, [customNavItems, totalUnreadChatCount, unreadNotificationCount]);
+  }, [customNavItems, totalUnreadChatCount, unreadNotificationCount, navItemsError, foldersError]);
 
   const topLevelItems = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
 
@@ -154,7 +203,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             <TooltipProvider delayDuration={0}>
               <nav className={cn("grid items-start gap-1 text-sm font-medium", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
                 {topLevelItems.map(item => <NavLink key={item.id} item={item} isCollapsed={isCollapsed} />)}
-                {folders.map(folder => {
+                {!navItemsError && !foldersError && folders.map(folder => {
                   const itemsInFolder = navItems.filter(item => item.folder_id === folder.id);
                   if (itemsInFolder.length === 0) return null;
                   const FolderIconComponent = folder.icon ? Icons[folder.icon] : FolderIcon;
