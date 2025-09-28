@@ -136,7 +136,7 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
           <ToggleGroupItem value="value" className="text-xs px-3">By Value</ToggleGroupItem>
         </ToggleGroup>
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-4">
         <StatCard
           title="Total Projects"
           value={stats.totalProjects}
