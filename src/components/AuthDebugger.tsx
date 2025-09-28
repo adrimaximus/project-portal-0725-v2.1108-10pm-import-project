@@ -12,6 +12,15 @@ const AuthDebugger = () => {
     const results: any = {};
 
     try {
+      // Environment info
+      results.environment = {
+        hostname: window.location.hostname,
+        origin: window.location.origin,
+        isLocalhost: window.location.hostname === 'localhost',
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+        hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+      };
+
       // 1. Check current session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       results.session = {
@@ -19,6 +28,7 @@ const AuthDebugger = () => {
         error: sessionError?.message,
         userEmail: sessionData.session?.user?.email,
         userId: sessionData.session?.user?.id,
+        accessToken: sessionData.session?.access_token ? 'present' : 'missing',
       };
 
       // 2. Check current user
@@ -28,6 +38,7 @@ const AuthDebugger = () => {
         error: userError?.message,
         email: userData.user?.email,
         id: userData.user?.id,
+        emailConfirmed: userData.user?.email_confirmed_at ? 'yes' : 'no',
       };
 
       // 3. Try to fetch profile if user exists
@@ -42,6 +53,7 @@ const AuthDebugger = () => {
           results.profile = {
             exists: !!profileData,
             error: profileError?.message,
+            errorCode: profileError?.code,
             data: profileData,
           };
         } catch (e: any) {
@@ -51,39 +63,20 @@ const AuthDebugger = () => {
           };
         }
 
-        // 4. Try the RPC function
+        // 4. Test basic table access
         try {
-          const { data: rpcData, error: rpcError } = await supabase
-            .rpc('get_user_profile_with_permissions', { p_user_id: userData.user.id })
-            .single();
-          
-          results.rpcFunction = {
-            works: !!rpcData,
-            error: rpcError?.message,
-            data: rpcData,
-          };
-        } catch (e: any) {
-          results.rpcFunction = {
-            works: false,
-            error: e.message,
-          };
-        }
-
-        // 5. Test navigation items access
-        try {
-          const { data: navData, error: navError } = await supabase
-            .from('user_navigation_items')
-            .select('id, name')
-            .eq('user_id', userData.user.id)
+          const { data: testData, error: testError } = await supabase
+            .from('profiles')
+            .select('count')
             .limit(1);
           
-          results.navigationAccess = {
-            works: !navError,
-            error: navError?.message,
-            count: navData?.length || 0,
+          results.tableAccess = {
+            works: !testError,
+            error: testError?.message,
+            errorCode: testError?.code,
           };
         } catch (e: any) {
-          results.navigationAccess = {
+          results.tableAccess = {
             works: false,
             error: e.message,
           };
@@ -118,6 +111,16 @@ const AuthDebugger = () => {
             {JSON.stringify(debugData, null, 2)}
           </pre>
         </div>
+        
+        {debugData.environment && (
+          <div className="text-sm space-y-2">
+            <p><strong>Quick Fix:</strong></p>
+            <p>Add this URL to your Supabase Auth settings:</p>
+            <code className="bg-gray-200 p-2 rounded block">
+              {debugData.environment.origin}/auth/callback
+            </code>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
