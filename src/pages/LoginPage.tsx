@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import AuthDebugger from '@/components/AuthDebugger';
 import AuthTest from '@/components/AuthTest';
+import { logAuthEvent } from '@/lib/authLogger';
 
 const LoginPage = () => {
   const { session, loading: authContextLoading } = useAuth();
@@ -76,20 +77,56 @@ const LoginPage = () => {
         console.error('Login error:', error);
         setDebugInfo(`Login error: ${error.message}`);
         toast.error(error.message);
+        
+        // Log failed login attempt
+        await logAuthEvent({
+          event_type: 'login_attempt',
+          email,
+          success: false,
+          error_message: error.message,
+        });
       } else if (data.user && data.session) {
         console.log('Login successful, user authenticated');
         setDebugInfo(`Login successful! User: ${data.user.email}, Session: ${!!data.session}`);
         toast.success('Login successful!');
+        
+        // Log successful login
+        await logAuthEvent({
+          event_type: 'login_attempt',
+          email,
+          success: true,
+          additional_data: {
+            user_id: data.user.id,
+            login_method: 'password',
+          },
+        });
+        
         // The AuthContext will handle navigation
       } else {
         console.error('Login returned no error but no user/session');
         setDebugInfo('Login returned no error but no user/session data');
         toast.error('Login failed - no user data returned');
+        
+        // Log unexpected login failure
+        await logAuthEvent({
+          event_type: 'login_attempt',
+          email,
+          success: false,
+          error_message: 'No user/session data returned',
+        });
       }
     } catch (error: any) {
       console.error('Unexpected login error:', error);
       setDebugInfo(`Unexpected error: ${error.message}`);
       toast.error('An unexpected error occurred during login');
+      
+      // Log unexpected error
+      await logAuthEvent({
+        event_type: 'login_attempt',
+        email,
+        success: false,
+        error_message: `Unexpected error: ${error.message}`,
+      });
     } finally {
       setLoading(false);
     }
@@ -118,16 +155,45 @@ const LoginPage = () => {
       if (error) {
         console.error('Sign up error:', error);
         toast.error(error.message);
+        
+        // Log failed signup attempt
+        await logAuthEvent({
+          event_type: 'signup_attempt',
+          email: signUpEmail,
+          success: false,
+          error_message: error.message,
+        });
       } else if (data.user) {
         if (data.session) {
           toast.success("Account created successfully!");
         } else {
           toast.success("Please check your email to verify your account.");
         }
+        
+        // Log successful signup
+        await logAuthEvent({
+          event_type: 'signup_attempt',
+          email: signUpEmail,
+          success: true,
+          additional_data: {
+            user_id: data.user.id,
+            first_name: firstName,
+            last_name: lastName,
+            needs_verification: !data.session,
+          },
+        });
       }
     } catch (error: any) {
       console.error('Unexpected sign up error:', error);
       toast.error('An unexpected error occurred during sign up');
+      
+      // Log unexpected signup error
+      await logAuthEvent({
+        event_type: 'signup_attempt',
+        email: signUpEmail,
+        success: false,
+        error_message: `Unexpected error: ${error.message}`,
+      });
     } finally {
       setSignUpLoading(false);
     }

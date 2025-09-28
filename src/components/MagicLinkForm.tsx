@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Mail, Loader2 } from 'lucide-react';
+import { logAuthEvent } from '@/lib/authLogger';
 
 const MagicLinkForm = () => {
   const [email, setEmail] = useState('');
@@ -40,7 +41,26 @@ const MagicLinkForm = () => {
         },
       });
       
-      if (error) throw error;
+      if (error) {
+        // Log failed magic link attempt
+        await logAuthEvent({
+          event_type: 'magic_link_sent',
+          email,
+          success: false,
+          error_message: error.message,
+        });
+        throw error;
+      }
+      
+      // Log successful magic link send
+      await logAuthEvent({
+        event_type: 'magic_link_sent',
+        email,
+        success: true,
+        additional_data: {
+          redirect_to: redirectTo,
+        },
+      });
       
       setSubmitted(true);
       setCooldown(60); // 60 second cooldown

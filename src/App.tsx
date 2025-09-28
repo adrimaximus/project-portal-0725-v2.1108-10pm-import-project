@@ -34,6 +34,7 @@ import IntegrationsPage from "./pages/IntegrationsPage";
 import GoogleDrivePage from "./pages/integrations/GoogleDrivePage";
 import OpenAiIntegrationPage from "./pages/integrations/OpenAiPage";
 import WbiztoolPage from "./pages/integrations/WbiztoolPage";
+import AuthLogsPage from "./pages/AuthLogsPage";
 import CustomPage from "./pages/CustomPage";
 import MultiEmbedPage from "./pages/MultiEmbedPage";
 import MultiEmbedItemPage from "./pages/MultiEmbedItemPage";
@@ -87,6 +88,7 @@ const App = () => {
         <Route path="/settings/integrations/google-drive" element={<GoogleDrivePage />} />
         <Route path="/settings/integrations/openai" element={<OpenAiIntegrationPage />} />
         <Route path="/settings/integrations/wbiztool" element={<WbiztoolPage />} />
+        <Route path="/settings/auth-logs" element={<AuthLogsPage />} />
 
         {/* Custom/Embed Routes */}
         <Route path="/custom/:pageId" element={<CustomPage />} />

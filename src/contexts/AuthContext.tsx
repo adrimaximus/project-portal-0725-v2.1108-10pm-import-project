@@ -5,6 +5,7 @@ import { User, Collaborator } from '@/types';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { logAuthEvent } from '@/lib/authLogger';
 
 export interface AuthContextType {
   session: Session | null;
@@ -266,9 +267,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const logout = async () => {
+    const userEmail = user?.email;
+    
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    
+    // Log logout event
+    if (userEmail) {
+      await logAuthEvent({
+        event_type: 'logout',
+        email: userEmail,
+        success: true,
+      });
+    }
+    
     navigate('/login', { replace: true });
   };
 
