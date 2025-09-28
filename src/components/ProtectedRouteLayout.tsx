@@ -5,9 +5,10 @@ import React, { useEffect, useRef } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { defaultNavItems } from '@/lib/defaultNavItems';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from "sonner";
 
 const ProtectedRouteLayout = () => {
-  const { session, user, loading, hasPermission } = useAuth();
+  const { session, user, loading, logout, hasPermission } = useAuth();
   const location = useLocation();
   const queryClient = useQueryClient();
   const navSyncAttempted = useRef(false);
@@ -33,7 +34,7 @@ const ProtectedRouteLayout = () => {
 
         if (fetchError) {
           console.error("Error fetching nav items:", fetchError);
-          return; // Don't throw, just log and continue
+          return;
         }
 
         const existingItemsMap = new Map(existingItems.map(item => [item.name, item]));
@@ -92,7 +93,6 @@ const ProtectedRouteLayout = () => {
         }
       } catch (error) {
         console.error("Error in syncDefaultNavItems:", error);
-        // Don't throw or show toast, just log the error
       }
     };
 
@@ -101,19 +101,25 @@ const ProtectedRouteLayout = () => {
     }
   }, [user, loading, queryClient, hasPermission]);
 
+  useEffect(() => {
+    if (!loading && session && !user) {
+      toast.error("Could not load your user profile. Please log in again.", {
+        description: "Your session might be invalid or there could be a network issue.",
+      });
+      logout();
+    }
+  }, [loading, session, user, logout]);
+
   if (loading) {
     return <LoadingScreen />;
   }
 
-  if (!session) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-  
-  if (!user) {
+  if (!session || !user) {
+    // The useEffect above will handle the logout. In the meantime, show a loading screen.
+    // A direct redirect here can cause loops if the state is flickering.
     return <LoadingScreen />;
   }
-
-  // Redirect root path to dashboard
+  
   if (location.pathname === '/') {
     return <Navigate to="/dashboard" replace />;
   }
