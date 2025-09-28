@@ -36,7 +36,6 @@ export interface NavItem {
   is_deletable?: boolean;
   is_editable?: boolean;
   type: 'url_embed' | 'multi_embed';
-  slug?: string;
 }
 
 export interface NavFolder extends FolderData {
@@ -184,7 +183,7 @@ const NavigationSettingsPage = () => {
       const { data: newItem, error } = await supabase
         .from('user_navigation_items')
         .insert(itemToInsert)
-        .select('*, slug')
+        .select()
         .single();
 
       if (error) throw error;
@@ -192,10 +191,10 @@ const NavigationSettingsPage = () => {
       if (type === 'multi_embed') {
         const { error: updateError } = await supabase
           .from('user_navigation_items')
-          .update({ url: `/multipage/${newItem.slug}` })
+          .update({ url: `/custom-page/${newItem.id}` })
           .eq('id', newItem.id);
         if (updateError) throw updateError;
-        newItem.url = `/multipage/${newItem.slug}`;
+        newItem.url = `/custom-page/${newItem.id}`;
       }
       
       return newItem;

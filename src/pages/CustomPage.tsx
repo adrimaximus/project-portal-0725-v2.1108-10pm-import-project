@@ -29,17 +29,15 @@ const CustomPage = () => {
   }
 
   return (
-    <PortalLayout noPadding disableMainScroll>
+    <PortalLayout>
       <div className="flex flex-col h-full">
-        <div className="p-4 border-b flex-shrink-0">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem><Link to="/dashboard">Dashboard</Link></BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem><BreadcrumbPage>{navItem.name}</BreadcrumbPage></BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <Breadcrumb className="mb-4">
+          <BreadcrumbList>
+            <BreadcrumbItem><Link to="/">Dashboard</Link></BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem><BreadcrumbPage>{navItem.name}</BreadcrumbPage></BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <div className="flex-grow">
           <EmbedRenderer content={navItem.url} />
         </div>

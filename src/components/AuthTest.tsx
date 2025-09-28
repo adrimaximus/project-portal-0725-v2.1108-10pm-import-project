@@ -4,42 +4,54 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 const AuthTest = () => {
-  const [testResults, setTestResults] = useState<string>('');
-  const [isRunning, setIsRunning] = useState(false);
+  const [testResult, setTestResult] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const runAuthTest = async () => {
-    setIsRunning(true);
-    let results = 'Running authentication tests...\n\n';
-
+    setIsLoading(true);
+    setTestResult('Testing authentication...\n');
+    
     try {
-      // Test 1: Check session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      results += `1. Session Check: ${session ? 'PASS' : 'FAIL'}\n`;
-      if (sessionError) results += `   Error: ${sessionError.message}\n`;
+      // Test 1: Check current session
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      setTestResult(prev => prev + `Session check: ${sessionData.session ? 'SUCCESS' : 'NO SESSION'}\n`);
       
-      // Test 2: Check user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      results += `2. User Check: ${user ? 'PASS' : 'FAIL'}\n`;
-      if (userError) results += `   Error: ${userError.message}\n`;
-      
-      // Test 3: Test database access
-      if (user) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', user.id)
-          .single();
-        results += `3. Database Access: ${profileData ? 'PASS' : 'FAIL'}\n`;
-        if (profileError) results += `   Error: ${profileError.message}\n`;
-      } else {
-        results += `3. Database Access: SKIPPED (no user)\n`;
+      if (sessionError) {
+        setTestResult(prev => prev + `Session error: ${sessionError.message}\n`);
       }
-
-      setTestResults(results);
+      
+      if (sessionData.session) {
+        // Test 2: Check user
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        setTestResult(prev => prev + `User check: ${userData.user ? 'SUCCESS' : 'NO USER'}\n`);
+        
+        if (userError) {
+          setTestResult(prev => prev + `User error: ${userError.message}\n`);
+        }
+        
+        if (userData.user) {
+          // Test 3: Check profile access
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, email, role')
+            .eq('id', userData.user.id)
+            .single();
+          
+          setTestResult(prev => prev + `Profile check: ${profileData ? 'SUCCESS' : 'NO PROFILE'}\n`);
+          
+          if (profileError) {
+            setTestResult(prev => prev + `Profile error: ${profileError.message}\n`);
+          } else if (profileData) {
+            setTestResult(prev => prev + `Profile data: ${JSON.stringify(profileData, null, 2)}\n`);
+          }
+        }
+      }
+      
+      setTestResult(prev => prev + '\nTest completed!');
     } catch (error: any) {
-      setTestResults(results + `\nUnexpected error: ${error.message}`);
+      setTestResult(prev => prev + `Unexpected error: ${error.message}\n`);
     } finally {
-      setIsRunning(false);
+      setIsLoading(false);
     }
   };
 
@@ -49,13 +61,13 @@ const AuthTest = () => {
         <CardTitle>Authentication Test</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button onClick={runAuthTest} disabled={isRunning}>
-          {isRunning ? 'Running Tests...' : 'Run Auth Test'}
+        <Button onClick={runAuthTest} disabled={isLoading}>
+          {isLoading ? 'Testing...' : 'Run Auth Test'}
         </Button>
         
-        {testResults && (
+        {testResult && (
           <div className="bg-gray-100 p-4 rounded-md">
-            <pre className="text-xs whitespace-pre-wrap">{testResults}</pre>
+            <pre className="text-xs whitespace-pre-wrap">{testResult}</pre>
           </div>
         )}
       </CardContent>

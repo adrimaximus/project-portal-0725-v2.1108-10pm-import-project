@@ -1,29 +1,35 @@
 import { supabase } from '@/integrations/supabase/client';
 
-interface AuthEventData {
-  event_type: string;
+type AuthEventType = 
+  | 'login_attempt' 
+  | 'signup_attempt' 
+  | 'magic_link_sent' 
+  | 'password_reset_requested'
+  | 'logout';
+
+interface AuthLogData {
+  event_type: AuthEventType;
   email: string;
   success: boolean;
   error_message?: string;
   additional_data?: Record<string, any>;
 }
 
-export const logAuthEvent = async (eventData: AuthEventData) => {
+export const logAuthEvent = async (data: AuthLogData) => {
   try {
-    const { error } = await supabase.from('auth_logs').insert({
-      event_type: eventData.event_type,
-      email: eventData.email,
-      success: eventData.success,
-      error_message: eventData.error_message,
-      user_agent: navigator.userAgent,
-      ip_address: null, // Will be filled by server if needed
-      additional_data: eventData.additional_data || {},
+    const { error } = await supabase.functions.invoke('auth-logger', {
+      body: {
+        ...data,
+        user_agent: navigator.userAgent,
+        ip_address: null, // Will be detected by the edge function
+      },
     });
 
     if (error) {
-      console.error('Failed to log auth event:', error);
+      console.warn('Failed to log auth event:', error);
     }
   } catch (error) {
-    console.error('Auth logging error:', error);
+    console.warn('Auth logging failed:', error);
+    // Don't throw - logging failure shouldn't break auth flow
   }
 };

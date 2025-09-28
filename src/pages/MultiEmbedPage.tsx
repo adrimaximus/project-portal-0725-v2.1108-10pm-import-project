@@ -3,98 +3,110 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import PortalLayout from '@/components/PortalLayout';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Link } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Loader2, Search } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import MultiEmbedCard, { MultiEmbedItem } from '@/components/MultiEmbedCard';
 import MultiEmbedItemFormDialog from '@/components/MultiEmbedItemFormDialog';
-import { Input } from '@/components/ui/input';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 const MultiEmbedPage = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { navItemId } = useParams<{ navItemId: string }>();
+  const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [editingItem, setEditingItem] = useState<MultiEmbedItem | null>(null);
 
   const { data: navItem, isLoading: isLoadingNavItem } = useQuery({
-    queryKey: ['user_navigation_item', slug],
+    queryKey: ['user_navigation_item', navItemId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_navigation_items').select('id, name').eq('slug', slug!).single();
+      const { data, error } = await supabase.from('user_navigation_items').select('name').eq('id', navItemId!).single();
       if (error) throw error;
       return data;
     },
-    enabled: !!slug,
+    enabled: !!navItemId,
   });
 
-  const { data: items, isLoading: isLoadingItems } = useQuery({
-    queryKey: ['multi_embed_items', navItem?.id],
+  const { data: items = [], isLoading: isLoadingItems } = useQuery({
+    queryKey: ['multi_embed_items', navItemId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('multi_embed_items').select('*').eq('nav_item_id', navItem!.id).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('multi_embed_items').select('*').eq('nav_item_id', navItemId!);
       if (error) throw error;
       return data as MultiEmbedItem[];
     },
-    enabled: !!navItem?.id,
+    enabled: !!navItemId,
   });
 
-  const handleAddNew = () => {
+  const { mutate: deleteItem } = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('multi_embed_items').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Item deleted');
+      queryClient.invalidateQueries({ queryKey: ['multi_embed_items', navItemId] });
+    },
+    onError: (error: any) => {
+      toast.error('Failed to delete item', { description: error.message });
+    }
+  });
+
+  const filteredItems = useMemo(() => {
+    if (!searchQuery) return items;
+    return items.filter(item =>
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [items, searchQuery]);
+
+  const handleEdit = (item: MultiEmbedItem) => {
+    setEditingItem(item);
     setIsFormOpen(true);
   };
 
-  const filteredItems = useMemo(() => {
-    if (!items) return [];
-    return items.filter(item =>
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [items, searchTerm]);
+  const handleAddNew = () => {
+    setEditingItem(null);
+    setIsFormOpen(true);
+  };
 
-  if (isLoadingNavItem) {
+  if (isLoadingNavItem || isLoadingItems) {
     return <PortalLayout><div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div></PortalLayout>;
   }
 
   return (
     <PortalLayout>
-      <div className="flex justify-between items-center mb-4">
+      <div className="space-y-6">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem><Link to="/">Dashboard</Link></BreadcrumbItem>
             <BreadcrumbSeparator />
-            <BreadcrumbItem>{navItem?.name || 'Custom Page'}</BreadcrumbItem>
+            <BreadcrumbItem><BreadcrumbPage>{navItem?.name || 'Custom Page'}</BreadcrumbPage></BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <Button onClick={handleAddNew}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New
-        </Button>
-      </div>
+        
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold tracking-tight">{navItem?.name}</h1>
+          <Button onClick={handleAddNew}><Plus className="mr-2 h-4 w-4" /> Add New</Button>
+        </div>
 
-      <div className="mb-4 relative">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          type="search"
-          placeholder="Search by title, description, or tag..."
-          className="pl-8 w-full"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search items..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="max-w-sm"
         />
-      </div>
 
-      {isLoadingItems ? (
-        <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {filteredItems.map(item => (
-            <MultiEmbedCard key={item.id} item={item} parentSlug={slug!} />
+            <MultiEmbedCard key={item.id} item={item} onEdit={handleEdit} onDelete={deleteItem} />
           ))}
         </div>
-      )}
-
-      <MultiEmbedItemFormDialog
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        item={null}
-        navItemId={navItem?.id!}
-      />
+      </div>
+      <MultiEmbedItemFormDialog open={isFormOpen} onOpenChange={setIsFormOpen} item={editingItem} navItemId={navItemId!} />
     </PortalLayout>
   );
 };
