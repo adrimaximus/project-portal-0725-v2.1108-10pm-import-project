@@ -47,67 +47,87 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
 
-    let { data, error } = await supabase
-      .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
-      .single<UserProfileData>();
+    console.log('Fetching user profile for:', supabaseUser.email);
 
-    // If profile doesn't exist (PGRST116), create it. This handles users created before the trigger existed.
-    if (error && error.code === 'PGRST116') {
-      console.warn("User profile not found, creating one...");
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert({
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          first_name: supabaseUser.user_metadata.first_name || '',
-          last_name: supabaseUser.user_metadata.last_name || '',
-          avatar_url: supabaseUser.user_metadata.avatar_url,
-          role: 'member', // default role
-          status: 'active',
-        });
-
-      if (insertError) {
-        console.error("Error creating user profile:", insertError);
-        toast.error("Failed to create user profile on first login.");
-        return null;
-      }
-      
-      // Now that it's created, fetch it again with permissions
-      const { data: refetchedData, error: refetchError } = await supabase
+    try {
+      // First, try to get the profile with permissions
+      let { data, error } = await supabase
         .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
         .single<UserProfileData>();
-      
-      if (refetchError || !refetchedData) {
-        console.error("Error refetching newly created profile:", refetchError);
+
+      // If profile doesn't exist, create it
+      if (error && error.code === 'PGRST116') {
+        console.log("Profile not found, creating new profile...");
+        
+        // Create the profile first
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            first_name: supabaseUser.user_metadata?.first_name || null,
+            last_name: supabaseUser.user_metadata?.last_name || null,
+            avatar_url: supabaseUser.user_metadata?.avatar_url || null,
+            role: supabaseUser.email === 'adri@7inked.com' ? 'master admin' : 'member',
+            status: 'active',
+          });
+
+        if (insertError) {
+          console.error("Error creating user profile:", insertError);
+          toast.error("Failed to create user profile. Please contact support.");
+          return null;
+        }
+
+        console.log("Profile created successfully, fetching again...");
+        
+        // Now fetch the profile with permissions
+        const { data: newData, error: newError } = await supabase
+          .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
+          .single<UserProfileData>();
+        
+        if (newError || !newData) {
+          console.error("Error fetching newly created profile:", newError);
+          toast.error("Failed to load user profile after creation.");
+          return null;
+        }
+        
+        data = newData;
+        error = null;
+      }
+
+      if (error || !data) {
+        console.error("Error fetching user profile:", error);
+        toast.error("Failed to load user profile. Please try refreshing the page.");
         return null;
       }
-      data = refetchedData;
-      error = null; // Clear the original error
-    }
+      
+      const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+      localStorage.setItem('lastUserName', fullName || data.email);
 
-    if (error || !data) {
-      console.error("Error fetching user profile with permissions:", error);
+      const userProfile: User = {
+        id: data.id,
+        name: fullName || data.email,
+        email: data.email,
+        avatar_url: getAvatarUrl(data.avatar_url, data.id),
+        initials: getInitials(fullName, data.email),
+        first_name: data.first_name,
+        last_name: data.last_name,
+        role: data.role,
+        status: data.status,
+        sidebar_order: data.sidebar_order,
+        updated_at: data.updated_at,
+        permissions: data.permissions || [],
+        people_kanban_settings: data.people_kanban_settings,
+      };
+
+      console.log('User profile loaded successfully:', userProfile.email, 'Role:', userProfile.role);
+      return userProfile;
+
+    } catch (error: any) {
+      console.error("Unexpected error in fetchUserProfile:", error);
+      toast.error("An unexpected error occurred while loading your profile.");
       return null;
     }
-    
-    const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-    localStorage.setItem('lastUserName', fullName || data.email);
-
-    return {
-      id: data.id,
-      name: fullName || data.email,
-      email: data.email,
-      avatar_url: getAvatarUrl(data.avatar_url, data.id),
-      initials: getInitials(fullName, data.email),
-      first_name: data.first_name,
-      last_name: data.last_name,
-      role: data.role,
-      status: data.status,
-      sidebar_order: data.sidebar_order,
-      updated_at: data.updated_at,
-      permissions: data.permissions || [],
-      people_kanban_settings: data.people_kanban_settings,
-    };
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -119,31 +139,71 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchUserProfile]);
 
   useEffect(() => {
+    console.log('AuthProvider: Initializing...');
     setLoading(true);
 
     const getInitialSession = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      const profile = await fetchUserProfile(initialSession?.user ?? null);
-      setUser(profile);
-      setLoading(false);
+      try {
+        console.log('Getting initial session...');
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting initial session:', error);
+          toast.error('Authentication error. Please try logging in again.');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Initial session:', initialSession ? 'Found' : 'Not found');
+        setSession(initialSession);
+        
+        if (initialSession?.user) {
+          console.log('Fetching profile for initial session user...');
+          const profile = await fetchUserProfile(initialSession.user);
+          setUser(profile);
+        }
+        
+        setLoading(false);
+      } catch (error: any) {
+        console.error('Unexpected error in getInitialSession:', error);
+        toast.error('Failed to initialize authentication.');
+        setLoading(false);
+      }
     };
 
     getInitialSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      setSession(newSession);
-      const profile = await fetchUserProfile(newSession?.user ?? null);
-      setUser(profile);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log('Auth state change:', event, newSession ? 'Session exists' : 'No session');
       
-      if (_event === 'SIGNED_OUT') {
+      setSession(newSession);
+      
+      if (event === 'SIGNED_IN' && newSession?.user) {
+        console.log('User signed in, fetching profile...');
+        const profile = await fetchUserProfile(newSession.user);
+        setUser(profile);
+        
+        if (profile) {
+          console.log('Profile loaded, navigating to dashboard...');
+          navigate('/dashboard', { replace: true });
+        } else {
+          console.error('Failed to load profile after sign in');
+          toast.error('Failed to load your profile. Please contact support.');
+        }
+      } else if (event === 'SIGNED_OUT') {
+        console.log('User signed out');
+        setUser(null);
         setIsImpersonating(false);
         setOriginalSession(null);
+      } else if (event === 'TOKEN_REFRESHED' && newSession?.user) {
+        console.log('Token refreshed, updating profile...');
+        const profile = await fetchUserProfile(newSession.user);
+        setUser(profile);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, navigate]);
 
   useEffect(() => {
     if (!user) {

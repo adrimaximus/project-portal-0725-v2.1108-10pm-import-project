@@ -36,48 +36,93 @@ const LoginPage = () => {
   }, []);
 
   useEffect(() => {
+    console.log('LoginPage: Auth context loading:', authContextLoading, 'Session:', !!session);
+    
     if (authContextLoading) return;
 
     if (session) {
+      console.log('LoginPage: Session found, redirecting to dashboard');
       navigate('/dashboard', { replace: true });
     }
   }, [session, authContextLoading, navigate]);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Attempting password login for:', email);
+    
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) {
-      toast.error(error.message);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      console.log('Login response:', { user: !!data.user, session: !!data.session, error: error?.message });
+      
+      if (error) {
+        console.error('Login error:', error);
+        toast.error(error.message);
+      } else if (data.user && data.session) {
+        console.log('Login successful, user authenticated');
+        toast.success('Login successful!');
+        // The AuthContext will handle navigation
+      } else {
+        console.error('Login returned no error but no user/session');
+        toast.error('Login failed - no user data returned');
+      }
+    } catch (error: any) {
+      console.error('Unexpected login error:', error);
+      toast.error('An unexpected error occurred during login');
+    } finally {
+      setLoading(false);
     }
-    // onAuthStateChange in AuthContext will handle navigation
-    setLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Attempting sign up for:', signUpEmail);
+    
     setSignUpLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: signUpEmail,
-      password: signUpPassword,
-      options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: signUpEmail,
+        password: signUpPassword,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      toast.error(error.message);
-    } else if (data.user) {
-      toast.success("Please check your email to verify your account.");
+      console.log('Sign up response:', { user: !!data.user, session: !!data.session, error: error?.message });
+
+      if (error) {
+        console.error('Sign up error:', error);
+        toast.error(error.message);
+      } else if (data.user) {
+        if (data.session) {
+          toast.success("Account created successfully!");
+        } else {
+          toast.success("Please check your email to verify your account.");
+        }
+      }
+    } catch (error: any) {
+      console.error('Unexpected sign up error:', error);
+      toast.error('An unexpected error occurred during sign up');
+    } finally {
+      setSignUpLoading(false);
     }
-    setSignUpLoading(false);
   };
+
+  // Add debug info for master admin
+  useEffect(() => {
+    if (email === 'adri@7inked.com') {
+      console.log('Master admin email detected');
+    }
+  }, [email]);
 
   return (
     <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1554147090-e1221a04a025?q=80&w=2940&auto=format&fit=crop')"}}>
@@ -105,6 +150,13 @@ const LoginPage = () => {
               Welcome Back{lastUserName ? `, ${lastUserName}` : ''}!👋
             </h1>
             <p className="text-white/80 mb-8">Sign in or create an account to access your portal.</p>
+            
+            {/* Debug info for development */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mb-4 p-2 bg-yellow-500/20 rounded text-yellow-200 text-xs">
+                Debug: Loading={String(authContextLoading)}, Session={String(!!session)}
+              </div>
+            )}
             
             <Tabs defaultValue="password" className="w-full">
               <TabsList className="grid w-full grid-cols-3 bg-gray-800/50">
