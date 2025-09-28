@@ -2,7 +2,6 @@ import PortalLayout from "@/components/PortalLayout";
 import IntegrationCard from "@/components/settings/IntegrationCard";
 import NavigationCard from "@/components/settings/NavigationCard";
 import TeamCard from "@/components/settings/TeamCard";
-import AuthLogsCard from "@/components/settings/AuthLogsCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -53,7 +52,6 @@ const SettingsPage = () => {
           {/* Role-based */}
           {isAdmin && <TeamCard />}
           {isMasterAdmin && <WorkspaceSettingsCard />}
-          {isMasterAdmin && <AuthLogsCard />}
         </div>
       </div>
     </PortalLayout>

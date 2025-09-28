@@ -1,28 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Package, Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Package, Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon } from 'lucide-react';
 import MagicLinkForm from '@/components/MagicLinkForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import AuthDebugger from '@/components/AuthDebugger';
-import AuthTest from '@/components/AuthTest';
-import { logAuthEvent } from '@/lib/authLogger';
 
 const LoginPage = () => {
   const { session, loading: authContextLoading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [lastUserName, setLastUserName] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string>('');
-  const [showDebugger, setShowDebugger] = useState(false);
-  const [showAuthTest, setShowAuthTest] = useState(false);
-  const [forceRefreshCount, setForceRefreshCount] = useState(0);
-  const [isArcBrowser, setIsArcBrowser] = useState(false);
-  const [error, setError] = useState('');
 
   // Login state
   const [email, setEmail] = useState('');
@@ -43,295 +33,51 @@ const LoginPage = () => {
     if (storedName) {
       setLastUserName(storedName);
     }
-    
-    // Detect Arc browser
-    setIsArcBrowser(navigator.userAgent.includes('Arc'));
   }, []);
 
-  // Force refresh session check
-  const handleForceRefresh = async () => {
-    setForceRefreshCount(prev => prev + 1);
-    console.log('Force refreshing session...');
-    
-    try {
-      const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-      console.log('Force refresh result:', { 
-        session: !!currentSession, 
-        error: error?.message,
-        userEmail: currentSession?.user?.email 
-      });
-      
-      if (currentSession?.user) {
-        console.log('Session found after force refresh, redirecting...');
-        // Force hard redirect for Arc browser
-        if (isArcBrowser) {
-          window.location.href = '/dashboard';
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
-      } else {
-        toast.info('No active session found');
-      }
-    } catch (error: any) {
-      console.error('Force refresh error:', error);
-      toast.error('Failed to refresh session');
-    }
-  };
-
-  // Arc browser specific fix
-  const handleArcBrowserFix = async () => {
-    console.log('Applying Arc browser fix...');
-    
-    try {
-      // Clear any cached auth state
-      await supabase.auth.signOut();
-      
-      // Clear browser storage
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Force reload
-      window.location.reload();
-    } catch (error: any) {
-      console.error('Arc browser fix error:', error);
-      toast.error('Failed to apply Arc browser fix');
-    }
-  };
-
   useEffect(() => {
-    console.log('LoginPage: Auth context loading:', authContextLoading, 'Session:', !!session);
-    
     if (authContextLoading) return;
 
     if (session) {
-      console.log('LoginPage: Session found, redirecting to dashboard');
-      // For Arc browser, use hard redirect
-      if (isArcBrowser) {
-        window.location.href = '/dashboard';
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      navigate('/dashboard', { replace: true });
     }
-  }, [session, authContextLoading, navigate, isArcBrowser]);
+  }, [session, authContextLoading, navigate]);
 
-  // Robust login handler with session verification
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Attempting password login for:', email);
-    
     setLoading(true);
-    setError('');
-    setDebugInfo('Starting login process...');
-    
-    try {
-      // Clear any stale sessions first for clean state
-      await supabase.auth.signOut();
-      setDebugInfo('Cleared any existing sessions...');
-      
-      // Fresh login attempt
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password,
-      });
-      
-      console.log('Login response:', { 
-        user: !!data.user, 
-        session: !!data.session, 
-        error: error?.message,
-        userEmail: data.user?.email,
-        sessionAccessToken: data.session?.access_token ? 'present' : 'missing'
-      });
-      
-      if (error) {
-        console.error('Login error:', error);
-        setError(error.message);
-        setDebugInfo(`Login error: ${error.message}`);
-        toast.error(error.message);
-        
-        // Log failed login attempt
-        await logAuthEvent({
-          event_type: 'login_attempt',
-          email,
-          success: false,
-          error_message: error.message,
-        });
-        return;
-      }
-
-      if (!data.user || !data.session) {
-        const errorMsg = 'Login returned no user/session data';
-        console.error(errorMsg);
-        setError(errorMsg);
-        setDebugInfo(errorMsg);
-        toast.error('Login failed - no user data returned');
-        
-        await logAuthEvent({
-          event_type: 'login_attempt',
-          email,
-          success: false,
-          error_message: errorMsg,
-        });
-        return;
-      }
-
-      console.log('Login successful, user authenticated');
-      setDebugInfo(`Login successful! User: ${data.user.email}, Session: ${!!data.session}`);
-      toast.success('Login successful!');
-      
-      // Log successful login
-      await logAuthEvent({
-        event_type: 'login_attempt',
-        email,
-        success: true,
-        additional_data: {
-          user_id: data.user.id,
-          login_method: 'password',
-          browser: isArcBrowser ? 'Arc' : 'Other',
-        },
-      });
-
-      // Wait for session to be properly set in browser
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Verify session is accessible after login
-      const { data: { session: verifySession } } = await supabase.auth.getSession();
-      
-      if (verifySession) {
-        console.log('Session verified, redirecting...');
-        setDebugInfo('Session verified, redirecting to dashboard...');
-        
-        // Force hard navigation for better compatibility
-        if (isArcBrowser || window.location.pathname === '/login') {
-          console.log('Using hard redirect for Arc browser or stuck on login page');
-          window.location.replace('/dashboard');
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
-      } else {
-        throw new Error('Session not persisted in browser - try disabling strict cookie blocking');
-      }
-
-    } catch (error: any) {
-      console.error('Login process error:', error);
-      setError(error.message || 'Failed to sign in. Try disabling strict cookie blocking.');
-      setDebugInfo(`Error: ${error.message}`);
-      toast.error(error.message || 'An unexpected error occurred during login');
-      
-      // Log unexpected error
-      await logAuthEvent({
-        event_type: 'login_attempt',
-        email,
-        success: false,
-        error_message: `Process error: ${error.message}`,
-      });
-    } finally {
-      setLoading(false);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) {
+      toast.error(error.message);
     }
+    // onAuthStateChange in AuthContext will handle navigation
+    setLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Attempting sign up for:', signUpEmail);
-    
     setSignUpLoading(true);
-    
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: signUpEmail,
-        password: signUpPassword,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          },
+    const { data, error } = await supabase.auth.signUp({
+      email: signUpEmail,
+      password: signUpPassword,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
         },
-      });
+      },
+    });
 
-      console.log('Sign up response:', { user: !!data.user, session: !!data.session, error: error?.message });
-
-      if (error) {
-        console.error('Sign up error:', error);
-        toast.error(error.message);
-        
-        // Log failed signup attempt
-        await logAuthEvent({
-          event_type: 'signup_attempt',
-          email: signUpEmail,
-          success: false,
-          error_message: error.message,
-        });
-      } else if (data.user) {
-        if (data.session) {
-          toast.success("Account created successfully!");
-          // Force redirect to dashboard for successful signup
-          if (isArcBrowser) {
-            window.location.href = '/dashboard';
-          } else {
-            navigate('/dashboard', { replace: true });
-          }
-        } else {
-          toast.success("Please check your email to verify your account.");
-        }
-        
-        // Log successful signup
-        await logAuthEvent({
-          event_type: 'signup_attempt',
-          email: signUpEmail,
-          success: true,
-          additional_data: {
-            user_id: data.user.id,
-            first_name: firstName,
-            last_name: lastName,
-            needs_verification: !data.session,
-            browser: isArcBrowser ? 'Arc' : 'Other',
-          },
-        });
-      }
-    } catch (error: any) {
-      console.error('Unexpected sign up error:', error);
-      toast.error('An unexpected error occurred during sign up');
-      
-      // Log unexpected signup error
-      await logAuthEvent({
-        event_type: 'signup_attempt',
-        email: signUpEmail,
-        success: false,
-        error_message: `Unexpected error: ${error.message}`,
-      });
-    } finally {
-      setSignUpLoading(false);
+    if (error) {
+      toast.error(error.message);
+    } else if (data.user) {
+      toast.success("Please check your email to verify your account.");
     }
+    setSignUpLoading(false);
   };
-
-  if (showDebugger) {
-    return (
-      <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl">
-          <div className="mb-4">
-            <Button onClick={() => setShowDebugger(false)} variant="outline" className="text-white border-white/20">
-              Back to Login
-            </Button>
-          </div>
-          <AuthDebugger />
-        </div>
-      </div>
-    );
-  }
-
-  if (showAuthTest) {
-    return (
-      <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl">
-          <div className="mb-4">
-            <Button onClick={() => setShowAuthTest(false)} variant="outline" className="text-white border-white/20">
-              Back to Login
-            </Button>
-          </div>
-          <AuthTest />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1554147090-e1221a04a025?q=80&w=2940&auto=format&fit=crop')"}}>
@@ -359,48 +105,6 @@ const LoginPage = () => {
               Welcome Back{lastUserName ? `, ${lastUserName}` : ''}!👋
             </h1>
             <p className="text-white/80 mb-8">Sign in or create an account to access your portal.</p>
-            
-            {/* Arc Browser Warning */}
-            {isArcBrowser && (
-              <div className="mb-4 p-3 bg-orange-500/20 rounded text-orange-200 text-xs">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span className="font-semibold">Arc Browser Detected</span>
-                </div>
-                <p className="mt-1">Arc browser may block authentication cookies. If login fails, try the Arc Browser Fix below.</p>
-              </div>
-            )}
-            
-            {/* Error display */}
-            {error && (
-              <div className="mb-4 p-3 bg-red-500/20 rounded text-red-200 text-sm">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span className="font-semibold">Login Error</span>
-                </div>
-                <p className="mt-1">{error}</p>
-              </div>
-            )}
-            
-            {/* Debug info with force refresh */}
-            <div className="mb-4 p-3 bg-yellow-500/20 rounded text-yellow-200 text-xs">
-              <div className="flex justify-between items-center">
-                <div>
-                  <div>Debug: Loading={String(authContextLoading)}, Session={String(!!session)}</div>
-                  <div>Environment: {window.location.hostname}</div>
-                  <div>Refresh Count: {forceRefreshCount}</div>
-                </div>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={handleForceRefresh}
-                  className="text-yellow-200 border-yellow-200/50 hover:bg-yellow-200/10"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                </Button>
-              </div>
-              {debugInfo && <div className="mt-2 whitespace-pre-wrap">{debugInfo}</div>}
-            </div>
             
             <Tabs defaultValue="password" className="w-full">
               <TabsList className="grid w-full grid-cols-3 bg-gray-800/50">
@@ -506,86 +210,9 @@ const LoginPage = () => {
               </TabsContent>
             </Tabs>
             
-            {/* Enhanced debug section */}
-            <div className="mt-4 space-y-2">
-              {session && (
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="w-full bg-green-600 hover:bg-green-700"
-                  onClick={() => {
-                    if (isArcBrowser) {
-                      window.location.href = '/dashboard';
-                    } else {
-                      navigate('/dashboard', { replace: true });
-                    }
-                  }}
-                >
-                  Go to Dashboard (Session Active)
-                </Button>
-              )}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full text-white border-white/20 hover:bg-white/10"
-                onClick={handleForceRefresh}
-              >
-                <RefreshCw className="mr-2 h-3 w-3" />
-                Force Refresh Session
-              </Button>
-              {isArcBrowser && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full text-orange-200 border-orange-200/50 hover:bg-orange-200/10"
-                  onClick={handleArcBrowserFix}
-                >
-                  <AlertTriangle className="mr-2 h-3 w-3" />
-                  Arc Browser Fix
-                </Button>
-              )}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full text-white border-white/20 hover:bg-white/10"
-                onClick={() => setShowAuthTest(true)}
-              >
-                Run Auth Test
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full text-white border-white/20 hover:bg-white/10"
-                onClick={() => setShowDebugger(true)}
-              >
-                Open Full Debugger
-              </Button>
-            </div>
           </div>
         </div>
       </div>
-      
-      {showDebugger && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto">
-            <div className="mb-4">
-              <Button onClick={() => setShowDebugger(false)}>Close Debugger</Button>
-            </div>
-            <AuthDebugger />
-          </div>
-        </div>
-      )}
-      
-      {showAuthTest && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto">
-            <div className="mb-4">
-              <Button onClick={() => setShowAuthTest(false)}>Close Auth Test</Button>
-            </div>
-            <AuthTest />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
