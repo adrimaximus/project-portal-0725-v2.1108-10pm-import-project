@@ -189,6 +189,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (mounted) {
           setUser(profile);
           setLoading(false);
+          // Force redirect to dashboard after successful login
+          navigate('/dashboard', { replace: true });
         }
       } else if (event === 'SIGNED_OUT') {
         console.log('User signed out');
@@ -212,7 +214,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, navigate]);
 
   useEffect(() => {
     if (!user) {

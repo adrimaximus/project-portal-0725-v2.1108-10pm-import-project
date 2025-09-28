@@ -27,6 +27,7 @@ const AuthCallbackPage = () => {
         if (data.session) {
           console.log('Auth callback successful, session found');
           toast.success('Successfully authenticated!');
+          // Force redirect to dashboard
           navigate('/dashboard', { replace: true });
         } else {
           console.log('Auth callback completed but no session found');

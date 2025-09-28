@@ -101,7 +101,8 @@ const LoginPage = () => {
           },
         });
         
-        // The AuthContext will handle navigation
+        // Force redirect to dashboard immediately
+        navigate('/dashboard', { replace: true });
       } else {
         console.error('Login returned no error but no user/session');
         setDebugInfo('Login returned no error but no user/session data');
@@ -166,6 +167,8 @@ const LoginPage = () => {
       } else if (data.user) {
         if (data.session) {
           toast.success("Account created successfully!");
+          // Force redirect to dashboard for successful signup
+          navigate('/dashboard', { replace: true });
         } else {
           toast.success("Please check your email to verify your account.");
         }
