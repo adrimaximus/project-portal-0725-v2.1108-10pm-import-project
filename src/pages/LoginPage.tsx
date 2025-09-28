@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Package, Mail, Lock, Eye, EyeOff, Loader2, User as UserIcon } from 'lucide-react';
 import MagicLinkForm from '@/components/MagicLinkForm';
@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 const LoginPage = () => {
   const { session, loading: authContextLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [lastUserName, setLastUserName] = useState<string | null>(null);
 
   // Login state
@@ -39,45 +40,74 @@ const LoginPage = () => {
     if (authContextLoading) return;
 
     if (session) {
-      navigate('/dashboard', { replace: true });
+      // Get the intended destination from location state, or default to dashboard
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
     }
-  }, [session, authContextLoading, navigate]);
+  }, [session, authContextLoading, navigate, location.state]);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) {
-      toast.error(error.message);
+    
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        toast.error(error.message);
+      }
+      // AuthContext will handle navigation on successful login
+    } catch (error: any) {
+      toast.error("An unexpected error occurred");
+      console.error("Login error:", error);
+    } finally {
       setLoading(false);
     }
-    // AuthContext will handle navigation to dashboard on successful login
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignUpLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: signUpEmail,
-      password: signUpPassword,
-      options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: signUpEmail,
+        password: signUpPassword,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      toast.error(error.message);
-    } else if (data.user) {
-      toast.success("Please check your email to verify your account.");
+      if (error) {
+        toast.error(error.message);
+      } else if (data.user) {
+        toast.success("Please check your email to verify your account.");
+      }
+    } catch (error: any) {
+      toast.error("An unexpected error occurred during sign up");
+      console.error("Sign up error:", error);
+    } finally {
+      setSignUpLoading(false);
     }
-    setSignUpLoading(false);
   };
+
+  // Show loading while auth context is initializing
+  if (authContextLoading) {
+    return (
+      <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1554147090-e1221a04a025?q=80&w=2940&auto=format&fit=crop')"}}>

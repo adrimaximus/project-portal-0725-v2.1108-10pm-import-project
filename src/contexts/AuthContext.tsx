@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { User, Collaborator } from '@/types';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 
 export interface AuthContextType {
@@ -43,37 +43,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [originalSession, setOriginalSession] = useState<Session | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
 
-    const { data, error } = await supabase
-      .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
-      .single<UserProfileData>();
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
+        .single<UserProfileData>();
 
-    if (error || !data) {
-      console.error("Error fetching user profile with permissions:", error);
+      if (error || !data) {
+        console.error("Error fetching user profile with permissions:", error);
+        return null;
+      }
+      
+      const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+      localStorage.setItem('lastUserName', fullName || data.email);
+
+      return {
+        id: data.id,
+        name: fullName || data.email,
+        email: data.email,
+        avatar_url: getAvatarUrl(data.avatar_url, data.id),
+        initials: getInitials(fullName, data.email),
+        first_name: data.first_name,
+        last_name: data.last_name,
+        role: data.role,
+        status: data.status,
+        sidebar_order: data.sidebar_order,
+        updated_at: data.updated_at,
+        permissions: data.permissions || [],
+        people_kanban_settings: data.people_kanban_settings,
+      };
+    } catch (error) {
+      console.error("Error in fetchUserProfile:", error);
       return null;
     }
-    
-    const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-    localStorage.setItem('lastUserName', fullName || data.email);
-
-    return {
-      id: data.id,
-      name: fullName || data.email,
-      email: data.email,
-      avatar_url: getAvatarUrl(data.avatar_url, data.id),
-      initials: getInitials(fullName, data.email),
-      first_name: data.first_name,
-      last_name: data.last_name,
-      role: data.role,
-      status: data.status,
-      sidebar_order: data.sidebar_order,
-      updated_at: data.updated_at,
-      permissions: data.permissions || [],
-      people_kanban_settings: data.people_kanban_settings,
-    };
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -85,36 +91,82 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchUserProfile]);
 
   useEffect(() => {
-    const getInitialSession = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      const profile = await fetchUserProfile(initialSession?.user ?? null);
-      setUser(profile);
-      setLoading(false);
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error getting initial session:", error);
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (mounted) {
+          setSession(initialSession);
+          
+          if (initialSession?.user) {
+            const profile = await fetchUserProfile(initialSession.user);
+            if (mounted) {
+              setUser(profile);
+            }
+          }
+          
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error in initializeAuth:", error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     };
 
-    getInitialSession();
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      setSession(newSession);
-      const profile = await fetchUserProfile(newSession?.user ?? null);
-      setUser(profile);
+      if (!mounted) return;
+
+      console.log("Auth state change:", event, !!newSession);
       
-      if (event === 'SIGNED_IN' && newSession && profile) {
-        // Redirect to dashboard on successful login
-        navigate('/dashboard', { replace: true });
-        setLoading(false);
-      } else if (event === 'USER_UPDATED') {
-        setLoading(false);
+      setSession(newSession);
+      
+      if (newSession?.user) {
+        const profile = await fetchUserProfile(newSession.user);
+        if (mounted) {
+          setUser(profile);
+        }
+      } else {
+        if (mounted) {
+          setUser(null);
+        }
+      }
+      
+      if (event === 'SIGNED_IN' && newSession) {
+        // Only redirect to dashboard if we're on login page or root
+        const isOnLoginPage = location.pathname === '/login' || location.pathname === '/';
+        if (isOnLoginPage) {
+          navigate('/dashboard', { replace: true });
+        }
       } else if (event === 'SIGNED_OUT') {
         setIsImpersonating(false);
         setOriginalSession(null);
+        navigate('/login', { replace: true });
+      }
+      
+      if (mounted) {
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [fetchUserProfile, navigate]);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchUserProfile, navigate, location.pathname]);
 
   useEffect(() => {
     if (!user) {
@@ -169,10 +221,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    navigate('/login', { replace: true });
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Force navigation even if logout fails
+      navigate('/login', { replace: true });
+    }
   };
 
   const hasPermission = (permission: string) => {

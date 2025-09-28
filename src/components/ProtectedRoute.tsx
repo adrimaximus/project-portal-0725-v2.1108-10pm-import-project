@@ -1,21 +1,18 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import LoadingScreen from './LoadingScreen';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { session, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  if (!session) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
