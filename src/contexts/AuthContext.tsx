@@ -10,7 +10,6 @@ export interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  error: string | null;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   refreshUser: () => Promise<void>;
@@ -40,7 +39,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [originalSession, setOriginalSession] = useState<Session | null>(null);
@@ -55,14 +53,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (error || !data) {
       console.error("Error fetching user profile with permissions:", error);
-      setError(`Failed to load user profile: ${error?.message || 'Unknown error'}`);
       return null;
     }
     
     const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
     localStorage.setItem('lastUserName', fullName || data.email);
-
-    setError(null);
 
     return {
       id: data.id,
@@ -132,30 +127,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     channel
-      .on('presence', { event: 'sync' }, async () => {
+      .on('presence', { event: 'sync' }, () => {
         const presenceState = channel.presenceState<any>();
         const userIds = Object.keys(presenceState).filter(id => id !== user.id);
         
         if (userIds.length > 0) {
-          try {
-            const { data } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url, email').in('id', userIds);
-            if (data) {
-              const collaborators = data.map(p => {
-                const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
-                return {
-                  id: p.id,
-                  name: name || p.email,
-                  avatar_url: getAvatarUrl(p.avatar_url, p.id),
-                  initials: getInitials(name, p.email),
-                  email: p.email,
-                  online: true,
-                };
-              });
-              setOnlineCollaborators(collaborators);
-            }
-          } catch (error: any) {
-            console.error('Error fetching online collaborators:', error);
-          }
+          supabase.from('profiles').select('id, first_name, last_name, avatar_url, email').in('id', userIds)
+            .then(({ data }) => {
+              if (data) {
+                const collaborators = data.map(p => {
+                  const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+                  return {
+                    id: p.id,
+                    name: name || p.email,
+                    avatar_url: getAvatarUrl(p.avatar_url, p.id),
+                    initials: getInitials(name, p.email),
+                    email: p.email,
+                    online: true,
+                  };
+                });
+                setOnlineCollaborators(collaborators);
+              }
+            });
         } else {
           setOnlineCollaborators([]);
         }
@@ -231,7 +224,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     session,
     user,
     loading,
-    error,
     logout,
     hasPermission,
     refreshUser,

@@ -9,26 +9,17 @@ import LoginHeader from '@/components/auth/LoginHeader';
 import BrowserWarnings from '@/components/auth/BrowserWarnings';
 import AuthDebugPanel from '@/components/auth/AuthDebugPanel';
 import AuthTabs from '@/components/auth/AuthTabs';
-import BrowserCompatibilityCheck from '@/components/auth/BrowserCompatibilityCheck';
-import AuthLoadingScreen from '@/components/auth/AuthLoadingScreen';
 import { useLoginHandlers } from '@/hooks/useLoginHandlers';
-import { useAuthRedirect } from '@/hooks/useAuthRedirect';
-import { useBrowserDetection } from '@/hooks/useBrowserDetection';
 
 const LoginPage = () => {
-  const { session, loading: authContextLoading, error: authError } = useAuth();
+  const { session, loading: authContextLoading } = useAuth();
+  const navigate = useNavigate();
   const [lastUserName, setLastUserName] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('');
   const [showDebugger, setShowDebugger] = useState(false);
   const [showAuthTest, setShowAuthTest] = useState(false);
+  const [isArcBrowser, setIsArcBrowser] = useState(false);
   const [error, setError] = useState('');
-  const [showCompatibilityCheck, setShowCompatibilityCheck] = useState(false);
-
-  const { browserInfo } = useBrowserDetection();
-  const { isRedirecting } = useAuthRedirect({ 
-    requireAuth: true, 
-    isArcBrowser: browserInfo.isArc 
-  });
 
   const {
     forceRefreshCount,
@@ -36,19 +27,33 @@ const LoginPage = () => {
     handleArcBrowserFix,
     handleNavigateToDashboard,
     handleLoginSuccess,
-  } = useLoginHandlers(browserInfo.isArc);
+  } = useLoginHandlers(isArcBrowser);
 
   useEffect(() => {
     const storedName = localStorage.getItem('lastUserName');
     if (storedName) {
       setLastUserName(storedName);
     }
+    
+    // Detect Arc browser
+    setIsArcBrowser(navigator.userAgent.includes('Arc'));
   }, []);
 
-  // Show loading screen while redirecting
-  if (isRedirecting) {
-    return <AuthLoadingScreen />;
-  }
+  useEffect(() => {
+    console.log('LoginPage: Auth context loading:', authContextLoading, 'Session:', !!session);
+    
+    if (authContextLoading) return;
+
+    if (session) {
+      console.log('LoginPage: Session found, redirecting to dashboard');
+      // For Arc browser, use hard redirect
+      if (isArcBrowser) {
+        window.location.href = '/dashboard';
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [session, authContextLoading, navigate, isArcBrowser]);
 
   if (showDebugger) {
     return (
@@ -90,19 +95,14 @@ const LoginPage = () => {
           <div className="w-full max-w-md mx-auto">
             <LoginHeader lastUserName={lastUserName} />
             
-            <BrowserCompatibilityCheck 
-              onDismiss={() => setShowCompatibilityCheck(false)}
-              showDetails={showCompatibilityCheck}
-            />
-            
-            <BrowserWarnings isArcBrowser={browserInfo.isArc} error={error || authError || ''} />
+            <BrowserWarnings isArcBrowser={isArcBrowser} error={error} />
             
             <AuthDebugPanel
               authContextLoading={authContextLoading}
               session={session}
               forceRefreshCount={forceRefreshCount}
               debugInfo={debugInfo}
-              isArcBrowser={browserInfo.isArc}
+              isArcBrowser={isArcBrowser}
               onForceRefresh={handleForceRefresh}
               onArcBrowserFix={handleArcBrowserFix}
               onShowDebugger={() => setShowDebugger(true)}
@@ -111,23 +111,11 @@ const LoginPage = () => {
             />
             
             <AuthTabs
-              isArcBrowser={browserInfo.isArc}
+              isArcBrowser={isArcBrowser}
               onLoginSuccess={handleLoginSuccess}
               onDebugUpdate={setDebugInfo}
               onError={setError}
             />
-
-            {/* Additional debug options */}
-            <div className="mt-4 pt-4 border-t border-white/10">
-              <Button 
-                variant="link" 
-                size="sm" 
-                className="text-white/60 hover:text-white/80 p-0"
-                onClick={() => setShowCompatibilityCheck(!showCompatibilityCheck)}
-              >
-                {showCompatibilityCheck ? 'Hide' : 'Show'} Browser Compatibility
-              </Button>
-            </div>
           </div>
         </div>
       </div>
