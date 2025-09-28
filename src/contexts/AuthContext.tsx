@@ -42,6 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [onlineCollaborators, setOnlineCollaborators] = useState<Collaborator[]>([]);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [originalSession, setOriginalSession] = useState<Session | null>(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -101,6 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.error("Error getting initial session:", error);
           if (mounted) {
             setLoading(false);
+            setInitialLoadComplete(true);
           }
           return;
         }
@@ -116,11 +118,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
           
           setLoading(false);
+          setInitialLoadComplete(true);
         }
       } catch (error) {
         console.error("Error in initializeAuth:", error);
         if (mounted) {
           setLoading(false);
+          setInitialLoadComplete(true);
         }
       }
     };
@@ -145,16 +149,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
       
-      if (event === 'SIGNED_IN' && newSession) {
-        // Only redirect to dashboard if we're on login page or root
-        const isOnLoginPage = location.pathname === '/login' || location.pathname === '/';
-        if (isOnLoginPage) {
-          navigate('/dashboard', { replace: true });
+      // Only handle navigation after initial load is complete
+      if (initialLoadComplete) {
+        if (event === 'SIGNED_IN' && newSession) {
+          // Only redirect to dashboard if we're on login page, root, or auth callback
+          const isOnAuthPage = ['/login', '/', '/auth/callback'].includes(location.pathname);
+          if (isOnAuthPage) {
+            navigate('/dashboard', { replace: true });
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setIsImpersonating(false);
+          setOriginalSession(null);
+          navigate('/login', { replace: true });
         }
-      } else if (event === 'SIGNED_OUT') {
-        setIsImpersonating(false);
-        setOriginalSession(null);
-        navigate('/login', { replace: true });
       }
       
       if (mounted) {
@@ -166,7 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, navigate, location.pathname]);
+  }, [fetchUserProfile, navigate, location.pathname, initialLoadComplete]);
 
   useEffect(() => {
     if (!user) {
