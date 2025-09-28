@@ -103,20 +103,25 @@ const ProtectedRouteLayout = () => {
 
   useEffect(() => {
     if (!loading && session && !user) {
-      toast.error("Could not load your user profile. Please log in again.", {
-        description: "Your session might be invalid or there could be a network issue.",
-      });
-      logout();
+      // This effect is now primarily for logging and debugging,
+      // as the logout is handled by AuthContext after retries fail.
+      console.warn("Session exists, but user profile is not available yet. AuthContext is handling this.");
     }
-  }, [loading, session, user, logout]);
+  }, [loading, session, user]);
 
   if (loading) {
+    // Covers the initial app load while session is being checked.
     return <LoadingScreen />;
   }
 
-  if (!session || !user) {
-    // The useEffect above will handle the logout. In the meantime, show a loading screen.
-    // A direct redirect here can cause loops if the state is flickering.
+  if (!session) {
+    // If after the initial load there's no session, redirect to login.
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!user) {
+    // If there's a session but no user profile yet, it means the profile is still being fetched (or has failed).
+    // AuthContext will handle the failure case by logging out. In the meantime, show a loading screen.
     return <LoadingScreen />;
   }
   

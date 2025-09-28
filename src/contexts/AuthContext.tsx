@@ -49,8 +49,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
 
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY = 500; // 500ms
+    const MAX_RETRIES = 5; // Increased from 3
+    const RETRY_DELAY = 1000; // Increased from 500ms
 
     for (let i = 0; i < MAX_RETRIES; i++) {
         try {
