@@ -22,6 +22,7 @@ const LoginPage = () => {
   const [showAuthTest, setShowAuthTest] = useState(false);
   const [forceRefreshCount, setForceRefreshCount] = useState(0);
   const [isArcBrowser, setIsArcBrowser] = useState(false);
+  const [error, setError] = useState('');
 
   // Login state
   const [email, setEmail] = useState('');
@@ -113,17 +114,24 @@ const LoginPage = () => {
     }
   }, [session, authContextLoading, navigate, isArcBrowser]);
 
+  // Robust login handler with session verification
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Attempting password login for:', email);
     
     setLoading(true);
+    setError('');
     setDebugInfo('Starting login process...');
     
     try {
+      // Clear any stale sessions first for clean state
+      await supabase.auth.signOut();
+      setDebugInfo('Cleared any existing sessions...');
+      
+      // Fresh login attempt
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: email.trim(),
+        password: password,
       });
       
       console.log('Login response:', { 
@@ -136,6 +144,7 @@ const LoginPage = () => {
       
       if (error) {
         console.error('Login error:', error);
+        setError(error.message);
         setDebugInfo(`Login error: ${error.message}`);
         toast.error(error.message);
         
@@ -146,57 +155,74 @@ const LoginPage = () => {
           success: false,
           error_message: error.message,
         });
-      } else if (data.user && data.session) {
-        console.log('Login successful, user authenticated');
-        setDebugInfo(`Login successful! User: ${data.user.email}, Session: ${!!data.session}`);
-        toast.success('Login successful!');
-        
-        // Log successful login
-        await logAuthEvent({
-          event_type: 'login_attempt',
-          email,
-          success: true,
-          additional_data: {
-            user_id: data.user.id,
-            login_method: 'password',
-            browser: isArcBrowser ? 'Arc' : 'Other',
-          },
-        });
-        
-        // Force redirect to dashboard - use hard redirect for Arc browser
-        if (isArcBrowser) {
-          setTimeout(() => {
-            window.location.href = '/dashboard';
-          }, 500);
-        } else {
-          setTimeout(() => {
-            navigate('/dashboard', { replace: true });
-          }, 500);
-        }
-      } else {
-        console.error('Login returned no error but no user/session');
-        setDebugInfo('Login returned no error but no user/session data');
+        return;
+      }
+
+      if (!data.user || !data.session) {
+        const errorMsg = 'Login returned no user/session data';
+        console.error(errorMsg);
+        setError(errorMsg);
+        setDebugInfo(errorMsg);
         toast.error('Login failed - no user data returned');
         
-        // Log unexpected login failure
         await logAuthEvent({
           event_type: 'login_attempt',
           email,
           success: false,
-          error_message: 'No user/session data returned',
+          error_message: errorMsg,
         });
+        return;
       }
+
+      console.log('Login successful, user authenticated');
+      setDebugInfo(`Login successful! User: ${data.user.email}, Session: ${!!data.session}`);
+      toast.success('Login successful!');
+      
+      // Log successful login
+      await logAuthEvent({
+        event_type: 'login_attempt',
+        email,
+        success: true,
+        additional_data: {
+          user_id: data.user.id,
+          login_method: 'password',
+          browser: isArcBrowser ? 'Arc' : 'Other',
+        },
+      });
+
+      // Wait for session to be properly set in browser
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Verify session is accessible after login
+      const { data: { session: verifySession } } = await supabase.auth.getSession();
+      
+      if (verifySession) {
+        console.log('Session verified, redirecting...');
+        setDebugInfo('Session verified, redirecting to dashboard...');
+        
+        // Force hard navigation for better compatibility
+        if (isArcBrowser || window.location.pathname === '/login') {
+          console.log('Using hard redirect for Arc browser or stuck on login page');
+          window.location.replace('/dashboard');
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      } else {
+        throw new Error('Session not persisted in browser - try disabling strict cookie blocking');
+      }
+
     } catch (error: any) {
-      console.error('Unexpected login error:', error);
-      setDebugInfo(`Unexpected error: ${error.message}`);
-      toast.error('An unexpected error occurred during login');
+      console.error('Login process error:', error);
+      setError(error.message || 'Failed to sign in. Try disabling strict cookie blocking.');
+      setDebugInfo(`Error: ${error.message}`);
+      toast.error(error.message || 'An unexpected error occurred during login');
       
       // Log unexpected error
       await logAuthEvent({
         event_type: 'login_attempt',
         email,
         success: false,
-        error_message: `Unexpected error: ${error.message}`,
+        error_message: `Process error: ${error.message}`,
       });
     } finally {
       setLoading(false);
@@ -342,6 +368,17 @@ const LoginPage = () => {
                   <span className="font-semibold">Arc Browser Detected</span>
                 </div>
                 <p className="mt-1">Arc browser may block authentication cookies. If login fails, try the Arc Browser Fix below.</p>
+              </div>
+            )}
+            
+            {/* Error display */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/20 rounded text-red-200 text-sm">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="font-semibold">Login Error</span>
+                </div>
+                <p className="mt-1">{error}</p>
               </div>
             )}
             
