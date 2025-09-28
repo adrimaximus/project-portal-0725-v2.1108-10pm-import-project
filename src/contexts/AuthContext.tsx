@@ -53,7 +53,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
         .single<UserProfileData>();
       if (error || !data) {
-        console.error("Error fetching user profile:", error);
+        console.error("Error fetching user profile, signing out:", error);
+        await supabase.auth.signOut();
         return null;
       }
       const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
@@ -73,113 +74,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const refreshUser = useCallback(async () => {
-    try {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (currentSession?.user) {
-        const profile = await fetchUserProfile(currentSession.user);
-        setUser(profile);
-      }
-    } catch (error) {
-      console.error("Error refreshing user:", error);
-    }
-  }, [fetchUserProfile]);
-
-  // Initialize session and set up auth state listener
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-
-        if (error) {
-          console.error("Error getting initial session:", error);
-          // Clear potentially corrupted session data
-          await supabase.auth.signOut();
-          setSession(null);
-          setUser(null);
-        } else {
-          setSession(initialSession);
-          if (initialSession?.user) {
-            const profile = await fetchUserProfile(initialSession.user);
-            if (mounted) {
-              setUser(profile);
-            }
-          }
+    const getInitialSession = async () => {
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      if (mounted) {
+        setSession(initialSession);
+        if (initialSession?.user) {
+          const profile = await fetchUserProfile(initialSession.user);
+          setUser(profile);
         }
-      } catch (error) {
-        console.error("Critical error in initializeAuth:", error);
-        if (mounted) {
-          setSession(null);
-          setUser(null);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
-    initializeAuth();
+    getInitialSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (!mounted) return;
-
-      console.log('Auth state change:', event, newSession ? 'session exists' : 'no session');
-
-      try {
-        switch (event) {
-          case 'SIGNED_IN':
-            setSession(newSession);
-            if (newSession?.user) {
-              const profile = await fetchUserProfile(newSession.user);
-              setUser(profile);
-            }
-            break;
-            
-          case 'TOKEN_REFRESHED':
-            // Handle token refresh explicitly
-            setSession(newSession);
-            // Don't refetch user profile on token refresh unless user is null
-            if (newSession?.user && !user) {
-              const profile = await fetchUserProfile(newSession.user);
-              setUser(profile);
-            }
-            break;
-            
-          case 'USER_UPDATED':
-            setSession(newSession);
-            if (newSession?.user) {
-              const profile = await fetchUserProfile(newSession.user);
-              setUser(profile);
-            }
-            break;
-            
-          case 'SIGNED_OUT':
-            setSession(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (mounted) {
+          setSession(session);
+          if (session?.user) {
+            const profile = await fetchUserProfile(session.user);
+            setUser(profile);
+          } else {
             setUser(null);
-            setIsImpersonating(false);
-            setOriginalSession(null);
-            SafeLocalStorage.removeItem('lastUserName');
-            if (location.pathname !== '/login' && location.pathname !== '/' && !location.pathname.startsWith('/auth')) {
-              navigate('/login', { replace: true });
-            }
-            break;
+          }
         }
-      } catch (error) {
-        console.error("Error in auth state change handler:", error);
-        // Don't throw or show toast here, as it might cause infinite loops
       }
-    });
+    );
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
-  }, [fetchUserProfile, navigate, location.pathname, user]);
+  }, [fetchUserProfile]);
 
   useEffect(() => {
     if (!user) {
@@ -237,7 +167,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       navigate('/login', { replace: true });
     } catch (error) {
       console.error("Error during logout:", error);
-      // Force clear everything even if signOut fails
       SafeLocalStorage.clear();
       setUser(null);
       setSession(null);
@@ -302,6 +231,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (currentSession?.user) {
+        const profile = await fetchUserProfile(currentSession.user);
+        setUser(profile);
+      }
+    } catch (error) {
+      console.error("Error refreshing user:", error);
+    }
+  }, [fetchUserProfile]);
+
   const value = { 
     session, 
     user, 
@@ -321,7 +262,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within an AuthContext');
   }
   return context;
 };
