@@ -190,7 +190,6 @@ const NavigationSettingsPage = () => {
       if (!user) throw new Error("User not authenticated");
       const newPosition = navItems.filter(i => !i.folder_id).length;
       
-      // For multi_embed type, we'll set a placeholder URL that will be updated after slug generation
       const itemToInsert = { 
         name, 
         url: type === 'multi_embed' ? '/multipage/placeholder' : url, 
@@ -203,28 +202,14 @@ const NavigationSettingsPage = () => {
         type 
       };
       
-      const { data: newItem, error } = await supabase
+      const { error } = await supabase
         .from('user_navigation_items')
-        .insert(itemToInsert)
-        .select('id,url,position,slug')
-        .single();
+        .insert(itemToInsert);
 
       if (error) throw error;
-
-      // For multi_embed type, update the URL to use the generated slug
-      if (type === 'multi_embed' && newItem.slug) {
-        const { error: updateError } = await supabase
-          .from('user_navigation_items')
-          .update({ url: `/multipage/${newItem.slug}` })
-          .eq('id', newItem.id);
-        if (updateError) throw updateError;
-        newItem.url = `/multipage/${newItem.slug}`;
-      }
-      
-      return newItem;
     },
-    onSuccess: (newItem) => {
-      queryClient.setQueryData(queryKey, (old: NavItem[] | undefined) => [...(old || []), newItem as NavItem]);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
       setNewItemName("");
       setNewItemContent("");
       setNewItemIcon(undefined);
