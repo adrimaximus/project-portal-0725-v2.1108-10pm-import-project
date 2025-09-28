@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import AuthDebugger from '@/components/AuthDebugger';
+import AuthTest from '@/components/AuthTest';
 
 const LoginPage = () => {
   const { session, loading: authContextLoading } = useAuth();
@@ -16,6 +17,7 @@ const LoginPage = () => {
   const [lastUserName, setLastUserName] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('');
   const [showDebugger, setShowDebugger] = useState(false);
+  const [showAuthTest, setShowAuthTest] = useState(false);
 
   // Login state
   const [email, setEmail] = useState('');
@@ -57,22 +59,6 @@ const LoginPage = () => {
     setDebugInfo('Starting login process...');
     
     try {
-      // First, let's check if the user exists
-      const { data: existingUser, error: userCheckError } = await supabase
-        .from('profiles')
-        .select('id, email, role, status')
-        .eq('email', email)
-        .single();
-
-      if (userCheckError && userCheckError.code !== 'PGRST116') {
-        console.error('Error checking user:', userCheckError);
-        setDebugInfo(`Error checking user: ${userCheckError.message}`);
-      } else if (userCheckError && userCheckError.code === 'PGRST116') {
-        setDebugInfo('User profile not found in database');
-      } else {
-        setDebugInfo(`User found: ${existingUser.email}, Role: ${existingUser.role}, Status: ${existingUser.status}`);
-      }
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -94,20 +80,6 @@ const LoginPage = () => {
         console.log('Login successful, user authenticated');
         setDebugInfo(`Login successful! User: ${data.user.email}, Session: ${!!data.session}`);
         toast.success('Login successful!');
-        
-        // Let's also check if the profile exists after login
-        const { data: profileCheck, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, email, role')
-          .eq('id', data.user.id)
-          .single();
-        
-        if (profileError) {
-          setDebugInfo(prev => prev + `\nProfile check error: ${profileError.message}`);
-        } else {
-          setDebugInfo(prev => prev + `\nProfile found: ${profileCheck.email}, Role: ${profileCheck.role}`);
-        }
-        
         // The AuthContext will handle navigation
       } else {
         console.error('Login returned no error but no user/session');
@@ -161,13 +133,6 @@ const LoginPage = () => {
     }
   };
 
-  // Add debug info for master admin
-  useEffect(() => {
-    if (email === 'adri@7inked.com') {
-      console.log('Master admin email detected');
-    }
-  }, [email]);
-
   if (showDebugger) {
     return (
       <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4">
@@ -178,6 +143,21 @@ const LoginPage = () => {
             </Button>
           </div>
           <AuthDebugger />
+        </div>
+      </div>
+    );
+  }
+
+  if (showAuthTest) {
+    return (
+      <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-4xl">
+          <div className="mb-4">
+            <Button onClick={() => setShowAuthTest(false)} variant="outline" className="text-white border-white/20">
+              Back to Login
+            </Button>
+          </div>
+          <AuthTest />
         </div>
       </div>
     );
@@ -213,6 +193,7 @@ const LoginPage = () => {
             {/* Debug info */}
             <div className="mb-4 p-3 bg-yellow-500/20 rounded text-yellow-200 text-xs">
               <div>Debug: Loading={String(authContextLoading)}, Session={String(!!session)}</div>
+              <div>Environment: {window.location.hostname}</div>
               {debugInfo && <div className="mt-2 whitespace-pre-wrap">{debugInfo}</div>}
             </div>
             
@@ -326,13 +307,9 @@ const LoginPage = () => {
                 variant="outline" 
                 size="sm" 
                 className="w-full text-white border-white/20 hover:bg-white/10"
-                onClick={async () => {
-                  const { data: { session: currentSession } } = await supabase.auth.getSession();
-                  const { data: { user: currentUser } } = await supabase.auth.getUser();
-                  setDebugInfo(`Current Session: ${!!currentSession}\nCurrent User: ${!!currentUser}\nUser Email: ${currentUser?.email || 'none'}`);
-                }}
+                onClick={() => setShowAuthTest(true)}
               >
-                Check Current Session
+                Run Auth Test
               </Button>
               <Button 
                 variant="outline" 
@@ -354,6 +331,17 @@ const LoginPage = () => {
               <Button onClick={() => setShowDebugger(false)}>Close Debugger</Button>
             </div>
             <AuthDebugger />
+          </div>
+        </div>
+      )}
+      
+      {showAuthTest && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="mb-4">
+              <Button onClick={() => setShowAuthTest(false)}>Close Auth Test</Button>
+            </div>
+            <AuthTest />
           </div>
         </div>
       )}
