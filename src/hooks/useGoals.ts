@@ -21,6 +21,7 @@ export const useGoals = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
+  /*
   useEffect(() => {
     if (!user) return;
 
@@ -48,6 +49,7 @@ export const useGoals = () => {
       supabase.removeChannel(channel);
     };
   }, [user, queryClient]);
+  */
 
   return useQuery<Goal[], Error>({
     queryKey: ['goals', user?.id],
