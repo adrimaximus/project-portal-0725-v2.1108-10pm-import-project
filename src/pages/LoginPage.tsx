@@ -13,6 +13,7 @@ const LoginPage = () => {
   const { session, loading: authContextLoading } = useAuth();
   const navigate = useNavigate();
   const [lastUserName, setLastUserName] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   // Login state
   const [email, setEmail] = useState('');
@@ -51,28 +52,69 @@ const LoginPage = () => {
     console.log('Attempting password login for:', email);
     
     setLoading(true);
+    setDebugInfo('Starting login process...');
     
     try {
+      // First, let's check if the user exists
+      const { data: existingUser, error: userCheckError } = await supabase
+        .from('profiles')
+        .select('id, email, role, status')
+        .eq('email', email)
+        .single();
+
+      if (userCheckError && userCheckError.code !== 'PGRST116') {
+        console.error('Error checking user:', userCheckError);
+        setDebugInfo(`Error checking user: ${userCheckError.message}`);
+      } else if (userCheckError && userCheckError.code === 'PGRST116') {
+        setDebugInfo('User profile not found in database');
+      } else {
+        setDebugInfo(`User found: ${existingUser.email}, Role: ${existingUser.role}, Status: ${existingUser.status}`);
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      console.log('Login response:', { user: !!data.user, session: !!data.session, error: error?.message });
+      console.log('Login response:', { 
+        user: !!data.user, 
+        session: !!data.session, 
+        error: error?.message,
+        userEmail: data.user?.email,
+        sessionAccessToken: data.session?.access_token ? 'present' : 'missing'
+      });
       
       if (error) {
         console.error('Login error:', error);
+        setDebugInfo(`Login error: ${error.message}`);
         toast.error(error.message);
       } else if (data.user && data.session) {
         console.log('Login successful, user authenticated');
+        setDebugInfo(`Login successful! User: ${data.user.email}, Session: ${!!data.session}`);
         toast.success('Login successful!');
+        
+        // Let's also check if the profile exists after login
+        const { data: profileCheck, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, email, role')
+          .eq('id', data.user.id)
+          .single();
+        
+        if (profileError) {
+          setDebugInfo(prev => prev + `\nProfile check error: ${profileError.message}`);
+        } else {
+          setDebugInfo(prev => prev + `\nProfile found: ${profileCheck.email}, Role: ${profileCheck.role}`);
+        }
+        
         // The AuthContext will handle navigation
       } else {
         console.error('Login returned no error but no user/session');
+        setDebugInfo('Login returned no error but no user/session data');
         toast.error('Login failed - no user data returned');
       }
     } catch (error: any) {
       console.error('Unexpected login error:', error);
+      setDebugInfo(`Unexpected error: ${error.message}`);
       toast.error('An unexpected error occurred during login');
     } finally {
       setLoading(false);
@@ -151,12 +193,11 @@ const LoginPage = () => {
             </h1>
             <p className="text-white/80 mb-8">Sign in or create an account to access your portal.</p>
             
-            {/* Debug info for development */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mb-4 p-2 bg-yellow-500/20 rounded text-yellow-200 text-xs">
-                Debug: Loading={String(authContextLoading)}, Session={String(!!session)}
-              </div>
-            )}
+            {/* Debug info */}
+            <div className="mb-4 p-3 bg-yellow-500/20 rounded text-yellow-200 text-xs">
+              <div>Debug: Loading={String(authContextLoading)}, Session={String(!!session)}</div>
+              {debugInfo && <div className="mt-2 whitespace-pre-wrap">{debugInfo}</div>}
+            </div>
             
             <Tabs defaultValue="password" className="w-full">
               <TabsList className="grid w-full grid-cols-3 bg-gray-800/50">
@@ -262,6 +303,21 @@ const LoginPage = () => {
               </TabsContent>
             </Tabs>
             
+            {/* Debug button for testing */}
+            <div className="mt-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full text-white border-white/20 hover:bg-white/10"
+                onClick={async () => {
+                  const { data: { session: currentSession } } = await supabase.auth.getSession();
+                  const { data: { user: currentUser } } = await supabase.auth.getUser();
+                  setDebugInfo(`Current Session: ${!!currentSession}\nCurrent User: ${!!currentUser}\nUser Email: ${currentUser?.email || 'none'}`);
+                }}
+              >
+                Check Current Session
+              </Button>
+            </div>
           </div>
         </div>
       </div>
