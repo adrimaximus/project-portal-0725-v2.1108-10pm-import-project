@@ -52,9 +52,9 @@ const LoginPage = () => {
     });
     if (error) {
       toast.error(error.message);
+      setLoading(false);
     }
-    // onAuthStateChange in AuthContext will handle navigation
-    setLoading(false);
+    // AuthContext will handle navigation to dashboard on successful login
   };
 
   const handleSignUp = async (e: React.FormEvent) => {

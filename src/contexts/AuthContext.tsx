@@ -95,14 +95,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     getInitialSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       setSession(newSession);
       const profile = await fetchUserProfile(newSession?.user ?? null);
       setUser(profile);
-      if (_event === 'SIGNED_IN' || _event === 'USER_UPDATED') {
+      
+      if (event === 'SIGNED_IN' && newSession && profile) {
+        // Redirect to dashboard on successful login
+        navigate('/dashboard', { replace: true });
         setLoading(false);
-      }
-      if (_event === 'SIGNED_OUT') {
+      } else if (event === 'USER_UPDATED') {
+        setLoading(false);
+      } else if (event === 'SIGNED_OUT') {
         setIsImpersonating(false);
         setOriginalSession(null);
         setLoading(false);
@@ -110,7 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, navigate]);
 
   useEffect(() => {
     if (!user) {

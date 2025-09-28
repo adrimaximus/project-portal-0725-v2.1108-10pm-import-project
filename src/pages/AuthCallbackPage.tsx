@@ -12,8 +12,8 @@ const AuthCallbackPage = () => {
       if (session) {
         navigate('/dashboard', { replace: true });
       } else {
-        // Jika tidak ada sesi setelah memuat, ada yang salah.
-        // Kembali ke halaman login.
+        // If no session after loading, something went wrong
+        // Go back to login page
         navigate('/login', { replace: true });
       }
     }

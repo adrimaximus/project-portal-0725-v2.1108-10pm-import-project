@@ -109,6 +109,11 @@ const ProtectedRouteLayout = () => {
     return <LoadingScreen />;
   }
 
+  // Redirect root path to dashboard
+  if (location.pathname === '/') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return <Outlet />;
 };
 
