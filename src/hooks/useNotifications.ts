@@ -55,7 +55,6 @@ export const useNotifications = () => {
     enabled: !!user,
   });
 
-  /*
   useEffect(() => {
     if (!user) return;
 
@@ -86,7 +85,6 @@ export const useNotifications = () => {
       supabase.removeChannel(channel);
     };
   }, [user, queryClient]);
-  */
 
   const notifications = data?.pages.flatMap(page => page) ?? [];
   const unreadCount = notifications.filter(n => !n.read).length;
