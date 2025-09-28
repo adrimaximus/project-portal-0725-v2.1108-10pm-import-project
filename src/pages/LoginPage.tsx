@@ -8,12 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import AuthDebugger from '@/components/AuthDebugger';
 
 const LoginPage = () => {
   const { session, loading: authContextLoading } = useAuth();
   const navigate = useNavigate();
   const [lastUserName, setLastUserName] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('');
+  const [showDebugger, setShowDebugger] = useState(false);
 
   // Login state
   const [email, setEmail] = useState('');
@@ -166,6 +168,21 @@ const LoginPage = () => {
     }
   }, [email]);
 
+  if (showDebugger) {
+    return (
+      <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-4xl">
+          <div className="mb-4">
+            <Button onClick={() => setShowDebugger(false)} variant="outline" className="text-white border-white/20">
+              Back to Login
+            </Button>
+          </div>
+          <AuthDebugger />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1554147090-e1221a04a025?q=80&w=2940&auto=format&fit=crop')"}}>
       <div className="w-full max-w-4xl grid lg:grid-cols-2 rounded-2xl overflow-hidden shadow-2xl">
@@ -303,8 +320,8 @@ const LoginPage = () => {
               </TabsContent>
             </Tabs>
             
-            {/* Debug button for testing */}
-            <div className="mt-4">
+            {/* Debug buttons */}
+            <div className="mt-4 space-y-2">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -317,10 +334,29 @@ const LoginPage = () => {
               >
                 Check Current Session
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full text-white border-white/20 hover:bg-white/10"
+                onClick={() => setShowDebugger(true)}
+              >
+                Open Full Debugger
+              </Button>
             </div>
           </div>
         </div>
       </div>
+      
+      {showDebugger && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="mb-4">
+              <Button onClick={() => setShowDebugger(false)}>Close Debugger</Button>
+            </div>
+            <AuthDebugger />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

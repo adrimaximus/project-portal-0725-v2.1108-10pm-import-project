@@ -21,20 +21,6 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface UserProfileData {
-  id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  avatar_url: string | null;
-  role: string;
-  status: string;
-  sidebar_order: string[];
-  updated_at: string;
-  permissions: string[];
-  people_kanban_settings: any;
-}
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -44,25 +30,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [originalSession, setOriginalSession] = useState<Session | null>(null);
   const navigate = useNavigate();
 
+  const createFallbackUser = useCallback((supabaseUser: SupabaseUser): User => {
+    const fullName = `${supabaseUser.user_metadata?.first_name || ''} ${supabaseUser.user_metadata?.last_name || ''}`.trim();
+    const role = supabaseUser.email === 'adri@7inked.com' ? 'master admin' : 'member';
+    
+    return {
+      id: supabaseUser.id,
+      name: fullName || supabaseUser.email || 'User',
+      email: supabaseUser.email || '',
+      avatar_url: getAvatarUrl(supabaseUser.user_metadata?.avatar_url, supabaseUser.id),
+      initials: getInitials(fullName, supabaseUser.email),
+      first_name: supabaseUser.user_metadata?.first_name,
+      last_name: supabaseUser.user_metadata?.last_name,
+      role: role,
+      status: 'active',
+      permissions: role === 'master admin' ? ['*'] : ['module:dashboard', 'module:projects'],
+    };
+  }, []);
+
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
 
     console.log('Fetching user profile for:', supabaseUser.email);
 
     try {
-      // First, try to get the profile with permissions
-      let { data, error } = await supabase
-        .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
-        .single<UserProfileData>();
+      // Try to get the profile from the database
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
 
-      // If profile doesn't exist, create it
-      if (error && error.code === 'PGRST116') {
+      if (profileError && profileError.code === 'PGRST116') {
         console.log("Profile not found, creating new profile...");
         
-        // Determine role based on email
-        const role = supabaseUser.email === 'adri@7inked.com' ? 'master admin' : 'member';
+        // Create fallback user first
+        const fallbackUser = createFallbackUser(supabaseUser);
         
-        // Create the profile first
+        // Try to create the profile
         const { error: insertError } = await supabase
           .from('profiles')
           .insert({
@@ -71,88 +76,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             first_name: supabaseUser.user_metadata?.first_name || null,
             last_name: supabaseUser.user_metadata?.last_name || null,
             avatar_url: supabaseUser.user_metadata?.avatar_url || null,
-            role: role,
+            role: fallbackUser.role,
             status: 'active',
           });
 
         if (insertError) {
           console.error("Error creating user profile:", insertError);
-          toast.error("Failed to create user profile. Please contact support.");
-          return null;
-        }
-
-        console.log("Profile created successfully, fetching again...");
-        
-        // Now fetch the profile with permissions
-        const { data: newData, error: newError } = await supabase
-          .rpc('get_user_profile_with_permissions', { p_user_id: supabaseUser.id })
-          .single<UserProfileData>();
-        
-        if (newError || !newData) {
-          console.error("Error fetching newly created profile:", newError);
-          
-          // Fallback: create a basic user object without permissions
-          const fullName = `${supabaseUser.user_metadata?.first_name || ''} ${supabaseUser.user_metadata?.last_name || ''}`.trim();
-          const fallbackUser: User = {
-            id: supabaseUser.id,
-            name: fullName || supabaseUser.email || 'User',
-            email: supabaseUser.email || '',
-            avatar_url: getAvatarUrl(supabaseUser.user_metadata?.avatar_url, supabaseUser.id),
-            initials: getInitials(fullName, supabaseUser.email),
-            first_name: supabaseUser.user_metadata?.first_name,
-            last_name: supabaseUser.user_metadata?.last_name,
-            role: role,
-            status: 'active',
-            permissions: role === 'master admin' ? ['*'] : ['module:dashboard', 'module:projects'],
-          };
-          
-          console.log('Using fallback user profile:', fallbackUser);
+          console.log("Using fallback user without database profile");
           return fallbackUser;
         }
-        
-        data = newData;
-        error = null;
-      }
 
-      if (error || !data) {
-        console.error("Error fetching user profile:", error);
-        
-        // Fallback: create a basic user object
-        const fullName = `${supabaseUser.user_metadata?.first_name || ''} ${supabaseUser.user_metadata?.last_name || ''}`.trim();
-        const fallbackUser: User = {
-          id: supabaseUser.id,
-          name: fullName || supabaseUser.email || 'User',
-          email: supabaseUser.email || '',
-          avatar_url: getAvatarUrl(supabaseUser.user_metadata?.avatar_url, supabaseUser.id),
-          initials: getInitials(fullName, supabaseUser.email),
-          first_name: supabaseUser.user_metadata?.first_name,
-          last_name: supabaseUser.user_metadata?.last_name,
-          role: supabaseUser.email === 'adri@7inked.com' ? 'master admin' : 'member',
-          status: 'active',
-          permissions: supabaseUser.email === 'adri@7inked.com' ? ['*'] : ['module:dashboard', 'module:projects'],
-        };
-        
-        console.log('Using fallback user profile due to error:', fallbackUser);
+        console.log("Profile created successfully");
         return fallbackUser;
       }
+
+      if (profileError || !profileData) {
+        console.error("Error fetching user profile:", profileError);
+        console.log("Using fallback user due to profile fetch error");
+        return createFallbackUser(supabaseUser);
+      }
       
-      const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-      localStorage.setItem('lastUserName', fullName || data.email);
+      const fullName = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim();
+      localStorage.setItem('lastUserName', fullName || profileData.email);
 
       const userProfile: User = {
-        id: data.id,
-        name: fullName || data.email,
-        email: data.email,
-        avatar_url: getAvatarUrl(data.avatar_url, data.id),
-        initials: getInitials(fullName, data.email),
-        first_name: data.first_name,
-        last_name: data.last_name,
-        role: data.role,
-        status: data.status,
-        sidebar_order: data.sidebar_order,
-        updated_at: data.updated_at,
-        permissions: data.permissions || [],
-        people_kanban_settings: data.people_kanban_settings,
+        id: profileData.id,
+        name: fullName || profileData.email,
+        email: profileData.email,
+        avatar_url: getAvatarUrl(profileData.avatar_url, profileData.id),
+        initials: getInitials(fullName, profileData.email),
+        first_name: profileData.first_name,
+        last_name: profileData.last_name,
+        role: profileData.role,
+        status: profileData.status,
+        sidebar_order: profileData.sidebar_order,
+        updated_at: profileData.updated_at,
+        permissions: profileData.role === 'master admin' ? ['*'] : ['module:dashboard', 'module:projects'],
+        people_kanban_settings: profileData.people_kanban_settings,
       };
 
       console.log('User profile loaded successfully:', userProfile.email, 'Role:', userProfile.role);
@@ -160,26 +120,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (error: any) {
       console.error("Unexpected error in fetchUserProfile:", error);
-      
-      // Fallback: create a basic user object
-      const fullName = `${supabaseUser.user_metadata?.first_name || ''} ${supabaseUser.user_metadata?.last_name || ''}`.trim();
-      const fallbackUser: User = {
-        id: supabaseUser.id,
-        name: fullName || supabaseUser.email || 'User',
-        email: supabaseUser.email || '',
-        avatar_url: getAvatarUrl(supabaseUser.user_metadata?.avatar_url, supabaseUser.id),
-        initials: getInitials(fullName, supabaseUser.email),
-        first_name: supabaseUser.user_metadata?.first_name,
-        last_name: supabaseUser.user_metadata?.last_name,
-        role: supabaseUser.email === 'adri@7inked.com' ? 'master admin' : 'member',
-        status: 'active',
-        permissions: supabaseUser.email === 'adri@7inked.com' ? ['*'] : ['module:dashboard', 'module:projects'],
-      };
-      
-      console.log('Using fallback user profile due to unexpected error:', fallbackUser);
-      return fallbackUser;
+      console.log("Using fallback user due to unexpected error");
+      return createFallbackUser(supabaseUser);
     }
-  }, []);
+  }, [createFallbackUser]);
 
   const refreshUser = useCallback(async () => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -191,16 +135,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     console.log('AuthProvider: Initializing...');
-    setLoading(true);
+    
+    let mounted = true;
 
-    const getInitialSession = async () => {
+    const initializeAuth = async () => {
       try {
         console.log('Getting initial session...');
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
+        if (!mounted) return;
+        
         if (error) {
           console.error('Error getting initial session:', error);
-          toast.error('Authentication error. Please try logging in again.');
           setLoading(false);
           return;
         }
@@ -211,53 +157,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (initialSession?.user) {
           console.log('Fetching profile for initial session user...');
           const profile = await fetchUserProfile(initialSession.user);
-          setUser(profile);
+          if (mounted) {
+            setUser(profile);
+          }
         }
         
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       } catch (error: any) {
-        console.error('Unexpected error in getInitialSession:', error);
-        toast.error('Failed to initialize authentication.');
-        setLoading(false);
+        console.error('Unexpected error in initializeAuth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    getInitialSession();
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       console.log('Auth state change:', event, newSession ? 'Session exists' : 'No session');
+      
+      if (!mounted) return;
       
       setSession(newSession);
       
       if (event === 'SIGNED_IN' && newSession?.user) {
         console.log('User signed in, fetching profile...');
         const profile = await fetchUserProfile(newSession.user);
-        setUser(profile);
-        setLoading(false);
-        
-        if (profile) {
-          console.log('Profile loaded, navigating to dashboard...');
-          navigate('/dashboard', { replace: true });
-        } else {
-          console.error('Failed to load profile after sign in');
-          toast.error('Failed to load your profile. Please contact support.');
+        if (mounted) {
+          setUser(profile);
+          setLoading(false);
         }
       } else if (event === 'SIGNED_OUT') {
         console.log('User signed out');
-        setUser(null);
-        setIsImpersonating(false);
-        setOriginalSession(null);
-        setLoading(false);
+        if (mounted) {
+          setUser(null);
+          setIsImpersonating(false);
+          setOriginalSession(null);
+          setLoading(false);
+        }
       } else if (event === 'TOKEN_REFRESHED' && newSession?.user) {
         console.log('Token refreshed, updating profile...');
         const profile = await fetchUserProfile(newSession.user);
-        setUser(profile);
-        setLoading(false);
+        if (mounted) {
+          setUser(profile);
+          setLoading(false);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [fetchUserProfile, navigate]);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchUserProfile]);
 
   useEffect(() => {
     if (!user) {
