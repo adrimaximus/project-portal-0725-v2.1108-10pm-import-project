@@ -200,9 +200,9 @@ const NavigationSettingsPage = () => {
       
       const itemToInsert = { 
         name, 
-        url: type === 'multi_embed' ? '/multipage/placeholder' : url, 
+        url: (type === 'multi_embed' ? '/multipage/placeholder' : url) || '',
         user_id: user.id, 
-        position: newPosition, 
+        position: newPosition ?? 0,
         is_enabled: true, 
         icon, 
         is_deletable: true, 
