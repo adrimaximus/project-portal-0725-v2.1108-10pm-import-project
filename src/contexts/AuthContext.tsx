@@ -143,12 +143,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    const handleAuthChange = async (session: Session | null) => {
+    const handleAuthChange = async (event: string, session: Session | null) => {
       if (!mounted) return;
+      
+      // This is the key change: always get the freshest session from Supabase
+      // when an auth event happens. This avoids race conditions between tabs.
+      const { data: { session: freshSession }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Error fetching fresh session:", error);
+        await logout();
+        return;
+      }
+
       setLoading(true);
       try {
-        setSession(session);
-        const profile = await fetchUserProfile(session?.user ?? null);
+        setSession(freshSession);
+        const profile = await fetchUserProfile(freshSession?.user ?? null);
         setUser(profile);
       } catch (error) {
         console.error("Error during auth state change handling:", error);
@@ -162,14 +172,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        await handleAuthChange(session);
+      (event, session) => {
+        handleAuthChange(event, session);
       }
     );
 
     // Check initial session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
-      handleAuthChange(session);
+      handleAuthChange('INITIAL_SESSION', session);
     });
 
     return () => {
