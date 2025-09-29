@@ -5,6 +5,7 @@ import React, { useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { defaultNavItems } from '@/lib/defaultNavItems';
 import { useQueryClient } from '@tanstack/react-query';
+import { NavItem as DbNavItem } from "@/pages/NavigationSettingsPage";
 
 const ProtectedRouteLayout = () => {
   const { session, user, loading, hasPermission } = useAuth();
@@ -29,16 +30,18 @@ const ProtectedRouteLayout = () => {
           return hasPermission(permission);
         });
 
-        const { data: existingItems, error: fetchError } = await supabase
-          .from('user_navigation_items')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('is_deletable', false);
+        // Use the RPC function to fetch all navigation items for the user
+        const { data: allUserItemsData, error: fetchError } = await supabase
+          .rpc('get_user_navigation_items');
 
         if (fetchError) {
           console.error("Error fetching nav items:", fetchError);
           return;
         }
+        const allUserItems = allUserItemsData as DbNavItem[];
+        
+        // Filter for the non-deletable (default) items on the client side
+        const existingItems = allUserItems.filter(item => item.is_deletable === false);
 
         const { data: folderId, error: rpcError } = await supabase.rpc('get_or_create_default_nav_folder', { p_user_id: user.id });
         if (rpcError) {
@@ -53,8 +56,8 @@ const ProtectedRouteLayout = () => {
         const existingItemsMap = new Map(existingItems.map(item => [item.name, item]));
         const permittedItemsMap = new Map(permittedDefaultItems.map(item => [item.name, item]));
 
-        const itemsToUpsert = [];
-        const idsToDelete = [];
+        const itemsToUpsert: any[] = [];
+        const idsToDelete: string[] = [];
 
         for (const permittedItem of permittedDefaultItems) {
           const existing = existingItemsMap.get(permittedItem.name);
