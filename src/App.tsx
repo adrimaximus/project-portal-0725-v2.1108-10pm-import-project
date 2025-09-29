@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, Navigate } from "react-router-dom";
 import ProtectedRouteLayout from "./components/ProtectedRouteLayout";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
@@ -93,9 +93,12 @@ const App = () => {
           <Route path="/custom/:slug" element={<CustomPage />} />
           <Route path="/multipage/:slug" element={<MultiEmbedPage />} />
           <Route path="/multipage/:slug/:itemSlug" element={<MultiEmbedItemPage />} />
+          
+          {/* Catch-all for logged-in users */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
 
-        {/* Not Found Route */}
+        {/* Not Found Route for public pages */}
         <Route path="*" element={<NotFound />} />
       </Routes>
       <ImpersonationBanner />
