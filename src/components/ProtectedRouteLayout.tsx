@@ -65,7 +65,6 @@ const ProtectedRouteLayout = () => {
             if (existing.position !== position) updates.position = position;
             
             if (Object.keys(updates).length > 0) {
-              // FIX: Always include position in the update object to prevent null constraint violation
               itemsToUpsert.push({ id: existing.id, ...updates, position: existing.position });
             }
           }
@@ -104,14 +103,6 @@ const ProtectedRouteLayout = () => {
     }
   }, [user, loading, queryClient, hasPermission]);
 
-  useEffect(() => {
-    if (!loading && session && !user) {
-      // This effect is now primarily for logging and debugging,
-      // as the logout is handled by AuthContext after retries fail.
-      console.warn("Session exists, but user profile is not available yet. AuthContext is handling this.");
-    }
-  }, [loading, session, user]);
-
   if (loading) {
     // Covers the initial app load while session is being checked.
     return <LoadingScreen />;
@@ -123,8 +114,8 @@ const ProtectedRouteLayout = () => {
   }
 
   if (!user) {
-    // If there's a session but no user profile yet, it means the profile is still being fetched (or has failed).
-    // AuthContext will handle the failure case by logging out. In the meantime, show a loading screen.
+    // If there's a session but no user profile, it means the profile fetch failed.
+    // AuthContext will handle the logout. In the meantime, show a loading screen.
     return <LoadingScreen />;
   }
   
