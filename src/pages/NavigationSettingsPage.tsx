@@ -111,6 +111,7 @@ const NavigationSettingsPage = () => {
   const [newItemContent, setNewItemContent] = useState("");
   const [newItemIcon, setNewItemIcon] = useState<string | undefined>(undefined);
   const [newItemType, setNewItemType] = useState<'url_embed' | 'multi_embed'>('url_embed');
+  const [newItemFolderId, setNewItemFolderId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<NavItem | null>(null);
   const [editingFolder, setEditingFolder] = useState<NavFolder | null>(null);
@@ -186,9 +187,10 @@ const NavigationSettingsPage = () => {
   const { mutate: deleteFolder } = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('navigation_folders').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Folder removed"); queryClient.invalidateQueries({ queryKey: ['navigation_folders', user?.id] }); } });
 
   const addItemMutation = useMutation({
-    mutationFn: async ({ name, url, icon, type }: { name: string, url: string, icon?: string, type: 'url_embed' | 'multi_embed' }) => {
+    mutationFn: async ({ name, url, icon, type, folder_id }: { name: string, url: string, icon?: string, type: 'url_embed' | 'multi_embed', folder_id: string }) => {
       if (!user) throw new Error("User not authenticated");
-      const newPosition = navItems.filter(i => !i.folder_id).length;
+      const itemsInFolder = navItems.filter(i => i.folder_id === folder_id);
+      const newPosition = itemsInFolder.length;
       
       const itemToInsert = { 
         name, 
@@ -199,7 +201,8 @@ const NavigationSettingsPage = () => {
         icon, 
         is_deletable: true, 
         is_editable: true, 
-        type 
+        type,
+        folder_id,
       };
       
       const { error } = await supabase
@@ -214,6 +217,7 @@ const NavigationSettingsPage = () => {
       setNewItemContent("");
       setNewItemIcon(undefined);
       setNewItemType('url_embed');
+      setNewItemFolderId(null);
       toast.success("Navigation page added");
     },
     onError: (error) => {
@@ -221,17 +225,32 @@ const NavigationSettingsPage = () => {
     }
   });
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
+    if (!user) return;
     const finalName = newItemName.trim() || 'Untitled Page';
     const isUrlEmbedValid = newItemType === 'url_embed' && newItemContent.trim();
     const isMultiEmbedValid = newItemType === 'multi_embed';
 
     if (isUrlEmbedValid || isMultiEmbedValid) {
+      let targetFolderId = newItemFolderId;
+      if (!targetFolderId) {
+        try {
+          const { data: folderId, error: rpcError } = await supabase.rpc('get_or_create_default_nav_folder', { p_user_id: user.id });
+          if (rpcError) throw rpcError;
+          targetFolderId = folderId;
+          queryClient.invalidateQueries({ queryKey: foldersQueryKey });
+        } catch (error: any) {
+          toast.error("Could not get or create a default folder.", { description: error.message });
+          return;
+        }
+      }
+
       addItemMutation.mutate({
         name: finalName,
         url: newItemContent.trim(),
         icon: newItemIcon,
         type: newItemType,
+        folder_id: targetFolderId!,
       });
     } else {
       toast.error("Please provide a URL or embed code for this page type.");
@@ -239,26 +258,18 @@ const NavigationSettingsPage = () => {
   };
 
   const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => {
-    // Find the item to get its type
     const item = navItems.find(i => i.id === id);
     if (!item) return;
 
     let finalUrl = url;
     
-    // If it's a multi_embed type and the URL was changed, we need to handle it properly
     if (item.type === 'multi_embed') {
-      // For multi_embed, the URL should always be based on the slug
-      // If they're trying to change the URL, we should update the name instead
-      // and regenerate the slug
       if (url !== item.url) {
-        // Update both name and regenerate URL based on new slug
-        await updateItems([{ id, name, url: item.url }]); // Keep original URL structure
-        // The trigger will handle slug regeneration
+        await updateItems([{ id, name, url: item.url }]);
       } else {
         await updateItems([{ id, name, icon }]);
       }
     } else {
-      // For url_embed type, allow URL changes
       await updateItems([{ id, name, url: finalUrl, icon }]);
     }
     
@@ -353,14 +364,6 @@ const NavigationSettingsPage = () => {
                   </DroppableFolder>
                 ))}
               </div>
-              <div className="border-t pt-4 mt-4">
-                <h3 className="text-sm font-semibold text-muted-foreground mb-2">Top-Level Items</h3>
-                <SortableContext id="root" items={itemsWithoutFolder.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2">
-                    {itemsWithoutFolder.map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
-                  </div>
-                </SortableContext>
-              </div>
               <DragOverlay>
                 {activeId && navItems.find(i => i.id === activeId) ? <SortableNavItemRow item={navItems.find(i => i.id === activeId)!} onDelete={() => {}} isDeleting={false} onToggle={() => {}} onEdit={() => {}} /> : null}
               </DragOverlay>
@@ -402,6 +405,19 @@ const NavigationSettingsPage = () => {
                 </p>
               </div>
             )}
+            <div className="grid gap-2">
+              <Label htmlFor="folder">Folder</Label>
+              <Select value={newItemFolderId || ''} onValueChange={(value) => setNewItemFolderId(value || null)}>
+                <SelectTrigger id="folder">
+                  <SelectValue placeholder="Select a folder (defaults to General)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {folders.map(folder => (
+                    <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button onClick={handleAddItem} disabled={(newItemType === 'url_embed' && !newItemContent.trim()) || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
