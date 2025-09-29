@@ -122,7 +122,16 @@ const NavigationSettingsPage = () => {
   const queryKey = ['user_navigation_items', user?.id];
   const foldersQueryKey = ['navigation_folders', user?.id];
 
-  const { data: navItems = [], isLoading: isLoadingItems } = useQuery({ queryKey: queryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('user_navigation_items').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data as NavItem[]; }, enabled: !!user });
+  const { data: navItems = [], isLoading: isLoadingItems } = useQuery({ 
+    queryKey: queryKey, 
+    queryFn: async () => { 
+      if (!user) return []; 
+      const { data, error } = await supabase.rpc('get_user_navigation_items');
+      if (error) throw error; 
+      return data as NavItem[]; 
+    }, 
+    enabled: !!user 
+  });
   const { data: folders = [], isLoading: isLoadingFolders } = useQuery({ queryKey: foldersQueryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data; }, enabled: !!user });
 
   const { mutate: updateItems } = useMutation({

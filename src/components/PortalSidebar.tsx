@@ -76,7 +76,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     queryKey: ['user_navigation_items', user?.id], 
     queryFn: async () => { 
       if (!user) return []; 
-      const { data, error } = await supabase.from('user_navigation_items').select('*').eq('user_id', user.id).order('position'); 
+      const { data, error } = await supabase.rpc('get_user_navigation_items');
       if (error) {
         console.error("Error fetching navigation items:", error);
         return []; // Return empty array instead of throwing
@@ -206,7 +206,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
                 {!navItemsError && !foldersError && folders.map(folder => {
                   const itemsInFolder = navItems.filter(item => item.folder_id === folder.id);
                   if (itemsInFolder.length === 0) return null;
-                  const FolderIconComponent = folder.icon ? Icons[folder.icon] : FolderIcon;
+                  const FolderIconComponent = folder.icon && Icons[folder.icon] ? Icons[folder.icon] : FolderIcon;
                   return (
                     <Collapsible key={folder.id} defaultOpen>
                       <CollapsibleTrigger className="w-full group">
