@@ -1,22 +1,25 @@
 import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingScreen from "./LoadingScreen";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { defaultNavItems } from '@/lib/defaultNavItems';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from "sonner";
 
 const ProtectedRouteLayout = () => {
-  const { session, user, loading, logout, hasPermission } = useAuth();
+  const { session, user, loading, hasPermission } = useAuth();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const navSyncAttempted = useRef(false);
 
   useEffect(() => {
     const syncDefaultNavItems = async () => {
-      if (!user || !user.permissions || navSyncAttempted.current) return;
-      navSyncAttempted.current = true;
+      if (!user || !user.permissions) return;
+
+      const syncFlag = `navSyncAttempted_${user.id}`;
+      if (sessionStorage.getItem(syncFlag)) {
+        return;
+      }
+      sessionStorage.setItem(syncFlag, 'true');
 
       try {
         const permittedDefaultItems = defaultNavItems.filter(defaultItem => {
@@ -117,18 +120,14 @@ const ProtectedRouteLayout = () => {
   }, [user, loading, queryClient, hasPermission]);
 
   if (loading) {
-    // Covers the initial app load while session is being checked.
     return <LoadingScreen />;
   }
 
   if (!session) {
-    // If after the initial load there's no session, redirect to login.
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   if (!user) {
-    // If there's a session but no user profile, it means the profile fetch failed.
-    // AuthContext will handle the logout. In the meantime, show a loading screen.
     return <LoadingScreen />;
   }
   
