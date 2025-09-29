@@ -147,6 +147,10 @@ const NavigationSettingsPage = () => {
   const { mutate: backfillNavItems } = useMutation({
     mutationFn: async () => {
         if (!user) return;
+        const { data: folderId, error: rpcError } = await supabase.rpc('get_or_create_default_nav_folder', { p_user_id: user.id });
+        if (rpcError) throw rpcError;
+        if (!folderId) throw new Error("Could not get or create a default folder.");
+
         const itemsToInsert = defaultNavItems.map((item, index) => ({
             user_id: user.id,
             name: item.name,
@@ -157,6 +161,7 @@ const NavigationSettingsPage = () => {
             is_deletable: false,
             is_editable: false,
             type: 'url_embed' as const,
+            folder_id: folderId,
         }));
         const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert);
         if (error) throw error;
@@ -164,6 +169,7 @@ const NavigationSettingsPage = () => {
     onSuccess: () => {
         toast.success("Default navigation items have been set up.");
         queryClient.invalidateQueries({ queryKey });
+        queryClient.invalidateQueries({ queryKey: foldersQueryKey });
     },
     onError: (error: any) => {
         toast.error("Failed to set up default navigation.", { description: error.message });

@@ -37,6 +37,16 @@ const ProtectedRouteLayout = () => {
           return;
         }
 
+        const { data: folderId, error: rpcError } = await supabase.rpc('get_or_create_default_nav_folder', { p_user_id: user.id });
+        if (rpcError) {
+            console.error("Could not get or create default folder during nav sync:", rpcError);
+            return;
+        }
+        if (!folderId) {
+            console.error("Default folder ID was not returned from RPC.");
+            return;
+        }
+
         const existingItemsMap = new Map(existingItems.map(item => [item.name, item]));
         const permittedItemsMap = new Map(permittedDefaultItems.map(item => [item.name, item]));
 
@@ -57,15 +67,17 @@ const ProtectedRouteLayout = () => {
               is_deletable: false,
               is_editable: false,
               type: 'url_embed' as const,
+              folder_id: folderId,
             });
           } else {
             const updates: any = {};
             if (existing.url !== permittedItem.url) updates.url = permittedItem.url;
             if (existing.icon !== permittedItem.icon) updates.icon = permittedItem.icon;
             if (existing.position !== position) updates.position = position;
+            if (!existing.folder_id) updates.folder_id = folderId;
             
             if (Object.keys(updates).length > 0) {
-              itemsToUpsert.push({ id: existing.id, ...updates, position: existing.position });
+              itemsToUpsert.push({ id: existing.id, ...updates });
             }
           }
         }
@@ -92,6 +104,7 @@ const ProtectedRouteLayout = () => {
 
         if (itemsChanged) {
           queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['navigation_folders', user.id] });
         }
       } catch (error) {
         console.error("Error in syncDefaultNavItems:", error);
