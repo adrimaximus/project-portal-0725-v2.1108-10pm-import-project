@@ -222,16 +222,19 @@ const NavigationSettingsPage = () => {
   });
 
   const handleAddItem = () => {
+    const finalName = newItemName.trim() || 'Untitled Page';
     const isUrlEmbedValid = newItemType === 'url_embed' && newItemContent.trim();
     const isMultiEmbedValid = newItemType === 'multi_embed';
-    
-    if (newItemName.trim() && (isUrlEmbedValid || isMultiEmbedValid)) {
-      addItemMutation.mutate({ 
-        name: newItemName.trim(), 
-        url: newItemContent.trim(), 
+
+    if (isUrlEmbedValid || isMultiEmbedValid) {
+      addItemMutation.mutate({
+        name: finalName,
+        url: newItemContent.trim(),
         icon: newItemIcon,
-        type: newItemType
+        type: newItemType,
       });
+    } else {
+      toast.error("Please provide a URL or embed code for this page type.");
     }
   };
 
@@ -401,7 +404,7 @@ const NavigationSettingsPage = () => {
             )}
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button onClick={handleAddItem} disabled={!newItemName.trim() || (newItemType === 'url_embed' && !newItemContent.trim()) || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
+            <Button onClick={handleAddItem} disabled={(newItemType === 'url_embed' && !newItemContent.trim()) || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
             <Button variant="outline" onClick={() => { setEditingFolder(null); setIsFolderFormOpen(true); }}><FolderPlus className="mr-2 h-4 w-4" /> Add Folder</Button>
           </CardFooter>
         </Card>
