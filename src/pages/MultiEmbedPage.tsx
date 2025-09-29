@@ -10,6 +10,7 @@ import { PlusCircle, Loader2, Search } from 'lucide-react';
 import MultiEmbedCard, { MultiEmbedItem } from '@/components/MultiEmbedCard';
 import MultiEmbedItemFormDialog from '@/components/MultiEmbedItemFormDialog';
 import { Input } from '@/components/ui/input';
+import { NavItem as DbNavItem } from '@/pages/NavigationSettingsPage';
 
 const MultiEmbedPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -18,10 +19,13 @@ const MultiEmbedPage = () => {
 
   const { data: navItem, isLoading: isLoadingNavItem } = useQuery({
     queryKey: ['user_navigation_item', slug],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('user_navigation_items').select('id, name').eq('slug', slug!).single();
-      if (error) throw error;
-      return data;
+    queryFn: async (): Promise<DbNavItem | null> => {
+      if (!slug) return null;
+      const { data, error } = await supabase
+        .rpc('get_nav_item_by_slug', { p_slug: slug })
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as DbNavItem | null;
     },
     enabled: !!slug,
   });
