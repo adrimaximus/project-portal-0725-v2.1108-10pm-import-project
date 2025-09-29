@@ -123,12 +123,8 @@ const ProtectedRouteLayout = () => {
     return <LoadingScreen />;
   }
 
-  if (!session) {
+  if (!session || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  if (!user) {
-    return <LoadingScreen />;
   }
   
   if (location.pathname === '/') {

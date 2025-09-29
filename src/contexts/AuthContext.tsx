@@ -46,6 +46,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const logout = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+      SafeLocalStorage.clear();
+      setUser(null);
+      setSession(null);
+      setIsImpersonating(false);
+      setOriginalSession(null);
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error("Error during logout:", error);
+      SafeLocalStorage.clear();
+      setUser(null);
+      setSession(null);
+      setIsImpersonating(false);
+      setOriginalSession(null);
+      navigate('/login', { replace: true });
+    }
+  }, [navigate]);
+
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
 
@@ -96,12 +116,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let mounted = true;
 
     const getInitialSession = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      if (mounted) {
-        setSession(initialSession);
-        const profile = await fetchUserProfile(initialSession?.user ?? null);
-        setUser(profile);
-        setLoading(false);
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        if (mounted) {
+          setSession(initialSession);
+          const profile = await fetchUserProfile(initialSession?.user ?? null);
+          setUser(profile);
+        }
+      } catch (error) {
+        console.error("Error during initial session fetch:", error);
+        if (mounted) {
+          setUser(null);
+          setSession(null);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -110,11 +141,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (mounted) {
-          setSession(session);
-          const profile = await fetchUserProfile(session?.user ?? null);
-          setUser(profile);
-          // Also set loading to false here to handle login/logout events
-          setLoading(false);
+          try {
+            setSession(session);
+            const profile = await fetchUserProfile(session?.user ?? null);
+            setUser(profile);
+          } catch (error) {
+            console.error("Error during auth state change handling:", error);
+            toast.error("An authentication error occurred. Please log in again.");
+            await logout();
+          } finally {
+            setLoading(false);
+          }
         }
       }
     );
@@ -123,7 +160,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       mounted = false;
       subscription?.unsubscribe();
     };
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, logout]);
 
   useEffect(() => {
     if (!user) {
@@ -169,26 +206,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     return () => { supabase.removeChannel(channel); };
   }, [user]);
-
-  const logout = useCallback(async () => {
-    try {
-      await supabase.auth.signOut();
-      SafeLocalStorage.clear();
-      setUser(null);
-      setSession(null);
-      setIsImpersonating(false);
-      setOriginalSession(null);
-      navigate('/login', { replace: true });
-    } catch (error) {
-      console.error("Error during logout:", error);
-      SafeLocalStorage.clear();
-      setUser(null);
-      setSession(null);
-      setIsImpersonating(false);
-      setOriginalSession(null);
-      navigate('/login', { replace: true });
-    }
-  }, [navigate]);
 
   const hasPermission = useCallback((permission: string) => {
     if (!user || !user.permissions) return false;
