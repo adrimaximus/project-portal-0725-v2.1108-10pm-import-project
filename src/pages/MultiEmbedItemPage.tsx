@@ -12,6 +12,7 @@ import MultiEmbedItemFormDialog from '@/components/MultiEmbedItemFormDialog';
 import { toast } from 'sonner';
 import { MultiEmbedItem } from '@/components/MultiEmbedCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { NavItem as DbNavItem } from '@/pages/NavigationSettingsPage';
 
 const MultiEmbedItemPage = () => {
   const { slug, itemSlug } = useParams<{ slug: string; itemSlug: string }>();
@@ -22,19 +23,26 @@ const MultiEmbedItemPage = () => {
 
   const { data: navItem, isLoading: isLoadingNavItem } = useQuery({
     queryKey: ['user_navigation_item', slug],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('user_navigation_items').select('id, name, url').eq('slug', slug!).single();
-      if (error) throw error;
-      return data;
+    queryFn: async (): Promise<DbNavItem | null> => {
+      if (!slug) return null;
+      const { data, error } = await supabase
+        .rpc('get_nav_item_by_slug', { p_slug: slug })
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as DbNavItem | null;
     },
     enabled: !!slug,
   });
 
   const { data: item, isLoading: isLoadingItem } = useQuery({
     queryKey: ['multi_embed_item', navItem?.id, itemSlug],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('multi_embed_items').select('*').eq('nav_item_id', navItem!.id).eq('slug', itemSlug!).single();
-      if (error) throw error;
+    queryFn: async (): Promise<MultiEmbedItem | null> => {
+      if (!navItem?.id || !itemSlug) return null;
+      const { data, error } = await supabase.from('multi_embed_items').select('*').eq('nav_item_id', navItem.id).eq('slug', itemSlug).single();
+      if (error) {
+        if (error.code === 'PGRST116') return null;
+        throw error;
+      }
       return data as MultiEmbedItem;
     },
     enabled: !!itemSlug && !!navItem?.id,

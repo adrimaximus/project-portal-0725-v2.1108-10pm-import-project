@@ -6,16 +6,20 @@ import PortalLayout from '@/components/PortalLayout';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Loader2 } from 'lucide-react';
 import EmbedRenderer from '@/components/EmbedRenderer';
+import { NavItem as DbNavItem } from '@/pages/NavigationSettingsPage';
 
 const CustomPage = () => {
   const { slug } = useParams<{ slug: string }>();
 
   const { data: navItem, isLoading } = useQuery({
     queryKey: ['user_navigation_item_by_slug', slug],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('user_navigation_items').select('name, url').eq('slug', slug!).single();
-      if (error) throw error;
-      return data;
+    queryFn: async (): Promise<DbNavItem | null> => {
+      if (!slug) return null;
+      const { data, error } = await supabase
+        .rpc('get_nav_item_by_slug', { p_slug: slug })
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as DbNavItem | null;
     },
     enabled: !!slug,
   });
