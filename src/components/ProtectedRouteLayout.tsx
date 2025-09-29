@@ -56,14 +56,17 @@ const ProtectedRouteLayout = () => {
               is_enabled: true,
               is_deletable: false,
               is_editable: false,
+              type: 'url_embed' as const,
             });
           } else {
             const updates: any = {};
             if (existing.url !== permittedItem.url) updates.url = permittedItem.url;
             if (existing.icon !== permittedItem.icon) updates.icon = permittedItem.icon;
             if (existing.position !== position) updates.position = position;
+            
             if (Object.keys(updates).length > 0) {
-              itemsToUpsert.push({ id: existing.id, ...updates });
+              // FIX: Always include position in the update object to prevent null constraint violation
+              itemsToUpsert.push({ id: existing.id, ...updates, position: existing.position });
             }
           }
         }
