@@ -143,20 +143,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    const getInitialSession = async () => {
+    const handleAuthChange = async (session: Session | null) => {
+      if (!mounted) return;
+      setLoading(true);
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        if (mounted) {
-          setSession(initialSession);
-          const profile = await fetchUserProfile(initialSession?.user ?? null);
-          setUser(profile);
-        }
+        setSession(session);
+        const profile = await fetchUserProfile(session?.user ?? null);
+        setUser(profile);
       } catch (error) {
-        console.error("Error during initial session fetch:", error);
-        if (mounted) {
-          setUser(null);
-          setSession(null);
-        }
+        console.error("Error during auth state change handling:", error);
+        toast.error("An authentication error occurred. Please log in again.");
+        await logout();
       } finally {
         if (mounted) {
           setLoading(false);
@@ -164,25 +161,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    getInitialSession();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        if (mounted) {
-          try {
-            setSession(session);
-            const profile = await fetchUserProfile(session?.user ?? null);
-            setUser(profile);
-          } catch (error) {
-            console.error("Error during auth state change handling:", error);
-            toast.error("An authentication error occurred. Please log in again.");
-            await logout();
-          } finally {
-            setLoading(false);
-          }
-        }
+        await handleAuthChange(session);
       }
     );
+
+    // Check initial session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuthChange(session);
+    });
 
     return () => {
       mounted = false;
