@@ -166,7 +166,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem className="text-destructive" onSelect={() => onDeleteProject(project.id)}>
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Hapus Proyek</span>
+                                <span>Delete</span>
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
