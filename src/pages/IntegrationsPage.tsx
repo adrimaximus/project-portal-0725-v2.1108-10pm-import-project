@@ -72,7 +72,7 @@ const IntegrationsPage = () => {
                 description="Sync your projects with Google Calendar." 
                 noBg={true}
                 icon={
-                    <img src="/google-calendar-icon.png" alt="Google Calendar icon" className="h-5 w-5" />
+                    <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/FileGoogle%20Calendar%20icon%20(2020).svg%20-%20Wikimedia%20Commons.png" alt="Google Calendar icon" className="h-5 w-5" />
                 }
                 path="/settings/integrations/google-calendar"
             />
