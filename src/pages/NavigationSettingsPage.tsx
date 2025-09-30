@@ -126,52 +126,35 @@ const NavigationSettingsPage = () => {
   const [navItemsState, setNavItemsState] = useState<NavItem[]>([]);
   const [foldersState, setFoldersState] = useState<NavFolder[]>([]);
 
-  const queryKey = ['user_navigation_items', user?.id];
-  const foldersQueryKey = ['navigation_folders', user?.id];
+  const itemsQueryKey = ['user_navigation_items'];
+  const foldersQueryKey = ['navigation_folders'];
 
-  const { data: navItemsData, isLoading: isLoadingItems } = useQuery({ queryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.rpc('get_user_navigation_items'); if (error) throw error; return data as NavItem[]; }, enabled: !!user });
-  const { data: foldersData, isLoading: isLoadingFolders } = useQuery({ queryKey: foldersQueryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data as NavFolder[]; }, enabled: !!user });
+  const { data: navItemsData, isLoading: isLoadingItems } = useQuery({ queryKey: [...itemsQueryKey, user?.id], queryFn: async () => { if (!user) return []; const { data, error } = await supabase.rpc('get_user_navigation_items'); if (error) throw error; return data as NavItem[]; }, enabled: !!user });
+  const { data: foldersData, isLoading: isLoadingFolders } = useQuery({ queryKey: [...foldersQueryKey, user?.id], queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data as NavFolder[]; }, enabled: !!user });
 
   useEffect(() => { if (navItemsData) setNavItemsState(navItemsData) }, [navItemsData]);
   useEffect(() => { if (foldersData) setFoldersState(foldersData) }, [foldersData]);
 
-  const { mutate: updateItems } = useMutation({ mutationFn: async (items: Partial<NavItem>[]) => { const { error } = await supabase.from('user_navigation_items').upsert(items); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey }), onError: (e: any) => toast.error("Failed to save changes", { description: e.message }) });
-  const { mutate: updateFolders } = useMutation({ mutationFn: async (folders: Partial<NavFolder>[]) => { const { error } = await supabase.from('navigation_folders').upsert(folders); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: foldersQueryKey }), onError: (e: any) => toast.error("Failed to reorder folders", { description: e.message }) });
-  const { mutate: backfillNavItems } = useMutation({ mutationFn: async () => { if (!user) return; const itemsToInsert = defaultNavItems.map((item, index) => ({ user_id: user.id, name: item.name, url: item.url, icon: item.icon, position: index, is_enabled: true, is_deletable: false, is_editable: false, type: 'url_embed' as const, folder_id: null, })); const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert); if (error) throw error; }, onSuccess: () => { toast.success("Default navigation items have been set up."); queryClient.invalidateQueries({ queryKey }); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); }, onError: (e: any) => toast.error("Failed to set up default navigation.", { description: e.message }) });
+  const { mutate: updateItems } = useMutation({ mutationFn: async (items: Partial<NavItem>[]) => { if (items.length === 0) return; const { error } = await supabase.from('user_navigation_items').upsert(items); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: itemsQueryKey }), onError: (e: any) => toast.error("Failed to save changes", { description: e.message }) });
+  const { mutate: updateFolders } = useMutation({ mutationFn: async (folders: Partial<NavFolder>[]) => { if (folders.length === 0) return; const { error } = await supabase.from('navigation_folders').upsert(folders); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: foldersQueryKey }), onError: (e: any) => toast.error("Failed to reorder folders", { description: e.message }) });
+  const { mutate: backfillNavItems } = useMutation({ mutationFn: async () => { if (!user) return; const itemsToInsert = defaultNavItems.map((item, index) => ({ user_id: user.id, name: item.name, url: item.url, icon: item.icon, position: index, is_enabled: true, is_deletable: false, is_editable: false, type: 'url_embed' as const, folder_id: null, })); const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert); if (error) throw error; }, onSuccess: () => { toast.success("Default navigation items have been set up."); queryClient.invalidateQueries({ queryKey: itemsQueryKey }); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); }, onError: (e: any) => toast.error("Failed to set up default navigation.", { description: e.message }) });
   const { mutate: upsertFolder, isPending: isSavingFolder } = useMutation({ mutationFn: async (folder: Partial<NavFolder>) => { const { error } = await supabase.from('navigation_folders').upsert(folder); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: foldersQueryKey }) });
-  const { mutate: deleteItem, isPending: isDeletingItem } = useMutation({ mutationFn: async (id: string) => { setDeletingId(id); const { error } = await supabase.from('user_navigation_items').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Page removed"); queryClient.invalidateQueries({ queryKey }); }, onError: (e: any) => toast.error(e.message), onSettled: () => setDeletingId(null) });
-  const { mutate: deleteFolder } = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('navigation_folders').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Folder removed"); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); } });
+  const { mutate: deleteItem, isPending: isDeletingItem } = useMutation({ mutationFn: async (id: string) => { setDeletingId(id); const { error } = await supabase.from('user_navigation_items').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Page removed"); queryClient.invalidateQueries({ queryKey: itemsQueryKey }); }, onError: (e: any) => toast.error(e.message), onSettled: () => setDeletingId(null) });
+  const { mutate: deleteFolder } = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('navigation_folders').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Folder removed"); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); queryClient.invalidateQueries({ queryKey: itemsQueryKey }); } });
   const addItemMutation = useMutation({
     mutationFn: async ({ name, url, icon, type, folder_id }: { name: string, url: string, icon?: string, type: 'url_embed' | 'multi_embed', folder_id: string | null }) => {
       if (!user) throw new Error("User not authenticated");
       const newPosition = navItemsState.length > 0 ? Math.max(...navItemsState.map(i => i.position)) + 1 : 0;
-      const itemToInsert = {
-        name,
-        url: (type === 'multi_embed' ? '/multipage/placeholder' : url) || '',
-        user_id: user.id,
-        position: newPosition,
-        is_enabled: true,
-        icon,
-        is_deletable: true,
-        is_editable: true,
-        type,
-        folder_id,
-      };
+      const itemToInsert = { name, url: (type === 'multi_embed' ? '/multipage/placeholder' : url) || '', user_id: user.id, position: newPosition, is_enabled: true, icon, is_deletable: true, is_editable: true, type, folder_id, };
       const { error } = await supabase.from('user_navigation_items').insert(itemToInsert);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-      setNewItemName("");
-      setNewItemContent("");
-      setNewItemIcon(undefined);
-      setNewItemType('url_embed');
-      setNewItemFolderId(null);
+      queryClient.invalidateQueries({ queryKey: itemsQueryKey });
+      setNewItemName(""); setNewItemContent(""); setNewItemIcon(undefined); setNewItemType('url_embed'); setNewItemFolderId(null);
       toast.success("Navigation page added");
     },
-    onError: (error) => {
-      toast.error("Failed to add page", { description: error.message });
-    }
+    onError: (error) => toast.error("Failed to add page", { description: error.message })
   });
 
   useEffect(() => { if (user && !isLoadingItems && !backfillAttempted.current) { const hasDefaultItems = navItemsData?.some(item => item.is_deletable === false); if (!hasDefaultItems) { backfillAttempted.current = true; backfillNavItems(); } else { backfillAttempted.current = true; } } }, [user, navItemsData, isLoadingItems, backfillNavItems]);
@@ -192,8 +175,8 @@ const NavigationSettingsPage = () => {
     const overId = String(over.id);
     const activeType = active.data.current?.type;
 
-    let newFolders = foldersState;
-    let newItems = navItemsState;
+    let newFolders = [...foldersState];
+    let newItems = [...navItemsState];
 
     if (activeType === 'folder' && over.data.current?.type === 'folder') {
         const oldIndex = foldersState.findIndex(f => f.id === activeId);
@@ -203,52 +186,53 @@ const NavigationSettingsPage = () => {
     } else if (activeType === 'item') {
         const oldIndex = navItemsState.findIndex(i => i.id === activeId);
         const overIsFolder = over.data.current?.type === 'folder';
-        const newFolderId = overIsFolder ? overId : over.data.current?.sortable.containerId;
-
+        
         const tempItems = [...navItemsState];
         const [movedItem] = tempItems.splice(oldIndex, 1);
-        movedItem.folder_id = newFolderId === 'uncategorized-folder' ? null : newFolderId;
 
         if (overIsFolder) {
-            const itemsInDest = tempItems.filter(i => (i.folder_id || 'uncategorized-folder') === newFolderId);
+            const newFolderId = overId === 'uncategorized-folder' ? null : overId;
+            movedItem.folder_id = newFolderId;
+            const itemsInDest = tempItems.filter(i => i.folder_id === newFolderId);
             if (itemsInDest.length > 0) {
                 const lastItemIndex = tempItems.findIndex(i => i.id === itemsInDest[itemsInDest.length - 1].id);
                 tempItems.splice(lastItemIndex + 1, 0, movedItem);
             } else {
-                tempItems.push(movedItem);
+                const folderIndex = newFolders.findIndex(f => f.id === overId);
+                if (folderIndex > -1) {
+                    let nextFolderFirstItemIndex = -1;
+                    for (let i = folderIndex + 1; i < newFolders.length; i++) {
+                        const nextFolderId = newFolders[i].id;
+                        const foundIndex = tempItems.findIndex(item => item.folder_id === nextFolderId);
+                        if (foundIndex > -1) { nextFolderFirstItemIndex = foundIndex; break; }
+                    }
+                    if (nextFolderFirstItemIndex > -1) { tempItems.splice(nextFolderFirstItemIndex, 0, movedItem); }
+                    else { const firstUncategorizedIndex = tempItems.findIndex(item => !item.folder_id); if (firstUncategorizedIndex > -1) { tempItems.splice(firstUncategorizedIndex, 0, movedItem); } else { tempItems.push(movedItem); } }
+                } else { tempItems.push(movedItem); }
             }
         } else {
             const newIndex = tempItems.findIndex(i => i.id === overId);
             if (newIndex !== -1) {
+                const overItem = tempItems[newIndex];
+                movedItem.folder_id = overItem.folder_id;
                 tempItems.splice(newIndex, 0, movedItem);
-            } else {
-                tempItems.push(movedItem);
-            }
+            } else { tempItems.push(movedItem); }
         }
         newItems = tempItems;
         setNavItemsState(newItems);
     }
 
-    // After any move, re-calculate all positions and send a single update.
-    const finalFolderUpdates = newFolders.map((folder, index) => ({
-        id: folder.id,
-        position: index,
-    }));
-
+    const finalFolderUpdates = newFolders.map((folder, index) => ({ id: folder.id, position: index }));
     const finalOrderedItems: NavItem[] = [];
-    const uncategorizedItems = newItems.filter(i => !i.folder_id);
-    finalOrderedItems.push(...uncategorizedItems);
-
+    
     newFolders.forEach(folder => {
         const itemsInFolder = newItems.filter(i => i.folder_id === folder.id);
         finalOrderedItems.push(...itemsInFolder);
     });
+    const uncategorizedItems = newItems.filter(i => !i.folder_id);
+    finalOrderedItems.push(...uncategorizedItems);
 
-    const finalItemUpdates = finalOrderedItems.map((item, index) => ({
-        id: item.id,
-        position: index,
-        folder_id: item.folder_id,
-    }));
+    const finalItemUpdates = finalOrderedItems.map((item, index) => ({ id: item.id, position: index, folder_id: item.folder_id }));
 
     updateFolders(finalFolderUpdates);
     updateItems(finalItemUpdates);
