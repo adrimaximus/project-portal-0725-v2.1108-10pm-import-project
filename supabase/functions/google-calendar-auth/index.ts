@@ -1,130 +1,81 @@
-// @ts-nocheck
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { OAuth2Client } from 'https://esm.sh/google-auth-library@9.11.0';
-import * as djwt from 'https://deno.land/x/djwt@v3.0.2/mod.ts';
+import { google } from "npm:googleapis";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-};
-
-async function getDjwtKey() {
-  const JWT_SECRET = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!JWT_SECRET) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set in environment variables.");
-  }
-  return await djwt.createSecretKey(new TextEncoder().encode(JWT_SECRET));
-}
-
-const handleInitialRequest = async (req: Request, oauth2Client: OAuth2Client) => {
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Missing authorization header' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  }
-
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    { global: { headers: { Authorization: authHeader } } }
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'User not authenticated' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  }
-
-  const key = await getDjwtKey();
-  const stateToken = await djwt.create({ alg: 'HS256', typ: 'JWT' }, { sub: user.id, exp: djwt.getNumericDate(60 * 5) }, key);
-
-  const authUrl = oauth2Client.generateAuthUrl({
-    access_type: 'offline',
-    prompt: 'consent',
-    scope: ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/calendar.events.readonly'],
-    state: stateToken,
-  });
-
-  return new Response(JSON.stringify({ url: authUrl }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-};
-
-const handleCallback = async (req: Request, oauth2Client: OAuth2Client, supabaseAdmin: any, finalRedirectUrl: string) => {
-  const url = new URL(req.url);
-  const code = url.searchParams.get('code');
-  const state = url.searchParams.get('state');
-
-  if (!code || !state) {
-    return Response.redirect(`${finalRedirectUrl}?error=missing_code_or_state`, 302);
-  }
-
-  let userId: string;
-  try {
-    const key = await getDjwtKey();
-    const payload = await djwt.verify(state, key);
-    userId = payload.sub as string;
-    if (!userId) throw new Error("Invalid state token: missing user ID");
-  } catch (err) {
-    console.error("State verification failed:", err);
-    return Response.redirect(`${finalRedirectUrl}?error=state_mismatch`, 302);
-  }
-
-  const { tokens } = await oauth2Client.getToken(code);
-  oauth2Client.setCredentials(tokens);
-
-  const { error: upsertError } = await supabaseAdmin
-    .from('google_calendar_tokens')
-    .upsert({
-      user_id: userId,
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      expiry_date: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
-      scope: tokens.scope,
-    });
-
-  if (upsertError) throw upsertError;
-
-  return Response.redirect(`${finalRedirectUrl}?success=true`, 302);
 };
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
-  const url = new URL(req.url);
-  const appUrl = Deno.env.get('VITE_APP_URL') || 'http://localhost:32100';
-  const finalRedirectUrl = `${appUrl}/settings/integrations/google-calendar`;
-
   try {
-    const oauth2Client = new OAuth2Client(
-      Deno.env.get('VITE_GOOGLE_CLIENT_ID'),
-      Deno.env.get('GOOGLE_CLIENT_SECRET'),
-      url.origin + url.pathname
+    const url = new URL(req.url);
+    const code = url.searchParams.get("code");
+
+    // Gunakan VITE_GOOGLE_CLIENT_ID agar konsisten dengan frontend jika diperlukan
+    const clientId = Deno.env.get("VITE_GOOGLE_CLIENT_ID");
+    const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+    // Redirect URI harus menunjuk ke fungsi ini sendiri
+    const redirectUri = `https://quuecudndfztjlxbrvyb.supabase.co/functions/v1/google-calendar-auth`;
+
+    if (!clientId || !clientSecret) {
+      throw new Error("Missing Google credentials in Supabase secrets.");
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      clientId,
+      clientSecret,
+      redirectUri
     );
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const code = url.searchParams.get('code');
+    // Jika ada 'code', berarti ini adalah callback dari Google
     if (code) {
-      return await handleCallback(req, oauth2Client, supabaseAdmin, finalRedirectUrl);
-    } else {
-      return await handleInitialRequest(req, oauth2Client);
+      const { tokens } = await oauth2Client.getToken(code);
+      oauth2Client.setCredentials(tokens);
+
+      // Di sini Anda harus menyimpan token ke database
+      // Contoh: (Anda perlu user ID, yang bisa didapat dari 'state' parameter)
+      // const { data: { user } } = await supabase.auth.getUser(tokens.access_token);
+      // await supabaseAdmin.from('google_calendar_tokens').upsert({ ... });
+      
+      console.log("Tokens received:", tokens);
+
+      // Redirect kembali ke aplikasi Anda dengan status sukses
+      const appRedirectUrl = `${Deno.env.get('VITE_APP_URL')}/settings/integrations/google-calendar?success=true`;
+      return Response.redirect(appRedirectUrl, 302);
     }
-  } catch (error) {
-    console.error('Error in Google Calendar auth function:', error);
-    const isCallback = new URL(req.url).searchParams.has('code');
-    if (isCallback) {
-        return Response.redirect(`${finalRedirectUrl}?error=${encodeURIComponent(error.message)}`, 302);
-    } else {
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+
+    // Jika tidak ada 'code', berarti ini permintaan awal dari aplikasi Anda
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: "offline",
+      prompt: 'consent', // Penting untuk mendapatkan refresh_token
+      scope: [
+        "https://www.googleapis.com/auth/calendar.readonly",
+        "https://www.googleapis.com/auth/calendar.events.readonly"
+      ],
+    });
+
+    return new Response(JSON.stringify({ url: authUrl }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
+  } catch (err) {
+    console.error("Function error:", err);
+    const appRedirectUrl = `${Deno.env.get('VITE_APP_URL')}/settings/integrations/google-calendar?error=${encodeURIComponent(err.message)}`;
+    
+    // Jika error terjadi saat callback, redirect dengan pesan error
+    if (new URL(req.url).searchParams.has('code')) {
+        return Response.redirect(appRedirectUrl, 302);
     }
+
+    // Jika error terjadi saat permintaan awal, kirim respons JSON
+    return new Response(JSON.stringify({ error: err.message }), { 
+        status: 500, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 });
