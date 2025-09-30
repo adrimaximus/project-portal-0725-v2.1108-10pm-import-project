@@ -2,85 +2,85 @@ import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Session } from "@supabase/supabase-js";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const GoogleCalendarIntegrationPage = () => {
-    const [session, setSession] = useState<Session | null>(null);
-    const [calendars, setCalendars] = useState<any[]>([]);
-    const [loadingCalendars, setLoadingCalendars] = useState(false);
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [isConnecting, setIsConnecting] = useState(false);
+
+    const { data: isConnected, isLoading: isLoadingConnection } = useQuery({
+        queryKey: ['googleCalendarConnection', user?.id],
+        queryFn: async () => {
+            if (!user) return false;
+            const { data, error } = await supabase
+                .from('google_calendar_tokens')
+                .select('user_id')
+                .eq('user_id', user.id)
+                .single();
+            if (error && error.code !== 'PGRST116') throw error;
+            return !!data;
+        },
+        enabled: !!user,
+    });
+
+    const { data: calendars = [], isLoading: isLoadingCalendars } = useQuery({
+        queryKey: ['googleCalendars', user?.id],
+        queryFn: async () => {
+            const { data, error } = await supabase.functions.invoke('get-google-calendars');
+            if (error) throw error;
+            return data || [];
+        },
+        enabled: !!isConnected,
+    });
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-        });
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
-    const isConnected = !!session?.provider_token && session.user.app_metadata.provider === 'google';
-
-    useEffect(() => {
-        const fetchCalendars = async () => {
-            if (session?.provider_token) {
-                setLoadingCalendars(true);
-                try {
-                    const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
-                        headers: {
-                            'Authorization': `Bearer ${session.provider_token}`,
-                        },
-                    });
-                    if (!response.ok) {
-                        // This can happen if the token expires. A real app would handle token refresh.
-                        if (response.status === 401) {
-                            // Attempt to sign out to clear the invalid session
-                            await supabase.auth.signOut();
-                        }
-                        throw new Error('Failed to fetch calendars');
-                    }
-                    const data = await response.json();
-                    setCalendars(data.items || []);
-                } catch (error) {
-                    console.error("Error fetching calendars:", error);
-                    setCalendars([]);
-                } finally {
-                    setLoadingCalendars(false);
-                }
-            }
-        };
-
-        if (isConnected) {
-            fetchCalendars();
-        } else {
-            setCalendars([]);
+        const success = searchParams.get('success');
+        const error = searchParams.get('error');
+        if (success) {
+            toast.success("Successfully connected to Google Calendar!");
+            queryClient.invalidateQueries({ queryKey: ['googleCalendarConnection', user?.id] });
+            queryClient.invalidateQueries({ queryKey: ['googleCalendars', user?.id] });
+            searchParams.delete('success');
+            setSearchParams(searchParams);
         }
-    }, [session, isConnected]);
+        if (error) {
+            toast.error("Failed to connect to Google Calendar.", { description: error });
+            searchParams.delete('error');
+            setSearchParams(searchParams);
+        }
+    }, [searchParams, setSearchParams, queryClient, user?.id]);
 
     const handleConnect = async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                scopes: 'https://www.googleapis.com/auth/calendar.readonly',
-                redirectTo: window.location.href,
-            },
-        });
-        if (error) {
-            console.error("Error connecting to Google Calendar:", error.message);
+        setIsConnecting(true);
+        try {
+            const { data, error } = await supabase.functions.invoke('google-calendar-auth');
+            if (error) throw error;
+            if (data.url) {
+                window.location.href = data.url;
+            }
+        } catch (error: any) {
+            toast.error("Could not get authorization URL.", { description: error.message });
+            setIsConnecting(false);
         }
     };
 
     const handleDisconnect = async () => {
-        const { error } = await supabase.auth.signOut();
+        const { error } = await supabase.rpc('delete_google_calendar_tokens');
         if (error) {
-            console.error("Error disconnecting from Google Calendar:", error.message);
+            toast.error("Failed to disconnect.", { description: error.message });
+        } else {
+            toast.success("Disconnected from Google Calendar.");
+            queryClient.invalidateQueries({ queryKey: ['googleCalendarConnection', user?.id] });
+            queryClient.invalidateQueries({ queryKey: ['googleCalendars', user?.id] });
         }
     };
 
@@ -90,15 +90,11 @@ const GoogleCalendarIntegrationPage = () => {
                 <Breadcrumb>
                     <BreadcrumbList>
                         <BreadcrumbItem>
-                            <BreadcrumbLink asChild>
-                                <Link to="/settings">Settings</Link>
-                            </BreadcrumbLink>
+                            <BreadcrumbLink asChild><Link to="/settings">Settings</Link></BreadcrumbLink>
                         </BreadcrumbItem>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
-                            <BreadcrumbLink asChild>
-                                <Link to="/settings/integrations">Integrations</Link>
-                            </BreadcrumbLink>
+                            <BreadcrumbLink asChild><Link to="/settings/integrations">Integrations</Link></BreadcrumbLink>
                         </BreadcrumbItem>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
@@ -109,34 +105,30 @@ const GoogleCalendarIntegrationPage = () => {
 
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">
-                            Google Calendar Integration
-                        </h1>
-                        <p className="text-muted-foreground">
-                            Connect your Google Calendar account to sync your projects.
-                        </p>
+                        <h1 className="text-2xl font-bold tracking-tight">Google Calendar Integration</h1>
+                        <p className="text-muted-foreground">Connect your Google Calendar account to sync your projects.</p>
                     </div>
-                    {isConnected && <Badge variant="secondary">Connected</Badge>}
+                    {isLoadingConnection ? <Loader2 className="h-5 w-5 animate-spin" /> : isConnected && <Badge variant="secondary">Connected</Badge>}
                 </div>
 
                 <Card>
                     <CardHeader>
                         <CardTitle>Connect to Google Calendar</CardTitle>
                         <CardDescription>
-                            {isConnected 
-                                ? "Your Google Calendar account is connected."
-                                : "Click the button below to connect your account."
-                            }
+                            {isConnected ? "Your Google Calendar account is connected." : "Click the button below to connect your account."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isConnected ? (
                              <div className="flex items-center justify-between">
-                                <p className="text-sm text-muted-foreground">Connected as {session?.user?.email}</p>
+                                <p className="text-sm text-muted-foreground">Connected as {user?.email}</p>
                                 <Button variant="destructive" onClick={handleDisconnect}>Disconnect</Button>
                             </div>
                         ) : (
-                            <Button onClick={handleConnect}>Connect Google Calendar</Button>
+                            <Button onClick={handleConnect} disabled={isConnecting}>
+                                {isConnecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Connect Google Calendar
+                            </Button>
                         )}
                     </CardContent>
                 </Card>
@@ -145,12 +137,10 @@ const GoogleCalendarIntegrationPage = () => {
                     <Card>
                         <CardHeader>
                             <CardTitle>Your Calendars</CardTitle>
-                            <CardDescription>
-                                Here is a list of your calendars from your Google account.
-                            </CardDescription>
+                            <CardDescription>Here is a list of your calendars from your Google account.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {loadingCalendars ? (
+                            {isLoadingCalendars ? (
                                 <div className="flex items-center justify-center p-4">
                                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                                     <p className="ml-2 text-muted-foreground">Loading calendars...</p>

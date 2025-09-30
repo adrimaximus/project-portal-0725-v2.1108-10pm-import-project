@@ -76,6 +76,7 @@
     "embla-carousel-react": "^8.3.0",
     "framer-motion": "^12.23.12",
     "gapi-script": "^1.2.0",
+    "googleapis": "^160.0.0",
     "input-otp": "^1.2.4",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.462.0",
