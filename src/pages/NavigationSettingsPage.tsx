@@ -144,12 +144,10 @@ const NavigationSettingsPage = () => {
   const addItemMutation = useMutation({
     mutationFn: async ({ name, url, icon, type, folder_id }: { name: string, url: string, icon?: string, type: 'url_embed' | 'multi_embed', folder_id: string | null }) => {
       if (!user) throw new Error("User not authenticated");
-      const newPosition = navItemsState.length > 0 ? Math.max(...navItemsState.map(i => i.position)) + 1 : 0;
       const itemToInsert = {
         name,
         url: (type === 'multi_embed' ? '/multipage/placeholder' : url) || '',
         user_id: user.id,
-        position: newPosition,
         is_enabled: true,
         icon,
         is_deletable: true,
@@ -176,23 +174,7 @@ const NavigationSettingsPage = () => {
 
   useEffect(() => { if (user && !isLoadingItems && !backfillAttempted.current) { const hasDefaultItems = navItemsData?.some(item => item.is_deletable === false); if (!hasDefaultItems) { backfillAttempted.current = true; backfillNavItems(); } else { backfillAttempted.current = true; } } }, [user, navItemsData, isLoadingItems, backfillNavItems]);
 
-  const handleAddItem = async () => {
-    if (!user) return;
-    const finalName = newItemName.trim() || 'Untitled Page';
-    const isUrlEmbedValid = newItemType === 'url_embed' && newItemContent.trim();
-    const isMultiEmbedValid = newItemType === 'multi_embed';
-    if (isUrlEmbedValid || isMultiEmbedValid) {
-      addItemMutation.mutate({
-        name: finalName,
-        url: newItemContent.trim(),
-        icon: newItemIcon,
-        type: newItemType,
-        folder_id: newItemFolderId,
-      });
-    } else {
-      toast.error("Please provide a URL or embed code for this page type.");
-    }
-  };
+  const handleAddItem = async () => { if (!user) return; const finalName = newItemName.trim() || 'Untitled Page'; const isUrlEmbedValid = newItemType === 'url_embed' && newItemContent.trim(); const isMultiEmbedValid = newItemType === 'multi_embed'; if (isUrlEmbedValid || isMultiEmbedValid) { addItemMutation.mutate({ name: finalName, url: newItemContent.trim(), icon: newItemIcon, type: newItemType, folder_id: newItemFolderId, }); } else { toast.error("Please provide a URL or embed code for this page type."); } };
   const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => { const item = navItemsState.find(i => i.id === id); if (!item) return; if (item.type === 'multi_embed') { await updateItems([{ id, name, icon }]); } else { await updateItems([{ id, name, url, icon }]); } setEditingItem(null); };
   const handleSaveFolder = (data: FolderData) => { const position = editingFolder ? editingFolder.position : foldersState.length; upsertFolder({ id: editingFolder?.id, ...data, user_id: user!.id, position }, { onSuccess: () => setIsFolderFormOpen(false) }); };
 
