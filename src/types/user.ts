@@ -27,7 +27,6 @@ export interface User {
     visibleColumnIds?: string[];
     collapseOverrides?: Record<string, boolean>;
   };
-  google_calendar_settings?: any;
 }
 
 export type Collaborator = User & { online?: boolean };
