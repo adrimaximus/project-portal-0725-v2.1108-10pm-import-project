@@ -6,20 +6,30 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, ChevronsUpDown, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+
+interface Calendar {
+    id: string;
+    summary: string;
+    backgroundColor: string;
+    primary?: boolean;
+}
 
 const GoogleCalendarIntegrationPage = () => {
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
     const [isConnecting, setIsConnecting] = useState(false);
-    const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
+    const [selectedCalendars, setSelectedCalendars] = useState<Calendar[]>([]);
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [popoverOpen, setPopoverOpen] = useState(false);
 
     const { data: isConnected, isLoading: isLoadingConnection } = useQuery({
         queryKey: ['googleCalendarConnection', user?.id],
@@ -36,6 +46,16 @@ const GoogleCalendarIntegrationPage = () => {
         enabled: !!user,
     });
 
+    const { data: calendars = [], isLoading: isLoadingCalendars } = useQuery<Calendar[]>({
+        queryKey: ['googleCalendars', user?.id],
+        queryFn: async () => {
+            const { data, error } = await supabase.functions.invoke('get-google-calendars');
+            if (error) throw error;
+            return data || [];
+        },
+        enabled: !!isConnected,
+    });
+
     const { data: profile } = useQuery({
         queryKey: ['userProfileGCalSettings', user?.id],
         queryFn: async () => {
@@ -48,24 +68,16 @@ const GoogleCalendarIntegrationPage = () => {
             if (error) throw error;
             return data;
         },
-        enabled: !!user,
+        enabled: !!user && calendars.length > 0,
     });
 
     useEffect(() => {
-        if (profile?.google_calendar_settings?.selected_calendars) {
-            setSelectedCalendars(profile.google_calendar_settings.selected_calendars);
+        if (profile?.google_calendar_settings?.selected_calendars && calendars.length > 0) {
+            const selectedIds = profile.google_calendar_settings.selected_calendars;
+            const fullCalendarData = calendars.filter(cal => selectedIds.includes(cal.id));
+            setSelectedCalendars(fullCalendarData);
         }
-    }, [profile]);
-
-    const { data: calendars = [], isLoading: isLoadingCalendars } = useQuery({
-        queryKey: ['googleCalendars', user?.id],
-        queryFn: async () => {
-            const { data, error } = await supabase.functions.invoke('get-google-calendars', { method: 'GET' });
-            if (error) throw error;
-            return data || [];
-        },
-        enabled: !!isConnected,
-    });
+    }, [profile, calendars]);
 
     useEffect(() => {
         const success = searchParams.get('success');
@@ -103,27 +115,33 @@ const GoogleCalendarIntegrationPage = () => {
             toast.error("Failed to disconnect.", { description: error.message });
         } else {
             toast.success("Disconnected from Google Calendar.");
+            setSelectedCalendars([]);
+            setIsDirty(false);
             queryClient.invalidateQueries({ queryKey: ['googleCalendarConnection', user?.id] });
+            queryClient.invalidateQueries({ queryKey: ['googleCalendars', user?.id] });
         }
     };
 
-    const handleCalendarSelectionChange = (calendarId: string) => {
-        const newSelection = selectedCalendars.includes(calendarId)
-            ? selectedCalendars.filter(id => id !== calendarId)
-            : [...selectedCalendars, calendarId];
+    const handleCalendarSelectionChange = (calendar: Calendar) => {
+        const isSelected = selectedCalendars.some(c => c.id === calendar.id);
+        const newSelection = isSelected
+            ? selectedCalendars.filter(c => c.id !== calendar.id)
+            : [...selectedCalendars, calendar];
         
         setSelectedCalendars(newSelection);
 
-        const originalSelection = profile?.google_calendar_settings?.selected_calendars || [];
-        const isDifferent = JSON.stringify(newSelection.sort()) !== JSON.stringify(originalSelection.sort());
+        const originalIds = profile?.google_calendar_settings?.selected_calendars || [];
+        const newIds = newSelection.map(c => c.id);
+        const isDifferent = JSON.stringify(newIds.sort()) !== JSON.stringify(originalIds.sort());
         setIsDirty(isDifferent);
     };
 
     const handleSaveSelection = async () => {
         setIsSaving(true);
         try {
+            const selectedCalendarIds = selectedCalendars.map(c => c.id);
             const { error } = await supabase.functions.invoke('save-google-calendar-selection', {
-                body: { selectedCalendarIds: selectedCalendars },
+                body: { selectedCalendarIds },
             });
             if (error) throw error;
             toast.success("Your calendar selection has been saved.");
@@ -141,17 +159,11 @@ const GoogleCalendarIntegrationPage = () => {
             <div className="space-y-6">
                 <Breadcrumb>
                     <BreadcrumbList>
-                        <BreadcrumbItem>
-                            <BreadcrumbLink asChild><Link to="/settings">Settings</Link></BreadcrumbLink>
-                        </BreadcrumbItem>
+                        <BreadcrumbItem><BreadcrumbLink asChild><Link to="/settings">Settings</Link></BreadcrumbLink></BreadcrumbItem>
                         <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbLink asChild><Link to="/settings/integrations">Integrations</Link></BreadcrumbLink>
-                        </BreadcrumbItem>
+                        <BreadcrumbItem><BreadcrumbLink asChild><Link to="/settings/integrations">Integrations</Link></BreadcrumbLink></BreadcrumbItem>
                         <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbPage>Google Calendar</BreadcrumbPage>
-                        </BreadcrumbItem>
+                        <BreadcrumbItem><BreadcrumbPage>Google Calendar</BreadcrumbPage></BreadcrumbItem>
                     </BreadcrumbList>
                 </Breadcrumb>
 
@@ -166,9 +178,7 @@ const GoogleCalendarIntegrationPage = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Connect to Google Calendar</CardTitle>
-                        <CardDescription>
-                            {isConnected ? "Your Google Calendar account is connected." : "Click the button below to connect your account."}
-                        </CardDescription>
+                        <CardDescription>{isConnected ? "Your Google Calendar account is connected." : "Click the button below to connect your account."}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isConnected ? (
@@ -189,35 +199,45 @@ const GoogleCalendarIntegrationPage = () => {
                     <Card>
                         <CardHeader>
                             <CardTitle>Select Calendars to Sync</CardTitle>
-                            <CardDescription>Choose one or more calendars you want to sync with your projects.</CardDescription>
+                            <CardDescription>Choose which calendars you want to sync with your projects.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {isLoadingCalendars ? (
-                                <div className="flex items-center justify-center p-4">
-                                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                                    <p className="ml-2 text-muted-foreground">Loading calendars...</p>
-                                </div>
-                            ) : calendars.length > 0 ? (
-                                <ul className="space-y-2">
-                                    {calendars.map((cal: any) => (
-                                        <li key={cal.id}>
-                                            <label htmlFor={cal.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50 cursor-pointer transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    <Checkbox
-                                                        id={cal.id}
-                                                        checked={selectedCalendars.includes(cal.id)}
-                                                        onCheckedChange={() => handleCalendarSelectionChange(cal.id)}
-                                                    />
-                                                    <div className="w-4 h-4 rounded" style={{ backgroundColor: cal.backgroundColor }}></div>
-                                                    <span>{cal.summary}</span>
-                                                </div>
-                                                {cal.primary && <Badge variant="default">Primary</Badge>}
-                                            </label>
-                                        </li>
-                                    ))}
-                                </ul>
+                                <div className="flex items-center justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /><p className="ml-2 text-muted-foreground">Loading calendars...</p></div>
                             ) : (
-                                <p className="text-sm text-muted-foreground text-center p-4">No calendars found or failed to load.</p>
+                                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" role="combobox" aria-expanded={popoverOpen} className="w-full justify-between h-auto min-h-10">
+                                            <div className="flex flex-wrap gap-1">
+                                                {selectedCalendars.length > 0 ? selectedCalendars.map(cal => (
+                                                    <Badge key={cal.id} variant="secondary" className="flex items-center gap-1">
+                                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cal.backgroundColor }}></div>
+                                                        {cal.summary}
+                                                    </Badge>
+                                                )) : "Select calendars..."}
+                                            </div>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Search calendars..." />
+                                            <CommandList>
+                                                <CommandEmpty>No calendars found.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {calendars.map((cal) => (
+                                                        <CommandItem key={cal.id} onSelect={() => handleCalendarSelectionChange(cal)}>
+                                                            <Check className={cn("mr-2 h-4 w-4", selectedCalendars.some(c => c.id === cal.id) ? "opacity-100" : "opacity-0")}/>
+                                                            <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: cal.backgroundColor }}></div>
+                                                            <span className="flex-1">{cal.summary}</span>
+                                                            {cal.primary && <Badge variant="outline" className="ml-2">Primary</Badge>}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             )}
                         </CardContent>
                         {calendars.length > 0 && (
