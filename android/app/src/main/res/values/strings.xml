@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">project-portal-0725-v3.30sept</string>
+    <string name="title_activity_main">project-portal-0725-v3.30sept</string>
+    <string name="package_name">com.example.projectportal0725v330sept</string>
+    <string name="custom_url_scheme">com.example.projectportal0725v330sept</string>
+</resources>
