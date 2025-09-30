@@ -254,7 +254,7 @@ const NavigationSettingsPage = () => {
     updateItems(finalItemUpdates);
   };
 
-  const itemsWithoutFolder = useMemo(() => navItemsState.filter(item => !item.folder_id).sort((a, b) => a.position - b.position), [navItemsState]);
+  const itemsWithoutFolder = useMemo(() => navItemsState.filter(item => !item.folder_id), [navItemsState]);
   const { setNodeRef: setUncategorizedNodeRef } = useDroppable({ id: 'uncategorized-folder', data: { type: 'folder' } });
 
   return (
@@ -273,7 +273,7 @@ const NavigationSettingsPage = () => {
                     <SortableFolderItem key={folder.id} folder={folder} onEdit={(f) => { setEditingFolder(f); setIsFolderFormOpen(true); }} onDelete={deleteFolder}>
                       <SortableContext id={folder.id} items={navItemsState.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
                         <div className="space-y-2">
-                          {navItemsState.filter(i => i.folder_id === folder.id).sort((a, b) => a.position - b.position).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
+                          {navItemsState.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
                         </div>
                       </SortableContext>
                     </SortableFolderItem>
