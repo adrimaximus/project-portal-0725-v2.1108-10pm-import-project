@@ -3,7 +3,7 @@ import { Project } from "@/types";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, RefreshCw, Search } from "lucide-react";
+import { PlusCircle, RefreshCw, Search, Download } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -30,8 +30,10 @@ import TaskFormDialog from "@/components/projects/TaskFormDialog";
 import { Task, TaskStatus } from "@/types/task";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { Input } from "@/components/ui/input";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { GoogleCalendarImportDialog } from "@/components/projects/GoogleCalendarImportDialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -70,6 +72,35 @@ const ProjectsPage = () => {
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'due_date', direction: 'asc' });
   const [hideCompletedTasks, setHideCompletedTasks] = useState(() => localStorage.getItem('hideCompletedTasks') === 'true');
+
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+
+  const { data: isGCalConnected } = useQuery({
+    queryKey: ['googleCalendarConnection', user?.id],
+    queryFn: async () => {
+        if (!user) return false;
+        const { data } = await supabase.from('google_calendar_tokens').select('user_id').eq('user_id', user.id).maybeSingle();
+        return !!data;
+    },
+    enabled: !!user,
+  });
+
+  const importEventsMutation = useMutation({
+    mutationFn: async (events: any[]) => {
+        const { error } = await supabase.functions.invoke('import-google-calendar-events', {
+            body: { eventsToImport: events },
+        });
+        if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+        toast.success("Events imported successfully as projects!");
+        setIsImportDialogOpen(false);
+        refetch();
+    },
+    onError: (error) => {
+        toast.error("Failed to import events.", { description: error.message });
+    }
+  });
 
   const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks({ 
     enabled: view === 'tasks' || view === 'tasks-kanban',
@@ -216,7 +247,6 @@ const ProjectsPage = () => {
     }
   };
 
-  // Task handlers
   const handleCreateTask = () => {
     setEditingTask(null);
     setIsTaskFormOpen(true);
@@ -302,10 +332,16 @@ const ProjectsPage = () => {
           task={editingTask}
         />
 
+        <GoogleCalendarImportDialog
+          open={isImportDialogOpen}
+          onOpenChange={setIsImportDialogOpen}
+          onImport={(events) => importEventsMutation.mutate(events)}
+          isImporting={importEventsMutation.isPending}
+        />
+
         <Card className="h-full flex flex-col">
           <div className="sticky top-0 bg-background z-10 sm:relative border-b">
             <CardHeader className="p-4 space-y-4">
-              {/* Row 1: Title and Desktop buttons */}
               <div className="flex items-center justify-between">
                 <CardTitle>All Projects</CardTitle>
                 <div className="hidden sm:flex items-center gap-2">
@@ -319,14 +355,34 @@ const ProjectsPage = () => {
                       New Task
                     </Button>
                   )}
-                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
-                      <span className="sr-only">Refresh data</span>
-                      <RefreshCw className="h-4 w-4" />
-                  </Button>
+                  {isGCalConnected ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Options</span>
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setIsImportDialogOpen(true)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Import from Calendar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleRefresh}>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Refresh List
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
+                        <span className="sr-only">Refresh data</span>
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
 
-              {/* Mobile: Row 2 - Buttons */}
               <div className="sm:hidden flex items-center gap-2">
                 <Button onClick={() => navigate('/request')} size="sm" className="flex-1">
                   <PlusCircle className="mr-2 h-4 w-4" />
@@ -338,13 +394,33 @@ const ProjectsPage = () => {
                     New Task
                   </Button>
                 )}
-                <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
-                    <span className="sr-only">Refresh data</span>
-                    <RefreshCw className="h-4 w-4" />
-                </Button>
+                {isGCalConnected ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Options</span>
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setIsImportDialogOpen(true)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Import from Calendar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleRefresh}>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Refresh List
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
+                        <span className="sr-only">Refresh data</span>
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  )}
               </div>
 
-              {/* All screens: Row 3 (mobile) / Row 2 (desktop) - Filters */}
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
