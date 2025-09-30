@@ -135,7 +135,20 @@ const NavigationSettingsPage = () => {
   useEffect(() => { if (navItemsData) setNavItemsState(navItemsData) }, [navItemsData]);
   useEffect(() => { if (foldersData) setFoldersState(foldersData) }, [foldersData]);
 
-  const { mutate: updateItems } = useMutation({ mutationFn: async (items: Partial<NavItem>[]) => { if (items.length === 0) return; const { error } = await supabase.from('user_navigation_items').upsert(items); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: itemsQueryKey }), onError: (e: any) => toast.error("Failed to save changes", { description: e.message }) });
+  const { mutate: updateItems } = useMutation({
+    mutationFn: async (items: Partial<NavItem>[]) => {
+      if (items.length === 0) return;
+      // Two-phase update to prevent unique constraint violations on position
+      const tempUpdates = items.map((item, index) => ({ id: item.id, position: -1 * (index + 1) }));
+      const { error: tempError } = await supabase.from('user_navigation_items').upsert(tempUpdates);
+      if (tempError) throw tempError;
+
+      const { error: finalError } = await supabase.from('user_navigation_items').upsert(items);
+      if (finalError) throw finalError;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: itemsQueryKey }),
+    onError: (e: any) => toast.error("Failed to save changes", { description: e.message })
+  });
   const { mutate: updateFolders } = useMutation({ mutationFn: async (folders: Partial<NavFolder>[]) => { if (folders.length === 0) return; const { error } = await supabase.from('navigation_folders').upsert(folders); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: foldersQueryKey }), onError: (e: any) => toast.error("Failed to reorder folders", { description: e.message }) });
   const { mutate: backfillNavItems } = useMutation({ mutationFn: async () => { if (!user) return; const itemsToInsert = defaultNavItems.map((item, index) => ({ user_id: user.id, name: item.name, url: item.url, icon: item.icon, position: index, is_enabled: true, is_deletable: false, is_editable: false, type: 'url_embed' as const, folder_id: null, })); const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert); if (error) throw error; }, onSuccess: () => { toast.success("Default navigation items have been set up."); queryClient.invalidateQueries({ queryKey: itemsQueryKey }); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); }, onError: (e: any) => toast.error("Failed to set up default navigation.", { description: e.message }) });
   const { mutate: upsertFolder, isPending: isSavingFolder } = useMutation({ mutationFn: async (folder: Partial<NavFolder>) => { const { error } = await supabase.from('navigation_folders').upsert(folder); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: foldersQueryKey }) });
@@ -176,48 +189,61 @@ const NavigationSettingsPage = () => {
     const activeType = active.data.current?.type;
     const overType = over.data.current?.type;
 
-    let updatedFolders = [...foldersState];
-    let updatedItems = [...navItemsState];
-
     if (activeType === 'folder' && overType === 'folder') {
-        const oldIndex = updatedFolders.findIndex(f => f.id === activeId);
-        const newIndex = updatedFolders.findIndex(f => f.id === overId);
-        updatedFolders = arrayMove(updatedFolders, oldIndex, newIndex);
-        setFoldersState(updatedFolders);
+        setFoldersState((folders) => {
+            const oldIndex = folders.findIndex((f) => f.id === activeId);
+            const newIndex = folders.findIndex((f) => f.id === overId);
+            const newOrder = arrayMove(folders, oldIndex, newIndex);
+            updateFolders(newOrder.map((f, index) => ({ id: f.id, position: index })));
+            return newOrder;
+        });
     } else if (activeType === 'item') {
-        const oldItemIndex = updatedItems.findIndex(i => i.id === activeId);
-        const activeItem = updatedItems[oldItemIndex];
+        setNavItemsState((items) => {
+            const oldIndex = items.findIndex((i) => i.id === activeId);
+            const overIsItem = overType === 'item';
+            const newIndex = overIsItem ? items.findIndex((i) => i.id === overId) : -1;
 
-        if (overType === 'item') {
-            const newItemIndex = updatedItems.findIndex(i => i.id === overId);
-            updatedItems = arrayMove(updatedItems, oldItemIndex, newItemIndex);
-            const overItem = updatedItems[newItemIndex];
-            if (activeItem.folder_id !== overItem.folder_id) {
-                updatedItems[newItemIndex] = { ...activeItem, folder_id: overItem.folder_id };
+            let newItems = [...items];
+            const activeItem = items[oldIndex];
+            const newFolderId = overType === 'folder' 
+                ? (overId === 'uncategorized-folder' ? null : overId) 
+                : (overIsItem ? items.find(i => i.id === overId)?.folder_id : activeItem.folder_id);
+
+            if (overIsItem && newIndex !== -1) {
+                newItems = arrayMove(items, oldIndex, newIndex);
+                const movedItemIndex = newItems.findIndex(i => i.id === activeId);
+                if (newItems[movedItemIndex].folder_id !== newFolderId) {
+                    newItems[movedItemIndex] = { ...newItems[movedItemIndex], folder_id: newFolderId };
+                }
+            } else if (overType === 'folder') {
+                const [movedItem] = newItems.splice(oldIndex, 1);
+                movedItem.folder_id = newFolderId;
+                const itemsInDest = newItems.filter(i => i.folder_id === newFolderId);
+                const lastItemInDest = itemsInDest[itemsInDest.length - 1];
+                const insertAtIndex = lastItemInDest ? newItems.findIndex(i => i.id === lastItemInDest.id) + 1 : oldIndex;
+                newItems.splice(insertAtIndex, 0, movedItem);
             }
-        } else if (overType === 'folder') {
-            const newFolderId = overId === 'uncategorized-folder' ? null : overId;
-            updatedItems[oldItemIndex] = { ...activeItem, folder_id: newFolderId };
-        }
-        setNavItemsState(updatedItems);
+
+            const updates: Partial<NavItem>[] = [];
+            const allFolderIds = [null, ...foldersState.map(f => f.id)];
+            let currentPosition = 0;
+            allFolderIds.forEach(folderId => {
+                newItems.filter(i => i.folder_id === folderId).forEach(item => {
+                    const originalItem = items.find(i => i.id === item.id);
+                    if (!originalItem || originalItem.position !== currentPosition || originalItem.folder_id !== item.folder_id) {
+                        updates.push({ id: item.id, position: currentPosition, folder_id: item.folder_id });
+                    }
+                    currentPosition++;
+                });
+            });
+
+            if (updates.length > 0) {
+                updateItems(updates);
+            }
+            
+            return newItems;
+        });
     }
-
-    const finalFolderUpdates = updatedFolders.map((folder, index) => ({ id: folder.id, position: index }));
-    
-    const finalOrderedItems: NavItem[] = [];
-    updatedFolders.forEach(folder => {
-        finalOrderedItems.push(...updatedItems.filter(i => i.folder_id === folder.id));
-    });
-    finalOrderedItems.push(...updatedItems.filter(i => !i.folder_id));
-
-    const finalItemUpdates = finalOrderedItems.map((item, index) => ({
-        id: item.id,
-        position: index,
-        folder_id: item.folder_id,
-    }));
-
-    updateFolders(finalFolderUpdates);
-    updateItems(finalItemUpdates);
   };
 
   const itemsWithoutFolder = useMemo(() => navItemsState.filter(item => !item.folder_id), [navItemsState]);
