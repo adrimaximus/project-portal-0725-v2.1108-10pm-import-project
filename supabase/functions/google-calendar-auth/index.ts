@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { google } from 'https://esm.sh/googleapis@140.0.1';
+import { OAuth2Client } from 'https://esm.sh/google-auth-library@9.11.0';
 import * as djwt from 'https://deno.land/x/djwt@v3.0.2/mod.ts';
 
 const corsHeaders = {
@@ -31,7 +31,7 @@ serve(async (req) => {
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
 
-    const oauth2Client = new google.auth.OAuth2(
+    const oauth2Client = new OAuth2Client(
       Deno.env.get('VITE_GOOGLE_CLIENT_ID'),
       Deno.env.get('GOOGLE_CLIENT_SECRET'),
       url.origin + url.pathname // Redirect URI is the function itself

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { google } from 'https://esm.sh/googleapis@140.0.1';
+import { OAuth2Client } from 'https://esm.sh/google-auth-library@9.11.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,7 +38,7 @@ serve(async (req) => {
     if (tokenError) throw new Error("Google Calendar not connected or tokens not found.");
 
     // 3. Set up OAuth client and credentials
-    const oauth2Client = new google.auth.OAuth2(
+    const oauth2Client = new OAuth2Client(
       Deno.env.get('VITE_GOOGLE_CLIENT_ID'),
       Deno.env.get('GOOGLE_CLIENT_SECRET')
     );
@@ -64,10 +64,21 @@ serve(async (req) => {
     }
 
     // 5. Call Google Calendar API
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-    const res = await calendar.calendarList.list();
+    const { token } = await oauth2Client.getAccessToken();
+    const apiResponse = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
 
-    return new Response(JSON.stringify(res.data.items || []), {
+    if (!apiResponse.ok) {
+      const errorBody = await apiResponse.json();
+      throw new Error(`Google API error: ${errorBody.error.message}`);
+    }
+
+    const calendarData = await apiResponse.json();
+
+    return new Response(JSON.stringify(calendarData.items || []), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
