@@ -3,7 +3,6 @@ import PortalSidebar from "./PortalSidebar";
 import { cn } from "@/lib/utils";
 import PortalHeader from "./PortalHeader";
 import StorageWarning from "./StorageWarning";
-import ToastProvider from "./ToastProvider";
 
 type PortalLayoutProps = {
   children: ReactNode;
@@ -41,7 +40,6 @@ export default function PortalLayout({ children, summary, pageHeader, disableMai
 
       {/* Storage Warning Component */}
       <StorageWarning />
-      <ToastProvider />
     </div>
   );
 }
