@@ -107,8 +107,9 @@ export const useNotifications = () => {
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await supabase.functions.invoke('update-notification', {
-        body: { notificationId, isRead: true },
+      const { error } = await supabase.rpc('update_my_notification_status', {
+        notification_id: notificationId,
+        is_read: true,
       });
       if (error) throw error;
     },
@@ -131,8 +132,9 @@ export const useNotifications = () => {
 
   const markAsUnreadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await supabase.functions.invoke('update-notification', {
-        body: { notificationId, isRead: false },
+      const { error } = await supabase.rpc('update_my_notification_status', {
+        notification_id: notificationId,
+        is_read: false,
       });
       if (error) throw error;
     },
@@ -156,9 +158,7 @@ export const useNotifications = () => {
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
       if (!user) return;
-      const { error } = await supabase.functions.invoke('update-notification', {
-        body: { markAll: true },
-      });
+      const { error } = await supabase.rpc('mark_all_my_notifications_as_read');
       if (error) throw error;
     },
     onMutate: async () => {
