@@ -32,7 +32,7 @@ serve(async (req) => {
     const state = url.searchParams.get('state');
 
     const oauth2Client = new google.auth.OAuth2(
-      Deno.env.get('VITE_GOOGLE_CLIENT_ID'),
+      Deno.env.get('GOOGLE_CLIENT_ID'),
       Deno.env.get('GOOGLE_CLIENT_SECRET'),
       url.origin + url.pathname // Redirect URI adalah fungsi itu sendiri
     );

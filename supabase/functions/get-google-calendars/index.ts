@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { google } from 'https://esm.sh/googleapis@118';
@@ -37,7 +38,7 @@ serve(async (req) => {
 
     // 3. Set up OAuth client and credentials
     const oauth2Client = new google.auth.OAuth2(
-      Deno.env.get('VITE_GOOGLE_CLIENT_ID'),
+      Deno.env.get('GOOGLE_CLIENT_ID'),
       Deno.env.get('GOOGLE_CLIENT_SECRET')
     );
     oauth2Client.setCredentials({
