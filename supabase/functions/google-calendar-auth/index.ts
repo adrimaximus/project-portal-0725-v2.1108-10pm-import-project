@@ -1,8 +1,8 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { google } from 'https://esm.sh/googleapis@118';
-import * as djwt from 'https://deno.land/x/djwt@v2.8/mod.ts';
+import { google } from 'https://esm.sh/googleapis@140.0.1';
+import * as djwt from 'https://deno.land/x/djwt@v3.0.2/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,7 +10,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
 };
 
-// Fungsi ini sekarang akan dipanggil di dalam handler
 async function getDjwtKey() {
   const JWT_SECRET = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!JWT_SECRET) {
@@ -35,7 +34,7 @@ serve(async (req) => {
     const oauth2Client = new google.auth.OAuth2(
       Deno.env.get('VITE_GOOGLE_CLIENT_ID'),
       Deno.env.get('GOOGLE_CLIENT_SECRET'),
-      url.origin + url.pathname // Redirect URI adalah fungsi itu sendiri
+      url.origin + url.pathname // Redirect URI is the function itself
     );
 
     const supabaseAdmin = createClient(
@@ -43,11 +42,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Bagian 2: Menangani callback dari Google
     if (code && state) {
       let userId: string;
       try {
-        const key = await getDjwtKey(); // Panggil fungsi async di sini
+        const key = await getDjwtKey();
         const payload = await djwt.verify(state, key);
         userId = payload.sub as string;
         if (!userId) throw new Error("Invalid state token: missing user ID");
@@ -74,7 +72,6 @@ serve(async (req) => {
       return Response.redirect(`${finalRedirectUrl}?success=true`, 302);
     }
 
-    // Bagian 1: Menghasilkan URL otorisasi untuk frontend
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -91,7 +88,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'User not authenticated' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const key = await getDjwtKey(); // Panggil fungsi async di sini
+    const key = await getDjwtKey();
     const stateToken = await djwt.create({ alg: 'HS256', typ: 'JWT' }, { sub: user.id, exp: djwt.getNumericDate(60 * 5) }, key);
 
     const authUrl = oauth2Client.generateAuthUrl({
