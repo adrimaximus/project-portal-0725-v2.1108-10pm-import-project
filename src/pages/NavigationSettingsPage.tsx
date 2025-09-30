@@ -183,34 +183,6 @@ const NavigationSettingsPage = () => {
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const handleDragStart = (event: DragStartEvent) => setActiveDragData(event.active.data.current as any);
   
-  const updateAllItemPositions = (items: NavItem[], folders: NavFolder[]) => {
-    const finalOrderedItems: NavItem[] = [];
-    const itemsByFolder: Record<string, NavItem[]> = { 'uncategorized-folder': [] };
-    folders.forEach(f => itemsByFolder[f.id] = []);
-
-    items.forEach(item => {
-        const folderId = item.folder_id || 'uncategorized-folder';
-        if (itemsByFolder[folderId]) {
-            itemsByFolder[folderId].push(item);
-        } else {
-            itemsByFolder['uncategorized-folder'].push(item);
-        }
-    });
-
-    const folderOrder = ['uncategorized-folder', ...folders.map(f => f.id)];
-    folderOrder.forEach(folderId => {
-        finalOrderedItems.push(...(itemsByFolder[folderId] || []));
-    });
-
-    const itemUpdates = finalOrderedItems.map((item, index) => ({
-        id: item.id,
-        position: index,
-        folder_id: item.folder_id,
-    }));
-
-    updateItems(itemUpdates);
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveDragData(null);
     const { active, over } = event;
@@ -220,51 +192,66 @@ const NavigationSettingsPage = () => {
     const overId = String(over.id);
     const activeType = active.data.current?.type;
 
-    if (activeType === 'folder') {
-        const overType = over.data.current?.type;
-        if (overType !== 'folder') return;
-        
-        setFoldersState((folders) => {
-            const oldIndex = folders.findIndex(f => f.id === activeId);
-            const newIndex = folders.findIndex(f => f.id === overId);
-            const reordered = arrayMove(folders, oldIndex, newIndex);
-            updateFolders(reordered.map((f, i) => ({ id: f.id, position: i })));
-            return reordered;
-        });
-        return;
-    }
+    let newFolders = foldersState;
+    let newItems = navItemsState;
 
-    if (activeType === 'item') {
-        setNavItemsState(items => {
-            const oldIndex = items.findIndex(i => i.id === activeId);
-            const overIsFolder = over.data.current?.type === 'folder';
-            const newFolderId = overIsFolder ? overId : over.data.current?.sortable.containerId;
+    if (activeType === 'folder' && over.data.current?.type === 'folder') {
+        const oldIndex = foldersState.findIndex(f => f.id === activeId);
+        const newIndex = foldersState.findIndex(f => f.id === overId);
+        newFolders = arrayMove(foldersState, oldIndex, newIndex);
+        setFoldersState(newFolders);
+    } else if (activeType === 'item') {
+        const oldIndex = navItemsState.findIndex(i => i.id === activeId);
+        const overIsFolder = over.data.current?.type === 'folder';
+        const newFolderId = overIsFolder ? overId : over.data.current?.sortable.containerId;
 
-            let newItems = [...items];
-            const [movedItem] = newItems.splice(oldIndex, 1);
-            movedItem.folder_id = newFolderId === 'uncategorized-folder' ? null : newFolderId;
+        const tempItems = [...navItemsState];
+        const [movedItem] = tempItems.splice(oldIndex, 1);
+        movedItem.folder_id = newFolderId === 'uncategorized-folder' ? null : newFolderId;
 
-            if (overIsFolder) {
-                const itemsInDest = newItems.filter(i => (i.folder_id || 'uncategorized-folder') === newFolderId);
-                if (itemsInDest.length > 0) {
-                    const lastItemIndex = newItems.findIndex(i => i.id === itemsInDest[itemsInDest.length - 1].id);
-                    newItems.splice(lastItemIndex + 1, 0, movedItem);
-                } else {
-                    newItems.push(movedItem);
-                }
+        if (overIsFolder) {
+            const itemsInDest = tempItems.filter(i => (i.folder_id || 'uncategorized-folder') === newFolderId);
+            if (itemsInDest.length > 0) {
+                const lastItemIndex = tempItems.findIndex(i => i.id === itemsInDest[itemsInDest.length - 1].id);
+                tempItems.splice(lastItemIndex + 1, 0, movedItem);
             } else {
-                const newIndex = newItems.findIndex(i => i.id === overId);
-                if (newIndex !== -1) {
-                    newItems.splice(newIndex, 0, movedItem);
-                } else {
-                    newItems.push(movedItem);
-                }
+                tempItems.push(movedItem);
             }
-            
-            updateAllItemPositions(newItems, foldersState);
-            return newItems;
-        });
+        } else {
+            const newIndex = tempItems.findIndex(i => i.id === overId);
+            if (newIndex !== -1) {
+                tempItems.splice(newIndex, 0, movedItem);
+            } else {
+                tempItems.push(movedItem);
+            }
+        }
+        newItems = tempItems;
+        setNavItemsState(newItems);
     }
+
+    // After any move, re-calculate all positions and send a single update.
+    const finalFolderUpdates = newFolders.map((folder, index) => ({
+        id: folder.id,
+        position: index,
+    }));
+
+    const finalOrderedItems: NavItem[] = [];
+    const uncategorizedItems = newItems.filter(i => !i.folder_id);
+    finalOrderedItems.push(...uncategorizedItems);
+
+    newFolders.forEach(folder => {
+        const itemsInFolder = newItems.filter(i => i.folder_id === folder.id);
+        finalOrderedItems.push(...itemsInFolder);
+    });
+
+    const finalItemUpdates = finalOrderedItems.map((item, index) => ({
+        id: item.id,
+        position: index,
+        folder_id: item.folder_id,
+    }));
+
+    updateFolders(finalFolderUpdates);
+    updateItems(finalItemUpdates);
   };
 
   const itemsWithoutFolder = useMemo(() => navItemsState.filter(item => !item.folder_id).sort((a, b) => a.position - b.position), [navItemsState]);
