@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 import UnsplashImage from "@/components/dashboard/UnsplashImage";
+import AgendaCard from "@/components/dashboard/AgendaCard";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -74,10 +75,13 @@ const Index = () => {
                 </div>
                 <DateRangePicker date={date} onDateChange={setDate} />
             </div>
-            <div className="grid gap-6 md:grid-cols-2">
-              <MonthlyProgressChart projects={filteredProjects} />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <MonthlyProgressChart projects={filteredProjects} />
+              </div>
               <UnsplashImage />
             </div>
+            <AgendaCard />
             <DashboardStatsGrid projects={filteredProjects} />
             <CollaboratorsList projects={filteredProjects} />
         </div>
