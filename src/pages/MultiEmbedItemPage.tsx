@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import PortalLayout from '@/components/PortalLayout';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Loader2, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { Loader2, Edit, Trash2, MoreHorizontal, ExternalLink } from 'lucide-react';
 import EmbedRenderer from '@/components/EmbedRenderer';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -63,6 +63,19 @@ const MultiEmbedItemPage = () => {
     }
   });
 
+  const itemUrl = useMemo(() => {
+    if (!item?.embed_content) return '#';
+    const content = item.embed_content;
+    const isIframe = content.trim().startsWith('<iframe');
+    if (isIframe) {
+      const match = content.match(/src="([^"]+)"/);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    return content;
+  }, [item]);
+
   const handleDelete = () => {
     if (item) {
       deleteItem(item.id);
@@ -101,6 +114,10 @@ const MultiEmbedItemPage = () => {
               <DropdownMenuItem onClick={() => setIsFormOpen(true)}>
                 <Edit className="mr-2 h-4 w-4" />
                 <span>Edit</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.open(itemUrl, '_blank', 'noopener,noreferrer')}>
+                <ExternalLink className="mr-2 h-4 w-4" />
+                <span>Open</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600 focus:text-red-600">
                 <Trash2 className="mr-2 h-4 w-4" />
