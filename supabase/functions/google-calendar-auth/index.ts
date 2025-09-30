@@ -7,6 +7,7 @@ import * as djwt from 'https://deno.land/x/djwt@v2.8/mod.ts';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
 };
 
 // Fungsi ini sekarang akan dipanggil di dalam handler
@@ -20,7 +21,7 @@ async function getDjwtKey() {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   const url = new URL(req.url);
