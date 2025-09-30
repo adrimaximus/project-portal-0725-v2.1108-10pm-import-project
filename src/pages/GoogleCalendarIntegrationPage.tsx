@@ -35,7 +35,7 @@ const GoogleCalendarIntegrationPage = () => {
     const { data: calendars = [], isLoading: isLoadingCalendars } = useQuery({
         queryKey: ['googleCalendars', user?.id],
         queryFn: async () => {
-            const { data, error } = await supabase.functions.invoke('get-google-calendars');
+            const { data, error } = await supabase.functions.invoke('get-google-calendars', { method: 'GET' });
             if (error) throw error;
             return data || [];
         },
@@ -62,7 +62,7 @@ const GoogleCalendarIntegrationPage = () => {
     const handleConnect = async () => {
         setIsConnecting(true);
         try {
-            const { data, error } = await supabase.functions.invoke('google-calendar-auth');
+            const { data, error } = await supabase.functions.invoke('google-calendar-auth', { method: 'GET' });
             if (error) throw error;
             if (data.url) {
                 window.location.href = data.url;
@@ -147,7 +147,7 @@ const GoogleCalendarIntegrationPage = () => {
                                 </div>
                             ) : calendars.length > 0 ? (
                                 <ul className="space-y-2">
-                                    {calendars.map((cal) => (
+                                    {calendars.map((cal: any) => (
                                         <li key={cal.id} className="flex items-center justify-between p-2 border rounded-md">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-4 h-4 rounded" style={{ backgroundColor: cal.backgroundColor }}></div>
