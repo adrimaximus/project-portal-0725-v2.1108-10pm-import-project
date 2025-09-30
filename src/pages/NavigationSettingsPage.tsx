@@ -137,12 +137,12 @@ const NavigationSettingsPage = () => {
 
   const { mutate: updateItems } = useMutation({ mutationFn: async (items: Partial<NavItem>[]) => { const { error } = await supabase.from('user_navigation_items').upsert(items); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey }), onError: (e: any) => toast.error("Failed to save changes", { description: e.message }) });
   const { mutate: updateFolders } = useMutation({ mutationFn: async (folders: Partial<NavFolder>[]) => { const { error } = await supabase.from('navigation_folders').upsert(folders); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: foldersQueryKey }), onError: (e: any) => toast.error("Failed to reorder folders", { description: e.message }) });
-  const { mutate: backfillNavItems } = useMutation({ mutationFn: async () => { if (!user) return; const { data: folderId, error: rpcError } = await supabase.rpc('get_or_create_default_nav_folder', { p_user_id: user.id }); if (rpcError) throw rpcError; if (!folderId) throw new Error("Could not get or create a default folder."); const itemsToInsert = defaultNavItems.map((item, index) => ({ user_id: user.id, name: item.name, url: item.url, icon: item.icon, position: index, is_enabled: true, is_deletable: false, is_editable: false, type: 'url_embed' as const, folder_id: folderId, })); const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert); if (error) throw error; }, onSuccess: () => { toast.success("Default navigation items have been set up."); queryClient.invalidateQueries({ queryKey }); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); }, onError: (e: any) => toast.error("Failed to set up default navigation.", { description: e.message }) });
+  const { mutate: backfillNavItems } = useMutation({ mutationFn: async () => { if (!user) return; const itemsToInsert = defaultNavItems.map((item, index) => ({ user_id: user.id, name: item.name, url: item.url, icon: item.icon, position: index, is_enabled: true, is_deletable: false, is_editable: false, type: 'url_embed' as const, folder_id: null, })); const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert); if (error) throw error; }, onSuccess: () => { toast.success("Default navigation items have been set up."); queryClient.invalidateQueries({ queryKey }); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); }, onError: (e: any) => toast.error("Failed to set up default navigation.", { description: e.message }) });
   const { mutate: upsertFolder, isPending: isSavingFolder } = useMutation({ mutationFn: async (folder: Partial<NavFolder>) => { const { error } = await supabase.from('navigation_folders').upsert(folder); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: foldersQueryKey }) });
   const { mutate: deleteItem, isPending: isDeletingItem } = useMutation({ mutationFn: async (id: string) => { setDeletingId(id); const { error } = await supabase.from('user_navigation_items').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Page removed"); queryClient.invalidateQueries({ queryKey }); }, onError: (e: any) => toast.error(e.message), onSettled: () => setDeletingId(null) });
   const { mutate: deleteFolder } = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('navigation_folders').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Folder removed"); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); } });
   const addItemMutation = useMutation({
-    mutationFn: async ({ name, url, icon, type, folder_id }: { name: string, url: string, icon?: string, type: 'url_embed' | 'multi_embed', folder_id: string }) => {
+    mutationFn: async ({ name, url, icon, type, folder_id }: { name: string, url: string, icon?: string, type: 'url_embed' | 'multi_embed', folder_id: string | null }) => {
       if (!user) throw new Error("User not authenticated");
       const newPosition = navItemsState.length > 0 ? Math.max(...navItemsState.map(i => i.position)) + 1 : 0;
       const itemToInsert = {
@@ -176,7 +176,7 @@ const NavigationSettingsPage = () => {
 
   useEffect(() => { if (user && !isLoadingItems && !backfillAttempted.current) { const hasDefaultItems = navItemsData?.some(item => item.is_deletable === false); if (!hasDefaultItems) { backfillAttempted.current = true; backfillNavItems(); } else { backfillAttempted.current = true; } } }, [user, navItemsData, isLoadingItems, backfillNavItems]);
 
-  const handleAddItem = async () => { if (!user) return; const finalName = newItemName.trim() || 'Untitled Page'; const isUrlEmbedValid = newItemType === 'url_embed' && newItemContent.trim(); const isMultiEmbedValid = newItemType === 'multi_embed'; if (isUrlEmbedValid || isMultiEmbedValid) { let targetFolderId = newItemFolderId; if (!targetFolderId) { try { const { data: folderId, error: rpcError } = await supabase.rpc('get_or_create_default_nav_folder', { p_user_id: user.id }); if (rpcError) throw rpcError; targetFolderId = folderId; queryClient.invalidateQueries({ queryKey: foldersQueryKey }); } catch (error: any) { toast.error("Could not get or create a default folder.", { description: error.message }); return; } } addItemMutation.mutate({ name: finalName, url: newItemContent.trim(), icon: newItemIcon, type: newItemType, folder_id: targetFolderId!, }); } else { toast.error("Please provide a URL or embed code for this page type."); } };
+  const handleAddItem = async () => { if (!user) return; const finalName = newItemName.trim() || 'Untitled Page'; const isUrlEmbedValid = newItemType === 'url_embed' && newItemContent.trim(); const isMultiEmbedValid = newItemType === 'multi_embed'; if (isUrlEmbedValid || isMultiEmbedValid) { addItemMutation.mutate({ name: finalName, url: newItemContent.trim(), icon: newItemIcon, type: newItemType, folder_id: newItemFolderId, }); } else { toast.error("Please provide a URL or embed code for this page type."); } };
   const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => { const item = navItemsState.find(i => i.id === id); if (!item) return; if (item.type === 'multi_embed') { await updateItems([{ id, name, icon }]); } else { await updateItems([{ id, name, url, icon }]); } setEditingItem(null); };
   const handleSaveFolder = (data: FolderData) => { const position = editingFolder ? editingFolder.position : foldersState.length; upsertFolder({ id: editingFolder?.id, ...data, user_id: user!.id, position }, { onSuccess: () => setIsFolderFormOpen(false) }); };
 
@@ -187,7 +187,6 @@ const NavigationSettingsPage = () => {
     setActiveDragData(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-
     const activeId = String(active.id);
     const overId = String(over.id);
     const activeType = active.data.current?.type;
@@ -196,12 +195,16 @@ const NavigationSettingsPage = () => {
     let finalItems = [...navItemsState];
 
     if (activeType === 'folder') {
-      const oldIndex = finalFolders.findIndex(f => f.id === activeId);
-      const newIndex = finalFolders.findIndex(f => f.id === overId);
-      if (oldIndex !== -1 && newIndex !== -1) {
-        finalFolders = arrayMove(finalFolders, oldIndex, newIndex);
-        setFoldersState(finalFolders);
-      }
+      const overType = over.data.current?.type;
+      if (overType !== 'folder') return;
+      setFoldersState(currentFolders => {
+        const oldIndex = currentFolders.findIndex(f => f.id === activeId);
+        const newIndex = currentFolders.findIndex(f => f.id === overId);
+        if (oldIndex === -1 || newIndex === -1) return currentFolders;
+        const reorderedFolders = arrayMove(currentFolders, oldIndex, newIndex);
+        updateFolders(reorderedFolders.map((folder, index) => ({ id: folder.id, position: index })));
+        return reorderedFolders;
+      });
     } else if (activeType === 'item') {
       const oldIndex = finalItems.findIndex(i => i.id === activeId);
       if (oldIndex === -1) return;
@@ -319,7 +322,7 @@ const NavigationSettingsPage = () => {
             <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" /></div>
             {newItemType === 'url_embed' && (<div className="grid gap-2"><Label htmlFor="url">URL or Embed Code</Label><Textarea id="url" value={newItemContent} onChange={(e) => setNewItemContent(e.target.value)} placeholder="https://example.com or <iframe ...></iframe>" /></div>)}
             {newItemType === 'multi_embed' && (<div className="p-3 bg-muted/50 rounded-md"><p className="text-sm text-muted-foreground">This will create a collection page where you can add multiple embed items. The URL will be automatically generated based on the page name.</p></div>)}
-            <div className="grid gap-2"><Label htmlFor="folder">Folder</Label><Select value={newItemFolderId || ''} onValueChange={(value) => setNewItemFolderId(value || null)}><SelectTrigger id="folder"><SelectValue placeholder="Select a folder (defaults to General)" /></SelectTrigger><SelectContent>{foldersState.map(folder => (<SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>))}</SelectContent></Select></div>
+            <div className="grid gap-2"><Label htmlFor="folder">Folder</Label><Select value={newItemFolderId || 'uncategorized'} onValueChange={(value) => setNewItemFolderId(value === 'uncategorized' ? null : value)}><SelectTrigger id="folder"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="uncategorized">Uncategorized</SelectItem>{foldersState.map(folder => (<SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>))}</SelectContent></Select></div>
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button onClick={handleAddItem} disabled={(newItemType === 'url_embed' && !newItemContent.trim()) || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
