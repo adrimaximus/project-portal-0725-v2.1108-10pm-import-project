@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { google } from 'https://esm.sh/googleapis@118';
@@ -8,11 +9,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const JWT_SECRET = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-if (!JWT_SECRET) {
-  throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set in environment variables.");
+// Fungsi ini sekarang akan dipanggil di dalam handler
+async function getDjwtKey() {
+  const JWT_SECRET = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!JWT_SECRET) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set in environment variables.");
+  }
+  return await djwt.createSecretKey(new TextEncoder().encode(JWT_SECRET));
 }
-const key = await djwt.createSecretKey(new TextEncoder().encode(JWT_SECRET));
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -30,7 +34,7 @@ serve(async (req) => {
     const oauth2Client = new google.auth.OAuth2(
       Deno.env.get('VITE_GOOGLE_CLIENT_ID'),
       Deno.env.get('GOOGLE_CLIENT_SECRET'),
-      url.origin + url.pathname // Redirect URI is the function itself
+      url.origin + url.pathname // Redirect URI adalah fungsi itu sendiri
     );
 
     const supabaseAdmin = createClient(
@@ -38,10 +42,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Part 2: Handle the callback from Google
+    // Bagian 2: Menangani callback dari Google
     if (code && state) {
       let userId: string;
       try {
+        const key = await getDjwtKey(); // Panggil fungsi async di sini
         const payload = await djwt.verify(state, key);
         userId = payload.sub as string;
         if (!userId) throw new Error("Invalid state token: missing user ID");
@@ -68,7 +73,7 @@ serve(async (req) => {
       return Response.redirect(`${finalRedirectUrl}?success=true`, 302);
     }
 
-    // Part 1: Generate the auth URL for the frontend
+    // Bagian 1: Menghasilkan URL otorisasi untuk frontend
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -85,6 +90,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'User not authenticated' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    const key = await getDjwtKey(); // Panggil fungsi async di sini
     const stateToken = await djwt.create({ alg: 'HS256', typ: 'JWT' }, { sub: user.id, exp: djwt.getNumericDate(60 * 5) }, key);
 
     const authUrl = oauth2Client.generateAuthUrl({
