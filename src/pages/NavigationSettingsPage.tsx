@@ -174,65 +174,47 @@ const NavigationSettingsPage = () => {
     const activeId = String(active.id);
     const overId = String(over.id);
     const activeType = active.data.current?.type;
+    const overType = over.data.current?.type;
 
-    let newFolders = [...foldersState];
-    let newItems = [...navItemsState];
+    let updatedFolders = [...foldersState];
+    let updatedItems = [...navItemsState];
 
-    if (activeType === 'folder' && over.data.current?.type === 'folder') {
-        const oldIndex = foldersState.findIndex(f => f.id === activeId);
-        const newIndex = foldersState.findIndex(f => f.id === overId);
-        newFolders = arrayMove(foldersState, oldIndex, newIndex);
-        setFoldersState(newFolders);
+    if (activeType === 'folder' && overType === 'folder') {
+        const oldIndex = updatedFolders.findIndex(f => f.id === activeId);
+        const newIndex = updatedFolders.findIndex(f => f.id === overId);
+        updatedFolders = arrayMove(updatedFolders, oldIndex, newIndex);
+        setFoldersState(updatedFolders);
     } else if (activeType === 'item') {
-        const oldIndex = navItemsState.findIndex(i => i.id === activeId);
-        const overIsFolder = over.data.current?.type === 'folder';
-        
-        const tempItems = [...navItemsState];
-        const [movedItem] = tempItems.splice(oldIndex, 1);
+        const oldItemIndex = updatedItems.findIndex(i => i.id === activeId);
+        const activeItem = updatedItems[oldItemIndex];
 
-        if (overIsFolder) {
-            const newFolderId = overId === 'uncategorized-folder' ? null : overId;
-            movedItem.folder_id = newFolderId;
-            const itemsInDest = tempItems.filter(i => i.folder_id === newFolderId);
-            if (itemsInDest.length > 0) {
-                const lastItemIndex = tempItems.findIndex(i => i.id === itemsInDest[itemsInDest.length - 1].id);
-                tempItems.splice(lastItemIndex + 1, 0, movedItem);
-            } else {
-                const folderIndex = newFolders.findIndex(f => f.id === overId);
-                if (folderIndex > -1) {
-                    let nextFolderFirstItemIndex = -1;
-                    for (let i = folderIndex + 1; i < newFolders.length; i++) {
-                        const nextFolderId = newFolders[i].id;
-                        const foundIndex = tempItems.findIndex(item => item.folder_id === nextFolderId);
-                        if (foundIndex > -1) { nextFolderFirstItemIndex = foundIndex; break; }
-                    }
-                    if (nextFolderFirstItemIndex > -1) { tempItems.splice(nextFolderFirstItemIndex, 0, movedItem); }
-                    else { const firstUncategorizedIndex = tempItems.findIndex(item => !item.folder_id); if (firstUncategorizedIndex > -1) { tempItems.splice(firstUncategorizedIndex, 0, movedItem); } else { tempItems.push(movedItem); } }
-                } else { tempItems.push(movedItem); }
+        if (overType === 'item') {
+            const newItemIndex = updatedItems.findIndex(i => i.id === overId);
+            updatedItems = arrayMove(updatedItems, oldItemIndex, newItemIndex);
+            const overItem = updatedItems[newItemIndex];
+            if (activeItem.folder_id !== overItem.folder_id) {
+                updatedItems[newItemIndex] = { ...activeItem, folder_id: overItem.folder_id };
             }
-        } else {
-            const newIndex = tempItems.findIndex(i => i.id === overId);
-            if (newIndex !== -1) {
-                const overItem = tempItems[newIndex];
-                movedItem.folder_id = overItem.folder_id;
-                tempItems.splice(newIndex, 0, movedItem);
-            } else { tempItems.push(movedItem); }
+        } else if (overType === 'folder') {
+            const newFolderId = overId === 'uncategorized-folder' ? null : overId;
+            updatedItems[oldItemIndex] = { ...activeItem, folder_id: newFolderId };
         }
-        newItems = tempItems;
-        setNavItemsState(newItems);
+        setNavItemsState(updatedItems);
     }
 
-    const finalFolderUpdates = newFolders.map((folder, index) => ({ id: folder.id, position: index }));
-    const finalOrderedItems: NavItem[] = [];
+    const finalFolderUpdates = updatedFolders.map((folder, index) => ({ id: folder.id, position: index }));
     
-    newFolders.forEach(folder => {
-        const itemsInFolder = newItems.filter(i => i.folder_id === folder.id);
-        finalOrderedItems.push(...itemsInFolder);
+    const finalOrderedItems: NavItem[] = [];
+    updatedFolders.forEach(folder => {
+        finalOrderedItems.push(...updatedItems.filter(i => i.folder_id === folder.id));
     });
-    const uncategorizedItems = newItems.filter(i => !i.folder_id);
-    finalOrderedItems.push(...uncategorizedItems);
+    finalOrderedItems.push(...updatedItems.filter(i => !i.folder_id));
 
-    const finalItemUpdates = finalOrderedItems.map((item, index) => ({ id: item.id, position: index, folder_id: item.folder_id }));
+    const finalItemUpdates = finalOrderedItems.map((item, index) => ({
+        id: item.id,
+        position: index,
+        folder_id: item.folder_id,
+    }));
 
     updateFolders(finalFolderUpdates);
     updateItems(finalItemUpdates);
@@ -255,7 +237,7 @@ const NavigationSettingsPage = () => {
                 <div className="space-y-2">
                   {foldersState.map(folder => (
                     <SortableFolderItem key={folder.id} folder={folder} onEdit={(f) => { setEditingFolder(f); setIsFolderFormOpen(true); }} onDelete={deleteFolder}>
-                      <SortableContext id={folder.id} items={navItemsState.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
+                      <SortableContext items={navItemsState.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
                         <div className="space-y-2">
                           {navItemsState.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
                         </div>
@@ -266,7 +248,7 @@ const NavigationSettingsPage = () => {
               </SortableContext>
               <div ref={setUncategorizedNodeRef} className="mt-4 pt-4 border-t">
                 <h3 className="font-semibold mb-2">Uncategorized</h3>
-                <SortableContext id="uncategorized-folder" items={itemsWithoutFolder.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={itemsWithoutFolder.map(i => i.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
                     {itemsWithoutFolder.map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
                   </div>
