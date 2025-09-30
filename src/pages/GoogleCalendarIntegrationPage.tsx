@@ -25,7 +25,7 @@ const GoogleCalendarIntegrationPage = () => {
                 .from('google_calendar_tokens')
                 .select('user_id')
                 .eq('user_id', user.id)
-                .single();
+                .maybeSingle();
             if (error && error.code !== 'PGRST116') throw error;
             return !!data;
         },
