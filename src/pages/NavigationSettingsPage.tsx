@@ -6,10 +6,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical, Loader2, Edit, Folder as FolderIcon, FolderPlus } from "lucide-react";
+import { Plus, Trash2, GripVertical, Loader2, Edit, Folder as FolderIcon, FolderPlus, ChevronDown } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay, useDroppable } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay, useDroppable, DragStartEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -53,15 +53,10 @@ const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { 
     const canEdit = item.is_editable ?? true;
     const canDelete = item.is_deletable ?? true;
 
-    // Generate display URL for the settings page
     const displayUrl = useMemo(() => {
-      if (item.type === 'multi_embed') {
-        return `/multipage/${item.slug}`;
-      } else if (item.url.startsWith('/')) {
-        return item.url;
-      } else {
-        return `/custom/${item.slug}`;
-      }
+      if (item.type === 'multi_embed') return `/multipage/${item.slug}`;
+      if (item.url.startsWith('/')) return item.url;
+      return `/custom/${item.slug}`;
     }, [item]);
 
     return (
@@ -82,25 +77,34 @@ const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { 
     )
 }
 
-const DroppableFolder = ({ folder, children, onEdit, onDelete }: { folder: NavFolder, children: React.ReactNode, onEdit: (folder: NavFolder) => void, onDelete: (id: string) => void }) => {
-    const { setNodeRef } = useDroppable({ id: folder.id, data: { type: 'folder' } });
+const SortableFolderItem = ({ folder, children, onEdit, onDelete }: { folder: NavFolder, children: React.ReactNode, onEdit: (folder: NavFolder) => void, onDelete: (id: string) => void }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: folder.id, data: { type: 'folder', folder } });
+    const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : 0, position: 'relative' as 'relative' };
+    const { setNodeRef: setDroppableNodeRef } = useDroppable({ id: folder.id, data: { type: 'folder' } });
     const FolderIconComponent = folder.icon && Icons[folder.icon] ? Icons[folder.icon] : FolderIcon;
 
     return (
-        <Collapsible defaultOpen>
-            <CollapsibleTrigger asChild>
-                <div ref={setNodeRef} className="flex items-center justify-between p-2 border rounded-md bg-muted/50 cursor-pointer">
-                    <div className="flex items-center gap-2 font-semibold"><FolderIconComponent className="h-5 w-5" style={{ color: folder.color }} /> {folder.name}</div>
+        <div ref={setNodeRef} style={style}>
+            <Collapsible defaultOpen>
+                <div ref={setDroppableNodeRef} className="flex items-center justify-between p-2 border rounded-md bg-muted/50">
+                    <div className="flex items-center gap-2 font-semibold">
+                        <button {...attributes} {...listeners} className="cursor-grab p-1"><GripVertical className="h-5 w-5 text-muted-foreground" /></button>
+                        <FolderIconComponent className="h-5 w-5" style={{ color: folder.color }} />
+                        <CollapsibleTrigger className="flex items-center gap-2">
+                            {folder.name}
+                            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                        </CollapsibleTrigger>
+                    </div>
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(folder); }}><Edit className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
                 </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="p-2 pl-6 border-l-2 ml-4">
-                {children}
-            </CollapsibleContent>
-        </Collapsible>
+                <CollapsibleContent className="p-2 pl-6 border-l-2 ml-4">
+                    {children}
+                </CollapsibleContent>
+            </Collapsible>
+        </div>
     )
 }
 
@@ -116,247 +120,97 @@ const NavigationSettingsPage = () => {
   const [editingItem, setEditingItem] = useState<NavItem | null>(null);
   const [editingFolder, setEditingFolder] = useState<NavFolder | null>(null);
   const [isFolderFormOpen, setIsFolderFormOpen] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeDragData, setActiveDragData] = useState<{ type: string, item?: NavItem, folder?: NavFolder } | null>(null);
   const backfillAttempted = useRef(false);
+
+  const [navItemsState, setNavItemsState] = useState<NavItem[]>([]);
+  const [foldersState, setFoldersState] = useState<NavFolder[]>([]);
 
   const queryKey = ['user_navigation_items', user?.id];
   const foldersQueryKey = ['navigation_folders', user?.id];
 
-  const { data: navItems = [], isLoading: isLoadingItems } = useQuery({ 
-    queryKey: queryKey, 
-    queryFn: async () => { 
-      if (!user) return []; 
-      const { data, error } = await supabase.rpc('get_user_navigation_items');
-      if (error) throw error; 
-      return data as NavItem[]; 
-    }, 
-    enabled: !!user 
-  });
-  const { data: folders = [], isLoading: isLoadingFolders } = useQuery({ queryKey: foldersQueryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data; }, enabled: !!user });
+  const { data: navItemsData, isLoading: isLoadingItems } = useQuery({ queryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.rpc('get_user_navigation_items'); if (error) throw error; return data as NavItem[]; }, enabled: !!user });
+  const { data: foldersData, isLoading: isLoadingFolders } = useQuery({ queryKey: foldersQueryKey, queryFn: async () => { if (!user) return []; const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); if (error) throw error; return data as NavFolder[]; }, enabled: !!user });
 
-  const { mutate: updateItems } = useMutation({
-    mutationFn: async (items: Partial<NavItem>[]) => {
-      const promises = items.map(item => {
-        const { id, ...updateData } = item;
-        if (!id) return Promise.resolve({ error: null });
-        return supabase.from('user_navigation_items').update(updateData).eq('id', id);
-      });
-      const results = await Promise.all(promises);
-      const firstError = results.find(res => res.error);
-      if (firstError) throw firstError.error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user?.id] });
-    },
-    onError: (error: any) => {
-      toast.error("Failed to save changes", { description: error.message });
-    }
-  });
+  useEffect(() => { if (navItemsData) setNavItemsState(navItemsData) }, [navItemsData]);
+  useEffect(() => { if (foldersData) setFoldersState(foldersData) }, [foldersData]);
 
-  const { mutate: backfillNavItems } = useMutation({
-    mutationFn: async () => {
-        if (!user) return;
-        const { data: folderId, error: rpcError } = await supabase.rpc('get_or_create_default_nav_folder', { p_user_id: user.id });
-        if (rpcError) throw rpcError;
-        if (!folderId) throw new Error("Could not get or create a default folder.");
+  const { mutate: updateItems } = useMutation({ mutationFn: async (items: Partial<NavItem>[]) => { const { error } = await supabase.from('user_navigation_items').upsert(items); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey }), onError: (e: any) => toast.error("Failed to save changes", { description: e.message }) });
+  const { mutate: updateFolders } = useMutation({ mutationFn: async (folders: Partial<NavFolder>[]) => { const { error } = await supabase.from('navigation_folders').upsert(folders); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: foldersQueryKey }), onError: (e: any) => toast.error("Failed to reorder folders", { description: e.message }) });
+  const { mutate: backfillNavItems } = useMutation({ mutationFn: async () => { if (!user) return; const { data: folderId, error: rpcError } = await supabase.rpc('get_or_create_default_nav_folder', { p_user_id: user.id }); if (rpcError) throw rpcError; if (!folderId) throw new Error("Could not get or create a default folder."); const itemsToInsert = defaultNavItems.map((item, index) => ({ user_id: user.id, name: item.name, url: item.url, icon: item.icon, position: index, is_enabled: true, is_deletable: false, is_editable: false, type: 'url_embed' as const, folder_id: folderId, })); const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert); if (error) throw error; }, onSuccess: () => { toast.success("Default navigation items have been set up."); queryClient.invalidateQueries({ queryKey }); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); }, onError: (e: any) => toast.error("Failed to set up default navigation.", { description: e.message }) });
+  const { mutate: upsertFolder, isPending: isSavingFolder } = useMutation({ mutationFn: async (folder: Partial<NavFolder>) => { const { error } = await supabase.from('navigation_folders').upsert(folder); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: foldersQueryKey }) });
+  const { mutate: deleteItem, isPending: isDeletingItem } = useMutation({ mutationFn: async (id: string) => { setDeletingId(id); const { error } = await supabase.from('user_navigation_items').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Page removed"); queryClient.invalidateQueries({ queryKey }); }, onError: (e: any) => toast.error(e.message), onSettled: () => setDeletingId(null) });
+  const { mutate: deleteFolder } = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('navigation_folders').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Folder removed"); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); } });
+  const addItemMutation = useMutation({ mutationFn: async ({ name, url, icon, type, folder_id }: { name: string, url: string, icon?: string, type: 'url_embed' | 'multi_embed', folder_id: string }) => { if (!user) throw new Error("User not authenticated"); const itemsInFolder = navItemsState.filter(i => i.folder_id === folder_id); const newPosition = itemsInFolder.length; const itemToInsert = { name, url: (type === 'multi_embed' ? '/multipage/placeholder' : url) || '', user_id: user.id, position: newPosition ?? 0, is_enabled: true, icon, is_deletable: true, is_editable: true, type, folder_id, }; const { error } = await supabase.from('user_navigation_items').insert(itemToInsert); if (error) throw error; }, onSuccess: () => { queryClient.invalidateQueries({ queryKey }); setNewItemName(""); setNewItemContent(""); setNewItemIcon(undefined); setNewItemType('url_embed'); setNewItemFolderId(null); toast.success("Navigation page added"); }, onError: (error) => { toast.error("Failed to add page", { description: error.message }); } });
 
-        const itemsToInsert = defaultNavItems.map((item, index) => ({
-            user_id: user.id,
-            name: item.name,
-            url: item.url,
-            icon: item.icon,
-            position: index,
-            is_enabled: true,
-            is_deletable: false,
-            is_editable: false,
-            type: 'url_embed' as const,
-            folder_id: folderId,
-        }));
-        const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert);
-        if (error) throw error;
-    },
-    onSuccess: () => {
-        toast.success("Default navigation items have been set up.");
-        queryClient.invalidateQueries({ queryKey });
-        queryClient.invalidateQueries({ queryKey: foldersQueryKey });
-    },
-    onError: (error: any) => {
-        toast.error("Failed to set up default navigation.", { description: error.message });
-    }
-  });
+  useEffect(() => { if (user && !isLoadingItems && !backfillAttempted.current) { const hasDefaultItems = navItemsData?.some(item => item.is_deletable === false); if (!hasDefaultItems) { backfillAttempted.current = true; backfillNavItems(); } else { backfillAttempted.current = true; } } }, [user, navItemsData, isLoadingItems, backfillNavItems]);
 
-  useEffect(() => {
-    if (user && !isLoadingItems && !backfillAttempted.current) {
-        const hasDefaultItems = navItems.some(item => item.is_deletable === false);
-        if (!hasDefaultItems) {
-            backfillAttempted.current = true;
-            backfillNavItems();
-        } else {
-            backfillAttempted.current = true;
-        }
-    }
-  }, [user, navItems, isLoadingItems, backfillNavItems]);
-
-  const { mutate: upsertFolder, isPending: isSavingFolder } = useMutation({ mutationFn: async (folder: Partial<NavFolder>) => { const { error } = await supabase.from('navigation_folders').upsert(folder); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['navigation_folders', user?.id] }) });
-  const { mutate: deleteItem, isPending: isDeletingItem } = useMutation({ mutationFn: async (id: string) => { setDeletingId(id); const { error } = await supabase.from('user_navigation_items').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Page removed"); queryClient.invalidateQueries({ queryKey: ['user_navigation_items', user?.id] }); }, onError: (e: any) => toast.error(e.message), onSettled: () => setDeletingId(null) });
-  const { mutate: deleteFolder } = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('navigation_folders').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast.success("Folder removed"); queryClient.invalidateQueries({ queryKey: ['navigation_folders', user?.id] }); } });
-
-  const addItemMutation = useMutation({
-    mutationFn: async ({ name, url, icon, type, folder_id }: { name: string, url: string, icon?: string, type: 'url_embed' | 'multi_embed', folder_id: string }) => {
-      if (!user) throw new Error("User not authenticated");
-      const itemsInFolder = navItems.filter(i => i.folder_id === folder_id);
-      const newPosition = itemsInFolder.length;
-      
-      const itemToInsert = { 
-        name, 
-        url: (type === 'multi_embed' ? '/multipage/placeholder' : url) || '',
-        user_id: user.id, 
-        position: newPosition ?? 0,
-        is_enabled: true, 
-        icon, 
-        is_deletable: true, 
-        is_editable: true, 
-        type,
-        folder_id,
-      };
-      
-      const { error } = await supabase
-        .from('user_navigation_items')
-        .insert(itemToInsert);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-      setNewItemName("");
-      setNewItemContent("");
-      setNewItemIcon(undefined);
-      setNewItemType('url_embed');
-      setNewItemFolderId(null);
-      toast.success("Navigation page added");
-    },
-    onError: (error) => {
-      toast.error("Failed to add page", { description: error.message });
-    }
-  });
-
-  const handleAddItem = async () => {
-    if (!user) return;
-    const finalName = newItemName.trim() || 'Untitled Page';
-    const isUrlEmbedValid = newItemType === 'url_embed' && newItemContent.trim();
-    const isMultiEmbedValid = newItemType === 'multi_embed';
-
-    if (isUrlEmbedValid || isMultiEmbedValid) {
-      let targetFolderId = newItemFolderId;
-      if (!targetFolderId) {
-        try {
-          const { data: folderId, error: rpcError } = await supabase.rpc('get_or_create_default_nav_folder', { p_user_id: user.id });
-          if (rpcError) throw rpcError;
-          targetFolderId = folderId;
-          queryClient.invalidateQueries({ queryKey: foldersQueryKey });
-        } catch (error: any) {
-          toast.error("Could not get or create a default folder.", { description: error.message });
-          return;
-        }
-      }
-
-      addItemMutation.mutate({
-        name: finalName,
-        url: newItemContent.trim(),
-        icon: newItemIcon,
-        type: newItemType,
-        folder_id: targetFolderId!,
-      });
-    } else {
-      toast.error("Please provide a URL or embed code for this page type.");
-    }
-  };
-
-  const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => {
-    const item = navItems.find(i => i.id === id);
-    if (!item) return;
-
-    let finalUrl = url;
-    
-    if (item.type === 'multi_embed') {
-      if (url !== item.url) {
-        await updateItems([{ id, name, url: item.url }]);
-      } else {
-        await updateItems([{ id, name, icon }]);
-      }
-    } else {
-      await updateItems([{ id, name, url: finalUrl, icon }]);
-    }
-    
-    setEditingItem(null);
-  };
-
-  const handleSaveFolder = (data: FolderData) => {
-    const position = editingFolder ? editingFolder.position : folders.length;
-    upsertFolder({ id: editingFolder?.id, ...data, user_id: user!.id, position }, { onSuccess: () => setIsFolderFormOpen(false) });
-  };
+  const handleAddItem = async () => { if (!user) return; const finalName = newItemName.trim() || 'Untitled Page'; const isUrlEmbedValid = newItemType === 'url_embed' && newItemContent.trim(); const isMultiEmbedValid = newItemType === 'multi_embed'; if (isUrlEmbedValid || isMultiEmbedValid) { let targetFolderId = newItemFolderId; if (!targetFolderId) { try { const { data: folderId, error: rpcError } = await supabase.rpc('get_or_create_default_nav_folder', { p_user_id: user.id }); if (rpcError) throw rpcError; targetFolderId = folderId; queryClient.invalidateQueries({ queryKey: foldersQueryKey }); } catch (error: any) { toast.error("Could not get or create a default folder.", { description: error.message }); return; } } addItemMutation.mutate({ name: finalName, url: newItemContent.trim(), icon: newItemIcon, type: newItemType, folder_id: targetFolderId!, }); } else { toast.error("Please provide a URL or embed code for this page type."); } };
+  const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => { const item = navItemsState.find(i => i.id === id); if (!item) return; if (item.type === 'multi_embed') { await updateItems([{ id, name, icon }]); } else { await updateItems([{ id, name, url, icon }]); } setEditingItem(null); };
+  const handleSaveFolder = (data: FolderData) => { const position = editingFolder ? editingFolder.position : foldersState.length; upsertFolder({ id: editingFolder?.id, ...data, user_id: user!.id, position }, { onSuccess: () => setIsFolderFormOpen(false) }); };
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
-
-  const handleDragStart = (event: DragEndEvent) => setActiveId(String(event.active.id));
-
+  const handleDragStart = (event: DragStartEvent) => setActiveDragData(event.active.data.current as any);
   const handleDragEnd = (event: DragEndEvent) => {
-    setActiveId(null);
+    setActiveDragData(null);
     const { active, over } = event;
-    if (!over) return;
-
+    if (!over || active.id === over.id) return;
     const activeId = String(active.id);
     const overId = String(over.id);
-    if (activeId === overId) return;
+    const activeType = active.data.current?.type;
 
-    const activeItem = navItems.find(i => i.id === activeId);
-    if (!activeItem) return;
-
-    const oldFolderId = activeItem.folder_id;
-    const overIsFolder = over.data.current?.type === 'folder';
-    const overItem = navItems.find(i => i.id === overId);
-    const newFolderId = overIsFolder ? overId : (overItem ? overItem.folder_id : null);
-
-    const itemsToUpdate: Partial<NavItem>[] = [];
-
-    queryClient.setQueryData(queryKey, (currentItems: NavItem[] = []) => {
-      let newItems = [...currentItems];
-      const activeIndex = newItems.findIndex(i => i.id === activeId);
+    if (activeType === 'folder') {
+      const overType = over.data.current?.type;
+      if (overType !== 'folder') return;
+      setFoldersState(currentFolders => {
+        const oldIndex = currentFolders.findIndex(f => f.id === activeId);
+        const newIndex = currentFolders.findIndex(f => f.id === overId);
+        if (oldIndex === -1 || newIndex === -1) return currentFolders;
+        const reorderedFolders = arrayMove(currentFolders, oldIndex, newIndex);
+        updateFolders(reorderedFolders.map((folder, index) => ({ id: folder.id, position: index })));
+        return reorderedFolders;
+      });
+    } else if (activeType === 'item') {
+      const overIsFolder = over.data.current?.type === 'folder';
+      const overItem = navItemsState.find(i => i.id === overId);
+      const oldFolderId = active.data.current?.item.folder_id ?? 'uncategorized-folder';
+      const newFolderId = overIsFolder ? overId : (overItem?.folder_id ?? 'uncategorized-folder');
       
-      if (oldFolderId === newFolderId) {
-        const itemsInList = newItems.filter(i => i.folder_id === oldFolderId).sort((a, b) => a.position - b.position);
-        const oldListIndex = itemsInList.findIndex(i => i.id === activeId);
-        const newListIndex = itemsInList.findIndex(i => i.id === overId);
-        if (oldListIndex === -1 || newListIndex === -1) return currentItems;
+      const itemsToUpdate: Partial<NavItem>[] = [];
+      setNavItemsState(currentItems => {
+        const newItems = [...currentItems];
+        const activeIndex = newItems.findIndex(i => i.id === activeId);
+        if (activeIndex === -1) return currentItems;
+        const movedItem = { ...newItems[activeIndex] };
         
-        const reordered = arrayMove(itemsInList, oldListIndex, newListIndex);
-        reordered.forEach((item, index) => {
-          const originalItem = newItems.find(i => i.id === item.id)!;
-          originalItem.position = index;
-          itemsToUpdate.push({ id: item.id, position: index });
-        });
-      } else {
-        const movedItem = newItems[activeIndex];
-        movedItem.folder_id = newFolderId;
-
-        const itemsInNewList = newItems.filter(i => i.folder_id === newFolderId && i.id !== activeId).sort((a, b) => a.position - b.position);
-        const overIndexInNewList = overItem ? itemsInNewList.findIndex(i => i.id === overId) : itemsInNewList.length;
-        itemsInNewList.splice(overIndexInNewList, 0, movedItem);
-        
-        const itemsInOldList = newItems.filter(i => i.folder_id === oldFolderId && i.id !== activeId).sort((a, b) => a.position - b.position);
-
-        itemsInOldList.forEach((item, index) => { item.position = index; itemsToUpdate.push({ id: item.id, position: index }); });
-        itemsInNewList.forEach((item, index) => { item.position = index; itemsToUpdate.push({ id: item.id, position: index, folder_id: newFolderId }); });
-      }
-      return newItems;
-    });
-
-    if (itemsToUpdate.length > 0) {
-      updateItems(itemsToUpdate);
+        if (oldFolderId === newFolderId) {
+          const itemsInList = newItems.filter(i => (i.folder_id ?? 'uncategorized-folder') === oldFolderId).sort((a, b) => a.position - b.position);
+          const oldListIndex = itemsInList.findIndex(i => i.id === activeId);
+          const newListIndex = itemsInList.findIndex(i => i.id === overId);
+          if (oldListIndex === -1 || newListIndex === -1) return currentItems;
+          const reordered = arrayMove(itemsInList, oldListIndex, newListIndex);
+          reordered.forEach((item, index) => {
+            const originalItem = newItems.find(i => i.id === item.id)!;
+            originalItem.position = index;
+            itemsToUpdate.push({ id: item.id, position: index });
+          });
+        } else {
+          movedItem.folder_id = newFolderId === 'uncategorized-folder' ? null : newFolderId;
+          const itemsInNewList = newItems.filter(i => (i.folder_id ?? 'uncategorized-folder') === newFolderId && i.id !== activeId).sort((a, b) => a.position - b.position);
+          const overIndexInNewList = overItem ? itemsInNewList.findIndex(i => i.id === overId) : itemsInNewList.length;
+          itemsInNewList.splice(overIndexInNewList, 0, movedItem);
+          const itemsInOldList = newItems.filter(i => (i.folder_id ?? 'uncategorized-folder') === oldFolderId && i.id !== activeId).sort((a, b) => a.position - b.position);
+          itemsInOldList.forEach((item, index) => { itemsToUpdate.push({ id: item.id, position: index }); });
+          itemsInNewList.forEach((item, index) => { itemsToUpdate.push({ id: item.id, position: index, folder_id: newFolderId === 'uncategorized-folder' ? null : newFolderId }); });
+        }
+        return newItems.map(item => itemsToUpdate.find(u => u.id === item.id) ? { ...item, ...itemsToUpdate.find(u => u.id === item.id) } : item);
+      });
+      if (itemsToUpdate.length > 0) updateItems(itemsToUpdate);
     }
   };
 
-  const itemsWithoutFolder = useMemo(() => navItems.filter(item => !item.folder_id).sort((a, b) => a.position - b.position), [navItems]);
+  const itemsWithoutFolder = useMemo(() => navItemsState.filter(item => !item.folder_id).sort((a, b) => a.position - b.position), [navItemsState]);
+  const { setNodeRef: setUncategorizedNodeRef } = useDroppable({ id: 'uncategorized-folder', data: { type: 'folder' } });
 
   return (
     <PortalLayout>
@@ -368,19 +222,30 @@ const NavigationSettingsPage = () => {
           <CardHeader><CardTitle>Navigation Items</CardTitle><CardDescription>Drag and drop to reorder items or move them into folders.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-              <div className="space-y-2">
-                {folders.map(folder => (
-                  <DroppableFolder key={folder.id} folder={folder} onEdit={(f) => { setEditingFolder(f); setIsFolderFormOpen(true); }} onDelete={deleteFolder}>
-                    <SortableContext id={folder.id} items={navItems.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-2">
-                        {navItems.filter(i => i.folder_id === folder.id).sort((a, b) => a.position - b.position).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
-                      </div>
-                    </SortableContext>
-                  </DroppableFolder>
-                ))}
+              <SortableContext items={foldersState.map(f => f.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {foldersState.map(folder => (
+                    <SortableFolderItem key={folder.id} folder={folder} onEdit={(f) => { setEditingFolder(f); setIsFolderFormOpen(true); }} onDelete={deleteFolder}>
+                      <SortableContext id={folder.id} items={navItemsState.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-2">
+                          {navItemsState.filter(i => i.folder_id === folder.id).sort((a, b) => a.position - b.position).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
+                        </div>
+                      </SortableContext>
+                    </SortableFolderItem>
+                  ))}
+                </div>
+              </SortableContext>
+              <div ref={setUncategorizedNodeRef} className="mt-4 pt-4 border-t">
+                <h3 className="font-semibold mb-2">Uncategorized</h3>
+                <SortableContext id="uncategorized-folder" items={itemsWithoutFolder.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2">
+                    {itemsWithoutFolder.map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
+                  </div>
+                </SortableContext>
               </div>
               <DragOverlay>
-                {activeId && navItems.find(i => i.id === activeId) ? <SortableNavItemRow item={navItems.find(i => i.id === activeId)!} onDelete={() => {}} isDeleting={false} onToggle={() => {}} onEdit={() => {}} /> : null}
+                {activeDragData?.type === 'item' && activeDragData.item ? <SortableNavItemRow item={activeDragData.item} onDelete={() => {}} isDeleting={false} onToggle={() => {}} onEdit={() => {}} /> : null}
+                {activeDragData?.type === 'folder' && activeDragData.folder ? <SortableFolderItem folder={activeDragData.folder} onEdit={() => {}} onDelete={() => {}}><div></div></SortableFolderItem> : null}
               </DragOverlay>
             </DndContext>
           </CardContent>
@@ -389,50 +254,12 @@ const NavigationSettingsPage = () => {
         <Card>
           <CardHeader><CardTitle>Add New Custom Page</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2"><Label htmlFor="type">Page Type</Label>
-              <Select value={newItemType} onValueChange={(value: 'url_embed' | 'multi_embed') => setNewItemType(value)}>
-                <SelectTrigger><SelectValue placeholder="Select page type" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="url_embed">URL / Embed Code</SelectItem>
-                  <SelectItem value="multi_embed">Multi Embed Collection</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {newItemType === 'url_embed' 
-                  ? 'Single URL or embed code that will be displayed in an iframe'
-                  : 'A collection page where you can add multiple embed items'
-                }
-              </p>
-            </div>
+            <div className="grid gap-2"><Label htmlFor="type">Page Type</Label><Select value={newItemType} onValueChange={(value: 'url_embed' | 'multi_embed') => setNewItemType(value)}><SelectTrigger><SelectValue placeholder="Select page type" /></SelectTrigger><SelectContent><SelectItem value="url_embed">URL / Embed Code</SelectItem><SelectItem value="multi_embed">Multi Embed Collection</SelectItem></SelectContent></Select><p className="text-xs text-muted-foreground">{newItemType === 'url_embed' ? 'Single URL or embed code that will be displayed in an iframe' : 'A collection page where you can add multiple embed items'}</p></div>
             <div className="grid gap-2"><Label htmlFor="icon">Icon</Label><IconPicker value={newItemIcon} onChange={setNewItemIcon} /></div>
             <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" /></div>
-            {newItemType === 'url_embed' && (
-              <div className="grid gap-2">
-                <Label htmlFor="url">URL or Embed Code</Label>
-                <Textarea id="url" value={newItemContent} onChange={(e) => setNewItemContent(e.target.value)} placeholder="https://example.com or <iframe ...></iframe>" />
-              </div>
-            )}
-            {newItemType === 'multi_embed' && (
-              <div className="p-3 bg-muted/50 rounded-md">
-                <p className="text-sm text-muted-foreground">
-                  This will create a collection page where you can add multiple embed items. 
-                  The URL will be automatically generated based on the page name.
-                </p>
-              </div>
-            )}
-            <div className="grid gap-2">
-              <Label htmlFor="folder">Folder</Label>
-              <Select value={newItemFolderId || ''} onValueChange={(value) => setNewItemFolderId(value || null)}>
-                <SelectTrigger id="folder">
-                  <SelectValue placeholder="Select a folder (defaults to General)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {folders.map(folder => (
-                    <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {newItemType === 'url_embed' && (<div className="grid gap-2"><Label htmlFor="url">URL or Embed Code</Label><Textarea id="url" value={newItemContent} onChange={(e) => setNewItemContent(e.target.value)} placeholder="https://example.com or <iframe ...></iframe>" /></div>)}
+            {newItemType === 'multi_embed' && (<div className="p-3 bg-muted/50 rounded-md"><p className="text-sm text-muted-foreground">This will create a collection page where you can add multiple embed items. The URL will be automatically generated based on the page name.</p></div>)}
+            <div className="grid gap-2"><Label htmlFor="folder">Folder</Label><Select value={newItemFolderId || ''} onValueChange={(value) => setNewItemFolderId(value || null)}><SelectTrigger id="folder"><SelectValue placeholder="Select a folder (defaults to General)" /></SelectTrigger><SelectContent>{foldersState.map(folder => (<SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>))}</SelectContent></Select></div>
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button onClick={handleAddItem} disabled={(newItemType === 'url_embed' && !newItemContent.trim()) || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
