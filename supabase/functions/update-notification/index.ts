@@ -1,11 +1,11 @@
-// @ts-ignore
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-// @ts-ignore
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+// @ts-nocheck
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
@@ -14,10 +14,9 @@ serve(async (req) => {
   }
 
   try {
+    // 1. Authenticate user with anon key
     const supabaseClient = createClient(
-      // @ts-ignore
       Deno.env.get('SUPABASE_URL') ?? '',
-      // @ts-ignore
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
@@ -30,10 +29,16 @@ serve(async (req) => {
       })
     }
 
+    // 2. Create admin client to bypass RLS for the update
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     const { notificationId, markAll, isRead } = await req.json()
 
     if (markAll) {
-      const { error } = await supabaseClient
+      const { error } = await supabaseAdmin
         .from('notification_recipients')
         .update({ read_at: new Date().toISOString() })
         .eq('user_id', user.id)
@@ -41,7 +46,7 @@ serve(async (req) => {
       if (error) throw error
     } else if (notificationId) {
       const newReadAt = isRead ? new Date().toISOString() : null;
-      const { error } = await supabaseClient
+      const { error } = await supabaseAdmin
         .from('notification_recipients')
         .update({ read_at: newReadAt })
         .eq('notification_id', notificationId)
