@@ -68,6 +68,15 @@ const IntegrationsPage = () => {
                 path="/settings/integrations/google-drive"
             />
             <IntegrationItem 
+                name="Google Calendar" 
+                description="Sync your projects with Google Calendar." 
+                noBg={true}
+                icon={
+                    <img src="/google-calendar-icon.png" alt="Google Calendar icon" className="h-5 w-5" />
+                }
+                path="/settings/integrations/google-calendar"
+            />
+            <IntegrationItem 
                 name="OpenAI" 
                 description="Leverage AI models for your projects." 
                 path="/settings/integrations/openai"
