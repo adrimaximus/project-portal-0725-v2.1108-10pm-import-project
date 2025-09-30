@@ -38,7 +38,7 @@ serve(async (req) => {
 
     // 3. Set up OAuth client and credentials
     const oauth2Client = new google.auth.OAuth2(
-      Deno.env.get('GOOGLE_CLIENT_ID'),
+      Deno.env.get('VITE_GOOGLE_CLIENT_ID'),
       Deno.env.get('GOOGLE_CLIENT_SECRET')
     );
     oauth2Client.setCredentials({
