@@ -58,6 +58,26 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     return `${formatInJakarta(project.start_date, "dd MMM yyyy")} - ${formatInJakarta(project.due_date!, "dd MMM yyyy")}`;
   };
 
+  const renderVenue = () => {
+    if (!project.venue) {
+      return <p className="text-muted-foreground">No venue specified</p>;
+    }
+    try {
+      const parsed = JSON.parse(project.venue);
+      if (parsed.name && parsed.address) {
+        return (
+          <div>
+            <p className="font-semibold text-foreground">{parsed.name}</p>
+            <p className="text-muted-foreground">{parsed.address}</p>
+          </div>
+        );
+      }
+    } catch (e) {
+      // Not a JSON string, display as is
+    }
+    return <p className="text-muted-foreground">{project.venue}</p>;
+  };
+
   const paymentBadgeColor = paymentStatusConfig[project.payment_status]?.color || "bg-gray-100 text-gray-800";
   const hasOpenTasks = project.tasks?.some(task => !task.completed);
 
@@ -116,9 +136,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                   onChange={(value) => onFieldChange('venue', value)}
                 />
               ) : (
-                <p className="text-muted-foreground">
-                  {project.venue || 'No venue specified'}
-                </p>
+                renderVenue()
               )}
             </div>
           </div>

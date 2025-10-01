@@ -19,10 +19,23 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
   });
 
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
-  const [inputValue, setInputValue] = useState(value);
+  const [inputValue, setInputValue] = useState('');
 
   useEffect(() => {
-    setInputValue(value);
+    if (value) {
+      try {
+        const parsed = JSON.parse(value);
+        if (parsed.name && parsed.address) {
+          setInputValue(`${parsed.name}, ${parsed.address}`);
+        } else {
+          setInputValue(value);
+        }
+      } catch (e) {
+        setInputValue(value);
+      }
+    } else {
+      setInputValue('');
+    }
   }, [value]);
 
   const onLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
@@ -32,10 +45,16 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
   const onPlaceChanged = () => {
     if (autocomplete !== null) {
       const place = autocomplete.getPlace();
-      const formattedAddress = place.formatted_address || place.name || '';
-      if (formattedAddress) {
-        onChange(formattedAddress);
-        setInputValue(formattedAddress);
+      const name = place.name || '';
+      const address = place.formatted_address || '';
+      if (name && address) {
+        const venueObject = { name, address };
+        onChange(JSON.stringify(venueObject));
+        setInputValue(`${name}, ${address}`);
+      } else {
+        const plainValue = address || name;
+        onChange(plainValue);
+        setInputValue(plainValue);
       }
     } else {
       console.error('Autocomplete is not loaded yet!');
