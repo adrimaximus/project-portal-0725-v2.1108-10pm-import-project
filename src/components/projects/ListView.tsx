@@ -12,8 +12,7 @@ import {
 import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { format } from 'date-fns';
-import { isSameDay, getMonth, getYear } from 'date-fns';
+import { format, isSameDay, subDays } from 'date-fns';
 import {
   Tooltip,
   TooltipContent,
@@ -118,7 +117,23 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
               </div>
               <div className="flex-1 space-y-3 pt-1 min-w-0">
                 {projectsOnDay.map(project => {
-                  const isMultiDay = project.start_date && project.due_date && new Date(project.start_date).toDateString() !== new Date(project.due_date).toDateString();
+                  const startDate = project.start_date ? new Date(project.start_date) : null;
+                  const dueDate = project.due_date ? new Date(project.due_date) : null;
+                  let displayDueDate = dueDate;
+                  let isMultiDay = false;
+
+                  if (startDate && dueDate) {
+                    const isExclusiveEndDate =
+                      dueDate.getUTCHours() === 0 &&
+                      dueDate.getUTCMinutes() === 0 &&
+                      dueDate.getUTCSeconds() === 0 &&
+                      dueDate.getUTCMilliseconds() === 0;
+
+                    const adjustedDueDate = isExclusiveEndDate ? subDays(dueDate, 1) : dueDate;
+                    
+                    isMultiDay = !isSameDay(startDate, adjustedDueDate);
+                    displayDueDate = adjustedDueDate;
+                  }
 
                   return (
                     <div 
@@ -135,9 +150,9 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                             <Clock size={14} />
                             <span>Seharian</span>
                           </div>
-                          {isMultiDay && project.due_date && (
+                          {isMultiDay && displayDueDate && (
                             <Badge variant="outline" className="mt-1.5 font-normal text-xs">
-                              Hingga {formatInJakarta(project.due_date, 'd MMM')}
+                              Hingga {formatInJakarta(displayDueDate, 'd MMM')}
                             </Badge>
                           )}
                         </div>
