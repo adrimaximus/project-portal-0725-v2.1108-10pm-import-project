@@ -68,24 +68,33 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
+          console.log('[Dyad Debug] Notification received:', payload);
           const newNotificationId = payload.new.notification_id;
           const { data } = await supabase.from('notifications').select('title, body, type').eq('id', newNotificationId).single();
+          
           if (data) {
+            console.log('[Dyad Debug] Fetched notification details:', data);
             toast.info(data.title, {
               description: data.body,
             });
 
             // Play sound logic
             const userPreferences = user.notification_preferences;
+            console.log('[Dyad Debug] User preferences:', userPreferences);
+
             const isNotificationTypeEnabled = userPreferences?.[data.type] !== false; // default to true
             const tone = userPreferences?.tone;
+            console.log(`[Dyad Debug] Type enabled: ${isNotificationTypeEnabled}, Tone: ${tone}`);
 
             if (isNotificationTypeEnabled && tone && tone !== 'none') {
+              const audioUrl = `${TONE_BASE_URL}${tone}`;
+              console.log(`[Dyad Debug] Attempting to play sound: ${audioUrl}`);
               try {
-                const audio = new Audio(`${TONE_BASE_URL}${tone}`);
+                const audio = new Audio(audioUrl);
                 await audio.play();
+                console.log('[Dyad Debug] Sound played successfully.');
               } catch (e) {
-                console.error("Error playing notification sound:", e);
+                console.error("[Dyad Debug] Error playing notification sound:", e);
               }
             }
           }
