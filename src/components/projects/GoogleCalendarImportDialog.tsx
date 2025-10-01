@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, ChevronsUpDown, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 
@@ -21,7 +21,9 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
   const { data: events = [], isLoading, error } = useQuery<any[]>({
     queryKey: ['googleCalendarEvents'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('get-google-calendar-events');
+      const { data, error } = await supabase.functions.invoke('get-google-calendar-events', {
+        method: 'GET',
+      });
       if (error) throw new Error(error.message);
       return data;
     },
