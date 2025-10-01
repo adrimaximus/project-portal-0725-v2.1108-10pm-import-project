@@ -9,6 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
+const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
+      <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.02 1.02-2.6 1.62-4.88 1.62-4.59 0-8.34-3.82-8.34-8.5s3.75-8.5 8.34-8.5c2.56 0 4.21.98 5.2 1.9l2.78-2.78C19.02 1.62 16.25 0 12.48 0 5.88 0 0 5.96 0 12.48s5.88 12.48 12.48 12.48c7.28 0 12.12-5.04 12.12-12.48 0-.83-.09-1.62-.24-2.4z" />
+    </svg>
+);
+
 const LoginPage = () => {
   const { session, loading: authContextLoading } = useAuth();
   const navigate = useNavigate();
@@ -28,6 +34,9 @@ const LoginPage = () => {
   const [signUpPassword, setSignUpPassword] = useState('');
   const [signUpLoading, setSignUpLoading] = useState(false);
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
+
+  // Google login state
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
     const storedName = localStorage.getItem('lastUserName');
@@ -94,6 +103,26 @@ const LoginPage = () => {
       console.error("Sign up error:", error);
     } finally {
       setSignUpLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) {
+        toast.error(error.message);
+        setGoogleLoading(false);
+      }
+    } catch (error: any) {
+      toast.error("An unexpected error occurred with Google sign-in.");
+      console.error("Google login error:", error);
+      setGoogleLoading(false);
     }
   };
 
@@ -240,6 +269,25 @@ const LoginPage = () => {
               </TabsContent>
             </Tabs>
             
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-700" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-black/50 px-2 text-gray-400 backdrop-blur-md">Or continue with</span>
+              </div>
+            </div>
+
+            <Button variant="outline" className="w-full h-12 text-base bg-transparent border-gray-700 text-white hover:bg-gray-800/50 hover:text-white" onClick={handleGoogleLogin} disabled={googleLoading}>
+              {googleLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <GoogleIcon className="mr-2 h-5 w-5 fill-white" />
+                  Sign in with Google
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </div>
