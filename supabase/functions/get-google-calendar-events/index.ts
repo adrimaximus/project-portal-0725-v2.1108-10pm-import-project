@@ -39,15 +39,15 @@ serve(async (req) => {
     oauth2Client.setCredentials({
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
-      expiry_date: new Date(tokens.expiry_date).getTime(),
+      expiry_date: tokens.expiry_date ? new Date(tokens.expiry_date).getTime() : null,
     });
 
-    if (new Date() > new Date(tokens.expiry_date)) {
+    if (!tokens.expiry_date || new Date() > new Date(tokens.expiry_date)) {
         const { credentials } = await oauth2Client.refreshAccessToken();
         await supabaseClient.from('google_calendar_tokens').update({
             access_token: credentials.access_token,
             refresh_token: credentials.refresh_token,
-            expiry_date: new Date(credentials.expiry_date!).toISOString(),
+            expiry_date: credentials.expiry_date ? new Date(credentials.expiry_date).toISOString() : null,
         }).eq('user_id', user.id);
         oauth2Client.setCredentials(credentials);
     }
