@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Users } from "lucide-react";
 import { Collaborator } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { generatePastelColor } from "@/lib/utils";
+import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 
 type OnlineCollaboratorsProps = {
   isCollapsed: boolean;
@@ -71,7 +71,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
               >
                 <div className="relative">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={c.avatar_url} alt={c.name} />
+                    <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
                     <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
                   </Avatar>
                   <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
@@ -91,7 +91,7 @@ const OnlineCollaborators = ({ isCollapsed }: OnlineCollaboratorsProps) => {
                       style={{ zIndex: index }}
                     >
                       <Avatar className="h-9 w-9 border-2 border-background bg-background">
-                        <AvatarImage src={collaborator.avatar_url} alt={collaborator.name} />
+                        <AvatarImage src={getAvatarUrl(collaborator.avatar_url, collaborator.id)} alt={collaborator.name} />
                         <AvatarFallback style={generatePastelColor(collaborator.id)}>{collaborator.initials}</AvatarFallback>
                       </Avatar>
                       {index === visibleCollaborators.length - 1 && remainingCount === 0 && (
