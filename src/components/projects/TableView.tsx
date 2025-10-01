@@ -20,7 +20,7 @@ import {
 import StatusBadge from "../StatusBadge";
 import { getStatusStyles, cn, formatInJakarta, getPaymentStatusStyles } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { getMonth, getYear, isSameDay } from 'date-fns';
+import { getMonth, getYear, isSameDay, subDays } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import {
   Tooltip,
@@ -43,19 +43,35 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
 
   const timeZone = 'Asia/Jakarta';
   const startDate = new Date(startDateStr);
-  const dueDate = dueDateStr ? new Date(dueDateStr) : startDate;
+  let dueDate = dueDateStr ? new Date(dueDateStr) : startDate;
 
   const zonedStartDate = toZonedTime(startDate, timeZone);
-  const zonedDueDate = toZonedTime(dueDate, timeZone);
+  const zonedDueDateCheck = toZonedTime(dueDate, timeZone);
 
-  if (isSameDay(zonedStartDate, zonedDueDate)) {
+  // If the due date is exactly at midnight in Jakarta, it's likely an exclusive end date.
+  // We subtract one day to make it inclusive for display.
+  // This handles cases like "22-23 Nov" being stored with an end date of "24 Nov 00:00".
+  if (
+    !isSameDay(zonedStartDate, zonedDueDateCheck) &&
+    zonedDueDateCheck.getHours() === 0 &&
+    zonedDueDateCheck.getMinutes() === 0 &&
+    zonedDueDateCheck.getSeconds() === 0 &&
+    zonedDueDateCheck.getMilliseconds() === 0
+  ) {
+    dueDate = subDays(dueDate, 1);
+  }
+
+  const finalZonedStartDate = toZonedTime(startDate, timeZone);
+  const finalZonedDueDate = toZonedTime(dueDate, timeZone);
+
+  if (isSameDay(finalZonedStartDate, finalZonedDueDate)) {
     return formatInJakarta(startDate, 'd MMM yyyy');
   }
 
-  const startMonth = getMonth(zonedStartDate);
-  const endMonth = getMonth(zonedDueDate);
-  const startYear = getYear(zonedStartDate);
-  const endYear = getYear(zonedDueDate);
+  const startMonth = getMonth(finalZonedStartDate);
+  const endMonth = getMonth(finalZonedDueDate);
+  const startYear = getYear(finalZonedStartDate);
+  const endYear = getYear(finalZonedDueDate);
 
   if (startYear !== endYear) {
     return `${formatInJakarta(startDate, 'd MMM yyyy')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;

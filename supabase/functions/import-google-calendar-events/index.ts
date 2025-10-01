@@ -3,8 +3,6 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { sub, format } from 'npm:date-fns';
-import { zonedTimeToUtc, toZonedTime } from 'npm:date-fns-tz';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,32 +29,13 @@ serve(async (req) => {
       throw new Error("Invalid request body: eventsToImport is required and must be an array.");
     }
 
-    const timeZone = 'Asia/Jakarta';
-
     const newProjects = eventsToImport.map(event => {
       const { summary, description, start, end, id: origin_event_id, location } = event;
 
-      let startDate, dueDate;
-
-      if (start.date) { // All-day event
-        startDate = zonedTimeToUtc(`${start.date}T00:00:00`, timeZone).toISOString();
-        
-        const endDateExclusive = new Date(end.date);
-        const endDateInclusive = sub(endDateExclusive, { days: 1 });
-        const inclusiveDateStr = endDateInclusive.toISOString().substring(0, 10);
-        
-        dueDate = zonedTimeToUtc(`${inclusiveDateStr}T23:59:59`, timeZone).toISOString();
-      } else { // Timed event
-        startDate = new Date(start.dateTime).toISOString();
-        const endDate = new Date(end.dateTime);
-        
-        const zonedEndDate = toZonedTime(endDate, timeZone);
-        if (format(zonedEndDate, 'HH:mm:ss') === '00:00:00') {
-          dueDate = sub(endDate, { milliseconds: 1 }).toISOString();
-        } else {
-          dueDate = endDate.toISOString();
-        }
-      }
+      // For both all-day and timed events, we'll take the dates as-is from Google.
+      // The end date from Google is exclusive, which we will handle on the client-side for display.
+      const startDate = start.date ? new Date(start.date).toISOString() : new Date(start.dateTime).toISOString();
+      const dueDate = end.date ? new Date(end.date).toISOString() : new Date(end.dateTime).toISOString();
 
       return {
         name: summary || 'Untitled Event',
