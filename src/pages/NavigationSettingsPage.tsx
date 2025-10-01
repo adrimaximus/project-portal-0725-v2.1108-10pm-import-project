@@ -129,7 +129,7 @@ const NavigationSettingsPage = () => {
   const [activeDragData, setActiveDragData] = useState<{ type: string, item?: NavItem, folder?: NavFolder } | null>(null);
   const backfillAttempted = useRef(false);
 
-  const canManageNavigation = useMemo(() => user?.role === 'admin' || user?.role === 'master admin', [user]);
+  const canManageNavigation = useMemo(() => !!user, [user]);
 
   const [navItemsState, setNavItemsState] = useState<NavItem[]>([]);
   const [foldersState, setFoldersState] = useState<NavFolder[]>([]);
