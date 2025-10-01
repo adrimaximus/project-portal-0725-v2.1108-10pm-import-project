@@ -146,17 +146,25 @@ const NavigationSettingsPage = () => {
   const { mutate: updateItems } = useMutation({
     mutationFn: async (items: Partial<NavItem>[]) => {
       if (items.length === 0) return;
-      // Two-phase update to prevent unique constraint violations on position
-      const tempUpdates = items.map((item, index) => ({ id: item.id, position: -1 * (index + 1) }));
-      const { error: tempError } = await supabase.from('user_navigation_items').upsert(tempUpdates);
-      if (tempError) throw tempError;
-
-      const { error: finalError } = await supabase.from('user_navigation_items').upsert(items);
-      if (finalError) throw finalError;
+      const { error } = await supabase.from('user_navigation_items').upsert(items);
+      if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: itemsQueryKey }),
+    onError: (e: any) => toast.error("Failed to save reorder changes", { description: e.message })
+  });
+
+  const { mutate: updateItem } = useMutation({
+    mutationFn: async (item: Partial<NavItem> & { id: string }) => {
+        const { error } = await supabase.from('user_navigation_items').update(item).eq('id', item.id);
+        if (error) throw error;
+    },
+    onSuccess: () => {
+        toast.success("Navigation item updated.");
+        queryClient.invalidateQueries({ queryKey: itemsQueryKey });
+    },
     onError: (e: any) => toast.error("Failed to save changes", { description: e.message })
   });
+
   const { mutate: updateFolders } = useMutation({ mutationFn: async (folders: Partial<NavFolder>[]) => { if (folders.length === 0) return; const { error } = await supabase.from('navigation_folders').upsert(folders); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: foldersQueryKey }), onError: (e: any) => toast.error("Failed to reorder folders", { description: e.message }) });
   const { mutate: backfillNavItems } = useMutation({ mutationFn: async () => { if (!user) return; const itemsToInsert = defaultNavItems.map((item, index) => ({ user_id: user.id, name: item.name, url: item.url, icon: item.icon, position: index, is_enabled: true, is_deletable: false, is_editable: false, type: 'url_embed' as const, folder_id: null, })); const { error } = await supabase.from('user_navigation_items').insert(itemsToInsert); if (error) throw error; }, onSuccess: () => { toast.success("Default navigation items have been set up."); queryClient.invalidateQueries({ queryKey: itemsQueryKey }); queryClient.invalidateQueries({ queryKey: foldersQueryKey }); }, onError: (e: any) => toast.error("Failed to set up default navigation.", { description: e.message }) });
   const { mutate: upsertFolder, isPending: isSavingFolder } = useMutation({ mutationFn: async (folder: Partial<NavFolder>) => { const { error } = await supabase.from('navigation_folders').upsert(folder); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: foldersQueryKey }) });
@@ -181,7 +189,21 @@ const NavigationSettingsPage = () => {
   useEffect(() => { if (user && !isLoadingItems && !backfillAttempted.current) { const hasDefaultItems = navItemsData?.some(item => item.is_deletable === false); if (!hasDefaultItems) { backfillAttempted.current = true; backfillNavItems(); } else { backfillAttempted.current = true; } } }, [user, navItemsData, isLoadingItems, backfillNavItems]);
 
   const handleAddItem = async () => { if (!user) return; const finalName = newItemName.trim() || 'Untitled Page'; const isUrlEmbedValid = newItemType === 'url_embed' && newItemContent.trim(); const isMultiEmbedValid = newItemType === 'multi_embed'; if (isUrlEmbedValid || isMultiEmbedValid) { addItemMutation.mutate({ name: finalName, url: newItemContent.trim(), icon: newItemIcon, type: newItemType, folder_id: newItemFolderId, }); } else { toast.error("Please provide a URL or embed code for this page type."); } };
-  const handleSaveEdit = async (id: string, name: string, url: string, icon?: string) => { const item = navItemsState.find(i => i.id === id); if (!item) return; if (item.type === 'multi_embed') { await updateItems([{ id, name, icon }]); } else { await updateItems([{ id, name, url, icon }]); } setEditingItem(null); };
+  const handleSaveEdit = (id: string, name: string, url: string, icon?: string) => {
+    const item = navItemsState.find(i => i.id === id);
+    if (!item) return;
+
+    const payload: Partial<NavItem> & { id: string } = { id, name, icon };
+    if (item.type !== 'multi_embed') {
+        payload.url = url;
+    }
+
+    updateItem(payload, {
+        onSuccess: () => {
+            setEditingItem(null);
+        }
+    });
+  };
   const handleSaveFolder = (data: FolderData) => { const position = editingFolder ? editingFolder.position : foldersState.length; upsertFolder({ id: editingFolder?.id, ...data, user_id: user!.id, position }, { onSuccess: () => setIsFolderFormOpen(false) }); };
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
@@ -273,7 +295,7 @@ const NavigationSettingsPage = () => {
                     <SortableFolderItem key={folder.id} folder={folder} onEdit={(f) => { setEditingFolder(f); setIsFolderFormOpen(true); }} onDelete={deleteFolder} canManage={canManageNavigation}>
                       <SortableContext items={navItemsState.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
                         <div className="space-y-2">
-                          {navItemsState.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} canManage={canManageNavigation} />)}
+                          {navItemsState.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItem({ id, is_enabled })} onEdit={setEditingItem} canManage={canManageNavigation} />)}
                         </div>
                       </SortableContext>
                     </SortableFolderItem>
@@ -284,7 +306,7 @@ const NavigationSettingsPage = () => {
                 <h3 className="font-semibold mb-2">Uncategorized</h3>
                 <SortableContext items={itemsWithoutFolder.map(i => i.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
-                    {itemsWithoutFolder.map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} canManage={canManageNavigation} />)}
+                    {itemsWithoutFolder.map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItem({ id, is_enabled })} onEdit={setEditingItem} canManage={canManageNavigation} />)}
                   </div>
                 </SortableContext>
               </div>
