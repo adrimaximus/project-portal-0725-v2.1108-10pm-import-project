@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/types";
 import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard } from "lucide-react";
-import { isSameDay } from "date-fns";
+import { isSameDay, subDays } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
@@ -52,10 +52,22 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     const start = new Date(project.start_date);
     const end = project.due_date ? new Date(project.due_date) : start;
 
-    if (isSameDay(start, end)) {
+    // For all-day events from sources like Google Calendar, the end date is often exclusive (the morning after).
+    // This logic checks for a midnight time on a multi-day event and adjusts the date for display.
+    const isExclusiveEndDate =
+      project.due_date &&
+      end.getUTCHours() === 0 &&
+      end.getUTCMinutes() === 0 &&
+      end.getUTCSeconds() === 0 &&
+      end.getUTCMilliseconds() === 0 &&
+      !isSameDay(start, end);
+
+    const adjustedEnd = isExclusiveEndDate ? subDays(end, 1) : end;
+
+    if (isSameDay(start, adjustedEnd)) {
         return formatInJakarta(project.start_date, "dd MMM yyyy");
     }
-    return `${formatInJakarta(project.start_date, "dd MMM yyyy")} - ${formatInJakarta(project.due_date!, "dd MMM yyyy")}`;
+    return `${formatInJakarta(project.start_date, "dd MMM yyyy")} - ${formatInJakarta(adjustedEnd, "dd MMM yyyy")}`;
   };
 
   const renderVenue = () => {
