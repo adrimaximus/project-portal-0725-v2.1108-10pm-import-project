@@ -47,7 +47,7 @@ export interface NavFolder extends FolderData {
 
 const Icons = LucideIcons as unknown as { [key: string]: LucideIcons.LucideIcon };
 
-const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { item: NavItem, onDelete: (id: string) => void, isDeleting: boolean, onToggle: (id: string, enabled: boolean) => void, onEdit: (item: NavItem) => void }) => {
+const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit, canManage }: { item: NavItem, onDelete: (id: string) => void, isDeleting: boolean, onToggle: (id: string, enabled: boolean) => void, onEdit: (item: NavItem) => void, canManage: boolean }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, data: { type: 'item', item } });
     const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : 0, position: 'relative' as 'relative' };
     const canEdit = item.is_editable ?? true;
@@ -69,15 +69,19 @@ const SortableNavItemRow = ({ item, onDelete, isDeleting, onToggle, onEdit }: { 
                 </div>
             </div>
             <div className="flex items-center gap-1 sm:gap-2">
-                <Switch checked={item.is_enabled} onCheckedChange={(checked) => onToggle(item.id, checked)} />
-                <Button variant="ghost" size="icon" onClick={() => onEdit(item)} disabled={!canEdit}><Edit className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} disabled={isDeleting || !canDelete}>{isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</Button>
+                <Switch checked={item.is_enabled} onCheckedChange={(checked) => onToggle(item.id, checked)} disabled={!canManage} />
+                {canManage && (
+                    <>
+                        <Button variant="ghost" size="icon" onClick={() => onEdit(item)} disabled={!canEdit}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} disabled={isDeleting || !canDelete}>{isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</Button>
+                    </>
+                )}
             </div>
         </div>
     )
 }
 
-const SortableFolderItem = ({ folder, children, onEdit, onDelete }: { folder: NavFolder, children: React.ReactNode, onEdit: (folder: NavFolder) => void, onDelete: (id: string) => void }) => {
+const SortableFolderItem = ({ folder, children, onEdit, onDelete, canManage }: { folder: NavFolder, children: React.ReactNode, onEdit: (folder: NavFolder) => void, onDelete: (id: string) => void, canManage: boolean }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: folder.id, data: { type: 'folder', folder } });
     const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : 0, position: 'relative' as 'relative' };
     const { setNodeRef: setDroppableNodeRef } = useDroppable({ id: folder.id, data: { type: 'folder' } });
@@ -95,10 +99,12 @@ const SortableFolderItem = ({ folder, children, onEdit, onDelete }: { folder: Na
                             <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                         </CollapsibleTrigger>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(folder); }}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </div>
+                    {canManage && (
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(folder); }}><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+                    )}
                 </div>
                 <CollapsibleContent className="p-2 pl-6 border-l-2 ml-4">
                     {children}
@@ -122,6 +128,8 @@ const NavigationSettingsPage = () => {
   const [isFolderFormOpen, setIsFolderFormOpen] = useState(false);
   const [activeDragData, setActiveDragData] = useState<{ type: string, item?: NavItem, folder?: NavFolder } | null>(null);
   const backfillAttempted = useRef(false);
+
+  const canManageNavigation = useMemo(() => user?.role === 'admin' || user?.role === 'master admin', [user]);
 
   const [navItemsState, setNavItemsState] = useState<NavItem[]>([]);
   const [foldersState, setFoldersState] = useState<NavFolder[]>([]);
@@ -262,10 +270,10 @@ const NavigationSettingsPage = () => {
               <SortableContext items={foldersState.map(f => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {foldersState.map(folder => (
-                    <SortableFolderItem key={folder.id} folder={folder} onEdit={(f) => { setEditingFolder(f); setIsFolderFormOpen(true); }} onDelete={deleteFolder}>
+                    <SortableFolderItem key={folder.id} folder={folder} onEdit={(f) => { setEditingFolder(f); setIsFolderFormOpen(true); }} onDelete={deleteFolder} canManage={canManageNavigation}>
                       <SortableContext items={navItemsState.filter(i => i.folder_id === folder.id).map(i => i.id)} strategy={verticalListSortingStrategy}>
                         <div className="space-y-2">
-                          {navItemsState.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
+                          {navItemsState.filter(i => i.folder_id === folder.id).map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} canManage={canManageNavigation} />)}
                         </div>
                       </SortableContext>
                     </SortableFolderItem>
@@ -276,33 +284,35 @@ const NavigationSettingsPage = () => {
                 <h3 className="font-semibold mb-2">Uncategorized</h3>
                 <SortableContext items={itemsWithoutFolder.map(i => i.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
-                    {itemsWithoutFolder.map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} />)}
+                    {itemsWithoutFolder.map(item => <SortableNavItemRow key={item.id} item={item} onDelete={deleteItem} isDeleting={isDeletingItem && deletingId === item.id} onToggle={(id, is_enabled) => updateItems([{ id, is_enabled }])} onEdit={setEditingItem} canManage={canManageNavigation} />)}
                   </div>
                 </SortableContext>
               </div>
               <DragOverlay>
-                {activeDragData?.type === 'item' && activeDragData.item ? <SortableNavItemRow item={activeDragData.item} onDelete={() => {}} isDeleting={false} onToggle={() => {}} onEdit={() => {}} /> : null}
-                {activeDragData?.type === 'folder' && activeDragData.folder ? <SortableFolderItem folder={activeDragData.folder} onEdit={() => {}} onDelete={() => {}}><div></div></SortableFolderItem> : null}
+                {activeDragData?.type === 'item' && activeDragData.item ? <SortableNavItemRow item={activeDragData.item} onDelete={() => {}} isDeleting={false} onToggle={() => {}} onEdit={() => {}} canManage={canManageNavigation} /> : null}
+                {activeDragData?.type === 'folder' && activeDragData.folder ? <SortableFolderItem folder={activeDragData.folder} onEdit={() => {}} onDelete={() => {}} canManage={canManageNavigation}><div></div></SortableFolderItem> : null}
               </DragOverlay>
             </DndContext>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader><CardTitle>Add New Custom Page</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2"><Label htmlFor="type">Page Type</Label><Select value={newItemType} onValueChange={(value: 'url_embed' | 'multi_embed') => setNewItemType(value)}><SelectTrigger><SelectValue placeholder="Select page type" /></SelectTrigger><SelectContent><SelectItem value="url_embed">URL / Embed Code</SelectItem><SelectItem value="multi_embed">Multi Embed Collection</SelectItem></SelectContent></Select><p className="text-xs text-muted-foreground">{newItemType === 'url_embed' ? 'Single URL or embed code that will be displayed in an iframe' : 'A collection page where you can add multiple embed items'}</p></div>
-            <div className="grid gap-2"><Label htmlFor="icon">Icon</Label><IconPicker value={newItemIcon} onChange={setNewItemIcon} /></div>
-            <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" /></div>
-            {newItemType === 'url_embed' && (<div className="grid gap-2"><Label htmlFor="url">URL or Embed Code</Label><Textarea id="url" value={newItemContent} onChange={(e) => setNewItemContent(e.target.value)} placeholder="https://example.com or <iframe ...></iframe>" /></div>)}
-            {newItemType === 'multi_embed' && (<div className="p-3 bg-muted/50 rounded-md"><p className="text-sm text-muted-foreground">This will create a collection page where you can add multiple embed items. The URL will be automatically generated based on the page name.</p></div>)}
-            <div className="grid gap-2"><Label htmlFor="folder">Folder</Label><Select value={newItemFolderId || 'uncategorized'} onValueChange={(value) => setNewItemFolderId(value === 'uncategorized' ? null : value)}><SelectTrigger id="folder"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="uncategorized">Uncategorized</SelectItem>{foldersState.map(folder => (<SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>))}</SelectContent></Select></div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button onClick={handleAddItem} disabled={(newItemType === 'url_embed' && !newItemContent.trim()) || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
-            <Button variant="outline" onClick={() => { setEditingFolder(null); setIsFolderFormOpen(true); }}><FolderPlus className="mr-2 h-4 w-4" /> Add Folder</Button>
-          </CardFooter>
-        </Card>
+        {canManageNavigation && (
+          <Card>
+            <CardHeader><CardTitle>Add New Custom Page</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2"><Label htmlFor="type">Page Type</Label><Select value={newItemType} onValueChange={(value: 'url_embed' | 'multi_embed') => setNewItemType(value)}><SelectTrigger><SelectValue placeholder="Select page type" /></SelectTrigger><SelectContent><SelectItem value="url_embed">URL / Embed Code</SelectItem><SelectItem value="multi_embed">Multi Embed Collection</SelectItem></SelectContent></Select><p className="text-xs text-muted-foreground">{newItemType === 'url_embed' ? 'Single URL or embed code that will be displayed in an iframe' : 'A collection page where you can add multiple embed items'}</p></div>
+              <div className="grid gap-2"><Label htmlFor="icon">Icon</Label><IconPicker value={newItemIcon} onChange={setNewItemIcon} /></div>
+              <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="e.g. Analytics Dashboard" /></div>
+              {newItemType === 'url_embed' && (<div className="grid gap-2"><Label htmlFor="url">URL or Embed Code</Label><Textarea id="url" value={newItemContent} onChange={(e) => setNewItemContent(e.target.value)} placeholder="https://example.com or <iframe ...></iframe>" /></div>)}
+              {newItemType === 'multi_embed' && (<div className="p-3 bg-muted/50 rounded-md"><p className="text-sm text-muted-foreground">This will create a collection page where you can add multiple embed items. The URL will be automatically generated based on the page name.</p></div>)}
+              <div className="grid gap-2"><Label htmlFor="folder">Folder</Label><Select value={newItemFolderId || 'uncategorized'} onValueChange={(value) => setNewItemFolderId(value === 'uncategorized' ? null : value)}><SelectTrigger id="folder"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="uncategorized">Uncategorized</SelectItem>{foldersState.map(folder => (<SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>))}</SelectContent></Select></div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button onClick={handleAddItem} disabled={(newItemType === 'url_embed' && !newItemContent.trim()) || addItemMutation.isPending}>{addItemMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />} Add Page</Button>
+              <Button variant="outline" onClick={() => { setEditingFolder(null); setIsFolderFormOpen(true); }}><FolderPlus className="mr-2 h-4 w-4" /> Add Folder</Button>
+            </CardFooter>
+          </Card>
+        )}
       </div>
       <EditNavItemDialog item={editingItem} open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)} onSave={handleSaveEdit} isSaving={false} />
       <FolderFormDialog open={isFolderFormOpen} onOpenChange={setIsFolderFormOpen} onSave={handleSaveFolder} folder={editingFolder} isSaving={isSavingFolder} />
