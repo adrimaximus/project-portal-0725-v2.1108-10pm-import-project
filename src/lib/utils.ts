@@ -42,7 +42,7 @@ export const getAvatarUrl = (avatarUrl: string | null | undefined, userId: strin
   if (avatarUrl && avatarUrl.startsWith('http')) {
     return avatarUrl;
   }
-  return `https://api.dicebear.com/8.x/initials/svg?seed=${userId}`;
+  return `https://api.dicebear.com/8.x/micah/svg?seed=${userId}`;
 };
 
 export const generatePastelColor = (str: string): { backgroundColor: string, color: string } => {
