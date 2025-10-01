@@ -62,8 +62,11 @@ serve(async (req) => {
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
     const today = new Date();
-    const timeMin = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString();
-    const timeMax = new Date(today.getFullYear(), today.getMonth() + 5, 0, 23, 59, 59).toISOString();
+    const oneMonthFromNow = new Date();
+    oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+
+    const timeMin = today.toISOString();
+    const timeMax = oneMonthFromNow.toISOString();
     
     const { data: { items: events } } = await calendar.events.list({
       calendarId: 'primary',

@@ -89,7 +89,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
           <DialogTitle>Import Events from Google Calendar</DialogTitle>
-          <DialogDescription>Select events to import as new projects. Events from the last month, this month, and the next 4 months are shown.</DialogDescription>
+          <DialogDescription>Select events to import as new projects. Events from the next month are shown.</DialogDescription>
         </DialogHeader>
         
         <div className="relative h-96">
