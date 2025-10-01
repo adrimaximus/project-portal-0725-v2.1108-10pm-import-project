@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import SafeLocalStorage from '@/lib/localStorage';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -39,7 +40,7 @@ const LoginPage = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
-    const storedName = localStorage.getItem('lastUserName');
+    const storedName = SafeLocalStorage.getItem<string>('lastUserName');
     if (storedName) {
       setLastUserName(storedName);
     }
