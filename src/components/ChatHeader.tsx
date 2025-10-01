@@ -54,6 +54,7 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
   const otherUser = !isGroup ? members?.find(m => m.id !== currentUser?.id) : null;
   const isOwner = currentUser?.id === created_by;
   const isOtherUserOnline = otherUser ? onlineCollaborators.some(c => c.id === otherUser.id) : false;
+  const isAiAssistant = userName === "AI Assistant";
 
   const handleViewProfile = () => {
     if (otherUser) {
@@ -91,6 +92,11 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
           <p className="text-lg font-semibold">{userName}</p>
           {isGroup ? (
             <p className="text-sm text-muted-foreground">{members?.length} members</p>
+          ) : isAiAssistant ? (
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-blue-500"></span>
+              <span>Ready to help</span>
+            </p>
           ) : (
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
               {typing ? (
@@ -137,6 +143,13 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
                       <LeaveGroupMenuItem />
                     )}
                   </>
+                ) : isAiAssistant ? (
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem className="text-red-500 focus:text-red-500" onSelect={(e) => e.preventDefault()}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      <span>Clear Chat</span>
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
                 ) : (
                   <>
                     <DropdownMenuItem onClick={handleViewProfile}>
