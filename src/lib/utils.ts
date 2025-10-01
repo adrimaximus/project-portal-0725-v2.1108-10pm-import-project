@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { format as formatFns, toZonedTime } from 'date-fns-tz';
-import { isPast as isPastFns, isSameDay } from 'date-fns';
+import { isPast as isPastFns, isSameDay, getMonth, getYear } from 'date-fns';
 import { ProjectStatus, PaymentStatus, TaskPriority, TaskStatus } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
@@ -21,6 +21,37 @@ export const formatInJakarta = (date: string | Date, formatString: string): stri
     return "Invalid Date";
   }
 };
+
+export const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
+  if (!startDateStr) return '-';
+
+  const timeZone = 'Asia/Jakarta';
+  const startDate = new Date(startDateStr);
+  const dueDate = dueDateStr ? new Date(dueDateStr) : startDate;
+
+  const zonedStartDate = toZonedTime(startDate, timeZone);
+  const zonedDueDate = toZonedTime(dueDate, timeZone);
+
+  if (isSameDay(zonedStartDate, zonedDueDate)) {
+    return formatInJakarta(startDate, 'd MMM yyyy');
+  }
+
+  const startMonth = getMonth(zonedStartDate);
+  const endMonth = getMonth(zonedDueDate);
+  const startYear = getYear(zonedStartDate);
+  const endYear = getYear(zonedDueDate);
+
+  if (startYear !== endYear) {
+    return `${formatInJakarta(startDate, 'd MMM yyyy')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
+  }
+
+  if (startMonth !== endMonth) {
+    return `${formatInJakarta(startDate, 'd MMM')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
+  }
+
+  return `${formatInJakarta(startDate, 'd')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
+};
+
 
 export const getInitials = (name?: string | null, email?: string | null): string => {
   if (name) {
