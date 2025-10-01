@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,9 +17,21 @@ const notificationTypes = [
   { id: 'system', label: 'System Notifications', description: 'Important updates and announcements from the system.' },
 ];
 
+const notificationTones = [
+    { name: 'No Tone', value: 'none' },
+    { name: 'Digital Bell FX', value: 'digital-bell-fx.mp3' },
+    { name: 'Digital Bell SmartSound', value: 'digital-bell-smartsound.mp3' },
+    { name: 'Double Bells', value: 'double-bells.mp3' },
+    { name: 'Fluttery Digital Bell', value: 'fluttery-digital-bell.mp3' },
+    { name: 'High Bling', value: 'high-bling.mp3' },
+    { name: 'Positive Alert Ding', value: 'positive-alert-ding.mp3' },
+];
+
+const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/general/notifications/`;
+
 const NotificationPreferencesCard = () => {
   const { user, refreshUser } = useAuth();
-  const [preferences, setPreferences] = useState<Record<string, boolean>>({});
+  const [preferences, setPreferences] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -42,10 +55,10 @@ const NotificationPreferencesCard = () => {
     }
   }, [user?.id]);
 
-  const handlePreferenceChange = async (typeId: string, isEnabled: boolean) => {
+  const updatePreferences = async (newPreferences: Record<string, any>) => {
     if (!user) return;
 
-    const newPreferences = { ...preferences, [typeId]: isEnabled };
+    const oldPreferences = { ...preferences };
     setPreferences(newPreferences);
 
     const { error } = await supabase
@@ -55,16 +68,37 @@ const NotificationPreferencesCard = () => {
 
     if (error) {
       toast.error("Failed to update notification setting.");
-      // Revert UI change on error
-      setPreferences(preferences);
-    } else {
+      setPreferences(oldPreferences); // Revert on error
+      return false;
+    }
+    
+    refreshUser();
+    return true;
+  };
+
+  const handlePreferenceChange = async (typeId: string, isEnabled: boolean) => {
+    const newPreferences = { ...preferences, [typeId]: isEnabled };
+    const success = await updatePreferences(newPreferences);
+    if (success) {
       if (isEnabled) {
         const notificationType = notificationTypes.find(t => t.id === typeId);
         toast(<TestNotificationToast user={user} type={notificationType} />);
       } else {
         toast.success("Notification setting updated.");
       }
-      refreshUser();
+    }
+  };
+
+  const handleToneChange = async (toneValue: string) => {
+    if (toneValue !== 'none') {
+      const audio = new Audio(`${TONE_BASE_URL}${toneValue}`);
+      audio.play().catch(e => console.error("Error playing audio preview:", e));
+    }
+    
+    const newPreferences = { ...preferences, tone: toneValue };
+    const success = await updatePreferences(newPreferences);
+    if (success) {
+      toast.success("Notification tone updated.");
     }
   };
 
@@ -88,20 +122,42 @@ const NotificationPreferencesCard = () => {
         <CardTitle>Notification Settings</CardTitle>
         <CardDescription>Manage how you receive notifications from the platform.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {notificationTypes.map((type) => (
-          <div key={type.id} className="flex items-start justify-between rounded-lg border p-4">
-            <div className="space-y-0.5 pr-4">
-              <Label htmlFor={`notif-${type.id}`} className="text-base">{type.label}</Label>
-              <p className="text-sm text-muted-foreground">{type.description}</p>
+      <CardContent className="space-y-6">
+        <div className="rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                    <Label htmlFor="notification-tone" className="text-base">Notification Tone</Label>
+                    <p className="text-sm text-muted-foreground">Select a sound for incoming notifications.</p>
+                </div>
+                <Select value={preferences.tone || 'none'} onValueChange={handleToneChange}>
+                    <SelectTrigger className="w-[240px]">
+                        <SelectValue placeholder="Select a tone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {notificationTones.map((tone) => (
+                            <SelectItem key={tone.value} value={tone.value}>
+                                {tone.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
-            <Switch
-              id={`notif-${type.id}`}
-              checked={preferences[type.id] !== false} // Default to true if not set
-              onCheckedChange={(checked) => handlePreferenceChange(type.id, checked)}
-            />
-          </div>
-        ))}
+        </div>
+        <div className="space-y-4">
+            {notificationTypes.map((type) => (
+              <div key={type.id} className="flex items-start justify-between rounded-lg border p-4">
+                <div className="space-y-0.5 pr-4">
+                  <Label htmlFor={`notif-${type.id}`} className="text-base">{type.label}</Label>
+                  <p className="text-sm text-muted-foreground">{type.description}</p>
+                </div>
+                <Switch
+                  id={`notif-${type.id}`}
+                  checked={preferences[type.id] !== false} // Default to true if not set
+                  onCheckedChange={(checked) => handlePreferenceChange(type.id, checked)}
+                />
+              </div>
+            ))}
+        </div>
       </CardContent>
     </Card>
   );
