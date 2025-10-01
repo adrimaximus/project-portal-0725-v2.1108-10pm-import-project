@@ -1,61 +1,65 @@
-import { useState, KeyboardEvent } from 'react';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
+"use client";
+
+import React from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { getColorForTag } from '@/lib/utils';
 
 interface TagInputProps {
   value: string[];
-  onChange: (tags: string[]) => void;
+  onChange: (value: string[]) => void;
   placeholder?: string;
-  className?: string;
 }
 
-export const TagInput = ({ value = [], onChange, placeholder, className }: TagInputProps) => {
-  const [inputValue, setInputValue] = useState('');
+export const TagInput = ({ value, onChange, placeholder }: TagInputProps) => {
+  const [inputValue, setInputValue] = React.useState("");
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       const newTag = inputValue.trim();
       if (newTag && !value.includes(newTag)) {
         onChange([...value, newTag]);
       }
-      setInputValue('');
-    } else if (e.key === 'Backspace' && !inputValue && value.length > 0) {
-      onChange(value.slice(0, -1));
+      setInputValue("");
     }
   };
 
-  const removeTag = (indexToRemove: number) => {
-    onChange(value.filter((_, index) => index !== indexToRemove));
-  };
-
   return (
-    <div className={cn("border rounded-md p-2 flex flex-wrap items-center gap-2", className)}>
-      {value.map((tag, index) => {
-        const { bg, text, border } = getColorForTag(tag);
-        return (
-          <Badge key={index} className={cn("flex items-center gap-1 font-normal", bg, text, border)}>
-            {tag}
-            <button
-              type="button"
-              className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              onClick={() => removeTag(index)}
-              aria-label={`Remove ${tag}`}
+    <div>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {value.map((tag, index) => {
+          const color = getColorForTag(tag);
+          return (
+            <div
+              key={index}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-sm border"
+              style={{
+                backgroundColor: `${color}20`,
+                borderColor: color,
+                color: color,
+              }}
             >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        );
-      })}
+              {tag}
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(value.filter((_, i) => i !== index));
+                }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
       <Input
-        className="flex-1 border-none shadow-none focus-visible:ring-0 h-auto py-0 px-1 min-w-[100px]"
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder || 'Add tags...'}
+        placeholder={placeholder || "Add a tag..."}
       />
     </div>
   );

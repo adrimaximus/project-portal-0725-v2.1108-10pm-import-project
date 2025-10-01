@@ -6,8 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format as formatFns, subDays, isEqual } from "date-fns";
-import { utcToZonedTime } from 'date-fns-tz';
+import { subDays, isEqual } from "date-fns";
+import * as dateFnsTz from 'date-fns-tz';
 import { Badge } from "@/components/ui/badge";
 import { formatInJakarta } from "@/lib/utils";
 
@@ -71,8 +71,8 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
 
       // Format as UTC to avoid timezone shifts on display for date-only values
       const formatInUTC = (date: Date, formatStr: string) => {
-        const utcDate = utcToZonedTime(date, 'UTC');
-        return formatFns(utcDate, formatStr, { timeZone: 'UTC' });
+        const utcDate = dateFnsTz.toZonedTime(date, 'UTC');
+        return dateFnsTz.format(utcDate, formatStr, { timeZone: 'UTC' });
       }
 
       if (isEqual(startDate, inclusiveEndDate)) {
