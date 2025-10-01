@@ -47,12 +47,16 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     queryKey: ['conversations', currentUser?.id],
     queryFn: chatApi.fetchConversations,
     enabled: !!currentUser,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: messages = [], isLoading: isLoadingMessages } = useQuery({
     queryKey: ['messages', selectedConversationId],
     queryFn: () => chatApi.fetchMessages(selectedConversationId!),
     enabled: !!selectedConversationId && selectedConversationId !== 'ai-assistant',
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const debouncedSearchMessages = useCallback(
@@ -174,7 +178,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'conversations' },
+        { event: 'UPDATE', schema: 'public', table: 'conversations' },
         () => {
           queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
         }
