@@ -69,9 +69,9 @@ export const useNotifications = () => {
         },
         async (payload) => {
           const newNotificationId = payload.new.notification_id;
-          const { data: notification } = await supabase.from('notifications').select('title, body, type').eq('id', newNotificationId).single();
+          const { data: notification } = await supabase.from('notifications').select('title, body, type, actor_id').eq('id', newNotificationId).single();
           
-          if (notification) {
+          if (notification && notification.actor_id !== user.id) {
             toast.info(notification.title, {
               description: notification.body,
             });
