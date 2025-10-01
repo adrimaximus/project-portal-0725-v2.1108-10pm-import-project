@@ -62,20 +62,41 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     if (!project.venue) {
       return <p className="text-muted-foreground">No venue specified</p>;
     }
+
+    let venueName = '';
+    let venueAddress = '';
+    let fullQuery = project.venue;
+
     try {
       const parsed = JSON.parse(project.venue);
       if (parsed.name && parsed.address) {
-        return (
-          <div>
-            <p className="font-semibold text-foreground">{parsed.name}</p>
-            <p className="text-muted-foreground">{parsed.address}</p>
-          </div>
-        );
+        venueName = parsed.name;
+        venueAddress = parsed.address;
+        fullQuery = `${venueName}, ${venueAddress}`;
       }
     } catch (e) {
-      // Not a JSON string, display as is
+      // Not a JSON string, use as is
     }
-    return <p className="text-muted-foreground">{project.venue}</p>;
+
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullQuery)}`;
+
+    return (
+      <a
+        href={mapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:underline group"
+      >
+        {venueName && venueAddress ? (
+          <div>
+            <p className="font-semibold text-foreground group-hover:text-primary">{venueName}</p>
+            <p className="text-muted-foreground">{venueAddress}</p>
+          </div>
+        ) : (
+          <p className="text-muted-foreground group-hover:text-primary">{project.venue}</p>
+        )}
+      </a>
+    );
   };
 
   const paymentBadgeColor = paymentStatusConfig[project.payment_status]?.color || "bg-gray-100 text-gray-800";
