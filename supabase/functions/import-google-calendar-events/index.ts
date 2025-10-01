@@ -35,33 +35,49 @@ serve(async (req) => {
     );
 
     const creatorEmails = [...new Set(eventsToImport.map(event => event.creator?.email).filter(Boolean))];
+    const creatorInfoMap = new Map(eventsToImport
+      .map(event => event.creator ? [event.creator.email, { displayName: event.creator.displayName || event.creator.email.split('@')[0] }] : null)
+      .filter(Boolean)
+    );
 
     let emailToUserIdMap = new Map<string, string>();
+    let emailToPersonIdMap = new Map<string, string>();
+
     if (creatorEmails.length > 0) {
-        const { data: profiles, error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .select('id, email')
-            .in('email', creatorEmails);
-        
-        if (profileError) {
-            console.warn("Could not fetch profiles for event creators:", profileError.message);
-        } else if (profiles) {
-            profiles.forEach(p => {
-                if (p.email) {
-                    emailToUserIdMap.set(p.email, p.id);
-                }
-            });
-        }
+      const { data: profiles } = await supabaseAdmin.from('profiles').select('id, email').in('email', creatorEmails);
+      if (profiles) profiles.forEach(p => p.email && emailToUserIdMap.set(p.email, p.id));
+
+      const { data: people } = await supabaseAdmin.from('people').select('id, email').in('email', creatorEmails);
+      if (people) people.forEach(p => p.email && emailToPersonIdMap.set(p.email, p.id));
     }
 
-    const newProjects = eventsToImport.map(event => {
-      const { summary, description, start, end, id: origin_event_id, location, creator } = event;
+    const newPeopleToCreate: any[] = [];
+    creatorEmails.forEach(email => {
+      if (!emailToUserIdMap.has(email) && !emailToPersonIdMap.has(email)) {
+        const info = creatorInfoMap.get(email);
+        newPeopleToCreate.push({
+          full_name: info?.displayName || email.split('@')[0],
+          email: email,
+          contact: { emails: [email] },
+          user_id: user.id,
+        });
+      }
+    });
 
+    if (newPeopleToCreate.length > 0) {
+      const { data: newPeople, error: insertPeopleError } = await supabaseAdmin
+        .from('people')
+        .insert(newPeopleToCreate)
+        .select('id, email');
+      if (insertPeopleError) throw new Error(`Failed to create new contacts: ${insertPeopleError.message}`);
+      if (newPeople) newPeople.forEach(p => p.email && emailToPersonIdMap.set(p.email, p.id));
+    }
+
+    const newProjectsPayload = eventsToImport.map(event => {
+      const { summary, description, start, end, id: origin_event_id, location, creator } = event;
       const startDate = start.date ? new Date(start.date).toISOString() : new Date(start.dateTime).toISOString();
       const dueDate = end.date ? new Date(end.date).toISOString() : new Date(end.dateTime).toISOString();
-
-      const ownerId = creator?.email ? emailToUserIdMap.get(creator.email) : undefined;
-
+      
       return {
         name: summary || 'Untitled Event',
         description: description,
@@ -69,19 +85,49 @@ serve(async (req) => {
         due_date: dueDate,
         origin_event_id: origin_event_id,
         venue: location,
-        created_by: ownerId || user.id, // Fallback to the importing user
+        created_by: user.id,
         status: 'On Track',
         payment_status: 'Unpaid',
         category: 'Event',
+        _creatorEmail: creator?.email,
       };
     });
 
-    if (newProjects.length > 0) {
-      const { error } = await supabaseAdmin.from('projects').insert(newProjects);
-      if (error) throw error;
+    if (newProjectsPayload.length === 0) {
+        return new Response(JSON.stringify({ success: true, count: 0, message: "No new projects to import." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ success: true, count: newProjects.length }), {
+    const { data: createdProjects, error: projectInsertError } = await supabaseAdmin
+      .from('projects')
+      .insert(newProjectsPayload.map(({ _creatorEmail, ...rest }) => rest))
+      .select('id, origin_event_id');
+    
+    if (projectInsertError) throw projectInsertError;
+
+    const peopleProjectsLinks: { person_id: string; project_id: string }[] = [];
+    createdProjects.forEach(project => {
+      const originalPayload = newProjectsPayload.find(p => p.origin_event_id === project.origin_event_id);
+      if (originalPayload?._creatorEmail) {
+        const personId = emailToPersonIdMap.get(originalPayload._creatorEmail);
+        if (personId) {
+          peopleProjectsLinks.push({
+            person_id: personId,
+            project_id: project.id,
+          });
+        }
+      }
+    });
+
+    if (peopleProjectsLinks.length > 0) {
+      const { error: linkError } = await supabaseAdmin
+        .from('people_projects')
+        .insert(peopleProjectsLinks);
+      if (linkError) {
+        console.warn("Failed to link some projects to contacts:", linkError.message);
+      }
+    }
+
+    return new Response(JSON.stringify({ success: true, count: newProjectsPayload.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
