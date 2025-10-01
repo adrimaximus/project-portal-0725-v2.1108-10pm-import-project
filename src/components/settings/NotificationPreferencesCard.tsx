@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import TestNotificationToast from "./TestNotificationToast";
+import { Loader2, Volume2 } from "lucide-react";
 
 const notificationTypes = [
   { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
@@ -16,10 +16,33 @@ const notificationTypes = [
   { id: 'system', label: 'System Notifications', description: 'Important updates and announcements from the system.' },
 ];
 
+interface NotificationSetting {
+  enabled: boolean;
+  sound: string;
+}
+
 const NotificationPreferencesCard = () => {
   const { user, refreshUser } = useAuth();
-  const [preferences, setPreferences] = useState<Record<string, boolean>>({});
+  const [preferences, setPreferences] = useState<Record<string, NotificationSetting>>({});
+  const [notificationSounds, setNotificationSounds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSounds = async () => {
+      const { data, error } = await supabase.storage.from('General').list('notification');
+      if (error) {
+        console.error("Error fetching notification sounds:", error);
+        toast.error("Could not load notification sounds.");
+        setNotificationSounds(['Default']);
+      } else {
+        const soundFiles = data
+          .filter(file => file.name !== '.emptyFolderPlaceholder' && (file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.ogg')))
+          .map(file => file.name);
+        setNotificationSounds(['Default', ...soundFiles]);
+      }
+    };
+    fetchSounds();
+  }, []);
 
   useEffect(() => {
     if (user?.id) {
@@ -33,8 +56,24 @@ const NotificationPreferencesCard = () => {
         
         if (error) {
           toast.error("Failed to load notification settings.");
-        } else if (data?.notification_preferences) {
-          setPreferences(data.notification_preferences);
+        } else {
+          const savedPrefs = data?.notification_preferences || {};
+          const newPrefs: Record<string, NotificationSetting> = {};
+          
+          notificationTypes.forEach(type => {
+            const savedPref = savedPrefs[type.id];
+            if (typeof savedPref === 'boolean') {
+              // Migrate from old format
+              newPrefs[type.id] = { enabled: savedPref, sound: 'Default' };
+            } else if (savedPref && typeof savedPref === 'object') {
+              // Use new format
+              newPrefs[type.id] = { enabled: savedPref.enabled !== false, sound: savedPref.sound || 'Default' };
+            } else {
+              // Default value
+              newPrefs[type.id] = { enabled: true, sound: 'Default' };
+            }
+          });
+          setPreferences(newPrefs);
         }
         setIsLoading(false);
       };
@@ -42,10 +81,23 @@ const NotificationPreferencesCard = () => {
     }
   }, [user?.id]);
 
-  const handlePreferenceChange = async (typeId: string, isEnabled: boolean) => {
+  const playSound = (soundFile: string) => {
+    if (soundFile === 'Default' || !soundFile) return;
+    const { data } = supabase.storage.from('General').getPublicUrl(`notification/${soundFile}`);
+    if (data.publicUrl) {
+      const audio = new Audio(data.publicUrl);
+      audio.play().catch(e => console.error("Error playing audio:", e));
+    }
+  };
+
+  const handlePreferenceChange = async (typeId: string, newSetting: Partial<NotificationSetting>) => {
     if (!user) return;
 
-    const newPreferences = { ...preferences, [typeId]: isEnabled };
+    const oldPreferences = { ...preferences };
+    const currentSetting = preferences[typeId] || { enabled: true, sound: 'Default' };
+    const updatedSetting = { ...currentSetting, ...newSetting };
+    
+    const newPreferences = { ...preferences, [typeId]: updatedSetting };
     setPreferences(newPreferences);
 
     const { error } = await supabase
@@ -55,20 +107,17 @@ const NotificationPreferencesCard = () => {
 
     if (error) {
       toast.error("Failed to update notification setting.");
-      // Revert UI change on error
-      setPreferences(preferences);
+      setPreferences(oldPreferences); // Revert UI change on error
     } else {
-      if (isEnabled) {
-        const notificationType = notificationTypes.find(t => t.id === typeId);
-        toast(<TestNotificationToast user={user} type={notificationType} />);
-      } else {
-        toast.success("Notification setting updated.");
+      toast.success("Notification setting updated.");
+      if (newSetting.sound && updatedSetting.enabled) {
+        playSound(newSetting.sound);
       }
       refreshUser();
     }
   };
 
-  if (isLoading) {
+  if (isLoading || notificationSounds.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -86,20 +135,37 @@ const NotificationPreferencesCard = () => {
     <Card>
       <CardHeader>
         <CardTitle>Notification Settings</CardTitle>
-        <CardDescription>Manage how you receive notifications from the platform.</CardDescription>
+        <CardDescription>Manage how you receive notifications from the platform and their sounds.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {notificationTypes.map((type) => (
           <div key={type.id} className="flex items-start justify-between rounded-lg border p-4">
-            <div className="space-y-0.5 pr-4">
-              <Label htmlFor={`notif-${type.id}`} className="text-base">{type.label}</Label>
+            <div className="space-y-0.5 pr-4 flex-grow">
+              <Label htmlFor={`notif-switch-${type.id}`} className="text-base">{type.label}</Label>
               <p className="text-sm text-muted-foreground">{type.description}</p>
             </div>
-            <Switch
-              id={`notif-${type.id}`}
-              checked={preferences[type.id] !== false} // Default to true if not set
-              onCheckedChange={(checked) => handlePreferenceChange(type.id, checked)}
-            />
+            <div className="flex items-center space-x-4">
+              <Select
+                value={preferences[type.id]?.sound || 'Default'}
+                onValueChange={(sound) => handlePreferenceChange(type.id, { sound })}
+                disabled={!preferences[type.id]?.enabled}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <Volume2 className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Select sound" />
+                </SelectTrigger>
+                <SelectContent>
+                  {notificationSounds.map(sound => (
+                    <SelectItem key={sound} value={sound}>{sound.split('.')[0].replace(/[-_]/g, ' ')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Switch
+                id={`notif-switch-${type.id}`}
+                checked={preferences[type.id]?.enabled !== false}
+                onCheckedChange={(checked) => handlePreferenceChange(type.id, { enabled: checked })}
+              />
+            </div>
           </div>
         ))}
       </CardContent>
