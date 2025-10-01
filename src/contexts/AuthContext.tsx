@@ -99,17 +99,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [fetchUserProfile, isImpersonating]);
 
   useEffect(() => {
-    if (!user || !user.role) return;
-
+    // This listener reacts to any change in the roles table.
     const channel = supabase
-      .channel(`role-update-listener-for-${user.id}`)
+      .channel('public:roles')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'roles', filter: `name=eq.${user.role}` },
+        { event: 'UPDATE', schema: 'public', table: 'roles' },
         (payload) => {
-          console.log('User role has been updated. Refetching profile.', payload);
-          if (session) {
-            fetchUserProfile(session);
+          const updatedRole = payload.new as { name: string };
+          // If the updated role is the one the current user has, refresh their profile.
+          if (user && updatedRole.name === user.role) {
+            console.log(`User's role '${user.role}' was updated. Refreshing profile and permissions.`);
+            toast.info("Your permissions have been updated and will now be reflected.");
+            if (session) {
+              fetchUserProfile(session);
+            }
           }
         }
       )
