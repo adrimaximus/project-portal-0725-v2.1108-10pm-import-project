@@ -54,15 +54,14 @@ serve(async (req) => {
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-    const { year, month } = await req.json();
+    const today = new Date();
+    const timeMin = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString();
+    const timeMax = new Date(today.getFullYear(), today.getMonth() + 5, 0, 23, 59, 59).toISOString();
     
-    const startDate = new Date(year, month, 1);
-    const endDate = new Date(year, month + 1, 0, 23, 59, 59);
-
     const { data: { items: events } } = await calendar.events.list({
       calendarId: 'primary',
-      timeMin: startDate.toISOString(),
-      timeMax: endDate.toISOString(),
+      timeMin: timeMin,
+      timeMax: timeMax,
       singleEvents: true,
       orderBy: 'startTime',
     });

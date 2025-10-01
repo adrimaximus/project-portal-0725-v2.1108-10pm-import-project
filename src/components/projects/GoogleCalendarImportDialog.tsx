@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, addMonths, subMonths, isSameMonth } from "date-fns";
+import { format } from "date-fns";
 
 interface GoogleCalendarImportDialogProps {
   open: boolean;
@@ -16,17 +16,12 @@ interface GoogleCalendarImportDialogProps {
 }
 
 export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImporting }: GoogleCalendarImportDialogProps) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
 
   const { data: events = [], isLoading, error } = useQuery<any[]>({
-    queryKey: ['googleCalendarEvents', currentMonth.getFullYear(), currentMonth.getMonth()],
+    queryKey: ['googleCalendarEvents'],
     queryFn: async () => {
-      const year = currentMonth.getFullYear();
-      const month = currentMonth.getMonth();
-      const { data, error } = await supabase.functions.invoke('get-google-calendar-events', {
-        body: { year, month }
-      });
+      const { data, error } = await supabase.functions.invoke('get-google-calendar-events');
       if (error) throw new Error(error.message);
       return data;
     },
@@ -37,13 +32,8 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
   useEffect(() => {
     if (!open) {
       setSelectedEvents([]);
-      setCurrentMonth(new Date());
     }
   }, [open]);
-
-  useEffect(() => {
-    setSelectedEvents([]);
-  }, [currentMonth]);
 
   const handleSelectEvent = (eventId: string) => {
     setSelectedEvents(prev =>
@@ -89,16 +79,6 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     return `${format(startDate, "d MMM, HH:mm")} - ${format(endDate, "d MMM, HH:mm")}`;
   };
 
-  const handlePreviousMonth = () => {
-    setCurrentMonth(prev => subMonths(prev, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentMonth(prev => addMonths(prev, 1));
-  };
-
-  const isCurrentRealMonth = isSameMonth(currentMonth, new Date());
-
   const allSelected = events.length > 0 && selectedEvents.length === events.length;
   const someSelected = selectedEvents.length > 0 && !allSelected;
 
@@ -107,19 +87,9 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
           <DialogTitle>Import Events from Google Calendar</DialogTitle>
-          <DialogDescription>Select events to import as new projects. You can navigate through months to find past events.</DialogDescription>
+          <DialogDescription>Select events to import as new projects. Events from the last month, this month, and the next 4 months are shown.</DialogDescription>
         </DialogHeader>
         
-        <div className="flex items-center justify-between p-2 border-b">
-          <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="font-medium text-lg">{format(currentMonth, "MMMM yyyy")}</span>
-          <Button variant="outline" size="icon" onClick={handleNextMonth} disabled={isCurrentRealMonth}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-
         <div className="relative h-96">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
@@ -130,7 +100,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
             <div className="text-destructive text-center p-4">{error.message}</div>
           )}
           {!isLoading && !error && events.length === 0 && (
-            <div className="text-center p-4 text-muted-foreground">No events found for this month.</div>
+            <div className="text-center p-4 text-muted-foreground">No new events found in the date range.</div>
           )}
           {!isLoading && !error && events.length > 0 && (
             <div className="h-full flex flex-col border rounded-md">
