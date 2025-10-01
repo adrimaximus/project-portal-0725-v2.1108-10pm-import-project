@@ -1,29 +1,25 @@
-import { useLocation, Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import PortalLayout from './PortalLayout';
-import { Loader2 } from 'lucide-react';
+import { Outlet, Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import LoadingScreen from "./LoadingScreen";
+import React from "react";
 
 const ProtectedRouteLayout = () => {
-  const { user, isLoading } = useAuth();
+  const { session, user, loading } = useAuth();
   const location = useLocation();
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+  if (loading) {
+    return <LoadingScreen />;
   }
 
-  if (!user) {
+  if (!session || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
+  
+  if (location.pathname === '/') {
+    return <Navigate to="/dashboard" replace />;
+  }
 
-  return (
-    <PortalLayout>
-      <Outlet />
-    </PortalLayout>
-  );
+  return <Outlet />;
 };
 
 export default ProtectedRouteLayout;

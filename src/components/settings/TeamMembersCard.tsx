@@ -1,97 +1,208 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth, AppUser } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useState, useMemo } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, User as UserIcon, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MoreHorizontal, Search, Send, Trash2, ChevronsUpDown, User as UserIcon } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { User } from '@/types';
+import { Role } from './RoleManagerDialog';
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { useAuth } from '@/contexts/AuthContext';
 
-const fetchTeamMembers = async (): Promise<AppUser[]> => {
-  const { data, error } = await supabase.from('profiles').select('*');
-  if (error) throw new Error(error.message);
-  
-  return (data as any[]).map(p => ({
-    ...p,
-    name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email,
-    initials: ((p.first_name?.[0] || '') + (p.last_name?.[0] || '') || p.email?.substring(0, 2) || 'NN').toUpperCase(),
-  }));
-};
+interface TeamMembersCardProps {
+  members: User[];
+  roles: Role[];
+  currentUser: User | null;
+  isLoading: boolean;
+  onRoleChange: (memberId: string, newRole: string) => void;
+  onToggleSuspend: (member: User) => void;
+  onDeleteMember: (member: User) => void;
+  onResendInvite: (member: User) => void;
+}
 
-const TeamMembersCard = () => {
+const TeamMembersCard = ({
+  members,
+  roles,
+  currentUser,
+  isLoading,
+  onRoleChange,
+  onToggleSuspend,
+  onDeleteMember,
+  onResendInvite,
+}: TeamMembersCardProps) => {
+  const [isOpen, setIsOpen] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const { startImpersonation } = useAuth();
-  const { data: members, isLoading } = useQuery<AppUser[]>({
-    queryKey: ['teamMembers'],
-    queryFn: fetchTeamMembers,
-  });
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Team Members</CardTitle>
-          <CardDescription>Manage your team members and their roles.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center p-10">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+  const filteredMembers = useMemo(() => {
+    return members.filter(member =>
+        member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (member.email && member.email.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }
+  }, [members, searchTerm]);
+
+  const getStatusBadgeVariant = (status?: string): "destructive" | "secondary" | "outline" => {
+    switch (status) {
+      case 'suspended': return 'destructive';
+      case 'Pending invite': return 'secondary';
+      default: return 'outline';
+    }
+  };
+
+  const getDisabledTooltipMessage = (member: User, currentUser: User | null): string => {
+    if (!currentUser) return "You are not logged in.";
+    if (member.id === currentUser.id) return "You cannot change your own role.";
+    if (member.role === 'master admin' && currentUser.role !== 'master admin') return "Only a Master Admin can change this role.";
+    return "You do not have permission to change this role.";
+  };
+
+  const isMasterAdmin = currentUser?.role === 'master admin';
+  const isAdmin = currentUser?.role === 'admin' || isMasterAdmin;
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Team Members</CardTitle>
-        <CardDescription>Manage your team members and their roles.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead><span className="sr-only">Actions</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {members?.map((member) => (
-              <TableRow key={member.id}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={member.avatar_url || undefined} />
-                      <AvatarFallback>{member.initials}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p>{member.name}</p>
-                      <p className="text-sm text-muted-foreground">{member.email}</p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>{member.role}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => startImpersonation(member.id)}>
-                        <UserIcon className="mr-2 h-4 w-4" />
-                        Impersonate
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <CollapsibleTrigger className="flex-grow text-left flex justify-between items-center">
+              <div>
+                  <CardTitle>Current Members</CardTitle>
+                  <CardDescription>Review and manage existing team members.</CardDescription>
+              </div>
+              <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+            </CollapsibleTrigger>
+            <div className="relative w-full sm:w-auto sm:max-w-xs" onClick={(e) => e.stopPropagation()}>
+              <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search by name..." className="pl-8 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+          </div>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Last Active</TableHead>
+                    <TableHead className="w-[180px]">Role</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={4} className="text-center">Loading members...</TableCell></TableRow>
+                  ) : filteredMembers.map((member) => {
+                    const isRoleChangeDisabled = !isAdmin || member.id === currentUser?.id || (member.role === 'master admin' && !isMasterAdmin);
+                    const availableRolesForMember = roles.filter(role => isMasterAdmin || role.name !== 'master admin');
+                    const tooltipMessage = getDisabledTooltipMessage(member, currentUser);
+
+                    return (
+                    <TableRow key={member.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar><AvatarImage src={member.avatar_url} /><AvatarFallback>{member.initials}</AvatarFallback></Avatar>
+                          <div>
+                            <span className="font-medium">{member.name}</span>
+                            <p className="text-sm text-muted-foreground">{member.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {member.status === 'Pending invite' ? (
+                          <Badge variant={getStatusBadgeVariant(member.status)}>Pending invite</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            {member.updated_at ? formatDistanceToNow(new Date(member.updated_at), { addSuffix: true, locale: id }) : 'N/A'}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {member.status === 'suspended' ? (
+                          <Badge variant={getStatusBadgeVariant(member.status)}>Suspended</Badge>
+                        ) : member.status === 'Pending invite' ? (
+                          <span className="text-muted-foreground capitalize">{member.role}</span>
+                        ) : isRoleChangeDisabled ? (
+                          <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                                <div className="w-full">
+                                  <Select value={member.role || undefined} disabled>
+                                    <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50">
+                                      <SelectValue placeholder="No role assigned">
+                                        {roles.find(r => r.name === member.role)?.name || member.role}
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                  </Select>
+                                </div>
+                              </TooltipTrigger><TooltipContent><p>{tooltipMessage}</p></TooltipContent></Tooltip></TooltipProvider>
+                        ) : (
+                          <Select value={member.role || undefined} onValueChange={(value) => onRoleChange(member.id, value)}>
+                            <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent"><SelectValue placeholder="Select a role" /></SelectTrigger>
+                            <SelectContent>
+                              {availableRolesForMember.map(role => (
+                                <SelectItem key={role.id} value={role.name}>{role.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {member.id !== currentUser?.id && isAdmin && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {isMasterAdmin && (
+                                <>
+                                  <DropdownMenuItem onSelect={() => startImpersonation(member)}>
+                                    <UserIcon className="mr-2 h-4 w-4" />
+                                    Impersonate
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              {member.status === 'Pending invite' ? (
+                                <>
+                                  <DropdownMenuItem onSelect={() => onResendInvite(member)}>
+                                    <Send className="mr-2 h-4 w-4" />
+                                    Resend Invite
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="text-red-600" onSelect={() => onDeleteMember(member)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Cancel Invite
+                                  </DropdownMenuItem>
+                                </>
+                              ) : (
+                                <>
+                                  <DropdownMenuItem onSelect={() => onToggleSuspend(member)} disabled={member.role === 'master admin' && !isMasterAdmin}>
+                                    {member.status === 'suspended' ? 'Unsuspend Member' : 'Suspend Member'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="text-red-600" onSelect={() => onDeleteMember(member)} disabled={(member.role === 'master admin' && !isMasterAdmin)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Member
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 };
