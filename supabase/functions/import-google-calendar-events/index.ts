@@ -3,8 +3,8 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { subDays, endOfDay } from 'npm:date-fns';
-import { zonedTimeToUtc } from 'npm:date-fns-tz';
+import { sub, format } from 'npm:date-fns';
+import { zonedTimeToUtc, toZonedTime } from 'npm:date-fns-tz';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,18 +39,23 @@ serve(async (req) => {
       let startDate, dueDate;
 
       if (start.date) { // All-day event
-        const startDateObj = zonedTimeToUtc(`${start.date}T00:00:00`, timeZone);
+        startDate = zonedTimeToUtc(`${start.date}T00:00:00`, timeZone).toISOString();
         
         const endDateExclusive = new Date(end.date);
-        const endDateInclusive = subDays(endDateExclusive, 1);
+        const endDateInclusive = sub(endDateExclusive, { days: 1 });
+        const inclusiveDateStr = endDateInclusive.toISOString().substring(0, 10);
         
-        const dueDateObj = zonedTimeToUtc(endOfDay(endDateInclusive), timeZone);
-
-        startDate = startDateObj.toISOString();
-        dueDate = dueDateObj.toISOString();
+        dueDate = zonedTimeToUtc(`${inclusiveDateStr}T23:59:59`, timeZone).toISOString();
       } else { // Timed event
         startDate = new Date(start.dateTime).toISOString();
-        dueDate = new Date(end.dateTime).toISOString();
+        const endDate = new Date(end.dateTime);
+        
+        const zonedEndDate = toZonedTime(endDate, timeZone);
+        if (format(zonedEndDate, 'HH:mm:ss') === '00:00:00') {
+          dueDate = sub(endDate, { milliseconds: 1 }).toISOString();
+        } else {
+          dueDate = endDate.toISOString();
+        }
       }
 
       return {

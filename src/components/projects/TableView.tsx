@@ -20,7 +20,8 @@ import {
 import StatusBadge from "../StatusBadge";
 import { getStatusStyles, cn, formatInJakarta, getPaymentStatusStyles } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { isSameDay, getMonth, getYear } from 'date-fns';
+import { getMonth, getYear, isSameDay } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import {
   Tooltip,
   TooltipContent,
@@ -40,28 +41,31 @@ interface TableViewProps {
 const formatProjectDateRange = (startDateStr: string | null | undefined, dueDateStr: string | null | undefined): string => {
   if (!startDateStr) return '-';
 
+  const timeZone = 'Asia/Jakarta';
   const startDate = new Date(startDateStr);
   const dueDate = dueDateStr ? new Date(dueDateStr) : startDate;
 
-  if (isSameDay(startDate, dueDate)) {
-    return formatInJakarta(startDate, 'd MMM');
+  const zonedStartDate = toZonedTime(startDate, timeZone);
+  const zonedDueDate = toZonedTime(dueDate, timeZone);
+
+  if (isSameDay(zonedStartDate, zonedDueDate)) {
+    return formatInJakarta(startDate, 'd MMM yyyy');
   }
 
-  const startMonth = getMonth(startDate);
-  const endMonth = getMonth(dueDate);
-  const startYear = getYear(startDate);
-  const endYear = getYear(dueDate);
+  const startMonth = getMonth(zonedStartDate);
+  const endMonth = getMonth(zonedDueDate);
+  const startYear = getYear(zonedStartDate);
+  const endYear = getYear(zonedDueDate);
 
   if (startYear !== endYear) {
     return `${formatInJakarta(startDate, 'd MMM yyyy')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
   }
 
   if (startMonth !== endMonth) {
-    return `${formatInJakarta(startDate, 'd MMM')} - ${formatInJakarta(dueDate, 'd MMM')}`;
+    return `${formatInJakarta(startDate, 'd MMM')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
   }
 
-  // Same month, same year
-  return `${formatInJakarta(startDate, 'd')} - ${formatInJakarta(dueDate, 'd MMM')}`;
+  return `${formatInJakarta(startDate, 'd')} - ${formatInJakarta(dueDate, 'd MMM yyyy')}`;
 };
 
 const TableView = ({ projects, isLoading, onDeleteProject, sortConfig, requestSort, rowRefs }: TableViewProps) => {
