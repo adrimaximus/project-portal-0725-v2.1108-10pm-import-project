@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Collaborator } from "@/types";
 import { toast } from "sonner";
 import { Label } from "./ui/label";
-import { getInitials, generatePastelColor } from "@/lib/utils";
+import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
 
 interface NewConversationDialogProps {
   open: boolean;
@@ -51,7 +51,7 @@ const NewConversationDialog = ({
         return {
           id: p.id,
           name: fullName || p.email || 'Unnamed User',
-          avatar_url: p.avatar_url,
+          avatar_url: getAvatarUrl(p.avatar_url, p.id),
           initials: getInitials(fullName, p.email) || 'NN',
           email: p.email || '',
           online: false,
