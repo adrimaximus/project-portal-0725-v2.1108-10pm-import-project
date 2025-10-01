@@ -6,12 +6,11 @@ import { toast } from 'sonner';
 import { useEffect } from 'react';
 
 const NOTIFICATIONS_PER_PAGE = 20;
+const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/Notification/`;
 
 const fetchNotifications = async (pageParam: number = 0): Promise<Notification[]> => {
-  const from = pageParam * NOTIFICATIONS_PER_PAGE;
-
   const { data, error } = await supabase
-    .rpc('get_user_notifications', { p_limit: NOTIFICATIONS_PER_PAGE, p_offset: from });
+    .rpc('get_user_notifications', { p_limit: NOTIFICATIONS_PER_PAGE, p_offset: pageParam * NOTIFICATIONS_PER_PAGE });
 
   if (error) {
     console.error("Error fetching notifications:", error);
@@ -70,11 +69,25 @@ export const useNotifications = () => {
         },
         async (payload) => {
           const newNotificationId = payload.new.notification_id;
-          const { data } = await supabase.from('notifications').select('title, body').eq('id', newNotificationId).single();
+          const { data } = await supabase.from('notifications').select('title, body, type').eq('id', newNotificationId).single();
           if (data) {
             toast.info(data.title, {
               description: data.body,
             });
+
+            // Play sound logic
+            const userPreferences = user.notification_preferences;
+            const isNotificationTypeEnabled = userPreferences?.[data.type] !== false; // default to true
+            const tone = userPreferences?.tone;
+
+            if (isNotificationTypeEnabled && tone && tone !== 'none') {
+              try {
+                const audio = new Audio(`${TONE_BASE_URL}${tone}`);
+                await audio.play();
+              } catch (e) {
+                console.error("Error playing notification sound:", e);
+              }
+            }
           }
           queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
         }
