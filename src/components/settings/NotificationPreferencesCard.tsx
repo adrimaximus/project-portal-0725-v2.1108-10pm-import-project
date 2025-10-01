@@ -27,7 +27,7 @@ const notificationTones = [
     { name: 'Positive Alert Ding', value: 'positive-alert-ding.mp3' },
 ];
 
-const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/general/notifications/`;
+const TONE_BASE_URL = `https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/general/`;
 
 const NotificationPreferencesCard = () => {
   const { user, refreshUser } = useAuth();
