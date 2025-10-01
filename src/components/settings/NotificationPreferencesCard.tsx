@@ -33,12 +33,12 @@ const NotificationPreferencesCard = () => {
       if (error) {
         console.error("Error fetching notification sounds:", error);
         toast.error("Could not load notification sounds.");
-        setNotificationSounds(['Default']);
+        setNotificationSounds(['Default', 'None']);
       } else {
         const soundFiles = data
           .filter(file => file.name !== '.emptyFolderPlaceholder' && (file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.ogg')))
           .map(file => file.name);
-        setNotificationSounds(['Default', ...soundFiles]);
+        setNotificationSounds(['Default', 'None', ...soundFiles]);
       }
     };
     fetchSounds();
@@ -82,7 +82,7 @@ const NotificationPreferencesCard = () => {
   }, [user?.id]);
 
   const playSound = (soundFile: string) => {
-    if (soundFile === 'Default' || !soundFile) return;
+    if (soundFile === 'Default' || soundFile === 'None' || !soundFile) return;
     const { data } = supabase.storage.from('General').getPublicUrl(`notification/${soundFile}`);
     if (data.publicUrl) {
       const audio = new Audio(data.publicUrl);
@@ -156,7 +156,9 @@ const NotificationPreferencesCard = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {notificationSounds.map(sound => (
-                    <SelectItem key={sound} value={sound}>{sound.split('.')[0].replace(/[-_]/g, ' ')}</SelectItem>
+                    <SelectItem key={sound} value={sound}>
+                      {sound === 'None' ? 'Tanpa Suara' : sound.split('.')[0].replace(/[-_]/g, ' ')}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
