@@ -29,7 +29,7 @@ const NotificationPreferencesCard = () => {
 
   useEffect(() => {
     const fetchSounds = async () => {
-      const { data, error } = await supabase.storage.from('General').list('notification');
+      const { data, error } = await supabase.storage.from('General').list('Notification');
       if (error) {
         console.error("Error fetching notification sounds:", error);
         toast.error("Could not load notification sounds.");
@@ -83,7 +83,7 @@ const NotificationPreferencesCard = () => {
 
   const playSound = (soundFile: string) => {
     if (soundFile === 'Default' || soundFile === 'None' || !soundFile) return;
-    const { data } = supabase.storage.from('General').getPublicUrl(`notification/${soundFile}`);
+    const { data } = supabase.storage.from('General').getPublicUrl(`Notification/${soundFile}`);
     if (data.publicUrl) {
       const audio = new Audio(data.publicUrl);
       audio.play().catch(e => console.error("Error playing audio:", e));
