@@ -16,12 +16,6 @@ const ProtectedRouteLayout = () => {
     const syncDefaultNavItems = async () => {
       if (!user || !user.permissions) return;
 
-      const syncFlag = `navSyncAttempted_${user.id}`;
-      if (sessionStorage.getItem(syncFlag)) {
-        return;
-      }
-      sessionStorage.setItem(syncFlag, 'true');
-
       try {
         const permittedDefaultItems = defaultNavItems.filter(defaultItem => {
           const path = defaultItem.url.split('?')[0];
