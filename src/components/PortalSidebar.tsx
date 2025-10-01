@@ -43,6 +43,8 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
       isActive = true;
   }
 
+  const isChatLink = item.label.toLowerCase() === 'chat';
+
   if (isCollapsed) {
     return (
       <Tooltip>
@@ -50,7 +52,11 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
           <Link to={item.href} className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary md:h-8 md:w-8 relative", isActive && "bg-muted text-primary")}>
             <item.icon className="h-5 w-5" />
             <span className="sr-only">{item.label}</span>
-            {item.badge && <Badge className="absolute -top-1 -right-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full p-0 text-xs">{item.badge}</Badge>}
+            {isChatLink && item.badge ? (
+              <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-1 ring-background" />
+            ) : (
+              item.badge && <Badge className="absolute -top-1 -right-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full p-0 text-xs">{item.badge}</Badge>
+            )}
           </Link>
         </TooltipTrigger>
         <TooltipContent side="right">{item.label}</TooltipContent>
@@ -61,7 +67,11 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
     <Link to={item.href} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary group", isActive && "bg-muted text-primary")}>
       <item.icon className="h-4 w-4" />
       {item.label}
-      {item.badge && <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">{item.badge}</Badge>}
+      {isChatLink && item.badge ? (
+        <span className="ml-auto block h-2 w-2 rounded-full bg-red-500" />
+      ) : (
+        item.badge && <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">{item.badge}</Badge>
+      )}
     </Link>
   );
 };
@@ -70,7 +80,8 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { user } = useAuth();
   const { unreadCount: unreadNotificationCount } = useNotifications();
   const queryClient = useQueryClient();
-  const totalUnreadChatCount = 0; // Placeholder for chat unread count
+  const location = useLocation();
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
 
   const { data: customNavItems = [], error: navItemsError } = useQuery({ 
     queryKey: ['user_navigation_items', user?.id], 
@@ -79,12 +90,12 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       const { data, error } = await supabase.rpc('get_user_navigation_items');
       if (error) {
         console.error("Error fetching navigation items:", error);
-        return []; // Return empty array instead of throwing
+        return [];
       }
       return data as DbNavItem[]; 
     }, 
     enabled: !!user,
-    retry: false, // Don't retry on failure
+    retry: false,
   });
 
   const { data: folders = [], error: foldersError } = useQuery({ 
@@ -94,13 +105,42 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
       const { data, error } = await supabase.from('navigation_folders').select('*').eq('user_id', user.id).order('position'); 
       if (error) {
         console.error("Error fetching navigation folders:", error);
-        return []; // Return empty array instead of throwing
+        return [];
       }
       return data as NavFolder[]; 
     }, 
     enabled: !!user,
-    retry: false, // Don't retry on failure
+    retry: false,
   });
+
+  // Realtime subscription for new chat messages
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('public:messages:sidebar-chat-indicator')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          if (payload.new.sender_id !== user.id && location.pathname !== '/chat') {
+            setHasUnreadChat(true);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, location.pathname]);
+
+  // Clear chat indicator when user navigates to the chat page
+  useEffect(() => {
+    if (location.pathname === '/chat') {
+      setHasUnreadChat(false);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!user) return;
@@ -116,14 +156,13 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   }, [user, queryClient]);
 
   const { navItems, settingsItem } = useMemo(() => {
-    // If there are errors loading nav items, provide fallback navigation
     if (navItemsError || foldersError) {
       console.warn("Using fallback navigation due to errors:", { navItemsError, foldersError });
       return {
         navItems: [
           { id: 'dashboard', href: '/dashboard', label: 'Dashboard', icon: Home, folder_id: null },
           { id: 'projects', href: '/projects', label: 'Projects', icon: LayoutGrid, folder_id: null },
-          { id: 'chat', href: '/chat', label: 'Chat', icon: MessageSquare, badge: totalUnreadChatCount > 0 ? totalUnreadChatCount : undefined, folder_id: null },
+          { id: 'chat', href: '/chat', label: 'Chat', icon: MessageSquare, badge: hasUnreadChat ? 1 : undefined, folder_id: null },
           { id: 'goals', href: '/goals', label: 'Goals', icon: Target, folder_id: null },
           { id: 'people', href: '/people', label: 'People', icon: Users, folder_id: null },
         ],
@@ -137,27 +176,20 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
         let href: string;
         let badge;
 
-        // Generate proper URLs based on item type and content
         if (item.type === 'multi_embed') {
-          // Multi-embed pages use their slug
           href = `/multipage/${item.slug}`;
         } else if (item.url.startsWith('/')) {
-          // Internal URLs
           href = item.url;
         } else if (item.url.startsWith('<iframe') || item.url.startsWith('http')) {
-          // External URLs or embed codes - use custom page with slug
           href = `/custom/${item.slug}`;
         } else {
-          // Fallback for other cases
           href = `/custom/${item.slug}`;
         }
 
-        // Fix for dashboard route
         if (href === '/') {
           href = '/dashboard';
         }
 
-        // Fix for incorrect URLs from database
         const itemNameLower = item.name.toLowerCase();
         if (itemNameLower === 'knowledge base' && href !== '/knowledge-base') {
             href = '/knowledge-base';
@@ -169,7 +201,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
             href = '/mood-tracker';
         }
 
-        if (itemNameLower === 'chat') badge = totalUnreadChatCount > 0 ? totalUnreadChatCount : undefined;
+        if (itemNameLower === 'chat') badge = hasUnreadChat ? 1 : undefined;
         if (itemNameLower === 'notifications') badge = unreadNotificationCount > 0 ? unreadNotificationCount : undefined;
         
         return {
@@ -186,7 +218,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const otherItems = allItems.filter(item => item.href !== '/settings');
 
     return { navItems: otherItems, settingsItem: settings };
-  }, [customNavItems, totalUnreadChatCount, unreadNotificationCount, navItemsError, foldersError]);
+  }, [customNavItems, unreadNotificationCount, navItemsError, foldersError, hasUnreadChat]);
 
   const topLevelItems = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
 
