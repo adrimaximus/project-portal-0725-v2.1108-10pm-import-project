@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Check, ChevronsUpDown, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 interface GoogleCalendarImportDialogProps {
   open: boolean;
@@ -16,20 +17,18 @@ interface GoogleCalendarImportDialogProps {
 }
 
 export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImporting }: GoogleCalendarImportDialogProps) => {
-  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
-
   const { data: events = [], isLoading, error } = useQuery<any[]>({
     queryKey: ['googleCalendarEvents'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('get-google-calendar-events', {
-        method: 'GET',
-      });
+      const { data, error } = await supabase.functions.invoke('get-google-calendar-events');
       if (error) throw new Error(error.message);
       return data;
     },
     enabled: open,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) {
@@ -67,11 +66,10 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const endDate = new Date(end);
 
     if (event.start?.date) { // All-day event
-        const adjustedEndDate = new Date(endDate.getTime() - 1);
-        if (format(startDate, 'yyyy-MM-dd') === format(adjustedEndDate, 'yyyy-MM-dd')) {
+        if (format(startDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
             return format(startDate, "d MMM yyyy");
         }
-        return `${format(startDate, "d MMM")} - ${format(adjustedEndDate, "d MMM yyyy")}`;
+        return `${format(startDate, "d MMM")} - ${format(endDate, "d MMM yyyy")}`;
     }
 
     if (format(startDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
@@ -89,9 +87,8 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
           <DialogTitle>Import Events from Google Calendar</DialogTitle>
-          <DialogDescription>Select events to import as new projects. Events from the next month are shown.</DialogDescription>
+          <DialogDescription>Select the events you want to import as new projects. Events already imported will not be shown.</DialogDescription>
         </DialogHeader>
-        
         <div className="relative h-96">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
@@ -102,7 +99,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
             <div className="text-destructive text-center p-4">{error.message}</div>
           )}
           {!isLoading && !error && events.length === 0 && (
-            <div className="text-center p-4 text-muted-foreground">No new events found in the date range.</div>
+            <div className="text-center p-4 text-muted-foreground">No upcoming events found to import.</div>
           )}
           {!isLoading && !error && events.length > 0 && (
             <div className="h-full flex flex-col border rounded-md">

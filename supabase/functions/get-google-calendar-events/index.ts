@@ -1,9 +1,8 @@
-/// <reference types="https://unpkg.com/@supabase/functions-js@2/src/edge-runtime.d.ts" />
+/// <reference types="https://esm.sh/@supabase/functions-js@2.4.1/src/edge-runtime.d.ts" />
 
-// @ts-nocheck
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { google } from 'npm:googleapis';
+import { google } from "npm:googleapis";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,99 +11,92 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  if (req.method !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
     const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
+    if (!user) throw new Error("Unauthorized");
 
-    const { data: tokens, error: tokenError } = await supabaseClient
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // 1. Get user's tokens
+    const { data: tokenData, error: tokenError } = await supabaseAdmin
       .from('google_calendar_tokens')
       .select('access_token, refresh_token, expiry_date')
       .eq('user_id', user.id)
       .single();
+    if (tokenError || !tokenData) throw new Error("Google Calendar not connected.");
 
-    if (tokenError || !tokens) {
-      return new Response(JSON.stringify({ error: 'Google Calendar not connected.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // 2. Get user's selected calendars
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('google_calendar_settings')
+      .eq('id', user.id)
+      .single();
+    if (profileError) throw profileError;
+
+    const selectedCalendarIds = profile?.google_calendar_settings?.selected_calendars;
+    if (!selectedCalendarIds || selectedCalendarIds.length === 0) {
+      return new Response(JSON.stringify([]), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const oauth2Client = new google.auth.OAuth2();
-    oauth2Client.setCredentials({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      expiry_date: tokens.expiry_date ? new Date(tokens.expiry_date).getTime() : null,
-    });
-
-    if (!tokens.expiry_date || new Date() > new Date(tokens.expiry_date)) {
-        const { credentials } = await oauth2Client.refreshAccessToken();
-        await supabaseClient.from('google_calendar_tokens').update({
-            access_token: credentials.access_token,
-            refresh_token: credentials.refresh_token,
-            expiry_date: credentials.expiry_date ? new Date(credentials.expiry_date).toISOString() : null,
-        }).eq('user_id', user.id);
-        oauth2Client.setCredentials(credentials);
-    }
-
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-    const today = new Date();
-    const oneMonthFromNow = new Date();
-    oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
-
-    const timeMin = today.toISOString();
-    const timeMax = oneMonthFromNow.toISOString();
-    
-    const { data: { items: events } } = await calendar.events.list({
-      calendarId: 'primary',
-      timeMin: timeMin,
-      timeMax: timeMax,
-      singleEvents: true,
-      orderBy: 'startTime',
-    });
-
-    if (!events) {
-        return new Response(JSON.stringify([]), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-        });
-    }
-
-    const eventIds = events.map(e => e.id);
-    const { data: existingProjects, error: projectError } = await supabaseClient
+    // 3. Get already imported event IDs
+    const { data: existingProjects, error: projectsError } = await supabaseAdmin
       .from('projects')
       .select('origin_event_id')
-      .in('origin_event_id', eventIds);
-
-    if (projectError) throw projectError;
-
+      .not('origin_event_id', 'is', null);
+    if (projectsError) throw projectsError;
     const existingEventIds = new Set(existingProjects.map(p => p.origin_event_id));
-    const newEvents = events.filter(event => !existingEventIds.has(event.id));
 
-    return new Response(JSON.stringify(newEvents), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+    // 4. Setup Google API client
+    const oauth2Client = new google.auth.OAuth2(
+        Deno.env.get("VITE_GOOGLE_CLIENT_ID"), 
+        Deno.env.get("GOOGLE_CLIENT_SECRET")
+    );
+    oauth2Client.setCredentials({
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      expiry_date: tokenData.expiry_date ? new Date(tokenData.expiry_date).getTime() : null,
+    });
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    // 5. Fetch events from each selected calendar
+    const allEvents = [];
+    for (const calendarId of selectedCalendarIds) {
+      const res = await calendar.events.list({
+        calendarId,
+        timeMin: (new Date()).toISOString(),
+        maxResults: 50,
+        singleEvents: true,
+        orderBy: 'startTime',
+      });
+      if (res.data.items) {
+        const events = res.data.items
+          .filter(event => event.status !== 'cancelled' && !existingEventIds.has(event.id))
+          .map(event => ({ ...event, calendarId })); // Add calendarId for context
+        allEvents.push(...events);
+      }
+    }
+
+    return new Response(JSON.stringify(allEvents), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+  } catch (err) {
+    console.error("Function error:", err.message);
+    return new Response(JSON.stringify({ error: err.message }), { 
+        status: 500, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
 });
