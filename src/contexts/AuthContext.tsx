@@ -129,7 +129,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (!user) return;
-    const room = supabase.channel(`online-users:${user.id}`);
+
+    // Use a common channel for all users to see each other
+    const room = supabase.channel('online-collaborators');
+
     room
       .on('presence', { event: 'sync' }, () => {
         const presenceState = room.presenceState();
@@ -138,16 +141,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const presences = presenceState[key] as unknown as { user: any }[];
             return presences[0].user;
           })
-          .filter(p => p.id !== user.id);
+          .filter(p => p.id !== user.id); // Filter out the current user
         setOnlineCollaborators(collaborators);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          await room.track({ user: { id: user.id, name: user.name, avatar_url: user.avatar_url } });
+          // Track the user's presence with all necessary info
+          await room.track({
+            user: {
+              id: user.id,
+              name: user.name,
+              avatar_url: user.avatar_url,
+              initials: user.initials,
+            },
+          });
         }
       });
+
     return () => {
-      room.unsubscribe();
+      supabase.removeChannel(room);
     };
   }, [user]);
 
