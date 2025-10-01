@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, MoreVertical, Trash2, UserX, Users, Settings } from "lucide-react";
+import { ArrowLeft, MoreVertical, Trash2, UserX, Users, Settings, Bot } from "lucide-react";
 import StackedAvatar from "./StackedAvatar";
 import { getInitials, generatePastelColor } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -82,6 +82,10 @@ const ChatHeader = ({ conversation, onBack, typing = false, onLeaveGroup, onClea
         )}
         {isGroup && members && members.length > 0 ? (
           <StackedAvatar members={members} />
+        ) : isAiAssistant ? (
+          <Avatar className="h-10 w-10 border flex items-center justify-center bg-primary/10 text-primary">
+            <Bot className="h-6 w-6" />
+          </Avatar>
         ) : (
           <Avatar className="h-10 w-10 border">
             <AvatarImage src={userAvatar} alt={userName} />
