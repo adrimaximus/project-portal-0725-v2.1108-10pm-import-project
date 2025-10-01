@@ -93,8 +93,16 @@ export const useNotifications = () => {
                 const audio = new Audio(audioUrl);
                 await audio.play();
                 console.log('[Dyad Debug] Sound played successfully.');
-              } catch (e) {
+              } catch (e: any) {
                 console.error("[Dyad Debug] Error playing notification sound:", e);
+                if (e.name === 'NotAllowedError') {
+                  toast.error("Could not play notification sound.", {
+                    description: "Browser security may have blocked it. Please click anywhere on the page to enable sound for notifications.",
+                    duration: 10000,
+                  });
+                } else {
+                  toast.error("An error occurred while trying to play the notification sound.");
+                }
               }
             }
           }

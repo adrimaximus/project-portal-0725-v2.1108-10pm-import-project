@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import ProtectedRouteLayout from "./components/ProtectedRouteLayout";
 import LandingPage from "./pages/LandingPage";
@@ -43,6 +44,33 @@ import TermsOfServicePage from "./pages/TermsOfServicePage";
 import NotFound from "./pages/NotFound";
 
 function App() {
+  useEffect(() => {
+    const unlockAudio = () => {
+      // Create a silent audio element to unlock audio context
+      const sound = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+      sound.volume = 0;
+      sound.play().catch(() => {
+        // Autoplay was prevented, but this is expected and fine.
+        // The user interaction gesture is now "consumed" by the browser for audio.
+      });
+      
+      // Remove the event listener after the first interaction
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
+
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('keydown', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio); // For mobile
+
+    return () => {
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
+  }, []);
+
   return (
     <Routes>
       {/* Public routes */}
