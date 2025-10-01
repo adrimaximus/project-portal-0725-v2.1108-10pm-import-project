@@ -9,6 +9,7 @@ const NOTIFICATIONS_PER_PAGE = 20;
 
 const fetchNotifications = async (pageParam: number = 0): Promise<Notification[]> => {
   const from = pageParam * NOTIFICATIONS_PER_PAGE;
+
   const { data, error } = await supabase
     .rpc('get_user_notifications', { p_limit: NOTIFICATIONS_PER_PAGE, p_offset: from });
 
@@ -69,25 +70,11 @@ export const useNotifications = () => {
         },
         async (payload) => {
           const newNotificationId = payload.new.notification_id;
-          const { data: notification } = await supabase.from('notifications').select('title, body, type, actor_id').eq('id', newNotificationId).single();
-          
-          if (notification && notification.actor_id !== user.id) {
-            toast.info(notification.title, {
-              description: notification.body,
+          const { data } = await supabase.from('notifications').select('title, body').eq('id', newNotificationId).single();
+          if (data) {
+            toast.info(data.title, {
+              description: data.body,
             });
-
-            // Play sound based on preferences
-            const preferences = user.notification_preferences;
-            if (preferences && preferences[notification.type]) {
-              const setting = preferences[notification.type];
-              if (setting.enabled && setting.sound && setting.sound !== 'None') {
-                const { data: urlData } = supabase.storage.from('General').getPublicUrl(`Notification/${setting.sound}`);
-                if (urlData.publicUrl) {
-                  const audio = new Audio(urlData.publicUrl);
-                  audio.play().catch(e => console.error("Error playing notification sound:", e));
-                }
-              }
-            }
           }
           queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
         }
