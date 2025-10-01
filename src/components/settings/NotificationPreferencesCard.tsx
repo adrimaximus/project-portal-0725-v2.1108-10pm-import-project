@@ -33,12 +33,12 @@ const NotificationPreferencesCard = () => {
       if (error) {
         console.error("Error fetching notification sounds:", error);
         toast.error("Could not load notification sounds.");
-        setNotificationSounds(['Default', 'None']);
+        setNotificationSounds(['None']);
       } else {
         const soundFiles = data
           .filter(file => file.name !== '.emptyFolderPlaceholder' && (file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.ogg')))
           .map(file => file.name);
-        setNotificationSounds(['Default', 'None', ...soundFiles]);
+        setNotificationSounds(['None', ...soundFiles]);
       }
     };
     fetchSounds();
@@ -64,13 +64,13 @@ const NotificationPreferencesCard = () => {
             const savedPref = savedPrefs[type.id];
             if (typeof savedPref === 'boolean') {
               // Migrate from old format
-              newPrefs[type.id] = { enabled: savedPref, sound: 'Default' };
+              newPrefs[type.id] = { enabled: savedPref, sound: 'None' };
             } else if (savedPref && typeof savedPref === 'object') {
-              // Use new format
-              newPrefs[type.id] = { enabled: savedPref.enabled !== false, sound: savedPref.sound || 'Default' };
+              // Use new format, mapping 'Default' to 'None' for legacy users
+              newPrefs[type.id] = { enabled: savedPref.enabled !== false, sound: savedPref.sound === 'Default' ? 'None' : (savedPref.sound || 'None') };
             } else {
               // Default value
-              newPrefs[type.id] = { enabled: true, sound: 'Default' };
+              newPrefs[type.id] = { enabled: true, sound: 'None' };
             }
           });
           setPreferences(newPrefs);
@@ -82,7 +82,7 @@ const NotificationPreferencesCard = () => {
   }, [user?.id]);
 
   const playSound = (soundFile: string) => {
-    if (soundFile === 'Default' || soundFile === 'None' || !soundFile) return;
+    if (soundFile === 'None' || !soundFile) return;
     const { data } = supabase.storage.from('General').getPublicUrl(`Notification/${soundFile}`);
     if (data.publicUrl) {
       const audio = new Audio(data.publicUrl);
@@ -94,7 +94,7 @@ const NotificationPreferencesCard = () => {
     if (!user) return;
 
     const oldPreferences = { ...preferences };
-    const currentSetting = preferences[typeId] || { enabled: true, sound: 'Default' };
+    const currentSetting = preferences[typeId] || { enabled: true, sound: 'None' };
     const updatedSetting = { ...currentSetting, ...newSetting };
     
     const newPreferences = { ...preferences, [typeId]: updatedSetting };
@@ -146,7 +146,7 @@ const NotificationPreferencesCard = () => {
             </div>
             <div className="flex items-center space-x-4">
               <Select
-                value={preferences[type.id]?.sound || 'Default'}
+                value={preferences[type.id]?.sound || 'None'}
                 onValueChange={(sound) => handlePreferenceChange(type.id, { sound })}
                 disabled={!preferences[type.id]?.enabled}
               >
