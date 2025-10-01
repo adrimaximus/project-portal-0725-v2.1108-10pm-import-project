@@ -1,3 +1,4 @@
+// @ts-nocheck
 /// <reference types="https://unpkg.com/@supabase/functions-js@2/src/edge-runtime.d.ts" />
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
@@ -48,6 +49,25 @@ serve(async (req) => {
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token,
       expiry_date: tokenData.expiry_date ? new Date(tokenData.expiry_date).getTime() : null,
+    });
+
+    oauth2Client.on('tokens', async (tokens) => {
+      if (tokens.refresh_token) {
+        console.log("New refresh token received for user:", user.id);
+      }
+      console.log("Access token refreshed for user:", user.id);
+      
+      const { error } = await supabaseAdmin.from('google_calendar_tokens').upsert({
+        user_id: user.id,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token || tokenData.refresh_token,
+        expiry_date: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
+        scope: tokens.scope,
+      });
+
+      if (error) {
+        console.error("Error saving refreshed tokens:", error);
+      }
     });
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
