@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatInJakarta, cn, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { CheckCircle } from 'lucide-react';
+import { isSameDay, subDays } from 'date-fns';
 
 const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened: React.MutableRefObject<boolean> }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
@@ -34,11 +35,17 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
     const startDate = new Date(start_date);
     const dueDate = due_date ? new Date(due_date) : startDate;
 
-    const isSameDay = startDate.getFullYear() === dueDate.getFullYear() &&
-                      startDate.getMonth() === dueDate.getMonth() &&
-                      startDate.getDate() === dueDate.getDate();
+    const isExclusiveEndDate = 
+      due_date &&
+      dueDate.getUTCHours() === 0 &&
+      dueDate.getUTCMinutes() === 0 &&
+      dueDate.getUTCSeconds() === 0 &&
+      dueDate.getUTCMilliseconds() === 0 &&
+      !isSameDay(startDate, dueDate);
 
-    if (isSameDay) {
+    const adjustedDueDate = isExclusiveEndDate ? subDays(dueDate, 1) : dueDate;
+
+    if (isSameDay(startDate, adjustedDueDate)) {
       return (
         <Badge variant="outline" className="text-xs font-normal">
           {formatInJakarta(start_date, 'd MMM')}
@@ -47,19 +54,19 @@ const KanbanCard = ({ project, dragHappened }: { project: Project, dragHappened:
     }
 
     const startMonth = formatInJakarta(start_date, 'MMM');
-    const endMonth = formatInJakarta(due_date, 'MMM');
+    const endMonth = formatInJakarta(adjustedDueDate, 'MMM');
 
     if (startMonth === endMonth) {
       return (
         <Badge variant="outline" className="text-xs font-normal">
-          {`${formatInJakarta(start_date, 'd')}-${formatInJakarta(due_date, 'd')} ${startMonth}`}
+          {`${formatInJakarta(start_date, 'd')}-${formatInJakarta(adjustedDueDate, 'd')} ${startMonth}`}
         </Badge>
       );
     }
 
     return (
       <Badge variant="outline" className="text-xs font-normal">
-        {`${formatInJakarta(start_date, 'd MMM')} - ${formatInJakarta(due_date, 'd MMM')}`}
+        {`${formatInJakarta(start_date, 'd MMM')} - ${formatInJakarta(adjustedDueDate, 'd MMM')}`}
       </Badge>
     );
   };

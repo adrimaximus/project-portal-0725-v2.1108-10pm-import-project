@@ -47,11 +47,12 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
 
   // An exclusive end date (e.g., from Google Calendar for an all-day event) is stored as the next day at midnight UTC.
   const isExclusiveEndDate = 
+    dueDateStr &&
     dueDate.getUTCHours() === 0 &&
     dueDate.getUTCMinutes() === 0 &&
     dueDate.getUTCSeconds() === 0 &&
     dueDate.getUTCMilliseconds() === 0;
-
+  
   const zonedStartDate = toZonedTime(startDate, timeZone);
   const zonedDueDateCheck = toZonedTime(dueDate, timeZone);
 

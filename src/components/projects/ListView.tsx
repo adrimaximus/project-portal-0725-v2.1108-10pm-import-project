@@ -127,7 +127,8 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                       dueDate.getUTCHours() === 0 &&
                       dueDate.getUTCMinutes() === 0 &&
                       dueDate.getUTCSeconds() === 0 &&
-                      dueDate.getUTCMilliseconds() === 0;
+                      dueDate.getUTCMilliseconds() === 0 &&
+                      !isSameDay(startDate, dueDate);
 
                     const adjustedDueDate = isExclusiveEndDate ? subDays(dueDate, 1) : dueDate;
                     

@@ -3,11 +3,12 @@ import { DndContext, MouseSensor, TouchSensor, useSensor, useSensors, DragOverla
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatInJakarta, generatePastelColor } from '@/lib/utils';
+import { formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { CheckCircle } from 'lucide-react';
 import KanbanColumn from './KanbanColumn';
 import { useKanbanDnd } from '@/hooks/useKanbanDnd';
+import { isSameDay, subDays } from 'date-fns';
 
 const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'status' | 'payment_status' }) => {
   const sensors = useSensors(
@@ -84,13 +85,23 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     const { start_date, due_date } = project;
     if (!start_date) return null;
     const startDate = new Date(start_date);
-    const dueDate = due_date ? new Date(due_date) : startDate;
-    const isSameDay = startDate.getFullYear() === dueDate.getFullYear() && startDate.getMonth() === dueDate.getMonth() && startDate.getDate() === dueDate.getDate();
-    if (isSameDay) return <Badge variant="outline" className="text-xs font-normal">{formatInJakarta(start_date, 'd MMM')}</Badge>;
+    let dueDate = due_date ? new Date(due_date) : startDate;
+
+    const isExclusiveEndDate = 
+      due_date &&
+      dueDate.getUTCHours() === 0 &&
+      dueDate.getUTCMinutes() === 0 &&
+      dueDate.getUTCSeconds() === 0 &&
+      dueDate.getUTCMilliseconds() === 0 &&
+      !isSameDay(startDate, dueDate);
+
+    const adjustedDueDate = isExclusiveEndDate ? subDays(dueDate, 1) : dueDate;
+
+    if (isSameDay(startDate, adjustedDueDate)) return <Badge variant="outline" className="text-xs font-normal">{formatInJakarta(start_date, 'd MMM')}</Badge>;
     const startMonth = formatInJakarta(start_date, 'MMM');
-    const endMonth = formatInJakarta(due_date, 'MMM');
-    if (startMonth === endMonth) return <Badge variant="outline" className="text-xs font-normal">{`${formatInJakarta(start_date, 'd')}-${formatInJakarta(due_date, 'd')} ${startMonth}`}</Badge>;
-    return <Badge variant="outline" className="text-xs font-normal">{`${formatInJakarta(start_date, 'd MMM')} - ${formatInJakarta(due_date, 'd MMM')}`}</Badge>;
+    const endMonth = formatInJakarta(adjustedDueDate, 'MMM');
+    if (startMonth === endMonth) return <Badge variant="outline" className="text-xs font-normal">{`${formatInJakarta(start_date, 'd')}-${formatInJakarta(adjustedDueDate, 'd')} ${startMonth}`}</Badge>;
+    return <Badge variant="outline" className="text-xs font-normal">{`${formatInJakarta(start_date, 'd MMM')} - ${formatInJakarta(adjustedDueDate, 'd MMM')}`}</Badge>;
   };
 
   return (
