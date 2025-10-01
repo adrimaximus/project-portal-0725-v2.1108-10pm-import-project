@@ -1,4 +1,5 @@
-/// <reference types="https://esm.sh/@supabase/functions-js@2.4.1/src/edge-runtime.d.ts" />
+// @ts-nocheck
+/// <reference types="https://unpkg.com/@supabase/functions-js@2/src/edge-runtime.d.ts" />
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -7,11 +8,19 @@ import { google } from "npm:googleapis";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
 };
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
+  }
+
+  if (req.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { 
+        status: 405, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 
   try {
@@ -35,7 +44,9 @@ serve(async (req) => {
       .select('access_token, refresh_token, expiry_date')
       .eq('user_id', user.id)
       .single();
-    if (tokenError || !tokenData) throw new Error("Google Calendar not connected.");
+    if (tokenError || !tokenData) {
+      throw new Error("Google Calendar not connected or token not found.");
+    }
 
     // 2. Get user's selected calendars
     const { data: profile, error: profileError } = await supabaseAdmin

@@ -20,7 +20,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
   const { data: events = [], isLoading, error } = useQuery<any[]>({
     queryKey: ['googleCalendarEvents'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('get-google-calendar-events');
+      const { data, error } = await supabase.functions.invoke('get-google-calendar-events', { method: 'GET' });
       if (error) throw new Error(error.message);
       return data;
     },
