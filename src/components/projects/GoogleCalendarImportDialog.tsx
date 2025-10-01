@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -30,12 +30,26 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
 
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
 
+  useEffect(() => {
+    if (!open) {
+      setSelectedEvents([]);
+    }
+  }, [open]);
+
   const handleSelectEvent = (eventId: string) => {
     setSelectedEvents(prev =>
       prev.includes(eventId)
         ? prev.filter(id => id !== eventId)
         : [...prev, eventId]
     );
+  };
+
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setSelectedEvents(events.map(e => e.id));
+    } else {
+      setSelectedEvents([]);
+    }
   };
 
   const handleImport = () => {
@@ -65,6 +79,9 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     return `${format(startDate, "d MMM, HH:mm")} - ${format(endDate, "d MMM, HH:mm")}`;
   };
 
+  const allSelected = events.length > 0 && selectedEvents.length === events.length;
+  const someSelected = selectedEvents.length > 0 && !allSelected;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[625px]">
@@ -85,23 +102,35 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
             <div className="text-center p-4 text-muted-foreground">No upcoming events found to import.</div>
           )}
           {!isLoading && !error && events.length > 0 && (
-            <ScrollArea className="h-full border rounded-md">
-              <div className="p-4 space-y-2">
-                {events.map(event => (
-                  <div key={event.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
-                    <Checkbox
-                      id={event.id}
-                      checked={selectedEvents.includes(event.id)}
-                      onCheckedChange={() => handleSelectEvent(event.id)}
-                    />
-                    <label htmlFor={event.id} className="flex-grow cursor-pointer">
-                      <p className="font-medium">{event.summary || "No Title"}</p>
-                      <p className="text-sm text-muted-foreground">{formatEventDate(event)}</p>
-                    </label>
-                  </div>
-                ))}
+            <div className="h-full flex flex-col border rounded-md">
+              <div className="flex items-center space-x-3 p-3 border-b bg-muted/50 flex-shrink-0">
+                <Checkbox
+                  id="select-all"
+                  checked={allSelected || (someSelected ? 'indeterminate' : false)}
+                  onCheckedChange={handleSelectAll}
+                />
+                <label htmlFor="select-all" className="text-sm font-medium leading-none cursor-pointer">
+                  Select All ({selectedEvents.length} / {events.length})
+                </label>
               </div>
-            </ScrollArea>
+              <ScrollArea className="flex-grow">
+                <div className="p-4 space-y-2">
+                  {events.map(event => (
+                    <div key={event.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+                      <Checkbox
+                        id={event.id}
+                        checked={selectedEvents.includes(event.id)}
+                        onCheckedChange={() => handleSelectEvent(event.id)}
+                      />
+                      <label htmlFor={event.id} className="flex-grow cursor-pointer">
+                        <p className="font-medium">{event.summary || "No Title"}</p>
+                        <p className="text-sm text-muted-foreground">{formatEventDate(event)}</p>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
           )}
         </div>
         <DialogFooter>
