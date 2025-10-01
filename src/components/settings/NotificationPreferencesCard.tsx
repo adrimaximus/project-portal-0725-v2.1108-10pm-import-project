@@ -29,16 +29,14 @@ const NotificationPreferencesCard = () => {
 
   useEffect(() => {
     const fetchSounds = async () => {
-      const { data, error } = await supabase.storage.from('General').list('Notification');
-      if (error) {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-notification-sounds');
+        if (error) throw error;
+        setNotificationSounds(['None', ...data]);
+      } catch (error: any) {
         console.error("Error fetching notification sounds:", error);
         toast.error("Could not load notification sounds.");
         setNotificationSounds(['None']);
-      } else {
-        const soundFiles = data
-          .filter(file => file.name !== '.emptyFolderPlaceholder' && (file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.ogg')))
-          .map(file => file.name);
-        setNotificationSounds(['None', ...soundFiles]);
       }
     };
     fetchSounds();
