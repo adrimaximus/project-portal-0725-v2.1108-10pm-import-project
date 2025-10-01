@@ -2,6 +2,7 @@ import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingScreen from "./LoadingScreen";
 import Sidebar from "./Sidebar";
+import { Toaster } from "@/components/ui/sonner";
 
 const ProtectedRouteLayout = () => {
   const { session, user, loading } = useAuth();
@@ -28,6 +29,7 @@ const ProtectedRouteLayout = () => {
           <Outlet />
         </div>
       </main>
+      <Toaster position="bottom-right" />
     </div>
   );
 };
