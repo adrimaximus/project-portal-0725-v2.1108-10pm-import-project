@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Volume2 } from "lucide-react";
+import { playNotificationSound } from "@/utils/playSound";
 
 const notificationTypes = [
   { id: 'project_update', label: 'Project Updates', description: 'When you are added to a project, a task is assigned to you, or a project you are in is updated.' },
@@ -79,15 +80,6 @@ const NotificationPreferencesCard = () => {
     }
   }, [user?.id]);
 
-  const playSound = (soundFile: string) => {
-    if (soundFile === 'None' || !soundFile) return;
-    const { data } = supabase.storage.from('General').getPublicUrl(`Notification/${soundFile}`);
-    if (data.publicUrl) {
-      const audio = new Audio(data.publicUrl);
-      audio.play().catch(e => console.error("Error playing audio:", e));
-    }
-  };
-
   const handlePreferenceChange = async (typeId: string, newSetting: Partial<NotificationSetting>) => {
     if (!user) return;
 
@@ -109,7 +101,7 @@ const NotificationPreferencesCard = () => {
     } else {
       toast.success("Notification setting updated.");
       if (newSetting.sound && updatedSetting.enabled) {
-        playSound(newSetting.sound);
+        playNotificationSound(newSetting.sound);
       }
       refreshUser();
     }

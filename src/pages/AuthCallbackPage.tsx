@@ -1,25 +1,28 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import LoadingScreen from '@/components/LoadingScreen';
+import { Loader2 } from 'lucide-react';
 
 const AuthCallbackPage = () => {
-  const { session, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading) {
-      if (session) {
-        navigate('/dashboard', { replace: true });
+    if (!isLoading) {
+      if (user) {
+        navigate('/dashboard');
       } else {
-        // If no session after loading, something went wrong
-        // Go back to login page
-        navigate('/login', { replace: true });
+        navigate('/login');
       }
     }
-  }, [session, loading, navigate]);
+  }, [user, isLoading, navigate]);
 
-  return <LoadingScreen />;
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin" />
+      <p className="ml-4">Finalizing authentication...</p>
+    </div>
+  );
 };
 
 export default AuthCallbackPage;
