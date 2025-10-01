@@ -39,7 +39,7 @@ export const getInitials = (name?: string | null, email?: string | null): string
 };
 
 export const getAvatarUrl = (avatarUrl: string | null | undefined, userId: string): string => {
-  if (avatarUrl && avatarUrl.startsWith('http')) {
+  if (typeof avatarUrl === 'string' && avatarUrl.startsWith('http')) {
     return avatarUrl;
   }
   return `https://api.dicebear.com/8.x/micah/svg?seed=${userId}`;
