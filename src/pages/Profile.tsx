@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
 import { useQueryClient } from "@tanstack/react-query";
+import AvatarCropper from "@/components/settings/AvatarCropper";
 
 const Profile = () => {
   const { user, refreshUser, logout } = useAuth();
@@ -27,6 +28,7 @@ const Profile = () => {
   const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -39,7 +41,7 @@ const Profile = () => {
     return <PortalLayout><div>Loading...</div></PortalLayout>;
   }
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -48,9 +50,23 @@ const Profile = () => {
         return;
     }
 
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+        setImageToCrop(reader.result as string);
+    });
+    reader.readAsDataURL(file);
+    
+    // Reset file input value to allow re-selecting the same file
+    event.target.value = '';
+  };
+
+  const handleAvatarUpload = async (imageBlob: Blob) => {
+    setImageToCrop(null);
+    if (!imageBlob) return;
+
     setIsUploading(true);
     try {
-        const fileExt = file.name.split('.').pop();
+        const fileExt = 'png';
         const filePath = `${user.id}/${Date.now()}.${fileExt}`;
 
         if (user.avatar_url && !user.avatar_url.includes('dicebear.com')) {
@@ -66,7 +82,7 @@ const Profile = () => {
 
         const { error: uploadError } = await supabase.storage
             .from('avatars')
-            .upload(filePath, file);
+            .upload(filePath, imageBlob, { contentType: 'image/png', upsert: true });
 
         if (uploadError) throw uploadError;
 
@@ -184,8 +200,8 @@ const Profile = () => {
             <div className="flex items-center space-x-4">
               <div className="relative group">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
-                  <AvatarFallback style={generatePastelColor(user.id)}>{user.initials || 'U'}</AvatarFallback>
+                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.first_name || ''} />
+                  <AvatarFallback style={generatePastelColor(user.id)}>{getInitials(user.first_name, user.email)}</AvatarFallback>
                 </Avatar>
                 <label 
                     htmlFor="avatar-upload" 
@@ -201,7 +217,7 @@ const Profile = () => {
                         type="file" 
                         className="hidden" 
                         accept="image/png, image/jpeg, image/gif"
-                        onChange={handleAvatarUpload}
+                        onChange={handleFileSelect}
                         disabled={isUploading}
                     />
                 </label>
@@ -275,6 +291,13 @@ const Profile = () => {
           </CardContent>
         </Card>
       </div>
+      {imageToCrop && (
+        <AvatarCropper
+          imageSrc={imageToCrop}
+          onCropComplete={handleAvatarUpload}
+          onClose={() => setImageToCrop(null)}
+        />
+      )}
     </PortalLayout>
   );
 };

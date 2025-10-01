@@ -94,6 +94,7 @@
     "react-google-places-autocomplete": "^4.1.0",
     "react-hook-form": "^7.53.0",
     "react-hot-toast": "^2.6.0",
+    "react-image-crop": "^11.0.10",
     "react-markdown": "^10.1.0",
     "react-mentions": "^4.4.10",
     "react-quill": "^2.0.0",
