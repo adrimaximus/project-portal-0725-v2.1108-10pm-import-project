@@ -356,24 +356,10 @@ const ProjectsPage = () => {
                     </Button>
                   )}
                   {isGCalConnected ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Options</span>
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setIsImportDialogOpen(true)}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Import from Calendar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleRefresh}>
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          Refresh List
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => setIsImportDialogOpen(true)}>
+                        <span className="sr-only">Import from Calendar</span>
+                        <Download className="h-4 w-4" />
+                    </Button>
                   ) : (
                     <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
                         <span className="sr-only">Refresh data</span>
@@ -395,24 +381,10 @@ const ProjectsPage = () => {
                   </Button>
                 )}
                 {isGCalConnected ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Options</span>
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setIsImportDialogOpen(true)}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Import from Calendar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleRefresh}>
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          Refresh List
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => setIsImportDialogOpen(true)}>
+                        <span className="sr-only">Import from Calendar</span>
+                        <Download className="h-4 w-4" />
+                    </Button>
                   ) : (
                     <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
                         <span className="sr-only">Refresh data</span>
