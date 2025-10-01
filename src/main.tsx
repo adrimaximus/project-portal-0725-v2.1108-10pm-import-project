@@ -1,6 +1,5 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
@@ -44,26 +43,24 @@ window.addEventListener('error', (event) => {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <FeaturesProvider>
-            <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-              <ConfigProvider
-                theme={{
-                  token: {
-                    colorPrimary: '#1E293B', // slate-800
-                    colorInfo: '#1E293B',
-                  },
-                }}
-              >
-                <App />
-              </ConfigProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <FeaturesProvider>
+          <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+            <ConfigProvider
+              theme={{
+                token: {
+                  colorPrimary: '#1E293B', // slate-800
+                  colorInfo: '#1E293B',
+                },
+              }}
+            >
+              <App />
               <Toaster />
-            </ThemeProvider>
-          </FeaturesProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
+            </ConfigProvider>
+          </ThemeProvider>
+        </FeaturesProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   </React.StrictMode>,
 )
