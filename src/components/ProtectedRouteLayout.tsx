@@ -30,7 +30,6 @@ const ProtectedRouteLayout = () => {
           return hasPermission(permission);
         });
 
-        // Use the RPC function to fetch all navigation items for the user
         const { data: allUserItemsData, error: fetchError } = await supabase
           .rpc('get_user_navigation_items');
 
@@ -40,19 +39,24 @@ const ProtectedRouteLayout = () => {
         }
         const allUserItems = allUserItemsData as DbNavItem[];
         
-        // Filter for the non-deletable (default) items on the client side
-        const existingItems = allUserItems.filter(item => item.is_deletable === false);
+        const existingDefaultItems = allUserItems.filter(item => item.is_deletable === false);
 
-        const existingItemsMap = new Map(existingItems.map(item => [item.name, item]));
+        const existingItemsMap = new Map(existingDefaultItems.map(item => [item.name, item]));
         const permittedItemsMap = new Map(permittedDefaultItems.map(item => [item.name, item]));
 
         const itemsToUpsert: any[] = [];
         const idsToDelete: string[] = [];
 
+        // Check what should exist based on permissions
         for (const permittedItem of permittedDefaultItems) {
           const existing = existingItemsMap.get(permittedItem.name);
           const position = defaultNavItems.findIndex(i => i.name === permittedItem.name);
+          
+          const updates: any = {};
+          let needsUpdate = false;
+
           if (!existing) {
+            // Add item if it's permitted but doesn't exist
             itemsToUpsert.push({
               user_id: user.id,
               name: permittedItem.name,
@@ -66,18 +70,20 @@ const ProtectedRouteLayout = () => {
               folder_id: null,
             });
           } else {
-            const updates: any = {};
+            // Check for updates on existing items
             if (existing.url !== permittedItem.url) updates.url = permittedItem.url;
             if (existing.icon !== permittedItem.icon) updates.icon = permittedItem.icon;
             if (existing.position !== position) updates.position = position;
-            
+            if (!existing.is_enabled) updates.is_enabled = true; // Re-enable if permissions are back
+
             if (Object.keys(updates).length > 0) {
               itemsToUpsert.push({ id: existing.id, ...updates });
             }
           }
         }
 
-        for (const existingItem of existingItems) {
+        // Check what should be removed
+        for (const existingItem of existingDefaultItems) {
           if (!permittedItemsMap.has(existingItem.name)) {
             idsToDelete.push(existingItem.id);
           }
