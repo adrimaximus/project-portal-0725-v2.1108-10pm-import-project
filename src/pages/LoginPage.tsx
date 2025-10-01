@@ -269,14 +269,7 @@ const LoginPage = () => {
               </TabsContent>
             </Tabs>
             
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-700" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-black/50 px-2 text-gray-400 backdrop-blur-md">Or continue with</span>
-              </div>
-            </div>
+            <div className="my-6"></div>
 
             <Button variant="outline" className="w-full h-12 text-base bg-transparent border-gray-700 text-white hover:bg-gray-800/50 hover:text-white" onClick={handleGoogleLogin} disabled={googleLoading}>
               {googleLoading ? (
