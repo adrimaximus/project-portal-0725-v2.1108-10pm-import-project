@@ -47,23 +47,8 @@ const ProtectedRouteLayout = () => {
           const position = defaultNavItems.findIndex(i => i.name === permittedItem.name);
           
           const updates: any = {};
-          let needsUpdate = false;
 
-          if (!existing) {
-            // Add item if it's permitted but doesn't exist
-            itemsToUpsert.push({
-              user_id: user.id,
-              name: permittedItem.name,
-              url: permittedItem.url,
-              icon: permittedItem.icon,
-              position,
-              is_enabled: true,
-              is_deletable: false,
-              is_editable: false,
-              type: 'url_embed' as const,
-              folder_id: null,
-            });
-          } else {
+          if (existing) {
             // Check for updates on existing items
             if (existing.url !== permittedItem.url) updates.url = permittedItem.url;
             if (existing.icon !== permittedItem.icon) updates.icon = permittedItem.icon;

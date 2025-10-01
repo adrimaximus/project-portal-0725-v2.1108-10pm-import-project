@@ -54,6 +54,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const fetchUserProfile = useCallback(async (session: Session | null) => {
     if (session?.user) {
       try {
+        // Backfill navigation items for existing users who might be missing them
+        await supabase.rpc('ensure_user_navigation_items', { p_user_id: session.user.id });
+
         const { data, error } = await supabase
           .rpc('get_user_profile_with_permissions', { p_user_id: session.user.id });
 
