@@ -45,19 +45,18 @@ const formatProjectDateRange = (startDateStr: string | null | undefined, dueDate
   const startDate = new Date(startDateStr);
   let dueDate = dueDateStr ? new Date(dueDateStr) : startDate;
 
+  // An exclusive end date (e.g., from Google Calendar for an all-day event) is stored as the next day at midnight UTC.
+  const isExclusiveEndDate = 
+    dueDate.getUTCHours() === 0 &&
+    dueDate.getUTCMinutes() === 0 &&
+    dueDate.getUTCSeconds() === 0 &&
+    dueDate.getUTCMilliseconds() === 0;
+
   const zonedStartDate = toZonedTime(startDate, timeZone);
   const zonedDueDateCheck = toZonedTime(dueDate, timeZone);
 
-  // If the due date is exactly at midnight in Jakarta, it's likely an exclusive end date.
-  // We subtract one day to make it inclusive for display.
-  // This handles cases like "22-23 Nov" being stored with an end date of "24 Nov 00:00".
-  if (
-    !isSameDay(zonedStartDate, zonedDueDateCheck) &&
-    zonedDueDateCheck.getHours() === 0 &&
-    zonedDueDateCheck.getMinutes() === 0 &&
-    zonedDueDateCheck.getSeconds() === 0 &&
-    zonedDueDateCheck.getMilliseconds() === 0
-  ) {
+  // If it's an exclusive end date and it's not the same day as the start date, subtract one day for display.
+  if (isExclusiveEndDate && !isSameDay(zonedStartDate, zonedDueDateCheck)) {
     dueDate = subDays(dueDate, 1);
   }
 
