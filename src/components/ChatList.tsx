@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, MessageSquarePlus, MoreHorizontal, Trash2, Sparkles } from "lucide-react";
 import NewConversationDialog from "./NewConversationDialog";
-import { cn, getInitials, generatePastelColor } from "@/lib/utils";
+import { cn, getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
@@ -85,6 +85,9 @@ const ChatList = () => {
         </div>
         {conversations.map((c) => {
           const otherUser = !c.isGroup ? c.members?.find(m => m.id !== currentUser?.id) : null;
+          const avatarSeed = otherUser?.id || c.id;
+          const finalAvatarUrl = getAvatarUrl(c.userAvatar, avatarSeed, c.isGroup);
+
           return (
             <div
               key={c.id}
@@ -98,7 +101,7 @@ const ChatList = () => {
                 onClick={() => selectConversation(c.id)}
               >
                 <Avatar>
-                  <AvatarImage src={c.userAvatar} />
+                  <AvatarImage src={finalAvatarUrl} />
                   <AvatarFallback style={generatePastelColor(otherUser?.id || c.id)}>{getInitials(c.userName)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden">

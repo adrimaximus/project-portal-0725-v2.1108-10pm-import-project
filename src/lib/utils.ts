@@ -38,11 +38,16 @@ export const getInitials = (name?: string | null, email?: string | null): string
   return 'NN';
 };
 
-export const getAvatarUrl = (avatarUrl: string | null | undefined, userId: string): string => {
+export const getAvatarUrl = (
+  avatarUrl: string | null | undefined,
+  seed: string,
+  isGroup: boolean = false
+): string => {
   if (typeof avatarUrl === 'string' && avatarUrl.startsWith('http')) {
     return avatarUrl;
   }
-  return `https://api.dicebear.com/8.x/micah/svg?seed=${userId}`;
+  const style = isGroup ? 'bottts' : 'micah';
+  return `https://api.dicebear.com/8.x/${style}/svg?seed=${seed}`;
 };
 
 export const generatePastelColor = (str: string): { backgroundColor: string, color: string } => {
