@@ -10,7 +10,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Loader2, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import { generatePastelColor, getAvatarUrl, getInitials } from "@/lib/utils";
 import NotificationPreferencesCard from "@/components/settings/NotificationPreferencesCard";
 import { useQueryClient } from "@tanstack/react-query";
 import AvatarCropper from "@/components/settings/AvatarCropper";
