@@ -1,7 +1,10 @@
-/// <reference types="https://esm.sh/@supabase/functions-js@2.4.1/src/edge-runtime.d.ts" />
+// @ts-nocheck
+/// <reference types="https://unpkg.com/@supabase/functions-js@2/src/edge-runtime.d.ts" />
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { subDays, endOfDay } from 'npm:date-fns';
+import { zonedTimeToUtc } from 'npm:date-fns-tz';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,33 +27,56 @@ serve(async (req) => {
     if (!user) throw new Error("Unauthorized");
 
     const { eventsToImport } = await req.json();
-    if (!Array.isArray(eventsToImport) || eventsToImport.length === 0) {
-      throw new Error("No events to import provided.");
+    if (!eventsToImport || !Array.isArray(eventsToImport)) {
+      throw new Error("Invalid request body: eventsToImport is required and must be an array.");
     }
 
-    const projectsToInsert = eventsToImport.map(event => ({
-      name: event.summary || 'Untitled Event',
-      description: event.description,
-      start_date: event.start?.dateTime || event.start?.date,
-      due_date: event.end?.dateTime || event.end?.date,
-      venue: event.location,
-      origin_event_id: event.id,
-      created_by: user.id,
-      status: 'Not Started',
-      payment_status: 'Unpaid',
-      category: 'Event',
-    }));
+    const timeZone = 'Asia/Jakarta';
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const newProjects = eventsToImport.map(event => {
+      const { summary, description, start, end, id: origin_event_id, location } = event;
 
-    const { error } = await supabaseAdmin.from('projects').insert(projectsToInsert);
+      let startDate, dueDate;
 
-    if (error) throw error;
+      if (start.date) { // All-day event
+        const startDateObj = zonedTimeToUtc(`${start.date}T00:00:00`, timeZone);
+        
+        const endDateExclusive = new Date(end.date);
+        const endDateInclusive = subDays(endDateExclusive, 1);
+        
+        const dueDateObj = zonedTimeToUtc(endOfDay(endDateInclusive), timeZone);
 
-    return new Response(JSON.stringify({ success: true, count: projectsToInsert.length }), {
+        startDate = startDateObj.toISOString();
+        dueDate = dueDateObj.toISOString();
+      } else { // Timed event
+        startDate = new Date(start.dateTime).toISOString();
+        dueDate = new Date(end.dateTime).toISOString();
+      }
+
+      return {
+        name: summary || 'Untitled Event',
+        description: description,
+        start_date: startDate,
+        due_date: dueDate,
+        origin_event_id: origin_event_id,
+        venue: location,
+        created_by: user.id,
+        status: 'On Track',
+        payment_status: 'Unpaid',
+        category: 'Event',
+      };
+    });
+
+    if (newProjects.length > 0) {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      const { error } = await supabaseAdmin.from('projects').insert(newProjects);
+      if (error) throw error;
+    }
+
+    return new Response(JSON.stringify({ success: true, count: newProjects.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 

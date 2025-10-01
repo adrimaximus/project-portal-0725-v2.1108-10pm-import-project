@@ -6,8 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format } from "date-fns";
+import { format as formatFns, subDays, isEqual } from "date-fns";
+import { utcToZonedTime } from 'date-fns-tz';
 import { Badge } from "@/components/ui/badge";
+import { formatInJakarta } from "@/lib/utils";
 
 interface GoogleCalendarImportDialogProps {
   open: boolean;
@@ -62,21 +64,30 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const end = event.end?.dateTime || event.end?.date;
     if (!start) return "Date not specified";
     
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-
     if (event.start?.date) { // All-day event
-        if (format(startDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
-            return format(startDate, "d MMM yyyy");
-        }
-        return `${format(startDate, "d MMM")} - ${format(endDate, "d MMM yyyy")}`;
+      const startDate = new Date(start);
+      // Google Calendar's end date for all-day events is exclusive, so we subtract a day.
+      const inclusiveEndDate = subDays(new Date(end), 1);
+
+      // Format as UTC to avoid timezone shifts on display for date-only values
+      const formatInUTC = (date: Date, formatStr: string) => {
+        const utcDate = utcToZonedTime(date, 'UTC');
+        return formatFns(utcDate, formatStr, { timeZone: 'UTC' });
+      }
+
+      if (isEqual(startDate, inclusiveEndDate)) {
+          return formatInUTC(startDate, "d MMM yyyy");
+      }
+      
+      return `${formatInUTC(startDate, "d MMM")} - ${formatInUTC(inclusiveEndDate, "d MMM yyyy")}`;
     }
 
-    if (format(startDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
-        return `${format(startDate, "d MMM yyyy, HH:mm")} - ${format(endDate, "HH:mm")}`;
+    // Timed event
+    if (formatInJakarta(start, 'yyyy-MM-dd') === formatInJakarta(end, 'yyyy-MM-dd')) {
+        return `${formatInJakarta(start, "d MMM yyyy, HH:mm")} - ${formatInJakarta(end, "HH:mm")}`;
     }
     
-    return `${format(startDate, "d MMM, HH:mm")} - ${format(endDate, "d MMM, HH:mm")}`;
+    return `${formatInJakarta(start, "d MMM, HH:mm")} - ${formatInJakarta(end, "d MMM, HH:mm")}`;
   };
 
   const allSelected = events.length > 0 && selectedEvents.length === events.length;

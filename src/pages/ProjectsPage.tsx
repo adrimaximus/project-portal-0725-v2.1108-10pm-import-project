@@ -33,7 +33,6 @@ import { Input } from "@/components/ui/input";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { GoogleCalendarImportDialog } from "@/components/projects/GoogleCalendarImportDialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
@@ -157,7 +156,7 @@ const ProjectsPage = () => {
 
   useEffect(() => {
     if (view === 'table' && !initialTableScrollDone.current && sortedProjects.length > 0) {
-      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      const todayStr = formatInJakarta(new Date(), 'yyyy-MM-dd');
       let targetProject = sortedProjects.find(p => p.start_date && formatInJakarta(p.start_date, 'yyyy-MM-dd') >= todayStr);
       if (!targetProject && sortedProjects.length > 0) {
         targetProject = sortedProjects[sortedProjects.length - 1];
