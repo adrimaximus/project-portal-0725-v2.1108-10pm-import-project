@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -50,6 +50,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [onlineCollaborators, setOnlineCollaborators] = useState<any[]>([]);
   const [isImpersonating, setIsImpersonating] = useState(false);
+  const userRef = useRef(user);
+  userRef.current = user;
 
   const fetchUserProfile = useCallback(async (session: Session | null) => {
     if (session?.user) {
@@ -128,9 +130,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user, session, fetchUserProfile]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) {
+      setOnlineCollaborators([]);
+      return;
+    }
+    const userId = user.id;
 
-    // Use a common channel for all users to see each other
     const room = supabase.channel('online-collaborators');
 
     room
@@ -141,27 +146,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const presences = presenceState[key] as unknown as { user: any }[];
             return presences[0].user;
           })
-          .filter(p => p.id !== user.id); // Filter out the current user
+          .filter(p => p && p.id !== userId);
         setOnlineCollaborators(collaborators);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          // Track the user's presence with all necessary info
-          await room.track({
-            user: {
-              id: user.id,
-              name: user.name,
-              avatar_url: user.avatar_url,
-              initials: user.initials,
-            },
-          });
+          if (userRef.current) {
+            await room.track({
+              user: {
+                id: userRef.current.id,
+                name: userRef.current.name,
+                avatar_url: userRef.current.avatar_url,
+                initials: userRef.current.initials,
+              },
+            });
+          }
         }
       });
 
     return () => {
       supabase.removeChannel(room);
     };
-  }, [user]);
+  }, [user?.id]);
 
   const hasPermission = useCallback((permission: string): boolean => {
     if (!user || !user.permissions) return false;
