@@ -9,23 +9,36 @@ import ProjectTasks from "./ProjectTasks";
 import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjectMutations } from "@/hooks/useProjectMutations";
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface ProjectMainContentProps {
   project: Project;
   isEditing: boolean;
   onFieldChange: (field: keyof Project, value: any) => void;
   mutations: ReturnType<typeof useProjectMutations>;
+  defaultTab?: string;
 }
 
-const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations }: ProjectMainContentProps) => {
+const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defaultTab }: ProjectMainContentProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(defaultTab || 'overview');
 
   const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set('tab', value);
+    navigate(`${location.pathname}?${searchParams.toString()}`, { replace: true });
+  };
 
   return (
     <Card>
       <CardContent className="p-4 md:p-6">
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="overview">
               <LayoutDashboard className="h-4 w-4 flex-shrink-0" />

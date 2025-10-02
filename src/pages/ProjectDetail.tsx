@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
@@ -43,6 +43,7 @@ const ProjectDetailSkeleton = () => (
 
 const ProjectDetail = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
@@ -51,6 +52,8 @@ const ProjectDetail = () => {
 
   const { data: project, isLoading, error } = useProject(slug!);
   const mutations = useProjectMutations(slug!);
+
+  const defaultTab = searchParams.get('tab') || 'overview';
 
   useEffect(() => {
     if (project) {
@@ -130,6 +133,7 @@ const ProjectDetail = () => {
               isEditing={isEditing}
               onFieldChange={handleFieldChange}
               mutations={mutations}
+              defaultTab={defaultTab}
             />
           </div>
           <div className="lg:col-span-1 space-y-6">
