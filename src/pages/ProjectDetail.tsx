@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
@@ -49,6 +49,7 @@ const ProjectDetail = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   const { data: project, isLoading, error } = useProject(slug!);
   const mutations = useProjectMutations(slug!);
@@ -60,6 +61,16 @@ const ProjectDetail = () => {
       setEditedProject(project);
     }
   }, [project]);
+
+  useEffect(() => {
+    const taskParam = searchParams.get('task');
+    const tabParam = searchParams.get('tab');
+    if (taskParam && tabParam === 'tasks' && mainContentRef.current && !isLoading) {
+      setTimeout(() => {
+        mainContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [searchParams, isLoading, project]);
 
   useEffect(() => {
     if (!isLoading && !error && !project) {
@@ -128,13 +139,15 @@ const ProjectDetail = () => {
               isEditing={isEditing}
               onFieldChange={handleFieldChange}
             />
-            <ProjectMainContent
-              project={editedProject}
-              isEditing={isEditing}
-              onFieldChange={handleFieldChange}
-              mutations={mutations}
-              defaultTab={defaultTab}
-            />
+            <div ref={mainContentRef}>
+              <ProjectMainContent
+                project={editedProject}
+                isEditing={isEditing}
+                onFieldChange={handleFieldChange}
+                mutations={mutations}
+                defaultTab={defaultTab}
+              />
+            </div>
           </div>
           <div className="lg:col-span-1 space-y-6">
             <ProjectProgressCard project={editedProject} />
