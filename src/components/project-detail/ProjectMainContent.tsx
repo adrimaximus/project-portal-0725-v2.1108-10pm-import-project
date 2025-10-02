@@ -88,7 +88,7 @@ const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defa
               onAddCommentOrTicket={(text, isTicket, attachment) => mutations.addComment.mutate({ project: project, user: user!, text, isTicket, attachment })}
             />
           </TabsContent>
-          <TabsContent value="activity">
+          <TabsContent value="activity" className="max-h-[600px] overflow-y-auto pr-4">
             <ProjectActivityFeed activities={project.activities || []} />
           </TabsContent>
         </Tabs>
