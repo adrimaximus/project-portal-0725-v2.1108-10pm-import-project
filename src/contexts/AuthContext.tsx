@@ -82,34 +82,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      // 1. Get initial session
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      
-      // 2. Set session and fetch profile
+    setLoading(true);
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
       setSession(initialSession);
       await fetchUserProfile(initialSession);
-      
-      // 3. Now we are done with initial loading
       setLoading(false);
 
-      // 4. Set up listener for future changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
         if (isImpersonating) return;
-        setSession(session);
-        await fetchUserProfile(session);
+        
+        setLoading(true);
+        setSession(newSession);
+        await fetchUserProfile(newSession);
+        setLoading(false);
       });
 
       return () => {
-        subscription.unsubscribe();
+        subscription?.unsubscribe();
       };
-    };
-
-    const subscriptionPromise = initializeAuth();
-
-    return () => {
-      subscriptionPromise.then(cleanup => cleanup && cleanup());
-    };
+    });
   }, [fetchUserProfile, isImpersonating]);
 
   useEffect(() => {
@@ -193,8 +184,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
   };
 
   const refreshUser = useCallback(async () => {
