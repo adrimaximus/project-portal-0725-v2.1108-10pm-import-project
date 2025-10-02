@@ -1,9 +1,8 @@
 import { Activity } from "@/types";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
-import { getAvatarUrl, generatePastelColor } from "@/lib/utils";
 import { History } from "lucide-react";
+import ActivityIcon from "./ActivityIcon";
 
 interface ProjectActivityFeedProps {
   activities: Activity[];
@@ -19,37 +18,54 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {activities.map((activity) => {
-        const userName = activity.user?.name || "System";
-        const userInitials = activity.user?.initials || "S";
-        const userId = activity.user?.id || "system-activity";
-        const avatarUrl = activity.user?.avatar_url;
+  const formatDescription = (text: string) => {
+    if (!text) return "";
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-card-foreground">$1</strong>')
+      .replace(/`(.*?)`/g, '<code class="bg-muted text-muted-foreground font-mono text-xs px-1 py-0.5 rounded">$1</code>');
+  };
 
-        return (
-          <div key={activity.id} className="flex items-start space-x-4">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={getAvatarUrl(avatarUrl, userId)} />
-              <AvatarFallback style={generatePastelColor(userId)}>
-                {userId === "system-activity" ? <History className="h-5 w-5" /> : userInitials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 pt-1.5">
-              <p className="text-sm text-card-foreground">
-                <span className="font-medium">{userName}</span>{" "}
-                {activity.details.description}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {formatDistanceToNow(new Date(activity.timestamp), {
-                  addSuffix: true,
-                  locale: id,
-                })}
-              </p>
-            </div>
-          </div>
-        );
-      })}
+  return (
+    <div className="flow-root">
+      <ul className="-mb-8">
+        {activities.map((activity, activityIdx) => {
+          const userName = activity.user?.name || "System";
+          const descriptionHtml = { __html: formatDescription(activity.details.description) };
+
+          return (
+            <li key={activity.id}>
+              <div className="relative pb-8">
+                {activityIdx !== activities.length - 1 ? (
+                  <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-border" aria-hidden="true" />
+                ) : null}
+                <div className="relative flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <span className="h-8 w-8 rounded-full bg-background border flex items-center justify-center ring-8 ring-background">
+                      <ActivityIcon type={activity.type} />
+                    </span>
+                  </div>
+                  <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-semibold text-card-foreground">{userName}</span>{' '}
+                        <span dangerouslySetInnerHTML={descriptionHtml} />
+                      </p>
+                    </div>
+                    <div className="whitespace-nowrap text-right text-sm text-muted-foreground">
+                      <time dateTime={activity.timestamp}>
+                        {formatDistanceToNow(new Date(activity.timestamp), {
+                          addSuffix: true,
+                          locale: id,
+                        })}
+                      </time>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 };
