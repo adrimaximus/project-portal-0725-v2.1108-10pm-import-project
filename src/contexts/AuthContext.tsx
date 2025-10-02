@@ -141,13 +141,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     room
       .on('presence', { event: 'sync' }, () => {
         const presenceState = room.presenceState();
-        const collaborators = Object.keys(presenceState)
-          .map(key => {
-            const presences = presenceState[key] as unknown as { user: any }[];
-            return presences[0].user;
-          })
-          .filter(p => p && p.id !== userId);
-        setOnlineCollaborators(collaborators);
+        const collaboratorsMap = new Map<string, any>();
+
+        for (const key in presenceState) {
+          const presences = presenceState[key] as unknown as { user: any }[];
+          if (presences.length > 0) {
+            const user = presences[0].user;
+            if (user && user.id !== userId && !collaboratorsMap.has(user.id)) {
+              collaboratorsMap.set(user.id, user);
+            }
+          }
+        }
+        
+        const uniqueCollaborators = Array.from(collaboratorsMap.values());
+        setOnlineCollaborators(uniqueCollaborators);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
