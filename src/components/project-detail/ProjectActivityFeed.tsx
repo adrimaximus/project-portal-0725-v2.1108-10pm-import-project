@@ -21,6 +21,7 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
   const formatDescription = (text: string) => {
     if (!text) return "";
     const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
     return text
       .replace(/\\"/g, "") // Remove escaped quotes
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-card-foreground">$1</strong>')
@@ -28,7 +29,8 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
       .replace(urlRegex, (url) => {
         const href = url.startsWith('www.') ? `https://${url}` : url;
         return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${url}</a>`;
-      });
+      })
+      .replace(mentionRegex, '<span class="text-primary font-semibold">@$1</span>');
   };
 
   return (
