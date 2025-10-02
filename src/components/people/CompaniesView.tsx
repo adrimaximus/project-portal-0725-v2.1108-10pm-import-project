@@ -8,14 +8,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import CompanyFormDialog, { Company } from './CompanyFormDialog';
-import CompanyPropertiesDialog from './CompanyPropertiesDialog';
+import { useNavigate } from 'react-router-dom';
 
 const CompaniesView = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
     const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
-    const [isPropertiesDialogOpen, setIsPropertiesDialogOpen] = useState(false);
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
 
     const { data: companies = [], isLoading } = useQuery<Company[]>({
         queryKey: ['companies'],
@@ -58,7 +58,7 @@ const CompaniesView = () => {
                     <p className="text-muted-foreground">Manage all companies in your network.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => setIsPropertiesDialogOpen(true)}>
+                    <Button variant="outline" onClick={() => navigate('/settings/company-properties')}>
                         <Settings className="mr-2 h-4 w-4" />
                         Company Properties
                     </Button>
@@ -122,11 +122,6 @@ const CompaniesView = () => {
                 open={isFormOpen}
                 onOpenChange={setIsFormOpen}
                 company={companyToEdit}
-            />
-
-            <CompanyPropertiesDialog
-                open={isPropertiesDialogOpen}
-                onOpenChange={setIsPropertiesDialogOpen}
             />
 
             <AlertDialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>

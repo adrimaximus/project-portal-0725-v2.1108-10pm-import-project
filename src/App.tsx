@@ -19,6 +19,7 @@ import PersonProfilePage from "./pages/people/PersonProfilePage";
 import UserProfilePage from "./pages/UserProfilePage";
 import CompaniesPage from "./pages/CompaniesPage";
 import ContactPropertiesPage from "./pages/ContactPropertiesPage";
+import CompanyPropertiesPage from "./pages/CompanyPropertiesPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import FolderDetailPage from "./pages/kb/FolderDetailPage";
 import KbPage from "./pages/kb/Page";
@@ -97,6 +98,7 @@ function App() {
         <Route path="/users/:id" element={<UserProfilePage />} />
         <Route path="/companies" element={<CompaniesPage />} />
         <Route path="/settings/people-properties" element={<ContactPropertiesPage />} />
+        <Route path="/settings/company-properties" element={<CompanyPropertiesPage />} />
         <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
         <Route path="/knowledge-base/folders/:slug" element={<FolderDetailPage />} />
         <Route path="/knowledge-base/pages/:slug" element={<KbPage />} />

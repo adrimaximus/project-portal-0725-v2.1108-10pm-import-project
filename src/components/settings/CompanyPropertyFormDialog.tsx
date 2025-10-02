@@ -1,0 +1,138 @@
+import { useEffect } from 'react';
+import { useForm, Controller, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { CompanyProperty } from '@/pages/CompanyPropertiesPage';
+import { Loader2, X } from 'lucide-react';
+
+const propertySchema = z.object({
+  label: z.string().min(1, 'Label is required'),
+  type: z.enum(['text', 'number', 'date', 'select']),
+  options: z.array(z.object({ value: z.string().min(1, 'Option value is required') })).optional(),
+}).refine(data => {
+  if (data.type === 'select') {
+    return data.options && data.options.length > 0 && data.options.every(o => o.value);
+  }
+  return true;
+}, {
+  message: 'Select properties must have at least one option.',
+  path: ['options'],
+});
+
+type PropertyFormValues = z.infer<typeof propertySchema>;
+
+interface CompanyPropertyFormDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (property: Omit<CompanyProperty, 'id' | 'name'> & { name: string }) => void;
+  property?: CompanyProperty | null;
+  isSaving: boolean;
+}
+
+const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSaving }: CompanyPropertyFormDialogProps) => {
+  const isEditMode = !!property;
+
+  const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<PropertyFormValues>({
+    resolver: zodResolver(propertySchema),
+    defaultValues: {
+      label: '',
+      type: 'text',
+      options: [{ value: '' }],
+    },
+  });
+  const { fields, append, remove } = useFieldArray({ control, name: 'options' });
+  const propertyType = watch('type');
+
+  useEffect(() => {
+    if (open) {
+      if (property) {
+        reset({
+          label: property.label,
+          type: property.type,
+          options: property.options?.map(o => ({ value: o })) || [{ value: '' }],
+        });
+      } else {
+        reset({ label: '', type: 'text', options: [{ value: '' }] });
+      }
+    }
+  }, [property, open, reset]);
+
+  const onSubmit = (values: PropertyFormValues) => {
+    const slug = values.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    onSave({
+      name: slug,
+      label: values.label,
+      type: values.type,
+      options: values.options?.map(o => o.value),
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{isEditMode ? 'Edit Company Property' : 'Create New Company Property'}</DialogTitle>
+          <DialogDescription>
+            Define a new field to store information about your companies.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <div>
+            <Label htmlFor="label">Label</Label>
+            <Input id="label" {...register('label')} />
+            {errors.label && <p className="text-sm text-destructive mt-1">{errors.label.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="type">Type</Label>
+            <Controller
+              name="type"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">Text</SelectItem>
+                    <SelectItem value="number">Number</SelectItem>
+                    <SelectItem value="date">Date</SelectItem>
+                    <SelectItem value="select">Select</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+
+          {propertyType === 'select' && (
+            <div>
+              <Label>Options</Label>
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex items-center gap-2 mb-2">
+                  <Input {...register(`options.${index}.value`)} />
+                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>Add Option</Button>
+              {errors.options && <p className="text-sm text-destructive mt-1">{errors.options.root?.message}</p>}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isEditMode ? 'Save Changes' : 'Add Property'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default CompanyPropertyFormDialog;

@@ -12,7 +12,7 @@ import { Loader2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CompanyProperty } from './CompanyPropertiesDialog';
+import { CompanyProperty } from '@/pages/CompanyPropertiesPage';
 
 export type Company = {
   id: string;
@@ -31,7 +31,7 @@ const CompanyFormDialog = ({ open, onOpenChange, company }) => {
     queryFn: async () => {
       const { data, error } = await supabase.from('company_properties').select('*').order('label');
       if (error) throw error;
-      return data.map(p => ({ ...p, options: p.options?.map(o => ({ value: o })) || [] }));
+      return data;
     },
   });
 
@@ -136,7 +136,7 @@ const CompanyFormDialog = ({ open, onOpenChange, company }) => {
               <Select onValueChange={field.onChange} value={field.value || ''}>
                 <SelectTrigger><SelectValue placeholder={`Select ${prop.label}`} /></SelectTrigger>
                 <SelectContent>
-                  {prop.options?.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.value}</SelectItem>)}
+                  {prop.options?.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}
