@@ -91,7 +91,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               suggestions: {
                 list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg overflow-hidden p-1 max-h-60 overflow-y-auto mt-2 z-10',
-                item: 'pl-3 pr-5 py-2 text-sm rounded-md cursor-pointer',
+                item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer outline-none',
                 itemFocused: 'bg-accent text-accent-foreground',
               },
               mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-2 py-1',
@@ -101,7 +101,16 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               trigger="@"
               data={mentionableUsers}
               renderSuggestion={(suggestion: any) => (
-                <div className="font-medium text-sm text-foreground">{suggestion.display}</div>
+                <>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
+                    <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-sm text-popover-foreground">{suggestion.display}</p>
+                    <p className="text-xs text-muted-foreground">{suggestion.email}</p>
+                  </div>
+                </>
               )}
               appendSpaceOnAdd
             />
