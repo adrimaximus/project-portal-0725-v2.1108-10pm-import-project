@@ -18,7 +18,7 @@ export type CompanyProperty = {
   id: string;
   name: string;
   label: string;
-  type: 'text' | 'number' | 'date' | 'select';
+  type: 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url' | 'image' | 'select';
   options?: string[];
 };
 

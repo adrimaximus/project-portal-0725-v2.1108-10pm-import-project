@@ -12,7 +12,7 @@ import { Loader2, X } from 'lucide-react';
 
 const propertySchema = z.object({
   label: z.string().min(1, 'Label is required'),
-  type: z.enum(['text', 'number', 'date', 'select']),
+  type: z.enum(['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select']),
   options: z.array(z.object({ value: z.string().min(1, 'Option value is required') })).optional(),
 }).refine(data => {
   if (data.type === 'select') {
@@ -97,8 +97,13 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
                   <SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="text">Text</SelectItem>
+                    <SelectItem value="textarea">Text Area</SelectItem>
                     <SelectItem value="number">Number</SelectItem>
                     <SelectItem value="date">Date</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="phone">Phone</SelectItem>
+                    <SelectItem value="url">URL</SelectItem>
+                    <SelectItem value="image">Image</SelectItem>
                     <SelectItem value="select">Select</SelectItem>
                   </SelectContent>
                 </Select>
