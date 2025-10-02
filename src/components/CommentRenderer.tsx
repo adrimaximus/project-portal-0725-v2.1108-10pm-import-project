@@ -11,8 +11,10 @@ const CommentRenderer = ({ text, members }: CommentRendererProps) => {
   const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
   const parts = text.split(mentionRegex);
 
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+
   return (
-    <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+    <p className="text-sm text-muted-foreground whitespace-pre-wrap break-all">
       {parts.map((part, index) => {
         // The display name is captured at index 1, 4, 7, etc.
         if (index % 3 === 1) {
@@ -24,8 +26,27 @@ const CommentRenderer = ({ text, members }: CommentRendererProps) => {
         if (index % 3 === 2) {
           return null;
         }
+        
         // Plain text parts are at index 0, 3, 6, etc.
-        return part;
+        // We process these parts to find and linkify URLs.
+        const textParts = part.split(urlRegex);
+        return textParts.map((textPart, i) => {
+          if (textPart.match(urlRegex)) {
+            const href = textPart.startsWith('www.') ? `https://${textPart}` : textPart;
+            return (
+              <a
+                key={`${index}-${i}`}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline hover:text-primary/80"
+              >
+                {textPart}
+              </a>
+            );
+          }
+          return textPart;
+        });
       })}
     </p>
   );
