@@ -78,6 +78,14 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
 
   const allProjectMembers = useMemo(() => [project.created_by, ...project.assignedTo], [project.created_by, project.assignedTo]);
 
+  const customSuggestionsContainer = (children: React.ReactNode) => (
+    <div className="bg-popover border rounded-lg shadow-lg p-2 -mt-2">
+      <div className="flex gap-2 overflow-x-auto max-w-full pb-2">
+        {children}
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -86,12 +94,13 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
+            customSuggestionsContainer={customSuggestionsContainer}
             classNames={{
               control: 'relative w-full',
               input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               suggestions: {
-                list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg overflow-hidden p-1 max-h-60 overflow-y-auto mt-2 z-10',
-                item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer outline-none',
+                list: 'flex flex-row gap-1',
+                item: 'flex flex-col items-center p-2 rounded-md cursor-pointer w-20',
                 itemFocused: 'bg-accent text-accent-foreground',
               },
               mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-2 py-1',
@@ -102,14 +111,11 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               data={mentionableUsers}
               renderSuggestion={(suggestion: any) => (
                 <>
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-10 w-10 mb-1">
                     <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
                     <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-medium text-sm text-popover-foreground">{suggestion.display}</p>
-                    <p className="text-xs text-muted-foreground">{suggestion.email}</p>
-                  </div>
+                  <p className="text-xs text-center truncate w-full text-popover-foreground">{suggestion.display}</p>
                 </>
               )}
               appendSpaceOnAdd
