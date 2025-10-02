@@ -73,7 +73,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
       
       <div className="space-y-6">
         {sortedItems.length > 0 ? sortedItems.map(item => {
-          const isTicketCompleted = item.isTicket && project.tasks?.find(t => t.originTicketId === item.id)?.completed;
+          const isTicketCompleted = item.isTicket && project.tasks?.find(t => t.origin_ticket_id === item.id)?.completed;
           return (
             <div key={item.id} className="flex items-start space-x-4">
               <Avatar>
