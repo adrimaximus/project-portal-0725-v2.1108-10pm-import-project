@@ -9,6 +9,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { toast } from 'sonner';
 import { FeatureFlag } from '@/contexts/FeaturesContext';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export type Role = {
   id?: string;
@@ -98,30 +99,42 @@ const RoleManagerDialog = ({ open, onOpenChange, onSave, role, workspaceFeatures
                 <div className="space-y-3">
                   {category.permissions.map(permission => {
                     const isEnabled = isModuleEnabled(permission.id);
+                    const isDisabledModule = permission.id.startsWith('module:') && !isEnabled;
                     return (
-                      <div key={permission.id} className="flex items-start space-x-3">
-                        <Checkbox
-                          id={permission.id}
-                          checked={permissions.includes(permission.id)}
-                          onCheckedChange={(checked) => handlePermissionChange(permission.id, !!checked)}
-                          disabled={!isEnabled}
-                        />
-                        <div className="grid gap-1.5 leading-none">
-                          <label
-                            htmlFor={permission.id}
-                            className={cn(
-                              "text-sm font-medium leading-none",
-                              !isEnabled ? "cursor-not-allowed opacity-50" : "peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            )}
-                          >
-                            {permission.label}
-                          </label>
-                          <p className="text-sm text-muted-foreground">
-                            {permission.description}
-                            {permission.id.startsWith('module:') && ' When unchecked, users with this role will not see this module in the navigation.'}
-                          </p>
-                        </div>
-                      </div>
+                      <TooltipProvider key={permission.id} delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-start space-x-3">
+                              <Checkbox
+                                id={permission.id}
+                                checked={permissions.includes(permission.id)}
+                                onCheckedChange={(checked) => handlePermissionChange(permission.id, !!checked)}
+                                disabled={!isEnabled}
+                              />
+                              <div className="grid gap-1.5 leading-none">
+                                <label
+                                  htmlFor={permission.id}
+                                  className={cn(
+                                    "text-sm font-medium leading-none",
+                                    !isEnabled ? "cursor-not-allowed opacity-50" : "peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                  )}
+                                >
+                                  {permission.label}
+                                </label>
+                                <p className="text-sm text-muted-foreground">
+                                  {permission.description}
+                                  {permission.id.startsWith('module:') && ' When unchecked, users with this role will not see this module in the navigation.'}
+                                </p>
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          {isDisabledModule && (
+                            <TooltipContent>
+                              <p>This module is currently disabled in your workspace settings.</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
                     );
                   })}
                 </div>
