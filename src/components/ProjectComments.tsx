@@ -80,7 +80,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
                 <AvatarImage src={getAvatarUrl(item.author.avatar_url, item.author.id)} />
                 <AvatarFallback style={generatePastelColor(item.author.id)}>{item.author.initials}</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-card-foreground flex items-center gap-2">
                     {item.author.id === user?.id ? "You" : item.author.name}
