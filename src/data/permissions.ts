@@ -1,58 +1,53 @@
-export type Permission = {
-  id: string;
-  label: string;
-  description: string;
-};
-
-export type PermissionCategory = {
-  id: string;
-  label: string;
-  permissions: Permission[];
-};
-
-export const PERMISSIONS: PermissionCategory[] = [
+export const PERMISSIONS = [
   {
     id: 'modules',
-    label: 'Module Access',
+    label: 'Akses Modul',
     permissions: [
-      { id: 'module:dashboard', label: 'Dashboard', description: 'Access to the main dashboard page.' },
-      { id: 'module:projects', label: 'Projects', description: 'Access to the projects list and details.' },
-      { id: 'module:request', label: 'Request', description: 'Access to the project request form.' },
-      { id: 'module:chat', label: 'Chat', description: 'Access to the team chat.' },
-      { id: 'module:mood-tracker', label: 'Mood Tracker', description: 'Access to the mood tracking feature.' },
-      { id: 'module:goals', label: 'Goals', description: 'Access to the goal tracking feature.' },
-      { id: 'module:billing', label: 'Billing', description: 'Access to billing and invoice information.' },
-      { id: 'module:people', label: 'People', description: 'Access to the contacts management page.' },
-      { id: 'module:knowledge-base', label: 'Knowledge Base', description: 'Access to articles and documentation.' },
-      { id: 'module:settings', label: 'Settings', description: 'Access to all settings pages.' },
+      { id: 'module:dashboard', label: 'Dasbor', description: 'Akses modul Dasbor.' },
+      { id: 'module:projects', label: 'Proyek', description: 'Akses modul Proyek.' },
+      { id: 'module:tasks', label: 'Tugas', description: 'Akses modul Tugas.' },
+      { id: 'module:request', label: 'Permintaan', description: 'Akses modul Permintaan.' },
+      { id: 'module:chat', label: 'Chat', description: 'Akses modul Chat.' },
+      { id: 'module:mood-tracker', label: 'Mood Tracker', description: 'Akses modul Mood Tracker.' },
+      { id: 'module:goals', label: 'Goals', description: 'Akses modul Goals.' },
+      { id: 'module:billing', label: 'Tagihan', description: 'Akses modul Tagihan.' },
+      { id: 'module:people', label: 'Orang', description: 'Akses modul Orang.' },
+      { id: 'module:knowledge-base', label: 'Knowledge Base', description: 'Akses modul Knowledge Base.' },
+      { id: 'module:settings', label: 'Pengaturan', description: 'Akses modul Pengaturan.' },
     ],
   },
   {
     id: 'projects',
-    label: 'Projects',
+    label: 'Proyek',
     permissions: [
-      { id: 'projects:create', label: 'Create Projects', description: 'Allows user to create new projects.' },
-      { id: 'projects:read', label: 'View All Projects', description: 'Allows user to view all projects, not just assigned ones.' },
-      { id: 'projects:update', label: 'Edit Projects', description: 'Allows user to edit details of any project.' },
-      { id: 'projects:delete', label: 'Delete Projects', description: 'Allows user to delete any project.' },
+      { id: 'projects:create', label: 'Buat Proyek', description: 'Izinkan pengguna untuk membuat proyek baru.' },
+      { id: 'projects:delete', label: 'Hapus Proyek', description: 'Izinkan pengguna untuk menghapus proyek yang mereka miliki.' },
+      { id: 'projects:edit', label: 'Edit Detail Proyek', description: 'Izinkan pengguna untuk mengedit detail proyek di mana mereka menjadi anggota.' },
+      { id: 'projects:manage_members', label: 'Kelola Anggota Proyek', description: 'Izinkan pengguna untuk menambah atau menghapus anggota dari proyek yang mereka miliki.' },
+      { id: 'projects:view_all', label: 'Lihat Semua Proyek', description: 'Izinkan pengguna untuk melihat semua proyek, bukan hanya yang mereka ikuti.' },
+      { id: 'projects:view_value', label: 'Lihat Nilai Proyek', description: 'Izinkan pengguna untuk melihat budget/nilai proyek. Jika tidak dicentang, nilai akan disembunyikan.' },
     ],
   },
   {
-    id: 'users',
-    label: 'User Management',
+    id: 'tasks',
+    label: 'Tugas',
     permissions: [
-      { id: 'users:invite', label: 'Invite Users', description: 'Allows user to invite new members to the team.' },
-      { id: 'users:manage', label: 'Manage User Roles', description: 'Allows user to change roles and suspend members.' },
-      { id: 'users:delete', label: 'Delete Users', description: 'Allows user to remove members from the team.' },
+      { id: 'tasks:create', label: 'Buat Tugas', description: 'Izinkan pengguna untuk membuat tugas baru di dalam proyek mereka.' },
+      { id: 'tasks:delete', label: 'Hapus Tugas', description: 'Izinkan pengguna untuk menghapus tugas di dalam proyek mereka.' },
+      { id: 'tasks:edit', label: 'Edit Tugas', description: 'Izinkan pengguna untuk mengedit tugas di dalam proyek mereka.' },
+      { id: 'tasks:assign', label: 'Tugaskan Tugas', description: 'Izinkan pengguna untuk menugaskan tugas kepada anggota proyek lain.' },
     ],
   },
   {
     id: 'settings',
-    label: 'Settings',
+    label: 'Pengaturan',
     permissions: [
-      { id: 'settings:access', label: 'Access Settings', description: 'Allows user to view the main settings page.' },
-      { id: 'settings:manage_roles', label: 'Manage Roles', description: 'Allows user to create, edit, and delete custom roles.' },
-      { id: 'settings:manage_integrations', label: 'Manage Integrations', description: 'Allows user to connect or disconnect third-party apps.' },
+      { id: 'settings:access', label: 'Akses Pengaturan', description: 'Izinkan pengguna untuk mengakses halaman utama pengaturan.' },
+      { id: 'settings:manage_workspace', label: 'Kelola Workspace', description: 'Izinkan pengguna untuk mengubah pengaturan tingkat workspace.' },
+      { id: 'settings:manage_roles', label: 'Kelola Peran & Izin', description: 'Izinkan pengguna untuk membuat, mengedit, dan menghapus peran.' },
+      { id: 'settings:manage_users', label: 'Kelola Pengguna', description: 'Izinkan pengguna untuk mengundang, menghapus, dan mengelola pengguna di workspace.' },
+      { id: 'settings:manage_billing', label: 'Kelola Tagihan', description: 'Izinkan pengguna untuk mengakses dan mengelola informasi tagihan.' },
+      { id: 'settings:manage_integrations', label: 'Kelola Integrasi', description: 'Izinkan pengguna untuk mengelola integrasi workspace.' },
     ],
   },
 ];
