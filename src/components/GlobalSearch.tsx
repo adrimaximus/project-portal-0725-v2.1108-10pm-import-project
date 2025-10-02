@@ -240,7 +240,7 @@ export function GlobalSearch() {
                   {results.tasks.map(task => (
                     <CommandItem
                       key={task.id}
-                      onSelect={() => handleSelect(() => navigate(`/projects/${task.project_slug}?task=${task.id}`))}
+                      onSelect={() => handleSelect(() => navigate(`/projects/${task.project_slug}?tab=tasks&task=${task.id}`))}
                       value={`task-${task.id}-${task.title}`}
                       className="cursor-pointer"
                     >
