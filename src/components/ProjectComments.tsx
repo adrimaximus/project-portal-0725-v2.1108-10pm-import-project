@@ -100,7 +100,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               suggestions: {
                 list: 'flex flex-row gap-1',
-                item: 'flex flex-col items-center p-2 rounded-md cursor-pointer w-20',
+                item: 'flex items-center gap-2 p-2 rounded-md cursor-pointer',
                 itemFocused: 'bg-accent text-accent-foreground',
               },
               mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-2 py-1',
@@ -111,11 +111,11 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               data={mentionableUsers}
               renderSuggestion={(suggestion: any) => (
                 <>
-                  <Avatar className="h-10 w-10 mb-1">
+                  <Avatar className="h-8 w-8">
                     <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
                     <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
                   </Avatar>
-                  <p className="text-xs text-center truncate w-full text-popover-foreground">{suggestion.display}</p>
+                  <p className="text-sm text-popover-foreground">{suggestion.display}</p>
                 </>
               )}
               appendSpaceOnAdd
