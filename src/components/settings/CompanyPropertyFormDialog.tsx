@@ -16,7 +16,7 @@ const propertySchema = z.object({
   options: z.array(z.object({ value: z.string().min(1, 'Option value is required') })).optional(),
 }).refine(data => {
   if (data.type === 'select') {
-    return data.options && data.options.length > 0 && data.options.every(o => o.value);
+    return data.options && data.options.length > 0;
   }
   return true;
 }, {
@@ -110,15 +110,20 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
             <div>
               <Label>Options</Label>
               {fields.map((field, index) => (
-                <div key={field.id} className="flex items-center gap-2 mb-2">
-                  <Input {...register(`options.${index}.value`)} />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
-                    <X className="h-4 w-4" />
-                  </Button>
+                <div key={field.id} className="mb-2">
+                  <div className="flex items-center gap-2">
+                    <Input {...register(`options.${index}.value`)} />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {errors.options?.[index]?.value && (
+                    <p className="text-sm text-destructive mt-1">{errors.options[index].value.message}</p>
+                  )}
                 </div>
               ))}
               <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>Add Option</Button>
-              {errors.options && <p className="text-sm text-destructive mt-1">{errors.options.root?.message}</p>}
+              {errors.options?.root && <p className="text-sm text-destructive mt-1">{errors.options.root.message}</p>}
             </div>
           )}
 
