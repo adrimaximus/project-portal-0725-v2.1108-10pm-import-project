@@ -89,21 +89,26 @@ const CompanyPropertiesDialog = ({ open, onOpenChange }) => {
 
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof propertySchema>) => {
-      const name = slugify(values.label);
       const options = values.type === 'select' ? values.options?.map(o => o.value) : null;
 
-      const record = {
-        name: propertyToEdit ? propertyToEdit.name : name,
-        label: values.label,
-        type: values.type,
-        options,
-      };
-
       if (propertyToEdit) {
+        const record = {
+          // name (slug) is not editable after creation
+          label: values.label,
+          type: values.type,
+          options,
+        };
         const { error } = await supabase.from('company_properties').update(record).eq('id', propertyToEdit.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('company_properties').insert({ ...record, name });
+        const name = slugify(values.label);
+        const record = {
+          name,
+          label: values.label,
+          type: values.type,
+          options,
+        };
+        const { error } = await supabase.from('company_properties').insert(record);
         if (error) throw error;
       }
     },
