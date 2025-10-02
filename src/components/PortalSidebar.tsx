@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Bell, Home, Package, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, BookOpen, Folder as FolderIcon, ChevronDown } from "lucide-react";
+import { Bell, Home, Settings, LayoutGrid, MessageSquare, Smile, Target, CreditCard, Link as LinkIcon, LucideIcon, Users, BookOpen, Folder as FolderIcon, ChevronDown } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "react-router-dom";
@@ -228,7 +228,10 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     <div className="h-screen border-r bg-muted/40 transition-all duration-300 ease-in-out" onDoubleClick={onToggle}>
       <div className="flex h-full max-h-screen flex-col">
         <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6", isCollapsed && "justify-center px-2")}>
-          <Link to="/dashboard" className="flex items-center gap-2 font-semibold" title="Client Portal"><Package className="h-6 w-6" /><span className={cn(isCollapsed && "sr-only")}>Client Portal</span></Link>
+          <Link to="/dashboard" className="flex items-center gap-2 font-semibold" title="7i Portal">
+            <img src="https://quuecudndfztjlxbrvyb.supabase.co/storage/v1/object/public/General/logo.png" alt="7i Portal Logo" className="h-8 w-8" />
+            <span className={cn(isCollapsed && "sr-only")}>7i Portal</span>
+          </Link>
         </div>
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto py-2">
