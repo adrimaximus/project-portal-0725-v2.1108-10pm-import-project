@@ -76,6 +76,19 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
     }
   }, [scrollToDate, visibleDays]);
 
+  const formatVenue = (venue: string | null): string => {
+    if (!venue) return "";
+    try {
+      const venueObj = JSON.parse(venue);
+      const name = venueObj.name || '';
+      const address = venueObj.address || '';
+      const parts = [name, address].filter(Boolean);
+      return parts.join(', ');
+    } catch (e) {
+      return venue;
+    }
+  };
+
   const visibleDayEntries = dayEntries.slice(0, visibleDays);
 
   let lastMonth: string | null = null;
@@ -135,6 +148,8 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                     isMultiDay = !isSameDay(startDate, adjustedDueDate);
                     displayDueDate = adjustedDueDate;
                   }
+                  
+                  const formattedVenue = formatVenue(project.venue);
 
                   return (
                     <div 
@@ -165,7 +180,7 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                           {project.venue && (
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
                               <MapPin size={12} />
-                              <span className="truncate">{project.venue}</span>
+                              <span className="truncate" title={formattedVenue}>{formattedVenue}</span>
                             </div>
                           )}
                         </div>
