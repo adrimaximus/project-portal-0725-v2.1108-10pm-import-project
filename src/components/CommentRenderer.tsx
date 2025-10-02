@@ -12,7 +12,7 @@ const CommentRenderer = ({ text, members }: CommentRendererProps) => {
   const parts = text.split(mentionRegex);
 
   return (
-    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+    <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
       {parts.map((part, index) => {
         // The display name is captured at index 1, 4, 7, etc.
         if (index % 3 === 1) {
