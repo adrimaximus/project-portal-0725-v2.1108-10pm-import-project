@@ -47,7 +47,7 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
                   </div>
                   <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
                     <div>
-                      <p className="text-sm text-muted-foreground break-words">
+                      <p className="text-sm text-muted-foreground break-all">
                         <span className="font-semibold text-card-foreground">{userName}</span>{' '}
                         <span dangerouslySetInnerHTML={descriptionHtml} />
                       </p>
