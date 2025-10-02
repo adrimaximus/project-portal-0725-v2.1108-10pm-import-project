@@ -1,11 +1,14 @@
 import { Message, Collaborator, User } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { cn, generatePastelColor, getInitials, getAvatarUrl } from "@/lib/utils";
-import { format } from "date-fns";
-import { Button } from "./ui/button";
-import { Reply } from "lucide-react";
+import MessageAttachment from "./MessageAttachment";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn, generatePastelColor } from "@/lib/utils";
+import { useEffect, useRef } from "react";
+import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { Link } from 'react-router-dom';
+import { Loader2, CornerUpLeft } from "lucide-react";
+import { Button } from "./ui/button";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 
 interface ChatConversationProps {
@@ -15,104 +18,192 @@ interface ChatConversationProps {
   onReply: (message: Message) => void;
 }
 
-const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
-  const groupMessages = (messages: Message[]) => {
-    if (!messages) return [];
-    const grouped = [];
-    let lastSenderId = null;
-    let lastTimestamp = null;
+const formatTimestamp = (timestamp: string) => {
+  try {
+    const date = parseISO(timestamp);
+    if (isNaN(date.getTime())) return "";
+    return format(date, 'p');
+  } catch (e) {
+    return "";
+  }
+};
 
-    for (const message of messages) {
-      const currentTimestamp = new Date(message.created_at);
-      const isSameSender = message.sender_id === lastSenderId;
-      const isWithin5Mins = lastTimestamp && (currentTimestamp.getTime() - lastTimestamp.getTime()) < 5 * 60 * 1000;
+const formatDateSeparator = (timestamp: string) => {
+  try {
+    const date = parseISO(timestamp);
+    if (isToday(date)) return "Today";
+    if (isYesterday(date)) return "Yesterday";
+    return format(date, 'MMMM d, yyyy');
+  } catch (e) {
+    return "";
+  }
+};
 
-      if (isSameSender && isWithin5Mins) {
-        grouped[grouped.length - 1].messages.push(message);
-      } else {
-        grouped.push({
-          senderId: message.sender_id,
-          messages: [message],
-        });
-      }
-      lastSenderId = message.sender_id;
-      lastTimestamp = currentTimestamp;
+export const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
+  const { user: currentUser } = useAuth();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
-    return grouped;
-  };
+  }, [messages, isLoading]);
 
-  const groupedMessages = groupMessages(messages);
+  if (!currentUser) {
+    return <div>Loading...</div>;
+  }
+
+  const aiUser = members.find(m => m.id === 'ai-assistant');
 
   return (
-    <div className="p-4 space-y-4">
-      {groupedMessages.map((group, groupIndex) => {
-        const sender = members.find(m => m.id === group.senderId);
-        if (!sender) return null;
+    <div className="flex-1 relative">
+      <div ref={scrollContainerRef} className="absolute inset-0 overflow-y-auto p-4 space-y-1">
+        {messages.map((message, index) => {
+          const isCurrentUser = message.sender.id === currentUser.id;
+          const sender = members.find(m => m.id === message.sender.id) || message.sender;
+          
+          const prevMessage = messages[index - 1];
+          const isSameSenderAsPrevious = prevMessage && prevMessage.sender.id === message.sender.id;
+          
+          const showDateSeparator = !prevMessage || !isSameDay(parseISO(prevMessage.timestamp), parseISO(message.timestamp));
+          const isImageAttachment = message.attachment?.type.startsWith('image/');
+          const isAudioAttachment = message.attachment?.type.startsWith('audio/');
 
-        const isCurrentUser = sender.id === members[0]?.id; // Assuming current user is first in members list
-
-        return (
-          <div key={groupIndex} className={cn("flex items-start gap-3", isCurrentUser ? "justify-end" : "")}>
-            {!isCurrentUser && (
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={getAvatarUrl(sender.avatar_url, sender.id)} />
-                <AvatarFallback style={generatePastelColor(sender.id)}>{getInitials(sender.name)}</AvatarFallback>
-              </Avatar>
-            )}
-            <div className={cn("flex flex-col gap-1", isCurrentUser ? "items-end" : "items-start")}>
-              {!isCurrentUser && groupIndex === 0 && (
-                <p className="text-xs text-muted-foreground">{sender.name}</p>
+          return (
+            <div key={message.id || index}>
+              {showDateSeparator && (
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      {formatDateSeparator(message.timestamp)}
+                    </span>
+                  </div>
+                </div>
               )}
-              {group.messages.map((message, msgIndex) => (
+              <div
+                className={cn(
+                  "flex items-end gap-2 group",
+                  isCurrentUser ? "justify-end" : "justify-start",
+                  isSameSenderAsPrevious ? "mt-1" : "mt-4"
+                )}
+              >
+                {isCurrentUser && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7 invisible group-hover:visible" onClick={() => onReply(message)}>
+                    <CornerUpLeft className="h-4 w-4" />
+                  </Button>
+                )}
+                {!isCurrentUser && !isSameSenderAsPrevious && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={sender.avatar_url} />
+                    <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
+                  </Avatar>
+                )}
                 <div
-                  key={message.id}
                   className={cn(
-                    "group relative max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2",
+                    "max-w-xs md:max-w-md lg:max-w-lg rounded-lg",
                     isCurrentUser
-                      ? "bg-primary text-primary-foreground rounded-br-none"
-                      : "bg-muted rounded-bl-none"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted",
+                    isImageAttachment ? "p-1 overflow-hidden" : "px-3 py-2",
+                    isAudioAttachment ? "p-0" : "",
+                    !isCurrentUser && isSameSenderAsPrevious && "ml-10"
                   )}
                 >
-                  {message.replied_message_content && (
+                  {!isCurrentUser && !isSameSenderAsPrevious && sender.id !== 'ai-assistant' && (
+                    <p className="text-sm font-semibold mb-1">{sender.name}</p>
+                  )}
+                  
+                  {message.repliedMessage && (
                     <div className="p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary">
-                      <p className="font-semibold">{message.replied_message_sender_name}</p>
+                      <p className="font-semibold">{message.repliedMessage.senderName}</p>
                       <p className="text-xs line-clamp-2 opacity-80">
-                        {message.replied_message_is_deleted ? "This message was deleted." : message.replied_message_content}
+                        {message.repliedMessage.isDeleted ? "This message was deleted." : message.repliedMessage.content}
                       </p>
                     </div>
                   )}
 
-                  {message.attachment?.type.startsWith('audio/') ? (
-                    <VoiceMessagePlayer audioUrl={message.attachment.url} sender={sender} />
-                  ) : (
-                    <>
-                      {message.attachment && (
-                        <div className="mb-1">
-                          <a href={message.attachment.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium underline">
-                            {message.attachment.name}
-                          </a>
+                  {isImageAttachment ? (
+                    <div className="relative">
+                      <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
+                        <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
+                      </a>
+                      <div className="absolute bottom-1 right-1 flex items-end gap-2 w-full p-1 justify-end">
+                        <div className="flex-grow min-w-0">
+                          {message.text && <p className="text-white text-sm break-words">{message.text}</p>}
                         </div>
-                      )}
-                      <div className="flex-grow min-w-0">
-                        {message.content && <p className="text-sm break-words">{message.content}</p>}
+                        <span className="text-xs text-white/90 bg-black/40 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                          {formatTimestamp(message.timestamp)}
+                        </span>
                       </div>
-                    </>
+                    </div>
+                  ) : isAudioAttachment ? (
+                    <VoiceMessagePlayer 
+                      src={message.attachment!.url} 
+                      sender={message.sender} 
+                      isCurrentUser={isCurrentUser}
+                    />
+                  ) : (
+                    <div className="flex items-end gap-2">
+                      <div className="min-w-0">
+                        {message.text && (
+                          <div className={cn(
+                            "text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none",
+                            isCurrentUser ? "prose-p:text-primary-foreground" : "",
+                            "[&_p]:my-0"
+                          )}>
+                            <ReactMarkdown
+                              components={{
+                                a: ({ node, ...props }) => {
+                                  const href = props.href || '';
+                                  if (href.startsWith('/')) {
+                                    return <Link to={href} {...props} className="text-inherit hover:text-inherit font-medium underline" />;
+                                  }
+                                  return <a {...props} target="_blank" rel="noopener noreferrer" className="text-inherit hover:text-inherit font-medium underline" />;
+                                }
+                              }}
+                            >
+                              {message.text}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+                        {message.attachment && (
+                          <MessageAttachment attachment={message.attachment} />
+                        )}
+                      </div>
+                      <span className={cn(
+                          "text-xs self-end flex-shrink-0",
+                          isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                      )}>
+                          {formatTimestamp(message.timestamp)}
+                      </span>
+                    </div>
                   )}
-                  
-                  <div className={cn("absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity", isCurrentUser ? "-left-8" : "-right-8")}>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onReply(message)}>
-                      <Reply className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
-              ))}
+                {!isCurrentUser && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7 invisible group-hover:visible" onClick={() => onReply(message)}>
+                    <CornerUpLeft className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {isLoading && aiUser && (
+          <div className="flex items-end gap-2 justify-start mt-4">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={aiUser.avatar_url} />
+              <AvatarFallback style={generatePastelColor(aiUser.id)}>{aiUser.initials}</AvatarFallback>
+            </Avatar>
+            <div className="max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 bg-muted flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm text-muted-foreground">AI is thinking...</span>
             </div>
           </div>
-        );
-      })}
-      {isLoading && <div className="text-center text-muted-foreground">Loading messages...</div>}
+        )}
+      </div>
     </div>
   );
 };
-
-export default ChatConversation;

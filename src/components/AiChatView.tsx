@@ -1,71 +1,95 @@
 import { useAuth } from "@/contexts/AuthContext";
-import useAiChat from "@/hooks/useAiChat";
+import { useAiChat } from "@/hooks/useAiChat";
+import ChatHeader from "./ChatHeader";
+import { ChatConversation } from "./ChatConversation";
+import { ChatInput } from "./ChatInput";
 import { forwardRef, useMemo, useState } from "react";
 import { Conversation, Message } from "@/types";
 import { Link } from 'react-router-dom';
-import ChatConversation from "./ChatConversation";
-import ChatInput from "./ChatInput";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
+import { Loader2 } from 'lucide-react';
 
-const AiChatView = forwardRef<HTMLDivElement>((props, ref) => {
+interface AiChatViewProps {
+  onBack?: () => void;
+}
+
+const AiChatView = forwardRef<HTMLTextAreaElement, AiChatViewProps>(({ onBack }, ref) => {
   const { user: currentUser } = useAuth();
-  const { conversation, isLoading, sendMessage, aiUser } = useAiChat(currentUser);
+  const { conversation, isLoading, sendMessage, aiUser, isConnected, isCheckingConnection } = useAiChat(currentUser);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [isSending, setIsSending] = useState(false);
 
-  const handleSendMessage = async (text: string, attachment?: File) => {
-    setIsSending(true);
-    try {
-      await sendMessage(text, attachment, replyTo || undefined);
-      setReplyTo(null);
-    } catch (error: any) {
-      toast.error("AI Error: " + error.message);
-    } finally {
-      setIsSending(false);
-    }
+  if (!currentUser) return null;
+
+  const aiConversationObject = useMemo((): Conversation => ({
+    id: 'ai-assistant',
+    userName: 'AI Assistant',
+    userAvatar: aiUser.avatar_url,
+    isGroup: false,
+    members: [currentUser!, aiUser],
+    messages: conversation,
+    lastMessage: conversation[conversation.length - 1]?.text || "Ask me anything...",
+    lastMessageTimestamp: conversation[conversation.length - 1]?.timestamp || new Date().toISOString(),
+    unreadCount: 0,
+  }), [aiUser, conversation, currentUser]);
+
+  const handleSendMessage = (text: string, attachmentFile: File | null) => {
+    sendMessage(text, attachmentFile, replyTo?.id);
+    setReplyTo(null);
   };
 
-  const aiConversation: Conversation = useMemo(() => ({
-    id: 'ai-assistant',
-    name: 'AI Assistant',
-    avatar: aiUser.avatar_url,
-    is_group: false,
-    participants: [currentUser!, aiUser],
-    created_by: 'system',
-    messages: conversation,
-    last_message_content: conversation[conversation.length - 1]?.content || "Ask me anything...",
-    last_message_at: conversation[conversation.length - 1]?.timestamp || new Date().toISOString(),
-  }), [conversation, currentUser, aiUser]);
+  if (isCheckingConnection) {
+    return (
+      <div className="flex flex-col h-full bg-background overflow-hidden">
+        <ChatHeader onBack={onBack} conversation={aiConversationObject} />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="flex flex-col h-full bg-background overflow-hidden">
+        <ChatHeader onBack={onBack} conversation={aiConversationObject} />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md text-center">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold">AI Assistant is Offline</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                An administrator needs to configure the OpenAI integration in the settings to enable the AI Assistant.
+              </p>
+              <Button asChild className="mt-4">
+                <Link to="/settings/integrations/openai">Go to Settings</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto" ref={ref}>
-        <div className="p-4 text-sm text-center bg-blue-50 border-b border-blue-200 text-blue-800">
-          This is an AI assistant. Responses may be inaccurate. For critical tasks, please verify with a human. For project-related queries, you can also visit the <Link to="/projects" className="underline font-semibold">Projects Page</Link>.
-        </div>
-        <ChatConversation
-          messages={conversation}
-          members={[currentUser!, aiUser]}
-          isLoading={isLoading}
-          onReply={setReplyTo}
-        />
-      </div>
-      <div className="p-4 border-t bg-background">
-        <ChatInput
-          onSendMessage={handleSendMessage}
-          isSending={isSending || isLoading}
-          replyTo={replyTo}
-          onClearReply={() => setReplyTo(null)}
-          placeholder="Ask the AI assistant..."
-        />
-        {isLoading && (
-          <div className="flex items-center justify-center pt-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            AI is thinking...
-          </div>
-        )}
-      </div>
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      <ChatHeader
+        onBack={onBack}
+        conversation={aiConversationObject}
+      />
+      <ChatConversation
+        messages={conversation}
+        members={[currentUser, aiUser]}
+        isLoading={isLoading}
+        onReply={setReplyTo}
+      />
+      <ChatInput 
+        ref={ref} 
+        onSendMessage={handleSendMessage}
+        isSending={isLoading}
+        conversationId="ai-assistant"
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
+      />
     </div>
   );
 });

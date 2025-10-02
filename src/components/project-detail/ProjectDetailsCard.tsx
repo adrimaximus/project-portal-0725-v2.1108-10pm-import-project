@@ -181,7 +181,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
           </div>
           <div className="flex items-start gap-4">
             <Briefcase className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-            <div className="flex-1">
+            <div className="w-full">
               <p className="font-medium">Services</p>
               <div className="mt-1">
                 <ProjectServices
