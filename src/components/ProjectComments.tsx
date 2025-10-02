@@ -101,7 +101,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               trigger="@"
               data={mentionableUsers}
               renderSuggestion={(suggestion: any) => (
-                <div className="font-medium text-sm">{suggestion.display}</div>
+                <div className="font-medium text-sm text-foreground">{suggestion.display}</div>
               )}
               appendSpaceOnAdd
             />
