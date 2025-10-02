@@ -5,22 +5,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Paperclip, Send, Ticket, X } from "lucide-react";
 import { Mention, MentionsInput } from "react-mentions";
+import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 
 interface CommentInputProps {
   project: Project;
   onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
 }
-
-const mentionInputClassNames = {
-  control: 'relative w-full',
-  input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-  suggestions: {
-    list: 'bg-popover text-popover-foreground border rounded-md shadow-lg overflow-hidden p-1 max-h-60 overflow-y-auto mt-2 z-10',
-    item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer outline-none',
-    itemFocused: 'bg-accent text-accent-foreground',
-  },
-  mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-1 py-0.5',
-};
 
 const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
   const { user } = useAuth();
@@ -76,7 +66,17 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder={isTicket ? "Describe the task or issue..." : "Add a comment... @ to mention"}
-          classNames={mentionInputClassNames}
+          a11ySuggestionsListLabel={"Suggested mentions"}
+          classNames={{
+            control: 'relative w-full',
+            input: 'w-full min-h-[100px] p-3 text-sm rounded-lg border bg-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+            suggestions: {
+              list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg p-1 mt-2 z-10 max-h-60 overflow-y-auto',
+              item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer outline-none',
+              itemFocused: 'bg-accent text-accent-foreground',
+            },
+            mention: 'bg-primary/10 text-primary font-semibold rounded-sm px-2 py-1',
+          }}
           disabled={isSubmitting}
         >
           <Mention
@@ -85,8 +85,8 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
             renderSuggestion={(suggestion: any) => (
               <>
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={suggestion.avatar_url} />
-                  <AvatarFallback>{suggestion.initials}</AvatarFallback>
+                  <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
+                  <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="font-medium text-sm">{suggestion.display}</p>
