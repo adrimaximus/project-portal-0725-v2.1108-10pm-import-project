@@ -9,9 +9,10 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { FileText, User as UserIcon, Trophy, Sparkles, Search as SearchIcon, CreditCard, Loader2 } from "lucide-react";
+import { FileText, User as UserIcon, Trophy, Sparkles, Search as SearchIcon, CreditCard, Loader2, ListChecks } from "lucide-react";
 import debounce from 'lodash.debounce';
 import { analyzeProjects } from "@/lib/openai";
 import ReactMarkdown from "react-markdown";
@@ -21,12 +22,14 @@ import { toast } from "sonner";
 
 type Goal = { id: string; title: string; slug: string; };
 type Bill = { id: string; name: string; slug: string; payment_status: string };
+type Task = { id: string; title: string; project_slug: string; project_name: string; };
 
 type SearchResults = {
   projects: Pick<Project, 'id' | 'name' | 'slug'>[];
   users: Pick<User, 'id' | 'name'>[];
   goals: Goal[];
   bills: Bill[];
+  tasks: Task[];
 };
 
 type ConversationMessage = {
@@ -37,7 +40,7 @@ type ConversationMessage = {
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResults>({ projects: [], users: [], goals: [], bills: [] });
+  const [results, setResults] = useState<SearchResults>({ projects: [], users: [], goals: [], bills: [], tasks: [] });
   const [loading, setLoading] = useState(false);
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -53,7 +56,7 @@ export function GlobalSearch() {
 
   const resetSearch = () => {
     setQuery("");
-    setResults({ projects: [], users: [], goals: [], bills: [] });
+    setResults({ projects: [], users: [], goals: [], bills: [], tasks: [] });
     setConversation([]);
     setIsAiLoading(false);
     setLoading(false);
@@ -72,18 +75,19 @@ export function GlobalSearch() {
 
   const performSearch = async (searchQuery: string) => {
     if (searchQuery.length < 2) {
-      setResults({ projects: [], users: [], goals: [], bills: [] });
+      setResults({ projects: [], users: [], goals: [], bills: [], tasks: [] });
       setLoading(false);
       return;
     }
     setLoading(true);
 
     try {
-      const [projectsRes, usersRes, goalsRes, billsRes] = await Promise.all([
+      const [projectsRes, usersRes, goalsRes, billsRes, tasksRes] = await Promise.all([
         supabase.from('projects').select('id, name, slug').ilike('name', `%${searchQuery}%`).limit(5),
         supabase.from('profiles').select('id, first_name, last_name, email').or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`).limit(5),
         supabase.from('goals').select('id, title, slug').ilike('title', `%${searchQuery}%`).limit(5),
-        supabase.from('projects').select('id, name, slug, payment_status').in('payment_status', ['Unpaid', 'Overdue']).ilike('name', `%${searchQuery}%`).limit(5)
+        supabase.from('projects').select('id, name, slug, payment_status').in('payment_status', ['Unpaid', 'Overdue']).ilike('name', `%${searchQuery}%`).limit(5),
+        supabase.rpc('search_tasks', { p_search_term: searchQuery, p_limit: 5 })
       ]);
 
       const projects = projectsRes.data || [];
@@ -93,11 +97,12 @@ export function GlobalSearch() {
       }));
       const goals = goalsRes.data || [];
       const bills = billsRes.data || [];
+      const tasks = tasksRes.data || [];
 
-      setResults({ projects, users, goals, bills });
+      setResults({ projects, users, goals, bills, tasks });
     } catch (error) {
       console.error("Error performing search:", error);
-      setResults({ projects: [], users: [], goals: [], bills: [] });
+      setResults({ projects: [], users: [], goals: [], bills: [], tasks: [] });
     } finally {
       setLoading(false);
     }
@@ -111,7 +116,7 @@ export function GlobalSearch() {
       setLoading(true);
       debouncedSearch(query);
     } else {
-      setResults({ projects: [], users: [], goals: [], bills: [] });
+      setResults({ projects: [], users: [], goals: [], bills: [], tasks: [] });
       setLoading(false);
       debouncedSearch.cancel();
     }
@@ -131,7 +136,7 @@ export function GlobalSearch() {
     setConversation(newConversationForUi);
     setQuery("");
     setIsAiLoading(true);
-    setResults({ projects: [], users: [], goals: [], bills: [] });
+    setResults({ projects: [], users: [], goals: [], bills: [], tasks: [] });
     setLoading(false);
   
     try {
@@ -159,7 +164,7 @@ export function GlobalSearch() {
     }
   };
 
-  const hasResults = results.projects.length > 0 || results.users.length > 0 || results.goals.length > 0 || results.bills.length > 0;
+  const hasResults = results.projects.length > 0 || results.users.length > 0 || results.goals.length > 0 || results.bills.length > 0 || results.tasks.length > 0;
 
   return (
     <>
@@ -230,6 +235,23 @@ export function GlobalSearch() {
 
           {conversation.length === 0 && (
             <>
+              {results.tasks.length > 0 && (
+                <CommandGroup heading="Tasks">
+                  {results.tasks.map(task => (
+                    <CommandItem
+                      key={task.id}
+                      onSelect={() => handleSelect(() => navigate(`/projects/${task.project_slug}?task=${task.id}`))}
+                      value={`task-${task.id}-${task.title}`}
+                      className="cursor-pointer"
+                    >
+                      <ListChecks className="mr-2 h-4 w-4" />
+                      <span>{task.title}</span>
+                      <span className="text-xs text-muted-foreground ml-auto">{task.project_name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
               {results.projects.length > 0 && (
                 <CommandGroup heading="Projects">
                   {results.projects.map(project => (
