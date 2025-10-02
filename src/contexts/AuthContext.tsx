@@ -82,25 +82,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    const initializeSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      await fetchUserProfile(session);
-      setLoading(false);
-    };
-
-    initializeSession();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (isImpersonating) return;
       setSession(session);
-      fetchUserProfile(session);
+    });
+
+    // Also check session on initial load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isImpersonating) {
+        setSession(session);
+      }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, isImpersonating]);
+  }, [isImpersonating]);
+
+  useEffect(() => {
+    const manageProfileAndLoading = async () => {
+      await fetchUserProfile(session);
+      setLoading(false);
+    };
+    manageProfileAndLoading();
+  }, [session, fetchUserProfile]);
 
   useEffect(() => {
     // This listener reacts to any change in the roles table.
