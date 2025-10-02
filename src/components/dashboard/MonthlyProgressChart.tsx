@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, getMonth } from 'date-fns';
 import { getStatusStyles, getPaymentStatusStyles } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ChartType = 'quantity' | 'value' | 'project_status' | 'payment_status';
 
@@ -45,7 +46,15 @@ const CustomTooltip = ({ active, payload, label, chartType }: any) => {
 };
 
 const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
+  const { hasPermission } = useAuth();
+  const canViewValue = hasPermission('projects:view_value');
   const [chartType, setChartType] = useState<ChartType>('quantity');
+
+  useEffect(() => {
+    if (!canViewValue && chartType === 'value') {
+      setChartType('quantity');
+    }
+  }, [canViewValue, chartType]);
 
   const chartData = useMemo(() => {
     const months = Array.from({ length: 12 }, (_, i) => {
@@ -134,7 +143,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="quantity">Project Quantity</SelectItem>
-              <SelectItem value="value">Project Value</SelectItem>
+              {canViewValue && <SelectItem value="value">Project Value</SelectItem>}
               <SelectItem value="project_status">Project Status</SelectItem>
               <SelectItem value="payment_status">Payment Status</SelectItem>
             </SelectContent>

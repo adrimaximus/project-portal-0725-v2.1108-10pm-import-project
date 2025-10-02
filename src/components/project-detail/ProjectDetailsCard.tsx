@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProjectDetailsCardProps {
   project: Project;
@@ -28,6 +29,9 @@ const paymentStatusConfig: Record<string, { color: string; label: string }> = {
 };
 
 const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
+  const { hasPermission } = useAuth();
+  const canViewValue = hasPermission('projects:view_value');
+
   const handleDateChange = (range: DateRange | undefined) => {
     const startDate = range?.from ? range.from.toISOString() : undefined;
     const endDateValue = range?.to || range?.from;
@@ -141,24 +145,26 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
               )}
             </div>
           </div>
-          <div className="flex items-start gap-4">
-            <Wallet className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-            <div>
-              <p className="font-medium">Budget</p>
-              {isEditing ? (
-                <CurrencyInput
-                  value={project.budget || 0}
-                  onChange={handleBudgetChange}
-                  placeholder="Enter budget"
-                  className="w-full"
-                />
-              ) : (
-                <p className="text-muted-foreground">
-                  {formatCurrency(project.budget || 0)}
-                </p>
-              )}
+          {canViewValue && (
+            <div className="flex items-start gap-4">
+              <Wallet className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Budget</p>
+                {isEditing ? (
+                  <CurrencyInput
+                    value={project.budget || 0}
+                    onChange={handleBudgetChange}
+                    placeholder="Enter budget"
+                    className="w-full"
+                  />
+                ) : (
+                  <p className="text-muted-foreground">
+                    {formatCurrency(project.budget || 0)}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
           <div className="flex items-start gap-4">
             <MapPin className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
             <div className="w-full">

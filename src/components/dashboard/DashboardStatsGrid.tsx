@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Project, User, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import StatCard from './StatCard';
 import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DashboardStatsGridProps {
   projects: Project[];
@@ -40,7 +41,15 @@ const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, met
 };
 
 const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
+  const { hasPermission } = useAuth();
+  const canViewValue = hasPermission('projects:view_value');
   const [viewMode, setViewMode] = useState<'quantity' | 'value'>('quantity');
+
+  useEffect(() => {
+    if (!canViewValue) {
+      setViewMode('quantity');
+    }
+  }, [canViewValue]);
 
   const stats = useMemo(() => {
     const totalProjects = projects.length;
@@ -125,28 +134,32 @@ const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
-        <ToggleGroup 
-          type="single" 
-          value={viewMode} 
-          onValueChange={(value) => { if (value) setViewMode(value as 'quantity' | 'value')}}
-          className="h-8"
-        >
-          <ToggleGroupItem value="quantity" className="text-xs px-3">By Quantity</ToggleGroupItem>
-          <ToggleGroupItem value="value" className="text-xs px-3">By Value</ToggleGroupItem>
-        </ToggleGroup>
-      </div>
+      {canViewValue && (
+        <div className="flex justify-end mb-4">
+          <ToggleGroup 
+            type="single" 
+            value={viewMode} 
+            onValueChange={(value) => { if (value) setViewMode(value as 'quantity' | 'value')}}
+            className="h-8"
+          >
+            <ToggleGroupItem value="quantity" className="text-xs px-3">By Quantity</ToggleGroupItem>
+            <ToggleGroupItem value="value" className="text-xs px-3">By Value</ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Projects"
           value={stats.totalProjects}
           icon={<Briefcase className="h-4 w-4 text-muted-foreground" />}
         />
-        <StatCard
-          title="Total Project Value"
-          value={`Rp\u00A0${new Intl.NumberFormat('id-ID').format(stats.totalValue)}`}
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-        />
+        {canViewValue && (
+          <StatCard
+            title="Total Project Value"
+            value={`Rp\u00A0${new Intl.NumberFormat('id-ID').format(stats.totalValue)}`}
+            icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          />
+        )}
         <StatCard
           title="Project Status"
           icon={<ListChecks className="h-4 w-4 text-muted-foreground" />}
