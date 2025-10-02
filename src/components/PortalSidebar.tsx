@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import OnlineCollaborators from "./OnlineCollaborators";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFeatures } from "@/contexts/FeaturesContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -77,7 +76,7 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
 };
 
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { unreadCount: unreadNotificationCount } = useNotifications();
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -155,6 +154,23 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     return () => { supabase.removeChannel(channel); };
   }, [user, queryClient]);
 
+  const navItemToPermissionId = (itemName: string): string | null => {
+    const mapping: { [key: string]: string } = {
+        'dashboard': 'module:dashboard',
+        'projects': 'module:projects',
+        'tasks': 'module:projects',
+        'requests': 'module:request',
+        'chat': 'module:chat',
+        'mood trackers': 'module:mood-tracker',
+        'goals': 'module:goals',
+        'billing': 'module:billing',
+        'people': 'module:people',
+        'knowledge base': 'module:knowledge-base',
+        'settings': 'module:settings',
+    };
+    return mapping[itemName.toLowerCase()] || null;
+  };
+
   const { navItems, settingsItem } = useMemo(() => {
     if (navItemsError || foldersError) {
       console.warn("Using fallback navigation due to errors:", { navItemsError, foldersError });
@@ -172,6 +188,13 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
 
     const allItems = customNavItems
       .filter(item => item.is_enabled)
+      .filter(item => {
+        if (item.is_deletable === false) {
+          const permissionId = navItemToPermissionId(item.name);
+          return permissionId ? hasPermission(permissionId) : true;
+        }
+        return true;
+      })
       .map(item => {
         let href: string;
         let badge;
@@ -218,7 +241,7 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     const otherItems = allItems.filter(item => item.href !== '/settings');
 
     return { navItems: otherItems, settingsItem: settings };
-  }, [customNavItems, unreadNotificationCount, navItemsError, foldersError, hasUnreadChat]);
+  }, [customNavItems, unreadNotificationCount, navItemsError, foldersError, hasPermission, hasUnreadChat]);
 
   const topLevelItems = useMemo(() => navItems.filter(item => !item.folder_id), [navItems]);
 
