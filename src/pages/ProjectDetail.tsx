@@ -1,12 +1,17 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import PortalLayout from "@/components/PortalLayout";
-import ProjectHeader from "@/components/project-detail/ProjectHeader";
-import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
-import { Skeleton } from "@/components/ui/skeleton";
-import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
-import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
-import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Project, User } from '@/types';
+import PortalLayout from '@/components/PortalLayout';
+import { Button } from '@/components/ui/button';
+import { MoreHorizontal, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,45 +21,45 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useAuth } from "@/contexts/AuthContext";
-import { useProject } from "@/hooks/useProject";
-import { useProjectMutations } from "@/hooks/useProjectMutations";
-import { toast } from "sonner";
-import { Project } from "@/types";
+} from '@/components/ui/alert-dialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProjectMutations } from '@/hooks/useProjectMutations';
+import ProjectHeader from '@/components/project-detail/ProjectHeader';
+import ProjectMainContent from '@/components/project-detail/ProjectMainContent';
+import { toast } from 'sonner';
 
-const ProjectDetailSkeleton = () => (
-  <PortalLayout>
-    <div className="space-y-4">
-      <Skeleton className="h-16 w-full" />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <Skeleton className="h-96" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-48" />
-        </div>
-      </div>
-    </div>
-  </PortalLayout>
-);
+const fetchProjectBySlug = async (slug: string): Promise<Project | null> => {
+  const { data, error } = await supabase
+    .rpc('get_project_by_slug', { p_slug: slug });
 
-const ProjectDetail = () => {
+  if (error) {
+    console.error('Error fetching project by slug:', error);
+    throw new Error(error.message);
+  }
+  
+  if (!data || data.length === 0) {
+    return null;
+  }
+  
+  return data[0] as Project;
+};
+
+const ProjectDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [searchParams] = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const mutations = useProjectMutations(slug || '');
+
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<Project | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const mainContentRef = useRef<HTMLDivElement>(null);
 
-  const { data: project, isLoading, error } = useProject(slug!);
-  const mutations = useProjectMutations(slug!);
-
-  const defaultTab = searchParams.get('tab') || 'overview';
+  const { data: project, isLoading, error } = useQuery({
+    queryKey: ['project', slug],
+    queryFn: () => fetchProjectBySlug(slug!),
+    enabled: !!slug,
+  });
 
   useEffect(() => {
     if (project) {
@@ -62,45 +67,27 @@ const ProjectDetail = () => {
     }
   }, [project]);
 
-  useEffect(() => {
-    const taskParam = searchParams.get('task');
-    const tabParam = searchParams.get('tab');
-    if (taskParam && tabParam === 'tasks' && mainContentRef.current && !isLoading) {
-      setTimeout(() => {
-        mainContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    }
-  }, [searchParams, isLoading, project]);
-
-  useEffect(() => {
-    if (!isLoading && !error && !project) {
-      toast.error("Project not found or you do not have access.");
-      navigate("/projects");
-    }
-    if (error) {
-      toast.error("Failed to load project", { description: "Please check the URL or try again later." });
-      navigate("/projects");
-    }
-  }, [isLoading, error, project, navigate]);
-
-  if (authLoading || isLoading || !project || !editedProject) {
-    return <ProjectDetailSkeleton />;
-  }
+  if (isLoading) return <PortalLayout><div className="p-6">Loading project...</div></PortalLayout>;
+  if (error) return <PortalLayout><div className="p-6 text-destructive">Error: {error.message}</div></PortalLayout>;
+  if (!project) return <PortalLayout><div className="p-6">Project not found.</div></PortalLayout>;
 
   const canEdit = user && (user.id === project.created_by.id || user.role === 'admin' || user.role === 'master admin');
 
   const handleFieldChange = (field: keyof Project, value: any) => {
-    setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
+    if (editedProject) {
+      setEditedProject({ ...editedProject, [field]: value });
+    }
   };
 
-  const handleSaveChanges = () => {
-    if (!editedProject) return;
-    mutations.updateProject.mutate(editedProject, {
-      onSuccess: () => setIsEditing(false),
-    });
+  const handleSave = () => {
+    if (editedProject) {
+      mutations.updateProject.mutate(editedProject, {
+        onSuccess: () => setIsEditing(false),
+      });
+    }
   };
 
-  const handleCancelChanges = () => {
+  const handleCancel = () => {
     setEditedProject(project);
     setIsEditing(false);
   };
@@ -119,57 +106,74 @@ const ProjectDetail = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
+      <div className="flex flex-col h-full">
         <ProjectHeader
-          project={editedProject}
+          project={editedProject || project}
           isEditing={isEditing}
-          isSaving={mutations.updateProject.isPending}
-          canEdit={canEdit}
-          onEditToggle={() => setIsEditing(true)}
-          onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleCancelChanges}
-          onToggleComplete={handleToggleComplete}
-          onDeleteProject={() => setIsDeleteDialogOpen(true)}
           onFieldChange={handleFieldChange}
         />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-6">
-            <ProjectDetailsCard
-              project={editedProject}
+
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div className="max-w-6xl mx-auto">
+            <ProjectMainContent
+              project={editedProject || project}
               isEditing={isEditing}
               onFieldChange={handleFieldChange}
-            />
-            <div ref={mainContentRef}>
-              <ProjectMainContent
-                project={editedProject}
-                isEditing={isEditing}
-                onFieldChange={handleFieldChange}
-                mutations={mutations}
-                defaultTab={defaultTab}
-              />
-            </div>
-          </div>
-          <div className="lg:col-span-1 space-y-6">
-            <ProjectProgressCard project={editedProject} />
-            <ProjectTeamCard
-              project={editedProject}
-              isEditing={isEditing}
-              onFieldChange={handleFieldChange}
+              mutations={mutations}
             />
           </div>
         </div>
+
+        {canEdit && (
+          <div className="sticky bottom-0 bg-background/80 backdrop-blur-sm border-t p-4">
+            <div className="max-w-6xl mx-auto flex justify-end items-center gap-2">
+              {isEditing ? (
+                <>
+                  <Button variant="ghost" onClick={handleCancel}>Cancel</Button>
+                  <Button onClick={handleSave} disabled={mutations.updateProject.isPending}>
+                    {mutations.updateProject.isPending ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={handleToggleComplete}>
+                    {project.status === 'Completed' ? <XCircle className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                    {project.status === 'Completed' ? 'Mark as In Progress' : 'Mark as Complete'}
+                  </Button>
+                  <Button onClick={() => setIsEditing(true)}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit Project
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Project
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the project and all its associated data.
+              This action cannot be undone. This will permanently delete the project "{project.name}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProject}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteProject} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -177,4 +181,4 @@ const ProjectDetail = () => {
   );
 };
 
-export default ProjectDetail;
+export default ProjectDetailPage;
