@@ -27,7 +27,7 @@ const propertySchema = z.object({
   options: z.array(z.object({ value: z.string().min(1, 'Option value is required') })).optional(),
 }).refine(data => {
   if (data.type === 'select') {
-    return data.options && data.options.length > 0;
+    return data.options && data.options.length > 0 && data.options.every(o => o.value);
   }
   return true;
 }, {
@@ -57,8 +57,6 @@ const CompanyPropertiesDialog = ({ open, onOpenChange }) => {
     queryFn: async () => {
       const { data, error } = await supabase.from('company_properties').select('*').order('label');
       if (error) throw error;
-      // The options are stored as a simple array of strings in Supabase.
-      // react-hook-form's useFieldArray works better with an array of objects.
       return data.map(p => ({ ...p, options: p.options?.map(o => ({ value: o })) || [] }));
     },
   });
@@ -93,7 +91,6 @@ const CompanyPropertiesDialog = ({ open, onOpenChange }) => {
 
       if (propertyToEdit) {
         const record = {
-          // name (slug) is not editable after creation
           label: values.label,
           type: values.type,
           options,
@@ -199,15 +196,20 @@ const CompanyPropertiesDialog = ({ open, onOpenChange }) => {
                 <div>
                   <Label>Options</Label>
                   {fields.map((field, index) => (
-                    <div key={field.id} className="flex items-center gap-2 mb-2">
-                      <Input {...register(`options.${index}.value`)} />
-                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
-                        <X className="h-4 w-4" />
-                      </Button>
+                    <div key={field.id} className="mb-2">
+                      <div className="flex items-center gap-2">
+                        <Input {...register(`options.${index}.value`)} />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {errors.options?.[index]?.value && (
+                        <p className="text-sm text-destructive mt-1 pl-1">{errors.options[index].value.message}</p>
+                      )}
                     </div>
                   ))}
                   <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>Add Option</Button>
-                  {errors.options && <p className="text-sm text-destructive mt-1">{errors.options.root?.message}</p>}
+                  {errors.options && !errors.options[0] && <p className="text-sm text-destructive mt-1">{errors.options.root?.message}</p>}
                 </div>
               )}
 
