@@ -3,16 +3,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, PlusCircle, Edit, Trash2, Building, Loader2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Edit, Trash2, Building, Loader2, Settings } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import CompanyFormDialog, { Company } from './CompanyFormDialog';
+import CompanyPropertiesDialog from './CompanyPropertiesDialog';
 
 const CompaniesView = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
     const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+    const [isPropertiesDialogOpen, setIsPropertiesDialogOpen] = useState(false);
     const queryClient = useQueryClient();
 
     const { data: companies = [], isLoading } = useQuery<Company[]>({
@@ -55,10 +57,16 @@ const CompaniesView = () => {
                     <h2 className="text-2xl font-bold">Companies</h2>
                     <p className="text-muted-foreground">Manage all companies in your network.</p>
                 </div>
-                <Button onClick={handleAddNew}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Company
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setIsPropertiesDialogOpen(true)}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Company Properties
+                    </Button>
+                    <Button onClick={handleAddNew}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Company
+                    </Button>
+                </div>
             </div>
             <div className="border rounded-lg overflow-auto flex-grow">
                 <Table>
@@ -114,6 +122,11 @@ const CompaniesView = () => {
                 open={isFormOpen}
                 onOpenChange={setIsFormOpen}
                 company={companyToEdit}
+            />
+
+            <CompanyPropertiesDialog
+                open={isPropertiesDialogOpen}
+                onOpenChange={setIsPropertiesDialogOpen}
             />
 
             <AlertDialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>

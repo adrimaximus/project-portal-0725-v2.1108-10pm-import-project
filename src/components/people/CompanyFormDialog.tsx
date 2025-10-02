@@ -1,171 +1,204 @@
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { CompanyProperty } from './CompanyPropertiesDialog';
 
-export interface Company {
+export type Company = {
   id: string;
   name: string;
-  legal_name: string | null;
-  address: string | null;
-  billing_address: string | null;
-  logo_url: string | null;
-  created_at: string;
-  updated_at: string;
-  user_id: string | null;
-}
+  legal_name?: string;
+  address?: string;
+  logo_url?: string;
+  custom_properties?: Record<string, any>;
+};
 
-const companySchema = z.object({
-    name: z.string().min(1, "Company name is required"),
+const CompanyFormDialog = ({ open, onOpenChange, company }) => {
+  const queryClient = useQueryClient();
+
+  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
+    queryKey: ['company_properties'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('company_properties').select('*').order('label');
+      if (error) throw error;
+      return data.map(p => ({ ...p, options: p.options?.map(o => ({ value: o })) || [] }));
+    },
+  });
+
+  const baseSchema = z.object({
+    name: z.string().min(1, 'Company name is required'),
     legal_name: z.string().optional(),
     address: z.string().optional(),
-    billing_address: z.string().optional(),
-    logo_url: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-});
+    logo_url: z.string().url().optional().or(z.literal('')),
+  });
 
-type CompanyFormData = z.infer<typeof companySchema>;
+  const [dynamicSchema, setDynamicSchema] = React.useState(baseSchema);
 
-interface CompanyFormDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    company: Company | null;
-}
-
-const CompanyFormDialog = ({ open, onOpenChange, company }: CompanyFormDialogProps) => {
-    const queryClient = useQueryClient();
-    const form = useForm<CompanyFormData>({
-        resolver: zodResolver(companySchema),
-        defaultValues: {
-            name: '',
-            legal_name: '',
-            address: '',
-            billing_address: '',
-            logo_url: '',
+  useEffect(() => {
+    if (properties.length > 0) {
+      const schema = properties.reduce((schema, prop) => {
+        let fieldSchema;
+        switch (prop.type) {
+          case 'number':
+            fieldSchema = z.coerce.number().optional();
+            break;
+          case 'date':
+            fieldSchema = z.string().optional();
+            break;
+          case 'select':
+            fieldSchema = z.string().optional();
+            break;
+          default:
+            fieldSchema = z.string().optional();
         }
-    });
+        return schema.extend({ [prop.name]: fieldSchema });
+      }, baseSchema);
+      setDynamicSchema(schema);
+    }
+  }, [properties]);
 
-    useEffect(() => {
-        if (company) {
-            form.reset({
-                name: company.name,
-                legal_name: company.legal_name || '',
-                address: company.address || '',
-                billing_address: company.billing_address || '',
-                logo_url: company.logo_url || '',
-            });
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
+    resolver: zodResolver(dynamicSchema),
+  });
+
+  useEffect(() => {
+    if (open) {
+      if (company) {
+        const { custom_properties, ...companyData } = company;
+        reset({ ...companyData, ...custom_properties });
+      } else {
+        const defaultValues = properties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
+        reset({ name: '', legal_name: '', address: '', logo_url: '', ...defaultValues });
+      }
+    }
+  }, [company, open, reset, properties]);
+
+  const mutation = useMutation({
+    mutationFn: async (values: any) => {
+      const standardFields = ['name', 'legal_name', 'address', 'logo_url'];
+      const companyData: Partial<Company> = {};
+      const custom_properties: Record<string, any> = {};
+
+      for (const key in values) {
+        if (standardFields.includes(key)) {
+          companyData[key] = values[key];
         } else {
-            form.reset({
-                name: '',
-                legal_name: '',
-                address: '',
-                billing_address: '',
-                logo_url: '',
-            });
+          custom_properties[key] = values[key];
         }
-    }, [company, open, form]);
+      }
+      companyData.custom_properties = custom_properties;
 
-    const onSubmit = async (values: CompanyFormData) => {
-        const { data, error } = await supabase
-            .from('companies')
-            .upsert({
-                id: company?.id,
-                ...values
-            })
-            .select()
-            .single();
+      if (company) {
+        const { error } = await supabase.from('companies').update(companyData).eq('id', company.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('companies').insert(companyData as any);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success(`Company ${company ? 'updated' : 'created'} successfully.`);
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast.error('Failed to save company.', { description: error.message });
+    },
+  });
 
-        if (error) {
-            toast.error("Failed to save company.", { description: error.message });
-        } else {
-            toast.success(`Company "${data.name}" saved successfully.`);
-            queryClient.invalidateQueries({ queryKey: ['companies'] });
-            onOpenChange(false);
-        }
-    };
+  const onSubmit = (data: any) => {
+    mutation.mutate(data);
+  };
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
-                    <DialogDescription>
-                        {company ? `Update details for ${company.name}.` : 'Add a new company to your list.'}
-                    </DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Company Name</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Acme Inc." {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="legal_name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Legal Name</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Acme Corporation" {...field} value={field.value ?? ''} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="address"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Address</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="123 Main St, Anytown, USA" {...field} value={field.value ?? ''} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="logo_url"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Logo URL</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="https://example.com/logo.png" {...field} value={field.value ?? ''} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                            <Button type="submit" disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Save
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
-    );
+  const renderField = (prop: CompanyProperty) => {
+    const fieldName = prop.name;
+    switch (prop.type) {
+      case 'number':
+        return <Input id={fieldName} type="number" {...register(fieldName)} />;
+      case 'date':
+        return <Input id={fieldName} type="date" {...register(fieldName)} />;
+      case 'select':
+        return (
+          <Controller
+            name={fieldName}
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value || ''}>
+                <SelectTrigger><SelectValue placeholder={`Select ${prop.label}`} /></SelectTrigger>
+                <SelectContent>
+                  {prop.options?.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.value}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        );
+      default:
+        return <Input id={fieldName} {...register(fieldName)} />;
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
+          <DialogDescription>Fill in the details for the company.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+          <div>
+            <Label htmlFor="name">Company Name</Label>
+            <Input id="name" {...register('name')} />
+            {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message as string}</p>}
+          </div>
+          <div>
+            <Label htmlFor="legal_name">Legal Name</Label>
+            <Input id="legal_name" {...register('legal_name')} />
+          </div>
+          <div>
+            <Label htmlFor="address">Address</Label>
+            <Textarea id="address" {...register('address')} />
+          </div>
+          <div>
+            <Label htmlFor="logo_url">Logo URL</Label>
+            <Input id="logo_url" {...register('logo_url')} />
+            {errors.logo_url && <p className="text-sm text-destructive mt-1">{errors.logo_url.message as string}</p>}
+          </div>
+
+          {isLoadingProperties ? (
+            <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          ) : properties.length > 0 && (
+            <div className="space-y-4 border-t pt-4 mt-4">
+              <h3 className="text-lg font-medium">Custom Properties</h3>
+              {properties.map(prop => (
+                <div key={prop.id}>
+                  <Label htmlFor={prop.name}>{prop.label}</Label>
+                  {renderField(prop)}
+                </div>
+              ))}
+            </div>
+          )}
+        
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {company ? 'Save Changes' : 'Create Company'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 export default CompanyFormDialog;
