@@ -31,7 +31,7 @@ const ProjectServices = ({ selectedServices = [], isEditing, onServicesChange }:
 
   if (!isEditing) {
     return (
-      <div className="flex flex-wrap gap-2 w-full">
+      <div className="flex flex-wrap gap-2">
         {serviceDetails.length > 0 ? serviceDetails.map((service) => (
           <Badge
             key={service.title}
