@@ -21,6 +21,7 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
   const formatDescription = (text: string) => {
     if (!text) return "";
     return text
+      .replace(/\\"/g, "") // Remove escaped quotes
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-card-foreground">$1</strong>')
       .replace(/`(.*?)`/g, '<code class="bg-muted text-muted-foreground font-mono text-xs px-1 py-0.5 rounded">$1</code>');
   };
