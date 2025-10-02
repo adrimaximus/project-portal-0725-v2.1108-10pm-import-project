@@ -8,11 +8,10 @@ type PortalLayoutProps = {
   children: ReactNode;
   summary?: ReactNode;
   pageHeader?: ReactNode;
-  disableMainScroll?: boolean;
   noPadding?: boolean;
 };
 
-export default function PortalLayout({ children, summary, pageHeader, disableMainScroll, noPadding }: PortalLayoutProps) {
+export default function PortalLayout({ children, summary, pageHeader, noPadding }: PortalLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSidebar = () => {
@@ -20,17 +19,20 @@ export default function PortalLayout({ children, summary, pageHeader, disableMai
   };
 
   return (
-    <div className="flex h-screen w-full bg-muted/40">
-      {/* Desktop Sidebar: Hidden on small screens */}
-      <div className="hidden sm:block">
+    <div className="flex min-h-screen w-full bg-muted/40">
+      {/* Desktop Sidebar: Hidden on small screens, now sticky */}
+      <div className="hidden sm:block sticky top-0 h-screen self-start">
         <PortalSidebar isCollapsed={isCollapsed} onToggle={toggleSidebar} />
       </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <PortalHeader summary={summary} />
+      <div className="flex flex-1 flex-col">
+        {/* Header is now sticky */}
+        <header className="sticky top-0 z-10">
+          <PortalHeader summary={summary} />
+        </header>
 
-        {/* Refactored scrollable content area */}
-        <div className={cn("flex-1 min-h-0", !disableMainScroll && "overflow-y-auto")}>
+        {/* Main content area, will scroll with the page */}
+        <div>
           {pageHeader}
           <main className={cn(!noPadding && "p-4 md:p-8")}>
             {children}
