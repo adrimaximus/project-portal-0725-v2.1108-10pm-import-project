@@ -32,7 +32,7 @@ export default function PortalLayout({ children, summary, pageHeader, disableMai
         {/* Refactored scrollable content area */}
         <div className={cn("flex-1 min-h-0", !disableMainScroll && "overflow-y-auto")}>
           {pageHeader}
-          <main className={cn("h-full", !noPadding && "p-4 md:p-8")}>
+          <main className={cn(!noPadding && "p-4 md:p-8")}>
             {children}
           </main>
         </div>
