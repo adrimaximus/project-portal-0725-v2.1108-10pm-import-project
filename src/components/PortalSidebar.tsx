@@ -12,6 +12,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NavItem as DbNavItem, NavFolder } from "@/pages/NavigationSettingsPage";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+import { useChatContext } from "@/contexts/ChatContext";
 
 type PortalSidebarProps = { isCollapsed: boolean; onToggle: () => void; };
 type NavItem = { id: string; href: string; label: string; icon: LucideIcon; badge?: number; folder_id: string | null; };
@@ -78,9 +79,9 @@ const NavLink = ({ item, isCollapsed }: { item: NavItem, isCollapsed: boolean })
 const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
   const { user, hasPermission } = useAuth();
   const { unreadCount: unreadNotificationCount } = useNotifications();
+  const { hasUnreadChat } = useChatContext();
   const queryClient = useQueryClient();
   const location = useLocation();
-  const [hasUnreadChat, setHasUnreadChat] = useState(false);
 
   const { data: customNavItems = [], error: navItemsError } = useQuery({ 
     queryKey: ['user_navigation_items', user?.id], 
@@ -111,35 +112,6 @@ const PortalSidebar = ({ isCollapsed, onToggle }: PortalSidebarProps) => {
     enabled: !!user,
     retry: false,
   });
-
-  // Realtime subscription for new chat messages
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('public:messages:sidebar-chat-indicator')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
-          if (payload.new.sender_id !== user.id && location.pathname !== '/chat') {
-            setHasUnreadChat(true);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, location.pathname]);
-
-  // Clear chat indicator when user navigates to the chat page
-  useEffect(() => {
-    if (location.pathname === '/chat') {
-      setHasUnreadChat(false);
-    }
-  }, [location.pathname]);
 
   useEffect(() => {
     if (!user) return;

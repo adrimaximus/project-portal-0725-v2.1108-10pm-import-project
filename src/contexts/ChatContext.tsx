@@ -27,6 +27,7 @@ interface ChatContextType {
   isSomeoneTyping: boolean;
   sendTyping: () => void;
   refetchConversations: () => void;
+  hasUnreadChat: boolean;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -36,6 +37,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [isSomeoneTyping, setIsSomeoneTyping] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [messageSearchResults, setMessageSearchResults] = useState<string[]>([]);
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
   
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
@@ -167,12 +169,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
-          const newMessage = payload.new as { conversation_id: string };
-          // Always invalidate conversations list for sidebar updates
+          const newMessage = payload.new as { conversation_id: string, sender_id: string };
           queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-          // If the user is viewing the conversation that got a new message, refresh it
           if (newMessage.conversation_id === selectedConversationId) {
             queryClient.invalidateQueries({ queryKey: ['messages', newMessage.conversation_id] });
+          }
+          if (newMessage.sender_id !== currentUser.id && location.pathname !== '/chat') {
+            setHasUnreadChat(true);
           }
         }
       )
@@ -195,7 +198,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, selectedConversationId, queryClient]);
+  }, [currentUser, selectedConversationId, queryClient, location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname === '/chat') {
+      setHasUnreadChat(false);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
@@ -242,6 +251,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     isSomeoneTyping,
     sendTyping,
     refetchConversations,
+    hasUnreadChat,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

@@ -42,6 +42,7 @@ import MultiEmbedItemPage from "./pages/MultiEmbedItemPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import NotFound from "./pages/NotFound";
+import { ChatProvider } from "./contexts/ChatContext";
 
 function App() {
   useEffect(() => {
@@ -82,7 +83,7 @@ function App() {
       <Route path="/terms-of-service" element={<TermsOfServicePage />} />
 
       {/* Protected routes */}
-      <Route element={<ProtectedRouteLayout />}>
+      <Route element={<ChatProvider><ProtectedRouteLayout /></ChatProvider>}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:slug" element={<ProjectDetail />} />

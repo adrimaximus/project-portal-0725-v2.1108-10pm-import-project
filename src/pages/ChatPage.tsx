@@ -41,9 +41,7 @@ const ChatPageContent = () => {
 const ChatPage = () => {
   return (
     <PortalLayout noPadding disableMainScroll>
-      <ChatProvider>
-        <ChatPageContent />
-      </ChatProvider>
+      <ChatPageContent />
     </PortalLayout>
   );
 };
