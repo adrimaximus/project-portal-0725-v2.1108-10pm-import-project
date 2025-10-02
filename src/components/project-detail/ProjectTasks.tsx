@@ -63,7 +63,7 @@ const ProjectTasks = ({
             <div
               key={task.id}
               className={`flex items-center space-x-3 p-2 rounded-md hover:bg-muted ${
-                (task.priority as string) === 'high' ? 'bg-red-500/10' : ''
+                (task.priority as string) === 'high' ? 'bg-red-500/10 border-l-4 border-red-500' : ''
               }`}
             >
               <Checkbox
