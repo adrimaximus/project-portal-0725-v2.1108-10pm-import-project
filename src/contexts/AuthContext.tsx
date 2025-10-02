@@ -90,7 +90,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      setLoading(true);
       setSession(session);
       await fetchUserProfile(session);
       setLoading(false);
