@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle, Folder } from 'lucide-react';
+import { MoreHorizontal, Clock, Trash2, MapPin, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getStatusStyles, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { format, isSameDay, subDays } from 'date-fns';
@@ -158,26 +158,14 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <p className="font-medium truncate flex items-center gap-2" title={project.name}>
                             {project.status === 'Completed' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
-                            <p className="font-medium truncate" title={project.name}>
-                              {project.name}
-                            </p>
-                          </div>
-                          {(project.category || project.venue) && (
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                              {project.category && (
-                                <div className="flex items-center gap-1.5">
-                                  <Folder size={12} />
-                                  <span>{project.category}</span>
-                                </div>
-                              )}
-                              {project.venue && (
-                                <div className="flex items-center gap-1.5 truncate min-w-0">
-                                  <MapPin size={12} className="flex-shrink-0" />
-                                  <span className="truncate">{project.venue}</span>
-                                </div>
-                              )}
+                            {project.name}
+                          </p>
+                          {project.venue && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                              <MapPin size={12} />
+                              <span className="truncate">{project.venue}</span>
                             </div>
                           )}
                         </div>
