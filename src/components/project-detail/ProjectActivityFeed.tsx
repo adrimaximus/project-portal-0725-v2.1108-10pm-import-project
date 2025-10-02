@@ -20,10 +20,15 @@ const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
 
   const formatDescription = (text: string) => {
     if (!text) return "";
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
     return text
       .replace(/\\"/g, "") // Remove escaped quotes
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-card-foreground">$1</strong>')
-      .replace(/`(.*?)`/g, '<code class="bg-muted text-muted-foreground font-mono text-xs px-1 py-0.5 rounded">$1</code>');
+      .replace(/`(.*?)`/g, '<code class="bg-muted text-muted-foreground font-mono text-xs px-1 py-0.5 rounded">$1</code>')
+      .replace(urlRegex, (url) => {
+        const href = url.startsWith('www.') ? `https://${url}` : url;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${url}</a>`;
+      });
   };
 
   return (
