@@ -42,7 +42,7 @@ const CompanyFormDialog = ({ open, onOpenChange, company }) => {
     logo_url: z.string().url().optional().or(z.literal('')),
   });
 
-  const [dynamicSchema, setDynamicSchema] = React.useState(baseSchema);
+  const [dynamicSchema, setDynamicSchema] = React.useState<z.AnyZodObject>(baseSchema);
 
   useEffect(() => {
     if (properties.length > 0) {
@@ -65,7 +65,7 @@ const CompanyFormDialog = ({ open, onOpenChange, company }) => {
       }, baseSchema);
       setDynamicSchema(schema);
     }
-  }, [properties]);
+  }, [properties, baseSchema]);
 
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
     resolver: zodResolver(dynamicSchema),
