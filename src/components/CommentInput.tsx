@@ -24,13 +24,9 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
     const users = [project.created_by, ...project.assignedTo];
     const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
     return uniqueUsers.map(u => {
-      let displayName = u.name;
-      if (displayName.includes('@') && !displayName.includes(' ')) {
-        displayName = displayName.split('@')[0];
-      }
       return {
         id: u.id,
-        display: displayName,
+        display: u.name,
         avatar_url: u.avatar_url,
         initials: u.initials,
         email: u.email,
@@ -88,10 +84,7 @@ const CommentInput = ({ project, onAddCommentOrTicket }: CommentInputProps) => {
                   <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
                   <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <p className="font-medium text-sm">{suggestion.display}</p>
-                  <p className="text-xs text-muted-foreground">{suggestion.email}</p>
-                </div>
+                <span className="font-medium text-sm">{suggestion.display}</span>
               </>
             )}
             appendSpaceOnAdd
