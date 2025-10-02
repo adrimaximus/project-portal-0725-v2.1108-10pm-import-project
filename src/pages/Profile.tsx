@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import AvatarCropper from "@/components/settings/AvatarCropper";
 
 const Profile = () => {
-  const { user, refreshUser, logout } = useAuth();
+  const { user, session, refreshUser, logout } = useAuth();
   const queryClient = useQueryClient();
   
   const [firstName, setFirstName] = useState("");
@@ -36,6 +36,13 @@ const Profile = () => {
       setLastName(user.last_name || "");
     }
   }, [user]);
+
+  const canChangePassword = useMemo(() => {
+    if (!session?.user) return false;
+    // Check the main provider and also check identities array for email provider
+    return session.user.app_metadata?.provider === 'email' || 
+           session.user.identities?.some(i => i.provider === 'email');
+  }, [session]);
 
   if (!user) {
     return <PortalLayout><div>Loading...</div></PortalLayout>;
@@ -150,20 +157,18 @@ const Profile = () => {
     setIsPasswordUpdating(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
-
       if (error) {
-        if (error.message.includes('New password should be different from the old password')) {
-          toast.info("Password baru sama dengan password lama. Tidak ada perubahan yang dilakukan.");
-        } else {
-          toast.error("Gagal memperbarui password.", { description: error.message });
-        }
-      } else {
-        toast.success("Password berhasil diperbarui.");
-        setNewPassword("");
-        setConfirmPassword("");
+        throw error;
       }
-    } catch (e: any) {
-      toast.error("Terjadi kesalahan tak terduga saat memperbarui password.", { description: e.message });
+      toast.success("Password berhasil diperbarui.");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      if (error.message.includes('New password should be different from the old password')) {
+        toast.info("Password baru sama dengan password lama. Tidak ada perubahan yang dilakukan.");
+      } else {
+        toast.error("Gagal memperbarui password.", { description: error.message });
+      }
     } finally {
       setIsPasswordUpdating(false);
     }
@@ -244,36 +249,49 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Security</CardTitle>
-            <CardDescription>Update your password. It's recommended to use a strong, unique password.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
-              <div className="relative">
-                <Input id="new-password" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowNewPassword(!showNewPassword)}>
-                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
+        {canChangePassword ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Security</CardTitle>
+              <CardDescription>Update your password. It's recommended to use a strong, unique password.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <div className="relative">
+                  <Input id="new-password" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                  <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowNewPassword(!showNewPassword)}>
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
-            </div>
-             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <div className="relative">
-                <Input id="confirm-password" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-                <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
+               <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <div className="relative">
+                  <Input id="confirm-password" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                  <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
-            </div>
-            <Button onClick={handlePasswordChange} disabled={isPasswordUpdating}>
-              {isPasswordUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Change Password
-            </Button>
-          </CardContent>
-        </Card>
+              <Button onClick={handlePasswordChange} disabled={isPasswordUpdating}>
+                {isPasswordUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Change Password
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Security</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                You are signed in with a social provider (e.g., Google). You can manage your password through your provider's settings.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <NotificationPreferencesCard />
 
