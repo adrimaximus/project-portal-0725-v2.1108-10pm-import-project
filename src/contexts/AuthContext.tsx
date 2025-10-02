@@ -79,7 +79,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       setUser(null);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -92,10 +91,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     getInitialSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (isImpersonating) return;
+      setLoading(true);
       setSession(session);
-      fetchUserProfile(session);
+      await fetchUserProfile(session);
+      setLoading(false);
     });
 
     return () => {
