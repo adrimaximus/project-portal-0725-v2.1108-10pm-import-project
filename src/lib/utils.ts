@@ -43,7 +43,7 @@ export const getAvatarUrl = (
   seed: string,
   isGroup: boolean = false
 ): string => {
-  if (typeof avatarUrl === 'string' && avatarUrl.startsWith('http')) {
+  if (avatarUrl && avatarUrl.startsWith('http')) {
     return avatarUrl;
   }
   const style = isGroup ? 'bottts' : 'micah';
