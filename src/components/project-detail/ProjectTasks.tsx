@@ -79,12 +79,21 @@ const ProjectTasks = ({
             <div className="flex items-center -space-x-2">
               {(task.assignees && task.assignees.length > 0)
                 ? task.assignees.map((user) => {
-                  const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+                  const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
                   return (
-                    <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
-                      <AvatarImage src={user.avatar_url} />
-                      <AvatarFallback style={generatePastelColor(user.id)}>{getInitials(fullName, user.email)}</AvatarFallback>
-                    </Avatar>
+                    <TooltipProvider key={user.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Avatar className="h-6 w-6 border-2 border-background">
+                            <AvatarImage src={user.avatar_url} />
+                            <AvatarFallback style={generatePastelColor(user.id)}>{getInitials(fullName, user.email)}</AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{fullName}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )
                 })
                 : task.created_by && (() => {
@@ -92,7 +101,7 @@ const ProjectTasks = ({
                   return (
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger>
+                        <TooltipTrigger asChild>
                           <Avatar key={task.created_by.id} className="h-6 w-6 border-2 border-background opacity-50">
                             <AvatarImage src={task.created_by.avatar_url} />
                             <AvatarFallback style={generatePastelColor(task.created_by.id)}>{getInitials(createdByFullName, task.created_by.email)}</AvatarFallback>
