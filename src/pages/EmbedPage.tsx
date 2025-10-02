@@ -1,43 +1,78 @@
-import { useParams } from "react-router-dom";
-import PortalLayout from "@/components/PortalLayout";
-import { useNavItem } from "@/hooks/useNavItem";
-import { Skeleton } from "@/components/ui/skeleton";
-import EmbedRenderer from "@/components/EmbedRenderer";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
+import { useSearchParams } from 'react-router-dom';
+import PortalLayout from '@/components/PortalLayout';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeProvider';
+import { useMemo } from 'react';
+import EmbedRenderer from '@/components/EmbedRenderer';
 
 const EmbedPage = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const { data: navItem, isLoading, error } = useNavItem(slug);
+  const [searchParams] = useSearchParams();
+  const { theme } = useTheme();
+  const content = searchParams.get('url');
 
-  if (isLoading) {
-    return (
-      <PortalLayout noPadding>
-        <div className="h-screen w-full flex items-center justify-center">
-          <Skeleton className="h-full w-full" />
-        </div>
-      </PortalLayout>
-    );
-  }
+  const finalContent = useMemo(() => {
+    if (!content) return null;
 
-  if (error || !navItem) {
+    const decodedContent = decodeURIComponent(content);
+
+    const isIframe = decodedContent.trim().startsWith('<iframe');
+    const isGoogleCalendar = decodedContent.includes('calendar.google.com/calendar/embed');
+
+    if (isGoogleCalendar) {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      const effectiveTheme = theme === "system" ? systemTheme : theme;
+      const bgColor = effectiveTheme === 'dark' ? '#222222' : '#FFFFFF';
+      const encodedBgColor = encodeURIComponent(bgColor);
+
+      if (isIframe) {
+        return decodedContent
+          .replace(/src="([^"]+)"/, (match, srcUrl) => {
+            let newSrcUrl = srcUrl.replace(/&?bgcolor=([^&]*)/, '');
+            newSrcUrl += `&bgcolor=${encodedBgColor}`;
+            return `src="${newSrcUrl}"`;
+          })
+          .replace(/width="[^"]*"/g, 'width="100%"')
+          .replace(/height="[^"]*"/g, 'height="100%"');
+      } else {
+        let urlString = decodedContent;
+        if (!/^https?:\/\//i.test(urlString)) {
+          urlString = `https://${urlString}`;
+        }
+        urlString = urlString.replace(/&?bgcolor=([^&]*)/, '');
+        urlString += `&bgcolor=${encodedBgColor}`;
+        return urlString;
+      }
+    }
+
+    if (isIframe) {
+      return decodedContent
+        .replace(/width="[^"]*"/g, 'width="100%"')
+        .replace(/height="[^"]*"/g, 'height="100%"');
+    }
+
+    let urlString = decodedContent;
+    if (!/^https?:\/\//i.test(urlString)) {
+      urlString = `https://${urlString}`;
+    }
+    return urlString;
+
+  }, [content, theme]);
+
+  if (!finalContent) {
     return (
       <PortalLayout>
         <Alert variant="destructive">
-          <Terminal className="h-4 w-4" />
+          <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            Could not load embedded content. Please check the configuration.
-          </AlertDescription>
+          <AlertDescription>No URL or embed code was provided.</AlertDescription>
         </Alert>
       </PortalLayout>
     );
   }
 
-  const finalContent = navItem.url;
-
   return (
-    <PortalLayout noPadding>
+    <PortalLayout noPadding disableMainScroll>
       <EmbedRenderer content={finalContent} />
     </PortalLayout>
   );

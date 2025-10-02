@@ -1,48 +1,51 @@
-import { useParams } from "react-router-dom";
-import PortalLayout from "@/components/PortalLayout";
-import { useNavItem } from "@/hooks/useNavItem";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
+import React from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import PortalLayout from '@/components/PortalLayout';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Loader2 } from 'lucide-react';
+import EmbedRenderer from '@/components/EmbedRenderer';
+import { NavItem as DbNavItem } from '@/pages/NavigationSettingsPage';
 
 const CustomPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { data: navItem, isLoading, error } = useNavItem(slug);
+
+  const { data: navItem, isLoading } = useQuery({
+    queryKey: ['user_navigation_item_by_slug', slug],
+    queryFn: async (): Promise<DbNavItem | null> => {
+      if (!slug) return null;
+      const { data, error } = await supabase
+        .rpc('get_nav_item_by_slug', { p_slug: slug })
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as DbNavItem | null;
+    },
+    enabled: !!slug,
+  });
 
   if (isLoading) {
-    return (
-      <PortalLayout noPadding>
-        <div className="p-4">
-          <Skeleton className="h-8 w-1/4 mb-4" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </PortalLayout>
-    );
+    return <PortalLayout><div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div></PortalLayout>;
   }
 
-  if (error || !navItem) {
-    return (
-      <PortalLayout>
-        <Alert variant="destructive">
-          <Terminal className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            Could not load page content. Please try again later.
-          </AlertDescription>
-        </Alert>
-      </PortalLayout>
-    );
+  if (!navItem) {
+    return <PortalLayout><div>Page not found.</div></PortalLayout>;
   }
 
   return (
-    <PortalLayout noPadding>
-      <div className="flex flex-col h-full bg-background">
-        <header className="p-4 border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
-          <h1 className="text-2xl font-bold">{navItem.name}</h1>
-        </header>
-        <div className="flex-1 p-4">
-          <p>This is a custom page for "{navItem.name}".</p>
-          <p>URL: {navItem.url}</p>
+    <PortalLayout noPadding disableMainScroll>
+      <div className="flex flex-col h-full">
+        <div className="p-4 border-b flex-shrink-0">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem><Link to="/dashboard">Dashboard</Link></BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem><BreadcrumbPage>{navItem.name}</BreadcrumbPage></BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+        <div className="flex-grow">
+          <EmbedRenderer content={navItem.url} />
         </div>
       </div>
     </PortalLayout>

@@ -1,54 +1,71 @@
 import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
-import RequestForm from "@/components/request/RequestForm";
-import RequestSuccess from "@/components/request/RequestSuccess";
-import RequestSummary from "@/components/request/RequestSummary";
-import { Card } from "@/components/ui/card";
+import { Service } from "@/data/services";
+import SelectedServicesSummary from "@/components/SelectedServicesSummary";
+import ServiceSelection from "@/components/request/ServiceSelection";
+import ProjectDetailsForm from "@/components/request/ProjectDetailsForm";
 
-const Request = () => {
+const RequestPage = () => {
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
 
-  const handleNext = (data: any) => {
-    setFormData(prev => ({ ...prev, ...data }));
-    setStep(step + 1);
-  };
+  const handleServiceSelect = (service: Service) => {
+    const isFeatured = service.title === "End to End Services";
+    const isAlreadySelected = selectedServices.some(
+      (s) => s.title === service.title
+    );
 
-  const handleBack = () => {
-    setStep(step - 1);
-  };
-
-  const handleSubmit = () => {
-    console.log("Submitting request:", formData);
-    // In a real app, you'd send this to a server
-    setStep(3);
-  };
-
-  const renderContent = () => {
-    switch (step) {
-      case 1:
-        return <Card className="max-w-2xl mx-auto"><RequestForm onNext={handleNext} /></Card>;
-      case 2:
-        return <Card className="max-w-2xl mx-auto"><RequestSummary formData={formData} onBack={handleBack} onSubmit={handleSubmit} /></Card>;
-      case 3:
-        return <Card className="max-w-2xl mx-auto"><RequestSuccess onReset={() => setStep(1)} /></Card>;
-      default:
-        return <Card className="max-w-2xl mx-auto"><RequestForm onNext={handleNext} /></Card>;
+    if (isFeatured) {
+      setSelectedServices(isAlreadySelected ? [] : [service]);
+    } else {
+      let newSelectedServices = selectedServices.filter(
+        (s) => s.title !== "End to End Services"
+      );
+      if (isAlreadySelected) {
+        newSelectedServices = newSelectedServices.filter(
+          (s) => s.title !== service.title
+        );
+      } else {
+        newSelectedServices.push(service);
+      }
+      setSelectedServices(newSelectedServices);
     }
   };
 
-  const summaryComponent = (
-    <div className="flex items-center gap-4">
-      <h1 className="text-xl font-semibold">Submit a Request</h1>
-      <div className="text-sm text-muted-foreground">Step {step} of 3</div>
-    </div>
-  );
+  const renderContent = () => {
+    if (step === 1) {
+      return (
+        <ServiceSelection
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          selectedServices={selectedServices}
+          onServiceSelect={handleServiceSelect}
+        />
+      );
+    } else {
+      return (
+        <ProjectDetailsForm
+          selectedServices={selectedServices}
+          onBack={() => setStep(1)}
+        />
+      );
+    }
+  };
+
+  const summaryComponent =
+    step === 1 ? (
+      <SelectedServicesSummary
+        selectedServices={selectedServices}
+        onContinue={() => setStep(2)}
+      />
+    ) : null;
 
   return (
-    <PortalLayout summary={summaryComponent}>
+    <PortalLayout summary={summaryComponent} disableMainScroll={step === 2}>
       {renderContent()}
     </PortalLayout>
   );
 };
 
-export default Request;
+export default RequestPage;
