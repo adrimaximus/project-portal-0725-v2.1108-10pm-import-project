@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,13 +40,44 @@ const TeamMembersCard = ({
   const [isOpen, setIsOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { startImpersonation } = useAuth();
+  
+  // Local state for optimistic UI updates
+  const [localMembers, setLocalMembers] = useState<User[]>(members);
+
+  useEffect(() => {
+    setLocalMembers(members);
+  }, [members]);
+
+  const handleRoleChange = (memberId: string, newRole: string) => {
+    setLocalMembers(prevMembers =>
+      prevMembers.map(member =>
+        member.id === memberId ? { ...member, role: newRole } : member
+      )
+    );
+    onRoleChange(memberId, newRole);
+  };
+
+  const handleToggleSuspend = (member: User) => {
+    const newStatus = member.status === 'suspended' ? 'active' : 'suspended';
+    setLocalMembers(prevMembers =>
+      prevMembers.map(m =>
+        m.id === member.id ? { ...m, status: newStatus } : m
+      )
+    );
+    onToggleSuspend(member);
+  };
+
+  const handleDeleteMember = (member: User) => {
+    setLocalMembers(prevMembers => prevMembers.filter(m => m.id !== member.id));
+    onDeleteMember(member);
+  };
 
   const filteredMembers = useMemo(() => {
-    return members.filter(member =>
-        member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    return localMembers.filter(member =>
+        (member.name && member.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (member.email && member.email.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [members, searchTerm]);
+  }, [localMembers, searchTerm]);
 
   const getStatusBadgeVariant = (status?: string): "destructive" | "secondary" | "outline" => {
     switch (status) {
@@ -142,7 +173,7 @@ const TeamMembersCard = ({
                                 </div>
                               </TooltipTrigger><TooltipContent><p>{tooltipMessage}</p></TooltipContent></Tooltip></TooltipProvider>
                         ) : (
-                          <Select value={member.role || undefined} onValueChange={(value) => onRoleChange(member.id, value)}>
+                          <Select value={member.role || undefined} onValueChange={(value) => handleRoleChange(member.id, value)}>
                             <SelectTrigger className="w-full h-9 border-none focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent"><SelectValue placeholder="Select a role" /></SelectTrigger>
                             <SelectContent>
                               {availableRolesForMember.map(role => (
@@ -173,18 +204,18 @@ const TeamMembersCard = ({
                                     Resend Invite
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem className="text-red-600" onSelect={() => onDeleteMember(member)}>
+                                  <DropdownMenuItem className="text-red-600" onSelect={() => handleDeleteMember(member)}>
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Cancel Invite
                                   </DropdownMenuItem>
                                 </>
                               ) : (
                                 <>
-                                  <DropdownMenuItem onSelect={() => onToggleSuspend(member)} disabled={member.role === 'master admin' && !isMasterAdmin}>
+                                  <DropdownMenuItem onSelect={() => handleToggleSuspend(member)} disabled={member.role === 'master admin' && !isMasterAdmin}>
                                     {member.status === 'suspended' ? 'Unsuspend Member' : 'Suspend Member'}
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem className="text-red-600" onSelect={() => onDeleteMember(member)} disabled={(member.role === 'master admin' && !isMasterAdmin)}>
+                                  <DropdownMenuItem className="text-red-600" onSelect={() => handleDeleteMember(member)} disabled={(member.role === 'master admin' && !isMasterAdmin)}>
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Delete Member
                                   </DropdownMenuItem>
