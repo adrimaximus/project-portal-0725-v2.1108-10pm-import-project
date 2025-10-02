@@ -96,7 +96,7 @@ const ProjectTasks = ({
                     </TooltipProvider>
                   )
                 })
-                : task.created_by && (() => {
+                : task.created_by ? (() => {
                   const createdByFullName = `${task.created_by.first_name || ''} ${task.created_by.last_name || ''}`.trim() || task.created_by.email;
                   return (
                     <TooltipProvider>
@@ -113,7 +113,20 @@ const ProjectTasks = ({
                       </Tooltip>
                     </TooltipProvider>
                   )
-                })()
+                })() : (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground flex items-center justify-center">
+                          <UserPlus className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Not assigned</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )
               }
             </div>
             <Dialog>
