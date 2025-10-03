@@ -10,6 +10,7 @@ import { Mention, MentionsInput } from "react-mentions";
 import { Badge } from "./ui/badge";
 import CommentRenderer from "./CommentRenderer";
 import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -21,6 +22,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
   const [newComment, setNewComment] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTicketMode, setIsTicketMode] = useState(false);
 
   const mentionableUsers = useMemo(() => {
     if (!project) return [];
@@ -47,14 +49,10 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
 
     setIsSubmitting(true);
     try {
-      const isTicket = newComment.trim().startsWith("/ticket");
-      const commentText = isTicket
-        ? newComment.trim().substring(7).trim()
-        : newComment;
-
-      await onAddCommentOrTicket(commentText, isTicket, attachment);
+      await onAddCommentOrTicket(newComment, isTicketMode, attachment);
       setNewComment("");
       setAttachment(null);
+      setIsTicketMode(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -119,7 +117,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
         <MentionsInput
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Add a comment... Type '/ticket' to create a ticket."
+          placeholder={isTicketMode ? "Describe the ticket..." : "Add a comment..."}
           a11ySuggestionsListLabel={"Suggested mentions"}
           classNames={{
             input: 'w-full text-sm bg-transparent placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none p-2',
@@ -164,9 +162,19 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
               <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} />
             </label>
           </Button>
+          <Button 
+            type="button" 
+            variant={isTicketMode ? "secondary" : "ghost"} 
+            size="icon" 
+            onClick={() => setIsTicketMode(!isTicketMode)}
+            className={cn("text-muted-foreground hover:text-foreground", isTicketMode && "text-primary")}
+            title="Create a ticket"
+          >
+            <Ticket className="h-5 w-5" />
+          </Button>
           <Button type="submit" disabled={isSubmitting || !newComment.trim()}>
-            <Send className="mr-2 h-4 w-4" />
-            {isSubmitting ? "Sending..." : "Send"}
+            {isTicketMode ? <Ticket className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />}
+            {isSubmitting ? (isTicketMode ? "Creating..." : "Sending...") : (isTicketMode ? "Create Ticket" : "Send")}
           </Button>
         </div>
       </form>
