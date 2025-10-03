@@ -122,9 +122,9 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
           classNames={{
             input: 'w-full text-sm bg-transparent placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none p-2',
             suggestions: {
-              list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg p-1 mt-2 z-10 max-h-60 overflow-y-auto',
-              item: 'px-3 py-2 text-sm rounded-sm cursor-pointer outline-none',
-              itemFocused: 'bg-accent text-accent-foreground',
+              list: 'bg-white dark:bg-black text-black dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-1 mt-2 z-10 max-h-60 overflow-y-auto',
+              item: 'rounded-sm cursor-pointer outline-none',
+              itemFocused: 'bg-gray-100 dark:bg-gray-800',
             },
             mention: 'bg-primary/10 text-primary font-semibold rounded-sm',
           }}
@@ -133,7 +133,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             trigger="@"
             data={mentionableUsers}
             renderSuggestion={(suggestion: any) => (
-              <span className="font-medium text-sm">{suggestion.display}</span>
+              <div className="px-3 py-2 font-medium text-sm">{suggestion.display}</div>
             )}
             appendSpaceOnAdd
           />
