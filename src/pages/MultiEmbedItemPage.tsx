@@ -92,9 +92,9 @@ const MultiEmbedItemPage = () => {
   }
 
   return (
-    <PortalLayout>
-      <div className="flex flex-col h-full">
-        <div className="flex justify-between items-center mb-4">
+    <PortalLayout noPadding>
+      <div className="flex flex-col">
+        <div className="p-4 border-b flex-shrink-0 flex justify-between items-center">
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem><Link to="/">Dashboard</Link></BreadcrumbItem>

@@ -33,8 +33,8 @@ const CustomPage = () => {
   }
 
   return (
-    <PortalLayout noPadding disableMainScroll>
-      <div className="flex flex-col h-full">
+    <PortalLayout noPadding>
+      <div className="flex flex-col">
         <div className="p-4 border-b flex-shrink-0">
           <Breadcrumb>
             <BreadcrumbList>

@@ -72,7 +72,7 @@ const EmbedPage = () => {
   }
 
   return (
-    <PortalLayout noPadding disableMainScroll>
+    <PortalLayout noPadding>
       <EmbedRenderer content={finalContent} />
     </PortalLayout>
   );

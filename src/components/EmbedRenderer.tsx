@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { ExternalLink } from 'lucide-react';
 
@@ -7,15 +7,51 @@ interface EmbedRendererProps {
 }
 
 const EmbedRenderer: React.FC<EmbedRendererProps> = ({ content }) => {
+  const embedContainerRef = useRef<HTMLDivElement>(null);
   const isIframe = content.trim().startsWith('<iframe');
   
   let srcUrl = content;
   if (isIframe) {
-    const match = content.match(/src="([^"]+)"/);
-    if (match) {
-      srcUrl = match[1];
+    const srcMatch = content.match(/src="([^"]+)"/);
+    const dataSrcMatch = content.match(/data-tally-src="([^"]+)"/);
+    if (srcMatch) {
+      srcUrl = srcMatch[1];
+    } else if (dataSrcMatch) {
+      srcUrl = dataSrcMatch[1];
     }
   }
+
+  useEffect(() => {
+    if (isIframe && embedContainerRef.current) {
+      const container = embedContainerRef.current;
+      const scripts = Array.from(container.getElementsByTagName('script'));
+      const loadedScripts: HTMLScriptElement[] = [];
+
+      scripts.forEach(oldScript => {
+        const newScript = document.createElement('script');
+        
+        Array.from(oldScript.attributes).forEach(attr => {
+          newScript.setAttribute(attr.name, attr.value);
+        });
+        
+        if (oldScript.innerHTML) {
+          newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+        }
+        
+        document.body.appendChild(newScript);
+        loadedScripts.push(newScript);
+        oldScript.remove();
+      });
+
+      return () => {
+        loadedScripts.forEach(script => {
+          if (document.body.contains(script)) {
+            document.body.removeChild(script);
+          }
+        });
+      };
+    }
+  }, [content, isIframe]);
 
   const Fallback = () => (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted text-center p-4 z-0">
@@ -32,18 +68,15 @@ const EmbedRenderer: React.FC<EmbedRendererProps> = ({ content }) => {
   );
 
   if (isIframe) {
-    let processedIframe = content;
-    if (processedIframe.includes('class="')) {
-        processedIframe = processedIframe.replace('class="', 'class="w-full h-full border-0 relative bg-background ');
-    } else {
-        processedIframe = processedIframe.replace('<iframe', '<iframe class="w-full h-full border-0 relative bg-background"');
-    }
+    // Remove fixed height/width to allow CSS or the script to take over
+    let processedIframe = content.replace(/ (height|width)="[^"]*"/g, '');
 
     return (
-      <div className="relative w-full h-full">
+      <div className="relative w-full">
         <Fallback />
         <div
-          className="w-full h-full"
+          ref={embedContainerRef}
+          className="w-full [&>iframe]:w-full"
           dangerouslySetInnerHTML={{ __html: processedIframe }}
         />
       </div>
