@@ -124,7 +124,7 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{item ? 'Edit Item' : 'Add New Item'}</DialogTitle>
             <DialogDescription>Fill in the details for your embed item.</DialogDescription>
