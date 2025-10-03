@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Paperclip, Send, Ticket, CheckCircle2, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
-import { Mention, MentionsInput } from "react-mentions";
 import { Badge } from "./ui/badge";
 import CommentRenderer from "./CommentRenderer";
 import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import MentionInput from "./MentionInput";
 
 interface ProjectCommentsProps {
   project: Project;
@@ -31,10 +31,15 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
       users.push(user);
     }
     const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
-    return uniqueUsers.map(u => ({
-      id: u.id,
-      display: u.name,
-    }));
+    return uniqueUsers.map(u => {
+      return {
+        id: u.id,
+        display: u.name,
+        avatar_url: u.avatar_url,
+        initials: u.initials,
+        email: u.email,
+      };
+    });
   }, [project, user]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,30 +119,14 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
       </div>
 
       <form onSubmit={handleSubmit} className="border rounded-lg p-2 space-y-2">
-        <MentionsInput
+        <MentionInput
           value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          placeholder={isTicketMode ? "Describe the ticket..." : "Add a comment..."}
-          a11ySuggestionsListLabel={"Suggested mentions"}
-          classNames={{
-            input: 'w-full text-sm bg-transparent placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none p-2',
-            suggestions: {
-              list: 'bg-white dark:bg-black text-black dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-1 mt-2 z-10 max-h-60 overflow-y-auto',
-              item: 'rounded-sm cursor-pointer outline-none',
-              itemFocused: 'bg-gray-100 dark:bg-gray-800',
-            },
-            mention: 'bg-primary/10 text-primary font-semibold rounded-sm',
-          }}
-        >
-          <Mention
-            trigger="@"
-            data={mentionableUsers}
-            renderSuggestion={(suggestion: any) => (
-              <div className="px-3 py-2 font-medium text-sm">{suggestion.display}</div>
-            )}
-            appendSpaceOnAdd
-          />
-        </MentionsInput>
+          onChange={setNewComment}
+          placeholder={isTicketMode ? "Describe the ticket..." : "Add a comment... @ to mention"}
+          suggestions={mentionableUsers}
+          disabled={isSubmitting}
+          className="w-full text-sm bg-transparent placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none p-2 border-none"
+        />
         
         {attachment && (
           <div className="text-sm text-muted-foreground flex items-center gap-2 p-2 border-t">

@@ -1,11 +1,12 @@
 import { useRef, useState, forwardRef } from "react";
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
 import { Paperclip, Send, X, Loader2, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
+import MentionInput from "./MentionInput";
+import { useChatContext } from "@/contexts/ChatContext";
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
@@ -27,6 +28,14 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const lastTypingSentAtRef = useRef<number>(0);
+  const { selectedConversation } = useChatContext();
+
+  const mentionableUsers = selectedConversation?.members.map(m => ({
+    id: m.id,
+    display: m.name,
+    avatar_url: m.avatar_url,
+    initials: m.initials,
+  })) || [];
 
   const onDrop = (acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
@@ -71,6 +80,20 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     }
   };
 
+  const handleTextChange = (newText: string) => {
+    setText(newText);
+    triggerTyping();
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    } else {
+      triggerTyping();
+    }
+  };
+
   return (
     <div {...getRootProps()} className="border-t p-4 flex-shrink-0 relative">
       <input {...getInputProps()} />
@@ -96,24 +119,15 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
 
       <div className="flex items-end gap-2">
         <div className="relative flex-1">
-          <Textarea
+          <MentionInput
             ref={ref}
             placeholder="Type a message..."
             value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              triggerTyping();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              } else {
-                triggerTyping();
-              }
-            }}
-            className="pr-12"
+            onChange={handleTextChange}
+            onKeyDown={handleKeyDown}
+            suggestions={mentionableUsers}
             disabled={isSending}
+            className="pr-12"
           />
           <Button variant="ghost" size="icon" asChild disabled={isSending} className="absolute bottom-2 right-2">
             <label htmlFor={`file-upload-${conversationId}`} className="cursor-pointer">
