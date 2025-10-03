@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { MultiEmbedItem } from './MultiEmbedCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Upload } from 'lucide-react';
-import ImageCropDialog from './ImageCropDialog';
+import ReactImageCropDialog from './ReactImageCropDialog';
 
 interface MultiEmbedItemFormDialogProps {
   open: boolean;
@@ -155,7 +155,7 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
           </form>
         </DialogContent>
       </Dialog>
-      <ImageCropDialog
+      <ReactImageCropDialog
         open={isCropDialogOpen}
         onOpenChange={setIsCropDialogOpen}
         imageSrc={cropImageSrc}
