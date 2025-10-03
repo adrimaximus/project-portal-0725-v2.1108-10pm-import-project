@@ -152,6 +152,7 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
         onOpenChange={setIsCropDialogOpen}
         imageSrc={cropImageSrc}
         onCropComplete={handleCropComplete}
+        aspectRatio={141 / 334}
       />
     </>
   );

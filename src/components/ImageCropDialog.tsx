@@ -1,108 +1,73 @@
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import React, { useState, useCallback } from 'react';
+import Cropper, { Point, Area } from 'react-easy-crop';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import ReactCrop, { type Crop, centerCrop } from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
+import { Slider } from '@/components/ui/slider';
+import getCroppedImg from '@/lib/cropImage';
 
 interface ImageCropDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   imageSrc: string | null;
   onCropComplete: (croppedImageBlob: Blob) => void;
+  aspectRatio?: number;
 }
 
-const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
-  open,
-  onOpenChange,
-  imageSrc,
-  onCropComplete,
-}) => {
-  const [crop, setCrop] = React.useState<Crop>();
-  const imgRef = React.useRef<HTMLImageElement>(null);
+const ImageCropDialog: React.FC<ImageCropDialogProps> = ({ open, onOpenChange, imageSrc, onCropComplete, aspectRatio = 1 }) => {
+  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
-  function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
-    const { width, height } = e.currentTarget;
-    const crop = centerCrop(
-      {
-        unit: '%',
-        width: 80,
-        height: 80,
-      },
-      width,
-      height
-    );
-    setCrop(crop);
-  }
+  const onCropCompleteCallback = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
   const handleCrop = async () => {
-    if (!imgRef.current || !crop || !crop.width || !crop.height) {
-      return;
-    }
-
-    const canvas = document.createElement('canvas');
-    const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
-    const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
-    canvas.width = crop.width * scaleX;
-    canvas.height = crop.height * scaleY;
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-      return;
-    }
-
-    ctx.drawImage(
-      imgRef.current,
-      crop.x * scaleX,
-      crop.y * scaleY,
-      crop.width * scaleX,
-      crop.height * scaleY,
-      0,
-      0,
-      crop.width * scaleX,
-      crop.height * scaleY
-    );
-
-    canvas.toBlob((blob) => {
-      if (blob) {
-        onCropComplete(blob);
-        onOpenChange(false);
+    if (!imageSrc || !croppedAreaPixels) return;
+    try {
+      const croppedImageBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
+      if (croppedImageBlob) {
+        onCropComplete(croppedImageBlob);
       }
-    }, 'image/png');
+      onOpenChange(false);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Crop Image</DialogTitle>
+          <DialogDescription>Adjust the image to fit the card.</DialogDescription>
         </DialogHeader>
-        <div className="flex justify-center items-center my-4">
+        <div className="relative h-96 w-full bg-muted">
           {imageSrc && (
-            <ReactCrop
+            <Cropper
+              image={imageSrc}
               crop={crop}
-              onChange={(_, percentCrop) => setCrop(percentCrop)}
-            >
-              <img
-                ref={imgRef}
-                src={imageSrc}
-                onLoad={onImageLoad}
-                alt="Crop preview"
-                style={{ maxHeight: '70vh' }}
-              />
-            </ReactCrop>
+              zoom={zoom}
+              aspect={aspectRatio}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropCompleteCallback}
+            />
           )}
         </div>
+        <div className="flex items-center space-x-4">
+          <span>Zoom</span>
+          <Slider
+            value={[zoom]}
+            min={1}
+            max={3}
+            step={0.1}
+            onValueChange={(value) => setZoom(value[0])}
+          />
+        </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleCrop}>Save Crop</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleCrop}>Crop & Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
