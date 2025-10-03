@@ -51,6 +51,18 @@ const CompaniesView = () => {
         setCompanyToDelete(null);
     };
 
+    const findImageUrlInCustomProps = (props: Record<string, any> | null | undefined): string | null => {
+        if (!props) return null;
+        for (const key in props) {
+            const value = props[key];
+            // Check if the value is a string and looks like a supabase storage URL for our bucket
+            if (typeof value === 'string' && value.includes('supabase.co') && value.includes('image_company')) {
+                return value;
+            }
+        }
+        return null;
+    };
+
     return (
         <div className="h-full flex flex-col space-y-4">
             <div className="flex justify-between items-center">
@@ -86,7 +98,8 @@ const CompaniesView = () => {
                             <TableRow><TableCell colSpan={4} className="text-center h-24">No companies found. Add one to get started.</TableCell></TableRow>
                         ) : (
                             companies.map(company => {
-                                const logoUrl = company.logo_url || company.custom_properties?.logo;
+                                const customLogoUrl = findImageUrlInCustomProps(company.custom_properties);
+                                const logoUrl = company.logo_url || customLogoUrl;
                                 return (
                                     <TableRow key={company.id}>
                                         <TableCell>
