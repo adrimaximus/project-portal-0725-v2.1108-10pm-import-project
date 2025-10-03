@@ -135,8 +135,8 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
               <Input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
               <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" /> Upload Image</Button>
               {(imageUrl || imageFile) && (
-                <div className="mt-2 flex justify-center">
-                  <img src={imageFile ? URL.createObjectURL(imageFile) : imageUrl} alt="Preview" className="rounded-md h-64" />
+                <div className="mt-2">
+                  <img src={imageFile ? URL.createObjectURL(imageFile) : imageUrl} alt="Preview" className="rounded-md h-36 w-auto" />
                 </div>
               )}
             </div>
