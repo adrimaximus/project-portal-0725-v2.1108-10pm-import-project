@@ -9,7 +9,7 @@ interface ReactImageCropDialogProps {
   onOpenChange: (open: boolean) => void;
   imageSrc: string | null;
   onCropComplete: (blob: Blob) => void;
-  aspectRatio?: number;
+  aspectRatio: number;
 }
 
 const ReactImageCropDialog: React.FC<ReactImageCropDialogProps> = ({ open, onOpenChange, imageSrc, onCropComplete, aspectRatio }) => {
@@ -54,7 +54,7 @@ const ReactImageCropDialog: React.FC<ReactImageCropDialogProps> = ({ open, onOpe
   };
 
   const handleCrop = async () => {
-    if (completedCrop && imgRef.current && completedCrop.width > 0 && completedCrop.height > 0) {
+    if (completedCrop && imgRef.current) {
       try {
         const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop, 'newFile.png');
         onCropComplete(croppedImageBlob);
@@ -85,7 +85,7 @@ const ReactImageCropDialog: React.FC<ReactImageCropDialogProps> = ({ open, onOpe
         )}
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleCrop} disabled={!completedCrop?.width || !completedCrop?.height}>Crop</Button>
+          <Button onClick={handleCrop}>Crop</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
