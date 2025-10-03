@@ -85,35 +85,38 @@ const CompaniesView = () => {
                         ) : companies.length === 0 ? (
                             <TableRow><TableCell colSpan={4} className="text-center h-24">No companies found. Add one to get started.</TableCell></TableRow>
                         ) : (
-                            companies.map(company => (
-                                <TableRow key={company.id}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            {company.logo_url ? (
-                                                <img src={company.logo_url} alt={company.name} className="h-10 w-10 object-contain rounded-md bg-muted p-1" />
-                                            ) : (
-                                                <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
-                                                    <Building className="h-5 w-5 text-muted-foreground" />
-                                                </div>
-                                            )}
-                                            <span className="font-medium">{company.name}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="hidden sm:table-cell">{company.legal_name || '-'}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{company.address || '-'}</TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onSelect={() => handleEdit(company)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => setCompanyToDelete(company)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                            companies.map(company => {
+                                const logoUrl = company.logo_url || company.custom_properties?.logo;
+                                return (
+                                    <TableRow key={company.id}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                {logoUrl ? (
+                                                    <img src={logoUrl} alt={company.name} className="h-10 w-10 object-contain rounded-md bg-muted p-1" />
+                                                ) : (
+                                                    <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
+                                                        <Building className="h-5 w-5 text-muted-foreground" />
+                                                    </div>
+                                                )}
+                                                <span className="font-medium">{company.name}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="hidden sm:table-cell">{company.legal_name || '-'}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{company.address || '-'}</TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onSelect={() => handleEdit(company)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => setCompanyToDelete(company)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
