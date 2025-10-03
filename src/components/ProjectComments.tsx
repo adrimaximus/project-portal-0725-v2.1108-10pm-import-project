@@ -120,7 +120,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
           placeholder={isTicketMode ? "Describe the ticket..." : "Add a comment..."}
           a11ySuggestionsListLabel={"Suggested mentions"}
           classNames={{
-            input: 'w-full text-sm bg-transparent placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none p-2',
+            input: 'w-full text-sm bg-transparent placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none p-2',
             suggestions: {
               list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg p-1 mt-2 z-10 max-h-60 overflow-y-auto',
               item: 'px-3 py-2 text-sm rounded-sm cursor-pointer outline-none',
