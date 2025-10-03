@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { MultiEmbedItem } from './MultiEmbedCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Upload } from 'lucide-react';
+import ImageCropDialog from './ImageCropDialog';
 
 interface MultiEmbedItemFormDialogProps {
   open: boolean;
@@ -29,6 +30,9 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
+
   useEffect(() => {
     if (item) {
       setTitle(item.title);
@@ -44,6 +48,7 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
       setImageUrl(null);
     }
     setImageFile(null);
+    setCropImageSrc(null);
   }, [item, open]);
 
   const { mutate: upsertItem, isPending } = useMutation({
@@ -92,31 +97,60 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
     upsertItem({});
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setCropImageSrc(reader.result as string);
+        setIsCropDialogOpen(true);
+      });
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCropComplete = (croppedImageBlob: Blob) => {
+    const croppedFile = new File([croppedImageBlob], "cropped_image.png", { type: "image/png" });
+    setImageFile(croppedFile);
+    setImageUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{item ? 'Edit Item' : 'Add New Item'}</DialogTitle>
-          <DialogDescription>Fill in the details for your embed item.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Image</Label>
-            <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} ref={fileInputRef} className="hidden" />
-            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" /> Upload Image</Button>
-            {(imageUrl || imageFile) && <img src={imageFile ? URL.createObjectURL(imageFile) : imageUrl} alt="Preview" className="mt-2 rounded-md max-h-40" />}
-          </div>
-          <div className="space-y-2"><Label htmlFor="title">Title</Label><Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
-          <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <div className="space-y-2"><Label htmlFor="tags">Tags (comma-separated)</Label><Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} /></div>
-          <div className="space-y-2"><Label htmlFor="embed">URL / Embed Code</Label><Textarea id="embed" value={embedContent} onChange={(e) => setEmbedContent(e.target.value)} required /></div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={isPending}>{isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{item ? 'Edit Item' : 'Add New Item'}</DialogTitle>
+            <DialogDescription>Fill in the details for your embed item.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Image</Label>
+              <Input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" /> Upload Image</Button>
+              {(imageUrl || imageFile) && <img src={imageFile ? URL.createObjectURL(imageFile) : imageUrl} alt="Preview" className="mt-2 rounded-md max-h-40" />}
+            </div>
+            <div className="space-y-2"><Label htmlFor="title">Title</Label><Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
+            <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+            <div className="space-y-2"><Label htmlFor="tags">Tags (comma-separated)</Label><Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} /></div>
+            <div className="space-y-2"><Label htmlFor="embed">URL / Embed Code</Label><Textarea id="embed" value={embedContent} onChange={(e) => setEmbedContent(e.target.value)} required /></div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button type="submit" disabled={isPending}>{isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <ImageCropDialog
+        open={isCropDialogOpen}
+        onOpenChange={setIsCropDialogOpen}
+        imageSrc={cropImageSrc}
+        onCropComplete={handleCropComplete}
+      />
+    </>
   );
 };
 
