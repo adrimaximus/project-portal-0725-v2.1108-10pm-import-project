@@ -54,7 +54,7 @@ const ReactImageCropDialog: React.FC<ReactImageCropDialogProps> = ({ open, onOpe
   };
 
   const handleCrop = async () => {
-    if (completedCrop && imgRef.current) {
+    if (completedCrop && imgRef.current && completedCrop.width > 0 && completedCrop.height > 0) {
       try {
         const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop, 'newFile.png');
         onCropComplete(croppedImageBlob);
@@ -85,7 +85,7 @@ const ReactImageCropDialog: React.FC<ReactImageCropDialogProps> = ({ open, onOpe
         )}
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleCrop}>Crop</Button>
+          <Button onClick={handleCrop} disabled={!completedCrop?.width || !completedCrop?.height}>Crop</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
