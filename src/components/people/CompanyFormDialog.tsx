@@ -12,25 +12,9 @@ import { Loader2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { Company, CompanyProperty } from '@/types';
 
-export type CompanyProperty = {
-  id: string;
-  name: string;
-  label: string;
-  type: string;
-  options?: string[];
-};
-
-export type Company = {
-  id: string;
-  name: string;
-  legal_name?: string;
-  address?: string;
-  logo_url?: string;
-  custom_properties?: Record<string, any>;
-};
-
-const CompanyFormDialog = ({ open, onOpenChange, company }) => {
+const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onOpenChange: (open: boolean) => void, company: Company | null }) => {
   const queryClient = useQueryClient();
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
@@ -161,30 +145,30 @@ const CompanyFormDialog = ({ open, onOpenChange, company }) => {
           <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
           <DialogDescription>Fill in the details for the company.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto px-4">
-          <div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto px-6 py-4 -mx-6">
+          <div className="px-6">
             <Label htmlFor="name">Company Name</Label>
             <Input id="name" {...register('name')} />
             {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message as string}</p>}
           </div>
-          <div>
+          <div className="px-6">
             <Label htmlFor="legal_name">Legal Name</Label>
             <Input id="legal_name" {...register('legal_name')} />
           </div>
-          <div>
+          <div className="px-6">
             <Label htmlFor="address">Address</Label>
             <Textarea id="address" {...register('address')} />
           </div>
-          <div>
+          <div className="px-6">
             <Label htmlFor="logo_url">Logo URL</Label>
             <Input id="logo_url" {...register('logo_url')} />
             {errors.logo_url && <p className="text-sm text-destructive mt-1">{errors.logo_url.message as string}</p>}
           </div>
 
           {isLoadingProperties ? (
-            <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            <div className="flex justify-center px-6"><Loader2 className="h-6 w-6 animate-spin" /></div>
           ) : properties.length > 0 && (
-            <div className="space-y-4 border-t pt-4 mt-4">
+            <div className="space-y-4 border-t pt-4 mt-4 px-6">
               <h3 className="text-lg font-medium">Custom Properties</h3>
               {properties.map(prop => (
                 <div key={prop.id}>
@@ -195,7 +179,7 @@ const CompanyFormDialog = ({ open, onOpenChange, company }) => {
             </div>
           )}
         
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 sticky bottom-0 bg-background px-6">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

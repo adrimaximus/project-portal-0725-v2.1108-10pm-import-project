@@ -12,28 +12,9 @@ import { Loader2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { ContactProperty, Person } from '@/types';
 
-export type ContactProperty = {
-  id: string;
-  name: string;
-  label: string;
-  type: string;
-  options?: string[];
-};
-
-export type Person = {
-  id: string;
-  full_name: string;
-  email?: string;
-  phone?: string;
-  company?: string;
-  job_title?: string;
-  avatar_url?: string;
-  notes?: string;
-  custom_properties?: Record<string, any>;
-};
-
-const PeopleFormDialog = ({ open, onOpenChange, person }) => {
+const PeopleFormDialog = ({ open, onOpenChange, person }: { open: boolean, onOpenChange: (open: boolean) => void, person: Person | null }) => {
   const queryClient = useQueryClient();
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<ContactProperty[]>({
@@ -66,9 +47,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person }) => {
             fieldSchema = z.coerce.number().optional();
             break;
           case 'date':
-            fieldSchema = z.string().optional();
-            break;
-          case 'select':
             fieldSchema = z.string().optional();
             break;
           default:
@@ -140,21 +118,6 @@ const PeopleFormDialog = ({ open, onOpenChange, person }) => {
         return <Input id={fieldName} type="number" {...register(fieldName)} />;
       case 'date':
         return <Input id={fieldName} type="date" {...register(fieldName)} />;
-      case 'select':
-        return (
-          <Controller
-            name={fieldName}
-            control={control}
-            render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value || ''}>
-                <SelectTrigger><SelectValue placeholder={`Select ${prop.label}`} /></SelectTrigger>
-                <SelectContent>
-                  {prop.options?.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        );
       default:
         return <Input id={fieldName} {...register(fieldName)} />;
     }
@@ -167,43 +130,43 @@ const PeopleFormDialog = ({ open, onOpenChange, person }) => {
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
           <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto px-4">
-          <div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto px-6 py-4 -mx-6">
+          <div className="px-6">
             <Label htmlFor="full_name">Full Name</Label>
             <Input id="full_name" {...register('full_name')} />
             {errors.full_name && <p className="text-sm text-destructive mt-1">{errors.full_name.message as string}</p>}
           </div>
-          <div>
+          <div className="px-6">
             <Label htmlFor="email">Email</Label>
             <Input id="email" {...register('email')} />
             {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message as string}</p>}
           </div>
-          <div>
+          <div className="px-6">
             <Label htmlFor="phone">Phone</Label>
             <Input id="phone" {...register('phone')} />
           </div>
-          <div>
+          <div className="px-6">
             <Label htmlFor="company">Company</Label>
             <Input id="company" {...register('company')} />
           </div>
-          <div>
+          <div className="px-6">
             <Label htmlFor="job_title">Job Title</Label>
             <Input id="job_title" {...register('job_title')} />
           </div>
-          <div>
+          <div className="px-6">
             <Label htmlFor="avatar_url">Avatar URL</Label>
             <Input id="avatar_url" {...register('avatar_url')} />
             {errors.avatar_url && <p className="text-sm text-destructive mt-1">{errors.avatar_url.message as string}</p>}
           </div>
-          <div>
+          <div className="px-6">
             <Label htmlFor="notes">Notes</Label>
             <Textarea id="notes" {...register('notes')} />
           </div>
 
           {isLoadingProperties ? (
-            <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            <div className="flex justify-center px-6"><Loader2 className="h-6 w-6 animate-spin" /></div>
           ) : properties.length > 0 && (
-            <div className="space-y-4 border-t pt-4 mt-4">
+            <div className="space-y-4 border-t pt-4 mt-4 px-6">
               <h3 className="text-lg font-medium">Custom Properties</h3>
               {properties.map(prop => (
                 <div key={prop.id}>
@@ -214,7 +177,7 @@ const PeopleFormDialog = ({ open, onOpenChange, person }) => {
             </div>
           )}
         
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 sticky bottom-0 bg-background px-6">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

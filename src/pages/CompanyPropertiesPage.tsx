@@ -10,17 +10,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { CompanyProperty } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import CompanyPropertyFormDialog from '@/components/settings/CompanyPropertyFormDialog';
-
-export type CompanyProperty = {
-  id: string;
-  name: string;
-  label: string;
-  type: 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url' | 'image' | 'select';
-  options?: string[];
-};
 
 const CompanyPropertiesPage = () => {
   const queryClient = useQueryClient();
@@ -48,9 +41,9 @@ const CompanyPropertiesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleSave = async (propertyData: Omit<CompanyProperty, 'id'>) => {
+  const handleSave = async (propertyData: Omit<CompanyProperty, 'id' | 'is_default' | 'company_logo_url'>) => {
     setIsSaving(true);
-    const { id, ...dataToSave } = propertyToEdit || {};
+    const { id, is_default, ...dataToSave } = propertyToEdit || {};
     const upsertData = { ...dataToSave, ...propertyData };
 
     const promise = propertyToEdit?.id
@@ -126,15 +119,17 @@ const CompanyPropertiesPage = () => {
                     <TableCell className="font-medium">{prop.label}</TableCell>
                     <TableCell><Badge variant="outline" className="capitalize">{prop.type}</Badge></TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => handleEdit(prop)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => setPropertyToDelete(prop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {!prop.is_default && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => handleEdit(prop)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setPropertyToDelete(prop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -150,6 +145,7 @@ const CompanyPropertiesPage = () => {
         onSave={handleSave}
         property={propertyToEdit}
         isSaving={isSaving}
+        properties={properties}
       />
 
       <AlertDialog open={!!propertyToDelete} onOpenChange={(open) => !open && setPropertyToDelete(null)}>

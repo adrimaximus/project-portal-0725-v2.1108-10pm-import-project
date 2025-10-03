@@ -7,7 +7,8 @@ import { MoreHorizontal, PlusCircle, Edit, Trash2, Building, Loader2, Settings }
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import CompanyFormDialog, { Company } from './CompanyFormDialog';
+import CompanyFormDialog from './CompanyFormDialog';
+import { Company } from '@/types';
 import { useNavigate } from 'react-router-dom';
 
 const CompaniesView = () => {

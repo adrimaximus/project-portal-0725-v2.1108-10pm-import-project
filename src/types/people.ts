@@ -32,6 +32,7 @@ export interface Company {
   created_at: string;
   updated_at: string;
   user_id: string | null;
+  custom_properties?: Record<string, any>;
 }
 
 export interface ContactProperty {
@@ -41,4 +42,13 @@ export interface ContactProperty {
   type: 'text' | 'email' | 'phone' | 'url' | 'date' | 'textarea' | 'number' | 'image';
   is_default: boolean;
   created_at?: string;
+}
+
+export interface CompanyProperty {
+  id: string;
+  name: string;
+  label: string;
+  type: 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url' | 'image' | 'select';
+  options?: string[];
+  is_default?: boolean;
 }
