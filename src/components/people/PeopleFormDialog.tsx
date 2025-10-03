@@ -13,7 +13,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
-export type CompanyProperty = {
+export type ContactProperty = {
   id: string;
   name: string;
   label: string;
@@ -21,32 +21,38 @@ export type CompanyProperty = {
   options?: string[];
 };
 
-export type Company = {
+export type Person = {
   id: string;
-  name: string;
-  legal_name?: string;
-  address?: string;
-  logo_url?: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  job_title?: string;
+  avatar_url?: string;
+  notes?: string;
   custom_properties?: Record<string, any>;
 };
 
-const CompanyFormDialog = ({ open, onOpenChange, company }) => {
+const PeopleFormDialog = ({ open, onOpenChange, person }) => {
   const queryClient = useQueryClient();
 
-  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
-    queryKey: ['company_properties'],
+  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<ContactProperty[]>({
+    queryKey: ['contact_properties'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('company_properties').select('*').order('label');
+      const { data, error } = await supabase.from('contact_properties').select('*').order('label');
       if (error) throw error;
       return data;
     },
   });
 
   const baseSchema = z.object({
-    name: z.string().min(1, 'Company name is required'),
-    legal_name: z.string().optional(),
-    address: z.string().optional(),
-    logo_url: z.string().url().optional().or(z.literal('')),
+    full_name: z.string().min(1, 'Full name is required'),
+    email: z.string().email('Invalid email address').optional().or(z.literal('')),
+    phone: z.string().optional(),
+    company: z.string().optional(),
+    job_title: z.string().optional(),
+    avatar_url: z.string().url().optional().or(z.literal('')),
+    notes: z.string().optional(),
   });
 
   const [dynamicSchema, setDynamicSchema] = React.useState<z.AnyZodObject>(baseSchema);
@@ -80,46 +86,46 @@ const CompanyFormDialog = ({ open, onOpenChange, company }) => {
 
   useEffect(() => {
     if (open) {
-      if (company) {
-        const { custom_properties, ...companyData } = company;
-        reset({ ...companyData, ...custom_properties });
+      if (person) {
+        const { custom_properties, ...personData } = person;
+        reset({ ...personData, ...custom_properties });
       } else {
         const defaultValues = properties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
-        reset({ name: '', legal_name: '', address: '', logo_url: '', ...defaultValues });
+        reset({ full_name: '', email: '', phone: '', company: '', job_title: '', avatar_url: '', notes: '', ...defaultValues });
       }
     }
-  }, [company, open, reset, properties]);
+  }, [person, open, reset, properties]);
 
   const mutation = useMutation({
     mutationFn: async (values: any) => {
-      const standardFields = ['name', 'legal_name', 'address', 'logo_url'];
-      const companyData: Partial<Company> = {};
+      const standardFields = ['full_name', 'email', 'phone', 'company', 'job_title', 'avatar_url', 'notes'];
+      const personData: Partial<Person> = {};
       const custom_properties: Record<string, any> = {};
 
       for (const key in values) {
         if (standardFields.includes(key)) {
-          companyData[key] = values[key];
+          personData[key] = values[key];
         } else {
           custom_properties[key] = values[key];
         }
       }
-      companyData.custom_properties = custom_properties;
+      personData.custom_properties = custom_properties;
 
-      if (company) {
-        const { error } = await supabase.from('companies').update(companyData).eq('id', company.id);
+      if (person) {
+        const { error } = await supabase.from('people').update(personData).eq('id', person.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('companies').insert(companyData as any);
+        const { error } = await supabase.from('people').insert(personData as any);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      toast.success(`Company ${company ? 'updated' : 'created'} successfully.`);
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      toast.success(`Person ${person ? 'updated' : 'created'} successfully.`);
+      queryClient.invalidateQueries({ queryKey: ['people'] });
       onOpenChange(false);
     },
     onError: (error: any) => {
-      toast.error('Failed to save company.', { description: error.message });
+      toast.error('Failed to save person.', { description: error.message });
     },
   });
 
@@ -127,7 +133,7 @@ const CompanyFormDialog = ({ open, onOpenChange, company }) => {
     mutation.mutate(data);
   };
 
-  const renderField = (prop: CompanyProperty) => {
+  const renderField = (prop: ContactProperty) => {
     const fieldName = prop.name;
     switch (prop.type) {
       case 'number':
@@ -158,27 +164,40 @@ const CompanyFormDialog = ({ open, onOpenChange, company }) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
-          <DialogDescription>Fill in the details for the company.</DialogDescription>
+          <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
+          <DialogDescription>Fill in the details for the person.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto px-4">
           <div>
-            <Label htmlFor="name">Company Name</Label>
-            <Input id="name" {...register('name')} />
-            {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message as string}</p>}
+            <Label htmlFor="full_name">Full Name</Label>
+            <Input id="full_name" {...register('full_name')} />
+            {errors.full_name && <p className="text-sm text-destructive mt-1">{errors.full_name.message as string}</p>}
           </div>
           <div>
-            <Label htmlFor="legal_name">Legal Name</Label>
-            <Input id="legal_name" {...register('legal_name')} />
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" {...register('email')} />
+            {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message as string}</p>}
           </div>
           <div>
-            <Label htmlFor="address">Address</Label>
-            <Textarea id="address" {...register('address')} />
+            <Label htmlFor="phone">Phone</Label>
+            <Input id="phone" {...register('phone')} />
           </div>
           <div>
-            <Label htmlFor="logo_url">Logo URL</Label>
-            <Input id="logo_url" {...register('logo_url')} />
-            {errors.logo_url && <p className="text-sm text-destructive mt-1">{errors.logo_url.message as string}</p>}
+            <Label htmlFor="company">Company</Label>
+            <Input id="company" {...register('company')} />
+          </div>
+          <div>
+            <Label htmlFor="job_title">Job Title</Label>
+            <Input id="job_title" {...register('job_title')} />
+          </div>
+          <div>
+            <Label htmlFor="avatar_url">Avatar URL</Label>
+            <Input id="avatar_url" {...register('avatar_url')} />
+            {errors.avatar_url && <p className="text-sm text-destructive mt-1">{errors.avatar_url.message as string}</p>}
+          </div>
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea id="notes" {...register('notes')} />
           </div>
 
           {isLoadingProperties ? (
@@ -199,7 +218,7 @@ const CompanyFormDialog = ({ open, onOpenChange, company }) => {
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {company ? 'Save Changes' : 'Create Company'}
+              {person ? 'Save Changes' : 'Create Person'}
             </Button>
           </DialogFooter>
         </form>
@@ -208,4 +227,4 @@ const CompanyFormDialog = ({ open, onOpenChange, company }) => {
   );
 };
 
-export default CompanyFormDialog;
+export default PeopleFormDialog;
