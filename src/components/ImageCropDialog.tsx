@@ -7,7 +7,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import ReactCrop, { type Crop, centerCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
 interface ImageCropDialogProps {
@@ -29,15 +29,11 @@ const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height } = e.currentTarget;
     const crop = centerCrop(
-      makeAspectCrop(
-        {
-          unit: '%',
-          width: 90,
-        },
-        16 / 9,
-        width,
-        height
-      ),
+      {
+        unit: '%',
+        width: 80,
+        height: 80,
+      },
       width,
       height
     );
@@ -91,7 +87,6 @@ const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
             <ReactCrop
               crop={crop}
               onChange={(_, percentCrop) => setCrop(percentCrop)}
-              aspect={16 / 9}
             >
               <img
                 ref={imgRef}
