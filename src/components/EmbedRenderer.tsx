@@ -76,7 +76,7 @@ const EmbedRenderer: React.FC<EmbedRendererProps> = ({ content }) => {
         <Fallback />
         <div
           ref={embedContainerRef}
-          className="w-full [&>iframe]:w-full"
+          className="w-full [&>iframe]:w-full [&>iframe]:h-[800px]"
           dangerouslySetInnerHTML={{ __html: processedIframe }}
         />
       </div>
@@ -84,7 +84,7 @@ const EmbedRenderer: React.FC<EmbedRendererProps> = ({ content }) => {
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-[800px]">
       <Fallback />
       <iframe
         src={content}
