@@ -9,7 +9,7 @@ interface ReactImageCropDialogProps {
   onOpenChange: (open: boolean) => void;
   imageSrc: string | null;
   onCropComplete: (blob: Blob) => void;
-  aspectRatio: number;
+  aspectRatio?: number;
 }
 
 const ReactImageCropDialog: React.FC<ReactImageCropDialogProps> = ({ open, onOpenChange, imageSrc, onCropComplete, aspectRatio }) => {
