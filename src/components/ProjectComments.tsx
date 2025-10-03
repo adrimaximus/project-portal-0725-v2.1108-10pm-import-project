@@ -113,7 +113,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="border rounded-lg p-2 space-y-2">
+      <form onSubmit={handleSubmit} className="border rounded-lg p-2 space-y-2 transition-colors focus-within:border-primary">
         <MentionsInput
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
