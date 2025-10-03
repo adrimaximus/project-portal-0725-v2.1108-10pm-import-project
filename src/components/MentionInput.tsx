@@ -83,7 +83,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
       const atMatch = textBeforeCursor.match(/@(\w*)$/);
       if (!atMatch) return;
 
-      const mentionText = `@[${suggestion.display}](${suggestion.id}) `;
+      const mentionText = `@${suggestion.display} `;
       const startIndex = textBeforeCursor.lastIndexOf('@');
       
       const newValue = 

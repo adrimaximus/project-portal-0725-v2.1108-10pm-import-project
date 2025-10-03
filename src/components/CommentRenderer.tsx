@@ -8,27 +8,28 @@ interface CommentRendererProps {
 }
 
 const CommentRenderer = ({ text, members }: CommentRendererProps) => {
-  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-  const parts = text.split(mentionRegex);
-
+  // Sort members by name length, descending, to match longer names first (e.g., "Adri Maximus" before "Adri")
+  const sortedMembers = [...members].sort((a, b) => b.name.length - a.name.length);
+  
+  // Create a regex pattern from member names to accurately find mentions
+  const mentionPattern = sortedMembers.map(m => m.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
+  
+  // This regex will find `@` followed by one of the member names, ensuring it's not part of an email
+  const regex = new RegExp(`(?<!\\S)@(${mentionPattern})(?!\\S)`, 'g');
+  
+  const parts = text.split(regex);
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
 
   return (
-    <p className="text-sm text-muted-foreground whitespace-pre-wrap break-all">
+    <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
       {parts.map((part, index) => {
-        // The display name is captured at index 1, 4, 7, etc.
-        if (index % 3 === 1) {
-          const userId = parts[index + 1];
-          const user = members.find(m => m.id === userId);
+        // Matched names are at odd indices
+        if (index % 2 === 1) {
+          const user = members.find(m => m.name === part);
           return user ? <UserMention key={index} user={user} /> : `@${part}`;
         }
-        // The user ID is captured at index 2, 5, 8, etc. We skip rendering it.
-        if (index % 3 === 2) {
-          return null;
-        }
-        
-        // Plain text parts are at index 0, 3, 6, etc.
-        // We process these parts to find and linkify URLs.
+
+        // Plain text parts are at even indices, check for URLs in them
         const textParts = part.split(urlRegex);
         return textParts.map((textPart, i) => {
           if (textPart.match(urlRegex)) {
