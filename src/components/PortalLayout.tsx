@@ -30,9 +30,9 @@ export default function PortalLayout({ children, summary, pageHeader, disableMai
         <PortalHeader summary={summary} />
 
         {/* Refactored scrollable content area */}
-        <div className={cn("flex-1 min-h-0", !disableMainScroll && "overflow-y-auto")}>
+        <div className={cn("flex-1 min-h-0", !disableMainScroll && "overflow-y-auto", disableMainScroll && "flex flex-col")}>
           {pageHeader}
-          <main className={cn(!noPadding && "p-4 md:p-8")}>
+          <main className={cn(!noPadding && "p-4 md:p-8", disableMainScroll && "flex-1")}>
             {children}
           </main>
         </div>
