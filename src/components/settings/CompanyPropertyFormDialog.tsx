@@ -13,15 +13,17 @@ import { Loader2, X } from 'lucide-react';
 const propertySchema = z.object({
   label: z.string().min(1, 'Label is required'),
   type: z.enum(['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select']),
-  options: z.array(z.object({ value: z.string().min(1, 'Option value is required') })).optional(),
-}).refine(data => {
+  options: z.array(z.object({ value: z.string() })).optional(),
+}).superRefine((data, ctx) => {
   if (data.type === 'select') {
-    return data.options && data.options.length > 0;
+    if (!data.options || data.options.length === 0 || data.options.every(opt => opt.value.trim() === '')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'For "Select" type, at least one option with a value is required.',
+        path: ['options'],
+      });
+    }
   }
-  return true;
-}, {
-  message: 'Select properties must have at least one option.',
-  path: ['options'],
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
@@ -68,7 +70,7 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
       name: slug,
       label: values.label,
       type: values.type,
-      options: values.options?.map(o => o.value),
+      options: values.options?.map(o => o.value).filter(Boolean),
     });
   };
 
@@ -128,7 +130,7 @@ const CompanyPropertyFormDialog = ({ open, onOpenChange, onSave, property, isSav
                 </div>
               ))}
               <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>Add Option</Button>
-              {errors.options?.root && <p className="text-sm text-destructive mt-1">{errors.options.root.message}</p>}
+              {errors.options && !Array.isArray(errors.options) && <p className="text-sm text-destructive mt-1">{errors.options.message}</p>}
             </div>
           )}
 
