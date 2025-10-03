@@ -23,7 +23,7 @@ const MultiEmbedCard: React.FC<MultiEmbedCardProps> = ({ item, parentSlug }) => 
   return (
     <Card className="group relative overflow-hidden">
       <Link to={`/multipage/${parentSlug}/${item.slug || item.id}`} className="flex items-stretch">
-        <div className="w-1/3 flex-shrink-0">
+        <div className="w-1/3 flex-shrink-0 aspect-[334/141] overflow-hidden">
           <img src={item.image_url || 'https://via.placeholder.com/200x200'} alt={item.title} className="object-cover h-full w-full" />
         </div>
         <CardContent className="p-4 flex-grow flex flex-col justify-center w-2/3">

@@ -135,8 +135,12 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
               <Input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
               <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" /> Upload Image</Button>
               {(imageUrl || imageFile) && (
-                <div className="mt-2">
-                  <img src={imageFile ? URL.createObjectURL(imageFile) : imageUrl} alt="Preview" className="rounded-md h-36 w-auto" />
+                <div className="mt-2 rounded-md border overflow-hidden">
+                  <img 
+                    src={imageFile ? URL.createObjectURL(imageFile) : imageUrl} 
+                    alt="Preview" 
+                    className="block w-full h-auto" 
+                  />
                 </div>
               )}
             </div>
@@ -156,7 +160,7 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
         onOpenChange={setIsCropDialogOpen}
         imageSrc={cropImageSrc}
         onCropComplete={handleCropComplete}
-        aspectRatio={141 / 334}
+        aspectRatio={334 / 141}
       />
     </>
   );
