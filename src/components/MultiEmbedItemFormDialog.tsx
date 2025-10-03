@@ -52,7 +52,7 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
   }, [item, open]);
 
   const { mutate: upsertItem, isPending } = useMutation({
-    mutationFn: async (newItem: Partial<MultiEmbedItem>) => {
+    mutationFn: async () => {
       if (!user) throw new Error("User not found");
 
       let finalImageUrl = imageUrl;
@@ -68,7 +68,6 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
       }
 
       const dataToUpsert = {
-        ...newItem,
         id: item?.id,
         nav_item_id: navItemId,
         user_id: user.id,
@@ -79,7 +78,11 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
         image_url: finalImageUrl,
       };
 
-      const { error } = await supabase.from('multi_embed_items').upsert(dataToUpsert);
+      if (!dataToUpsert.id) {
+        delete dataToUpsert.id;
+      }
+
+      const { error } = await supabase.from('multi_embed_items').upsert([dataToUpsert]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -94,7 +97,7 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    upsertItem({});
+    upsertItem();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
