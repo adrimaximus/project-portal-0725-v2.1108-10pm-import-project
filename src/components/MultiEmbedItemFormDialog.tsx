@@ -124,7 +124,7 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{item ? 'Edit Item' : 'Add New Item'}</DialogTitle>
             <DialogDescription>Fill in the details for your embed item.</DialogDescription>
@@ -134,7 +134,7 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
               <Label>Image</Label>
               <Input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
               <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" /> Upload Image</Button>
-              {(imageUrl || imageFile) && <img src={imageFile ? URL.createObjectURL(imageFile) : imageUrl} alt="Preview" className="mt-2 rounded-md w-full max-w-xs object-cover aspect-[141/334]" />}
+              {(imageUrl || imageFile) && <img src={imageFile ? URL.createObjectURL(imageFile) : imageUrl} alt="Preview" className="mt-2 rounded-md h-64 object-cover aspect-[141/334]" />}
             </div>
             <div className="space-y-2"><Label htmlFor="title">Title</Label><Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
             <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
