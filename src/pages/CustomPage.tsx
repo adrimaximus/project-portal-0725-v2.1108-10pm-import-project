@@ -34,7 +34,7 @@ const CustomPage = () => {
 
   return (
     <PortalLayout noPadding>
-      <div className="flex flex-col">
+      <div className="flex flex-col h-full">
         <div className="p-4 border-b flex-shrink-0">
           <Breadcrumb>
             <BreadcrumbList>
