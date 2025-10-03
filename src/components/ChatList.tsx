@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { useChatContext } from "@/contexts/ChatContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const ChatList = () => {
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
@@ -60,7 +61,7 @@ const ChatList = () => {
           </Button>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <ScrollArea className="flex-1">
         <div
           className={cn(
             "flex items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group cursor-pointer",
@@ -146,7 +147,7 @@ const ChatList = () => {
             </div>
           )
         })}
-      </div>
+      </ScrollArea>
       <NewConversationDialog
         open={isNewConversationOpen}
         onOpenChange={setIsNewConversationOpen}
