@@ -13,6 +13,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Company, CompanyProperty } from '@/types';
+import ImageUploadField from '../ImageUploadField';
 
 const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onOpenChange: (open: boolean) => void, company: Company | null }) => {
   const queryClient = useQueryClient();
@@ -48,6 +49,9 @@ const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onO
             break;
           case 'select':
             fieldSchema = z.string().optional();
+            break;
+          case 'image':
+            fieldSchema = z.string().url().optional().nullable();
             break;
           default:
             fieldSchema = z.string().optional();
@@ -131,6 +135,14 @@ const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onO
                 </SelectContent>
               </Select>
             )}
+          />
+        );
+      case 'image':
+        return (
+          <Controller
+            name={fieldName}
+            control={control}
+            render={({ field }) => <ImageUploadField value={field.value} onChange={field.onChange} />}
           />
         );
       default:
