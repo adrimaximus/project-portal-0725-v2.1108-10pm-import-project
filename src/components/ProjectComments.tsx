@@ -25,17 +25,17 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
   const [isTicketMode, setIsTicketMode] = useState(false);
 
   const mentionableUsers = useMemo(() => {
-    if (!project) return [];
+    if (!project || !user) return [];
     const users = [project.created_by, ...project.assignedTo];
+    if (!users.some(u => u.id === user.id)) {
+      users.push(user);
+    }
     const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
     return uniqueUsers.map(u => ({
       id: u.id,
       display: u.name,
-      avatar_url: u.avatar_url,
-      initials: u.initials,
-      email: u.email,
     }));
-  }, [project]);
+  }, [project, user]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -123,7 +123,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             input: 'w-full text-sm bg-transparent placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none p-2',
             suggestions: {
               list: 'bg-popover text-popover-foreground border rounded-lg shadow-lg p-1 mt-2 z-10 max-h-60 overflow-y-auto',
-              item: 'flex items-center gap-3 px-2 py-1.5 text-sm rounded-sm cursor-pointer outline-none',
+              item: 'px-3 py-2 text-sm rounded-sm cursor-pointer outline-none',
               itemFocused: 'bg-accent text-accent-foreground',
             },
             mention: 'bg-primary/10 text-primary font-semibold rounded-sm',
@@ -133,13 +133,7 @@ const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps
             trigger="@"
             data={mentionableUsers}
             renderSuggestion={(suggestion: any) => (
-              <>
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
-                  <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
-                </Avatar>
-                <span className="font-medium text-sm">{suggestion.display}</span>
-              </>
+              <span className="font-medium text-sm">{suggestion.display}</span>
             )}
             appendSpaceOnAdd
           />
