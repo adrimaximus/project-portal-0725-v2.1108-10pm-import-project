@@ -1,3 +1,4 @@
+import type { ElementType } from 'react';
 import { 
   LucideIcon, Target, Flag, BookOpen, Dumbbell, TrendingUp, Star, Heart, Rocket, DollarSign, FileText, Image as ImageIcon, Award, BarChart, Calendar, CheckCircle, Users,
   Activity, Anchor, Aperture, Bike, Briefcase, Brush, Camera, Car, ClipboardCheck, Cloud, Code, Coffee, Compass, Cpu, CreditCard, Crown, Database, Diamond, Feather, Film, Flame, Flower, Gift, Globe, GraduationCap, Headphones, Home, Key, Laptop, Leaf, Lightbulb, Link, Map, Medal, Mic, Moon, MousePointer, Music, Paintbrush, Palette, PenTool, Phone, PieChart, Plane, Puzzle, Save, Scale, Scissors, Settings, Shield, ShoppingBag, Smile, Speaker, Sun, Sunrise, Sunset, Sword, Tag, Trophy, Truck, Umbrella, Video, Wallet, Watch, Wind, Wrench, Zap
@@ -15,15 +16,16 @@ const lucideIconMap: { [key: string]: LucideIcon } = {
   Activity, Anchor, Aperture, Bike, Briefcase, Brush, Camera, Car, ClipboardCheck, Cloud, Code, Coffee, Compass, Cpu, CreditCard, Crown, Database, Diamond, Feather, Film, Flame, Flower, Gift, Globe, GraduationCap, Headphones, Home, Key, Laptop, Leaf, Lightbulb, Link, Map, Medal, Mic, Moon, MousePointer, Music, Paintbrush, Palette, PenTool, Phone, PieChart, Plane, Puzzle, Save, Scale, Scissors, Settings, Shield, ShoppingBag, Smile, Speaker, Sun, Sunrise, Sunset, Sword, Tag, Trophy, Truck, Umbrella, Video, Wallet, Watch, Wind, Wrench, Zap
 };
 
-const hugeIconNames = Object.keys(HugeIcons);
+const { icons, createHugeiconComponent, ...hugeIconComponents } = HugeIcons;
+const hugeIconNames = Object.keys(hugeIconComponents);
 
 export const allIcons = [...lucideIconNames, ...hugeIconNames].sort();
 
-const iconMap: { [key: string]: LucideIcon } = {
+const iconMap: { [key: string]: ElementType } = {
   ...lucideIconMap,
-  ...HugeIcons,
+  ...hugeIconComponents,
 };
 
-export const getIconComponent = (iconName: string): LucideIcon => {
+export const getIconComponent = (iconName: string): ElementType => {
   return iconMap[iconName] || Target; // Default to Target icon
 };
