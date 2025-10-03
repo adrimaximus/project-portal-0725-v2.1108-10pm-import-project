@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { MultiEmbedItem } from './MultiEmbedCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Upload, Crop } from 'lucide-react';
+import { Loader2, Upload } from 'lucide-react';
 import ReactImageCropDialog from './ReactImageCropDialog';
 
 interface MultiEmbedItemFormDialogProps {
@@ -32,7 +32,6 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
 
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
-  const [originalImageSrc, setOriginalImageSrc] = useState<string | null>(null);
 
   useEffect(() => {
     if (item) {
@@ -50,7 +49,6 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
     }
     setImageFile(null);
     setCropImageSrc(null);
-    setOriginalImageSrc(null);
   }, [item, open]);
 
   const { mutate: upsertItem, isPending } = useMutation({
@@ -107,9 +105,7 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.addEventListener('load', () => {
-        const result = reader.result as string;
-        setOriginalImageSrc(result);
-        setCropImageSrc(result);
+        setCropImageSrc(reader.result as string);
         setIsCropDialogOpen(true);
       });
       reader.readAsDataURL(file);
@@ -125,18 +121,6 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
     }
   };
 
-  const handleReCrop = () => {
-    const sourceToCrop = originalImageSrc || imageUrl;
-    if (sourceToCrop) {
-      setCropImageSrc(sourceToCrop);
-      setIsCropDialogOpen(true);
-    } else {
-      toast.error("No image to re-crop.");
-    }
-  };
-
-  const hasImage = !!(imageUrl || imageFile);
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,19 +132,14 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>Image</Label>
-              <div className="flex items-center gap-2">
-                <Input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
-                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" /> Upload Image</Button>
-                {hasImage && (
-                  <Button type="button" variant="outline" onClick={handleReCrop}><Crop className="mr-2 h-4 w-4" /> Re-crop</Button>
-                )}
-              </div>
-              {hasImage && (
-                <div className="mt-2 flex justify-center">
+              <Input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" /> Upload Image</Button>
+              {(imageUrl || imageFile) && (
+                <div className="mt-2 rounded-md border overflow-hidden">
                   <img 
                     src={imageFile ? URL.createObjectURL(imageFile) : imageUrl} 
                     alt="Preview" 
-                    className="rounded-md border object-contain max-h-48" 
+                    className="block w-full h-auto" 
                   />
                 </div>
               )}
