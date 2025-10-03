@@ -160,7 +160,7 @@ const MultiEmbedItemFormDialog: React.FC<MultiEmbedItemFormDialogProps> = ({ ope
                   <img 
                     src={imageFile ? URL.createObjectURL(imageFile) : imageUrl} 
                     alt="Preview" 
-                    className="rounded-md border object-contain max-h-48" 
+                    className="rounded-md border max-w-full h-auto" 
                   />
                 </div>
               )}
