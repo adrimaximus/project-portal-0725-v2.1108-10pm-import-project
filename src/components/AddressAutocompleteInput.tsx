@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 import { Input } from "./ui/input";
 import { Skeleton } from "./ui/skeleton";
@@ -23,82 +23,45 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({
     libraries,
   });
 
-  const [autocomplete, setAutocomplete] =
-    useState<google.maps.places.Autocomplete | null>(null);
-  const [inputValue, setInputValue] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (isFocused) {
-      return; // Don't update from prop while user is typing
-    }
-    if (value) {
-      try {
-        const parsed = JSON.parse(value);
-        const display = `${parsed.name ?? ""}${
-          parsed.type ? " - " + parsed.type : ""
-        }${parsed.address ? " - " + parsed.address : ""}`;
-        setInputValue(display);
-      } catch {
-        setInputValue(value);
+  const displayValue = useMemo(() => {
+    if (!value) return "";
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed.name && parsed.address) {
+        if (parsed.name.toLowerCase() === parsed.address.toLowerCase()) return parsed.name;
+        return `${parsed.name} - ${parsed.address}`;
       }
-    } else {
-      setInputValue("");
+      return value;
+    } catch {
+      return value;
     }
-  }, [value, isFocused]);
+  }, [value]);
 
   const onLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
-    setAutocomplete(autocompleteInstance);
+    autocompleteRef.current = autocompleteInstance;
   };
 
   const onPlaceChanged = () => {
-    if (autocomplete !== null) {
-      const place = autocomplete.getPlace();
-      const name = place.name || "";
-      const address = place.formatted_address || "";
-      const type =
-        place.types && place.types.length > 0
-          ? place.types[0].replace(/_/g, " ")
-          : "";
-
-      if (name && address) {
-        const venueObject = { name, type, address };
-        const display = `${name}${type ? " - " + type : ""} - ${address}`;
+    if (autocompleteRef.current) {
+      const place = autocompleteRef.current.getPlace();
+      if (place) {
+        const name = place.name || "";
+        const address = place.formatted_address || "";
+        const type =
+          place.types && place.types.length > 0
+            ? place.types[0].replace(/_/g, " ")
+            : "";
+        const venueObject = { name, address, type };
         onChange(JSON.stringify(venueObject));
-        setInputValue(display);
-      } else {
-        const plainValue = address || name || inputRef.current?.value || '';
-        onChange(JSON.stringify({ name: plainValue, address: plainValue }));
-        setInputValue(plainValue);
       }
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-    // Use a timeout to allow onPlaceChanged to fire first if user clicks a suggestion
-    setTimeout(() => {
-        try {
-            // If value is already valid JSON, do nothing
-            JSON.parse(value);
-        } catch {
-            // If not, it means user typed text without selecting.
-            // So, we format and update the parent state.
-            if (inputValue.trim()) {
-                onChange(
-                JSON.stringify({ name: inputValue, address: inputValue })
-                );
-            } else if (value) {
-                // If input is cleared, clear parent state
-                onChange('');
-            }
-        }
-    }, 200);
+    onChange(e.target.value);
   };
 
   if (loadError) {
@@ -125,18 +88,14 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({
       <Autocomplete
         onLoad={onLoad}
         onPlaceChanged={onPlaceChanged}
-        options={{
-          fields: ["formatted_address", "name", "geometry", "types"],
-        }}
+        options={{ fields: ["formatted_address", "name", "geometry", "types"] }}
       >
         <Input
           ref={inputRef}
           type="text"
           placeholder="Start typing an address..."
-          value={inputValue}
+          value={displayValue}
           onChange={handleInputChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={handleBlur}
           disabled={disabled}
           className="pr-10"
         />
