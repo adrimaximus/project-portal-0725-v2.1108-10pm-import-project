@@ -115,7 +115,20 @@ const CompaniesView = () => {
                                             </div>
                                         </TableCell>
                                         <TableCell className="hidden sm:table-cell">{company.legal_name || '-'}</TableCell>
-                                        <TableCell className="hidden md:table-cell">{company.address || '-'}</TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            {company.address ? (
+                                                <a
+                                                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(company.address)}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="hover:underline"
+                                                >
+                                                    {company.address}
+                                                </a>
+                                            ) : (
+                                                '-'
+                                            )}
+                                        </TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
