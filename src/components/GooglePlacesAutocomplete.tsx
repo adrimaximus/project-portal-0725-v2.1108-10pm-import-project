@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 
 interface GooglePlacesAutocompleteProps {
@@ -10,6 +10,12 @@ interface GooglePlacesAutocompleteProps {
 const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({ value, onChange, placeholder }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [internalValue, setInternalValue] = useState(value || '');
+
+  // Sinkronkan state internal saat nilai eksternal berubah (misalnya, saat reset formulir)
+  useEffect(() => {
+    setInternalValue(value || '');
+  }, [value]);
 
   useEffect(() => {
     if (window.google && inputRef.current && !autocompleteRef.current) {
@@ -20,28 +26,37 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({ val
       autocompleteRef.current.addListener('place_changed', () => {
         const place = autocompleteRef.current?.getPlace();
         if (place) {
-          let displayValue = place.formatted_address;
-          if (place.name && place.formatted_address && !place.formatted_address.toLowerCase().includes(place.name.toLowerCase())) {
-            displayValue = `${place.name} - ${place.formatted_address}`;
+          let displayValue = place.formatted_address || '';
+          // Tambahkan nama di depan jika belum ada di alamat yang diformat
+          if (place.name && displayValue && !displayValue.toLowerCase().includes(place.name.toLowerCase())) {
+            displayValue = `${place.name} - ${displayValue}`;
           }
-          onChange(displayValue || '');
+          onChange(displayValue); // Perbarui state formulir
+          setInternalValue(displayValue); // Perbarui tampilan input
         }
       });
     }
   }, [onChange]);
 
-  useEffect(() => {
-    if (inputRef.current && value !== inputRef.current.value) {
-      inputRef.current.value = value || '';
-    }
-  }, [value]);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInternalValue(e.target.value);
+    // Jangan panggil onChange di sini untuk menghindari pembaruan formulir dengan input parsial
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    // Saat pengguna mengklik di luar, kita dapat mengasumsikan mereka sudah selesai.
+    // Kita teruskan nilai input saat ini ke formulir.
+    // Ini menangani kasus di mana mereka mengetik alamat secara manual tanpa memilih.
+    onChange(e.target.value);
+  };
 
   return (
     <Input
       ref={inputRef}
       placeholder={placeholder || "Cari nama tempat atau alamat..."}
-      defaultValue={value || ''}
-      onChange={(e) => onChange(e.target.value)}
+      value={internalValue}
+      onChange={handleInputChange}
+      onBlur={handleBlur}
     />
   );
 };
