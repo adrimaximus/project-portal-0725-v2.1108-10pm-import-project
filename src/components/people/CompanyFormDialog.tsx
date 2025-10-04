@@ -13,18 +13,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Company, CompanyProperty } from '@/types';
 import ImageUploadField from '../ImageUploadField';
-import { useLoadScript } from '@react-google-maps/api';
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
-
-const libraries: ("places")[] = ['places'];
 
 const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onOpenChange: (open: boolean) => void, company: Company | null }) => {
   const queryClient = useQueryClient();
-
-  const { isLoaded: isGoogleMapsLoaded } = useLoadScript({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
-    libraries,
-  });
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
     queryKey: ['company_properties'],
@@ -177,64 +169,60 @@ const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onO
           </div>
           <div className="px-6">
             <Label htmlFor="address">Address</Label>
-            {isGoogleMapsLoaded ? (
-              <Controller
-                name="address"
-                control={control}
-                render={({ field }) => {
-                  let venueName = '';
-                  let venueAddress = '';
-                  let fullQuery = field.value || '';
+            <Controller
+              name="address"
+              control={control}
+              render={({ field }) => {
+                let venueName = '';
+                let venueAddress = '';
+                let fullQuery = field.value || '';
 
-                  try {
-                    const parsed = JSON.parse(field.value || '{}');
-                    if (parsed.name && parsed.address) {
-                      venueName = parsed.name;
-                      venueAddress = parsed.address;
-                      fullQuery = `${venueName}, ${venueAddress}`;
-                    }
-                  } catch (e) {
-                    // Not a JSON string, use as is
+                try {
+                  const parsed = JSON.parse(field.value || '{}');
+                  if (parsed.name && parsed.address) {
+                    venueName = parsed.name;
+                    venueAddress = parsed.address;
+                    fullQuery = `${venueName}, ${venueAddress}`;
                   }
+                } catch (e) {
+                  // Not a JSON string, use as is
+                }
 
-                  return (
-                    <div>
-                      <div className="relative flex items-center">
-                        <AddressAutocompleteInput
-                          value={field.value || ''}
-                          onChange={field.onChange}
-                        />
-                        {field.value && (
-                          <a
-                            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullQuery)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Get directions"
-                            className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <MapPin className="h-4 w-4" />
-                          </a>
-                        )}
-                      </div>
+                return (
+                  <div>
+                    <div className="relative flex items-center">
+                      <AddressAutocompleteInput
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                      />
                       {field.value && (
-                        <div className="text-sm text-muted-foreground mt-2 p-2 bg-muted rounded-md">
-                          {venueName && venueAddress ? (
-                            <div>
-                              <p className="font-semibold text-foreground">{venueName}</p>
-                              <p>{venueAddress}</p>
-                            </div>
-                          ) : (
-                            <p>{field.value}</p>
-                          )}
-                        </div>
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullQuery)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Get directions"
+                          className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <MapPin className="h-4 w-4" />
+                        </a>
                       )}
                     </div>
-                  );
-                }}
-              />
-            ) : (
-              <Input disabled placeholder="Loading address search..." />
-            )}
+                    {field.value && (venueAddress || (!venueName && fullQuery)) && (
+                      <div className="text-sm text-muted-foreground mt-2 p-2 bg-muted rounded-md">
+                        {venueName && venueAddress ? (
+                          <div>
+                            <p className="font-semibold text-foreground">{venueName}</p>
+                            <p>{venueAddress}</p>
+                          </div>
+                        ) : (
+                          <p>{field.value}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
+            />
           </div>
           <div className="px-6">
             <Label htmlFor="logo_url">Logo URL</Label>

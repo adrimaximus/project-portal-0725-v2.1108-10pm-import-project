@@ -1,21 +1,21 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
-import { toast } from 'sonner';
-import { Skeleton } from './ui/skeleton';
-import { supabase } from '@/integrations/supabase/client';
 import { Input } from './ui/input';
+import { Skeleton } from './ui/skeleton';
+import { toast } from 'sonner';
 
 interface AddressAutocompleteInputProps {
   value: string;
-  onChange: (address: string) => void;
+  onChange: (value: string) => void;
   disabled?: boolean;
 }
 
-const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: string, value: string, onChange: (address: string) => void, disabled?: boolean }) => {
+const libraries: ('places')[] = ['places'];
+
+const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({ value, onChange, disabled }) => {
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey,
-    libraries: ['places'],
-    preventGoogleFontsLoading: true,
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
+    libraries,
   });
 
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
@@ -25,11 +25,7 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
     if (value) {
       try {
         const parsed = JSON.parse(value);
-        if (parsed.name) {
-          setInputValue(parsed.name);
-        } else {
-          setInputValue(value);
-        }
+        setInputValue(parsed.name || value);
       } catch (e) {
         setInputValue(value);
       }
@@ -56,15 +52,28 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
         onChange(plainValue);
         setInputValue(plainValue);
       }
-    } else {
-      console.error('Autocomplete is not loaded yet!');
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  };
+
+  const handleBlur = () => {
+    let storedName = '';
+    try {
+      storedName = JSON.parse(value).name;
+    } catch (e) {
+      storedName = value;
+    }
+    if (inputValue !== storedName) {
+      onChange(inputValue);
     }
   };
 
   if (loadError) {
-    console.error("Google Maps API Load Error:", loadError);
-    toast.error("Failed to load Google Maps script. Please check your API key and internet connection.");
-    return <Input value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} placeholder="Error loading maps, enter address manually" />;
+    toast.error("Failed to load Google Maps script.");
+    return <Input placeholder="Error loading maps" disabled />;
   }
 
   if (!isLoaded) {
@@ -76,59 +85,19 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
       onLoad={onLoad}
       onPlaceChanged={onPlaceChanged}
       options={{
-        types: ["establishment", "geocode"],
-        componentRestrictions: { country: "id" },
-        fields: ["formatted_address", "name"],
+        fields: ["formatted_address", "name", "geometry"],
       }}
     >
       <Input
         type="text"
         placeholder="Start typing an address..."
         value={inputValue}
-        onChange={(e) => {
-          setInputValue(e.target.value);
-          onChange(e.target.value);
-        }}
+        onChange={handleInputChange}
+        onBlur={handleBlur}
         disabled={disabled}
       />
     </Autocomplete>
   );
-};
-
-const AddressAutocompleteInput = ({ value, onChange, disabled }: AddressAutocompleteInputProps) => {
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [loadingKey, setLoadingKey] = useState(true);
-
-  useEffect(() => {
-    const fetchKey = async () => {
-      setLoadingKey(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('get-google-maps-key');
-        if (error) throw error;
-        if (data.apiKey) {
-          setApiKey(data.apiKey);
-        } else {
-          throw new Error("API key was not returned from the function.");
-        }
-      } catch (error: any) {
-        console.error("Failed to fetch Google Maps API key:", error.message);
-        toast.error("Could not fetch Google Maps API key.");
-      } finally {
-        setLoadingKey(false);
-      }
-    };
-    fetchKey();
-  }, []);
-
-  if (loadingKey) {
-    return <Skeleton className="h-10 w-full" />;
-  }
-
-  if (!apiKey) {
-    return <Input value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} placeholder="API key missing, enter address manually" />;
-  }
-
-  return <AutocompleteCore apiKey={apiKey} value={value} onChange={onChange} disabled={disabled} />;
 };
 
 export default AddressAutocompleteInput;
