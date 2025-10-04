@@ -5,18 +5,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MapPin } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Company, CompanyProperty } from '@/types';
 import ImageUploadField from '../ImageUploadField';
+import { useLoadScript } from '@react-google-maps/api';
+import GooglePlacesAutocomplete from '../GooglePlacesAutocomplete';
+
+const libraries: ("places")[] = ['places'];
 
 const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onOpenChange: (open: boolean) => void, company: Company | null }) => {
   const queryClient = useQueryClient();
+
+  const { isLoaded: isGoogleMapsLoaded } = useLoadScript({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
+    libraries,
+  });
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
     queryKey: ['company_properties'],
@@ -169,7 +177,33 @@ const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onO
           </div>
           <div className="px-6">
             <Label htmlFor="address">Address</Label>
-            <Textarea id="address" {...register('address')} />
+            {isGoogleMapsLoaded ? (
+              <Controller
+                name="address"
+                control={control}
+                render={({ field }) => (
+                  <div className="relative flex items-center">
+                    <GooglePlacesAutocomplete
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                    />
+                    {field.value && (
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(field.value)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Get directions"
+                        className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <MapPin className="h-4 w-4" />
+                      </a>
+                    )}
+                  </div>
+                )}
+              />
+            ) : (
+              <Input disabled placeholder="Loading address search..." />
+            )}
           </div>
           <div className="px-6">
             <Label htmlFor="logo_url">Logo URL</Label>
