@@ -181,7 +181,6 @@ const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onO
             <div className="flex justify-center px-6"><Loader2 className="h-6 w-6 animate-spin" /></div>
           ) : properties.length > 0 && (
             <div className="space-y-4 border-t pt-4 mt-4 px-6">
-              <h3 className="text-lg font-medium">Custom Properties</h3>
               {properties.map(prop => (
                 <div key={prop.id}>
                   <Label htmlFor={prop.name}>{prop.label}</Label>
