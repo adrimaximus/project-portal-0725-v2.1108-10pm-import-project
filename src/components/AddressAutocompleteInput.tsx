@@ -25,7 +25,11 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({ val
     if (value) {
       try {
         const parsed = JSON.parse(value);
-        setInputValue(parsed.name || value);
+        if (parsed.name && parsed.address) {
+          setInputValue(`${parsed.name} - ${parsed.address}`);
+        } else {
+          setInputValue(value);
+        }
       } catch (e) {
         setInputValue(value);
       }
@@ -46,7 +50,7 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({ val
       if (name && address) {
         const venueObject = { name, address };
         onChange(JSON.stringify(venueObject));
-        setInputValue(name);
+        setInputValue(`${name} - ${address}`);
       } else {
         const plainValue = address || name;
         onChange(plainValue);
@@ -60,13 +64,18 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({ val
   };
 
   const handleBlur = () => {
-    let storedName = '';
+    let storedDisplayValue = '';
     try {
-      storedName = JSON.parse(value).name;
+      const parsed = JSON.parse(value);
+      if (parsed.name && parsed.address) {
+        storedDisplayValue = `${parsed.name} - ${parsed.address}`;
+      } else {
+        storedDisplayValue = value;
+      }
     } catch (e) {
-      storedName = value;
+      storedDisplayValue = value;
     }
-    if (inputValue !== storedName) {
+    if (inputValue !== storedDisplayValue) {
       onChange(inputValue);
     }
   };

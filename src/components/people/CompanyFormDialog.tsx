@@ -173,51 +173,33 @@ const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onO
               name="address"
               control={control}
               render={({ field }) => {
-                let venueName = '';
-                let venueAddress = '';
                 let fullQuery = field.value || '';
 
                 try {
                   const parsed = JSON.parse(field.value || '{}');
                   if (parsed.name && parsed.address) {
-                    venueName = parsed.name;
-                    venueAddress = parsed.address;
-                    fullQuery = `${venueName}, ${venueAddress}`;
+                    fullQuery = `${parsed.name}, ${parsed.address}`;
                   }
                 } catch (e) {
                   // Not a JSON string, use as is
                 }
 
                 return (
-                  <div>
-                    <div className="relative flex items-center">
-                      <AddressAutocompleteInput
-                        value={field.value || ''}
-                        onChange={field.onChange}
-                      />
-                      {field.value && (
-                        <a
-                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullQuery)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Get directions"
-                          className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          <MapPin className="h-4 w-4" />
-                        </a>
-                      )}
-                    </div>
-                    {field.value && (venueAddress || (!venueName && fullQuery)) && (
-                      <div className="text-sm text-muted-foreground mt-2 p-2 bg-muted rounded-md">
-                        {venueName && venueAddress ? (
-                          <div>
-                            <p className="font-semibold text-foreground">{venueName}</p>
-                            <p>{venueAddress}</p>
-                          </div>
-                        ) : (
-                          <p>{field.value}</p>
-                        )}
-                      </div>
+                  <div className="relative flex items-center">
+                    <AddressAutocompleteInput
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                    />
+                    {field.value && (
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullQuery)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Get directions"
+                        className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <MapPin className="h-4 w-4" />
+                      </a>
                     )}
                   </div>
                 );
