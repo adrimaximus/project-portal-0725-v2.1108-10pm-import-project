@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 import { Input } from "./ui/input";
 import { Skeleton } from "./ui/skeleton";
@@ -26,9 +26,13 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({
   const [autocomplete, setAutocomplete] =
     useState<google.maps.places.Autocomplete | null>(null);
   const [inputValue, setInputValue] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Parse value from parent (keep JSON object consistent)
   useEffect(() => {
+    if (isFocused) {
+      return; // Don't update from prop while user is typing
+    }
     if (value) {
       try {
         const parsed = JSON.parse(value);
@@ -42,7 +46,7 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({
     } else {
       setInputValue("");
     }
-  }, [value]);
+  }, [value, isFocused]);
 
   const onLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
     setAutocomplete(autocompleteInstance);
@@ -64,7 +68,7 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({
         onChange(JSON.stringify(venueObject));
         setInputValue(display);
       } else {
-        const plainValue = address || name;
+        const plainValue = address || name || inputRef.current?.value || '';
         onChange(JSON.stringify({ name: plainValue, address: plainValue }));
         setInputValue(plainValue);
       }
@@ -76,15 +80,25 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({
   };
 
   const handleBlur = () => {
-    try {
-      JSON.parse(value); // valid JSON → biarin
-    } catch {
-      if (inputValue.trim()) {
-        onChange(
-          JSON.stringify({ name: inputValue, address: inputValue })
-        );
-      }
-    }
+    setIsFocused(false);
+    // Use a timeout to allow onPlaceChanged to fire first if user clicks a suggestion
+    setTimeout(() => {
+        try {
+            // If value is already valid JSON, do nothing
+            JSON.parse(value);
+        } catch {
+            // If not, it means user typed text without selecting.
+            // So, we format and update the parent state.
+            if (inputValue.trim()) {
+                onChange(
+                JSON.stringify({ name: inputValue, address: inputValue })
+                );
+            } else if (value) {
+                // If input is cleared, clear parent state
+                onChange('');
+            }
+        }
+    }, 200);
   };
 
   if (loadError) {
@@ -116,10 +130,12 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({
         }}
       >
         <Input
+          ref={inputRef}
           type="text"
           placeholder="Start typing an address..."
           value={inputValue}
           onChange={handleInputChange}
+          onFocus={() => setIsFocused(true)}
           onBlur={handleBlur}
           disabled={disabled}
           className="pr-10"
