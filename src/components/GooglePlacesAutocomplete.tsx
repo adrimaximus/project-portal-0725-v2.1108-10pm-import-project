@@ -21,8 +21,8 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({ val
         const place = autocompleteRef.current?.getPlace();
         if (place) {
           let displayValue = place.formatted_address;
-          if (place.name && place.formatted_address && !place.formatted_address.startsWith(place.name)) {
-            displayValue = `${place.name}, ${place.formatted_address}`;
+          if (place.name && place.formatted_address && !place.formatted_address.toLowerCase().includes(place.name.toLowerCase())) {
+            displayValue = `${place.name} ${place.formatted_address}`;
           }
           onChange(displayValue || '');
         }
