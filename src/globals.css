@@ -99,3 +99,7 @@
     @apply bg-background text-foreground;
   }
 }
+
+.pac-container {
+  z-index: 9999 !important;
+}

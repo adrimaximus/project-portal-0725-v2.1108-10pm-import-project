@@ -74,8 +74,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/* Fix for Google Places Autocomplete inside modals/dialogs */
-.pac-container {
-  z-index: 10000 !important;
-}
