@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -172,38 +172,12 @@ const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onO
             <Controller
               name="address"
               control={control}
-              render={({ field }) => {
-                let fullQuery = field.value || '';
-
-                try {
-                  const parsed = JSON.parse(field.value || '{}');
-                  if (parsed.name && parsed.address) {
-                    fullQuery = `${parsed.name}, ${parsed.address}`;
-                  }
-                } catch (e) {
-                  // Not a JSON string, use as is
-                }
-
-                return (
-                  <div className="relative flex items-center">
-                    <AddressAutocompleteInput
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                    />
-                    {field.value && (
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullQuery)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Get directions"
-                        className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <MapPin className="h-4 w-4" />
-                      </a>
-                    )}
-                  </div>
-                );
-              }}
+              render={({ field }) => (
+                <AddressAutocompleteInput
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                />
+              )}
             />
           </div>
           <div className="px-6">

@@ -3,6 +3,7 @@ import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 import { Input } from './ui/input';
 import { Skeleton } from './ui/skeleton';
 import { toast } from 'sonner';
+import { MapPin } from 'lucide-react';
 
 interface AddressAutocompleteInputProps {
   value: string;
@@ -89,23 +90,47 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({ val
     return <Skeleton className="h-10 w-full" />;
   }
 
+  let fullQuery = value || '';
+  try {
+    const parsed = JSON.parse(value || '{}');
+    if (parsed.name && parsed.address) {
+      fullQuery = `${parsed.name}, ${parsed.address}`;
+    }
+  } catch (e) {
+    // Not a JSON string, use as is
+  }
+
   return (
-    <Autocomplete
-      onLoad={onLoad}
-      onPlaceChanged={onPlaceChanged}
-      options={{
-        fields: ["formatted_address", "name", "geometry"],
-      }}
-    >
-      <Input
-        type="text"
-        placeholder="Start typing an address..."
-        value={inputValue}
-        onChange={handleInputChange}
-        onBlur={handleBlur}
-        disabled={disabled}
-      />
-    </Autocomplete>
+    <div className="relative w-full">
+      <Autocomplete
+        onLoad={onLoad}
+        onPlaceChanged={onPlaceChanged}
+        options={{
+          fields: ["formatted_address", "name", "geometry"],
+        }}
+      >
+        <Input
+          type="text"
+          placeholder="Start typing an address..."
+          value={inputValue}
+          onChange={handleInputChange}
+          onBlur={handleBlur}
+          disabled={disabled}
+          className="pr-10"
+        />
+      </Autocomplete>
+      {value && (
+        <a
+          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullQuery)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Get directions"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <MapPin className="h-4 w-4" />
+        </a>
+      )}
+    </div>
   );
 };
 
