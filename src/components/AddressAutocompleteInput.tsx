@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 import { Input } from './ui/input';
 import { Skeleton } from './ui/skeleton';
@@ -20,22 +20,17 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({ val
   });
 
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
-  const [inputValue, setInputValue] = useState('');
 
-  useEffect(() => {
-    if (value) {
-      try {
-        const parsed = JSON.parse(value);
-        if (parsed.name && parsed.address) {
-          setInputValue(`${parsed.name} - ${parsed.address}`);
-        } else {
-          setInputValue(value);
-        }
-      } catch (e) {
-        setInputValue(value);
+  const displayValue = useMemo(() => {
+    if (!value) return '';
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed.name && parsed.address) {
+        return `${parsed.name} - ${parsed.address}`;
       }
-    } else {
-      setInputValue('');
+      return value;
+    } catch (e) {
+      return value;
     }
   }, [value]);
 
@@ -51,34 +46,14 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({ val
       if (name && address) {
         const venueObject = { name, address };
         onChange(JSON.stringify(venueObject));
-        setInputValue(`${name} - ${address}`);
       } else {
-        const plainValue = address || name;
-        onChange(plainValue);
-        setInputValue(plainValue);
+        onChange(address || name || '');
       }
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
-
-  const handleBlur = () => {
-    let storedDisplayValue = '';
-    try {
-      const parsed = JSON.parse(value);
-      if (parsed.name && parsed.address) {
-        storedDisplayValue = `${parsed.name} - ${parsed.address}`;
-      } else {
-        storedDisplayValue = value;
-      }
-    } catch (e) {
-      storedDisplayValue = value;
-    }
-    if (inputValue !== storedDisplayValue) {
-      onChange(inputValue);
-    }
+    onChange(e.target.value);
   };
 
   if (loadError) {
@@ -112,9 +87,8 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({ val
         <Input
           type="text"
           placeholder="Start typing an address..."
-          value={inputValue}
+          value={displayValue}
           onChange={handleInputChange}
-          onBlur={handleBlur}
           disabled={disabled}
           className="pr-10"
         />

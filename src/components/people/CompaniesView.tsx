@@ -116,18 +116,28 @@ const CompaniesView = () => {
                                         </TableCell>
                                         <TableCell className="hidden sm:table-cell">{company.legal_name || '-'}</TableCell>
                                         <TableCell className="hidden md:table-cell">
-                                            {company.address ? (
-                                                <a
-                                                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(company.address)}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="hover:underline"
-                                                >
-                                                    {company.address}
-                                                </a>
-                                            ) : (
-                                                '-'
-                                            )}
+                                            {(() => {
+                                                if (!company.address) return '-';
+                                                let displayAddress = company.address;
+                                                let mapsQuery = company.address;
+                                                try {
+                                                    const parsed = JSON.parse(company.address);
+                                                    if (parsed.name && parsed.address) {
+                                                        displayAddress = `${parsed.name} - ${parsed.address}`;
+                                                        mapsQuery = `${parsed.name}, ${parsed.address}`;
+                                                    }
+                                                } catch (e) {}
+                                                return (
+                                                    <a
+                                                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapsQuery)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="hover:underline"
+                                                    >
+                                                        {displayAddress}
+                                                    </a>
+                                                );
+                                            })()}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
