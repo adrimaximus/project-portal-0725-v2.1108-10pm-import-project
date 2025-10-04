@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 import { toast } from 'sonner';
 import { Skeleton } from './ui/skeleton';
@@ -25,8 +25,8 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
     if (value) {
       try {
         const parsed = JSON.parse(value);
-        if (parsed.name && parsed.address) {
-          setInputValue(`${parsed.name}, ${parsed.address}`);
+        if (parsed.name) {
+          setInputValue(parsed.name);
         } else {
           setInputValue(value);
         }
@@ -50,7 +50,7 @@ const AutocompleteCore = ({ apiKey, value, onChange, disabled }: { apiKey: strin
       if (name && address) {
         const venueObject = { name, address };
         onChange(JSON.stringify(venueObject));
-        setInputValue(`${name}, ${address}`);
+        setInputValue(name);
       } else {
         const plainValue = address || name;
         onChange(plainValue);
