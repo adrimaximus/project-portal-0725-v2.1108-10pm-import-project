@@ -22,7 +22,7 @@ const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> = ({ val
         if (place) {
           let displayValue = place.formatted_address;
           if (place.name && place.formatted_address && !place.formatted_address.toLowerCase().includes(place.name.toLowerCase())) {
-            displayValue = `${place.name} ${place.formatted_address}`;
+            displayValue = `${place.name} - ${place.formatted_address}`;
           }
           onChange(displayValue || '');
         }

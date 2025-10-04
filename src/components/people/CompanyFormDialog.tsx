@@ -182,21 +182,26 @@ const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onO
                 name="address"
                 control={control}
                 render={({ field }) => (
-                  <div className="relative flex items-center">
-                    <GooglePlacesAutocomplete
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                    />
+                  <div>
+                    <div className="relative flex items-center">
+                      <GooglePlacesAutocomplete
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                      />
+                      {field.value && (
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(field.value)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Get directions"
+                          className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <MapPin className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
                     {field.value && (
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(field.value)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Get directions"
-                        className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <MapPin className="h-4 w-4" />
-                      </a>
+                      <p className="text-sm text-muted-foreground mt-2 p-2 bg-muted rounded-md">{field.value}</p>
                     )}
                   </div>
                 )}
