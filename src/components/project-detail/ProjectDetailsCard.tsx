@@ -14,7 +14,6 @@ import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Extend the Project type to include people, assuming this data will be fetched.
 type Project = BaseProject & {
@@ -61,6 +60,16 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     enabled: !!client?.company,
   });
 
+  const { data: allPeople, isLoading: isLoadingPeople } = useQuery<Person[]>({
+    queryKey: ['allPeople'],
+    queryFn: async () => {
+        const { data, error } = await supabase.from('people').select('*');
+        if (error) throw error;
+        return data;
+    },
+    enabled: isEditing,
+  });
+
   const handleDateChange = (range: DateRange | undefined) => {
     const startDate = range?.from ? range.from.toISOString() : undefined;
     const endDateValue = range?.to || range?.from;
@@ -72,6 +81,15 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
 
   const handleBudgetChange = (value: number | null) => {
     onFieldChange('budget', value || 0);
+  };
+
+  const handleClientChange = (personId: string) => {
+    const selectedPerson = allPeople?.find(p => p.id === personId);
+    if (selectedPerson) {
+        onFieldChange('people', [selectedPerson]);
+    } else {
+        onFieldChange('people', []);
+    }
   };
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
@@ -287,25 +305,48 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
             <User className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
             <div className="w-full">
               <p className="font-medium">Client</p>
-              <div className="pt-1">
-                {client ? (
-                  <div className="flex items-center gap-3">
-                    {company?.logo_url ? (
-                      <img src={company.logo_url} alt={client.company || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
+              {isEditing ? (
+                <Select
+                  value={client?.id}
+                  onValueChange={handleClientChange}
+                  disabled={isLoadingPeople}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingPeople ? (
+                      <SelectItem value="loading" disabled>Loading...</SelectItem>
                     ) : (
-                      <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                      </div>
+                      allPeople?.map(person => (
+                        <SelectItem key={person.id} value={person.id}>
+                          {person.full_name} {person.company && `(${person.company})`}
+                        </SelectItem>
+                      ))
                     )}
-                    <div>
-                      <p className="text-foreground font-semibold">{client.full_name}</p>
-                      <p className="text-muted-foreground text-xs">{client.company}</p>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="pt-1">
+                  {client ? (
+                    <div className="flex items-center gap-3">
+                      {company?.logo_url ? (
+                        <img src={company.logo_url} alt={client.company || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
+                      ) : (
+                        <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
+                          <Building className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-foreground font-semibold">{client.full_name}</p>
+                        <p className="text-muted-foreground text-xs">{client.company}</p>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">No client assigned</p>
-                )}
-              </div>
+                  ) : (
+                    <p className="text-muted-foreground">No client assigned</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
