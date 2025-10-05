@@ -74,3 +74,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Fix for Google Maps Autocomplete z-index issue inside dialogs */
+.pac-container {
+  z-index: 9999 !important;
+}
