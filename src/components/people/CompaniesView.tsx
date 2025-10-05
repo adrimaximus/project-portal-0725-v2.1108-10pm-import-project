@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import CompanyFormDialog from './CompanyFormDialog';
 import { Company } from '@/types';
 import { useNavigate } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
 
 const CompaniesView = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -82,27 +83,29 @@ const CompaniesView = () => {
                 </div>
             </div>
             <div className="border rounded-lg overflow-auto flex-grow">
-                <Table>
+                <Table className="min-w-[1200px]">
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Company</TableHead>
-                            <TableHead className="hidden sm:table-cell">Legal Name</TableHead>
-                            <TableHead className="hidden md:table-cell">Address</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead className="min-w-[250px] sticky left-0 bg-card">Company</TableHead>
+                            <TableHead className="min-w-[200px]">Legal Name</TableHead>
+                            <TableHead className="min-w-[300px]">Address</TableHead>
+                            <TableHead className="min-w-[300px]">Billing Address</TableHead>
+                            <TableHead className="min-w-[150px]">Updated At</TableHead>
+                            <TableHead className="text-right sticky right-0 bg-card">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
-                            <TableRow><TableCell colSpan={4} className="text-center h-24"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="text-center h-24"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></TableCell></TableRow>
                         ) : companies.length === 0 ? (
-                            <TableRow><TableCell colSpan={4} className="text-center h-24">No companies found. Add one to get started.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="text-center h-24">No companies found. Add one to get started.</TableCell></TableRow>
                         ) : (
                             companies.map(company => {
                                 const customLogoUrl = findImageUrlInCustomProps(company.custom_properties);
                                 const logoUrl = company.logo_url || customLogoUrl;
                                 return (
                                     <TableRow key={company.id}>
-                                        <TableCell>
+                                        <TableCell className="sticky left-0 bg-card">
                                             <div className="flex items-center gap-3">
                                                 {logoUrl ? (
                                                     <img src={logoUrl} alt={company.name} className="h-10 w-10 object-contain rounded-md bg-muted p-1" />
@@ -114,8 +117,8 @@ const CompaniesView = () => {
                                                 <span className="font-medium">{company.name}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="hidden sm:table-cell">{company.legal_name || '-'}</TableCell>
-                                        <TableCell className="hidden md:table-cell">
+                                        <TableCell>{company.legal_name || '-'}</TableCell>
+                                        <TableCell>
                                             {(() => {
                                                 if (!company.address) return '-';
                                                 let displayAddress = company.address;
@@ -139,7 +142,9 @@ const CompaniesView = () => {
                                                 );
                                             })()}
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell>{company.billing_address || '-'}</TableCell>
+                                        <TableCell>{formatDistanceToNow(new Date(company.updated_at), { addSuffix: true })}</TableCell>
+                                        <TableCell className="text-right sticky right-0 bg-card">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
