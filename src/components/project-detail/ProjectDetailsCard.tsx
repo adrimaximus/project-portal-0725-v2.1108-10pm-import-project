@@ -15,9 +15,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-// Extend the Project type to include people, assuming this data will be fetched.
+// Extend the Project type to include people and person_ids for saving.
 type Project = BaseProject & {
   people?: Person[];
+  person_ids?: string[];
 };
 
 interface ProjectDetailsCardProps {
@@ -86,9 +87,13 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   const handleClientChange = (personId: string) => {
     const selectedPerson = allPeople?.find(p => p.id === personId);
     if (selectedPerson) {
+        // Update 'people' for immediate UI feedback
         onFieldChange('people', [selectedPerson]);
+        // Update 'person_ids' for saving the relationship
+        onFieldChange('person_ids', [personId]);
     } else {
         onFieldChange('people', []);
+        onFieldChange('person_ids', []);
     }
   };
 
