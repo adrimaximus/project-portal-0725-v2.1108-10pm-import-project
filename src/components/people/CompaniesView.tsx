@@ -100,13 +100,11 @@ const CompaniesView = () => {
                     <p className="text-muted-foreground">Manage all companies in your network.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => navigate('/settings/company-properties')}>
-                        <Settings className="mr-2 h-4 w-4" />
-                        Company Properties
+                    <Button variant="outline" size="icon" onClick={() => navigate('/settings/company-properties')}>
+                        <Settings className="h-4 w-4" />
                     </Button>
-                    <Button onClick={handleAddNew}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Company
+                    <Button size="icon" onClick={handleAddNew}>
+                        <PlusCircle className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
