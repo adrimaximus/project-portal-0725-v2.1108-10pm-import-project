@@ -1,7 +1,9 @@
-import React from 'react';
-import GooglePlacesAutocomplete from 'react-google-places-autocomplete';
-import { useTheme } from '@/contexts/ThemeProvider';
-import { cn } from '@/lib/utils';
+import React, { useEffect, useRef, useState } from "react";
+import { useJsApiLoader } from "@react-google-maps/api";
+import { Input } from "./ui/input";
+import { Skeleton } from "./ui/skeleton";
+import { toast } from "sonner";
+import { MapPin } from "lucide-react";
 
 interface AddressAutocompleteInputProps {
   value: string;
@@ -9,110 +11,116 @@ interface AddressAutocompleteInputProps {
   disabled?: boolean;
 }
 
-const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({ value, onChange, disabled }) => {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+const libraries: ("places")[] = ["places"];
 
-  const selectStyles = {
-    control: (provided: any) => ({
-      ...provided,
-      backgroundColor: 'hsl(var(--background))',
-      borderColor: 'hsl(var(--input))',
-      boxShadow: 'none',
-      '&:hover': {
-        borderColor: 'hsl(var(--input))',
-      },
-      minHeight: '40px',
-    }),
-    input: (provided: any) => ({
-      ...provided,
-      color: 'hsl(var(--foreground))',
-    }),
-    singleValue: (provided: any) => ({
-      ...provided,
-      color: 'hsl(var(--foreground))',
-    }),
-    menu: (provided: any) => ({
-      ...provided,
-      backgroundColor: 'hsl(var(--popover))',
-      zIndex: 9999, // Ensure it's on top of the dialog
-    }),
-    option: (provided: any, state: { isFocused: boolean; }) => ({
-      ...provided,
-      backgroundColor: state.isFocused ? 'hsl(var(--accent))' : 'transparent',
-      color: 'hsl(var(--popover-foreground))',
-      '&:active': {
-        backgroundColor: 'hsl(var(--accent))',
-      },
-    }),
-    placeholder: (provided: any) => ({
-      ...provided,
-      color: 'hsl(var(--muted-foreground))',
-    }),
-    menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
+const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({
+  value,
+  onChange,
+  disabled,
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
+    libraries,
+  });
+
+  const [inputValue, setInputValue] = useState("");
+
+  // Sync value from parent
+  useEffect(() => {
+    if (value) {
+      try {
+        const parsed = JSON.parse(value);
+        const display = `${parsed.name ?? ""}${
+          parsed.type ? " - " + parsed.type : ""
+        }${parsed.address ? " - " + parsed.address : ""}`;
+        setInputValue(display);
+      } catch {
+        setInputValue(value);
+      }
+    } else {
+      setInputValue("");
+    }
+  }, [value]);
+
+  // Initialize Autocomplete when Maps script is ready
+  useEffect(() => {
+    if (isLoaded && inputRef.current) {
+      const autocomplete = new window.google.maps.places.Autocomplete(
+        inputRef.current,
+        {
+          fields: ["formatted_address", "name", "geometry", "types"],
+          componentRestrictions: { country: "id" }, // limit ke Indonesia
+        }
+      );
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place || !place.formatted_address) return;
+
+        const name = place.name || "";
+        const address = place.formatted_address || "";
+        const type =
+          place.types && place.types.length > 0
+            ? place.types[0].replace(/_/g, " ")
+            : "";
+
+        const venueObject = { name, type, address };
+        const display = `${name}${type ? " - " + type : ""} - ${address}`;
+
+        setInputValue(display);
+        onChange(JSON.stringify(venueObject));
+      });
+    }
+  }, [isLoaded, onChange]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
   };
 
-  let parsedValue = null;
-  if (value) {
-    try {
-      const parsed = JSON.parse(value);
-      if (parsed.name && parsed.address) {
-        parsedValue = { label: `${parsed.name} - ${parsed.address}`, value: parsed };
-      } else {
-        parsedValue = { label: value, value: null };
-      }
-    } catch {
-      parsedValue = { label: value, value: null };
-    }
+  if (loadError) {
+    toast.error("Failed to load Google Maps script.");
+    return <Input placeholder="Error loading maps" disabled />;
   }
 
-  const handleSelect = (place: any) => {
-    if (place && place.value) {
-      const { description, structured_formatting, types } = place.value;
-      const name = structured_formatting?.main_text || description;
-      const address = description;
-      const type = types?.[0]?.replace(/_/g, ' ') || '';
-      const venueObject = { name, address, type };
-      onChange(JSON.stringify(venueObject));
-    } else {
-      onChange('');
+  if (!isLoaded) {
+    return <Skeleton className="h-10 w-full" />;
+  }
+
+  let fullQuery = value || "";
+  try {
+    const parsed = JSON.parse(value || "{}");
+    if (parsed.name && parsed.address) {
+      fullQuery = `${parsed.name}, ${parsed.address}`;
     }
-  };
+  } catch {
+    // Not JSON, use as is
+  }
 
   return (
-    <div className={cn('w-full')}>
-      <GooglePlacesAutocomplete
-        apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string}
-        selectProps={{
-          value: parsedValue,
-          onChange: handleSelect,
-          onInputChange: (inputValue, { action }) => {
-            if (action === 'input-change') {
-              onChange(inputValue);
-            }
-          },
-          isDisabled: disabled,
-          placeholder: "Start typing an address...",
-          styles: selectStyles,
-          menuPortalTarget: document.body,
-          theme: (theme) => ({
-            ...theme,
-            borderRadius: 6,
-            colors: {
-              ...theme.colors,
-              primary: 'hsl(var(--primary))',
-              primary75: 'hsl(var(--primary) / 0.75)',
-              primary50: 'hsl(var(--primary) / 0.50)',
-              primary25: 'hsl(var(--primary) / 0.25)',
-            },
-          }),
-        }}
-        autocompletionRequest={{
-          componentRestrictions: {
-            country: ['id'],
-          },
-        }}
+    <div className="relative w-full">
+      <Input
+        ref={inputRef}
+        type="text"
+        placeholder="Start typing an address..."
+        value={inputValue}
+        onChange={handleInputChange}
+        disabled={disabled}
+        className="pr-10"
       />
+      {value && (
+        <a
+          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+            fullQuery
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Get directions"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <MapPin className="h-4 w-4" />
+        </a>
+      )}
     </div>
   );
 };
