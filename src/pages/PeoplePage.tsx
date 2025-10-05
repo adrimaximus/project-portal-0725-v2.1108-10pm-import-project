@@ -268,9 +268,6 @@ const PeoplePage = () => {
                     <DropdownMenuItem onSelect={() => navigate('/settings/people-properties')}>
                       Manage Properties
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => kanbanViewRef.current?.openSettings()} disabled={viewMode !== 'kanban'}>
-                      Customize Kanban Columns
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'grid' | 'table' | 'kanban')}}>
