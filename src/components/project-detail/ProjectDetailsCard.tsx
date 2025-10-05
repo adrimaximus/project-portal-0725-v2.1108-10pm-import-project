@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/types";
-import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard } from "lucide-react";
+import { Project as BaseProject, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, Person } from "@/types";
+import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building } from "lucide-react";
 import { isSameDay, subDays } from "date-fns";
 import { DateRangePicker } from "../DateRangePicker";
 import { DateRange } from "react-day-picker";
@@ -12,6 +12,14 @@ import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+// Extend the Project type to include people, assuming this data will be fetched.
+type Project = BaseProject & {
+  people?: Person[];
+};
 
 interface ProjectDetailsCardProps {
   project: Project;
@@ -31,6 +39,27 @@ const paymentStatusConfig: Record<string, { color: string; label: string }> = {
 const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetailsCardProps) => {
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
+
+  // Assuming the first person linked to the project is the client.
+  const client = project.people?.[0];
+
+  const { data: company } = useQuery({
+    queryKey: ['company_logo', client?.company],
+    queryFn: async () => {
+        if (!client?.company) return null;
+        const { data, error } = await supabase
+            .from('companies')
+            .select('logo_url')
+            .eq('name', client.company)
+            .single();
+        if (error) {
+            console.warn(`Could not fetch logo for company "${client.company}":`, error.message);
+            return null;
+        }
+        return data;
+    },
+    enabled: !!client?.company,
+  });
 
   const handleDateChange = (range: DateRange | undefined) => {
     const startDate = range?.from ? range.from.toISOString() : undefined;
@@ -56,8 +85,6 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     const start = new Date(project.start_date);
     const end = project.due_date ? new Date(project.due_date) : start;
 
-    // For all-day events from sources like Google Calendar, the end date is often exclusive (the morning after).
-    // This logic checks for a midnight time on a multi-day event and adjusts the date for display.
     const isExclusiveEndDate =
       project.due_date &&
       end.getUTCHours() === 0 &&
@@ -254,6 +281,31 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                   </Badge>
                 </div>
               )}
+            </div>
+          </div>
+          <div className="flex items-start gap-4">
+            <User className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
+            <div className="w-full">
+              <p className="font-medium">Client</p>
+              <div className="pt-1">
+                {client ? (
+                  <div className="flex items-center gap-3">
+                    {company?.logo_url ? (
+                      <img src={company.logo_url} alt={client.company || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
+                    ) : (
+                      <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
+                        <Building className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-foreground font-semibold">{client.full_name}</p>
+                      <p className="text-muted-foreground text-xs">{client.company}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No client assigned</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
