@@ -1,26 +1,35 @@
+import { useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useProjects } from "@/hooks/useProjects";
-import { PaymentStatus } from "@/types";
+import { PaymentStatus, Project } from "@/types";
 import { cn, getPaymentStatusStyles } from "@/lib/utils";
 import { format, addDays, isPast } from "date-fns";
-import { DollarSign, Clock, AlertTriangle, Download, Loader2 } from "lucide-react";
+import { DollarSign, Clock, AlertTriangle, Download, Loader2, MoreVertical, Edit } from "lucide-react";
 import { Link } from "react-router-dom";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
+import { useProjectMutations } from "@/hooks/useProjectMutations";
 
 type Invoice = {
   id: string;
-  projectId: string;
+  projectId: string; // slug
   projectName: string;
   amount: number;
   dueDate: Date;
   status: PaymentStatus;
+  rawProjectId: string; // original uuid
 };
 
 const Billing = () => {
   const { data: projects = [], isLoading } = useProjects();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  
+  const { updateProject } = useProjectMutations(selectedInvoice?.projectId || '');
 
   const invoices: Invoice[] = projects
     .map(project => {
@@ -36,12 +45,13 @@ const Billing = () => {
       }
 
       return {
-        id: `INV-${project.id}`,
+        id: `INV-${project.id.substring(0, 8).toUpperCase()}`,
         projectId: project.slug,
         projectName: project.name,
         amount: project.budget,
         dueDate: dueDate,
         status: finalStatus as PaymentStatus,
+        rawProjectId: project.id,
       };
     })
     .filter((invoice): invoice is Invoice => invoice !== null)
@@ -56,6 +66,19 @@ const Billing = () => {
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]?.dueDate;
 
   const overdueInvoicesCount = invoices.filter(inv => inv.status === 'Overdue').length;
+
+  const handleEdit = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsFormOpen(true);
+  };
+
+  const handleSave = (updatedProjectData: Partial<Project> & { id: string }) => {
+    const originalProject = projects.find(p => p.id === updatedProjectData.id);
+    if (originalProject) {
+      const projectToUpdate = { ...originalProject, ...updatedProjectData };
+      updateProject.mutate(projectToUpdate);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -152,10 +175,23 @@ const Billing = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm">
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => handleEdit(invoice)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Download className="mr-2 h-4 w-4" />
+                              Download
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
@@ -165,6 +201,13 @@ const Billing = () => {
           </CardContent>
         </Card>
       </div>
+      <EditInvoiceDialog
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        invoice={selectedInvoice}
+        project={projects.find(p => p.id === selectedInvoice?.rawProjectId) || null}
+        onSave={handleSave}
+      />
     </PortalLayout>
   );
 };

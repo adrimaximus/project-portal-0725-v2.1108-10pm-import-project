@@ -1,54 +1,61 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { Input } from "@/components/ui/input";
+import * as React from "react"
+import { Input, InputProps } from "@/components/ui/input"
 
-export interface CurrencyInputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> {
-  value: number | undefined;
-  onChange: (value: number | undefined) => void;
+interface CurrencyInputProps extends Omit<InputProps, 'onChange' | 'value'> {
+  value: number;
+  onChange: (value: number) => void;
+  prefix?: string;
 }
 
 const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
-  ({ value, onChange, ...props }, ref) => {
-    const formatValue = (num: number | undefined): string => {
-      if (num === undefined || num === null) return "";
-      // Menggunakan 'en-US' untuk mendapatkan pemisah koma
-      return new Intl.NumberFormat("en-US").format(num);
-    };
+  ({ value, onChange, prefix = 'Rp ', ...props }, ref) => {
+    const [displayValue, setDisplayValue] = React.useState('');
 
-    const parseValue = (str: string): number | undefined => {
-      const cleaned = str.replace(/[^0-9]/g, "");
-      if (cleaned === "") return undefined;
-      return parseInt(cleaned, 10);
-    };
+    React.useEffect(() => {
+      // Only format on initial load or when value changes from outside
+      setDisplayValue(value.toLocaleString('id-ID'));
+    }, [value]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const parsed = parseValue(e.target.value);
-      onChange(parsed);
-    };
-
-    const handleCopy = (e: React.ClipboardEvent<HTMLInputElement>) => {
-      if (value !== undefined) {
-        e.clipboardData.setData("text/plain", String(value));
-        e.preventDefault();
+      const rawValue = e.target.value;
+      // Allow user to type freely
+      setDisplayValue(rawValue);
+      
+      const numericValue = parseInt(rawValue.replace(/[^0-9]/g, ''), 10);
+      
+      if (!isNaN(numericValue)) {
+        onChange(numericValue);
+      } else {
+        onChange(0);
       }
     };
 
+    const handleBlur = () => {
+      // Format the number on blur
+      setDisplayValue(value.toLocaleString('id-ID'));
+    };
+
     return (
-      <Input
-        {...props}
-        ref={ref}
-        value={formatValue(value)}
-        onChange={handleChange}
-        onCopy={handleCopy}
-        type="text"
-        inputMode="numeric"
-      />
+      <div className="relative">
+        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-muted-foreground">
+          {prefix}
+        </span>
+        <Input
+          {...props}
+          ref={ref}
+          value={displayValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          className="pl-10"
+          type="text" // Use text to allow for formatted strings
+        />
+      </div>
     );
   }
 );
 
-CurrencyInput.displayName = "CurrencyInput";
+CurrencyInput.displayName = 'CurrencyInput';
 
 export { CurrencyInput };
