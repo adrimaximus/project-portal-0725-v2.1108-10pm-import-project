@@ -89,7 +89,8 @@ const CompaniesView = () => {
         return String(value);
     };
 
-    const totalColumns = 5 + properties.length;
+    const visibleProperties = properties.filter(prop => prop.type !== 'image');
+    const totalColumns = 5 + visibleProperties.length;
 
     return (
         <div className="h-full flex flex-col space-y-4">
@@ -116,7 +117,7 @@ const CompaniesView = () => {
                             <TableHead className="min-w-[250px] sticky left-0 bg-card">Company</TableHead>
                             <TableHead className="min-w-[200px]">Legal Name</TableHead>
                             <TableHead className="min-w-[300px]">Address</TableHead>
-                            {properties.map(prop => (
+                            {visibleProperties.map(prop => (
                                 <TableHead key={prop.id} className="min-w-[200px]">{prop.label}</TableHead>
                             ))}
                             <TableHead className="min-w-[150px]">Updated At</TableHead>
@@ -171,7 +172,7 @@ const CompaniesView = () => {
                                                 );
                                             })()}
                                         </TableCell>
-                                        {properties.map(prop => (
+                                        {visibleProperties.map(prop => (
                                             <TableCell key={prop.id}>
                                                 {renderCustomPropertyValue(company.custom_properties?.[prop.name], prop.type)}
                                             </TableCell>
