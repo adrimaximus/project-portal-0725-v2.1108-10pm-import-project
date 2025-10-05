@@ -15,7 +15,7 @@ export const useProjectMutations = (slug: string) => {
 
     const useUpdateProject = () => useMutation({
         mutationFn: async (editedProject: Project) => {
-            const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo, venue, tags } = editedProject;
+            const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo, venue, tags, person_ids } = editedProject;
             const { data, error } = await supabase
                 .rpc('update_project_details', {
                     p_project_id: id, p_name: name, p_description: description || null,
@@ -29,6 +29,26 @@ export const useProjectMutations = (slug: string) => {
                 })
                 .single();
             if (error) throw error;
+
+            if (person_ids !== undefined) {
+                const { error: deleteError } = await supabase
+                    .from('people_projects')
+                    .delete()
+                    .eq('project_id', id);
+                if (deleteError) throw new Error(`Failed to update client link (delete step): ${deleteError.message}`);
+
+                if (person_ids.length > 0) {
+                    const linksToInsert = person_ids.map(personId => ({
+                        project_id: id,
+                        person_id: personId,
+                    }));
+                    const { error: insertError } = await supabase
+                        .from('people_projects')
+                        .insert(linksToInsert);
+                    if (insertError) throw new Error(`Failed to update client link (insert step): ${insertError.message}`);
+                }
+            }
+
             return data;
         },
         onSuccess: (data: any) => {

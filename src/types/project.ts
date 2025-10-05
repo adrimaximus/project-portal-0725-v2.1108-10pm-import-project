@@ -1,6 +1,7 @@
 import { User, AssignedUser } from './user';
 import { Tag } from './goal';
 import { Task } from './task';
+import { Person } from './people';
 
 export interface Comment {
   id: string;
@@ -58,6 +59,8 @@ export interface Project {
   payment_kanban_order?: number;
   tags: Tag[];
   origin_event_id?: string;
+  people?: Person[];
+  person_ids?: string[];
 }
 
 export const PROJECT_STATUS_OPTIONS = [
