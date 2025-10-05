@@ -157,7 +157,7 @@ const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onO
           <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
           <DialogDescription>Fill in the details for the company.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto px-6 py-4 -mx-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 px-6 py-4 -mx-6">
           <div className="px-6">
             <Label htmlFor="name">Company Name</Label>
             <Input id="name" {...register('name')} />
