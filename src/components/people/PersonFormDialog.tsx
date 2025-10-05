@@ -200,171 +200,172 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl p-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarPreview || undefined} />
-                <AvatarFallback style={generatePastelColor(person?.id || '')}>
-                  <UserIcon className="h-8 w-8 text-white" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="space-y-2">
-                <Label>Profile Picture</Label>
-                {isAdmin ? (
-                  <Input type="file" accept="image/*" onChange={handleFileChange} className="text-xs" />
-                ) : (
-                  <p className="text-xs text-muted-foreground pt-2">
-                    You don't have permission to change this.
-                  </p>
-                )}
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="max-h-[70vh] overflow-y-auto px-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={avatarPreview || undefined} />
+                  <AvatarFallback style={generatePastelColor(person?.id || '')}>
+                    <UserIcon className="h-8 w-8 text-white" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-2">
+                  <Label>Profile Picture</Label>
+                  {isAdmin ? (
+                    <Input type="file" accept="image/*" onChange={handleFileChange} className="text-xs" />
+                  ) : (
+                    <p className="text-xs text-muted-foreground pt-2">
+                      You don't have permission to change this.
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-            <FormField control={form.control} name="full_name" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Full Name</FormLabel>
-                <FormControl><Input {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="email" render={({ field }) => (
+              <FormField control={form.control} name="full_name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl><Input type="email" {...field} /></FormControl>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl><Input {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="phone" render={({ field }) => (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="email" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl><Input type="email" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="phone" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <PhoneNumberInput {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="address" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone</FormLabel>
+                  <FormLabel>Address</FormLabel>
                   <FormControl>
-                    <PhoneNumberInput {...field} />
+                    <AddressAutocompleteInput
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
-            </div>
-            <FormField control={form.control} name="address" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Address</FormLabel>
-                <FormControl>
-                  <AddressAutocompleteInput
-                    value={field.value || ''}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="job_title" render={({ field }) => (
+                  <FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="department" render={({ field }) => (
+                  <FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+              </div>
+              <FormField
+                control={form.control}
+                name="company"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a company" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {allCompanies.map((company) => (
+                          <SelectItem key={company.id} value={company.name}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="linkedin" render={({ field }) => (
+                  <FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="twitter" render={({ field }) => (
+                  <FormItem><FormLabel>Twitter URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="instagram" render={({ field }) => (
+                <FormItem><FormLabel>Instagram URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="tag_ids" render={({ field }) => (
+                <FormItem><FormLabel>Tags</FormLabel>
+                  <MultiSelect
+                    options={allTags.map(t => ({ value: t.id, label: t.name }))}
+                    value={field.value || []}
                     onChange={field.onChange}
+                    placeholder="Select tags..."
                   />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="job_title" render={({ field }) => (
-                <FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="department" render={({ field }) => (
-                <FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-            </div>
-            <FormField
-              control={form.control}
-              name="company"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Company</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a company" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {allCompanies.map((company) => (
-                        <SelectItem key={company.id} value={company.name}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
+              )} />
+              <FormField control={form.control} name="project_ids" render={({ field }) => (
+                <FormItem><FormLabel>Related Projects</FormLabel>
+                  <MultiSelect
+                    options={allProjects.map(p => ({ value: p.id, label: p.name }))}
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Select projects..."
+                  />
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="birthday" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Birthday</FormLabel>
+                  <FormControl>
+                    <AntDatePicker 
+                      value={field.value} 
+                      onChange={field.onChange} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="notes" render={({ field }) => (
+                <FormItem><FormLabel>Notes</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              
+              {customProperties.length > 0 && (
+                <div className="space-y-4 pt-4 border-t">
+                  <h3 className="text-sm font-medium text-muted-foreground">Additional Information</h3>
+                  {customProperties.map(prop => (
+                    <FormField
+                      key={prop.id}
+                      control={form.control}
+                      name={`custom_properties.${prop.name}`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{prop.label}</FormLabel>
+                          <FormControl>
+                            <Input type={prop.type} {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
               )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="linkedin" render={({ field }) => (
-                <FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="twitter" render={({ field }) => (
-                <FormItem><FormLabel>Twitter URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
             </div>
-            <FormField control={form.control} name="instagram" render={({ field }) => (
-              <FormItem><FormLabel>Instagram URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="tag_ids" render={({ field }) => (
-              <FormItem><FormLabel>Tags</FormLabel>
-                <MultiSelect
-                  options={allTags.map(t => ({ value: t.id, label: t.name }))}
-                  value={field.value || []}
-                  onChange={field.onChange}
-                  placeholder="Select tags..."
-                />
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="project_ids" render={({ field }) => (
-              <FormItem><FormLabel>Related Projects</FormLabel>
-                <MultiSelect
-                  options={allProjects.map(p => ({ value: p.id, label: p.name }))}
-                  value={field.value || []}
-                  onChange={field.onChange}
-                  placeholder="Select projects..."
-                />
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="birthday" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Birthday</FormLabel>
-                <FormControl>
-                  <AntDatePicker 
-                    value={field.value} 
-                    onChange={field.onChange} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="notes" render={({ field }) => (
-              <FormItem><FormLabel>Notes</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            
-            {customProperties.length > 0 && (
-              <div className="space-y-4 pt-4 border-t">
-                <h3 className="text-sm font-medium text-muted-foreground">Additional Information</h3>
-                {customProperties.map(prop => (
-                  <FormField
-                    key={prop.id}
-                    control={form.control}
-                    name={`custom_properties.${prop.name}`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{prop.label}</FormLabel>
-                        <FormControl>
-                          <Input type={prop.type} {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ))}
-              </div>
-            )}
-
-            <DialogFooter className="pt-4 sticky bottom-0 bg-background">
+            <DialogFooter className="p-6 pt-4 border-t">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -152,54 +152,57 @@ const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onO
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg p-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
           <DialogDescription>Fill in the details for the company.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 px-6 py-4 -mx-6">
-          <div className="px-6">
-            <Label htmlFor="name">Company Name</Label>
-            <Input id="name" {...register('name')} />
-            {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message as string}</p>}
-          </div>
-          <div className="px-6">
-            <Label htmlFor="legal_name">Legal Name</Label>
-            <Input id="legal_name" {...register('legal_name')} />
-          </div>
-          <div className="px-6">
-            <Label htmlFor="address">Address</Label>
-            <Controller
-              name="address"
-              control={control}
-              render={({ field }) => (
-                <AddressAutocompleteInput
-                  value={field.value || ''}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </div>
-          <div className="px-6">
-            <Label htmlFor="logo_url">Logo URL</Label>
-            <Input id="logo_url" {...register('logo_url')} />
-            {errors.logo_url && <p className="text-sm text-destructive mt-1">{errors.logo_url.message as string}</p>}
-          </div>
-
-          {isLoadingProperties ? (
-            <div className="flex justify-center px-6"><Loader2 className="h-6 w-6 animate-spin" /></div>
-          ) : properties.length > 0 && (
-            <div className="space-y-4 border-t pt-4 mt-4 px-6">
-              {properties.map(prop => (
-                <div key={prop.id}>
-                  <Label htmlFor={prop.name}>{prop.label}</Label>
-                  {renderField(prop)}
-                </div>
-              ))}
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="max-h-[60vh] overflow-y-auto px-6 space-y-4">
+            <div>
+              <Label htmlFor="name">Company Name</Label>
+              <Input id="name" {...register('name')} />
+              {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message as string}</p>}
             </div>
-          )}
+            <div>
+              <Label htmlFor="legal_name">Legal Name</Label>
+              <Input id="legal_name" {...register('legal_name')} />
+            </div>
+            <div>
+              <Label htmlFor="address">Address</Label>
+              <Controller
+                name="address"
+                control={control}
+                render={({ field }) => (
+                  <AddressAutocompleteInput
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+            <div>
+              <Label htmlFor="logo_url">Logo URL</Label>
+              <Input id="logo_url" {...register('logo_url')} />
+              {errors.logo_url && <p className="text-sm text-destructive mt-1">{errors.logo_url.message as string}</p>}
+            </div>
+
+            {isLoadingProperties ? (
+              <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            ) : properties.length > 0 && (
+              <div className="space-y-4 border-t pt-4 mt-4">
+                <h3 className="text-lg font-medium">Custom Properties</h3>
+                {properties.map(prop => (
+                  <div key={prop.id}>
+                    <Label htmlFor={prop.name}>{prop.label}</Label>
+                    {renderField(prop)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         
-          <DialogFooter className="pt-4 sticky bottom-0 bg-background px-6">
+          <DialogFooter className="p-6 pt-4 border-t">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
