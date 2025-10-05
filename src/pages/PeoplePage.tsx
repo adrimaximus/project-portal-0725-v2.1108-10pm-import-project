@@ -255,9 +255,8 @@ const PeoplePage = () => {
                 <Button variant="outline" size="icon" onClick={findAndAnalyzeDuplicates} disabled={isFindingDuplicates}>
                   {isFindingDuplicates ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitMerge className="h-4 w-4" />}
                 </Button>
-                <Button onClick={handleAddNew}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Person
+                <Button size="icon" onClick={handleAddNew}>
+                  <PlusCircle className="h-4 w-4" />
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
