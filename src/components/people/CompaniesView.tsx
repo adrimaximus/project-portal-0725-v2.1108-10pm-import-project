@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import CompanyFormDialog from './CompanyFormDialog';
-import { Company } from '@/types';
+import { Company, CompanyProperty } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -19,7 +19,7 @@ const CompaniesView = () => {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
 
-    const { data: companies = [], isLoading } = useQuery<Company[]>({
+    const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Company[]>({
         queryKey: ['companies'],
         queryFn: async () => {
             const { data, error } = await supabase.from('companies').select('*').order('name', { ascending: true });
@@ -27,6 +27,17 @@ const CompaniesView = () => {
             return data;
         }
     });
+
+    const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
+        queryKey: ['company_properties'],
+        queryFn: async () => {
+            const { data, error } = await supabase.from('company_properties').select('*').order('label');
+            if (error) throw error;
+            return data;
+        },
+    });
+
+    const isLoading = isLoadingCompanies || isLoadingProperties;
 
     const handleAddNew = () => {
         setCompanyToEdit(null);
@@ -56,13 +67,29 @@ const CompaniesView = () => {
         if (!props) return null;
         for (const key in props) {
             const value = props[key];
-            // Check if the value is a string and looks like a supabase storage URL for our bucket
             if (typeof value === 'string' && value.includes('supabase.co') && value.includes('image_company')) {
                 return value;
             }
         }
         return null;
     };
+
+    const renderCustomPropertyValue = (value: any, type: string) => {
+        if (value === null || typeof value === 'undefined' || value === '') return '-';
+        if (type === 'image' && typeof value === 'string' && value.startsWith('http')) {
+            return <img src={value} alt="Company property" className="h-10 w-10 object-contain rounded-md bg-muted p-1" />;
+        }
+        if (type === 'date' && typeof value === 'string') {
+            try {
+                return formatDistanceToNow(new Date(value), { addSuffix: true });
+            } catch (e) {
+                return value;
+            }
+        }
+        return String(value);
+    };
+
+    const totalColumns = 5 + properties.length;
 
     return (
         <div className="h-full flex flex-col space-y-4">
@@ -89,16 +116,18 @@ const CompaniesView = () => {
                             <TableHead className="min-w-[250px] sticky left-0 bg-card">Company</TableHead>
                             <TableHead className="min-w-[200px]">Legal Name</TableHead>
                             <TableHead className="min-w-[300px]">Address</TableHead>
-                            <TableHead className="min-w-[300px]">Billing Address</TableHead>
+                            {properties.map(prop => (
+                                <TableHead key={prop.id} className="min-w-[200px]">{prop.label}</TableHead>
+                            ))}
                             <TableHead className="min-w-[150px]">Updated At</TableHead>
                             <TableHead className="text-right sticky right-0 bg-card">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
-                            <TableRow><TableCell colSpan={6} className="text-center h-24"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={totalColumns} className="text-center h-24"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></TableCell></TableRow>
                         ) : companies.length === 0 ? (
-                            <TableRow><TableCell colSpan={6} className="text-center h-24">No companies found. Add one to get started.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={totalColumns} className="text-center h-24">No companies found. Add one to get started.</TableCell></TableRow>
                         ) : (
                             companies.map(company => {
                                 const customLogoUrl = findImageUrlInCustomProps(company.custom_properties);
@@ -142,7 +171,11 @@ const CompaniesView = () => {
                                                 );
                                             })()}
                                         </TableCell>
-                                        <TableCell>{company.billing_address || '-'}</TableCell>
+                                        {properties.map(prop => (
+                                            <TableCell key={prop.id}>
+                                                {renderCustomPropertyValue(company.custom_properties?.[prop.name], prop.type)}
+                                            </TableCell>
+                                        ))}
                                         <TableCell>{formatDistanceToNow(new Date(company.updated_at), { addSuffix: true })}</TableCell>
                                         <TableCell className="text-right sticky right-0 bg-card">
                                             <DropdownMenu>
