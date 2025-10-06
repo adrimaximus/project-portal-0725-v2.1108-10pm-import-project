@@ -28,17 +28,15 @@ export default function PortalLayout({ children, summary, pageHeader, disableMai
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <PortalHeader summary={summary} />
-
-        {/* Refactored scrollable content area */}
-        <div className={cn("flex-1 min-h-0", !disableMainScroll && "overflow-y-auto", disableMainScroll && "flex flex-col")}>
-          {pageHeader}
-          <main className={cn(
-            "flex-1 flex flex-col w-full", 
-            !noPadding && "max-w-7xl mx-auto p-4 md:p-8"
-          )}>
-            {children}
-          </main>
-        </div>
+        {pageHeader}
+        <main className={cn(
+          "flex-1 min-h-0",
+          !disableMainScroll && "overflow-y-auto",
+          disableMainScroll && "flex flex-col",
+          !noPadding && "p-4 md:p-8"
+        )}>
+          {children}
+        </main>
       </div>
 
       {/* Storage Warning Component */}
