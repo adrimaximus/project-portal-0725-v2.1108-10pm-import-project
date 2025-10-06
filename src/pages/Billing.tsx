@@ -161,11 +161,30 @@ const Billing = () => {
     if (!sortColumn) return filteredInvoices;
 
     return [...filteredInvoices].sort((a, b) => {
-      const aValue = a[sortColumn];
-      const bValue = b[sortColumn];
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortColumn) {
+        case 'projectOwner':
+          aValue = a.projectOwner?.name;
+          bValue = b.projectOwner?.name;
+          break;
+        case 'assignedMembers':
+          aValue = a.assignedMembers?.find(m => m.role === 'admin')?.name;
+          bValue = b.assignedMembers?.find(m => m.role === 'admin')?.name;
+          break;
+        default:
+          aValue = a[sortColumn];
+          bValue = b[sortColumn];
+      }
 
       if (aValue === null || aValue === undefined) return 1;
       if (bValue === null || bValue === undefined) return -1;
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const comparison = aValue.localeCompare(bValue);
+        return sortDirection === 'asc' ? comparison : -comparison;
+      }
 
       if (aValue < bValue) {
         return sortDirection === 'asc' ? -1 : 1;
@@ -298,9 +317,21 @@ const Billing = () => {
                         Project {renderSortIcon('projectName')}
                       </Button>
                     </TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Owner</TableHead>
-                    <TableHead>Project Admin</TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('clientName')} className="px-2">
+                        Client {renderSortIcon('clientName')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('projectOwner')} className="px-2">
+                        Owner {renderSortIcon('projectOwner')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('assignedMembers')} className="px-2">
+                        Project Admin {renderSortIcon('assignedMembers')}
+                      </Button>
+                    </TableHead>
                     <TableHead>
                       <Button variant="ghost" onClick={() => handleSort('status')} className="px-2">
                         Status {renderSortIcon('status')}
