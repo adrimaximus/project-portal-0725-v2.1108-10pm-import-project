@@ -56,7 +56,11 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
     });
     people.forEach(person => {
       const tagId = person.tags?.[0]?.id;
-      const columnId = tagId && Object.prototype.hasOwnProperty.call(groups, tagId) ? tagId : 'uncategorized';
+      const isTagColumnVisible = tagId && visibleColumnIds.includes(tagId);
+      const columnId = tagId && isTagColumnVisible && Object.prototype.hasOwnProperty.call(groups, tagId) 
+        ? tagId 
+        : 'uncategorized';
+      
       if (groups[columnId]) {
         groups[columnId].push(person);
       }
@@ -65,7 +69,7 @@ const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ 
       groups[groupId].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
     }
     return groups;
-  }, [people, tags]);
+  }, [people, tags, visibleColumnIds]);
 
   useImperativeHandle(ref, () => ({
     openSettings: () => setIsSettingsOpen(true),
