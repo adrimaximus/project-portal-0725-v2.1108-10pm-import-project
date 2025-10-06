@@ -16,13 +16,21 @@ export const useProjectMutations = (slug: string) => {
     const useUpdateProject = () => useMutation({
         mutationFn: async (editedProject: Project) => {
             const { id, name, description, category, status, budget, start_date, due_date, payment_status, payment_due_date, services, assignedTo, venue, tags, person_ids } = editedProject;
+            
+            // Prepare members payload with roles
+            const membersPayload = assignedTo.map(m => ({
+                user_id: m.id,
+                role: m.role || 'member' // Ensure role defaults to 'member' if not specified
+            }));
+
             const { data, error } = await supabase
                 .rpc('update_project_details', {
                     p_project_id: id, p_name: name, p_description: description || null,
                     p_category: category || null, p_status: status, p_budget: budget || null,
                     p_start_date: start_date || null, p_due_date: due_date || null,
                     p_payment_status: payment_status, p_payment_due_date: payment_due_date || null,
-                    p_member_ids: assignedTo.map(m => m.id), p_service_titles: services || [],
+                    p_members: membersPayload, // Use the new payload
+                    p_service_titles: services || [],
                     p_venue: venue || null,
                     p_existing_tags: (tags || []).filter(t => !t.isNew).map(t => t.id),
                     p_custom_tags: (tags || []).filter(t => t.isNew).map(({ name, color }) => ({ name, color })),
