@@ -141,14 +141,14 @@ const CompaniesView = () => {
                     <Table className="min-w-[1200px]">
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="min-w-[250px] sticky left-0 bg-card">Company</TableHead>
+                                <TableHead className="min-w-[250px] md:sticky left-0 bg-card">Company</TableHead>
                                 <TableHead className="min-w-[200px]">Legal Name</TableHead>
                                 <TableHead className="min-w-[300px]">Address</TableHead>
                                 {visibleProperties.map(prop => (
                                     <TableHead key={prop.id} className="min-w-[200px]">{prop.label}</TableHead>
                                 ))}
                                 <TableHead className="min-w-[150px]">Updated At</TableHead>
-                                <TableHead className="text-right sticky right-0 bg-card">Actions</TableHead>
+                                <TableHead className="text-right md:sticky right-0 bg-card">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -162,7 +162,7 @@ const CompaniesView = () => {
                                     const logoUrl = company.logo_url || customLogoUrl;
                                     return (
                                         <TableRow key={company.id}>
-                                            <TableCell className="sticky left-0 bg-card">
+                                            <TableCell className="md:sticky left-0 bg-card">
                                                 <div className="flex items-center gap-3">
                                                     {logoUrl ? (
                                                         <img src={logoUrl} alt={company.name} className="h-10 w-10 object-contain rounded-md bg-muted p-1" />
@@ -205,7 +205,7 @@ const CompaniesView = () => {
                                                 </TableCell>
                                             ))}
                                             <TableCell>{formatDistanceToNow(new Date(company.updated_at), { addSuffix: true })}</TableCell>
-                                            <TableCell className="text-right sticky right-0 bg-card">
+                                            <TableCell className="text-right md:sticky right-0 bg-card">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
