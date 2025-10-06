@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { useJsApiLoader, Autocomplete } from "@react-google-maps/api";
+import { useJsApiLoader } from "@react-google-maps/api";
 import { MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from "./ui/skeleton";
 
 const libraries: ("places")[] = ["places"];
@@ -23,9 +24,19 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
     preventGoogleFontsLoading: true,
   });
 
-  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+  const [service, setService] = useState<google.maps.places.AutocompleteService | null>(null);
+  const [placesService, setPlacesService] = useState<google.maps.places.PlacesService | null>(null);
+  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [showPredictions, setShowPredictions] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isLoaded && !service) {
+      setService(new window.google.maps.places.AutocompleteService());
+      setPlacesService(new window.google.maps.places.PlacesService(document.createElement("div")));
+    }
+  }, [isLoaded, service]);
 
   useEffect(() => {
     if (value) {
@@ -41,26 +52,57 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
     }
   }, [value]);
 
-  const onLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
-    setAutocomplete(autocompleteInstance);
-  };
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setInputValue(query);
 
-  const onPlaceChanged = () => {
-    if (autocomplete !== null) {
-      const place = autocomplete.getPlace();
-      if (place && place.formatted_address) {
-        const name = place.name || "";
-        const address = place.formatted_address || "";
-        const type = place.types && place.types.length > 0 ? place.types[0].replace(/_/g, " ") : "";
-
-        const venue = { name, type, address };
-        onChange(JSON.stringify(venue));
-        setInputValue(address);
-      }
+    if (service && query.length > 2) {
+      service.getPlacePredictions(
+        { input: query, componentRestrictions: { country: "id" } },
+        (res) => {
+          setPredictions(res || []);
+          if (res && res.length > 0) {
+            setShowPredictions(true);
+          }
+        }
+      );
     } else {
-      console.error("Autocomplete is not loaded yet!");
+      setPredictions([]);
+      setShowPredictions(false);
     }
   };
+
+  const handleSelect = (prediction: google.maps.places.AutocompletePrediction) => {
+    if (!placesService) return;
+    setShowPredictions(false);
+    setInputValue(prediction.description);
+
+    placesService.getDetails(
+      { placeId: prediction.place_id, fields: ["name", "formatted_address", "geometry", "types"] },
+      (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+          const name = place.name || "";
+          const address = place.formatted_address || "";
+          const type =
+            place.types && place.types.length > 0 ? place.types[0].replace(/_/g, " ") : "";
+
+          const venue = { name, type, address };
+          onChange(JSON.stringify(venue));
+          setInputValue(`${name}${type ? " - " + type : ""} - ${address}`);
+        }
+      }
+    );
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowPredictions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   if (!googleMapsApiKey) {
     return <Input type="text" disabled value="Google Maps API Key is missing" className={className} />;
@@ -76,25 +118,47 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
   }
 
   return (
-    <div className="relative w-full">
-      <Autocomplete
-        onLoad={onLoad}
-        onPlaceChanged={onPlaceChanged}
-        options={{
-          componentRestrictions: { country: "id" },
-          fields: ["name", "formatted_address", "geometry", "types"],
-        }}
-      >
-        <Input
-          ref={inputRef}
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          disabled={disabled}
-          placeholder="Search address..."
-          className={`pr-10 ${className}`}
-        />
-      </Autocomplete>
+    <div ref={containerRef} className="relative w-full">
+      <Input
+        type="text"
+        value={inputValue}
+        onChange={handleChange}
+        onFocus={handleChange}
+        disabled={disabled}
+        placeholder="Search address..."
+        className={`pr-10 ${className}`}
+        autoComplete="off"
+      />
+
+      {showPredictions && predictions.length > 0 && (
+        <div className="absolute top-full mt-2 z-50 w-full rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
+          <Command>
+            <CommandList>
+              <CommandGroup>
+                {predictions.map((p) => (
+                  <CommandItem
+                    key={p.place_id}
+                    onSelect={() => handleSelect(p)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelect(p);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <strong>{p.structured_formatting.main_text}</strong>
+                      <span className="text-xs text-muted-foreground">
+                        {p.structured_formatting.secondary_text}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </div>
+      )}
+
       {value && (
         <a
           href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(inputValue)}`}
