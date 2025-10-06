@@ -8,13 +8,12 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Diperlukan jika Anda memanggil fungsi dari browser.
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { email } = await req.json()
+    const { email, role } = await req.json()
     if (!email) {
       return new Response(JSON.stringify({ error: 'Email is required.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -27,8 +26,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Sangat penting untuk menyediakan URL redirectTo untuk tautan undangan.
-    // URL ini harus mengarah ke halaman di aplikasi Anda yang menangani konfirmasi pengguna.
     const siteUrl = Deno.env.get('SITE_URL')
     if (!siteUrl) {
       console.error("SITE_URL environment variable is not set.")
@@ -41,11 +38,11 @@ serve(async (req) => {
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectTo,
+      data: { role: role } // Pass role to be stored in user_meta_data
     })
 
     if (error) {
       console.error(`Error inviting user ${email}:`, error)
-      // Mengembalikan pesan error yang lebih spesifik ke klien
       return new Response(JSON.stringify({ error: `Failed to invite user. Supabase error: ${error.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
