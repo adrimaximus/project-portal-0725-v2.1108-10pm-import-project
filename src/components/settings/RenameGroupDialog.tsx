@@ -16,7 +16,7 @@ interface RenameGroupDialogProps {
 }
 
 const groupSchema = z.object({
-  name: z.string().min(1, "Group name is required.").toLowerCase().refine(name => name !== 'general', {
+  name: z.string().min(1, "Group name is required.").refine(name => name.toLowerCase() !== 'general', {
     message: "'general' is a reserved group name.",
   }),
 });

@@ -66,7 +66,7 @@ const TagsSettingsPage = () => {
   const handleSave = async (tagData: Omit<Tag, 'id' | 'user_id'>) => {
     if (!user) return;
     setIsSaving(true);
-    const upsertData = { ...tagData, user_id: user.id, id: tagToEdit?.id, type: tagData.type?.toLowerCase() || 'general' };
+    const upsertData = { ...tagData, user_id: user.id, id: tagToEdit?.id, type: tagData.type || 'general' };
 
     const { error } = await supabase.from('tags').upsert(upsertData);
     setIsSaving(false);
@@ -102,7 +102,7 @@ const TagsSettingsPage = () => {
 
     const { error } = await supabase
       .from('tags')
-      .update({ type: newGroupName.toLowerCase() })
+      .update({ type: newGroupName })
       .eq('user_id', user.id)
       .eq('type', groupToRename);
 
