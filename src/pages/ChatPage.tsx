@@ -4,6 +4,11 @@ import { ChatWindow } from "@/components/ChatWindow";
 import PortalLayout from "@/components/PortalLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatProvider, useChatContext } from "@/contexts/ChatContext";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 
 const ChatPageContent = () => {
   const isMobile = useIsMobile();
@@ -31,10 +36,18 @@ const ChatPageContent = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] flex-1 overflow-hidden">
-      <ChatList />
-      <ChatWindow ref={chatInputRef} />
-    </div>
+    <ResizablePanelGroup
+      direction="horizontal"
+      className="flex-1 items-stretch"
+    >
+      <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
+        <ChatList />
+      </ResizablePanel>
+      <ResizableHandle withHandle />
+      <ResizablePanel>
+        <ChatWindow ref={chatInputRef} />
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 };
 
