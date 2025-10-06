@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useAuth } from '@/contexts/AuthContext';
 import TagFormDialog from '@/components/settings/TagFormDialog';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const TagsSettingsPage = () => {
   const { user } = useAuth();
@@ -24,6 +25,7 @@ const TagsSettingsPage = () => {
   const [tagToDelete, setTagToDelete] = useState<Tag | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('general');
 
   const { data: tags = [], isLoading } = useQuery({
     queryKey: ['tags', user?.id],
@@ -36,9 +38,12 @@ const TagsSettingsPage = () => {
     enabled: !!user,
   });
 
-  const filteredTags = tags.filter(tag =>
-    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const tagGroups = ['general', ...Array.from(new Set(tags.map(tag => tag.type).filter((type): type is string => !!type && type !== 'general')))];
+
+  const filteredTags = tags.filter(tag => {
+    const tagType = tag.type || 'general';
+    return tagType === activeTab && tag.name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const handleAddNew = () => {
     setTagToEdit(null);
@@ -100,11 +105,19 @@ const TagsSettingsPage = () => {
           </Button>
         </div>
 
+        <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="general">
+          <TabsList>
+            {tagGroups.map(group => (
+              <TabsTrigger key={group} value={group} className="capitalize">{group}</TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
         <Card>
           <CardHeader>
             <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
               <div>
-                <CardTitle>Your Tags</CardTitle>
+                <CardTitle className="capitalize">{activeTab} Tags</CardTitle>
                 <CardDescription>These tags are available for you to use across the application.</CardDescription>
               </div>
               <div className="relative w-full md:max-w-xs">
@@ -132,7 +145,7 @@ const TagsSettingsPage = () => {
                   <TableRow><TableCell colSpan={3} className="text-center">Loading tags...</TableCell></TableRow>
                 ) : filteredTags.length === 0 ? (
                   <TableRow><TableCell colSpan={3} className="text-center h-24">
-                    {searchQuery ? `No tags found for "${searchQuery}"` : "No tags created yet."}
+                    {searchQuery ? `No tags found for "${searchQuery}"` : `No tags in the "${activeTab}" group yet.`}
                   </TableCell></TableRow>
                 ) : filteredTags.map(tag => (
                   <TableRow key={tag.id}>
