@@ -1,30 +1,24 @@
-import { File as FileIcon } from 'lucide-react';
+import { Attachment } from "@/types";
+import { File, Download } from "lucide-react";
+import { Button } from "./ui/button";
 
 interface MessageAttachmentProps {
-  attachment: {
-    name: string;
-    url: string;
-    type: string;
-  };
+  attachment: Attachment;
 }
 
 const MessageAttachment = ({ attachment }: MessageAttachmentProps) => {
   return (
-    <a
-      href={attachment.url}
-      download={attachment.name}
-      className="mt-2 flex items-center gap-3 rounded-lg border p-2 bg-background/50 hover:bg-background transition-colors max-w-xs"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <div className="flex h-10 w-10 items-center justify-center rounded-md bg-background border">
-        <FileIcon className="h-5 w-5 text-muted-foreground" />
+    <div className="mt-2 flex items-center gap-2 rounded-md border bg-background/50 p-2">
+      <File className="h-6 w-6 flex-shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{attachment.name}</p>
       </div>
-      <div className="flex-1 overflow-hidden">
-        <p className="font-medium text-sm truncate">{attachment.name}</p>
-        <p className="text-xs text-muted-foreground">Klik untuk mengunduh</p>
-      </div>
-    </a>
+      <a href={attachment.url} download={attachment.name} target="_blank" rel="noopener noreferrer">
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Download className="h-4 w-4" />
+        </Button>
+      </a>
+    </div>
   );
 };
 

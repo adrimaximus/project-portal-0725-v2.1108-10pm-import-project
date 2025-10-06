@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
-import { Loader2, CornerUpLeft } from "lucide-react";
+import { Loader2, CornerUpLeft, Download } from "lucide-react";
 import { Button } from "./ui/button";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 
@@ -126,13 +126,25 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                   )}
 
                   {isImageAttachment ? (
-                    <div className="relative">
+                    <div className="relative group/image">
                       <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
                         <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
                       </a>
-                      <div className="absolute bottom-1 right-1 flex items-end gap-2 w-full p-1 justify-end">
+                      <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity">
+                        <a
+                          href={message.attachment!.url}
+                          download={message.attachment!.name}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/40 hover:bg-black/60 text-white hover:text-white">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      </div>
+                      <div className="absolute bottom-1 right-1 flex items-end gap-2 w-full p-1 justify-end pointer-events-none">
                         <div className="flex-grow min-w-0">
-                          {message.text && <p className="text-white text-sm break-words">{message.text}</p>}
+                          {message.text && <p className="text-white text-sm break-words bg-black/40 rounded-md px-2 py-1 inline-block">{message.text}</p>}
                         </div>
                         <span className="text-xs text-white/90 bg-black/40 rounded-full px-1.5 py-0.5 flex-shrink-0">
                           {formatTimestamp(message.timestamp)}
