@@ -1,12 +1,16 @@
 import { useRef, useState, forwardRef } from "react";
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
-import { Paperclip, Send, X, Loader2, UploadCloud } from "lucide-react";
+import { Paperclip, Send, X, Loader2, UploadCloud, Smile } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
 import MentionInput from "./MentionInput";
 import { useChatContext } from "@/contexts/ChatContext";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import Picker from '@emoji-mart/react';
+import data from '@emoji-mart/data';
+import { useTheme } from "@/contexts/ThemeProvider";
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
@@ -29,6 +33,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const lastTypingSentAtRef = useRef<number>(0);
   const { selectedConversation } = useChatContext();
+  const { theme } = useTheme();
 
   const mentionableUsers = selectedConversation?.members.map(m => ({
     id: m.id,
@@ -94,6 +99,10 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     }
   };
 
+  const handleEmojiSelect = (emoji: any) => {
+    setText(prev => prev + emoji.native);
+  };
+
   return (
     <div {...getRootProps()} className="border-t p-4 flex-shrink-0 relative">
       <input {...getInputProps()} />
@@ -127,20 +136,37 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
             onKeyDown={handleKeyDown}
             suggestions={mentionableUsers}
             disabled={isSending}
-            className="pr-12"
+            className="pr-24"
           />
-          <Button variant="ghost" size="icon" asChild disabled={isSending} className="absolute bottom-2 right-2">
-            <label htmlFor={`file-upload-${conversationId}`} className="cursor-pointer">
-              <Paperclip className="h-5 w-5" />
-              <input 
-                id={`file-upload-${conversationId}`} 
-                type="file" 
-                className="sr-only" 
-                onChange={handleFileChange}
-                accept="image/*,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              />
-            </label>
-          </Button>
+          <div className="absolute bottom-2 right-2 flex items-center">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" disabled={isSending}>
+                  <Smile className="h-5 w-5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 border-none">
+                <Picker 
+                  data={data} 
+                  onEmojiSelect={handleEmojiSelect}
+                  theme={theme === 'dark' ? 'dark' : 'light'}
+                  previewPosition="none"
+                />
+              </PopoverContent>
+            </Popover>
+            <Button variant="ghost" size="icon" asChild disabled={isSending}>
+              <label htmlFor={`file-upload-${conversationId}`} className="cursor-pointer">
+                <Paperclip className="h-5 w-5" />
+                <input 
+                  id={`file-upload-${conversationId}`} 
+                  type="file" 
+                  className="sr-only" 
+                  onChange={handleFileChange}
+                  accept="image/*,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                />
+              </label>
+            </Button>
+          </div>
         </div>
         {text.trim() || attachmentFile ? (
           <Button size="icon" onClick={handleSend} disabled={isSending}>
