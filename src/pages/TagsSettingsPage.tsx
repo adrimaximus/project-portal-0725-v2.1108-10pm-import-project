@@ -4,7 +4,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, MoreHorizontal, Trash2, Search } from "lucide-react";
+import { PlusCircle, Edit, MoreHorizontal, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -18,6 +18,10 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RenameGroupDialog from '@/components/settings/RenameGroupDialog';
 
+type SortableTagColumns = 'name' | 'type' | 'color';
+type SortableGroupColumns = 'name' | 'count';
+type SortDirection = 'asc' | 'desc';
+
 const TagsSettingsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -30,12 +34,14 @@ const TagsSettingsPage = () => {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [groupToRename, setGroupToRename] = useState<string | null>(null);
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
+  const [tagSort, setTagSort] = useState<{ column: SortableTagColumns; direction: SortDirection }>({ column: 'name', direction: 'asc' });
+  const [groupSort, setGroupSort] = useState<{ column: SortableGroupColumns; direction: SortDirection }>({ column: 'name', direction: 'asc' });
 
   const { data: tags = [], isLoading } = useQuery({
     queryKey: ['tags', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase.from('tags').select('*').eq('user_id', user.id).order('name');
+      const { data, error } = await supabase.from('tags').select('*').eq('user_id', user.id);
       if (error) throw error;
       return data as Tag[];
     },
@@ -49,9 +55,37 @@ const TagsSettingsPage = () => {
     return acc;
   }, {} as Record<string, number>);
 
-  const filteredTags = tags.filter(tag => 
-    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleTagSort = (column: SortableTagColumns) => {
+    setTagSort(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const handleGroupSort = (column: SortableGroupColumns) => {
+    setGroupSort(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const sortedTags = [...tags]
+    .filter(tag => tag.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      const aVal = a[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
+      const bVal = b[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
+      if (aVal < bVal) return tagSort.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return tagSort.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  const sortedTagGroups = [...tagGroups].sort((a, b) => {
+    const aVal = groupSort.column === 'name' ? a : groupCounts[a] || 0;
+    const bVal = groupSort.column === 'name' ? b : groupCounts[b] || 0;
+    if (aVal < bVal) return groupSort.direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return groupSort.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   const handleAddNew = () => {
     setTagToEdit(null);
@@ -133,6 +167,17 @@ const TagsSettingsPage = () => {
     setGroupToDelete(null);
   };
 
+  const SortableHeader = ({ column, label, onSort, sortConfig }: { column: any, label: string, onSort: (col: any) => void, sortConfig: { column: any, direction: SortDirection } }) => (
+    <TableHead>
+      <Button variant="ghost" onClick={() => onSort(column)} className="px-2">
+        {label}
+        {sortConfig.column === column && (
+          sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4 inline" /> : <ArrowDown className="ml-2 h-4 w-4 inline" />
+        )}
+      </Button>
+    </TableHead>
+  );
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -185,20 +230,20 @@ const TagsSettingsPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Group</TableHead>
-                      <TableHead>Color</TableHead>
+                      <SortableHeader column="name" label="Name" onSort={handleTagSort} sortConfig={tagSort} />
+                      <SortableHeader column="type" label="Group" onSort={handleTagSort} sortConfig={tagSort} />
+                      <SortableHeader column="color" label="Color" onSort={handleTagSort} sortConfig={tagSort} />
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       <TableRow><TableCell colSpan={4} className="text-center">Loading tags...</TableCell></TableRow>
-                    ) : filteredTags.length === 0 ? (
+                    ) : sortedTags.length === 0 ? (
                       <TableRow><TableCell colSpan={4} className="text-center h-24">
                         {searchQuery ? `No tags found for "${searchQuery}"` : `You haven't created any tags yet.`}
                       </TableCell></TableRow>
-                    ) : filteredTags.map(tag => (
+                    ) : sortedTags.map(tag => (
                       <TableRow key={tag.id}>
                         <TableCell className="font-medium">{tag.name}</TableCell>
                         <TableCell className="capitalize">{tag.type || 'general'}</TableCell>
@@ -237,15 +282,15 @@ const TagsSettingsPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Group Name</TableHead>
-                      <TableHead>Tags</TableHead>
+                      <SortableHeader column="name" label="Group Name" onSort={handleGroupSort} sortConfig={groupSort} />
+                      <SortableHeader column="count" label="Tags" onSort={handleGroupSort} sortConfig={groupSort} />
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       <TableRow><TableCell colSpan={3} className="text-center">Loading groups...</TableCell></TableRow>
-                    ) : tagGroups.map(group => (
+                    ) : sortedTagGroups.map(group => (
                       <TableRow key={group}>
                         <TableCell className="font-medium capitalize">{group}</TableCell>
                         <TableCell>{groupCounts[group] || 0}</TableCell>
