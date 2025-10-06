@@ -1,6 +1,7 @@
-/// <reference types="https://cdn.jsdelivr.net/npm/@supabase/functions-js/src/edge-runtime.d.ts" />
+/// <reference types="https://esm.sh/@supabase/functions-js@2/src/edge-runtime.d.ts" />
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
+import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,61 +10,62 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
     const { title, startDate, dueDate, venue, services } = await req.json();
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
 
-    if (!apiKey) {
-      throw new Error("ANTHROPIC_API_KEY is not set in Supabase secrets.");
+    if (!title) {
+      return new Response(JSON.stringify({ error: 'Project title is required.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
     }
 
-    const serviceList = Array.isArray(services) && services.length > 0 ? services.join(', ') : 'Not specified';
-    const timeline = startDate && dueDate 
-      ? `from ${new Date(startDate).toLocaleDateString()} to ${new Date(dueDate).toLocaleDateString()}` 
-      : 'Not specified';
-
-    const prompt = `You are a project management assistant. Generate a project brief and preparation recommendations based on these details:
-- Project Title: ${title}
-- Timeline: ${timeline}
-- Venue: ${venue || 'Not specified'}
-- Services: ${serviceList}
-
-The output should be in HTML format. Structure it with an <h2> for "Project Brief" and another <h2> for "Preparation Recommendations". Use <ul> and <li> for lists. Be concise and professional.`;
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 2048,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const anthropic = new Anthropic({
+      apiKey: Deno.env.get('ANTHROPIC_API_KEY'),
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Anthropic API error: ${response.status} ${response.statusText} - ${errorBody}`);
-    }
+    const formattedStartDate = startDate ? new Date(startDate).toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Belum ditentukan';
+    const formattedDueDate = dueDate ? new Date(dueDate).toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Belum ditentukan';
 
-    const responseData = await response.json();
-    const brief = responseData.content[0].text;
+    const prompt = `
+      Anda adalah seorang manajer proyek ahli. Tugas Anda adalah membuat brief proyek yang profesional dan komprehensif dalam format HTML berdasarkan detail berikut. Brief harus terstruktur dengan baik, jelas, dan siap digunakan dalam alat manajemen proyek.
 
-    return new Response(
-      JSON.stringify({ brief }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+      **Detail Proyek:**
+      - **Judul:** ${title}
+      - **Tanggal Mulai:** ${formattedStartDate}
+      - **Tanggal Selesai:** ${formattedDueDate}
+      - **Lokasi:** ${venue || 'Belum ditentukan'}
+      - **Layanan yang Dibutuhkan:** ${services && services.length > 0 ? services.join(', ') : 'Belum ditentukan'}
+
+      **Instruksi:**
+      1.  Mulai dengan bagian **Ringkasan Proyek** (menggunakan tag <h2>). Jelaskan secara singkat tujuan dan sasaran proyek.
+      2.  Buat bagian **Lingkup Pekerjaan** (menggunakan tag <h2>). Rincikan layanan yang akan diberikan menggunakan daftar berpoin (tag <ul> dan <li>).
+      3.  Sertakan bagian **Detail Utama** (menggunakan tag <h2>). Cantumkan linimasa dan lokasi menggunakan daftar berpoin.
+      4.  Akhiri dengan bagian **Langkah Selanjutnya** (menggunakan tag <h2>) yang menyarankan tindakan awal seperti rapat kickoff atau penyelarasan tim.
+      5.  Seluruh output harus dalam format HTML yang valid. Jangan sertakan \`\`\`html atau format markdown apa pun. Kembalikan hanya konten HTML mentah.
+    `;
+
+    const msg = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const brief = msg.content[0].text;
+
+    return new Response(JSON.stringify({ brief }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    });
+
   } catch (error) {
-    console.error(error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    console.error('Error generating brief:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
+    });
   }
-})
+});
