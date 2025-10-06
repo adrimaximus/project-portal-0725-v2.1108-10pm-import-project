@@ -46,11 +46,27 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
     fetchUsers();
   }, []);
 
-  const handleTeamSelectionToggle = (userToToggle: AssignedUser) => {
-    const isSelected = project.assignedTo.some(u => u.id === userToToggle.id);
-    const newTeam = isSelected
-      ? project.assignedTo.filter(u => u.id !== userToToggle.id)
-      : [...project.assignedTo, userToToggle];
+  const projectAdmins = project.assignedTo.filter(member => member.role === 'admin');
+  const teamMembers = project.assignedTo.filter(member => member.role === 'member');
+
+  const handleRoleChange = (userToToggle: User, role: 'admin' | 'member') => {
+    const existingMember = project.assignedTo.find(u => u.id === userToToggle.id);
+    let newTeam: AssignedUser[];
+
+    if (existingMember && existingMember.role === role) {
+      // User with same role clicked -> remove them
+      newTeam = project.assignedTo.filter(u => u.id !== userToToggle.id);
+    } else {
+      // Add or change role
+      // Remove user if they exist with a different role
+      const filteredTeam = project.assignedTo.filter(u => u.id !== userToToggle.id);
+      // Add them back with the new role
+      const newUser: AssignedUser = {
+        ...userToToggle,
+        role: role,
+      };
+      newTeam = [...filteredTeam, newUser];
+    }
     onFieldChange('assignedTo', newTeam);
   };
 
@@ -74,9 +90,24 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
     ? allUsers.filter(u => u.id !== project.created_by.id)
     : allUsers;
     
-  const teamMembers = project.assignedTo.filter(member => member.id !== project.created_by.id);
-
   const canChangeOwner = currentUser && (currentUser.id === project.created_by.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
+
+  const renderUserList = (users: AssignedUser[]) => (
+    <div className="space-y-3">
+      {users.map(member => (
+        <div key={member.id} className="flex items-center gap-3">
+          <Avatar className="h-9 w-9">
+            <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
+            <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="text-sm font-medium">{member.name}</p>
+            <p className="text-xs text-muted-foreground">{member.email}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <>
@@ -86,6 +117,7 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
+          {/* Project Owner */}
           <div>
             <div className="flex justify-between items-center">
               <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT OWNER</h4>
@@ -108,33 +140,40 @@ const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardP
             </div>
           </div>
 
+          {/* Project Admins */}
+          {isEditing ? (
+            <div>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT ADMINS</h4>
+              <ModernTeamSelector
+                users={assignableUsers}
+                selectedUsers={projectAdmins}
+                onSelectionChange={(user) => handleRoleChange(user, 'admin')}
+              />
+            </div>
+          ) : (
+            projectAdmins.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT ADMINS</h4>
+                {renderUserList(projectAdmins)}
+              </div>
+            )
+          )}
+
+          {/* Team Members */}
           {isEditing ? (
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
               <ModernTeamSelector
                 users={assignableUsers}
                 selectedUsers={teamMembers}
-                onSelectionChange={handleTeamSelectionToggle}
+                onSelectionChange={(user) => handleRoleChange(user, 'member')}
               />
             </div>
           ) : (
             teamMembers.length > 0 && (
               <div>
                 <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
-                <div className="space-y-3">
-                  {teamMembers.map(member => (
-                    <div key={member.id} className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
-                        <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{member.name}</p>
-                        <p className="text-xs text-muted-foreground">{member.email}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {renderUserList(teamMembers)}
               </div>
             )
           )}
