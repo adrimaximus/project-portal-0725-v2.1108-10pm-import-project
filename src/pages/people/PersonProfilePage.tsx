@@ -79,52 +79,38 @@ const PersonProfilePage = () => {
   const person = basePerson as Person | null;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchCompanyLogo = async () => {
-      if (!person) return;
-      
-      setCompanyLogoUrl(null);
+  const { data: company } = useQuery({
+    queryKey: ['company_details_for_person', person?.id],
+    queryFn: async () => {
+        if (!person) return null;
+        const companyId = person.company_id;
+        const companyName = person.company?.trim();
 
-      const companyNameFromField = person.company?.trim();
-      const companyNameFromJob = person.job_title?.includes(' at ') ? person.job_title.split(' at ')[1].trim() : null;
-      
-      const companyToSearch = companyNameFromField || companyNameFromJob;
+        if (!companyId && !companyName) return null;
 
-      let logoUrl: string | null = null;
-
-      if (person.company_id) {
-        const { data } = await supabase
-          .from('companies')
-          .select('logo_url')
-          .eq('id', person.company_id)
-          .single();
-        if (data && data.logo_url) {
-          logoUrl = data.logo_url;
+        let query = supabase.from('companies').select('logo_url');
+        if (companyId) {
+            query = query.eq('id', companyId);
+        } else if (companyName) {
+            query = query.ilike('name', companyName);
+        } else {
+            return null;
         }
-      }
 
-      if (!logoUrl && companyToSearch) {
-        const { data } = await supabase
-          .from('companies')
-          .select('logo_url')
-          .ilike('name', `%${companyToSearch}%`)
-          .limit(1);
-        if (data && data.length > 0) {
-          logoUrl = data[0].logo_url;
+        const { data, error } = await query.single();
+
+        if (error && error.code !== 'PGRST116') {
+            console.warn(`Could not fetch company logo for person ${person.id}:`, error.message);
         }
-      }
-      
-      setCompanyLogoUrl(logoUrl);
-    };
+        return data;
+    },
+    enabled: !!person,
+  });
 
-    if (person) {
-      fetchCompanyLogo();
-    }
-  }, [person]);
+  const companyLogoUrl = company?.logo_url;
 
   const { data: customProperties = [] } = useQuery({
     queryKey: ['contact_properties'],

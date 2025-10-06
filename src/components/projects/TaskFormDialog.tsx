@@ -25,7 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useProfiles } from '@/hooks/useProfiles';
 import { Profile } from '@/types/user';
-import { Project } from '@/types/project';
+import { Project } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import TaskFileUpload from './TaskFileUpload';
 
