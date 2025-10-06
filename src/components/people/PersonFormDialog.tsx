@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect, useMemo } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, User as UserIcon } from "lucide-react";
+import { Loader2, User as UserIcon, Briefcase } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -69,6 +69,13 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     }
   });
 
+  const selectedCompanyName = useWatch({ control: form.control, name: 'company' });
+
+  const selectedCompany = useMemo(() => {
+    if (!selectedCompanyName || !allCompanies) return null;
+    return allCompanies.find(c => c.name === selectedCompanyName);
+  }, [selectedCompanyName, allCompanies]);
+
   useEffect(() => {
     const fetchData = async () => {
       const { data: projectsData } = await supabase.from('projects').select('id, name');
@@ -77,7 +84,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       const { data: tagsData } = await supabase.from('tags').select('id, name, color');
       if (tagsData) setAllTags(tagsData);
 
-      const { data: companiesData } = await supabase.from('companies').select('id, name');
+      const { data: companiesData } = await supabase.from('companies').select('id, name, logo_url');
       if (companiesData) setAllCompanies(companiesData as any);
 
       const { data: customPropsData } = await supabase.from('contact_properties').select('*').eq('is_default', false);
@@ -270,30 +277,42 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                   <FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
               </div>
-              <FormField
-                control={form.control}
-                name="company"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a company" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {allCompanies.map((company) => (
-                          <SelectItem key={company.id} value={company.name}>
-                            {company.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-[1fr_auto] items-end gap-4">
+                <FormField
+                  control={form.control}
+                  name="company"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a company" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {allCompanies.map((company) => (
+                            <SelectItem key={company.id} value={company.name}>
+                              {company.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {selectedCompany?.logo_url ? (
+                  <Avatar>
+                    <AvatarImage src={selectedCompany.logo_url} alt={selectedCompany.name} />
+                    <AvatarFallback><Briefcase className="h-5 w-5" /></AvatarFallback>
+                  </Avatar>
+                ) : selectedCompanyName ? (
+                  <Avatar>
+                    <AvatarFallback><Briefcase className="h-5 w-5" /></AvatarFallback>
+                  </Avatar>
+                ) : null}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="linkedin" render={({ field }) => (
                   <FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
