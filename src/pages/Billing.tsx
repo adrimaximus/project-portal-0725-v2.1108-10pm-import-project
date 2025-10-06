@@ -161,11 +161,39 @@ const Billing = () => {
     if (!sortColumn) return filteredInvoices;
 
     return [...filteredInvoices].sort((a, b) => {
-      const aValue = a[sortColumn];
-      const bValue = b[sortColumn];
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortColumn) {
+        case 'clientName':
+          aValue = a.clientName || '';
+          bValue = b.clientName || '';
+          break;
+        case 'projectOwner':
+          aValue = a.projectOwner?.name || '';
+          bValue = b.projectOwner?.name || '';
+          break;
+        case 'assignedMembers':
+          const aAdmin = a.assignedMembers.find(m => m.role === 'admin');
+          const bAdmin = b.assignedMembers.find(m => m.role === 'admin');
+          aValue = aAdmin?.name || '';
+          bValue = bAdmin?.name || '';
+          break;
+        default:
+          aValue = a[sortColumn];
+          bValue = b[sortColumn];
+      }
 
       if (aValue === null || aValue === undefined) return 1;
       if (bValue === null || bValue === undefined) return -1;
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      }
+      
+      if (aValue instanceof Date && bValue instanceof Date) {
+        return sortDirection === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
+      }
 
       if (aValue < bValue) {
         return sortDirection === 'asc' ? -1 : 1;
@@ -298,7 +326,21 @@ const Billing = () => {
                         Project {renderSortIcon('projectName')}
                       </Button>
                     </TableHead>
-                    <TableHead>Client</TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('clientName')} className="px-2">
+                        Client {renderSortIcon('clientName')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('projectOwner')} className="px-2">
+                        Owner {renderSortIcon('projectOwner')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('assignedMembers')} className="px-2">
+                        Project Admins {renderSortIcon('assignedMembers')}
+                      </Button>
+                    </TableHead>
                     <TableHead>
                       <Button variant="ghost" onClick={() => handleSort('status')} className="px-2">
                         Status {renderSortIcon('status')}
@@ -319,8 +361,6 @@ const Billing = () => {
                         Due Date {renderSortIcon('dueDate')}
                       </Button>
                     </TableHead>
-                    <TableHead>Owner</TableHead>
-                    <TableHead>Project Admins</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -352,14 +392,6 @@ const Billing = () => {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
-                            {invoice.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
-                        <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
-                        <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
                         <TableCell>
                           {invoice.projectOwner && (
                             <TooltipProvider>
@@ -398,6 +430,14 @@ const Billing = () => {
                               ))}
                           </div>
                         </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
+                            {invoice.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
+                        <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
+                        <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
