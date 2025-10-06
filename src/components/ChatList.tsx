@@ -98,7 +98,7 @@ const ChatList = () => {
               )}
             >
               <div
-                className="flex-1 flex items-center gap-3 overflow-hidden cursor-pointer"
+                className="flex-1 flex items-center gap-3 cursor-pointer"
                 onClick={() => selectConversation(c.id)}
               >
                 <Avatar>
