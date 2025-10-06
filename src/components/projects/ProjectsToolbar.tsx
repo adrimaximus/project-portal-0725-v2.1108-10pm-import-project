@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw } from "lucide-react";
+import { List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -67,9 +67,9 @@ const ProjectsToolbar = ({
       {/* Desktop Action Buttons */}
       <div className="hidden sm:flex items-center gap-2">
         {isTaskView && (
-          <Button size="sm" onClick={onNewTaskClick}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            New Task
+          <Button size="icon" variant="outline" onClick={onNewTaskClick}>
+            <ListPlus className="h-4 w-4" />
+            <span className="sr-only">New Task</span>
           </Button>
         )}
         <Button size="icon" variant="outline" onClick={onNewProjectClick}>
@@ -97,7 +97,7 @@ const ProjectsToolbar = ({
         </Button>
         {isTaskView && (
           <Button size="sm" onClick={onNewTaskClick} className="flex-1">
-            <PlusCircle className="h-4 w-4 mr-2" />
+            <ListPlus className="h-4 w-4 mr-2" />
             New Task
           </Button>
         )}
