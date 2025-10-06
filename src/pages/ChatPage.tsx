@@ -31,7 +31,7 @@ const ChatPageContent = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full">
+    <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] flex-1">
       <ChatList />
       <ChatWindow ref={chatInputRef} />
     </div>
