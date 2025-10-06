@@ -129,3 +129,13 @@ export const toggleReaction = async (messageId: string, emoji: string, userId: s
     if (insertError) throw insertError;
   }
 };
+
+export const searchProjects = async (searchTerm: string): Promise<{ id: string, name: string, slug: string }[]> => {
+  if (!searchTerm) return [];
+  const { data, error } = await supabase.rpc('search_projects', { p_search_term: searchTerm });
+  if (error) {
+    console.error("Error searching projects:", error);
+    return [];
+  }
+  return data;
+};

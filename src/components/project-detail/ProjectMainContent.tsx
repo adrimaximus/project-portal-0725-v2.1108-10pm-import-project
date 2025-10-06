@@ -1,99 +1,70 @@
-import { Project, Tag } from "@/types";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectComments from "@/components/ProjectComments";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import ProjectOverviewTab from "./ProjectOverviewTab";
-import ProjectActivityFeed from "./ProjectActivityFeed";
-import ProjectTasks from "./ProjectTasks";
-import { LayoutDashboard, ListChecks, MessageSquare, History } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useProjectMutations } from "@/hooks/useProjectMutations";
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState } from 'react';
+import { Project } from '@/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ProjectComments from '@/components/ProjectComments';
+import { useAuth } from '@/contexts/AuthContext';
+import ProjectOverview from './ProjectOverview';
+import ProjectTasks from './ProjectTasks';
+import ProjectFiles from './ProjectFiles';
+import ProjectActivity from './ProjectActivity';
+import { LayoutGrid, ListChecks, FileText, MessageSquare, Activity } from 'lucide-react';
 
 interface ProjectMainContentProps {
   project: Project;
-  isEditing: boolean;
-  onFieldChange: (field: keyof Project, value: any) => void;
-  mutations: ReturnType<typeof useProjectMutations>;
-  defaultTab?: string;
 }
 
-const ProjectMainContent = ({ project, isEditing, onFieldChange, mutations, defaultTab }: ProjectMainContentProps) => {
+const ProjectMainContent = ({ project }: ProjectMainContentProps) => {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState(defaultTab || 'overview');
+  const [activeTab, setActiveTab] = useState("overview");
 
-  const openTasksCount = project.tasks?.filter(task => !task.completed).length || 0;
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    const searchParams = new URLSearchParams(location.search);
-    searchParams.set('tab', value);
-    navigate(`${location.pathname}?${searchParams.toString()}`, { replace: true });
-  };
+  if (!user) {
+    return null;
+  }
 
   return (
-    <Card>
-      <CardContent className="p-4 md:p-6">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
-            <TabsTrigger value="overview">
-              <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline ml-2">Overview</span>
-            </TabsTrigger>
-            <TabsTrigger value="tasks">
-              <ListChecks className="h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline ml-2">Tasks</span>
-              {openTasksCount > 0 && <Badge className="ml-2">{openTasksCount}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="discussion">
-              <MessageSquare className="h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline ml-2">Discussion</span>
-            </TabsTrigger>
-            <TabsTrigger value="activity">
-              <History className="h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline ml-2">Activity</span>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="overview">
-            <ProjectOverviewTab
-              project={project}
-              isEditing={isEditing}
-              onDescriptionChange={(value) => onFieldChange('description', value)}
-              onTeamChange={(users) => onFieldChange('assignedTo', users)}
-              onFilesAdd={(files) => mutations.addFiles.mutate({ files, project: project, user: user! })}
-              onFileDelete={(fileId) => {
-                const file = project.briefFiles?.find(f => f.id === fileId);
-                if (file) mutations.deleteFile.mutate(file);
-              }}
-              onServicesChange={(services) => onFieldChange('services', services)}
-              onTagsChange={(tags: Tag[]) => onFieldChange('tags', tags)}
-            />
-          </TabsContent>
-          <TabsContent value="tasks">
-            <ProjectTasks
-              project={project}
-              onTaskAdd={(title) => mutations.addTask.mutate({ project: project, user: user!, title })}
-              onTaskAssignUsers={(taskId, userIds) => mutations.assignUsersToTask.mutate({ taskId, userIds })}
-              onTaskStatusChange={(taskId, completed) => mutations.updateTask.mutate({ taskId, updates: { completed } })}
-              onTaskDelete={(taskId) => mutations.deleteTask.mutate(taskId)}
-            />
-          </TabsContent>
-          <TabsContent value="discussion">
-            <ProjectComments
-              project={project}
-              onAddCommentOrTicket={(text, isTicket, attachment) => mutations.addComment.mutate({ project: project, user: user!, text, isTicket, attachment })}
-            />
-          </TabsContent>
-          <TabsContent value="activity" className="pr-4">
-            <ProjectActivityFeed activities={project.activities || []} />
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+    <div className="p-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview">
+            <LayoutGrid className="w-4 h-4 mr-2" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="tasks">
+            <ListChecks className="w-4 h-4 mr-2" />
+            Tasks
+          </TabsTrigger>
+          <TabsTrigger value="files">
+            <FileText className="w-4 h-4 mr-2" />
+            Files
+          </TabsTrigger>
+          <TabsTrigger value="discussion">
+            <MessageSquare className="w-4 h-4 mr-2" />
+            Discussion
+          </TabsTrigger>
+          <TabsTrigger value="activity">
+            <Activity className="w-4 h-4 mr-2" />
+            Activity
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="mt-6">
+          <ProjectOverview project={project} />
+        </TabsContent>
+        <TabsContent value="tasks" className="mt-6">
+          <ProjectTasks project={project} />
+        </TabsContent>
+        <TabsContent value="files" className="mt-6">
+          <ProjectFiles project={project} />
+        </TabsContent>
+        <TabsContent value="discussion" className="mt-6">
+          <ProjectComments
+            project={project}
+          />
+        </TabsContent>
+        <TabsContent value="activity" className="mt-6">
+          <ProjectActivity project={project} />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

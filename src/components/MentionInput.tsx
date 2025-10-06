@@ -1,35 +1,48 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { Briefcase } from 'lucide-react';
 
-export interface MentionSuggestion {
+export interface UserSuggestion {
   id: string;
   display: string;
   avatar_url?: string;
   initials: string;
 }
 
+export interface ProjectSuggestion {
+  id: string;
+  display: string;
+  slug: string;
+}
+
+type Suggestion = UserSuggestion | ProjectSuggestion;
+
 interface MentionInputProps {
   value: string;
   onChange: (value: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-  suggestions: MentionSuggestion[];
+  userSuggestions: UserSuggestion[];
+  projectSuggestions: ProjectSuggestion[];
+  onSearchTermChange?: (trigger: '@' | '/' | null, term: string) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
 }
 
 const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
-  ({ value, onChange, onKeyDown, suggestions, placeholder, disabled, className }, ref) => {
+  ({ value, onChange, onKeyDown, userSuggestions, projectSuggestions, onSearchTermChange, placeholder, disabled, className }, ref) => {
     const [open, setOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
+    const [activeTrigger, setActiveTrigger] = useState<'@' | '/' | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    const filteredSuggestions = suggestions.filter(s =>
+    const suggestions = activeTrigger === '@' ? userSuggestions : projectSuggestions;
+    const filteredSuggestions = (suggestions || []).filter(s =>
       s.display.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -44,7 +57,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
         } else if (e.key === 'Enter' || e.key === 'Tab') {
           e.preventDefault();
           handleSelect(filteredSuggestions[activeIndex]);
-          return; // Prevent default form submission
+          return;
         } else if (e.key === 'Escape') {
           e.preventDefault();
           setOpen(false);
@@ -62,29 +75,46 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
 
       const cursorPos = e.target.selectionStart;
       const textBeforeCursor = text.substring(0, cursorPos);
-      const atMatch = textBeforeCursor.match(/@(\w*)$/);
+      const match = textBeforeCursor.match(/([@\/])([\w\s-]*)$/);
 
-      if (atMatch) {
+      if (match) {
+        const trigger = match[1] as '@' | '/';
+        const term = match[2];
         setOpen(true);
-        setSearchTerm(atMatch[1]);
+        setSearchTerm(term);
+        setActiveTrigger(trigger);
         setActiveIndex(0);
+        if (onSearchTermChange) {
+          onSearchTermChange(trigger, term);
+        }
       } else {
         setOpen(false);
+        setActiveTrigger(null);
+        if (onSearchTermChange) {
+          onSearchTermChange(null, '');
+        }
       }
     };
 
-    const handleSelect = (suggestion: MentionSuggestion) => {
+    const handleSelect = (suggestion: Suggestion) => {
       if (!textareaRef.current) return;
 
       const text = value;
       const cursorPos = textareaRef.current.selectionStart;
       const textBeforeCursor = text.substring(0, cursorPos);
       
-      const atMatch = textBeforeCursor.match(/@(\w*)$/);
-      if (!atMatch) return;
+      const match = textBeforeCursor.match(/([@\/])([\w\s-]*)$/);
+      if (!match) return;
 
-      const mentionText = `@${suggestion.display} `;
-      const startIndex = textBeforeCursor.lastIndexOf('@');
+      let mentionText = '';
+      if (activeTrigger === '@') {
+        mentionText = `@${suggestion.display} `;
+      } else if (activeTrigger === '/') {
+        const proj = suggestion as ProjectSuggestion;
+        mentionText = `[${proj.display}](/projects/${proj.slug}) `;
+      }
+      
+      const startIndex = match.index!;
       
       const newValue = 
         text.substring(0, startIndex) + 
@@ -93,6 +123,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
 
       onChange(newValue);
       setOpen(false);
+      setActiveTrigger(null);
 
       setTimeout(() => {
         if (textareaRef.current) {
@@ -122,13 +153,13 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
         <PopoverContent className="w-[300px] p-0" align="start">
           <Command>
             <CommandInput 
-              placeholder="Search user..." 
+              placeholder={activeTrigger === '@' ? "Search user..." : "Search project..."}
               value={searchTerm}
               onValueChange={setSearchTerm}
               className="border-none focus:ring-0"
             />
             <CommandList>
-              <CommandEmpty>No user found.</CommandEmpty>
+              <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup>
                 {filteredSuggestions.map((suggestion, index) => (
                   <CommandItem
@@ -136,11 +167,20 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                     onSelect={() => handleSelect(suggestion)}
                     className={index === activeIndex ? 'bg-accent' : ''}
                   >
-                    <Avatar className="h-8 w-8 mr-2">
-                      <AvatarImage src={getAvatarUrl(suggestion.avatar_url, suggestion.id)} />
-                      <AvatarFallback style={generatePastelColor(suggestion.id)}>{suggestion.initials}</AvatarFallback>
-                    </Avatar>
-                    <span>{suggestion.display}</span>
+                    {activeTrigger === '@' ? (
+                      <>
+                        <Avatar className="h-8 w-8 mr-2">
+                          <AvatarImage src={getAvatarUrl((suggestion as UserSuggestion).avatar_url, suggestion.id)} />
+                          <AvatarFallback style={generatePastelColor(suggestion.id)}>{(suggestion as UserSuggestion).initials}</AvatarFallback>
+                        </Avatar>
+                        <span>{suggestion.display}</span>
+                      </>
+                    ) : (
+                      <div className="flex items-center">
+                        <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span>{suggestion.display}</span>
+                      </div>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>

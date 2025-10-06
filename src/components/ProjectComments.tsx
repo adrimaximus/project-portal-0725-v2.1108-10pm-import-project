@@ -1,166 +1,139 @@
-import { useState, useMemo } from "react";
-import { Project } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Paperclip, Send, Ticket, CheckCircle2, X } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { id } from "date-fns/locale";
-import { Badge } from "./ui/badge";
-import CommentRenderer from "./CommentRenderer";
-import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
-import { cn } from "@/lib/utils";
-import MentionInput from "./MentionInput";
+import { useState, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Loader2 } from 'lucide-react';
+import { getAvatarUrl, getInitials } from '@/lib/utils';
+import MentionInput from './MentionInput';
+import { Project } from '@/types';
+import { formatDistanceToNow } from 'date-fns';
+import ReactMarkdown from 'react-markdown';
+import { Link } from 'react-router-dom';
 
 interface ProjectCommentsProps {
   project: Project;
-  onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
 }
 
-const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps) => {
+const ProjectComments = ({ project }: ProjectCommentsProps) => {
   const { user } = useAuth();
-  const [newComment, setNewComment] = useState("");
-  const [attachment, setAttachment] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
+  const [comment, setComment] = useState('');
   const [isTicketMode, setIsTicketMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const mentionableUsers = useMemo(() => {
-    if (!project || !user) return [];
-    const users = [project.created_by, ...project.assignedTo];
-    if (!users.some(u => u.id === user.id)) {
-      users.push(user);
-    }
-    const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
-    return uniqueUsers.map(u => {
-      return {
-        id: u.id,
-        display: u.name,
-        avatar_url: u.avatar_url,
-        initials: u.initials,
-        email: u.email,
-      };
-    });
-  }, [project, user]);
+  if (!user) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setAttachment(e.target.files[0]);
-    }
-  };
+  const mentionableUsers = (project.assignedTo || []).map(member => ({
+    id: member.id,
+    display: member.name,
+    avatar_url: member.avatar_url || '',
+    initials: member.initials || getInitials(member.name, member.email),
+  }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim() || !user) return;
-
+  const handleSubmit = async () => {
+    if (!comment.trim()) return;
     setIsSubmitting(true);
-    try {
-      await onAddCommentOrTicket(newComment, isTicketMode, attachment);
-      setNewComment("");
-      setAttachment(null);
+
+    const { error } = await supabase.from('comments').insert({
+      project_id: project.id,
+      author_id: user.id,
+      text: comment,
+      is_ticket: isTicketMode,
+    });
+
+    if (error) {
+      toast.error('Failed to add comment.', { description: error.message });
+    } else {
+      setComment('');
       setIsTicketMode(false);
-    } finally {
-      setIsSubmitting(false);
+      toast.success(isTicketMode ? 'Ticket created successfully.' : 'Comment added.');
+      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
     }
+    setIsSubmitting(false);
   };
-
-  const sortedItems = useMemo(() => 
-    [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-    [project.comments]
-  );
-
-  const allProjectMembers = useMemo(() => [project.created_by, ...project.assignedTo], [project.created_by, project.assignedTo]);
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-card-foreground">Comments & Tickets</h3>
-      
-      <div className="space-y-6">
-        {sortedItems.length > 0 ? sortedItems.map(item => {
-          const isTicketCompleted = item.isTicket && project.tasks?.find(t => t.originTicketId === item.id)?.completed;
-          return (
-            <div key={item.id} className="flex items-start space-x-4">
-              <Avatar>
-                <AvatarImage src={getAvatarUrl(item.author.avatar_url, item.author.id)} />
-                <AvatarFallback style={generatePastelColor(item.author.id)}>{item.author.initials}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-card-foreground flex items-center gap-2">
-                    {item.author.id === user?.id ? "You" : item.author.name}
-                    {item.isTicket && (
-                      <Badge variant={isTicketCompleted ? "default" : "destructive"} className={isTicketCompleted ? "bg-green-500 hover:bg-green-600" : ""}>
-                        <Ticket className="mr-1.5 h-3 w-3" />
-                        Ticket
-                        {isTicketCompleted && <CheckCircle2 className="ml-1.5 h-3 w-3" />}
-                      </Badge>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true, locale: id })}
-                  </p>
-                </div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  <CommentRenderer text={item.text || ''} members={allProjectMembers} />
-                </div>
-                {item.attachment_url && (
-                  <div className="mt-2">
-                    <a href={item.attachment_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md max-w-max">
-                      <Paperclip className="h-4 w-4" />
-                      {item.attachment_name || 'View Attachment'}
-                    </a>
-                  </div>
-                )}
-              </div>
+    <div className="mt-6">
+      <h3 className="text-lg font-semibold mb-4">Comments & Tickets</h3>
+      <div className="flex items-start gap-4">
+        <Avatar>
+          <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+          <AvatarFallback>{getInitials(user.name, user.email)}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <div className="border rounded-lg">
+            <div className="p-4">
+              <MentionInput
+                ref={textareaRef}
+                value={comment}
+                onChange={setComment}
+                placeholder={isTicketMode ? "Describe the ticket..." : "Add a comment... @ to mention"}
+                userSuggestions={mentionableUsers}
+                projectSuggestions={[]}
+                disabled={isSubmitting}
+                className="min-h-[100px] border-none focus-visible:ring-0 p-0"
+              />
             </div>
-          )
-        }) : (
-          <p className="text-sm text-muted-foreground text-center py-4">No comments or tickets yet.</p>
-        )}
+            <div className="flex justify-between items-center p-2 border-t bg-muted/50 rounded-b-lg">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="ticket-mode"
+                  checked={isTicketMode}
+                  onCheckedChange={(checked) => setIsTicketMode(!!checked)}
+                  disabled={isSubmitting}
+                />
+                <Label htmlFor="ticket-mode" className="text-sm font-medium">
+                  Create a ticket
+                </Label>
+              </div>
+              <Button onClick={handleSubmit} disabled={isSubmitting || !comment.trim()}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isTicketMode ? 'Create Ticket' : 'Comment'}
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="border rounded-lg p-2 space-y-2">
-        <MentionInput
-          value={newComment}
-          onChange={setNewComment}
-          placeholder={isTicketMode ? "Describe the ticket..." : "Add a comment... @ to mention"}
-          suggestions={mentionableUsers}
-          disabled={isSubmitting}
-          className="w-full text-sm bg-transparent placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none p-2 border-none"
-        />
-        
-        {attachment && (
-          <div className="text-sm text-muted-foreground flex items-center gap-2 p-2 border-t">
-            <Paperclip className="h-4 w-4" />
-            <span>{attachment.name}</span>
-            <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => setAttachment(null)}>
-              <X className="h-4 w-4" />
-            </Button>
+      <div className="mt-6 space-y-6">
+        {(project.comments || []).map((c) => (
+          <div key={c.id} className="flex items-start gap-4">
+            <Avatar>
+              <AvatarImage src={getAvatarUrl(c.author.avatar_url, c.author.id)} />
+              <AvatarFallback>{c.author.initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">{c.author.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(c.timestamp), { addSuffix: true })}
+                </span>
+              </div>
+              <div className="prose prose-sm dark:prose-invert max-w-none mt-1">
+                <ReactMarkdown
+                  components={{
+                    a: ({ node, ...props }) => {
+                      const href = props.href || '';
+                      if (href.startsWith('/')) {
+                        return <Link to={href} {...props} className="text-primary hover:underline" />;
+                      }
+                      return <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" />;
+                    }
+                  }}
+                >
+                  {c.text}
+                </ReactMarkdown>
+              </div>
+            </div>
           </div>
-        )}
-
-        <div className="flex justify-end items-center gap-2 pt-2 border-t">
-          <Button type="button" variant="ghost" size="icon" asChild>
-            <label htmlFor="file-upload" className="cursor-pointer text-muted-foreground hover:text-foreground">
-              <Paperclip className="h-5 w-5" />
-              <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} />
-            </label>
-          </Button>
-          <Button 
-            type="button" 
-            variant={isTicketMode ? "secondary" : "ghost"} 
-            size="icon" 
-            onClick={() => setIsTicketMode(!isTicketMode)}
-            className={cn("text-muted-foreground hover:text-foreground", isTicketMode && "text-primary")}
-            title="Create a ticket"
-          >
-            <Ticket className="h-5 w-5" />
-          </Button>
-          <Button type="submit" disabled={isSubmitting || !newComment.trim()}>
-            {isTicketMode ? <Ticket className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />}
-            {isSubmitting ? (isTicketMode ? "Creating..." : "Sending...") : (isTicketMode ? "Create Ticket" : "Send")}
-          </Button>
-        </div>
-      </form>
+        ))}
+      </div>
     </div>
   );
 };
