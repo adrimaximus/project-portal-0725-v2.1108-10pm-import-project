@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Project, PaymentStatus } from '@/types';
 import { DatePicker } from '../ui/date-picker';
-import { NumericInput } from '../ui/NumericInput';
-import { Input } from '../ui/input';
 
 type Invoice = {
   id: string;
@@ -104,10 +103,11 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
             <Label htmlFor="amount" className="text-right">
               Amount (Rp)
             </Label>
-            <NumericInput
+            <Input
               id="amount"
+              type="number"
               value={amount}
-              onChange={setAmount}
+              onChange={(e) => setAmount(Number(e.target.value))}
               className="col-span-3"
             />
           </div>
