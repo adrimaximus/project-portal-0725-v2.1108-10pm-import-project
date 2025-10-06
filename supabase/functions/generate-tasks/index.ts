@@ -26,20 +26,20 @@ serve(async (req) => {
       apiKey: apiKey,
     });
 
-    const serviceList = Array.isArray(services) && services.length > 0 ? services.join(', ') : 'Not specified';
-    const existingTasksList = Array.isArray(existingTasks) && existingTasks.length > 0 ? `The following tasks already exist, so do not generate them again: ${existingTasks.join(', ')}.` : '';
+    const serviceList = Array.isArray(services) && services.length > 0 ? services.join(', ') : 'Tidak ditentukan';
+    const existingTasksList = Array.isArray(existingTasks) && existingTasks.length > 0 ? `Tugas-tugas berikut sudah ada, jadi jangan buat lagi: ${existingTasks.join(', ')}.` : '';
 
-    const prompt = `You are a helpful project management assistant. Based on the following project details, generate a JSON array of 5 concise, actionable task titles that are relevant but not yet created.
+    const prompt = `Anda adalah asisten manajemen proyek yang ahli dalam strategi aktivasi merek dan pelaksanaan acara. Berdasarkan detail proyek berikut, buatlah sebuah JSON array berisi 5 judul tugas yang ringkas, dapat ditindaklanjuti, relevan, dan belum dibuat. Gunakan Bahasa Indonesia.
 
-      **Project Details:**
-      - **Title:** ${projectName}
-      - **Location:** ${venue || 'an unspecified location'}
-      - **Services:** ${serviceList}
-      - **Overview:** ${description || 'No overview provided.'}
+      **Detail Proyek:**
+      - **Judul:** ${projectName}
+      - **Lokasi:** ${venue || 'lokasi tidak ditentukan'}
+      - **Layanan:** ${serviceList}
+      - **Gambaran Umum:** ${description || 'Tidak ada gambaran umum.'}
 
       ${existingTasksList}
 
-      Return ONLY a valid JSON array of 5 unique strings, where each string is a new task title. For example: ["New Task 1", "New Task 2", "New Task 3", "New Task 4", "New Task 5"]. Do not include any other text, markdown, or explanation.`;
+      Hanya kembalikan JSON array yang valid berisi 5 string unik, di mana setiap string adalah judul tugas baru dalam Bahasa Indonesia. Contoh: ["Siapkan materi promosi", "Koordinasi dengan vendor sound system", "Buat jadwal acara", "Rancang tata letak booth", "Lakukan gladi bersih"]. Jangan sertakan teks lain, markdown, atau penjelasan.`;
 
     const msg = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",
@@ -52,13 +52,13 @@ serve(async (req) => {
     const jsonMatch = responseText.match(/\[.*\]/s);
     if (!jsonMatch) {
       console.error("Raw AI response:", responseText);
-      throw new Error("AI response did not contain a valid JSON array.");
+      throw new Error("Respons AI tidak berisi JSON array yang valid.");
     }
 
     const tasks = JSON.parse(jsonMatch[0]);
 
     if (!Array.isArray(tasks) || tasks.length === 0) {
-      throw new Error("AI generated an empty or invalid list of tasks.");
+      throw new Error("AI menghasilkan daftar tugas yang kosong atau tidak valid.");
     }
 
     return new Response(

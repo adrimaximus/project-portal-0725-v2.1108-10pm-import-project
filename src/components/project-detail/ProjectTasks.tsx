@@ -52,7 +52,7 @@ const ProjectTasks = ({
 
   const handleGenerateTasks = async (isInitial: boolean) => {
     setIsGenerating(true);
-    const toastId = toast.loading(isInitial ? "Generating initial tasks..." : "Generating more tasks...");
+    const toastId = toast.loading(isInitial ? "Menghasilkan tugas awal..." : "Menghasilkan lebih banyak tugas...");
     try {
       const existingTaskTitles = project.tasks?.map(t => t.title) || [];
       const { data, error } = await supabase.functions.invoke('generate-tasks', {
@@ -71,13 +71,13 @@ const ProjectTasks = ({
         for (const title of data) {
           onTaskAdd(title);
         }
-        toast.success(`${data.length} new tasks have been generated!`, { id: toastId });
+        toast.success(`${data.length} tugas baru telah dibuat!`, { id: toastId });
       } else {
-        throw new Error("AI did not return a valid list of task titles.");
+        throw new Error("AI tidak mengembalikan daftar judul tugas yang valid.");
       }
     } catch (error: any) {
-      console.error("Failed to generate tasks:", error);
-      toast.error("Failed to generate tasks.", {
+      console.error("Gagal menghasilkan tugas:", error);
+      toast.error("Gagal menghasilkan tugas.", {
         id: toastId,
         description: error.message,
       });
@@ -96,7 +96,7 @@ const ProjectTasks = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Tasks</h3>
+        <h3 className="text-lg font-semibold">Tugas</h3>
         {tasks.length > 0 && (
           <Button onClick={() => handleGenerateTasks(false)} disabled={isGenerating} size="sm" variant="outline">
             {isGenerating ? (
@@ -104,24 +104,24 @@ const ProjectTasks = ({
             ) : (
               <Sparkles className="mr-2 h-4 w-4" />
             )}
-            Generate More
+            Hasilkan Lebih Banyak
           </Button>
         )}
       </div>
       
       {tasks.length === 0 && !isAddingTask && (
         <div className="text-center py-4 border-2 border-dashed rounded-lg">
-          <p className="text-sm text-muted-foreground mb-4">No tasks yet. Get started by adding one or let AI help.</p>
+          <p className="text-sm text-muted-foreground mb-4">Belum ada tugas. Mulai dengan menambahkan satu atau biarkan AI membantu.</p>
           <Button onClick={() => handleGenerateTasks(true)} disabled={isGenerating}>
             {isGenerating ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
+                Menghasilkan...
               </>
             ) : (
               <>
                 <Sparkles className="mr-2 h-4 w-4" />
-                Generate Initial Tasks with AI
+                Hasilkan Tugas Awal dengan AI
               </>
             )}
           </Button>
@@ -186,7 +186,7 @@ const ProjectTasks = ({
                             </Avatar>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Created by {createdByFullName}</p>
+                            <p>Dibuat oleh {createdByFullName}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -200,7 +200,7 @@ const ProjectTasks = ({
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Not assigned</p>
+                          <p>Belum ditugaskan</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -218,7 +218,7 @@ const ProjectTasks = ({
                     <DialogTrigger asChild>
                       <DropdownMenuItem>
                         <UserPlus className="mr-2 h-4 w-4" />
-                        Assign
+                        Tugaskan
                       </DropdownMenuItem>
                     </DialogTrigger>
                     <DropdownMenuItem
@@ -226,13 +226,13 @@ const ProjectTasks = ({
                       onClick={() => onTaskDelete(task.id)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
+                      Hapus
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Assign to: {task.title}</DialogTitle>
+                    <DialogTitle>Tugaskan ke: {task.title}</DialogTitle>
                   </DialogHeader>
                   <MultiSelect
                     options={userOptions}
@@ -240,7 +240,7 @@ const ProjectTasks = ({
                     onChange={(selectedIds) => {
                       onTaskAssignUsers(task.id, selectedIds);
                     }}
-                    placeholder="Select team members..."
+                    placeholder="Pilih anggota tim..."
                   />
                 </DialogContent>
               </Dialog>
@@ -254,13 +254,13 @@ const ProjectTasks = ({
           <Input
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="What needs to be done?"
+            placeholder="Apa yang perlu dilakukan?"
             onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
             autoFocus
           />
-          <Button onClick={handleAddTask}>Add</Button>
+          <Button onClick={handleAddTask}>Tambah</Button>
           <Button variant="ghost" onClick={() => setIsAddingTask(false)}>
-            Cancel
+            Batal
           </Button>
         </div>
       ) : (
@@ -270,7 +270,7 @@ const ProjectTasks = ({
           onClick={() => setIsAddingTask(true)}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add task
+          Tambah tugas
         </Button>
       )}
     </div>
