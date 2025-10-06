@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import ChatHeader from "./ChatHeader";
 import { ChatConversation } from "./ChatConversation";
-import ChatInput from "./ChatInput";
+import { ChatInput } from "./ChatInput";
 import ChatPlaceholder from "./ChatPlaceholder";
 import { forwardRef } from "react";
 import { useChatContext } from "@/contexts/ChatContext";
