@@ -57,6 +57,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [customProperties, setCustomProperties] = useState<ContactProperty[]>([]);
+  const [companyProperties, setCompanyProperties] = useState<any[]>([]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
@@ -76,6 +77,19 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
     return allCompanies.find(c => c.name === selectedCompanyName);
   }, [selectedCompanyName, allCompanies]);
 
+  const logoProperty = useMemo(() => {
+    return companyProperties.find(p => p.label === 'Logo Image');
+  }, [companyProperties]);
+
+  const companyLogoUrl = useMemo(() => {
+    if (!selectedCompany) return null;
+    if (logoProperty && selectedCompany.custom_properties) {
+        const customLogo = selectedCompany.custom_properties[logoProperty.name];
+        if (customLogo) return customLogo;
+    }
+    return selectedCompany.logo_url;
+  }, [selectedCompany, logoProperty]);
+
   useEffect(() => {
     const fetchData = async () => {
       const { data: projectsData } = await supabase.from('projects').select('id, name');
@@ -84,8 +98,11 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
       const { data: tagsData } = await supabase.from('tags').select('id, name, color');
       if (tagsData) setAllTags(tagsData);
 
-      const { data: companiesData } = await supabase.from('companies').select('id, name, logo_url');
+      const { data: companiesData } = await supabase.from('companies').select('id, name, logo_url, custom_properties');
       if (companiesData) setAllCompanies(companiesData as any);
+
+      const { data: companyPropsData } = await supabase.from('company_properties').select('*');
+      if (companyPropsData) setCompanyProperties(companyPropsData);
 
       const { data: customPropsData } = await supabase.from('contact_properties').select('*').eq('is_default', false);
       if (customPropsData) setCustomProperties(customPropsData);
@@ -302,9 +319,9 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                     </FormItem>
                   )}
                 />
-                {selectedCompany?.logo_url ? (
+                {companyLogoUrl ? (
                   <Avatar>
-                    <AvatarImage src={selectedCompany.logo_url} alt={selectedCompany.name} />
+                    <AvatarImage src={companyLogoUrl} alt={selectedCompany?.name} />
                     <AvatarFallback><Briefcase className="h-5 w-5" /></AvatarFallback>
                   </Avatar>
                 ) : selectedCompanyName ? (
