@@ -195,14 +195,36 @@ const PersonProfilePage = () => {
                     <a href={firstWebsite} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstWebsite}</a>
                   </div>
                 )}
-                {person.address?.formatted_address && (
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(person.address.formatted_address)}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                      {person.address.formatted_address}
-                    </a>
-                  </div>
-                )}
+                {(() => {
+                  if (!person.address?.formatted_address) return null;
+
+                  let name = '';
+                  let address = '';
+                  let fullQuery = person.address.formatted_address;
+
+                  try {
+                    const parsed = JSON.parse(person.address.formatted_address);
+                    if (parsed.name && parsed.address) {
+                      name = parsed.name;
+                      address = parsed.address;
+                      fullQuery = `${name}, ${address}`;
+                    } else {
+                      address = person.address.formatted_address;
+                    }
+                  } catch (e) {
+                    address = person.address.formatted_address;
+                  }
+
+                  return (
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullQuery)}`} target="_blank" rel="noopener noreferrer" className="hover:underline group">
+                        {name && <p className="font-bold text-foreground group-hover:text-primary">{name}</p>}
+                        <p className="text-muted-foreground">{address}</p>
+                      </a>
+                    </div>
+                  );
+                })()}
                 {person.birthday && (
                   <div className="flex items-center gap-3">
                     <Cake className="h-4 w-4 text-muted-foreground flex-shrink-0" />
