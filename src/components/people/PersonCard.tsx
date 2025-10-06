@@ -40,11 +40,15 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
 
   useEffect(() => {
     const fetchCompanyDetails = async () => {
-      // Reset state on person change to avoid showing stale data
       setCompanyLogoUrl(null);
       setCompanyAddress(null);
 
-      if (!person.company_id && !person.company) {
+      const companyNameFromField = person.company?.trim();
+      const companyNameFromJob = person.job_title?.includes(' at ') ? person.job_title.split(' at ')[1].trim() : null;
+      
+      const companyToSearch = companyNameFromField || companyNameFromJob;
+
+      if (!person.company_id && !companyToSearch) {
         return;
       }
 
@@ -59,26 +63,23 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           .single();
         if (!idError && data) {
           companyData = data;
-        } else if (idError && idError.code !== 'PGRST116') { // Ignore "row not found" errors
+        } else if (idError && idError.code !== 'PGRST116') {
           console.warn(`Could not fetch company by ID "${person.company_id}":`, idError.message);
         }
       }
 
-      // 2. Fallback to fetching by company name (case-insensitive) if not found by ID
-      if (!companyData && person.company) {
-        const trimmedCompanyName = person.company.trim();
-        if (trimmedCompanyName) {
-            const { data, error: nameError } = await supabase
-              .from('companies')
-              .select('logo_url, address')
-              .ilike('name', `%${trimmedCompanyName}%`) // Use pattern matching for more flexibility
-              .limit(1);
-            
-            if (!nameError && data && data.length > 0) {
-              companyData = data[0];
-            } else if (nameError) {
-              console.warn(`Could not fetch company by name "${trimmedCompanyName}":`, nameError.message);
-            }
+      // 2. Fallback to fetching by name if not found by ID
+      if (!companyData && companyToSearch) {
+        const { data, error: nameError } = await supabase
+          .from('companies')
+          .select('logo_url, address')
+          .ilike('name', `%${companyToSearch}%`)
+          .limit(1);
+        
+        if (!nameError && data && data.length > 0) {
+          companyData = data[0];
+        } else if (nameError) {
+          console.warn(`Could not fetch company by name "${companyToSearch}":`, nameError.message);
         }
       }
 
@@ -89,7 +90,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     };
 
     fetchCompanyDetails();
-  }, [person.company, person.company_id]);
+  }, [person.company, person.company_id, person.job_title]);
 
   const handleImageError = () => {
     setImageError(true);
