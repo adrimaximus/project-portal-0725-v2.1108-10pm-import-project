@@ -1,6 +1,8 @@
-/// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
+// @ts-nocheck
+/// <reference types="https://esm.sh/@supabase/functions-js@2/src/edge-runtime.d.ts" />
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
+import Anthropic from 'npm:@anthropic-ai/sdk@^0.22.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,38 +15,39 @@ serve(async (req) => {
   }
 
   try {
-    const { projectName, venue, services, description } = await req.json();
+    const { projectName, venue, services, description, existingTasks } = await req.json();
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
 
     if (!apiKey) {
       throw new Error("ANTHROPIC_API_KEY is not set in Supabase secrets.");
     }
 
-    const serviceList = Array.isArray(services) && services.length > 0 ? services.join(', ') : 'Not specified';
-
-    const prompt = `You are a helpful project management assistant. Based on the following project details, generate a JSON array of 5 concise, actionable task titles. The project is titled '${projectName}'. It will take place at '${venue || 'an unspecified location'}'. The services involved are: ${serviceList}. Project overview: ${description || 'No overview provided.'}. Return ONLY a valid JSON array of strings, where each string is a task title. For example: ["Task 1", "Task 2", "Task 3", "Task 4", "Task 5"]. Do not include any other text, markdown, or explanation.`;
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 1024,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const anthropic = new Anthropic({
+      apiKey: apiKey,
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Anthropic API error: ${response.status} ${response.statusText} - ${errorBody}`);
-    }
+    const serviceList = Array.isArray(services) && services.length > 0 ? services.join(', ') : 'Not specified';
+    const existingTasksList = Array.isArray(existingTasks) && existingTasks.length > 0 ? `The following tasks already exist, so do not generate them again: ${existingTasks.join(', ')}.` : '';
 
-    const responseData = await response.json();
-    const responseText = responseData.content[0].text;
+    const prompt = `You are a helpful project management assistant. Based on the following project details, generate a JSON array of 5 concise, actionable task titles that are relevant but not yet created.
+
+      **Project Details:**
+      - **Title:** ${projectName}
+      - **Location:** ${venue || 'an unspecified location'}
+      - **Services:** ${serviceList}
+      - **Overview:** ${description || 'No overview provided.'}
+
+      ${existingTasksList}
+
+      Return ONLY a valid JSON array of 5 unique strings, where each string is a new task title. For example: ["New Task 1", "New Task 2", "New Task 3", "New Task 4", "New Task 5"]. Do not include any other text, markdown, or explanation.`;
+
+    const msg = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const responseText = msg.content[0].text;
     
     const jsonMatch = responseText.match(/\[.*\]/s);
     if (!jsonMatch) {

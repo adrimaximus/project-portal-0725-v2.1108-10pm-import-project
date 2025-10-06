@@ -50,16 +50,18 @@ const ProjectTasks = ({
     setIsAddingTask(false);
   };
 
-  const handleGenerateTasks = async () => {
+  const handleGenerateTasks = async (isInitial: boolean) => {
     setIsGenerating(true);
-    const toastId = toast.loading("Generating initial tasks with AI...");
+    const toastId = toast.loading(isInitial ? "Generating initial tasks..." : "Generating more tasks...");
     try {
+      const existingTaskTitles = project.tasks?.map(t => t.title) || [];
       const { data, error } = await supabase.functions.invoke('generate-tasks', {
         body: {
           projectName: project.name,
           venue: project.venue,
           services: project.services,
           description: project.description,
+          existingTasks: existingTaskTitles,
         },
       });
 
@@ -69,15 +71,15 @@ const ProjectTasks = ({
         for (const title of data) {
           onTaskAdd(title);
         }
-        toast.success("5 initial tasks have been generated!", { id: toastId });
+        toast.success(`${data.length} new tasks have been generated!`, { id: toastId });
       } else {
         throw new Error("AI did not return a valid list of task titles.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to generate tasks:", error);
       toast.error("Failed to generate tasks.", {
         id: toastId,
-        description: (error as Error).message,
+        description: error.message,
       });
     } finally {
       setIsGenerating(false);
@@ -93,12 +95,24 @@ const ProjectTasks = ({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Tasks</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Tasks</h3>
+        {tasks.length > 0 && (
+          <Button onClick={() => handleGenerateTasks(false)} disabled={isGenerating} size="sm" variant="outline">
+            {isGenerating ? (
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-4 w-4" />
+            )}
+            Generate More
+          </Button>
+        )}
+      </div>
       
       {tasks.length === 0 && !isAddingTask && (
         <div className="text-center py-4 border-2 border-dashed rounded-lg">
           <p className="text-sm text-muted-foreground mb-4">No tasks yet. Get started by adding one or let AI help.</p>
-          <Button onClick={handleGenerateTasks} disabled={isGenerating}>
+          <Button onClick={() => handleGenerateTasks(true)} disabled={isGenerating}>
             {isGenerating ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
