@@ -58,6 +58,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
   }
 
   const aiUser = members.find(m => m.id === 'ai-assistant');
+  const isAiChat = !!aiUser;
 
   return (
     <div className="flex-1 relative">
@@ -96,7 +97,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
               >
                 <div className={cn("flex items-center gap-1", isCurrentUser ? "flex-row-reverse" : "flex-row")}>
                   <div className="invisible group-hover:visible flex items-center">
-                    <EmojiReactionPicker onSelect={(emoji) => toggleReaction(message.id, emoji)} />
+                    {!isAiChat && <EmojiReactionPicker onSelect={(emoji) => toggleReaction(message.id, emoji)} />}
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onReply(message)}>
                       <CornerUpLeft className="h-4 w-4" />
                     </Button>
@@ -199,7 +200,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                         </span>
                       </div>
                     )}
-                    <MessageReactions reactions={message.reactions || []} onToggleReaction={(emoji) => toggleReaction(message.id, emoji)} />
+                    {!isAiChat && <MessageReactions reactions={message.reactions || []} onToggleReaction={(emoji) => toggleReaction(message.id, emoji)} />}
                   </div>
                 </div>
               </div>
