@@ -38,6 +38,13 @@ const ChatList = () => {
     }
   };
 
+  const formatLastMessage = (message: string) => {
+    if (!message) return "";
+    // This regex looks for markdown-style links and extracts the link text.
+    const linkRegex = /\[([^\]]+)\]\([^)]+\)/g;
+    return message.replace(linkRegex, '$1');
+  };
+
   return (
     <div className="flex flex-col h-full border-r bg-background">
       <div className="p-4 border-b">
@@ -111,7 +118,7 @@ const ChatList = () => {
                     <span className="text-xs text-muted-foreground flex-shrink-0">{formatTimestamp(c.lastMessageTimestamp)}</span>
                   </div>
                   <p className="text-sm text-muted-foreground truncate">
-                    {c.lastMessage}
+                    {formatLastMessage(c.lastMessage)}
                   </p>
                 </div>
               </div>
