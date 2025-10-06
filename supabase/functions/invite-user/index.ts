@@ -1,4 +1,6 @@
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+/// <reference types="https://esm.sh/@supabase/functions-js@2/src/edge-runtime.d.ts" />
+
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -34,7 +36,7 @@ serve(async (req) => {
         status: 500,
       })
     }
-    const redirectTo = `${siteUrl}/set-password`;
+    const redirectTo = `${siteUrl}/reset-password`;
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectTo,
@@ -43,6 +45,12 @@ serve(async (req) => {
 
     if (error) {
       console.error(`Error inviting user ${email}:`, error)
+      if (error.message.includes('User already registered')) {
+        return new Response(JSON.stringify({ error: `A user with the email ${email} already exists.` }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 409, // Conflict
+        })
+      }
       return new Response(JSON.stringify({ error: `Failed to invite user. Supabase error: ${error.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
