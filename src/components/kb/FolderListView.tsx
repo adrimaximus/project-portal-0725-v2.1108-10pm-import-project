@@ -1,82 +1,78 @@
 import { KbFolder } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Folder, MoreHorizontal, ChevronsUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { getIconComponent } from '@/data/icons';
 import { formatDistanceToNow } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { Badge } from '../ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { Button } from '../ui/button';
+import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 
 interface FolderListViewProps {
   folders: KbFolder[];
-  onFolderSelect: (folder: KbFolder) => void;
   onEdit: (folder: KbFolder) => void;
   onDelete: (folder: KbFolder) => void;
+  requestSort: (key: keyof KbFolder) => void;
 }
 
-type SortKey = keyof KbFolder;
-
-const FolderListView = ({ folders, onFolderSelect, onEdit, onDelete }: FolderListViewProps) => {
-  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'ascending' | 'descending' }>({ key: 'name', direction: 'ascending' });
-
-  const sortedFolders = useMemo(() => {
-    let sortableItems = [...folders];
-    if (sortConfig.key) {
-      sortableItems.sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
-        if (aValue === undefined || aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-        if (bValue === undefined || aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [folders, sortConfig]);
-
-  const requestSort = (key: SortKey) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const getSortIcon = (key: SortKey) => {
-    if (sortConfig.key !== key) return <ChevronsUpDown className="h-4 w-4" />;
-    return sortConfig.direction === 'ascending' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
-  };
-
+const FolderListView = ({ folders, onEdit, onDelete, requestSort }: FolderListViewProps) => {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead><Button variant="ghost" onClick={() => requestSort('name')} className="px-2">Name {getSortIcon('name')}</Button></TableHead>
-          <TableHead><Button variant="ghost" onClick={() => requestSort('category')} className="px-2">Category {getSortIcon('category')}</Button></TableHead>
-          <TableHead><Button variant="ghost" onClick={() => requestSort('updated_at')} className="px-2">Last Modified {getSortIcon('updated_at')}</Button></TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {sortedFolders.map(folder => (
-          <TableRow key={folder.id} className="cursor-pointer" onClick={() => onFolderSelect(folder)}>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Folder className="h-4 w-4" style={{ color: folder.color || 'currentColor' }} />
-                <span className="font-medium">{folder.name}</span>
-              </div>
-            </TableCell>
-            <TableCell>
-              {folder.category ? <Badge variant="secondary">{folder.category}</Badge> : '-'}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {folder.updated_at ? formatDistanceToNow(new Date(folder.updated_at), { addSuffix: true }) : 'N/A'}
-            </TableCell>
-            <TableCell className="text-right">
-              {/* Actions can be added here */}
-            </TableCell>
+    <div className="border rounded-lg">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>
+              <Button variant="ghost" onClick={() => requestSort('name')} className="px-2">Name</Button>
+            </TableHead>
+            <TableHead>
+              <Button variant="ghost" onClick={() => requestSort('category')} className="px-2">Category</Button>
+            </TableHead>
+            <TableHead>
+              <Button variant="ghost" onClick={() => requestSort('updated_at')} className="px-2">Last Modified</Button>
+            </TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {folders.map(folder => {
+            const Icon = getIconComponent(folder.icon || 'Folder');
+            return (
+              <TableRow key={folder.id}>
+                <TableCell>
+                  <Link to={`/knowledge-base/folders/${folder.slug}`} className="flex items-center gap-3 group font-medium text-primary hover:underline">
+                    <Icon className="h-5 w-5 flex-shrink-0" style={{ color: folder.color }} />
+                    <span className="truncate">{folder.name}</span>
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  {folder.category ? <Badge variant="secondary">{folder.category}</Badge> : '-'}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {formatDistanceToNow(new Date(folder.updated_at), { addSuffix: true })}
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => onEdit(folder)}>
+                        <Edit className="mr-2 h-4 w-4" /> Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => onDelete(folder)} className="text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 

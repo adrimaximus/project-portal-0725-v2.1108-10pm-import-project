@@ -1,145 +1,299 @@
 import { useState, useEffect } from "react";
-import { useFormContext } from "react-hook-form";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import ModernTeamSelector from "./ModernTeamSelector";
+import FileUploader from "./FileUploader";
+import { useNavigate } from "react-router-dom";
+import { Service, services as allServicesData } from "@/data/services";
+import { DateRange } from "react-day-picker";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@/types";
 import { toast } from "sonner";
+import { useCreateProject } from "@/hooks/useCreateProject";
+import { getInitials } from "@/lib/utils";
+import AddressAutocompleteInput from "../AddressAutocompleteInput";
 
-const ProjectDetailsForm = () => {
-  const { control } = useFormContext();
+interface ProjectDetailsFormProps {
+  selectedServices: Service[];
+  onBack: () => void;
+}
+
+const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProps) => {
+  const { user: currentUser } = useAuth();
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [projectName, setProjectName] = useState("");
+  const [date, setDate] = useState<DateRange | undefined>();
+  const [budget, setBudget] = useState("");
+  const [description, setDescription] = useState("");
+  const [team, setTeam] = useState<User[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [venue, setVenue] = useState<string>("");
+  const navigate = useNavigate();
+  const createProjectMutation = useCreateProject();
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const { data, error } = await supabase.from('profiles').select('id, first_name, last_name, email, avatar_url');
+      const { data, error } = await supabase.from('profiles').select(`
+        id,
+        first_name,
+        last_name,
+        avatar_url,
+        email
+      `);
+
       if (error) {
-        toast.error("Failed to fetch users");
+        toast.error("Failed to fetch users.");
+        console.error('Error fetching users:', error);
       } else {
-        const users = data.map((p: any) => {
-          const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+        const users = data.map(profile => {
+          const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
           return {
-            id: p.id,
-            name: name || p.email,
-            avatar_url: p.avatar_url,
-            email: p.email,
-            initials: (p.first_name?.[0] || '') + (p.last_name?.[0] || '') || p.email.slice(0, 2).toUpperCase(),
-            first_name: p.first_name,
-            last_name: p.last_name,
-          };
+            id: profile.id,
+            name: fullName || profile.email || 'No name',
+            avatar: profile.avatar_url,
+            email: profile.email,
+            initials: getInitials(fullName, profile.email) || 'NN',
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+          }
         });
         setAllUsers(users);
       }
     };
+
     fetchUsers();
   }, []);
 
+  const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/[^0-9]/g, '');
+    if (rawValue) {
+      const formattedValue = new Intl.NumberFormat('id-ID').format(parseInt(rawValue));
+      setBudget(`Rp ${formattedValue}`);
+    } else {
+      setBudget('');
+    }
+  };
+
+  const handleTeamChange = (userToToggle: User) => {
+    setTeam((currentTeam) =>
+      currentTeam.some((user) => user.id === userToToggle.id)
+        ? currentTeam.filter((user) => user.id !== userToToggle.id)
+        : [...currentTeam, userToToggle]
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) {
+      toast.error("You must be logged in to create a project.");
+      return;
+    }
+    if (!projectName.trim()) {
+      toast.error("Project name is required.");
+      return;
+    }
+
+    const numericBudget = parseInt(budget.replace(/[^0-9]/g, ''), 10) || 0;
+
+    createProjectMutation.mutate({
+      name: projectName,
+      description: description,
+      category: "Requested Event",
+      budget: numericBudget,
+      startDate: date?.from?.toISOString(),
+      dueDate: date?.to?.toISOString(),
+      venue: venue,
+    }, {
+      onSuccess: async (newProject) => {
+        const newProjectId = newProject.id;
+        const newProjectSlug = newProject.slug;
+
+        if (selectedServices.length > 0) {
+          const servicesToInsert = selectedServices.map(service => ({
+            project_id: newProjectId,
+            service_title: service.title,
+          }));
+          const { error: servicesError } = await supabase.from('project_services').insert(servicesToInsert);
+          if (servicesError) {
+            console.error('Failed to link services:', servicesError);
+            toast.warning('Project created, but could not link services.');
+          }
+        }
+
+        if (team.length > 0) {
+          const membersToInsert = team.map(member => ({
+            project_id: newProjectId,
+            user_id: member.id,
+            role: 'member' as const
+          }));
+          const { error: membersError } = await supabase.from('project_members').insert(membersToInsert);
+          if (membersError) {
+            toast.error("Failed to add team members to the project.");
+            console.error('Error adding project members:', membersError);
+          }
+        }
+
+        if (files.length > 0) {
+          toast.info(`Uploading ${files.length} file(s)...`);
+          for (const file of files) {
+            const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+            const filePath = `${newProjectId}/${Date.now()}-${sanitizedFileName}`;
+            const { error: uploadError } = await supabase.storage.from('project-files').upload(filePath, file);
+            
+            if (uploadError) {
+              toast.error(`Failed to upload ${file.name}.`);
+              console.error('Error uploading file:', uploadError);
+              continue;
+            }
+
+            const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(filePath);
+            
+            await supabase.from('project_files').insert({
+              project_id: newProjectId,
+              user_id: currentUser.id,
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              url: urlData.publicUrl,
+              storage_path: filePath,
+            });
+          }
+        }
+        
+        navigate(`/projects/${newProjectSlug}`);
+      }
+    });
+  };
+
+  const serviceDetails = selectedServices
+    .map((service) => allServicesData.find((s) => s.title === service.title))
+    .filter((s): s is Service => s !== undefined);
+
+  const assignableUsers = allUsers.filter(user => user.id !== currentUser?.id);
+
   return (
-    <div className="space-y-4">
-      <FormField
-        control={control}
-        name="name"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Project Name</FormLabel>
-            <FormControl>
-              <Input placeholder="e.g., New Website Design" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={control}
-        name="description"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Description</FormLabel>
-            <FormControl>
-              <Textarea
-                placeholder="Provide a brief description of the project"
-                {...field}
+    <form onSubmit={handleSubmit}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Project Details</CardTitle>
+          <CardDescription>Fill out the form below to create a new project request.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2">
+            <Label htmlFor="project-name">Project Name</Label>
+            <Input
+              id="project-name"
+              placeholder="e.g., New Marketing Website"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Selected Services</Label>
+            <div className="flex flex-wrap gap-2 rounded-md border p-3 bg-muted/50 min-h-[40px]">
+              {serviceDetails.length > 0 ? serviceDetails.map((service) => (
+                <Badge key={service.title} variant="secondary" className="flex items-center gap-2">
+                  <service.icon className={cn("h-4 w-4", service.iconColor)} />
+                  <span>{service.title}</span>
+                </Badge>
+              )) : <p className="text-sm text-muted-foreground">No services selected. Go back to select services.</p>}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="date-range">Project Timeline</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="date-range"
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date?.from ? (
+                      date.to ? (
+                        <>
+                          {format(date.from, "LLL dd, y")} -{" "}
+                          {format(date.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(date.from, "LLL dd, y")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={date?.from}
+                    selected={date}
+                    onSelect={setDate}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="budget">Project Budget</Label>
+              <Input
+                id="budget"
+                placeholder="e.g., Rp 10.000.000"
+                value={budget}
+                onChange={handleBudgetChange}
               />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          control={control}
-          name="start_date"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Start Date</FormLabel>
-              <FormControl>
-                <DatePicker date={field.value} setDate={field.onChange} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name="due_date"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Due Date</FormLabel>
-              <FormControl>
-                <DatePicker date={field.value} setDate={field.onChange} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-      <FormField
-        control={control}
-        name="budget"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Budget (Optional)</FormLabel>
-            <FormControl>
-              <Input type="number" placeholder="e.g., 5000" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={control}
-        name="assignedTo"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Assign Team</FormLabel>
-            <FormControl>
-              <ModernTeamSelector
-                allUsers={allUsers}
-                selectedUsers={field.value}
-                onChange={field.onChange}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="venue">Venue</Label>
+            <AddressAutocompleteInput
+              value={venue}
+              onChange={setVenue}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Project Description</Label>
+            <Textarea
+              id="description"
+              placeholder="Provide a detailed description of the project requirements..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={5}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Assign Team</Label>
+            <ModernTeamSelector users={assignableUsers} selectedUsers={team} onSelectionChange={handleTeamChange} />
+          </div>
+          <div className="space-y-2">
+            <Label>Attach Files</Label>
+            <FileUploader onFilesChange={setFiles} />
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onBack} disabled={createProjectMutation.isPending}>Back</Button>
+          <Button type="submit" disabled={createProjectMutation.isPending}>
+            {createProjectMutation.isPending ? "Submitting..." : "Submit Project Request"}
+          </Button>
+        </CardFooter>
+      </Card>
+    </form>
   );
 };
 

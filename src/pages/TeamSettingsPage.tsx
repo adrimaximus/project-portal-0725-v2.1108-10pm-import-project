@@ -1,62 +1,52 @@
-import { useState } from 'react';
-import PortalLayout from "@/components/PortalLayout";
+import { Link } from 'react-router-dom';
+import PortalLayout from '@/components/PortalLayout';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Link } from "react-router-dom";
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
 import RoleManagerDialog, { Role } from '@/components/settings/RoleManagerDialog';
+import AddUserDialog from '@/components/settings/AddUserDialog';
+import { useFeatures } from '@/contexts/FeaturesContext';
+import RolesCard from '@/components/settings/RolesCard';
+import InviteCard, { Invite } from '@/components/settings/InviteCard';
 import TeamMembersCard from '@/components/settings/TeamMembersCard';
-import InviteMemberDialog from '@/components/settings/InviteMemberDialog';
-import { useTeamMembers } from '@/hooks/useTeamMembers';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useTeamSettingsData } from '@/hooks/useTeamSettingsData';
+import { useTeamSettingsMutations } from '@/hooks/useTeamSettingsMutations';
+import ConfirmationDialog from '@/components/settings/ConfirmationDialog';
 
 const TeamSettingsPage = () => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { members, isLoading: isLoadingMembers } = useTeamMembers();
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const [isRoleManagerOpen, setIsRoleManagerOpen] = useState(false);
-  const [roleToEdit, setRoleToEdit] = useState<Role | null>(null);
+  const { user: currentUser } = useAuth();
+  const { features: workspaceFeatures } = useFeatures();
+  
+  const { members, roles, validRoles, isLoading, fetchData } = useTeamSettingsData();
+  const { 
+    sendInvites, 
+    changeRole, 
+    toggleSuspend, 
+    deleteMember, 
+    saveRole, 
+    isSavingRole,
+    deleteRole, 
+    resendInvite 
+  } = useTeamSettingsMutations(fetchData);
+
   const [memberToDelete, setMemberToDelete] = useState<User | null>(null);
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
+  const [roleToEdit, setRoleToEdit] = useState<Role | null>(null);
+  const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
 
-  const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
-    queryKey: ['roles'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('roles').select('*');
-      if (error) throw error;
-      return data as Role[];
-    },
-  });
+  const isMasterAdmin = currentUser?.role === 'master admin';
+  const isAdmin = isMasterAdmin || currentUser?.role === 'admin';
 
-  const handleEditRole = (role: Role) => {
-    setRoleToEdit(role);
-    setIsRoleManagerOpen(true);
+  const handleSaveRole = (role: Role) => {
+    saveRole(role, {
+      onSuccess: () => {
+        setRoleToEdit(null);
+        setIsCreateRoleOpen(false);
+      },
+    });
   };
-
-  const handleDeleteMember = async () => {
-    if (!memberToDelete) return;
-
-    if (memberToDelete.status === 'Pending invite') {
-      // It's an invitation
-      const { error } = await supabase.from('invitations').delete().eq('recipient_email', memberToDelete.email);
-      if (error) {
-        toast.error(`Failed to cancel invite: ${error.message}`);
-      } else {
-        toast.success(`Invitation for ${memberToDelete.email} cancelled.`);
-        queryClient.invalidateQueries({ queryKey: ['teamMembers'] });
-      }
-    } else {
-      // It's a profile
-      // This should be a soft delete or a more complex operation, for now, we just show a message
-      toast.info("Delete functionality for active members is not fully implemented.");
-    }
-    setMemberToDelete(null);
-  };
-
-  const isLoading = isLoadingMembers || isLoadingRoles;
 
   return (
     <PortalLayout>
@@ -65,61 +55,88 @@ const TeamSettingsPage = () => {
           <BreadcrumbList>
             <BreadcrumbItem><BreadcrumbLink asChild><Link to="/settings">Settings</Link></BreadcrumbLink></BreadcrumbItem>
             <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbPage>Team Management</BreadcrumbPage></BreadcrumbItem>
+            <BreadcrumbItem><BreadcrumbPage>Team Members & Access</BreadcrumbPage></BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
         
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>
-          <p className="text-muted-foreground">Manage your team members, roles, and permissions.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Team Members & Access</h1>
+          <p className="text-muted-foreground">Manage your team members and their roles across the application.</p>
         </div>
 
-        {isLoading ? (
-          <p>Loading team data...</p>
-        ) : (
-          <TeamMembersCard
-            members={members}
-            roles={roles}
-            onInvite={() => setIsInviteOpen(true)}
-            onEditRole={handleEditRole}
-            onDeleteMember={setMemberToDelete}
+        <RolesCard
+          roles={roles}
+          onCreateRole={() => setIsCreateRoleOpen(true)}
+          onEditRole={(role) => setRoleToEdit(role)}
+          onDeleteRole={(role) => setRoleToDelete(role)}
+          isMasterAdmin={isMasterAdmin}
+        />
+
+        {isAdmin && (
+          <InviteCard
+            roles={validRoles}
+            onSendInvites={(invites) => sendInvites(invites)}
+            onAddManually={() => setIsAddUserOpen(true)}
+            isMasterAdmin={isMasterAdmin}
           />
         )}
 
-        <InviteMemberDialog
-          open={isInviteOpen}
-          onOpenChange={setIsInviteOpen}
-          roles={roles}
+        <TeamMembersCard
+          members={members}
+          roles={validRoles}
+          currentUser={currentUser}
+          isLoading={isLoading}
+          onRoleChange={(memberId, newRole) => changeRole({ memberId, newRole })}
+          onToggleSuspend={toggleSuspend}
+          onDeleteMember={(member) => setMemberToDelete(member)}
+          onResendInvite={resendInvite}
         />
-
-        <RoleManagerDialog
-          open={isRoleManagerOpen}
-          onOpenChange={setIsRoleManagerOpen}
-          roles={roles}
-          roleToEdit={roleToEdit}
-          setRoleToEdit={setRoleToEdit}
-        />
-
-        <AlertDialog open={!!memberToDelete} onOpenChange={(open) => !open && setMemberToDelete(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                {memberToDelete?.status === 'Pending invite'
-                  ? `This will cancel the invitation for ${memberToDelete.email}. They will not be able to join the team with the current link.`
-                  : `This will permanently remove ${memberToDelete?.name} from the team. This action cannot be undone.`
-                }
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteMember} className="bg-destructive hover:bg-destructive/90">
-                {memberToDelete?.status === 'Pending invite' ? 'Cancel Invite' : 'Delete'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
+
+      {/* Dialogs */}
+      {memberToDelete && (
+        <ConfirmationDialog
+          open={!!memberToDelete}
+          onOpenChange={() => setMemberToDelete(null)}
+          onConfirm={() => deleteMember(memberToDelete)}
+          title="Are you sure?"
+          description={
+            memberToDelete.status === 'Pending invite'
+              ? `This will cancel the invitation for ${memberToDelete.email}. They will not be able to join the team with the current link.`
+              : `This will permanently delete ${memberToDelete.name} from the team. This action cannot be undone.`
+          }
+          confirmText={memberToDelete.status === 'Pending invite' ? 'Cancel Invite' : 'Delete'}
+        />
+      )}
+
+      {roleToDelete && (
+        <ConfirmationDialog
+          open={!!roleToDelete}
+          onOpenChange={() => setRoleToDelete(null)}
+          onConfirm={() => deleteRole(roleToDelete)}
+          title="Are you sure?"
+          description={`This will permanently delete the "${roleToDelete.name}" role. This action cannot be undone.`}
+          confirmText="Delete"
+        />
+      )}
+
+      <RoleManagerDialog
+        open={isCreateRoleOpen || !!roleToEdit}
+        onOpenChange={() => {
+          setIsCreateRoleOpen(false);
+          setRoleToEdit(null);
+        }}
+        onSave={handleSaveRole}
+        role={roleToEdit}
+        workspaceFeatures={workspaceFeatures}
+      />
+
+      <AddUserDialog
+        open={isAddUserOpen}
+        onOpenChange={setIsAddUserOpen}
+        onUserAdded={fetchData}
+        roles={validRoles.filter(r => isMasterAdmin || r.name !== 'master admin')}
+      />
     </PortalLayout>
   );
 };

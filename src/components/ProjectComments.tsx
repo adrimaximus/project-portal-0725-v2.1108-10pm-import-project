@@ -1,109 +1,167 @@
 import { useState, useMemo } from "react";
-import { Project, Comment } from "@/types";
+import { Project } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Textarea } from "./ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Paperclip, Send, Ticket, CheckCircle2, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
-import { useProjectMutations } from "@/hooks/useProjectMutations";
-import { toast } from "sonner";
 import { Badge } from "./ui/badge";
-import { CheckCircle2, MessageSquare, Plus } from "lucide-react";
 import CommentRenderer from "./CommentRenderer";
-import { useQueryClient } from "@tanstack/react-query";
+import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import MentionInput from "./MentionInput";
 
-const ProjectComments = ({ project }: { project: Project }) => {
+interface ProjectCommentsProps {
+  project: Project;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
+}
+
+const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps) => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { createComment } = useProjectMutations(project.id);
+  const [isTicketMode, setIsTicketMode] = useState(false);
 
-  const handleAddComment = async () => {
+  const mentionableUsers = useMemo(() => {
+    if (!project || !user) return [];
+    const users = [project.created_by, ...project.assignedTo];
+    if (!users.some(u => u.id === user.id)) {
+      users.push(user);
+    }
+    const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
+    return uniqueUsers.map(u => {
+      return {
+        id: u.id,
+        display: u.name,
+        avatar_url: u.avatar_url,
+        initials: u.initials,
+        email: u.email,
+      };
+    });
+  }, [project, user]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setAttachment(e.target.files[0]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!newComment.trim() || !user) return;
+
     setIsSubmitting(true);
     try {
-      await createComment.mutateAsync({
-        project_id: project.id,
-        author_id: user.id,
-        text: newComment,
-      });
+      await onAddCommentOrTicket(newComment, isTicketMode, attachment);
       setNewComment("");
-      toast.success("Comment added");
-      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
-    } catch (error) {
-      toast.error("Failed to add comment");
+      setAttachment(null);
+      setIsTicketMode(false);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const sortedItems = useMemo(() => 
-    [...(project.comments || [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [...(project.comments || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
     [project.comments]
   );
 
+  const allProjectMembers = useMemo(() => [project.created_by, ...project.assignedTo], [project.created_by, project.assignedTo]);
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Comments & Tickets</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {user && (
-            <div className="flex items-start gap-4">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user.avatar_url || undefined} />
-                <AvatarFallback>{user.initials}</AvatarFallback>
+    <div className="space-y-6">
+      <h3 className="text-lg font-semibold text-card-foreground">Comments & Tickets</h3>
+      
+      <div className="space-y-6">
+        {sortedItems.length > 0 ? sortedItems.map(item => {
+          const isTicketCompleted = item.isTicket && project.tasks?.find(t => t.originTicketId === item.id)?.completed;
+          return (
+            <div key={item.id} className="flex items-start space-x-4">
+              <Avatar>
+                <AvatarImage src={getAvatarUrl(item.author.avatar_url, item.author.id)} />
+                <AvatarFallback style={generatePastelColor(item.author.id)}>{item.author.initials}</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <Textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment or create a ticket by typing '/ticket'..."
-                  className="mb-2"
-                />
-                <Button onClick={handleAddComment} disabled={isSubmitting || !newComment.trim()}>
-                  {isSubmitting ? "Submitting..." : "Add Comment"}
-                </Button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-card-foreground flex items-center gap-2">
+                    {item.author.id === user?.id ? "You" : item.author.name}
+                    {item.isTicket && (
+                      <Badge variant={isTicketCompleted ? "default" : "destructive"} className={isTicketCompleted ? "bg-green-500 hover:bg-green-600" : ""}>
+                        <Ticket className="mr-1.5 h-3 w-3" />
+                        Ticket
+                        {isTicketCompleted && <CheckCircle2 className="ml-1.5 h-3 w-3" />}
+                      </Badge>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true, locale: id })}
+                  </p>
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  <CommentRenderer text={item.text || ''} members={allProjectMembers} />
+                </div>
+                {item.attachment_url && (
+                  <div className="mt-2">
+                    <a href={item.attachment_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2 bg-primary/10 px-2 py-1 rounded-md max-w-max">
+                      <Paperclip className="h-4 w-4" />
+                      {item.attachment_name || 'View Attachment'}
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
-          )}
-          <div className="space-y-6">
-            {sortedItems.length > 0 ? sortedItems.map(item => {
-              const isTicketCompleted = item.is_ticket && project.tasks?.find(t => t.origin_ticket_id === item.id)?.completed;
-              return (
-                <div key={item.id} className="flex items-start gap-4">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={item.author.avatar_url || undefined} />
-                    <AvatarFallback>{item.author.initials}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{item.author.id === user?.id ? "You" : item.author.name}</span>
-                      {item.is_ticket && (
-                        <Badge variant={isTicketCompleted ? "default" : "destructive"} className={isTicketCompleted ? "bg-green-500 hover:bg-green-600" : ""}>
-                          {isTicketCompleted ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <MessageSquare className="h-3 w-3 mr-1" />}
-                          Ticket
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <CommentRenderer content={item.text} />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: id })}
-                    </p>
-                  </div>
-                </div>
-              );
-            }) : <p className="text-sm text-muted-foreground text-center py-4">No comments yet.</p>}
+          )
+        }) : (
+          <p className="text-sm text-muted-foreground text-center py-4">No comments or tickets yet.</p>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="border rounded-lg p-2 space-y-2">
+        <MentionInput
+          value={newComment}
+          onChange={setNewComment}
+          placeholder={isTicketMode ? "Describe the ticket..." : "Add a comment... @ to mention"}
+          suggestions={mentionableUsers}
+          disabled={isSubmitting}
+          className="w-full text-sm bg-transparent placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none p-2 border-none"
+        />
+        
+        {attachment && (
+          <div className="text-sm text-muted-foreground flex items-center gap-2 p-2 border-t">
+            <Paperclip className="h-4 w-4" />
+            <span>{attachment.name}</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => setAttachment(null)}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
+        )}
+
+        <div className="flex justify-end items-center gap-2 pt-2 border-t">
+          <Button type="button" variant="ghost" size="icon" asChild>
+            <label htmlFor="file-upload" className="cursor-pointer text-muted-foreground hover:text-foreground">
+              <Paperclip className="h-5 w-5" />
+              <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} />
+            </label>
+          </Button>
+          <Button 
+            type="button" 
+            variant={isTicketMode ? "secondary" : "ghost"} 
+            size="icon" 
+            onClick={() => setIsTicketMode(!isTicketMode)}
+            className={cn("text-muted-foreground hover:text-foreground", isTicketMode && "text-primary")}
+            title="Create a ticket"
+          >
+            <Ticket className="h-5 w-5" />
+          </Button>
+          <Button type="submit" disabled={isSubmitting || !newComment.trim()}>
+            {isTicketMode ? <Ticket className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />}
+            {isSubmitting ? (isTicketMode ? "Creating..." : "Sending...") : (isTicketMode ? "Create Ticket" : "Send")}
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+      </form>
+    </div>
   );
 };
 
