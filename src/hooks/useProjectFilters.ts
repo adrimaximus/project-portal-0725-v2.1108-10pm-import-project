@@ -1,55 +1,45 @@
 import { useState, useMemo } from 'react';
 import { Project } from '@/types';
 import { DateRange } from 'react-day-picker';
-import { formatInJakarta } from '@/lib/utils';
 
 export const useProjectFilters = (projects: Project[]) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: 'start_date', direction: 'descending' });
-
-  const requestSort = (key: keyof Project) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Project | null; direction: 'ascending' | 'descending' }>({ key: 'start_date', direction: 'ascending' });
 
   const filteredProjects = useMemo(() => {
-    let filtered = projects;
+    return projects.filter(project => {
+      const searchTermLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        project.name.toLowerCase().includes(searchTermLower) ||
+        (project.description && project.description.toLowerCase().includes(searchTermLower)) ||
+        (project.category && project.category.toLowerCase().includes(searchTermLower));
 
-    if (dateRange?.from) {
-      const fromDate = new Date(dateRange.from);
-      fromDate.setHours(0, 0, 0, 0);
+      const projectStart = project.start_date ? new Date(project.start_date) : null;
+      const projectEnd = project.due_date ? new Date(project.due_date) : projectStart;
 
-      const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-      toDate.setHours(23, 59, 59, 999);
+      const matchesDate = (() => {
+        if (!dateRange || !dateRange.from) {
+          return true; // No date filter applied
+        }
 
-      filtered = filtered.filter(project => {
-        if (!project.start_date && !project.due_date) return false;
-        
-        const projectStart = project.start_date ? new Date(project.start_date) : null;
-        const projectEnd = project.due_date ? new Date(project.due_date) : projectStart;
+        if (!projectStart) {
+          return false; // Project has no start date, cannot match a date filter
+        }
 
-        if (projectStart && projectEnd) return projectStart <= toDate && projectEnd >= fromDate;
-        if (projectStart) return projectStart >= fromDate && projectStart <= toDate;
-        if (projectEnd) return projectEnd >= fromDate && projectEnd <= toDate;
+        const filterStart = dateRange.from;
+        const filterEnd = dateRange.to || dateRange.from; // Handle single day selection
 
-        return false;
-      });
-    }
+        // Ensure project end is not before project start
+        const effectiveProjectEnd = projectEnd && projectEnd < projectStart ? projectStart : (projectEnd || projectStart);
 
-    if (searchTerm.trim() !== "") {
-      const lowercasedFilter = searchTerm.toLowerCase();
-      filtered = filtered.filter(project =>
-        project.name.toLowerCase().includes(lowercasedFilter) ||
-        (project.description && project.description.toLowerCase().includes(lowercasedFilter))
-      );
-    }
+        // Overlap condition: (StartA <= EndB) and (EndA >= StartB)
+        return projectStart <= filterEnd && effectiveProjectEnd >= filterStart;
+      })();
 
-    return filtered;
-  }, [projects, dateRange, searchTerm]);
+      return matchesSearch && matchesDate;
+    });
+  }, [projects, searchTerm, dateRange]);
 
   const sortedProjects = useMemo(() => {
     let sortableItems = [...filteredProjects];
@@ -60,26 +50,26 @@ export const useProjectFilters = (projects: Project[]) => {
 
         if (aValue === null || aValue === undefined) return 1;
         if (bValue === null || bValue === undefined) return -1;
-        
-        if (typeof aValue === 'number' && typeof bValue === 'number') {
-            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-        } else if (sortConfig.key === 'start_date' || sortConfig.key === 'due_date') {
-            const dateA = new Date(aValue as string).getTime();
-            const dateB = new Date(bValue as string).getTime();
-            if (dateA < dateB) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (dateA > dateB) return sortConfig.direction === 'ascending' ? 1 : -1;
-        } else {
-            const stringA = String(aValue).toLowerCase();
-            const stringB = String(bValue).toLowerCase();
-            if (stringA < stringB) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (stringA > stringB) return sortConfig.direction === 'ascending' ? 1 : -1;
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
         }
         return 0;
       });
     }
     return sortableItems;
   }, [filteredProjects, sortConfig]);
+
+  const requestSort = (key: keyof Project) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
 
   return {
     searchTerm,
