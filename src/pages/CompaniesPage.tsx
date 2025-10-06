@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, MoreHorizontal, Trash2, Building, Search, Settings } from "lucide-react";
