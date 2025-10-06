@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Person } from '@/types';
+import { Person as BasePerson } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, generatePastelColor, formatInJakarta, formatPhoneNumberForApi } from '@/lib/utils';
@@ -12,41 +12,75 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import WhatsappIcon from '../icons/WhatsappIcon';
+import { useQuery } from '@tanstack/react-query';
+
+type Person = BasePerson & { company_id?: string | null };
 
 const PeopleKanbanCard = ({ person, dragHappened, onEdit, onDelete }: { person: Person, dragHappened: React.MutableRefObject<boolean>, onEdit: (person: Person) => void, onDelete: (person: Person) => void }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: person.id });
   const navigate = useNavigate();
-  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
-  const [companyAddress, setCompanyAddress] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchCompanyDetails = async () => {
-      if (person.company) {
+  const { data: companyProperties = [] } = useQuery({
+    queryKey: ['company_properties'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('company_properties').select('*');
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
+  const { data: company } = useQuery({
+    queryKey: ['company_details_for_kanban_card', person.id],
+    queryFn: async () => {
+      const companyId = person.company_id;
+      const companyName = person.company?.trim();
+
+      if (!companyId && !companyName) {
+        return null;
+      }
+
+      let companyData: { logo_url: string | null; address: string | null; custom_properties: any } | null = null;
+
+      if (companyId) {
         const { data, error } = await supabase
           .from('companies')
-          .select('logo_url, address')
-          .eq('name', person.company)
+          .select('logo_url, address, custom_properties')
+          .eq('id', companyId)
           .single();
-
-        if (error) {
-          console.error('Error fetching company details:', error.message);
-          setCompanyLogoUrl(null);
-          setCompanyAddress(null);
-        } else if (data) {
-          setCompanyLogoUrl(data.logo_url);
-          setCompanyAddress(data.address);
-        } else {
-          setCompanyLogoUrl(null);
-          setCompanyAddress(null);
+        if (!error && data) {
+          companyData = data;
         }
-      } else {
-        setCompanyLogoUrl(null);
-        setCompanyAddress(null);
       }
-    };
 
-    fetchCompanyDetails();
-  }, [person.company]);
+      if (!companyData && companyName) {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('logo_url, address, custom_properties')
+          .ilike('name', `%${companyName}%`)
+          .limit(1)
+          .maybeSingle();
+        if (!error && data) {
+          companyData = data;
+        }
+      }
+      return companyData;
+    },
+    enabled: !!person,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
+  const companyLogoUrl = useMemo(() => {
+    if (!company) return null;
+    const logoProperty = companyProperties.find(p => p.label === 'Logo Image');
+    if (logoProperty && company.custom_properties) {
+        const customLogo = company.custom_properties[logoProperty.name];
+        if (customLogo) return customLogo;
+    }
+    return company.logo_url;
+  }, [company, companyProperties]);
+
+  const companyAddress = company?.address;
   
   const style = {
     transform: CSS.Transform.toString(transform),
