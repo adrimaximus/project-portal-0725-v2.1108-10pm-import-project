@@ -90,24 +90,24 @@ const ProjectsToolbar = ({
       </div>
 
       {/* Mobile Action Buttons */}
-      <div className="sm:hidden flex items-center gap-2 w-full">
-        <Button onClick={onNewProjectClick} size="sm" className="flex-1">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          New Project
-        </Button>
+      <div className="sm:hidden flex items-center gap-2">
         {isTaskView && (
-          <Button size="sm" onClick={onNewTaskClick} className="flex-1">
-            <ListPlus className="h-4 w-4 mr-2" />
-            New Task
+          <Button size="icon" variant="outline" onClick={onNewTaskClick}>
+            <ListPlus className="h-4 w-4" />
+            <span className="sr-only">New Task</span>
           </Button>
         )}
+        <Button size="icon" variant="outline" onClick={onNewProjectClick}>
+          <PlusCircle className="h-4 w-4" />
+          <span className="sr-only">New Project</span>
+        </Button>
         {isGCalConnected ? (
-          <Button variant="ghost" size="icon" onClick={onImportClick}>
+          <Button variant="outline" size="icon" onClick={onImportClick}>
             <Download className="h-4 w-4" />
             <span className="sr-only">Import from Calendar</span>
           </Button>
         ) : (
-          <Button variant="ghost" size="icon" onClick={onRefreshClick}>
+          <Button variant="outline" size="icon" onClick={onRefreshClick}>
             <RefreshCw className="h-4 w-4" />
             <span className="sr-only">Refresh data</span>
           </Button>
