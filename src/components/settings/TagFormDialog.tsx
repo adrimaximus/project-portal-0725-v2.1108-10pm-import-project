@@ -18,6 +18,7 @@ interface TagFormDialogProps {
   tag: Tag | null;
   isSaving: boolean;
   groups: string[];
+  initialGroup?: string | null;
 }
 
 const tagSchema = z.object({
@@ -28,7 +29,7 @@ const tagSchema = z.object({
 
 type TagFormValues = z.infer<typeof tagSchema>;
 
-const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: TagFormDialogProps) => {
+const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups, initialGroup }: TagFormDialogProps) => {
   const isEditMode = !!tag;
 
   const form = useForm<TagFormValues>({
@@ -40,19 +41,24 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
       if (tag) {
         form.reset({ name: tag.name, color: tag.color, type: tag.type || 'general' });
       } else {
-        form.reset({ name: '', color: '#6b7280', type: 'general' });
+        form.reset({ name: '', color: '#6b7280', type: initialGroup || 'general' });
       }
     }
-  }, [tag, open, form]);
+  }, [tag, open, form, initialGroup]);
+
+  const title = isEditMode ? 'Edit Tag' : (initialGroup ? `Create First Tag for "${initialGroup}"` : 'Create New Tag');
+  const description = isEditMode 
+    ? "Tags help you organize and categorize items like projects and goals."
+    : (initialGroup 
+        ? "Now, create the first tag to officially create your new group."
+        : "Tags help you organize and categorize items like projects and goals.");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Tag' : 'Create New Tag'}</DialogTitle>
-          <DialogDescription>
-            Tags help you organize and categorize items like projects and goals.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSave as any)} className="space-y-4 py-4">
