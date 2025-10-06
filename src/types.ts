@@ -100,11 +100,6 @@ export interface Project {
   position?: number | null;
   payment_kanban_order?: number | null;
   invoice_number?: string | null;
-  po_number?: string | null;
-  paid_date?: string | null;
-  email_sending_date?: string | null;
-  hardcopy_sending_date?: string | null;
-  channel?: string | null;
   
   assignedTo: AssignedUser[];
   tags: Tag[];
