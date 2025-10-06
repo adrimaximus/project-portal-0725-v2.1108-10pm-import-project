@@ -100,21 +100,37 @@ const PersonProfilePage = () => {
 
         if (!companyId && !companyName) return null;
 
-        let query = supabase.from('companies').select('logo_url, custom_properties');
+        let companyData: { logo_url: string | null; custom_properties: any } | null = null;
+
         if (companyId) {
-            query = query.eq('id', companyId);
-        } else if (companyName) {
-            query = query.ilike('name', companyName);
-        } else {
-            return null;
+            const { data, error } = await supabase
+                .from('companies')
+                .select('logo_url, custom_properties')
+                .eq('id', companyId)
+                .single();
+            if (error && error.code !== 'PGRST116') {
+                console.warn(`Could not fetch company for person ${person.id}:`, error.message);
+            } else if (data) {
+                companyData = data;
+            }
         }
 
-        const { data, error } = await query.single();
-
-        if (error && error.code !== 'PGRST116') {
-            console.warn(`Could not fetch company logo for person ${person.id}:`, error.message);
+        if (!companyData && companyName) {
+            const { data, error } = await supabase
+                .from('companies')
+                .select('logo_url, custom_properties')
+                .ilike('name', `%${companyName}%`)
+                .limit(1)
+                .maybeSingle();
+            
+            if (error) {
+                console.warn(`Could not fetch company by name for person ${person.id}:`, error.message);
+            } else if (data) {
+                companyData = data;
+            }
         }
-        return data;
+        
+        return companyData;
     },
     enabled: !!person,
   });
