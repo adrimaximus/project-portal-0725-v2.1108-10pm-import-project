@@ -16,7 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import TagFormDialog from '@/components/settings/TagFormDialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import GroupFormDialog from '@/components/settings/GroupFormDialog';
+import RenameGroupDialog from '@/components/settings/RenameGroupDialog';
 
 const TagsSettingsPage = () => {
   const { user } = useAuth();
@@ -27,11 +27,9 @@ const TagsSettingsPage = () => {
   const [tagToDelete, setTagToDelete] = useState<Tag | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [groupToRename, setGroupToRename] = useState<string | null>(null);
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
-  const [isGroupFormOpen, setIsGroupFormOpen] = useState(false);
-  const [groupFormMode, setGroupFormMode] = useState<'create' | 'rename'>('create');
-  const [initialGroupForNewTag, setInitialGroupForNewTag] = useState<string | null>(null);
 
   const { data: tags = [], isLoading } = useQuery({
     queryKey: ['tags', user?.id],
@@ -94,23 +92,9 @@ const TagsSettingsPage = () => {
     setTagToDelete(null);
   };
 
-  const handleNewGroup = () => {
-    setGroupToRename(null);
-    setGroupFormMode('create');
-    setIsGroupFormOpen(true);
-  };
-
   const handleRenameGroup = (groupName: string) => {
     setGroupToRename(groupName);
-    setGroupFormMode('rename');
-    setIsGroupFormOpen(true);
-  };
-
-  const handleSaveNewGroup = async (groupName: string) => {
-    setIsGroupFormOpen(false);
-    setTagToEdit(null);
-    setInitialGroupForNewTag(groupName);
-    setIsFormOpen(true);
+    setIsRenameDialogOpen(true);
   };
 
   const handleSaveGroupName = async (newGroupName: string) => {
@@ -127,7 +111,7 @@ const TagsSettingsPage = () => {
     } else {
       toast.success(`Group "${groupToRename}" renamed to "${newGroupName}".`);
       await queryClient.invalidateQueries({ queryKey: ['tags', user.id] });
-      setIsGroupFormOpen(false);
+      setIsRenameDialogOpen(false);
     }
   };
 
@@ -147,13 +131,6 @@ const TagsSettingsPage = () => {
       queryClient.invalidateQueries({ queryKey: ['tags', user.id] });
     }
     setGroupToDelete(null);
-  };
-
-  const handleTagFormOpenChange = (open: boolean) => {
-    if (!open) {
-      setInitialGroupForNewTag(null);
-    }
-    setIsFormOpen(open);
   };
 
   return (
@@ -178,13 +155,9 @@ const TagsSettingsPage = () => {
               <TabsTrigger value="tags">Tags</TabsTrigger>
               <TabsTrigger value="groups">Groups</TabsTrigger>
             </TabsList>
-            {mainTab === 'tags' ? (
+            {mainTab === 'tags' && (
               <Button onClick={handleAddNew} size="sm">
                 <PlusCircle className="mr-2 h-4 w-4" /> New Tag
-              </Button>
-            ) : (
-              <Button onClick={handleNewGroup} size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" /> New Group
               </Button>
             )}
           </div>
@@ -258,7 +231,7 @@ const TagsSettingsPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Tag Groups</CardTitle>
-                <CardDescription>Organize your tags into groups. To create a new group, click 'New Group' and create the first tag for it.</CardDescription>
+                <CardDescription>Organize your tags into groups. Create a new group by creating or editing a tag.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -301,12 +274,11 @@ const TagsSettingsPage = () => {
 
       <TagFormDialog
         open={isFormOpen}
-        onOpenChange={handleTagFormOpenChange}
+        onOpenChange={setIsFormOpen}
         onSave={handleSave}
         tag={tagToEdit}
         isSaving={isSaving}
         groups={tagGroups}
-        initialGroup={initialGroupForNewTag}
       />
 
       <AlertDialog open={!!tagToDelete} onOpenChange={(open) => !open && setTagToDelete(null)}>
@@ -324,12 +296,11 @@ const TagsSettingsPage = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <GroupFormDialog
-        open={isGroupFormOpen}
-        onOpenChange={setIsGroupFormOpen}
-        mode={groupFormMode}
-        initialGroupName={groupToRename}
-        onSave={groupFormMode === 'create' ? handleSaveNewGroup : handleSaveGroupName}
+      <RenameGroupDialog
+        open={isRenameDialogOpen}
+        onOpenChange={setIsRenameDialogOpen}
+        groupName={groupToRename}
+        onSave={handleSaveGroupName}
       />
 
       <AlertDialog open={!!groupToDelete} onOpenChange={(open) => !open && setGroupToDelete(null)}>

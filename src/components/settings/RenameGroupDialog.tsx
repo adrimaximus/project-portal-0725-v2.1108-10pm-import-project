@@ -8,12 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
 
-interface GroupFormDialogProps {
+interface RenameGroupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (groupName: string) => Promise<void>;
-  initialGroupName: string | null;
-  mode: 'create' | 'rename';
+  groupName: string | null;
 }
 
 const groupSchema = z.object({
@@ -24,7 +23,7 @@ const groupSchema = z.object({
 
 type GroupFormValues = z.infer<typeof groupSchema>;
 
-const GroupFormDialog = ({ open, onOpenChange, onSave, initialGroupName, mode }: GroupFormDialogProps) => {
+const RenameGroupDialog = ({ open, onOpenChange, onSave, groupName }: RenameGroupDialogProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const form = useForm<GroupFormValues>({
     resolver: zodResolver(groupSchema),
@@ -33,12 +32,12 @@ const GroupFormDialog = ({ open, onOpenChange, onSave, initialGroupName, mode }:
 
   useEffect(() => {
     if (open) {
-      form.reset({ name: mode === 'rename' ? initialGroupName || '' : '' });
+      form.reset({ name: groupName || '' });
     }
-  }, [initialGroupName, open, form, mode]);
+  }, [groupName, open, form]);
 
   const handleFormSubmit = async (values: GroupFormValues) => {
-    if (mode === 'rename' && values.name === initialGroupName) {
+    if (values.name === groupName) {
         onOpenChange(false);
         return;
     }
@@ -47,17 +46,12 @@ const GroupFormDialog = ({ open, onOpenChange, onSave, initialGroupName, mode }:
     setIsSaving(false);
   };
 
-  const title = mode === 'create' ? 'Create New Group' : 'Rename Group';
-  const description = mode === 'create' 
-    ? "Enter a name for your new group. You'll then be prompted to create the first tag for it."
-    : "This will rename the group for all associated tags.";
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>Rename Group</DialogTitle>
+          <DialogDescription>This will rename the group for all associated tags.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
@@ -72,7 +66,7 @@ const GroupFormDialog = ({ open, onOpenChange, onSave, initialGroupName, mode }:
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === 'create' ? 'Continue' : 'Save'}
+                Save
               </Button>
             </DialogFooter>
           </form>
@@ -82,4 +76,4 @@ const GroupFormDialog = ({ open, onOpenChange, onSave, initialGroupName, mode }:
   );
 };
 
-export default GroupFormDialog;
+export default RenameGroupDialog;
