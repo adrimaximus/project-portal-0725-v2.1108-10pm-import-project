@@ -221,7 +221,7 @@ const Billing = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
           <p className="text-muted-foreground">
-            View your invoices and manage your payment details, derived from your projects.
+            View your invoices and manage your payment details, derived from your projects. A project will only appear here if it has a payment status, a budget, and a due date.
           </p>
         </div>
 
