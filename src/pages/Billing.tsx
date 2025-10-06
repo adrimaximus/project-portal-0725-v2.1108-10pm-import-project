@@ -208,17 +208,17 @@ const Billing = () => {
   const overdueInvoicesCount = filteredInvoices.filter(inv => inv.status === 'Overdue').length;
 
   const projectAdmins = useMemo(() => {
-    const adminMap = new Map<string, { admin: Member; projectCount: number; totalValue: number }>();
+    const adminMap = new Map<string, { admin: Member; invoiceCount: number; totalValue: number }>();
     invoices.forEach(invoice => {
         invoice.assignedMembers
             .filter(member => member.role === 'admin')
             .forEach(admin => {
                 if (adminMap.has(admin.id)) {
                     const existing = adminMap.get(admin.id)!;
-                    existing.projectCount++;
+                    existing.invoiceCount++;
                     existing.totalValue += invoice.amount;
                 } else {
-                    adminMap.set(admin.id, { admin, projectCount: 1, totalValue: invoice.amount });
+                    adminMap.set(admin.id, { admin, invoiceCount: 1, totalValue: invoice.amount });
                 }
             });
     });
@@ -226,7 +226,7 @@ const Billing = () => {
     const sortedAdmins = Array.from(adminMap.values());
 
     if (adminView === 'count') {
-        sortedAdmins.sort((a, b) => b.projectCount - a.projectCount);
+        sortedAdmins.sort((a, b) => b.invoiceCount - a.invoiceCount);
     } else {
         sortedAdmins.sort((a, b) => b.totalValue - a.totalValue);
     }
@@ -335,7 +335,7 @@ const Billing = () => {
                 <ToggleGroupItem value="value" aria-label="Show by total value">Value</ToggleGroupItem>
               </ToggleGroup>
               <div className="space-y-3 max-h-24 overflow-y-auto pr-2">
-                {projectAdmins.length > 0 ? projectAdmins.map(({ admin, projectCount, totalValue }) => (
+                {projectAdmins.length > 0 ? projectAdmins.map(({ admin, invoiceCount, totalValue }) => (
                   <div key={admin.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
@@ -346,7 +346,7 @@ const Billing = () => {
                     </div>
                     <span className="text-sm text-muted-foreground flex-shrink-0">
                       {adminView === 'count' 
-                        ? `${projectCount} project${projectCount > 1 ? 's' : ''}`
+                        ? `${invoiceCount} invoice${invoiceCount > 1 ? 's' : ''}`
                         : `Rp ${totalValue.toLocaleString('id-ID')}`
                       }
                     </span>
