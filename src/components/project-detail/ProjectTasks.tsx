@@ -52,7 +52,7 @@ const ProjectTasks = ({
 
   const handleGenerateTasks = async (isInitial: boolean) => {
     setIsGenerating(true);
-    const toastId = toast.loading(isInitial ? "Menghasilkan tugas awal..." : "Menghasilkan lebih banyak tugas...");
+    const toastId = toast.loading(isInitial ? "Generating initial tasks..." : "Generating more tasks...");
     try {
       const existingTaskTitles = project.tasks?.map(t => t.title) || [];
       const { data, error } = await supabase.functions.invoke('generate-tasks', {
@@ -71,13 +71,13 @@ const ProjectTasks = ({
         for (const title of data) {
           onTaskAdd(title);
         }
-        toast.success(`${data.length} tugas baru telah dibuat!`, { id: toastId });
+        toast.success(`${data.length} new tasks generated!`, { id: toastId });
       } else {
-        throw new Error("AI tidak mengembalikan daftar judul tugas yang valid.");
+        throw new Error("AI did not return a valid list of task titles.");
       }
     } catch (error: any) {
-      console.error("Gagal menghasilkan tugas:", error);
-      toast.error("Gagal menghasilkan tugas.", {
+      console.error("Failed to generate tasks:", error);
+      toast.error("Failed to generate tasks.", {
         id: toastId,
         description: error.message,
       });
@@ -98,14 +98,22 @@ const ProjectTasks = ({
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Tugas</h3>
         {tasks.length > 0 && (
-          <Button onClick={() => handleGenerateTasks(false)} disabled={isGenerating} size="sm" variant="outline">
-            {isGenerating ? (
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            Hasilkan Lebih Banyak
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={() => handleGenerateTasks(false)} disabled={isGenerating} size="icon" variant="outline">
+                  {isGenerating ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Generate more tasks with AI</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
       

@@ -29,17 +29,21 @@ serve(async (req) => {
     const serviceList = Array.isArray(services) && services.length > 0 ? services.join(', ') : 'Tidak ditentukan';
     const existingTasksList = Array.isArray(existingTasks) && existingTasks.length > 0 ? `Tugas-tugas berikut sudah ada, jadi jangan buat lagi: ${existingTasks.join(', ')}.` : '';
 
-    const prompt = `Anda adalah asisten manajemen proyek yang ahli dalam strategi aktivasi merek dan pelaksanaan acara. Berdasarkan detail proyek berikut, buatlah sebuah JSON array berisi 5 judul tugas yang ringkas, dapat ditindaklanjuti, relevan, dan belum dibuat. Gunakan Bahasa Indonesia.
+    const prompt = `Anda adalah asisten manajemen proyek yang ahli dalam strategi aktivasi merek dan pelaksanaan acara. Tugas utama Anda adalah menguraikan proyek menjadi tugas-tugas yang dapat ditindaklanjuti.
+
+      Fokus utama pada **Judul Proyek** dan **Deskripsi Proyek** untuk memahami tujuan inti. Gunakan detail lain sebagai konteks tambahan.
 
       **Detail Proyek:**
-      - **Judul:** ${projectName}
-      - **Lokasi:** ${venue || 'lokasi tidak ditentukan'}
-      - **Layanan:** ${serviceList}
-      - **Gambaran Umum:** ${description || 'Tidak ada gambaran umum.'}
+      - **Judul Proyek (Fokus Utama):** ${projectName}
+      - **Deskripsi Proyek (Fokus Utama):** ${description || 'Tidak ada gambaran umum.'}
+      - **Lokasi Acara:** ${venue || 'tidak ditentukan'}
+      - **Layanan yang Disediakan:** ${serviceList}
 
       ${existingTasksList}
 
-      Hanya kembalikan JSON array yang valid berisi 5 string unik, di mana setiap string adalah judul tugas baru dalam Bahasa Indonesia. Contoh: ["Siapkan materi promosi", "Koordinasi dengan vendor sound system", "Buat jadwal acara", "Rancang tata letak booth", "Lakukan gladi bersih"]. Jangan sertakan teks lain, markdown, atau penjelasan.`;
+      Berdasarkan informasi di atas, buatlah sebuah JSON array berisi 5 judul tugas baru dalam Bahasa Indonesia. Tugas harus sangat spesifik untuk proyek ini, ringkas, dan dapat ditindaklanjuti.
+
+      Hanya kembalikan JSON array yang valid berisi 5 string unik. Contoh: ["Siapkan materi promosi", "Koordinasi dengan vendor sound system", "Buat jadwal acara", "Rancang tata letak booth", "Lakukan gladi bersih"]. Jangan sertakan teks lain, markdown, atau penjelasan.`;
 
     const msg = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",
