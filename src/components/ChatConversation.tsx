@@ -170,7 +170,9 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                           {message.text && (
                             <div className={cn(
                               "text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none",
-                              isCurrentUser ? "prose-p:text-primary-foreground" : "",
+                              isCurrentUser
+                                ? "prose-p:text-primary-foreground prose-a:text-white prose-a:font-medium"
+                                : "prose-a:text-blue-600 dark:prose-a:text-blue-400",
                               "[&_p]:my-0"
                             )}>
                               <ReactMarkdown
@@ -178,9 +180,9 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                   a: ({ node, ...props }) => {
                                     const href = props.href || '';
                                     if (href.startsWith('/')) {
-                                      return <Link to={href} {...props} className="text-inherit hover:text-inherit font-medium underline" />;
+                                      return <Link to={href} {...props} />;
                                     }
-                                    return <a {...props} target="_blank" rel="noopener noreferrer" className="text-inherit hover:text-inherit font-medium underline" />;
+                                    return <a {...props} target="_blank" rel="noopener noreferrer" />;
                                   }
                                 }}
                               >
