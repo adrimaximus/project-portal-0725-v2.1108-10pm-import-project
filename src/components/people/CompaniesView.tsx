@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, PlusCircle, Edit, Trash2, Building, Loader2, Settings } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Edit, Trash2, Building, Loader2, Settings, Search } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -11,11 +11,13 @@ import CompanyFormDialog from './CompanyFormDialog';
 import { Company, CompanyProperty } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
+import { Input } from '@/components/ui/input';
 
 const CompaniesView = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
     const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
     const queryClient = useQueryClient();
     const navigate = useNavigate();
 
@@ -38,6 +40,12 @@ const CompaniesView = () => {
     });
 
     const isLoading = isLoadingCompanies || isLoadingProperties;
+
+    const filteredCompanies = companies.filter(company =>
+        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (company.legal_name && company.legal_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (company.address && company.address.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
     const handleAddNew = () => {
         setCompanyToEdit(null);
@@ -94,17 +102,23 @@ const CompaniesView = () => {
 
     return (
         <div className="h-full flex flex-col space-y-4">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h2 className="text-2xl font-bold">Companies</h2>
-                    <p className="text-muted-foreground">Manage all companies in your network.</p>
+            <div className="flex justify-between items-center gap-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search companies by name, legal name, or address..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                    />
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" onClick={() => navigate('/settings/company-properties')}>
                         <Settings className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" onClick={handleAddNew}>
-                        <PlusCircle className="h-4 w-4" />
+                    <Button onClick={handleAddNew}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Company
                     </Button>
                 </div>
             </div>
@@ -125,10 +139,10 @@ const CompaniesView = () => {
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={totalColumns} className="text-center h-24"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></TableCell></TableRow>
-                        ) : companies.length === 0 ? (
-                            <TableRow><TableCell colSpan={totalColumns} className="text-center h-24">No companies found. Add one to get started.</TableCell></TableRow>
+                        ) : filteredCompanies.length === 0 ? (
+                            <TableRow><TableCell colSpan={totalColumns} className="text-center h-24">{searchTerm ? 'No companies match your search.' : 'No companies found. Add one to get started.'}</TableCell></TableRow>
                         ) : (
-                            companies.map(company => {
+                            filteredCompanies.map(company => {
                                 const customLogoUrl = findImageUrlInCustomProps(company.custom_properties);
                                 const logoUrl = company.logo_url || customLogoUrl;
                                 return (
