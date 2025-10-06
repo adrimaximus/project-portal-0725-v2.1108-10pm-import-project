@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import TagFormDialog from '@/components/settings/TagFormDialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import RenameGroupDialog from '@/components/settings/RenameGroupDialog';
 
 const TagsSettingsPage = () => {
   const { user } = useAuth();
@@ -26,6 +27,8 @@ const TagsSettingsPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('general');
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [groupToRename, setGroupToRename] = useState<string | null>(null);
 
   const { data: tags = [], isLoading } = useQuery({
     queryKey: ['tags', user?.id],
@@ -84,6 +87,30 @@ const TagsSettingsPage = () => {
     setTagToDelete(null);
   };
 
+  const handleRenameGroup = (groupName: string) => {
+    setGroupToRename(groupName);
+    setIsRenameDialogOpen(true);
+  };
+
+  const handleSaveGroupName = async (newGroupName: string) => {
+    if (!user || !groupToRename) return;
+
+    const { error } = await supabase
+      .from('tags')
+      .update({ type: newGroupName.toLowerCase() })
+      .eq('user_id', user.id)
+      .eq('type', groupToRename);
+
+    if (error) {
+      toast.error(`Failed to rename group: ${error.message}`);
+    } else {
+      toast.success(`Group "${groupToRename}" renamed to "${newGroupName}".`);
+      await queryClient.invalidateQueries({ queryKey: ['tags', user.id] });
+      setActiveTab(newGroupName.toLowerCase());
+      setIsRenameDialogOpen(false);
+    }
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -117,7 +144,14 @@ const TagsSettingsPage = () => {
           <CardHeader>
             <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
               <div>
-                <CardTitle className="capitalize">{activeTab} Tags</CardTitle>
+                <CardTitle className="capitalize flex items-center gap-2">
+                  {activeTab} Tags
+                  {activeTab !== 'general' && !isLoading && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRenameGroup(activeTab)}>
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  )}
+                </CardTitle>
                 <CardDescription>These tags are available for you to use across the application.</CardDescription>
               </div>
               <div className="relative w-full md:max-w-xs">
@@ -197,6 +231,13 @@ const TagsSettingsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <RenameGroupDialog
+        open={isRenameDialogOpen}
+        onOpenChange={setIsRenameDialogOpen}
+        groupName={groupToRename}
+        onSave={handleSaveGroupName}
+      />
     </PortalLayout>
   );
 };
