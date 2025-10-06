@@ -107,8 +107,8 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
             <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('due_date')}>
               Due Date
             </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('created_at')}>
-              Created
+            <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestSort('updated_at')}>
+              Last Updated
             </TableHead>
             <TableHead>Assignees</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -165,9 +165,9 @@ const TasksView = ({ tasks, isLoading, onEdit, onDelete, onToggleTaskCompletion,
                   ) : <span className="text-muted-foreground text-xs">No due date</span>}
                 </TableCell>
                 <TableCell>
-                  {task.created_at ? (
+                  {task.updated_at ? (
                     <span className="text-muted-foreground text-xs">
-                      {format(new Date(task.created_at), "MMM d, yyyy")}
+                      {format(new Date(task.updated_at), "MMM d, yyyy")}
                     </span>
                   ) : <span className="text-muted-foreground text-xs">-</span>}
                 </TableCell>

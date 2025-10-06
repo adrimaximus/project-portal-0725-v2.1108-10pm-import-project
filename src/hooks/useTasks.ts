@@ -55,6 +55,7 @@ export function useTasks(options: UseTasksOptions = {}) {
       assignees: task.assignees,
       created_by: task.created_by,
       created_at: task.created_at,
+      updated_at: task.updated_at,
       status: task.status,
       tags: task.tags,
       originTicketId: task.origin_ticket_id,

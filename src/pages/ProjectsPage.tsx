@@ -69,7 +69,7 @@ const ProjectsPage = () => {
   } = useProjectFilters(projects);
 
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
-  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'due_date', direction: 'asc' });
+  const [taskSortConfig, setTaskSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
   const [hideCompletedTasks, setHideCompletedTasks] = useState(() => localStorage.getItem('hideCompletedTasks') === 'true');
 
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);

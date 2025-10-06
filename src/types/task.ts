@@ -55,6 +55,7 @@ export interface Task {
     assignees: TaskAssignee[];
     created_by: TaskAssignee | null;
     created_at: string;
+    updated_at: string;
     tags: Tag[];
     originTicketId?: string;
     attachment_url?: string;
