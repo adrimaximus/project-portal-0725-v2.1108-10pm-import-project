@@ -29,9 +29,12 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({
   const [showPredictions, setShowPredictions] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
+
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
+    googleMapsApiKey,
     libraries,
+    preventGoogleFontsLoading: true,
   });
 
   useEffect(() => {
@@ -81,6 +84,10 @@ const AddressAutocompleteInput: React.FC<AddressAutocompleteInputProps> = ({
       onChange(prediction.description);
     }
   };
+
+  if (!googleMapsApiKey) {
+    return <Input type="text" disabled value="Google Maps API Key is missing" className={className} />;
+  }
 
   if (loadError) {
     return <Input type="text" disabled value="Error loading Google Maps" className={className} />;
