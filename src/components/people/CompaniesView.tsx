@@ -1,86 +1,222 @@
-import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building } from 'lucide-react';
-import { generatePastelColor } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { MoreHorizontal, PlusCircle, Edit, Trash2, Building, Loader2, Settings } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import CompanyFormDialog from './CompanyFormDialog';
+import { Company, CompanyProperty } from '@/types';
+import { useNavigate } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
 
-type Company = {
-  id: string;
-  name: string;
-  address: string | null;
-  logo_url: string | null;
-};
+const CompaniesView = () => {
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
+    const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+    const queryClient = useQueryClient();
+    const navigate = useNavigate();
 
-interface CompaniesViewProps {
-  searchTerm: string;
-}
+    const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Company[]>({
+        queryKey: ['companies'],
+        queryFn: async () => {
+            const { data, error } = await supabase.from('companies').select('*').order('name', { ascending: true });
+            if (error) throw error;
+            return data;
+        }
+    });
 
-const CompaniesView: React.FC<CompaniesViewProps> = ({ searchTerm }) => {
-  const { data: companies = [], isLoading } = useQuery<Company[]>({
-    queryKey: ['companies'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, name, address, logo_url');
-      if (error) throw error;
-      return data;
-    },
-  });
+    const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
+        queryKey: ['company_properties'],
+        queryFn: async () => {
+            const { data, error } = await supabase.from('company_properties').select('*').order('label');
+            if (error) throw error;
+            return data;
+        },
+    });
 
-  const filteredCompanies = useMemo(() => {
-    if (!searchTerm) {
-      return companies;
-    }
-    return companies.filter(company =>
-      company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (company.address && company.address.toLowerCase().includes(searchTerm.toLowerCase()))
+    const isLoading = isLoadingCompanies || isLoadingProperties;
+
+    const handleAddNew = () => {
+        setCompanyToEdit(null);
+        setIsFormOpen(true);
+    };
+
+    const handleEdit = (company: Company) => {
+        setCompanyToEdit(company);
+        setIsFormOpen(true);
+    };
+
+    const handleDelete = async () => {
+        if (!companyToDelete) return;
+
+        const { error } = await supabase.from('companies').delete().eq('id', companyToDelete.id);
+
+        if (error) {
+            toast.error(`Failed to delete ${companyToDelete.name}.`, { description: error.message });
+        } else {
+            toast.success(`${companyToDelete.name} has been deleted.`);
+            queryClient.invalidateQueries({ queryKey: ['companies'] });
+        }
+        setCompanyToDelete(null);
+    };
+
+    const findImageUrlInCustomProps = (props: Record<string, any> | null | undefined): string | null => {
+        if (!props) return null;
+        for (const key in props) {
+            const value = props[key];
+            if (typeof value === 'string' && value.includes('supabase.co') && value.includes('image_company')) {
+                return value;
+            }
+        }
+        return null;
+    };
+
+    const renderCustomPropertyValue = (value: any, type: string) => {
+        if (value === null || typeof value === 'undefined' || value === '') return '-';
+        if (type === 'image' && typeof value === 'string' && value.startsWith('http')) {
+            return <img src={value} alt="Company property" className="h-10 w-10 object-contain rounded-md bg-muted p-1" />;
+        }
+        if (type === 'date' && typeof value === 'string') {
+            try {
+                return formatDistanceToNow(new Date(value), { addSuffix: true });
+            } catch (e) {
+                return value;
+            }
+        }
+        return String(value);
+    };
+
+    const visibleProperties = properties.filter(prop => prop.type !== 'image');
+    const totalColumns = 5 + visibleProperties.length;
+
+    return (
+        <div className="h-full flex flex-col space-y-4">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-bold">Companies</h2>
+                    <p className="text-muted-foreground">Manage all companies in your network.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" onClick={() => navigate('/settings/company-properties')}>
+                        <Settings className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" onClick={handleAddNew}>
+                        <PlusCircle className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+            <div className="border rounded-lg overflow-auto flex-grow">
+                <Table className="min-w-[1200px]">
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="min-w-[250px] sticky left-0 bg-card">Company</TableHead>
+                            <TableHead className="min-w-[200px]">Legal Name</TableHead>
+                            <TableHead className="min-w-[300px]">Address</TableHead>
+                            {visibleProperties.map(prop => (
+                                <TableHead key={prop.id} className="min-w-[200px]">{prop.label}</TableHead>
+                            ))}
+                            <TableHead className="min-w-[150px]">Updated At</TableHead>
+                            <TableHead className="text-right sticky right-0 bg-card">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            <TableRow><TableCell colSpan={totalColumns} className="text-center h-24"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></TableCell></TableRow>
+                        ) : companies.length === 0 ? (
+                            <TableRow><TableCell colSpan={totalColumns} className="text-center h-24">No companies found. Add one to get started.</TableCell></TableRow>
+                        ) : (
+                            companies.map(company => {
+                                const customLogoUrl = findImageUrlInCustomProps(company.custom_properties);
+                                const logoUrl = company.logo_url || customLogoUrl;
+                                return (
+                                    <TableRow key={company.id}>
+                                        <TableCell className="sticky left-0 bg-card">
+                                            <div className="flex items-center gap-3">
+                                                {logoUrl ? (
+                                                    <img src={logoUrl} alt={company.name} className="h-10 w-10 object-contain rounded-md bg-muted p-1" />
+                                                ) : (
+                                                    <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
+                                                        <Building className="h-5 w-5 text-muted-foreground" />
+                                                    </div>
+                                                )}
+                                                <span className="font-medium">{company.name}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{company.legal_name || '-'}</TableCell>
+                                        <TableCell>
+                                            {(() => {
+                                                if (!company.address) return '-';
+                                                let displayAddress = company.address;
+                                                let mapsQuery = company.address;
+                                                try {
+                                                    const parsed = JSON.parse(company.address);
+                                                    if (parsed.name && parsed.address) {
+                                                        displayAddress = `${parsed.name} - ${parsed.address}`;
+                                                        mapsQuery = `${parsed.name}, ${parsed.address}`;
+                                                    }
+                                                } catch (e) {}
+                                                return (
+                                                    <a
+                                                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapsQuery)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="hover:underline"
+                                                    >
+                                                        {displayAddress}
+                                                    </a>
+                                                );
+                                            })()}
+                                        </TableCell>
+                                        {visibleProperties.map(prop => (
+                                            <TableCell key={prop.id}>
+                                                {renderCustomPropertyValue(company.custom_properties?.[prop.name], prop.type)}
+                                            </TableCell>
+                                        ))}
+                                        <TableCell>{formatDistanceToNow(new Date(company.updated_at), { addSuffix: true })}</TableCell>
+                                        <TableCell className="text-right sticky right-0 bg-card">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onSelect={() => handleEdit(company)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => setCompanyToDelete(company)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+
+            <CompanyFormDialog
+                open={isFormOpen}
+                onOpenChange={setIsFormOpen}
+                company={companyToEdit}
+            />
+
+            <AlertDialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete {companyToDelete?.name}. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     );
-  }, [companies, searchTerm]);
-
-  return (
-    <div className="border rounded-lg overflow-auto h-full">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Company</TableHead>
-            <TableHead>Address</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            <TableRow>
-              <TableCell colSpan={2} className="text-center h-24">Loading companies...</TableCell>
-            </TableRow>
-          ) : filteredCompanies.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={2} className="text-center h-24">No companies found.</TableCell>
-            </TableRow>
-          ) : (
-            filteredCompanies.map(company => (
-              <TableRow key={company.id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={company.logo_url || undefined} />
-                      <AvatarFallback style={generatePastelColor(company.id)}>
-                        <Building className="h-5 w-5 text-white" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{company.name}</p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>{company.address || '-'}</TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  );
 };
 
 export default CompaniesView;
