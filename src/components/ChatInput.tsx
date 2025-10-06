@@ -1,78 +1,164 @@
-import { useState, useRef, useEffect } from "react";
-import { Smile, Send } from "lucide-react";
-import data from '@emoji-mart/data'
-import Picker from '@emoji-mart/react'
-import { Textarea } from "./ui/textarea";
+import { useRef, useState, forwardRef } from "react";
+import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
+import { Paperclip, Send, X, Loader2, UploadCloud } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Message } from "@/types";
+import VoiceMessageRecorder from "./VoiceMessageRecorder";
+import MentionInput from "./MentionInput";
+import { useChatContext } from "@/contexts/ChatContext";
 
 interface ChatInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  onSend: () => void;
+  onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
+  onTyping?: () => void;
   isSending: boolean;
+  conversationId: string;
+  replyTo: Message | null;
+  onCancelReply: () => void;
 }
 
-export default function ChatInput({ value, onChange, onSend, isSending }: ChatInputProps) {
-  const [showPicker, setShowPicker] = useState(false)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
-  const pickerRef = useRef<HTMLDivElement>(null);
+export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ 
+  onSendMessage, 
+  onTyping, 
+  isSending, 
+  conversationId,
+  replyTo,
+  onCancelReply,
+}, ref) => {
+  const [text, setText] = useState("");
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const lastTypingSentAtRef = useRef<number>(0);
+  const { selectedConversation } = useChatContext();
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
-        setShowPicker(false);
+  const mentionableUsers = selectedConversation?.members.map(m => ({
+    id: m.id,
+    display: m.name,
+    avatar_url: m.avatar_url,
+    initials: m.initials,
+  })) || [];
+
+  const onDrop = (acceptedFiles: File[]) => {
+    if (acceptedFiles && acceptedFiles.length > 0) {
+      setAttachmentFile(acceptedFiles[0]);
+    }
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+    multiple: false,
+  });
+
+  const triggerTyping = () => {
+    if (onTyping) {
+      const now = Date.now();
+      if (now - lastTypingSentAtRef.current > 800) {
+        lastTypingSentAtRef.current = now;
+        onTyping();
       }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [pickerRef]);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!text.trim() && !attachmentFile) return;
+    onSendMessage(text, attachmentFile, replyTo?.id);
+    setText("");
+    setAttachmentFile(null);
+    onCancelReply();
+  };
+
+  const handleSendVoiceMessage = (file: File) => {
+    onSendMessage("", file, replyTo?.id);
+    onCancelReply();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAttachmentFile(file);
+    }
+  };
+
+  const handleTextChange = (newText: string) => {
+    setText(newText);
+    triggerTyping();
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      onSend();
+      handleSend();
+    } else {
+      triggerTyping();
     }
   };
 
   return (
-    <div className="relative flex items-end gap-2 p-4 border-t bg-background">
-      <div className="relative flex-1">
-        <Textarea
-          ref={inputRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
-          className="resize-none pr-10"
-          rows={1}
-        />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setShowPicker((v) => !v)}
-          className="absolute right-1 bottom-1 h-8 w-8"
-        >
-          <Smile className="w-5 h-5" />
-        </Button>
-        {showPicker && (
-          <div ref={pickerRef} className="absolute bottom-full right-0 mb-2 z-50">
-            <Picker
-              data={data}
-              onEmojiSelect={(emoji: any) => {
-                onChange(value + emoji.native)
-                inputRef.current?.focus()
-              }}
-              theme="light"
-              previewPosition="none"
-            />
+    <div {...getRootProps()} className="border-t p-4 flex-shrink-0 relative">
+      <input {...getInputProps()} />
+      
+      {isDragActive && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 border-2 border-dashed border-primary rounded-lg m-4">
+          <UploadCloud className="h-10 w-10 text-primary" />
+          <p className="mt-2 text-lg font-medium text-primary">Drop file to attach</p>
+        </div>
+      )}
+
+      {replyTo && (
+        <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-center">
+          <div className="text-sm overflow-hidden">
+            <p className="font-semibold text-primary">Replying to {replyTo.sender.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{replyTo.text}</p>
           </div>
+          <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-7 w-7">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      <div className="flex items-end gap-2">
+        <div className="relative flex-1">
+          <MentionInput
+            ref={ref}
+            placeholder="Type a message..."
+            value={text}
+            onChange={handleTextChange}
+            onKeyDown={handleKeyDown}
+            suggestions={mentionableUsers}
+            disabled={isSending}
+            className="pr-12"
+          />
+          <Button variant="ghost" size="icon" asChild disabled={isSending} className="absolute bottom-2 right-2">
+            <label htmlFor={`file-upload-${conversationId}`} className="cursor-pointer">
+              <Paperclip className="h-5 w-5" />
+              <input 
+                id={`file-upload-${conversationId}`} 
+                type="file" 
+                className="sr-only" 
+                onChange={handleFileChange}
+                accept="image/*,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              />
+            </label>
+          </Button>
+        </div>
+        {text.trim() || attachmentFile ? (
+          <Button size="icon" onClick={handleSend} disabled={isSending}>
+            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+          </Button>
+        ) : (
+          <VoiceMessageRecorder onSend={handleSendVoiceMessage} disabled={isSending} />
         )}
       </div>
-      <Button onClick={onSend} disabled={isSending || !value.trim()} size="icon" className="flex-shrink-0">
-        <Send className="w-5 h-5" />
-      </Button>
+      {attachmentFile && (
+        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground bg-muted p-2 rounded-md">
+          <Paperclip className="h-4 w-4" />
+          <span>{attachmentFile.name}</span>
+          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => setAttachmentFile(null)} disabled={isSending}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
-  )
-}
+  );
+});
