@@ -155,9 +155,13 @@ const TagsSettingsPage = () => {
               <TabsTrigger value="tags">Tags</TabsTrigger>
               <TabsTrigger value="groups">Groups</TabsTrigger>
             </TabsList>
-            {mainTab === 'tags' && (
+            {mainTab === 'tags' ? (
               <Button onClick={handleAddNew} size="sm">
                 <PlusCircle className="mr-2 h-4 w-4" /> New Tag
+              </Button>
+            ) : (
+              <Button onClick={handleAddNew} size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" /> New Group
               </Button>
             )}
           </div>
@@ -231,7 +235,7 @@ const TagsSettingsPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Tag Groups</CardTitle>
-                <CardDescription>Organize your tags into groups for better management. Create a new group by editing a tag.</CardDescription>
+                <CardDescription>Organize your tags into groups. To create a new group, click 'New Group' and create the first tag for it.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
