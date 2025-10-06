@@ -37,13 +37,14 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const { selectedConversation } = useChatContext();
   const { theme } = useTheme();
 
+  const [isProjectMentionActive, setIsProjectMentionActive] = useState(false);
   const [projectSearchTerm, setProjectSearchTerm] = useState('');
   const [debouncedProjectSearchTerm, setDebouncedProjectSearchTerm] = useState('');
 
   const { data: projectSuggestionsData } = useQuery({
     queryKey: ['project-search', debouncedProjectSearchTerm],
     queryFn: () => chatApi.searchProjects(debouncedProjectSearchTerm),
-    enabled: !!debouncedProjectSearchTerm,
+    enabled: isProjectMentionActive,
   });
 
   useEffect(() => {
@@ -58,8 +59,10 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
 
   const handleSearchTermChange = (trigger: '@' | '/' | null, term: string) => {
     if (trigger === '/') {
+      setIsProjectMentionActive(true);
       setProjectSearchTerm(term);
     } else {
+      setIsProjectMentionActive(false);
       setProjectSearchTerm('');
     }
   };
