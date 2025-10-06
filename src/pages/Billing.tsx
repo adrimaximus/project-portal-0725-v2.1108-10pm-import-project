@@ -8,11 +8,14 @@ import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project } from "@/types";
 import { cn, getPaymentStatusStyles } from "@/lib/utils";
 import { format, addDays, isPast } from "date-fns";
-import { DollarSign, Clock, AlertTriangle, Download, Loader2, MoreVertical, Edit, ArrowUp, ArrowDown } from "lucide-react";
+import { DollarSign, Clock, AlertTriangle, Download, Loader2, MoreVertical, Edit, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
 import { useProjectMutations } from "@/hooks/useProjectMutations";
+import { Input } from "@/components/ui/input";
+import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
+import { DateRange } from "react-day-picker";
 
 type Invoice = {
   id: string;
@@ -30,6 +33,8 @@ const Billing = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [sortColumn, setSortColumn] = useState<keyof Invoice>('dueDate');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   
   const { updateProject } = useProjectMutations(selectedInvoice?.projectId || '');
 
@@ -58,6 +63,22 @@ const Billing = () => {
     })
     .filter((invoice): invoice is Invoice => invoice !== null);
 
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(invoice => {
+      const searchTermLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        invoice.id.toLowerCase().includes(searchTermLower) ||
+        invoice.projectName.toLowerCase().includes(searchTermLower);
+
+      const matchesDate =
+        !dateRange ||
+        (!dateRange.from && !dateRange.to) ||
+        (dateRange.from && invoice.dueDate >= dateRange.from && (!dateRange.to || invoice.dueDate <= dateRange.to));
+
+      return matchesSearch && matchesDate;
+    });
+  }, [invoices, searchTerm, dateRange]);
+
   const handleSort = (column: keyof Invoice) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -68,9 +89,9 @@ const Billing = () => {
   };
 
   const sortedInvoices = useMemo(() => {
-    if (!sortColumn) return invoices;
+    if (!sortColumn) return filteredInvoices;
 
-    return [...invoices].sort((a, b) => {
+    return [...filteredInvoices].sort((a, b) => {
       const aValue = a[sortColumn];
       const bValue = b[sortColumn];
 
@@ -82,17 +103,17 @@ const Billing = () => {
       }
       return 0;
     });
-  }, [invoices, sortColumn, sortDirection]);
+  }, [filteredInvoices, sortColumn, sortDirection]);
 
-  const outstandingBalance = invoices
+  const outstandingBalance = filteredInvoices
     .filter(inv => ['Due', 'Overdue', 'Unpaid', 'Pending', 'In Process'].includes(inv.status))
     .reduce((sum, inv) => sum + inv.amount, 0);
 
-  const nextDueDate = invoices
+  const nextDueDate = filteredInvoices
     .filter(inv => ['Due', 'Unpaid', 'Pending', 'In Process'].includes(inv.status))
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]?.dueDate;
 
-  const overdueInvoicesCount = invoices.filter(inv => inv.status === 'Overdue').length;
+  const overdueInvoicesCount = filteredInvoices.filter(inv => inv.status === 'Overdue').length;
 
   const handleEdit = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -130,6 +151,19 @@ const Billing = () => {
           <p className="text-muted-foreground">
             View your invoices and manage your payment details, derived from your projects.
           </p>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by invoice # or project name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
