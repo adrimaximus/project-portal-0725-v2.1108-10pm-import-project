@@ -65,7 +65,7 @@ const ProjectOverviewTab = ({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader><CardTitle>Description & Brief</CardTitle></Header>
+        <CardHeader><CardTitle>Description & Brief</CardTitle></CardHeader>
         <CardContent>
           <ProjectDescription
             description={project.description}
@@ -74,19 +74,14 @@ const ProjectOverviewTab = ({
             aiOptions={{
               onGenerate: handleGenerateBrief,
               isGenerating: isGenerating,
-              prompt: 'Generate with AI from project details',
-              title: project.name,
-              startDate: project.start_date,
-              dueDate: project.due_date,
-              venue: project.venue,
-              services: project.services,
+              prompt: 'Generate with AI from project details'
             }}
           />
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Project Tags</CardTitle></Header>
+        <CardHeader><CardTitle>Project Tags</CardTitle></CardHeader>
         <CardContent>
           <ProjectTags
             project={project}
@@ -97,7 +92,7 @@ const ProjectOverviewTab = ({
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Shared Files</CardTitle></Header>
+        <CardHeader><CardTitle>Shared Files</CardTitle></CardHeader>
         <CardContent>
           <ProjectBrief
             files={project.briefFiles || []}
