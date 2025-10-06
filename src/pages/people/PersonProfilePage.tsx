@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
 import { usePerson } from '@/hooks/usePerson';
@@ -82,6 +82,15 @@ const PersonProfilePage = () => {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
 
+  const { data: companyProperties = [] } = useQuery({
+    queryKey: ['company_properties'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('company_properties').select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const { data: company } = useQuery({
     queryKey: ['company_details_for_person', person?.id],
     queryFn: async () => {
@@ -91,7 +100,7 @@ const PersonProfilePage = () => {
 
         if (!companyId && !companyName) return null;
 
-        let query = supabase.from('companies').select('logo_url');
+        let query = supabase.from('companies').select('logo_url, custom_properties');
         if (companyId) {
             query = query.eq('id', companyId);
         } else if (companyName) {
@@ -110,7 +119,15 @@ const PersonProfilePage = () => {
     enabled: !!person,
   });
 
-  const companyLogoUrl = company?.logo_url;
+  const companyLogoUrl = useMemo(() => {
+    if (!company) return null;
+    const logoProperty = companyProperties.find(p => p.label === 'Logo Image');
+    if (logoProperty && company.custom_properties) {
+        const customLogo = company.custom_properties[logoProperty.name];
+        if (customLogo) return customLogo;
+    }
+    return company.logo_url;
+  }, [company, companyProperties]);
 
   const { data: customProperties = [] } = useQuery({
     queryKey: ['contact_properties'],
