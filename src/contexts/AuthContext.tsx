@@ -87,20 +87,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(initialSession);
       await fetchUserProfile(initialSession);
       setLoading(false);
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-        if (isImpersonating) return;
-        
-        setLoading(true);
-        setSession(newSession);
-        await fetchUserProfile(newSession);
-        setLoading(false);
-      });
-
-      return () => {
-        subscription?.unsubscribe();
-      };
     });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (isImpersonating) return;
+      
+      setSession(newSession);
+      await fetchUserProfile(newSession);
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, [fetchUserProfile, isImpersonating]);
 
   useEffect(() => {
