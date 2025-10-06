@@ -22,9 +22,11 @@ type Invoice = {
   projectId: string; // slug
   projectName: string;
   amount: number;
-  dueDate: Date;
+  dueDate: Date; // This is the payment due date
   status: PaymentStatus;
   rawProjectId: string; // original uuid
+  projectStartDate: Date | null;
+  projectEndDate: Date | null;
 };
 
 const Billing = () => {
@@ -59,6 +61,8 @@ const Billing = () => {
         dueDate: dueDate,
         status: finalStatus as PaymentStatus,
         rawProjectId: project.id,
+        projectStartDate: project.start_date ? new Date(project.start_date) : null,
+        projectEndDate: project.due_date ? new Date(project.due_date) : null,
       };
     })
     .filter((invoice): invoice is Invoice => invoice !== null);
@@ -70,10 +74,24 @@ const Billing = () => {
         invoice.id.toLowerCase().includes(searchTermLower) ||
         invoice.projectName.toLowerCase().includes(searchTermLower);
 
-      const matchesDate =
-        !dateRange ||
-        (!dateRange.from && !dateRange.to) ||
-        (dateRange.from && invoice.dueDate >= dateRange.from && (!dateRange.to || invoice.dueDate <= dateRange.to));
+      const matchesDate = (() => {
+        if (!dateRange || !dateRange.from) {
+          return true; // No date filter applied
+        }
+
+        if (!invoice.projectStartDate) {
+          return false; // Invoice's project has no start date, cannot match a date filter
+        }
+
+        const filterStart = dateRange.from;
+        const filterEnd = dateRange.to || dateRange.from; // Handle single day selection
+
+        const projectStart = invoice.projectStartDate;
+        const projectEnd = invoice.projectEndDate || projectStart;
+
+        // Overlap condition: (StartA <= EndB) and (EndA >= StartB)
+        return projectStart <= filterEnd && projectEnd >= filterStart;
+      })();
 
       return matchesSearch && matchesDate;
     });
