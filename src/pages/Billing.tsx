@@ -27,6 +27,7 @@ type Member = {
   avatar_url: string;
   initials: string;
   email: string;
+  role: 'admin' | 'member';
 };
 
 type Owner = {
@@ -319,13 +320,14 @@ const Billing = () => {
                       </Button>
                     </TableHead>
                     <TableHead>Owner</TableHead>
+                    <TableHead>Project Admins</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedInvoices.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center">
+                      <TableCell colSpan={10} className="h-24 text-center">
                         No invoices found.
                       </TableCell>
                     </TableRow>
@@ -374,6 +376,27 @@ const Billing = () => {
                               </Tooltip>
                             </TooltipProvider>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex -space-x-2">
+                            {invoice.assignedMembers
+                              .filter(member => member.role === 'admin')
+                              .map(admin => (
+                                <TooltipProvider key={admin.id}>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Avatar className="h-8 w-8 border-2 border-background">
+                                        <AvatarImage src={admin.avatar_url} alt={admin.name} />
+                                        <AvatarFallback>{admin.initials}</AvatarFallback>
+                                      </Avatar>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{admin.name}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ))}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
