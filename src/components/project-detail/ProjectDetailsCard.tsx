@@ -15,9 +15,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-// Extend the Project type to include people and person_ids for saving.
+// Extend types to include the new optional company_id field for a robust relationship.
+type LocalPerson = Person & { company_id?: string | null };
 type Project = BaseProject & {
-  people?: Person[];
+  people?: LocalPerson[];
   person_ids?: string[];
 };
 
@@ -40,28 +41,48 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
 
-  // Assuming the first person linked to the project is the client.
   const client = project.people?.[0];
 
   const { data: company } = useQuery({
-    queryKey: ['company_logo', client?.company],
+    queryKey: ['company_logo', client?.id],
     queryFn: async () => {
-        if (!client?.company) return null;
+      if (!client) return null;
+
+      // 1. Prioritize fetching by company_id for a reliable link
+      if (client.company_id) {
         const { data, error } = await supabase
-            .from('companies')
-            .select('logo_url')
-            .eq('name', client.company)
-            .single();
+          .from('companies')
+          .select('logo_url')
+          .eq('id', client.company_id)
+          .single();
+        if (!error && data) {
+          return data;
+        }
         if (error) {
-            console.warn(`Could not fetch logo for company "${client.company}":`, error.message);
-            return null;
+           console.warn(`Could not fetch company by ID "${client.company_id}":`, error.message);
+        }
+      }
+
+      // 2. Fallback to fetching by company name (case-insensitive)
+      if (client.company) {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('logo_url')
+          .ilike('name', client.company)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116: "single row not found"
+          console.warn(`Could not fetch logo for company name "${client.company}":`, error.message);
         }
         return data;
+      }
+      
+      return null;
     },
-    enabled: !!client?.company,
+    enabled: !!client,
   });
 
-  const { data: allPeople, isLoading: isLoadingPeople } = useQuery<Person[]>({
+  const { data: allPeople, isLoading: isLoadingPeople } = useQuery<LocalPerson[]>({
     queryKey: ['allPeople'],
     queryFn: async () => {
         const { data, error } = await supabase.from('people').select('*');
@@ -87,9 +108,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
   const handleClientChange = (personId: string) => {
     const selectedPerson = allPeople?.find(p => p.id === personId);
     if (selectedPerson) {
-        // Update 'people' for immediate UI feedback
         onFieldChange('people', [selectedPerson]);
-        // Update 'person_ids' for saving the relationship
         onFieldChange('person_ids', [personId]);
     } else {
         onFieldChange('people', []);
