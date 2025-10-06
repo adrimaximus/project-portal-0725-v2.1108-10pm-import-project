@@ -113,16 +113,16 @@ const PersonCard = ({ person, onEdit, onDelete, onViewProfile }: PersonCardProps
         <p className="text-sm text-muted-foreground truncate w-full" title={person.job_title || ''}>{person.job_title || 'No title'}</p>
 
         <div className="mt-4 pt-4 border-t w-full flex flex-col items-center space-y-2">
-          <div className="flex items-center justify-center h-8">
+          <div className="flex items-center justify-center h-8 gap-2">
             {companyLogoUrl ? (
-              <img src={companyLogoUrl} alt={person.company || 'Company Logo'} className="max-h-8 max-w-full object-contain" />
+              <img src={companyLogoUrl} alt={person.company || 'Company Logo'} className="max-h-6 object-contain" />
             ) : person.company ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Briefcase className="h-4 w-4" />
-                <span className="text-sm truncate" title={person.company}>{person.company}</span>
-              </div>
+              <Briefcase className="h-4 w-4 text-muted-foreground" />
+            ) : null}
+            {person.company ? (
+              <span className="text-sm truncate text-muted-foreground" title={person.company}>{person.company}</span>
             ) : (
-              <div className="h-4" /> // Placeholder to maintain height
+              <div className="h-4" />
             )}
           </div>
           
