@@ -13,16 +13,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Company, CompanyProperty } from '@/types';
 import ImageUploadField from '../ImageUploadField';
-import GooglePlacesAutocomplete from '../GooglePlacesAutocomplete';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import AddressAutocompleteInput from '../AddressAutocompleteInput';
 
-interface CompanyFormDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  company: Company | null;
-}
-
-const CompanyFormDialog = ({ open, onOpenChange, company }: CompanyFormDialogProps) => {
+const CompanyFormDialog = ({ open, onOpenChange, company }: { open: boolean, onOpenChange: (open: boolean) => void, company: Company | null }) => {
   const queryClient = useQueryClient();
 
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
@@ -181,7 +174,7 @@ const CompanyFormDialog = ({ open, onOpenChange, company }: CompanyFormDialogPro
                 name="address"
                 control={control}
                 render={({ field }) => (
-                  <GooglePlacesAutocomplete
+                  <AddressAutocompleteInput
                     value={field.value || ''}
                     onChange={field.onChange}
                   />

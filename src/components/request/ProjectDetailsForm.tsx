@@ -21,7 +21,7 @@ import { User } from "@/types";
 import { toast } from "sonner";
 import { useCreateProject } from "@/hooks/useCreateProject";
 import { getInitials } from "@/lib/utils";
-import GooglePlacesAutocomplete from "../GooglePlacesAutocomplete";
+import AddressAutocompleteInput from "../AddressAutocompleteInput";
 
 interface ProjectDetailsFormProps {
   selectedServices: Service[];
@@ -262,7 +262,7 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
           </div>
           <div className="space-y-2">
             <Label htmlFor="venue">Venue</Label>
-            <GooglePlacesAutocomplete
+            <AddressAutocompleteInput
               value={venue}
               onChange={setVenue}
             />

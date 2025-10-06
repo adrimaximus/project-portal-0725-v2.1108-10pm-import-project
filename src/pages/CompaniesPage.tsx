@@ -1,28 +1,27 @@
 import { useState, useMemo } from 'react';
 import PortalLayout from "@/components/PortalLayout";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, MoreHorizontal, Trash2, Building, Search, Settings } from "lucide-react";
+import { PlusCircle, Edit, MoreHorizontal, Trash2, Building, Search } from "lucide-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Company, CompanyProperty } from '@/types';
+import { Company } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import CompanyFormDialog from '@/components/companies/CompanyFormDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import CompanyFormDialog, { CompanyFormValues } from '@/components/companies/CompanyFormDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
-import { formatDistanceToNow } from 'date-fns';
 
 const useCompanies = () => {
   return useQuery({
     queryKey: ['companies'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('companies').select('*').order('name', { ascending: true });
+      const { data, error } = await supabase.from('companies').select('*').order('name');
       if (error) throw error;
       return data as Company[];
     }
@@ -35,21 +34,10 @@ const CompaniesPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const navigate = useNavigate();
 
-  const { data: companies = [], isLoading: isLoadingCompanies } = useCompanies();
-
-  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
-    queryKey: ['company_properties'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('company_properties').select('*').order('label');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const isLoading = isLoadingCompanies || isLoadingProperties;
+  const { data: companies = [], isLoading } = useCompanies();
 
   const filteredCompanies = useMemo(() => {
     if (!searchTerm) return companies;
@@ -71,48 +59,50 @@ const CompaniesPage = () => {
     setIsFormOpen(true);
   };
 
+  const handleSave = async (companyData: CompanyFormValues, file: File | null) => {
+    setIsSaving(true);
+    try {
+      let companyId = companyToEdit?.id;
+      let logo_url = companyToEdit?.logo_url;
+
+      if (!companyId) {
+        const { data: newCompany, error: createError } = await supabase.from('companies').insert({ name: companyData.name, user_id: user?.id }).select('id').single();
+        if (createError) throw createError;
+        companyId = newCompany.id;
+      }
+
+      if (file) {
+        const filePath = `${companyId}/${file.name}`;
+        const { error: uploadError } = await supabase.storage.from('company-logos').upload(filePath, file, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from('company-logos').getPublicUrl(filePath);
+        logo_url = `${urlData.publicUrl}?t=${new Date().getTime()}`;
+      }
+
+      const { error: updateError } = await supabase.from('companies').update({ ...companyData, logo_url, updated_at: new Date().toISOString() }).eq('id', companyId);
+      if (updateError) throw updateError;
+
+      toast.success(`Company "${companyData.name}" saved.`);
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      setIsFormOpen(false);
+    } catch (error: any) {
+      toast.error(`Failed to save company: ${error.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!companyToDelete) return;
-
     const { error } = await supabase.from('companies').delete().eq('id', companyToDelete.id);
-
     if (error) {
-      toast.error(`Failed to delete ${companyToDelete.name}.`, { description: error.message });
+      toast.error(`Failed to delete company: ${error.message}`);
     } else {
-      toast.success(`${companyToDelete.name} has been deleted.`);
+      toast.success(`Company "${companyToDelete.name}" deleted.`);
       queryClient.invalidateQueries({ queryKey: ['companies'] });
     }
     setCompanyToDelete(null);
   };
-
-  const findImageUrlInCustomProps = (props: Record<string, any> | null | undefined): string | null => {
-    if (!props) return null;
-    for (const key in props) {
-      const value = props[key];
-      if (typeof value === 'string' && value.includes('supabase.co') && value.includes('image_company')) {
-        return value;
-      }
-    }
-    return null;
-  };
-
-  const renderCustomPropertyValue = (value: any, type: string) => {
-    if (value === null || typeof value === 'undefined' || value === '') return '-';
-    if (type === 'image' && typeof value === 'string' && value.startsWith('http')) {
-      return <img src={value} alt="Company property" className="h-10 w-10 object-contain rounded-md bg-muted p-1" />;
-    }
-    if (type === 'date' && typeof value === 'string') {
-      try {
-        return formatDistanceToNow(new Date(value), { addSuffix: true });
-      } catch (e) {
-        return value;
-      }
-    }
-    return String(value);
-  };
-
-  const visibleProperties = properties.filter(prop => prop.type !== 'image');
-  const totalColumns = 5 + visibleProperties.length;
 
   return (
     <PortalLayout>
@@ -130,14 +120,9 @@ const CompaniesPage = () => {
             <h1 className="text-2xl font-bold tracking-tight">Companies</h1>
             <p className="text-muted-foreground">Manage company profiles and information.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => navigate('/settings/company-properties')}>
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Button size="icon" onClick={handleAddNew}>
-              <PlusCircle className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button onClick={handleAddNew}>
+            <PlusCircle className="mr-2 h-4 w-4" /> New Company
+          </Button>
         </div>
 
         <Card>
@@ -165,82 +150,40 @@ const CompaniesPage = () => {
                   <TableHead>Company</TableHead>
                   <TableHead>Legal Name</TableHead>
                   <TableHead>Address</TableHead>
-                  {visibleProperties.map(prop => (
-                    <TableHead key={prop.id}>{prop.label}</TableHead>
-                  ))}
-                  <TableHead>Updated At</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={totalColumns} className="text-center">Loading companies...</TableCell></TableRow>
-                ) : companies.length === 0 ? (
-                  <TableRow><TableCell colSpan={totalColumns} className="text-center h-24">No companies found. Add one to get started.</TableCell></TableRow>
-                ) : (
-                  filteredCompanies.map(company => {
-                    const customLogoUrl = findImageUrlInCustomProps(company.custom_properties);
-                    const logoUrl = company.logo_url || customLogoUrl;
-                    return (
-                      <TableRow key={company.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-3">
-                            {logoUrl ? (
-                              <img src={logoUrl} alt={company.name} className="h-10 w-10 object-contain rounded-md bg-muted p-1" />
-                            ) : (
-                              <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
-                                <Building className="h-5 w-5 text-muted-foreground" />
-                              </div>
-                            )}
-                            {company.name}
-                          </div>
-                        </TableCell>
-                        <TableCell>{company.legal_name || '-'}</TableCell>
-                        <TableCell>
-                          {(() => {
-                            if (!company.address) return '-';
-                            let displayAddress = company.address;
-                            let mapsQuery = company.address;
-                            try {
-                                const parsed = JSON.parse(company.address);
-                                if (parsed.name && parsed.address) {
-                                    displayAddress = `${parsed.name} - ${parsed.address}`;
-                                    mapsQuery = `${parsed.name}, ${parsed.address}`;
-                                }
-                            } catch (e) {}
-                            return (
-                                <a
-                                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapsQuery)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:underline"
-                                >
-                                    {displayAddress}
-                                </a>
-                            );
-                          })()}
-                        </TableCell>
-                        {visibleProperties.map(prop => (
-                          <TableCell key={prop.id}>
-                            {renderCustomPropertyValue(company.custom_properties?.[prop.name], prop.type)}
-                          </TableCell>
-                        ))}
-                        <TableCell>{formatDistanceToNow(new Date(company.updated_at), { addSuffix: true })}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => handleEdit(company)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => setCompanyToDelete(company)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
+                  <TableRow><TableCell colSpan={4} className="text-center">Loading companies...</TableCell></TableRow>
+                ) : filteredCompanies.length === 0 ? (
+                  <TableRow><TableCell colSpan={4} className="text-center h-24">No companies found.</TableCell></TableRow>
+                ) : filteredCompanies.map(company => (
+                  <TableRow key={company.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9 rounded-md">
+                          <AvatarImage src={company.logo_url} className="object-contain" />
+                          <AvatarFallback className="rounded-md"><Building className="h-4 w-4" /></AvatarFallback>
+                        </Avatar>
+                        {company.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>{company.legal_name || '-'}</TableCell>
+                    <TableCell>{company.address || '-'}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => handleEdit(company)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setCompanyToDelete(company)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </CardContent>
@@ -250,7 +193,9 @@ const CompaniesPage = () => {
       <CompanyFormDialog
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
+        onSave={handleSave}
         company={companyToEdit}
+        isSaving={isSaving}
       />
 
       <AlertDialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
@@ -258,7 +203,7 @@ const CompaniesPage = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete {companyToDelete?.name}. This action cannot be undone.
+              This will permanently delete the company "{companyToDelete?.name}". This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

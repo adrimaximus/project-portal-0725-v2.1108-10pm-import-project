@@ -10,7 +10,7 @@ import { formatInJakarta, cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
-import GooglePlacesAutocomplete from '../GooglePlacesAutocomplete';
+import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -220,7 +220,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
             <div className="w-full">
               <p className="font-medium">Venue</p>
               {isEditing ? (
-                <GooglePlacesAutocomplete
+                <AddressAutocompleteInput
                   value={project.venue || ''}
                   onChange={(value) => onFieldChange('venue', value)}
                 />

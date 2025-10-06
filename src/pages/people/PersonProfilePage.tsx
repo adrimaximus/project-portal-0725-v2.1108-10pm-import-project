@@ -4,10 +4,10 @@ import PortalLayout from '@/components/PortalLayout';
 import { usePerson } from '@/hooks/usePerson';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2, Globe } from 'lucide-react';
+import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
 import PersonFormDialog from '@/components/people/PersonFormDialog';
@@ -122,7 +122,6 @@ const PersonProfilePage = () => {
 
   const firstEmail = person.contact?.emails?.[0];
   const firstPhone = person.contact?.phones?.[0] || person.phone;
-  const firstWebsite = (person as any).contact?.websites?.[0] || (person as any).website;
   const whatsappLink = firstPhone ? `https://wa.me/${formatPhoneNumberForApi(firstPhone)}` : null;
 
   const customPropertiesWithValue = customProperties.filter(prop => person.custom_properties && person.custom_properties[prop.name]);
@@ -169,75 +168,21 @@ const PersonProfilePage = () => {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle>About {person.full_name.split(' ')[0]}</CardTitle></CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                {firstEmail && (
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <a href={`mailto:${firstEmail}`} className="truncate hover:underline">{firstEmail}</a>
-                  </div>
-                )}
-                {firstPhone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="truncate">{firstPhone}</span>
-                  </div>
-                )}
-                {whatsappLink && (
-                  <div className="flex items-center gap-3">
-                    <WhatsappIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">Send WhatsApp Message</a>
-                  </div>
-                )}
-                {firstWebsite && (
-                  <div className="flex items-center gap-3">
-                    <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <a href={firstWebsite} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstWebsite}</a>
-                  </div>
-                )}
-                {(() => {
-                  if (!person.address?.formatted_address) return null;
+              <CardHeader><CardTitle>Contact Info</CardTitle></CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {firstEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${firstEmail}`} className="truncate hover:underline">{firstEmail}</a></div>}
+                {whatsappLink && <div className="flex items-center gap-3"><WhatsappIcon className="h-4 w-4 text-muted-foreground" /><a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstPhone}</a></div>}
+                {person.address?.formatted_address && <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" /><span>{person.address.formatted_address}</span></div>}
+                {person.birthday && <div className="flex items-center gap-3"><Cake className="h-4 w-4 text-muted-foreground" /><span>{formatInJakarta(person.birthday, 'MMMM d, yyyy')}</span></div>}
+              </CardContent>
+            </Card>
 
-                  let name = '';
-                  let address = '';
-                  let fullQuery = person.address.formatted_address;
-
-                  try {
-                    const parsed = JSON.parse(person.address.formatted_address);
-                    if (parsed.name && parsed.address) {
-                      name = parsed.name;
-                      address = parsed.address;
-                      fullQuery = `${name}, ${address}`;
-                    } else {
-                      address = person.address.formatted_address;
-                    }
-                  } catch (e) {
-                    address = person.address.formatted_address;
-                  }
-
-                  return (
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullQuery)}`} target="_blank" rel="noopener noreferrer" className="hover:underline group">
-                        {name && <p className="font-bold text-foreground group-hover:text-primary">{name}</p>}
-                        <p className="text-muted-foreground">{address}</p>
-                      </a>
-                    </div>
-                  );
-                })()}
-                {person.birthday && (
-                  <div className="flex items-center gap-3">
-                    <Cake className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span>{formatInJakarta(person.birthday, 'MMMM d, yyyy')}</span>
-                  </div>
-                )}
-                {(person.social_media?.linkedin || person.social_media?.twitter || person.social_media?.instagram) && (
-                  <div className="flex items-center gap-4 pt-2">
-                    {person.social_media?.linkedin && <a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Linkedin className="h-5 w-5" /></a>}
-                    {person.social_media?.twitter && <a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Twitter className="h-5 w-5" /></a>}
-                    {person.social_media?.instagram && <a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Instagram className="h-5 w-5" /></a>}
-                  </div>
-                )}
+            <Card>
+              <CardHeader><CardTitle>Social Links</CardTitle></CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {person.social_media?.linkedin && <div className="flex items-center gap-3"><Linkedin className="h-4 w-4 text-muted-foreground" /><a href={person.social_media.linkedin} target="_blank" rel="noopener noreferrer" className="truncate text-primary hover:underline">LinkedIn</a></div>}
+                {person.social_media?.twitter && <div className="flex items-center gap-3"><Twitter className="h-4 w-4 text-muted-foreground" /><a href={person.social_media.twitter} target="_blank" rel="noopener noreferrer" className="truncate text-primary hover:underline">Twitter</a></div>}
+                {person.social_media?.instagram && <div className="flex items-center gap-3"><Instagram className="h-4 w-4 text-muted-foreground" /><a href={person.social_media.instagram} target="_blank" rel="noopener noreferrer" className="truncate text-primary hover:underline">Instagram</a></div>}
               </CardContent>
             </Card>
           </div>
