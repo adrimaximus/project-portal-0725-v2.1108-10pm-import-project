@@ -106,12 +106,14 @@ const ChatList = () => {
                   <AvatarFallback style={generatePastelColor(otherUser?.id || c.id)}>{getInitials(c.userName)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
-                  <p className="font-semibold truncate">{c.userName}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold truncate">{c.userName}</p>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">{formatTimestamp(c.lastMessageTimestamp)}</span>
+                  </div>
                   <p className="text-sm text-muted-foreground truncate">
                     {c.lastMessage}
                   </p>
                 </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(c.lastMessageTimestamp)}</span>
               </div>
               <AlertDialog>
                 <DropdownMenu>
