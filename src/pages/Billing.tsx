@@ -16,6 +16,24 @@ import { useProjectMutations } from "@/hooks/useProjectMutations";
 import { Input } from "@/components/ui/input";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { DateRange } from "react-day-picker";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+type Member = {
+  id: string;
+  name: string;
+  avatar_url: string;
+  initials: string;
+  email: string;
+};
+
+type Owner = {
+  id: string;
+  name: string;
+  avatar_url: string;
+  initials: string;
+  email: string;
+};
 
 type Invoice = {
   id: string;
@@ -32,7 +50,16 @@ type Invoice = {
   emailSendingDate: Date | null;
   hardcopySendingDate: Date | null;
   channel: string | null;
+  clientName: string | null;
+  clientLogo: string | null;
+  projectOwner: Owner | null;
+  assignedMembers: Member[];
 };
+
+interface ExtendedProject extends Project {
+  client_name?: string | null;
+  client_company_logo_url?: string | null;
+}
 
 const Billing = () => {
   const { data: projects = [], isLoading } = useProjects();
@@ -45,7 +72,7 @@ const Billing = () => {
   
   const { updateProject } = useProjectMutations(selectedInvoice?.projectId || '');
 
-  const invoices: Invoice[] = projects
+  const invoices: Invoice[] = (projects as ExtendedProject[])
     .map(project => {
       if (!project.payment_status || !project.budget || !project.due_date) {
         return null;
@@ -73,6 +100,10 @@ const Billing = () => {
         emailSendingDate: project.email_sending_date ? new Date(project.email_sending_date) : null,
         hardcopySendingDate: project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : null,
         channel: project.channel || null,
+        clientName: project.client_name || null,
+        clientLogo: project.client_company_logo_url || null,
+        projectOwner: project.created_by,
+        assignedMembers: project.assignedTo || [],
       };
     })
     .filter((invoice): invoice is Invoice => invoice !== null);
@@ -83,6 +114,7 @@ const Billing = () => {
       const matchesSearch =
         invoice.id.toLowerCase().includes(searchTermLower) ||
         invoice.projectName.toLowerCase().includes(searchTermLower) ||
+        (invoice.clientName && invoice.clientName.toLowerCase().includes(searchTermLower)) ||
         (invoice.poNumber && invoice.poNumber.toLowerCase().includes(searchTermLower)) ||
         (invoice.channel && invoice.channel.toLowerCase().includes(searchTermLower));
 
@@ -190,7 +222,7 @@ const Billing = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by invoice #, project, PO #, or channel..."
+              placeholder="Search by invoice #, project, client, PO #, or channel..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -252,6 +284,7 @@ const Billing = () => {
                       Project {renderSortIcon('projectName')}
                     </Button>
                   </TableHead>
+                  <TableHead>Client</TableHead>
                   <TableHead>
                     <Button variant="ghost" onClick={() => handleSort('status')} className="px-2">
                       Status {renderSortIcon('status')}
@@ -272,33 +305,15 @@ const Billing = () => {
                       Due Date {renderSortIcon('dueDate')}
                     </Button>
                   </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('paidDate')} className="px-2">
-                      Paid Date {renderSortIcon('paidDate')}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('emailSendingDate')} className="px-2">
-                      Email Sent {renderSortIcon('emailSendingDate')}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('hardcopySendingDate')} className="px-2">
-                      Hardcopy Sent {renderSortIcon('hardcopySendingDate')}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('channel')} className="px-2">
-                      Channel {renderSortIcon('channel')}
-                    </Button>
-                  </TableHead>
+                  <TableHead>Owner</TableHead>
+                  <TableHead>Members</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sortedInvoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                       No invoices found.
                     </TableCell>
                   </TableRow>
@@ -312,6 +327,15 @@ const Billing = () => {
                         </Link>
                       </TableCell>
                       <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={invoice.clientLogo || undefined} alt={invoice.clientName || ''} />
+                            <AvatarFallback>{invoice.clientName?.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <span>{invoice.clientName || 'N/A'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
                           {invoice.status}
                         </Badge>
@@ -319,10 +343,42 @@ const Billing = () => {
                       <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
                       <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
                       <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
-                      <TableCell>{invoice.paidDate ? format(invoice.paidDate, 'MMM dd, yyyy') : 'N/A'}</TableCell>
-                      <TableCell>{invoice.emailSendingDate ? format(invoice.emailSendingDate, 'MMM dd, yyyy') : 'N/A'}</TableCell>
-                      <TableCell>{invoice.hardcopySendingDate ? format(invoice.hardcopySendingDate, 'MMM dd, yyyy') : 'N/A'}</TableCell>
-                      <TableCell>{invoice.channel || 'N/A'}</TableCell>
+                      <TableCell>
+                        {invoice.projectOwner && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={invoice.projectOwner.avatar_url} alt={invoice.projectOwner.name} />
+                                  <AvatarFallback>{invoice.projectOwner.initials}</AvatarFallback>
+                                </Avatar>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{invoice.projectOwner.name}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex -space-x-2">
+                          {invoice.assignedMembers.map((member) => (
+                            <TooltipProvider key={member.id}>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Avatar className="h-8 w-8 border-2 border-background">
+                                    <AvatarImage src={member.avatar_url} alt={member.name} />
+                                    <AvatarFallback>{member.initials}</AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{member.name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ))}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
