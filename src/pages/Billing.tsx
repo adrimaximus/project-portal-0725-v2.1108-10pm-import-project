@@ -253,6 +253,11 @@ const Billing = () => {
                     </Button>
                   </TableHead>
                   <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('status')} className="px-2">
+                      Status {renderSortIcon('status')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
                     <Button variant="ghost" onClick={() => handleSort('poNumber')} className="px-2">
                       PO # {renderSortIcon('poNumber')}
                     </Button>
@@ -287,11 +292,6 @@ const Billing = () => {
                       Channel {renderSortIcon('channel')}
                     </Button>
                   </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('status')} className="px-2">
-                      Status {renderSortIcon('status')}
-                    </Button>
-                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -311,6 +311,11 @@ const Billing = () => {
                           {invoice.projectName}
                         </Link>
                       </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
+                          {invoice.status}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
                       <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
                       <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
@@ -318,11 +323,6 @@ const Billing = () => {
                       <TableCell>{invoice.emailSendingDate ? format(invoice.emailSendingDate, 'MMM dd, yyyy') : 'N/A'}</TableCell>
                       <TableCell>{invoice.hardcopySendingDate ? format(invoice.hardcopySendingDate, 'MMM dd, yyyy') : 'N/A'}</TableCell>
                       <TableCell>{invoice.channel || 'N/A'}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
-                          {invoice.status}
-                        </Badge>
-                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
