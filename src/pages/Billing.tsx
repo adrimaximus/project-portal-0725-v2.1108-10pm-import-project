@@ -75,6 +75,7 @@ const Billing = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [adminView, setAdminView] = useState<'count' | 'value'>('count');
   
   const { updateProject } = useProjectMutations(selectedInvoice?.projectId || '');
 
@@ -207,20 +208,31 @@ const Billing = () => {
   const overdueInvoicesCount = filteredInvoices.filter(inv => inv.status === 'Overdue').length;
 
   const projectAdmins = useMemo(() => {
-    const adminMap = new Map<string, { admin: Member; projectCount: number }>();
+    const adminMap = new Map<string, { admin: Member; projectCount: number; totalValue: number }>();
     invoices.forEach(invoice => {
         invoice.assignedMembers
             .filter(member => member.role === 'admin')
             .forEach(admin => {
                 if (adminMap.has(admin.id)) {
-                    adminMap.get(admin.id)!.projectCount++;
+                    const existing = adminMap.get(admin.id)!;
+                    existing.projectCount++;
+                    existing.totalValue += invoice.amount;
                 } else {
-                    adminMap.set(admin.id, { admin, projectCount: 1 });
+                    adminMap.set(admin.id, { admin, projectCount: 1, totalValue: invoice.amount });
                 }
             });
     });
-    return Array.from(adminMap.values()).sort((a, b) => b.projectCount - a.projectCount);
-  }, [invoices]);
+    
+    const sortedAdmins = Array.from(adminMap.values());
+
+    if (adminView === 'count') {
+        sortedAdmins.sort((a, b) => b.projectCount - a.projectCount);
+    } else {
+        sortedAdmins.sort((a, b) => b.totalValue - a.totalValue);
+    }
+    
+    return sortedAdmins;
+  }, [invoices, adminView]);
 
   const handleEdit = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -312,8 +324,18 @@ const Billing = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
+              <ToggleGroup 
+                type="single" 
+                value={adminView} 
+                onValueChange={(value) => { if (value) setAdminView(value as 'count' | 'value')}}
+                className="mb-2 justify-end"
+                size="sm"
+              >
+                <ToggleGroupItem value="count" aria-label="Show by project count">Qty</ToggleGroupItem>
+                <ToggleGroupItem value="value" aria-label="Show by total value">Value</ToggleGroupItem>
+              </ToggleGroup>
               <div className="space-y-3 max-h-24 overflow-y-auto pr-2">
-                {projectAdmins.length > 0 ? projectAdmins.map(({ admin, projectCount }) => (
+                {projectAdmins.length > 0 ? projectAdmins.map(({ admin, projectCount, totalValue }) => (
                   <div key={admin.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
@@ -322,7 +344,12 @@ const Billing = () => {
                       </Avatar>
                       <span className="text-sm font-medium truncate">{admin.name}</span>
                     </div>
-                    <span className="text-sm text-muted-foreground flex-shrink-0">{projectCount} project{projectCount > 1 ? 's' : ''}</span>
+                    <span className="text-sm text-muted-foreground flex-shrink-0">
+                      {adminView === 'count' 
+                        ? `${projectCount} project${projectCount > 1 ? 's' : ''}`
+                        : `Rp ${totalValue.toLocaleString('id-ID')}`
+                      }
+                    </span>
                   </div>
                 )) : (
                   <p className="text-sm text-muted-foreground text-center pt-4">No project admins found.</p>
