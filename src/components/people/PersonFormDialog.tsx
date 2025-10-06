@@ -1,27 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import React, { useEffect, useState, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, User as UserIcon } from "lucide-react";
-import { format } from "date-fns";
-import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Person, Project, Tag, ContactProperty, Company } from '@/types';
+import { Loader2, User as UserIcon } from 'lucide-react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { ContactProperty, Person, Project, Tag, Company } from '@/types';
 import { MultiSelect } from '../ui/multi-select';
 import PhoneNumberInput from '../PhoneNumberInput';
 import AntDatePicker from './AntDatePicker';
-import AddressAutocompleteInput from '../AddressAutocompleteInput';
+import GooglePlacesAutocomplete from '../GooglePlacesAutocomplete';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { generatePastelColor } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -254,7 +254,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
                 <FormItem>
                   <FormLabel>Address</FormLabel>
                   <FormControl>
-                    <AddressAutocompleteInput
+                    <GooglePlacesAutocomplete
                       value={field.value || ''}
                       onChange={field.onChange}
                     />
@@ -369,7 +369,7 @@ const PersonFormDialog = ({ open, onOpenChange, person }: PersonFormDialogProps)
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save
+                {person ? 'Save Changes' : 'Create Person'}
               </Button>
             </DialogFooter>
           </form>

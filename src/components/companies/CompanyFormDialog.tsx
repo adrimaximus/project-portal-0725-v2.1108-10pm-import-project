@@ -1,115 +1,222 @@
-import { useState, useEffect, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import React, { useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Building, Image as ImageIcon } from "lucide-react";
-import { Company } from '@/types';
-import AddressAutocompleteInput from '../AddressAutocompleteInput';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Company, CompanyProperty } from '@/types';
+import ImageUploadField from '../ImageUploadField';
+import GooglePlacesAutocomplete from '../GooglePlacesAutocomplete';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Label } from '../ui/label';
 
 interface CompanyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: CompanyFormValues, file: File | null) => void;
   company: Company | null;
-  isSaving: boolean;
 }
 
-const companySchema = z.object({
-  name: z.string().min(1, "Company name is required"),
-  legal_name: z.string().optional(),
-  address: z.string().optional(),
-  billing_address: z.string().optional(),
-});
+const CompanyFormDialog = ({ open, onOpenChange, company }: CompanyFormDialogProps) => {
+  const queryClient = useQueryClient();
 
-export type CompanyFormValues = z.infer<typeof companySchema>;
+  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<CompanyProperty[]>({
+    queryKey: ['company_properties'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('company_properties').select('*').order('label');
+      if (error) throw error;
+      return data;
+    },
+  });
 
-const CompanyFormDialog = ({ open, onOpenChange, onSave, company, isSaving }: CompanyFormDialogProps) => {
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const baseSchema = z.object({
+    name: z.string().min(1, 'Company name is required'),
+    legal_name: z.string().optional(),
+    address: z.string().optional(),
+    logo_url: z.string().url().optional().or(z.literal('')),
+  });
 
-  const form = useForm<CompanyFormValues>({
-    resolver: zodResolver(companySchema),
-    defaultValues: { name: '', legal_name: '', address: '', billing_address: '' }
+  const [dynamicSchema, setDynamicSchema] = React.useState<z.AnyZodObject>(baseSchema);
+
+  useEffect(() => {
+    if (properties.length > 0) {
+      const schema = properties.reduce((schema, prop) => {
+        let fieldSchema;
+        switch (prop.type) {
+          case 'number':
+            fieldSchema = z.coerce.number().optional();
+            break;
+          case 'date':
+            fieldSchema = z.string().optional();
+            break;
+          case 'select':
+            fieldSchema = z.string().optional();
+            break;
+          case 'image':
+            fieldSchema = z.string().url().optional().nullable();
+            break;
+          default:
+            fieldSchema = z.string().optional();
+        }
+        return schema.extend({ [prop.name]: fieldSchema });
+      }, baseSchema);
+      setDynamicSchema(schema);
+    }
+  }, [properties, baseSchema]);
+
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
+    resolver: zodResolver(dynamicSchema),
   });
 
   useEffect(() => {
     if (open) {
       if (company) {
-        form.reset({
-          name: company.name,
-          legal_name: company.legal_name || '',
-          address: company.address || '',
-          billing_address: company.billing_address || '',
-        });
-        setLogoPreview(company.logo_url || null);
+        const { custom_properties, ...companyData } = company;
+        reset({ ...companyData, ...custom_properties });
       } else {
-        form.reset({ name: '', legal_name: '', address: '', billing_address: '' });
-        setLogoPreview(null);
+        const defaultValues = properties.reduce((acc, prop) => ({ ...acc, [prop.name]: '' }), {});
+        reset({ name: '', legal_name: '', address: '', logo_url: '', ...defaultValues });
       }
-      setLogoFile(null);
     }
-  }, [company, open, form]);
+  }, [company, open, reset, properties]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      setLogoPreview(URL.createObjectURL(file));
-    }
+  const mutation = useMutation({
+    mutationFn: async (values: any) => {
+      const standardFields = ['name', 'legal_name', 'address', 'logo_url'];
+      const companyData: Partial<Company> = {};
+      const custom_properties: Record<string, any> = {};
+
+      for (const key in values) {
+        if (standardFields.includes(key)) {
+          companyData[key] = values[key];
+        } else {
+          custom_properties[key] = values[key];
+        }
+      }
+      companyData.custom_properties = custom_properties;
+
+      if (company) {
+        const { error } = await supabase.from('companies').update(companyData).eq('id', company.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('companies').insert(companyData as any);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success(`Company ${company ? 'updated' : 'created'} successfully.`);
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast.error('Failed to save company.', { description: error.message });
+    },
+  });
+
+  const onSubmit = (data: any) => {
+    mutation.mutate(data);
   };
 
-  const onSubmit = (values: CompanyFormValues) => {
-    onSave(values, logoFile);
+  const renderField = (prop: CompanyProperty) => {
+    const fieldName = prop.name;
+    switch (prop.type) {
+      case 'number':
+        return <Input id={fieldName} type="number" {...register(fieldName)} />;
+      case 'date':
+        return <Input id={fieldName} type="date" {...register(fieldName)} />;
+      case 'select':
+        return (
+          <Controller
+            name={fieldName}
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value || ''}>
+                <SelectTrigger><SelectValue placeholder={`Select ${prop.label}`} /></SelectTrigger>
+                <SelectContent>
+                  {prop.options?.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        );
+      case 'image':
+        return (
+          <Controller
+            name={fieldName}
+            control={control}
+            render={({ field }) => <ImageUploadField value={field.value} onChange={field.onChange} />}
+          />
+        );
+      default:
+        return <Input id={fieldName} {...register(fieldName)} />;
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg p-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
-          <DialogDescription>Fill in the details for the company profile.</DialogDescription>
+          <DialogDescription>Fill in the details for the company.</DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20 rounded-md">
-                <AvatarImage src={logoPreview || undefined} className="object-contain" />
-                <AvatarFallback className="rounded-md"><Building className="h-8 w-8 text-muted-foreground" /></AvatarFallback>
-              </Avatar>
-              <div className="space-y-2">
-                <Label>Company Logo</Label>
-                <Input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="text-xs" />
-              </div>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="max-h-[60vh] overflow-y-auto px-6 space-y-4">
+            <div>
+              <Label htmlFor="name">Company Name</Label>
+              <Input id="name" {...register('name')} />
+              {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message as string}</p>}
             </div>
-            <FormField control={form.control} name="name" render={({ field }) => (
-              <FormItem><FormLabel>Company Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="legal_name" render={({ field }) => (
-              <FormItem><FormLabel>Legal Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="address" render={({ field }) => (
-              <FormItem><FormLabel>Address</FormLabel><FormControl><AddressAutocompleteInput value={field.value || ''} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="billing_address" render={({ field }) => (
-              <FormItem><FormLabel>Billing Address</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <DialogFooter className="pt-4 sticky bottom-0 bg-background">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            <div>
+              <Label htmlFor="legal_name">Legal Name</Label>
+              <Input id="legal_name" {...register('legal_name')} />
+            </div>
+            <div>
+              <Label htmlFor="address">Address</Label>
+              <Controller
+                name="address"
+                control={control}
+                render={({ field }) => (
+                  <GooglePlacesAutocomplete
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+            <div>
+              <Label htmlFor="logo_url">Logo URL</Label>
+              <Input id="logo_url" {...register('logo_url')} />
+              {errors.logo_url && <p className="text-sm text-destructive mt-1">{errors.logo_url.message as string}</p>}
+            </div>
+
+            {isLoadingProperties ? (
+              <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            ) : properties.length > 0 && (
+              <div className="space-y-4 border-t pt-4 mt-4">
+                <h3 className="text-lg font-medium">Custom Properties</h3>
+                {properties.map(prop => (
+                  <div key={prop.id}>
+                    <Label htmlFor={prop.name}>{prop.label}</Label>
+                    {renderField(prop)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        
+          <DialogFooter className="p-6 pt-4 border-t">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {company ? 'Save Changes' : 'Create Company'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

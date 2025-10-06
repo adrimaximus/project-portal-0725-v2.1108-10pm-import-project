@@ -14,7 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { id } from 'date-fns/locale';
-import AddressAutocompleteInput from './AddressAutocompleteInput';
+import GooglePlacesAutocomplete from './GooglePlacesAutocomplete';
 
 const projectFormSchema = z.object({
     name: z.string().min(3, { message: 'Nama proyek minimal 3 karakter.' }),
@@ -110,7 +110,7 @@ export function CreateProjectForm({ onFinished }: CreateProjectFormProps) {
                         <FormItem>
                             <FormLabel>Venue</FormLabel>
                             <FormControl>
-                                <AddressAutocompleteInput
+                                <GooglePlacesAutocomplete
                                     value={field.value || ''}
                                     onChange={field.onChange}
                                 />
