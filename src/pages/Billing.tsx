@@ -52,6 +52,7 @@ type Invoice = {
   channel: string | null;
   clientName: string | null;
   clientLogo: string | null;
+  clientCompanyName: string | null;
   projectOwner: Owner | null;
   assignedMembers: Member[];
 };
@@ -59,6 +60,7 @@ type Invoice = {
 interface ExtendedProject extends Project {
   client_name?: string | null;
   client_company_logo_url?: string | null;
+  client_company_name?: string | null;
 }
 
 const Billing = () => {
@@ -102,6 +104,7 @@ const Billing = () => {
         channel: project.channel || null,
         clientName: project.client_name || null,
         clientLogo: project.client_company_logo_url || null,
+        clientCompanyName: project.client_company_name || null,
         projectOwner: project.created_by,
         assignedMembers: project.assignedTo || [],
       };
@@ -331,7 +334,10 @@ const Billing = () => {
                             <AvatarImage src={invoice.clientLogo || undefined} alt={invoice.clientName || ''} />
                             <AvatarFallback>{invoice.clientName?.charAt(0)}</AvatarFallback>
                           </Avatar>
-                          <span>{invoice.clientName || 'N/A'}</span>
+                          <div>
+                            <div className="font-medium">{invoice.clientName || 'N/A'}</div>
+                            <div className="text-sm text-muted-foreground">{invoice.clientCompanyName || ''}</div>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
