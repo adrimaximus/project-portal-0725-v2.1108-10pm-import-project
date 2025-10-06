@@ -27,6 +27,11 @@ type Invoice = {
   rawProjectId: string; // original uuid
   projectStartDate: Date | null;
   projectEndDate: Date | null;
+  poNumber: string | null;
+  paidDate: Date | null;
+  emailSendingDate: Date | null;
+  hardcopySendingDate: Date | null;
+  channel: string | null;
 };
 
 const Billing = () => {
@@ -63,6 +68,11 @@ const Billing = () => {
         rawProjectId: project.id,
         projectStartDate: project.start_date ? new Date(project.start_date) : null,
         projectEndDate: project.due_date ? new Date(project.due_date) : null,
+        poNumber: project.po_number || null,
+        paidDate: project.paid_date ? new Date(project.paid_date) : null,
+        emailSendingDate: project.email_sending_date ? new Date(project.email_sending_date) : null,
+        hardcopySendingDate: project.hardcopy_sending_date ? new Date(project.hardcopy_sending_date) : null,
+        channel: project.channel || null,
       };
     })
     .filter((invoice): invoice is Invoice => invoice !== null);
@@ -72,7 +82,9 @@ const Billing = () => {
       const searchTermLower = searchTerm.toLowerCase();
       const matchesSearch =
         invoice.id.toLowerCase().includes(searchTermLower) ||
-        invoice.projectName.toLowerCase().includes(searchTermLower);
+        invoice.projectName.toLowerCase().includes(searchTermLower) ||
+        (invoice.poNumber && invoice.poNumber.toLowerCase().includes(searchTermLower)) ||
+        (invoice.channel && invoice.channel.toLowerCase().includes(searchTermLower));
 
       const matchesDate = (() => {
         if (!dateRange || !dateRange.from) {
@@ -112,6 +124,9 @@ const Billing = () => {
     return [...filteredInvoices].sort((a, b) => {
       const aValue = a[sortColumn];
       const bValue = b[sortColumn];
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
 
       if (aValue < bValue) {
         return sortDirection === 'asc' ? -1 : 1;
@@ -175,7 +190,7 @@ const Billing = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by invoice # or project name..."
+              placeholder="Search by invoice #, project, PO #, or channel..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -228,27 +243,52 @@ const Billing = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('id')} className="flex items-center">
+                    <Button variant="ghost" onClick={() => handleSort('id')} className="px-2">
                       Invoice # {renderSortIcon('id')}
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('projectName')} className="flex items-center">
+                    <Button variant="ghost" onClick={() => handleSort('projectName')} className="px-2">
                       Project {renderSortIcon('projectName')}
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('amount')} className="flex items-center">
+                    <Button variant="ghost" onClick={() => handleSort('poNumber')} className="px-2">
+                      PO # {renderSortIcon('poNumber')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('amount')} className="px-2">
                       Amount {renderSortIcon('amount')}
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('dueDate')} className="flex items-center">
+                    <Button variant="ghost" onClick={() => handleSort('dueDate')} className="px-2">
                       Due Date {renderSortIcon('dueDate')}
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('status')} className="flex items-center">
+                    <Button variant="ghost" onClick={() => handleSort('paidDate')} className="px-2">
+                      Paid Date {renderSortIcon('paidDate')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('emailSendingDate')} className="px-2">
+                      Email Sent {renderSortIcon('emailSendingDate')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('hardcopySendingDate')} className="px-2">
+                      Hardcopy Sent {renderSortIcon('hardcopySendingDate')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('channel')} className="px-2">
+                      Channel {renderSortIcon('channel')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('status')} className="px-2">
                       Status {renderSortIcon('status')}
                     </Button>
                   </TableHead>
@@ -258,7 +298,7 @@ const Billing = () => {
               <TableBody>
                 {sortedInvoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={11} className="h-24 text-center">
                       No invoices found.
                     </TableCell>
                   </TableRow>
@@ -271,8 +311,13 @@ const Billing = () => {
                           {invoice.projectName}
                         </Link>
                       </TableCell>
+                      <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
                       <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
                       <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
+                      <TableCell>{invoice.paidDate ? format(invoice.paidDate, 'MMM dd, yyyy') : 'N/A'}</TableCell>
+                      <TableCell>{invoice.emailSendingDate ? format(invoice.emailSendingDate, 'MMM dd, yyyy') : 'N/A'}</TableCell>
+                      <TableCell>{invoice.hardcopySendingDate ? format(invoice.hardcopySendingDate, 'MMM dd, yyyy') : 'N/A'}</TableCell>
+                      <TableCell>{invoice.channel || 'N/A'}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
                           {invoice.status}
