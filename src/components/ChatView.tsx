@@ -10,11 +10,11 @@ import { ScrollArea } from "./ui/scroll-area";
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Message } from "@/types";
 
 const ChatView = () => {
   const { selectedConversation } = useChatContext();
   const { user: currentUser } = useAuth();
-  const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const queryClient = useQueryClient();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -40,17 +40,21 @@ const ChatView = () => {
     }
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!message.trim() || !selectedConversation || !currentUser || selectedConversation.id === 'ai-assistant') return;
+  const handleSendMessage = async (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => {
+    if ((!text.trim() && !attachmentFile) || !selectedConversation || !currentUser) return;
     
     setIsSending(true);
+
+    if (attachmentFile) {
+      toast.warning("File attachments are not implemented in this chat yet.");
+    }
+
     const newMessage = {
-      content: message,
+      content: text,
       conversation_id: selectedConversation.id,
       sender_id: currentUser.id,
+      reply_to_message_id: replyToMessageId,
     };
-
-    setMessage("");
 
     const { error } = await supabase.from('messages').insert(newMessage);
 
@@ -99,7 +103,7 @@ const ChatView = () => {
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-4">
           {isLoading && <p className="text-center text-muted-foreground">Loading messages...</p>}
-          {messages.map((msg) => (
+          {messages.map((msg: any) => (
             <div key={msg.id} className={cn("flex items-start gap-3", msg.sender_id === currentUser?.id && "justify-end")}>
               {msg.sender_id !== currentUser?.id && (
                 <Avatar className="h-8 w-8">
@@ -117,7 +121,13 @@ const ChatView = () => {
           ))}
         </div>
       </ScrollArea>
-      <ChatInput value={message} onChange={setMessage} onSend={handleSendMessage} isSending={isSending} />
+      <ChatInput 
+        onSendMessage={handleSendMessage} 
+        isSending={isSending} 
+        conversationId={selectedConversation.id}
+        replyTo={null}
+        onCancelReply={() => {}}
+      />
     </div>
   );
 };
