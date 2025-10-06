@@ -10,6 +10,9 @@ import { Link } from 'react-router-dom';
 import { Loader2, CornerUpLeft, Download } from "lucide-react";
 import { Button } from "./ui/button";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
+import MessageReactions from "./MessageReactions";
+import EmojiReactionPicker from "./EmojiReactionPicker";
+import { useChatContext } from "@/contexts/ChatContext";
 
 interface ChatConversationProps {
   messages: Message[];
@@ -41,6 +44,7 @@ const formatDateSeparator = (timestamp: string) => {
 
 export const ChatConversation = ({ messages, members, isLoading, onReply }: ChatConversationProps) => {
   const { user: currentUser } = useAuth();
+  const { toggleReaction } = useChatContext();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -90,115 +94,114 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                   isSameSenderAsPrevious ? "mt-1" : "mt-4"
                 )}
               >
-                {isCurrentUser && (
-                  <Button variant="ghost" size="icon" className="h-7 w-7 invisible group-hover:visible" onClick={() => onReply(message)}>
-                    <CornerUpLeft className="h-4 w-4" />
-                  </Button>
-                )}
-                {!isCurrentUser && !isSameSenderAsPrevious && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={sender.avatar_url} />
-                    <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
-                  </Avatar>
-                )}
-                <div
-                  className={cn(
-                    "max-w-xs md:max-w-md lg:max-w-lg rounded-lg",
-                    isCurrentUser
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted",
-                    isImageAttachment ? "p-1 overflow-hidden" : "px-3 py-2",
-                    isAudioAttachment ? "p-0" : "",
-                    !isCurrentUser && isSameSenderAsPrevious && "ml-10"
+                <div className={cn("flex items-center gap-1", isCurrentUser ? "flex-row-reverse" : "flex-row")}>
+                  <div className="invisible group-hover:visible flex items-center">
+                    <EmojiReactionPicker onSelect={(emoji) => toggleReaction(message.id, emoji)} />
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onReply(message)}>
+                      <CornerUpLeft className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {!isCurrentUser && !isSameSenderAsPrevious && (
+                    <Avatar className="h-8 w-8 self-end">
+                      <AvatarImage src={sender.avatar_url} />
+                      <AvatarFallback style={generatePastelColor(sender.id)}>{sender.initials}</AvatarFallback>
+                    </Avatar>
                   )}
-                >
-                  {!isCurrentUser && !isSameSenderAsPrevious && sender.id !== 'ai-assistant' && (
-                    <p className="text-sm font-semibold mb-1">{sender.name}</p>
-                  )}
-                  
-                  {message.repliedMessage && (
-                    <div className="p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary">
-                      <p className="font-semibold">{message.repliedMessage.senderName}</p>
-                      <p className="text-xs line-clamp-2 opacity-80">
-                        {message.repliedMessage.isDeleted ? "This message was deleted." : message.repliedMessage.content}
-                      </p>
-                    </div>
-                  )}
-
-                  {isImageAttachment ? (
-                    <div className="relative group/image">
-                      <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
-                        <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
-                      </a>
-                      <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity">
-                        <a
-                          href={message.attachment!.url}
-                          download={message.attachment!.name}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/40 hover:bg-black/60 text-white hover:text-white">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </a>
+                  <div
+                    className={cn(
+                      "max-w-xs md:max-w-md lg:max-w-lg rounded-lg relative",
+                      isCurrentUser
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted",
+                      isImageAttachment ? "p-1 overflow-hidden" : "px-3 py-2",
+                      isAudioAttachment ? "p-0" : "",
+                      !isCurrentUser && isSameSenderAsPrevious && "ml-10"
+                    )}
+                  >
+                    {!isCurrentUser && !isSameSenderAsPrevious && sender.id !== 'ai-assistant' && (
+                      <p className="text-sm font-semibold mb-1">{sender.name}</p>
+                    )}
+                    
+                    {message.repliedMessage && (
+                      <div className="p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary">
+                        <p className="font-semibold">{message.repliedMessage.senderName}</p>
+                        <p className="text-xs line-clamp-2 opacity-80">
+                          {message.repliedMessage.isDeleted ? "This message was deleted." : message.repliedMessage.content}
+                        </p>
                       </div>
-                      <div className="absolute bottom-1 right-1 flex items-end gap-2 w-full p-1 justify-end pointer-events-none">
-                        <div className="flex-grow min-w-0">
-                          {message.text && <p className="text-white text-sm break-words bg-black/40 rounded-md px-2 py-1 inline-block">{message.text}</p>}
+                    )}
+
+                    {isImageAttachment ? (
+                      <div className="relative group/image">
+                        <a href={message.attachment!.url} target="_blank" rel="noopener noreferrer">
+                          <img src={message.attachment!.url} alt={message.attachment!.name} className="max-w-full h-auto rounded-md" />
+                        </a>
+                        <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity">
+                          <a
+                            href={message.attachment!.url}
+                            download={message.attachment!.name}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/40 hover:bg-black/60 text-white hover:text-white">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </a>
                         </div>
-                        <span className="text-xs text-white/90 bg-black/40 rounded-full px-1.5 py-0.5 flex-shrink-0">
-                          {formatTimestamp(message.timestamp)}
+                        <div className="absolute bottom-1 right-1 flex items-end gap-2 w-full p-1 justify-end pointer-events-none">
+                          <div className="flex-grow min-w-0">
+                            {message.text && <p className="text-white text-sm break-words bg-black/40 rounded-md px-2 py-1 inline-block">{message.text}</p>}
+                          </div>
+                          <span className="text-xs text-white/90 bg-black/40 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                            {formatTimestamp(message.timestamp)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : isAudioAttachment ? (
+                      <VoiceMessagePlayer 
+                        src={message.attachment!.url} 
+                        sender={message.sender} 
+                        isCurrentUser={isCurrentUser}
+                      />
+                    ) : (
+                      <div className="flex items-end gap-2">
+                        <div className="min-w-0">
+                          {message.text && (
+                            <div className={cn(
+                              "text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none",
+                              isCurrentUser ? "prose-p:text-primary-foreground" : "",
+                              "[&_p]:my-0"
+                            )}>
+                              <ReactMarkdown
+                                components={{
+                                  a: ({ node, ...props }) => {
+                                    const href = props.href || '';
+                                    if (href.startsWith('/')) {
+                                      return <Link to={href} {...props} className="text-inherit hover:text-inherit font-medium underline" />;
+                                    }
+                                    return <a {...props} target="_blank" rel="noopener noreferrer" className="text-inherit hover:text-inherit font-medium underline" />;
+                                  }
+                                }}
+                              >
+                                {message.text}
+                              </ReactMarkdown>
+                            </div>
+                          )}
+                          {message.attachment && (
+                            <MessageAttachment attachment={message.attachment} />
+                          )}
+                        </div>
+                        <span className={cn(
+                            "text-xs self-end flex-shrink-0",
+                            isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                        )}>
+                            {formatTimestamp(message.timestamp)}
                         </span>
                       </div>
-                    </div>
-                  ) : isAudioAttachment ? (
-                    <VoiceMessagePlayer 
-                      src={message.attachment!.url} 
-                      sender={message.sender} 
-                      isCurrentUser={isCurrentUser}
-                    />
-                  ) : (
-                    <div className="flex items-end gap-2">
-                      <div className="min-w-0">
-                        {message.text && (
-                          <div className={cn(
-                            "text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none",
-                            isCurrentUser ? "prose-p:text-primary-foreground" : "",
-                            "[&_p]:my-0"
-                          )}>
-                            <ReactMarkdown
-                              components={{
-                                a: ({ node, ...props }) => {
-                                  const href = props.href || '';
-                                  if (href.startsWith('/')) {
-                                    return <Link to={href} {...props} className="text-inherit hover:text-inherit font-medium underline" />;
-                                  }
-                                  return <a {...props} target="_blank" rel="noopener noreferrer" className="text-inherit hover:text-inherit font-medium underline" />;
-                                }
-                              }}
-                            >
-                              {message.text}
-                            </ReactMarkdown>
-                          </div>
-                        )}
-                        {message.attachment && (
-                          <MessageAttachment attachment={message.attachment} />
-                        )}
-                      </div>
-                      <span className={cn(
-                          "text-xs self-end flex-shrink-0",
-                          isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
-                      )}>
-                          {formatTimestamp(message.timestamp)}
-                      </span>
-                    </div>
-                  )}
+                    )}
+                    <MessageReactions reactions={message.reactions || []} onToggleReaction={(emoji) => toggleReaction(message.id, emoji)} />
+                  </div>
                 </div>
-                {!isCurrentUser && (
-                  <Button variant="ghost" size="icon" className="h-7 w-7 invisible group-hover:visible" onClick={() => onReply(message)}>
-                    <CornerUpLeft className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
             </div>
           );

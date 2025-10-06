@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Conversation, Message, Attachment } from '@/types';
+import { Conversation, Message, Attachment, Reaction } from '@/types';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
 
 const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
@@ -57,6 +57,7 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
         senderName: m.replied_message_sender_name,
         isDeleted: m.replied_message_is_deleted,
       } : null,
+      reactions: m.reactions as Reaction[],
     };
   });
 };
@@ -96,4 +97,35 @@ export const hideConversation = async (conversationId: string) => {
 export const leaveGroup = async (conversationId: string) => {
   const { error } = await supabase.rpc('leave_group', { p_conversation_id: conversationId });
   if (error) throw error;
+};
+
+export const toggleReaction = async (messageId: string, emoji: string, userId: string) => {
+  const { data, error: selectError } = await supabase
+    .from('message_reactions')
+    .select('id')
+    .eq('message_id', messageId)
+    .eq('user_id', userId)
+    .eq('emoji', emoji)
+    .single();
+
+  if (selectError && selectError.code !== 'PGRST116') {
+    throw selectError;
+  }
+
+  if (data) {
+    const { error: deleteError } = await supabase
+      .from('message_reactions')
+      .delete()
+      .eq('id', data.id);
+    if (deleteError) throw deleteError;
+  } else {
+    const { error: insertError } = await supabase
+      .from('message_reactions')
+      .insert({
+        message_id: messageId,
+        user_id: userId,
+        emoji: emoji,
+      });
+    if (insertError) throw insertError;
+  }
 };

@@ -12,6 +12,12 @@ export interface RepliedMessageInfo {
   isDeleted: boolean;
 }
 
+export interface Reaction {
+  emoji: string;
+  user_id: string;
+  user_name: string;
+}
+
 export interface Message {
   id: string;
   text: string;
@@ -20,6 +26,7 @@ export interface Message {
   attachment?: Attachment;
   reply_to_message_id?: string | null;
   repliedMessage?: RepliedMessageInfo | null;
+  reactions?: Reaction[];
 }
 
 export interface Conversation {

@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation, InfiniteData, UseMutateFunction } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import * as chatApi from '@/lib/chatApi';
-import { Conversation, Message, Collaborator, Attachment } from '@/types';
+import { Conversation, Message, Collaborator, Attachment, Reaction } from '@/types';
 import debounce from 'lodash.debounce';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -27,6 +27,7 @@ interface ChatContextType {
   isSomeoneTyping: boolean;
   sendTyping: () => void;
   refetchConversations: () => void;
+  toggleReaction: (messageId: string, emoji: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -160,19 +161,66 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     onError: (error: any) => toast.error("Failed to leave group.", { description: error.message }),
   });
 
+  const toggleReactionMutation = useMutation({
+    mutationFn: ({ messageId, emoji }: { messageId: string, emoji: string }) => {
+      if (!currentUser) throw new Error("User not authenticated");
+      return chatApi.toggleReaction(messageId, emoji, currentUser.id);
+    },
+    onMutate: async ({ messageId, emoji }) => {
+      await queryClient.cancelQueries({ queryKey: ['messages', selectedConversationId] });
+      const previousMessages = queryClient.getQueryData<Message[]>(['messages', selectedConversationId]);
+
+      queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (old) => {
+        if (!old) return [];
+        return old.map(message => {
+          if (message.id === messageId) {
+            const existingReactionIndex = (message.reactions || []).findIndex(r => r.emoji === emoji && r.user_id === currentUser!.id);
+            let newReactions: Reaction[];
+            if (existingReactionIndex > -1) {
+              newReactions = (message.reactions || []).filter((_, index) => index !== existingReactionIndex);
+            } else {
+              newReactions = [...(message.reactions || []), { emoji, user_id: currentUser!.id, user_name: currentUser!.name }];
+            }
+            return { ...message, reactions: newReactions };
+          }
+          return message;
+        });
+      });
+      return { previousMessages };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['messages', selectedConversationId], context.previousMessages);
+      }
+      toast.error("Failed to update reaction.");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
+    },
+  });
+
   useEffect(() => {
     if (!currentUser) return;
     const channel = supabase.channel('chat-room-realtime-listener')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
+        { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
-          const newMessage = payload.new as { conversation_id: string };
-          // Always invalidate conversations list for sidebar updates
+          const changedMessage = payload.new as { conversation_id: string };
           queryClient.invalidateQueries({ queryKey: ['conversations', currentUser.id] });
-          // If the user is viewing the conversation that got a new message, refresh it
-          if (newMessage.conversation_id === selectedConversationId) {
-            queryClient.invalidateQueries({ queryKey: ['messages', newMessage.conversation_id] });
+          if (changedMessage.conversation_id === selectedConversationId) {
+            queryClient.invalidateQueries({ queryKey: ['messages', changedMessage.conversation_id] });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'message_reactions' },
+        (payload) => {
+          const reaction = (payload.new || payload.old) as { message_id: string };
+          const message = messages.find(m => m.id === reaction.message_id);
+          if (message && message.sender.id !== currentUser.id) {
+            queryClient.invalidateQueries({ queryKey: ['messages', selectedConversationId] });
           }
         }
       )
@@ -195,7 +243,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, selectedConversationId, queryClient]);
+  }, [currentUser, selectedConversationId, queryClient, messages]);
 
   useEffect(() => {
     const collaboratorToChat = (location.state as any)?.selectedCollaborator as Collaborator | undefined;
@@ -224,7 +272,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     sendMessageMutation.mutate({ text, attachmentFile, replyToMessageId });
   };
 
-  const value = {
+  const toggleReaction = (messageId: string, emoji: string) => {
+    toggleReactionMutation.mutate({ messageId, emoji });
+  };
+
+  const value: ChatContextType = {
     conversations: filteredConversations,
     isLoadingConversations,
     selectedConversation,
@@ -242,6 +294,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     isSomeoneTyping,
     sendTyping,
     refetchConversations,
+    toggleReaction,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
