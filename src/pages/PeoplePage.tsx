@@ -35,7 +35,8 @@ type KanbanViewHandle = {
 
 const PeoplePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [peopleSearchTerm, setPeopleSearchTerm] = useState("");
+  const [companySearchTerm, setCompanySearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [personToEdit, setPersonToEdit] = useState<Person | null>(null);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
@@ -151,11 +152,11 @@ const PeoplePage = () => {
 
   const filteredPeople = useMemo(() => {
     return sortedPeople.filter(person =>
-      person.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (person.company && person.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (person.job_title && person.job_title.toLowerCase().includes(searchTerm.toLowerCase()))
+      person.full_name.toLowerCase().includes(peopleSearchTerm.toLowerCase()) ||
+      (person.company && person.company.toLowerCase().includes(peopleSearchTerm.toLowerCase())) ||
+      (person.job_title && person.job_title.toLowerCase().includes(peopleSearchTerm.toLowerCase()))
     );
-  }, [sortedPeople, searchTerm]);
+  }, [sortedPeople, peopleSearchTerm]);
 
   const groupedPeople = useMemo(() => {
     return filteredPeople.reduce((acc, person) => {
@@ -249,8 +250,8 @@ const PeoplePage = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, company, or title..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={peopleSearchTerm}
+                  onChange={(e) => setPeopleSearchTerm(e.target.value)}
                   className="pl-9 w-full"
                 />
               </div>
@@ -424,8 +425,21 @@ const PeoplePage = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="companies" className="flex-grow flex flex-col mt-0">
-            <CompaniesView />
+          <TabsContent value="companies" className="flex-grow flex flex-col mt-0 space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0 flex-wrap">
+              <div className="relative w-full sm:flex-1 sm:max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search companies..."
+                  value={companySearchTerm}
+                  onChange={(e) => setCompanySearchTerm(e.target.value)}
+                  className="pl-9 w-full"
+                />
+              </div>
+            </div>
+            <div className="flex-grow min-h-0">
+              <CompaniesView searchTerm={companySearchTerm} />
+            </div>
           </TabsContent>
         </Tabs>
 
