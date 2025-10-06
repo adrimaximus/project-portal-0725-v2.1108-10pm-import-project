@@ -53,6 +53,17 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
     }
   }, [messages, isLoading]);
 
+  const handleScrollToMessage = (messageId: string) => {
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('bg-primary/10', 'rounded-md');
+      setTimeout(() => {
+        element.classList.remove('bg-primary/10', 'rounded-md');
+      }, 1500);
+    }
+  };
+
   if (!currentUser) {
     return <div>Loading...</div>;
   }
@@ -75,7 +86,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
           const isAudioAttachment = message.attachment?.type.startsWith('audio/');
 
           return (
-            <div key={message.id || index}>
+            <div key={message.id || index} id={`message-${message.id}`} className="transition-all duration-500 -m-1 p-1">
               {showDateSeparator && (
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
@@ -123,13 +134,16 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                       <p className="text-sm font-semibold mb-1">{sender.name}</p>
                     )}
                     
-                    {message.repliedMessage && (
-                      <div className="p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary">
+                    {message.repliedMessage && message.reply_to_message_id && (
+                      <button 
+                        onClick={() => handleScrollToMessage(message.reply_to_message_id!)}
+                        className="w-full text-left p-2 mb-1 text-sm bg-black/10 dark:bg-white/10 rounded-md border-l-2 border-primary hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
+                      >
                         <p className="font-semibold">{message.repliedMessage.senderName}</p>
                         <p className="text-xs line-clamp-2 opacity-80">
                           {message.repliedMessage.isDeleted ? "This message was deleted." : message.repliedMessage.content}
                         </p>
-                      </div>
+                      </button>
                     )}
 
                     {isImageAttachment ? (
