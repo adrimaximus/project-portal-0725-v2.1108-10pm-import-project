@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Person as BasePerson } from '@/types';
 import { Card } from '@/components/ui/card';
-import { User as UserIcon, Instagram, Briefcase, Mail, Building } from 'lucide-react';
+import { User as UserIcon, Instagram, Briefcase, Mail } from 'lucide-react';
 import { generatePastelColor } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
 import WhatsappIcon from '../icons/WhatsappIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 
 type Person = BasePerson & { company_id?: string | null };
 
@@ -29,68 +29,75 @@ const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
 };
 
 const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
-  const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
-  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
-  const [companyAddress, setCompanyAddress] = useState<string | null>(null);
+
+  const { data: companyProperties = [] } = useQuery({
+    queryKey: ['company_properties'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('company_properties').select('*');
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
+  const { data: company } = useQuery({
+    queryKey: ['company_details_for_person_card', person.id],
+    queryFn: async () => {
+      const companyId = person.company_id;
+      const companyNameFromField = person.company?.trim();
+      const companyNameFromJob = person.job_title?.includes(' at ') ? person.job_title.split(' at ')[1].trim() : null;
+      const companyToSearch = companyNameFromField || companyNameFromJob;
+
+      if (!companyId && !companyToSearch) {
+        return null;
+      }
+
+      let companyData: { logo_url: string | null; address: string | null; custom_properties: any } | null = null;
+
+      if (companyId) {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('logo_url, address, custom_properties')
+          .eq('id', companyId)
+          .single();
+        if (!error && data) {
+          companyData = data;
+        }
+      }
+
+      if (!companyData && companyToSearch) {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('logo_url, address, custom_properties')
+          .ilike('name', `%${companyToSearch}%`)
+          .limit(1)
+          .maybeSingle();
+        if (!error && data) {
+          companyData = data;
+        }
+      }
+      return companyData;
+    },
+    enabled: !!person,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
+  const companyLogoUrl = useMemo(() => {
+    if (!company) return null;
+    const logoProperty = companyProperties.find(p => p.label === 'Logo Image');
+    if (logoProperty && company.custom_properties) {
+        const customLogo = company.custom_properties[logoProperty.name];
+        if (customLogo) return customLogo;
+    }
+    return company.logo_url;
+  }, [company, companyProperties]);
+
+  const companyAddress = company?.address;
 
   useEffect(() => {
     setImageError(false);
   }, [person.avatar_url]);
-
-  useEffect(() => {
-    const fetchCompanyDetails = async () => {
-      setCompanyLogoUrl(null);
-      setCompanyAddress(null);
-
-      const companyNameFromField = person.company?.trim();
-      const companyNameFromJob = person.job_title?.includes(' at ') ? person.job_title.split(' at ')[1].trim() : null;
-      
-      const companyToSearch = companyNameFromField || companyNameFromJob;
-
-      if (!person.company_id && !companyToSearch) {
-        return;
-      }
-
-      let companyData: { logo_url: string | null; address: string | null } | null = null;
-
-      // 1. Prioritize fetching by company_id for a reliable link
-      if (person.company_id) {
-        const { data, error: idError } = await supabase
-          .from('companies')
-          .select('logo_url, address')
-          .eq('id', person.company_id)
-          .single();
-        if (!idError && data) {
-          companyData = data;
-        } else if (idError && idError.code !== 'PGRST116') {
-          console.warn(`Could not fetch company by ID "${person.company_id}":`, idError.message);
-        }
-      }
-
-      // 2. Fallback to fetching by name if not found by ID
-      if (!companyData && companyToSearch) {
-        const { data, error: nameError } = await supabase
-          .from('companies')
-          .select('logo_url, address')
-          .ilike('name', `%${companyToSearch}%`)
-          .limit(1);
-        
-        if (!nameError && data && data.length > 0) {
-          companyData = data[0];
-        } else if (nameError) {
-          console.warn(`Could not fetch company by name "${companyToSearch}":`, nameError.message);
-        }
-      }
-
-      if (companyData) {
-        setCompanyLogoUrl(companyData.logo_url);
-        setCompanyAddress(companyData.address);
-      }
-    };
-
-    fetchCompanyDetails();
-  }, [person.company, person.company_id, person.job_title]);
 
   const handleImageError = () => {
     setImageError(true);
