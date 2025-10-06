@@ -14,6 +14,7 @@ import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
 
 // Extend types to include the new optional company_id field for a robust relationship.
 type LocalPerson = Person & { company_id?: string | null };
@@ -43,6 +44,15 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
 
   const client = project.people?.[0];
 
+  const { data: companyProperties = [] } = useQuery({
+    queryKey: ['company_properties'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('company_properties').select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const { data: company } = useQuery({
     queryKey: ['company_logo', client?.id],
     queryFn: async () => {
@@ -52,7 +62,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
       if (client.company_id) {
         const { data, error } = await supabase
           .from('companies')
-          .select('logo_url')
+          .select('logo_url, custom_properties')
           .eq('id', client.company_id)
           .single();
         if (!error && data) {
@@ -67,7 +77,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
       if (client.company) {
         const { data, error } = await supabase
           .from('companies')
-          .select('logo_url')
+          .select('logo_url, custom_properties')
           .ilike('name', client.company)
           .single();
         
@@ -81,6 +91,16 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
     },
     enabled: !!client,
   });
+
+  const companyLogoUrl = useMemo(() => {
+    if (!company) return null;
+    const logoProperty = companyProperties.find(p => p.label === 'Logo Image');
+    if (logoProperty && company.custom_properties) {
+        const customLogo = company.custom_properties[logoProperty.name];
+        if (customLogo) return customLogo;
+    }
+    return company.logo_url;
+  }, [company, companyProperties]);
 
   const { data: allPeople, isLoading: isLoadingPeople } = useQuery<LocalPerson[]>({
     queryKey: ['allPeople'],
@@ -354,8 +374,8 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange }: ProjectDetail
                 <div className="pt-1">
                   {client ? (
                     <div className="flex items-center gap-3">
-                      {company?.logo_url ? (
-                        <img src={company.logo_url} alt={client.company || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
+                      {companyLogoUrl ? (
+                        <img src={companyLogoUrl} alt={client.company || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
                       ) : (
                         <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
                           <Building className="h-4 w-4 text-muted-foreground" />
