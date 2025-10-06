@@ -71,8 +71,8 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
             const { data, error: nameError } = await supabase
               .from('companies')
               .select('logo_url, address')
-              .ilike('name', trimmedCompanyName)
-              .limit(1); // Use limit(1) to avoid errors with multiple matches and get the first one
+              .ilike('name', `%${trimmedCompanyName}%`) // Use pattern matching for more flexibility
+              .limit(1);
             
             if (!nameError && data && data.length > 0) {
               companyData = data[0];
