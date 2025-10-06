@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
+import { Plus, MoreHorizontal, Trash2, UserPlus, Sparkles, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,8 @@ import {
 import { MultiSelect } from "@/components/ui/multi-select";
 import { generatePastelColor, getInitials } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface ProjectTasksProps {
   project: Project;
@@ -39,6 +41,7 @@ const ProjectTasks = ({
 }: ProjectTasksProps) => {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isAddingTask, setIsAddingTask] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleAddTask = () => {
     if (newTaskTitle.trim() === "") return;
@@ -47,16 +50,72 @@ const ProjectTasks = ({
     setIsAddingTask(false);
   };
 
+  const handleGenerateTasks = async () => {
+    setIsGenerating(true);
+    const toastId = toast.loading("Generating initial tasks with AI...");
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-tasks', {
+        body: {
+          projectName: project.name,
+          venue: project.venue,
+          services: project.services,
+          description: project.description,
+        },
+      });
+
+      if (error) throw error;
+
+      if (Array.isArray(data) && data.every(item => typeof item === 'string')) {
+        for (const title of data) {
+          onTaskAdd(title);
+        }
+        toast.success("5 initial tasks have been generated!", { id: toastId });
+      } else {
+        throw new Error("AI did not return a valid list of task titles.");
+      }
+    } catch (error) {
+      console.error("Failed to generate tasks:", error);
+      toast.error("Failed to generate tasks.", {
+        id: toastId,
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const userOptions = project.assignedTo.map((user) => ({
     value: user.id,
     label: user.name,
   }));
 
+  const tasks = project.tasks || [];
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Tasks</h3>
+      
+      {tasks.length === 0 && !isAddingTask && (
+        <div className="text-center py-4 border-2 border-dashed rounded-lg">
+          <p className="text-sm text-muted-foreground mb-4">No tasks yet. Get started by adding one or let AI help.</p>
+          <Button onClick={handleGenerateTasks} disabled={isGenerating}>
+            {isGenerating ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Generate Initial Tasks with AI
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
       <div className="space-y-2">
-        {(project.tasks || []).map((task) => {
+        {tasks.map((task) => {
           const assignees = (task.assignees || (task as any).assignedTo || []) as (User & { first_name?: string; last_name?: string; avatar_url?: string; email?: string })[];
 
           return (
