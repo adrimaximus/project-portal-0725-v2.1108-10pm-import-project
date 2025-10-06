@@ -47,7 +47,7 @@ const Billing = () => {
       }
 
       return {
-        id: `INV-${project.id.substring(0, 8).toUpperCase()}`,
+        id: project.invoice_number || `INV-${project.id.substring(0, 8).toUpperCase()}`,
         projectId: project.slug,
         projectName: project.name,
         amount: project.budget,

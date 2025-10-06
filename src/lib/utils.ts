@@ -1,137 +1,125 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { format as formatFns, toZonedTime } from 'date-fns-tz';
-import { isPast as isPastFns, isSameDay } from 'date-fns';
+import { isPast as isPastFns, isSameDay, format } from 'date-fns';
 import { ProjectStatus, PaymentStatus, TaskPriority, TaskStatus } from "@/types";
+import { formatInTimeZone } from 'date-fns-tz';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-const jakartaTimeZone = 'Asia/Jakarta';
-
-export const formatInJakarta = (date: string | Date, formatString: string): string => {
-  if (!date) return '';
-  try {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    const zonedDate = toZonedTime(dateObj, jakartaTimeZone);
-    return formatFns(zonedDate, formatString, { timeZone: jakartaTimeZone });
-  } catch (error) {
-    console.error("Error formatting date:", error);
-    return "Invalid Date";
+export const getInitials = (name: string = '') => {
+  if (!name) return '';
+  const names = name.split(' ');
+  if (names.length > 1) {
+    return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
   }
+  return name.substring(0, 2).toUpperCase();
 };
 
-export const getInitials = (name?: string | null, email?: string | null): string => {
-  if (name) {
-    const parts = name.split(' ').filter(Boolean);
-    if (parts.length > 1) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    }
-    if (parts.length === 1 && parts[0].length > 1) {
-      return parts[0].substring(0, 2).toUpperCase();
-    }
-  }
-  if (email) {
-    return email.substring(0, 2).toUpperCase();
-  }
-  return 'NN';
-};
+export const getAvatarUrl = (avatarUrl: string | null | undefined, seed: string) => {
+  if (avatarUrl) return avatarUrl;
+  return `https://api.dicebear.com/6.x/initials/svg?seed=${seed}`;
+}
 
-export const getAvatarUrl = (
-  avatarUrl: string | null | undefined,
-  seed: string,
-  isGroup: boolean = false
-): string => {
-  if (avatarUrl && avatarUrl.startsWith('http')) {
-    return avatarUrl;
-  }
-  const style = isGroup ? 'bottts' : 'micah';
-  return `https://api.dicebear.com/8.x/${style}/svg?seed=${seed}`;
-};
-
-export const generatePastelColor = (str: string): { backgroundColor: string, color: string } => {
+export const generatePastelColor = (seed: string) => {
   let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
   }
   const h = hash % 360;
-  return {
-    backgroundColor: `hsl(${h}, 70%, 85%)`,
-    color: `hsl(${h}, 70%, 30%)`,
-  };
+  return { backgroundColor: `hsl(${h}, 70%, 90%)`, color: `hsl(${h}, 70%, 30%)` };
 };
 
-export const getStatusStyles = (status: ProjectStatus | string) => {
+export const getStatusStyles = (status: ProjectStatus | string | null | undefined) => {
   switch (status) {
-    case 'Requested': return { hex: '#3b82f6', tw: 'bg-blue-100 text-blue-800' };
-    case 'In Progress': return { hex: '#f97316', tw: 'bg-orange-100 text-orange-800' };
-    case 'In Review': return { hex: '#a855f7', tw: 'bg-purple-100 text-purple-800' };
-    case 'On Hold': return { hex: '#f59e0b', tw: 'bg-amber-100 text-amber-800' };
-    case 'Completed': return { hex: '#22c55e', tw: 'bg-green-100 text-green-800' };
-    case 'Cancelled': return { hex: '#ef4444', tw: 'bg-red-100 text-red-800' };
-    default: return { hex: '#6b7280', tw: 'bg-gray-100 text-gray-800' };
+    case 'On Track':
+      return { tw: 'bg-green-100 text-green-800', label: 'On Track' };
+    case 'Completed':
+      return { tw: 'bg-blue-100 text-blue-800', label: 'Completed' };
+    case 'At Risk':
+      return { tw: 'bg-yellow-100 text-yellow-800', label: 'At Risk' };
+    case 'Off Track':
+      return { tw: 'bg-red-100 text-red-800', label: 'Off Track' };
+    case 'On Hold':
+      return { tw: 'bg-gray-100 text-gray-800', label: 'On Hold' };
+    case 'Archived':
+        return { tw: 'bg-gray-100 text-gray-500', label: 'Archived' };
+    default:
+      return { tw: 'bg-gray-100 text-gray-800', label: status || 'Unknown' };
   }
 };
 
-export const getPaymentStatusStyles = (status: PaymentStatus | string) => {
-    switch (status) {
-        case 'Paid': return { hex: '#22c55e', tw: 'bg-green-100 text-green-800' };
-        case 'Pending': return { hex: '#f59e0b', tw: 'bg-amber-100 text-amber-800' };
-        case 'In Process': return { hex: '#a855f7', tw: 'bg-purple-100 text-purple-800' };
-        case 'Overdue': return { hex: '#ef4444', tw: 'bg-red-100 text-red-800' };
-        case 'Proposed': return { hex: '#3b82f6', tw: 'bg-blue-100 text-blue-800' };
-        case 'Cancelled': return { hex: '#6b7280', tw: 'bg-gray-100 text-gray-800' };
-        case 'Unpaid':
-        default: return { hex: '#9ca3af', tw: 'bg-gray-200 text-gray-800' };
-    }
+export const getPaymentStatusStyles = (status: PaymentStatus | string | null | undefined) => {
+  switch (status) {
+    case 'Paid':
+      return { tw: 'bg-green-100 text-green-800', label: 'Paid', color: '#22c55e' };
+    case 'Unpaid':
+      return { tw: 'bg-red-100 text-red-800', label: 'Unpaid', color: '#ef4444' };
+    case 'Pending':
+      return { tw: 'bg-yellow-100 text-yellow-800', label: 'Pending', color: '#eab308' };
+    case 'Overdue':
+      return { tw: 'bg-orange-100 text-orange-800', label: 'Overdue', color: '#f97316' };
+    case 'Cancelled':
+      return { tw: 'bg-gray-100 text-gray-500', label: 'Cancelled', color: '#6b7280' };
+    case 'In Process':
+      return { tw: 'bg-blue-100 text-blue-800', label: 'In Process', color: '#3b82f6' };
+    case 'Due':
+      return { tw: 'bg-yellow-100 text-yellow-800', label: 'Due', color: '#eab308' };
+    default:
+      return { tw: 'bg-gray-100 text-gray-800', label: status || 'Unknown', color: '#6b7280' };
+  }
 };
 
-export const getPriorityStyles = (priority: TaskPriority | string | null) => {
-    switch (priority) {
-        case 'Urgent': return { hex: '#ef4444', tw: 'bg-red-100 text-red-800' };
-        case 'High': return { hex: '#f97316', tw: 'bg-orange-100 text-orange-800' };
-        case 'Normal': return { hex: '#3b82f6', tw: 'bg-blue-100 text-blue-800' };
-        case 'Low': return { hex: '#6b7280', tw: 'bg-gray-100 text-gray-800' };
-        default: return { hex: '#6b7280', tw: 'bg-gray-100 text-gray-800' };
-    }
+export const getPriorityStyles = (priority: TaskPriority | string | null | undefined) => {
+  switch (priority) {
+    case 'low':
+      return { tw: 'bg-gray-100 text-gray-800', label: 'Low' };
+    case 'normal':
+      return { tw: 'bg-blue-100 text-blue-800', label: 'Normal' };
+    case 'high':
+      return { tw: 'bg-yellow-100 text-yellow-800', label: 'High' };
+    case 'urgent':
+      return { tw: 'bg-red-100 text-red-800', label: 'Urgent' };
+    default:
+      return { tw: 'bg-gray-100 text-gray-800', label: priority || 'Unknown' };
+  }
 };
 
-export const getTaskStatusStyles = (status: TaskStatus | string) => {
-    switch (status) {
-        case 'To do': return { tw: 'text-muted-foreground' };
-        case 'In Progress': return { tw: 'text-blue-600 font-semibold' };
-        case 'Done': return { tw: 'text-green-600 font-semibold' };
-        case 'Cancelled': return { tw: 'text-red-600 line-through' };
-        default: return { tw: 'text-muted-foreground' };
-    }
+export const getTaskStatusStyles = (status: TaskStatus | string | null | undefined) => {
+  switch (status) {
+    case 'To do':
+      return { tw: 'bg-gray-100 text-gray-800', label: 'To do' };
+    case 'In progress':
+      return { tw: 'bg-blue-100 text-blue-800', label: 'In progress' };
+    case 'Done':
+      return { tw: 'bg-green-100 text-green-800', label: 'Done' };
+    case 'Backlog':
+      return { tw: 'bg-purple-100 text-purple-800', label: 'Backlog' };
+    default:
+      return { tw: 'bg-gray-100 text-gray-800', label: status || 'Unknown' };
+  }
 };
 
-export const isOverdue = (date: string | Date): boolean => {
-    if (!date) return false;
-    return isPastFns(new Date(date)) && !isSameDay(new Date(date), new Date());
+export const isOverdue = (date: Date | string | null | undefined) => {
+  if (!date) return false;
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return isPastFns(d) && !isSameDay(d, new Date());
 };
 
-export const formatPhoneNumberForApi = (phone: string): string => {
-    if (!phone) return '';
-    let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.startsWith('0')) {
-        cleaned = '62' + cleaned.substring(1);
-    } else if (!cleaned.startsWith('62')) {
-        cleaned = '62' + cleaned;
-    }
-    return cleaned;
+export const formatInJakarta = (date: Date | string | number, formatString: string) => {
+  return formatInTimeZone(date, 'Asia/Jakarta', formatString);
 };
 
-export const getColorForTag = (tagName: string): string => {
-  const colors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#F7B801',
-    '#5FAD56', '#F26419', '#8338EC', '#FF006E',
-  ];
+export const formatPhoneNumberForApi = (phone: string) => {
+  return phone.replace(/\D/g, '');
+};
+
+export const getColorForTag = (tagName: string) => {
   let hash = 0;
   for (let i = 0; i < tagName.length; i++) {
     hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const index = Math.abs(hash % colors.length);
-  return colors[index];
+  const h = hash % 360;
+  return `hsl(${h}, 50%, 60%)`;
 };
