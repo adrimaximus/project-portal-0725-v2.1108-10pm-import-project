@@ -35,12 +35,12 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const { selectedConversation } = useChatContext();
   const { theme } = useTheme();
 
-  const mentionableUsers = selectedConversation?.members.map(m => ({
+  const mentionableUsers = (selectedConversation?.members || []).map(m => ({
     id: m.id,
     display: m.name,
     avatar_url: m.avatar_url,
     initials: m.initials,
-  })) || [];
+  }));
 
   const onDrop = (acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
