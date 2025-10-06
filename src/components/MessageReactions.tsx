@@ -1,46 +1,56 @@
 import { Reaction } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { groupBy } from 'lodash';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 interface MessageReactionsProps {
   reactions: Reaction[];
-  onReact: (emoji: string) => void;
+  onToggleReaction: (emoji: string) => void;
 }
 
-const MessageReactions = ({ reactions, onReact }: MessageReactionsProps) => {
+const MessageReactions = ({ reactions, onToggleReaction }: MessageReactionsProps) => {
   const { user: currentUser } = useAuth();
 
   if (!reactions || reactions.length === 0) {
     return null;
   }
 
-  const groupedReactions = groupBy(reactions, 'emoji');
+  const groupedReactions = reactions.reduce((acc, reaction) => {
+    if (!acc[reaction.emoji]) {
+      acc[reaction.emoji] = [];
+    }
+    acc[reaction.emoji].push(reaction);
+    return acc;
+  }, {} as Record<string, Reaction[]>);
 
   return (
-    <div className="absolute -bottom-3 right-2 flex items-center gap-1 bg-card p-0.5 rounded-full border shadow-sm">
+    <div className="flex flex-wrap gap-1 mt-1">
       {Object.entries(groupedReactions).map(([emoji, reactionList]) => {
-        const reactions = reactionList as Reaction[];
-        const userHasReacted = reactions.some(r => r.user_id === currentUser?.id);
-        const userNames = reactions.map(r => r.user_id === currentUser?.id ? 'You' : r.user_name).join(', ');
+        const userHasReacted = reactionList.some(r => r.user_id === currentUser?.id);
+        const userNames = reactionList.map(r => r.user_id === currentUser?.id ? 'You' : r.user_name).join(', ');
 
         return (
-          <Popover key={emoji}>
-            <PopoverTrigger asChild>
-              <button
-                onClick={() => onReact(emoji)}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors ${
-                  userHasReacted ? 'bg-primary/20' : 'hover:bg-muted'
-                }`}
-              >
-                <span>{emoji}</span>
-                <span className="font-medium">{reactions.length}</span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="text-sm p-2 w-auto">
-              <p>{userNames} reacted with {emoji}</p>
-            </PopoverContent>
-          </Popover>
+          <TooltipProvider key={emoji} delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onToggleReaction(emoji)}
+                  className={cn(
+                    "px-2 py-0.5 rounded-full text-xs flex items-center gap-1 transition-colors",
+                    userHasReacted
+                      ? "bg-primary/20 border border-primary/50"
+                      : "bg-muted hover:bg-muted/80 border"
+                  )}
+                >
+                  <span>{emoji}</span>
+                  <span className="font-medium">{reactionList.length}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{userNames}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         );
       })}
     </div>

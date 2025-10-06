@@ -1,55 +1,65 @@
 import React, { useState, useMemo } from 'react';
-import { Project, UserProfile } from '@/types';
+import { Project, User } from '@/types';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ChevronsUpDown } from "lucide-react";
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 
 interface CollaboratorsListProps {
   projects: Project[];
 }
 
-type CollaboratorStat = UserProfile & {
+interface CollaboratorStat extends User {
   projectCount: number;
-  totalValue: number;
-};
+}
 
 const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
-  const [view, setView] = useState<'summary' | 'details'>('summary');
+  const [isOpen, setIsOpen] = useState(false);
 
-  const collaborators: CollaboratorStat[] = useMemo(() => {
-    const collaboratorStats: { [key: string]: CollaboratorStat } = {};
-    projects.forEach(p => {
-      const members = (p.assignedTo || []);
-      if (p.created_by && typeof p.created_by === 'object') {
-        members.push(p.created_by);
-      }
-      
-      const uniqueMembers = Array.from(new Map(members.map(m => [m.id, m])).values());
+  const collaborators = useMemo(() => {
+    const collaboratorStats = projects.reduce((acc, p) => {
+        p.assignedTo.forEach(user => {
+            if (!acc[user.id]) {
+                acc[user.id] = { ...user, projectCount: 0 };
+            }
+            acc[user.id].projectCount++;
+        });
+        return acc;
+    }, {} as Record<string, CollaboratorStat>);
 
-      uniqueMembers.forEach(collaborator => {
-        if (!collaboratorStats[collaborator.id]) {
-          collaboratorStats[collaborator.id] = { ...collaborator, projectCount: 0, totalValue: 0 };
-        }
-        collaboratorStats[collaborator.id].projectCount++;
-        if (p.created_by && typeof p.created_by === 'object' && p.created_by.id === collaborator.id) {
-          collaboratorStats[collaborator.id].totalValue += p.budget || 0;
-        }
-      });
-    });
     return Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount);
   }, [projects]);
 
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <CardTitle className="text-lg">Collaborators</CardTitle>
-          <div className="flex items-center">
-            <TooltipProvider>
-              <div className="flex -space-x-2 overflow-hidden">
-                {collaborators.slice(0, 5).map(c => (
+      <TooltipProvider>
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger className="w-full p-6">
+            <div className="flex items-center justify-between">
+              <CardTitle>Collaborators</CardTitle>
+              <div className="flex items-center gap-4">
+                {!isOpen && (
+                  <div className="flex items-center -space-x-2">
+                    {collaborators.slice(0, 5).map(c => (
                       <Tooltip key={c.id}>
                         <TooltipTrigger asChild>
                           <Avatar className="h-8 w-8 border-2 border-card">
@@ -62,24 +72,27 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                         </TooltipContent>
                       </Tooltip>
                     ))}
+                  </div>
+                )}
+                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
               </div>
-            </TooltipProvider>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead className="text-right">Projects</TableHead>
-                <TableHead className="text-right">Total Value (Owner)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {collaborators.map(c => (
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="px-6 pb-6 pt-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead>Collaborator</TableHead>
+                              <TableHead className="text-right">Projects</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {collaborators.map(c => (
                               <TableRow key={c.id}>
                                   <TableCell>
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-3">
                                           <Avatar className="h-8 w-8">
                                               <AvatarImage src={getAvatarUrl(c.avatar_url, c.id)} alt={c.name} />
                                               <AvatarFallback style={generatePastelColor(c.id)}>{c.initials}</AvatarFallback>
@@ -87,14 +100,16 @@ const CollaboratorsList = ({ projects }: CollaboratorsListProps) => {
                                           <span className="font-medium whitespace-nowrap">{c.name}</span>
                                       </div>
                                   </TableCell>
-                                  <TableCell className="text-right">{c.projectCount}</TableCell>
-                                  <TableCell className="text-right">${c.totalValue.toLocaleString()}</TableCell>
+                                  <TableCell className="text-right font-medium">{c.projectCount}</TableCell>
                               </TableRow>
                           ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+                      </TableBody>
+                  </Table>
+                </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </TooltipProvider>
     </Card>
   );
 };
