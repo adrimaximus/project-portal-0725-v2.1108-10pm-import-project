@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,7 +8,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project } from "@/types";
 import { cn, getPaymentStatusStyles } from "@/lib/utils";
 import { format, addDays, isPast } from "date-fns";
-import { DollarSign, Clock, AlertTriangle, Download, Loader2, MoreVertical, Edit } from "lucide-react";
+import { DollarSign, Clock, AlertTriangle, Download, Loader2, MoreVertical, Edit, ArrowUp, ArrowDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
@@ -28,6 +28,8 @@ const Billing = () => {
   const { data: projects = [], isLoading } = useProjects();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [sortColumn, setSortColumn] = useState<keyof Invoice>('dueDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
   const { updateProject } = useProjectMutations(selectedInvoice?.projectId || '');
 
@@ -54,8 +56,33 @@ const Billing = () => {
         rawProjectId: project.id,
       };
     })
-    .filter((invoice): invoice is Invoice => invoice !== null)
-    .sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
+    .filter((invoice): invoice is Invoice => invoice !== null);
+
+  const handleSort = (column: keyof Invoice) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedInvoices = useMemo(() => {
+    if (!sortColumn) return invoices;
+
+    return [...invoices].sort((a, b) => {
+      const aValue = a[sortColumn];
+      const bValue = b[sortColumn];
+
+      if (aValue < bValue) {
+        return sortDirection === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [invoices, sortColumn, sortDirection]);
 
   const outstandingBalance = invoices
     .filter(inv => ['Due', 'Overdue', 'Unpaid', 'Pending', 'In Process'].includes(inv.status))
@@ -78,6 +105,11 @@ const Billing = () => {
       const projectToUpdate = { ...originalProject, ...updatedProjectData };
       updateProject.mutate(projectToUpdate);
     }
+  };
+
+  const renderSortIcon = (column: keyof Invoice) => {
+    if (sortColumn !== column) return null;
+    return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
   if (isLoading) {
@@ -143,23 +175,43 @@ const Billing = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('id')} className="flex items-center">
+                      Invoice # {renderSortIcon('id')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('projectName')} className="flex items-center">
+                      Project {renderSortIcon('projectName')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('amount')} className="flex items-center">
+                      Amount {renderSortIcon('amount')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('dueDate')} className="flex items-center">
+                      Due Date {renderSortIcon('dueDate')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('status')} className="flex items-center">
+                      Status {renderSortIcon('status')}
+                    </Button>
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.length === 0 ? (
+                {sortedInvoices.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
                       No invoices found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  invoices.map((invoice) => (
+                  sortedInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
                       <TableCell className="font-medium">{invoice.id}</TableCell>
                       <TableCell>
