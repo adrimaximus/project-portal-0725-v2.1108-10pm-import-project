@@ -21,6 +21,7 @@ interface TagFormDialogProps {
 const tagSchema = z.object({
   name: z.string().min(1, "Tag name is required."),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color."),
+  type: z.string().optional(),
 });
 
 type TagFormValues = z.infer<typeof tagSchema>;
@@ -35,9 +36,9 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving }: TagFormDia
   useEffect(() => {
     if (open) {
       if (tag) {
-        form.reset({ name: tag.name, color: tag.color });
+        form.reset({ name: tag.name, color: tag.color, type: tag.type || 'general' });
       } else {
-        form.reset({ name: '', color: '#6b7280' });
+        form.reset({ name: '', color: '#6b7280', type: 'general' });
       }
     }
   }, [tag, open, form]);
@@ -52,11 +53,18 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving }: TagFormDia
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSave)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSave as any)} className="space-y-4 py-4">
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem>
                 <FormLabel>Tag Name</FormLabel>
                 <FormControl><Input {...field} placeholder="e.g., High Priority" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="type" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Group</FormLabel>
+                <FormControl><Input {...field} placeholder="e.g., general" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
