@@ -8,7 +8,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project } from "@/types";
 import { cn, getPaymentStatusStyles } from "@/lib/utils";
 import { format, addDays, isPast } from "date-fns";
-import { DollarSign, Clock, AlertTriangle, Download, Loader2, MoreVertical, Edit, ArrowUp, ArrowDown, Search } from "lucide-react";
+import { DollarSign, Clock, AlertTriangle, Download, Loader2, MoreVertical, Edit, ArrowUp, ArrowDown, Search, Kanban, Table as TableIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
@@ -18,6 +18,8 @@ import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { DateRange } from "react-day-picker";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import BillingKanbanView from "@/components/billing/BillingKanbanView";
 
 type Member = {
   id: string;
@@ -35,7 +37,7 @@ type Owner = {
   email: string;
 };
 
-type Invoice = {
+export type Invoice = {
   id: string;
   projectId: string; // slug
   projectName: string;
@@ -71,6 +73,7 @@ const Billing = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   
   const { updateProject } = useProjectMutations(selectedInvoice?.projectId || '');
 
@@ -271,124 +274,134 @@ const Billing = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Invoice History</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>Invoice History</CardTitle>
+              <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if (value) setViewMode(value as 'table' | 'kanban')}}>
+                  <ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem>
+                  <ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('id')} className="px-2">
-                      Invoice # {renderSortIcon('id')}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('projectName')} className="px-2">
-                      Project {renderSortIcon('projectName')}
-                    </Button>
-                  </TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('status')} className="px-2">
-                      Status {renderSortIcon('status')}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('poNumber')} className="px-2">
-                      PO # {renderSortIcon('poNumber')}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('amount')} className="px-2">
-                      Amount {renderSortIcon('amount')}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort('dueDate')} className="px-2">
-                      Due Date {renderSortIcon('dueDate')}
-                    </Button>
-                  </TableHead>
-                  <TableHead>Owner</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedInvoices.length === 0 ? (
+          <CardContent className="p-0">
+            {viewMode === 'table' ? (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
-                      No invoices found.
-                    </TableCell>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('id')} className="px-2">
+                        Invoice # {renderSortIcon('id')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('projectName')} className="px-2">
+                        Project {renderSortIcon('projectName')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('status')} className="px-2">
+                        Status {renderSortIcon('status')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('poNumber')} className="px-2">
+                        PO # {renderSortIcon('poNumber')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('amount')} className="px-2">
+                        Amount {renderSortIcon('amount')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => handleSort('dueDate')} className="px-2">
+                        Due Date {renderSortIcon('dueDate')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>Owner</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  sortedInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">{invoice.id}</TableCell>
-                      <TableCell>
-                        <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
-                          {invoice.projectName}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={invoice.clientLogo || undefined} alt={invoice.clientName || ''} />
-                            <AvatarFallback>{invoice.clientName?.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{invoice.clientName || 'N/A'}</div>
-                            <div className="text-sm text-muted-foreground">{invoice.clientCompanyName || ''}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
-                          {invoice.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
-                      <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
-                      <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
-                      <TableCell>
-                        {invoice.projectOwner && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage src={invoice.projectOwner.avatar_url} alt={invoice.projectOwner.name} />
-                                  <AvatarFallback>{invoice.projectOwner.initials}</AvatarFallback>
-                                </Avatar>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{invoice.projectOwner.name}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => handleEdit(invoice)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Download className="mr-2 h-4 w-4" />
-                              Download
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                </TableHeader>
+                <TableBody>
+                  {sortedInvoices.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-24 text-center">
+                        No invoices found.
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    sortedInvoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">{invoice.id}</TableCell>
+                        <TableCell>
+                          <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
+                            {invoice.projectName}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={invoice.clientLogo || undefined} alt={invoice.clientName || ''} />
+                              <AvatarFallback>{invoice.clientName?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">{invoice.clientName || 'N/A'}</div>
+                              <div className="text-sm text-muted-foreground">{invoice.clientCompanyName || ''}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
+                            {invoice.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
+                        <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
+                        <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
+                        <TableCell>
+                          {invoice.projectOwner && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage src={invoice.projectOwner.avatar_url} alt={invoice.projectOwner.name} />
+                                    <AvatarFallback>{invoice.projectOwner.initials}</AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{invoice.projectOwner.name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onSelect={() => handleEdit(invoice)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Download className="mr-2 h-4 w-4" />
+                                Download
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            ) : (
+              <BillingKanbanView invoices={sortedInvoices} onEditInvoice={handleEdit} />
+            )}
           </CardContent>
         </Card>
       </div>
