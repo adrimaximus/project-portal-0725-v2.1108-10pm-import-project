@@ -1,61 +1,66 @@
-import { useState, useRef } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import { getAvatarUrl, getInitials } from '@/lib/utils';
+import { useState, useRef, useMemo } from "react";
+import { Project } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Loader2, Paperclip, Send, Ticket, X } from "lucide-react";
+import { generatePastelColor, getAvatarUrl, getInitials } from "@/lib/utils";
 import MentionInput from './MentionInput';
-import { Project } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
 
 interface ProjectCommentsProps {
   project: Project;
+  onAddCommentOrTicket: (text: string, isTicket: boolean, attachment: File | null) => void;
 }
 
-const ProjectComments = ({ project }: ProjectCommentsProps) => {
+const ProjectComments = ({ project, onAddCommentOrTicket }: ProjectCommentsProps) => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState("");
   const [isTicketMode, setIsTicketMode] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   if (!user) return null;
 
-  const mentionableUsers = (project.assignedTo || []).map(member => ({
-    id: member.id,
-    display: member.name,
-    avatar_url: member.avatar_url || '',
-    initials: member.initials || getInitials(member.name, member.email),
-  }));
-
-  const handleSubmit = async () => {
-    if (!comment.trim()) return;
-    setIsSubmitting(true);
-
-    const { error } = await supabase.from('comments').insert({
-      project_id: project.id,
-      author_id: user.id,
-      text: comment,
-      is_ticket: isTicketMode,
+  const mentionableUsers = useMemo(() => {
+    if (!project) return [];
+    const users = [project.created_by, ...project.assignedTo];
+    const uniqueUsers = Array.from(new Map(users.map(u => [u.id, u])).values());
+    return uniqueUsers.map(u => {
+      return {
+        id: u.id,
+        display: u.name,
+        avatar_url: u.avatar_url,
+        initials: u.initials,
+        email: u.email,
+      };
     });
+  }, [project]);
 
-    if (error) {
-      toast.error('Failed to add comment.', { description: error.message });
-    } else {
-      setComment('');
-      setIsTicketMode(false);
-      toast.success(isTicketMode ? 'Ticket created successfully.' : 'Comment added.');
-      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setAttachment(e.target.files[0]);
     }
-    setIsSubmitting(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!comment.trim() || !user) return;
+
+    setIsSubmitting(true);
+    try {
+      await onAddCommentOrTicket(comment, isTicketMode, attachment);
+      setComment("");
+      setIsTicketMode(false);
+      setAttachment(null);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -75,7 +80,6 @@ const ProjectComments = ({ project }: ProjectCommentsProps) => {
                 onChange={setComment}
                 placeholder={isTicketMode ? "Describe the ticket..." : "Add a comment... @ to mention"}
                 userSuggestions={mentionableUsers}
-                projectSuggestions={[]}
                 disabled={isSubmitting}
                 className="min-h-[100px] border-none focus-visible:ring-0 p-0"
               />
