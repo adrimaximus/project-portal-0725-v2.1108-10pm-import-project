@@ -47,10 +47,17 @@ export const getAvatarUrl = (
     return avatarUrl;
   }
   const style = isGroup ? 'bottts' : 'micah';
-  return `https://api.dicebear.com/8.x/${style}/svg?seed=${seed}`;
+  return `https://api.dicebear.com/8.x/${style}/svg?seed=${seed || 'default-seed'}`;
 };
 
 export const generatePastelColor = (str: string): { backgroundColor: string, color: string } => {
+  if (!str) {
+    const h = 0; // default hue
+    return {
+      backgroundColor: `hsl(${h}, 70%, 85%)`,
+      color: `hsl(${h}, 70%, 30%)`,
+    };
+  }
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
