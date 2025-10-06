@@ -1,154 +1,195 @@
-import { Project, AssignedUser, User } from "@/types";
+import { Project, AssignedUser, UserProfile } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, RefreshCw } from "lucide-react";
-import ModernTeamSelector from "../request/ModernTeamSelector";
+import { Button } from "@/components/ui/button";
+import { UserPlus, Crown, MoreVertical, Trash2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "../ui/button";
-import ChangeOwnerDialog from "./ChangeOwnerDialog";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
-import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
+import ChangeOwnerDialog from "./ChangeOwnerDialog";
 
 interface ProjectTeamCardProps {
   project: Project;
-  isEditing: boolean;
-  onFieldChange: (field: keyof Project, value: any) => void;
+  onProjectUpdate: () => void;
 }
 
-const ProjectTeamCard = ({ project, isEditing, onFieldChange }: ProjectTeamCardProps) => {
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+const ProjectTeamCard = ({ project, onProjectUpdate }: ProjectTeamCardProps) => {
   const { user: currentUser } = useAuth();
-  const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
-  const queryClient = useQueryClient();
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [isChangeOwnerOpen, setIsChangeOwnerOpen] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
       const { data, error } = await supabase.from('profiles').select('*');
-      if (data) {
-        const users = data.map(profile => {
-          const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-          return {
-            id: profile.id,
-            name: fullName || profile.email || 'No name',
-            avatar_url: getAvatarUrl(profile.avatar_url, profile.id),
-            email: profile.email,
-            initials: getInitials(fullName, profile.email) || 'NN',
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-          }
-        });
-        setAllUsers(users);
+      if (error) {
+        console.error("Error fetching users:", error);
+      } else {
+        setAllUsers(data as UserProfile[]);
       }
     };
     fetchUsers();
   }, []);
 
-  const handleTeamSelectionToggle = (userToToggle: AssignedUser) => {
-    const isSelected = project.assignedTo.some(u => u.id === userToToggle.id);
-    const newTeam = isSelected
-      ? project.assignedTo.filter(u => u.id !== userToToggle.id)
-      : [...project.assignedTo, userToToggle];
-    onFieldChange('assignedTo', newTeam);
-  };
+  const handleAddMember = async () => {
+    if (!selectedUser) return;
 
-  const handleOwnerChange = async (newOwnerId: string) => {
-    const { error } = await supabase.rpc('transfer_project_ownership', {
-      p_project_id: project.id,
-      p_new_owner_id: newOwnerId,
+    const existingMemberIds = project.assignedTo?.map(m => m.id) || [];
+    if (typeof project.created_by === 'object' && project.created_by.id) {
+      existingMemberIds.push(project.created_by.id);
+    }
+
+    if (existingMemberIds.includes(selectedUser)) {
+      toast.info("User is already a member of this project.");
+      return;
+    }
+
+    const { error } = await supabase.from('project_members').insert({
+      project_id: project.id,
+      user_id: selectedUser,
     });
 
     if (error) {
-      toast.error("Failed to transfer ownership.", { description: error.message });
+      toast.error("Failed to add member.", { description: error.message });
     } else {
-      toast.success("Project ownership transferred. Reloading project...");
-      setIsChangeOwnerDialogOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
-      await queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success("Member added successfully.");
+      onProjectUpdate();
+      setIsAddingMember(false);
+      setSelectedUser(null);
     }
   };
 
-  const assignableUsers = project.created_by
+  const handleRemoveMember = async (userId: string) => {
+    const { error } = await supabase.from('project_members').delete()
+      .eq('project_id', project.id)
+      .eq('user_id', userId);
+
+    if (error) {
+      toast.error("Failed to remove member.", { description: error.message });
+    } else {
+      toast.success("Member removed successfully.");
+      onProjectUpdate();
+    }
+  };
+
+  const assignableUsers = (typeof project.created_by === 'object' && project.created_by.id)
     ? allUsers.filter(u => u.id !== project.created_by.id)
     : allUsers;
-    
-  const teamMembers = project.assignedTo.filter(member => member.id !== project.created_by.id);
 
-  const canChangeOwner = currentUser && (currentUser.id === project.created_by.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
+  const teamMembers = (project.assignedTo || []).filter(member => 
+    typeof project.created_by === 'object' ? member.id !== project.created_by.id : true
+  );
+
+  const canChangeOwner = currentUser && typeof project.created_by === 'object' && (currentUser.id === project.created_by.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Team</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent className="space-y-4 pt-4">
-          <div>
-            <div className="flex justify-between items-center">
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">PROJECT OWNER</h4>
-              {isEditing && canChangeOwner && (
-                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setIsChangeOwnerDialogOpen(true)}>
-                  <RefreshCw className="mr-1 h-3 w-3" />
-                  Change
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={getAvatarUrl(project.created_by.avatar_url, project.created_by.id)} />
-                <AvatarFallback style={generatePastelColor(project.created_by.id)}>{project.created_by.initials}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium">{project.created_by.name}</p>
-                <p className="text-xs text-muted-foreground">{project.created_by.email}</p>
-              </div>
-            </div>
-          </div>
-
-          {isEditing ? (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
-              <ModernTeamSelector
-                users={assignableUsers}
-                selectedUsers={teamMembers}
-                onSelectionChange={handleTeamSelectionToggle}
-              />
-            </div>
-          ) : (
-            teamMembers.length > 0 && (
-              <div>
-                <h4 className="text-xs font-semibold text-muted-foreground mb-2">TEAM MEMBERS</h4>
-                <div className="space-y-3">
-                  {teamMembers.map(member => (
-                    <div key={member.id} className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
-                        <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{member.name}</p>
-                        <p className="text-xs text-muted-foreground">{member.email}</p>
-                      </div>
-                    </div>
-                  ))}
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-lg font-semibold">Team</CardTitle>
+        <Button variant="ghost" size="sm" onClick={() => setIsAddingMember(true)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Add Member
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {typeof project.created_by === 'object' && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={getAvatarUrl(project.created_by.avatar_url, project.created_by.id)} />
+                  <AvatarFallback style={generatePastelColor(project.created_by.id)}>{project.created_by.initials}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">{project.created_by.name}</p>
+                  <p className="text-xs text-muted-foreground">{project.created_by.email}</p>
                 </div>
               </div>
-            )
+              <div className="flex items-center gap-1 text-xs text-amber-500">
+                <Crown className="h-4 w-4" />
+                <span>Owner</span>
+              </div>
+            </div>
           )}
-        </CardContent>
-      </Card>
-      {canChangeOwner && (
-        <ChangeOwnerDialog
-          open={isChangeOwnerDialogOpen}
-          onOpenChange={setIsChangeOwnerDialogOpen}
-          project={project}
-          onOwnerChange={handleOwnerChange}
-        />
-      )}
-    </>
+
+          {teamMembers.map((member) => (
+            <div key={member.id} className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={getAvatarUrl(member.avatar_url, member.id)} />
+                  <AvatarFallback style={generatePastelColor(member.id)}>{member.initials}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">{member.name}</p>
+                  <p className="text-xs text-muted-foreground">{member.email}</p>
+                </div>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleRemoveMember(member.id)} className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ))}
+
+          {isAddingMember && (
+            <div className="flex items-center gap-2">
+              <Select onValueChange={setSelectedUser}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assignableUsers
+                    .filter(u => !(project.assignedTo || []).find(m => m.id === u.id))
+                    .map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleAddMember} size="sm">Add</Button>
+              <Button onClick={() => setIsAddingMember(false)} size="sm" variant="outline">Cancel</Button>
+            </div>
+          )}
+        </div>
+        {canChangeOwner && (
+          <Button variant="outline" size="sm" className="mt-4 w-full" onClick={() => setIsChangeOwnerOpen(true)}>
+            Transfer Ownership
+          </Button>
+        )}
+      </CardContent>
+      <ChangeOwnerDialog
+        project={project}
+        isOpen={isChangeOwnerOpen}
+        onClose={() => setIsChangeOwnerOpen(false)}
+        onOwnerChanged={onProjectUpdate}
+      />
+    </Card>
   );
 };
 

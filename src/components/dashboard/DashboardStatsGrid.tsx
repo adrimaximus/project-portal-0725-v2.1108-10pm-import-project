@@ -1,242 +1,166 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Project, User, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
+import { Project, UserProfile, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/types';
 import StatCard from './StatCard';
-import { DollarSign, ListChecks, CreditCard, User as UserIcon, Users, Hourglass, Briefcase } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getCurrencySymbol } from '@/lib/utils';
 
 interface DashboardStatsGridProps {
   projects: Project[];
 }
 
-type UserStatData = User & { projectCount: number; totalValue: number };
-
-const UserStat = ({ user, metric, metricType }: { user: UserStatData | null, metric: number, metricType: 'quantity' | 'value' }) => {
-  if (!user || metric === 0) {
-    return (
-      <div className="pt-2">
-        <div className="text-2xl font-bold">N/A</div>
-        <p className="text-xs text-muted-foreground">No data available</p>
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-center gap-2 sm:gap-4 pt-2">
-      <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-        <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
-        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-      </Avatar>
-      <div>
-        <div className="text-base sm:text-lg font-bold leading-tight">{user.name}</div>
-        <p className="text-xs text-muted-foreground">
-          {metricType === 'quantity'
-            ? `${metric} project${metric === 1 ? '' : 's'}`
-            : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(metric)}`}
-        </p>
-      </div>
-    </div>
-  );
+type CollaboratorStat = UserProfile & {
+  projectCount: number;
+  totalValue: number;
 };
 
 const DashboardStatsGrid = ({ projects }: DashboardStatsGridProps) => {
-  const { hasPermission } = useAuth();
-  const canViewValue = hasPermission('projects:view_value');
-  const [viewMode, setViewMode] = useState<'quantity' | 'value'>('quantity');
+  const [timeRange, setTimeRange] = useState('all');
+  const [currency, setCurrency] = useState('USD');
 
-  useEffect(() => {
-    if (!canViewValue) {
-      setViewMode('quantity');
-    }
-  }, [canViewValue]);
+  const filteredProjects = useMemo(() => {
+    if (timeRange === 'all') return projects;
+    const now = new Date();
+    return projects.filter(p => {
+      if (!p.created_at) return false;
+      const projectDate = new Date(p.created_at);
+      if (timeRange === '7d') return now.getTime() - projectDate.getTime() < 7 * 24 * 60 * 60 * 1000;
+      if (timeRange === '30d') return now.getTime() - projectDate.getTime() < 30 * 24 * 60 * 60 * 1000;
+      if (timeRange === '90d') return now.getTime() - projectDate.getTime() < 90 * 24 * 60 * 60 * 1000;
+      return true;
+    });
+  }, [projects, timeRange]);
 
-  const stats = useMemo(() => {
-    const totalProjects = projects.length;
-    const totalValue = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
+  const totalProjects = filteredProjects.length;
+  const totalValue = filteredProjects.reduce((sum, p) => sum + (p.budget || 0), 0);
+  const paidValue = filteredProjects.filter(p => p.payment_status === 'Paid').reduce((sum, p) => sum + (p.budget || 0), 0);
+  const unpaidValue = totalValue - paidValue;
 
-    const projectStatusCounts = projects.reduce((acc, p) => {
-      if (p.status) {
-        acc[p.status] = (acc[p.status] || 0) + 1;
+  const projectsByStatus = useMemo(() => {
+    const statusCounts = PROJECT_STATUS_OPTIONS.map(opt => ({ name: opt.label, count: 0 }));
+    filteredProjects.forEach(p => {
+      const status = statusCounts.find(s => s.name === p.status);
+      if (status) {
+        status.count++;
       }
-      return acc;
-    }, {} as Record<string, number>);
+    });
+    return statusCounts;
+  }, [filteredProjects]);
 
-    const projectStatusValues = projects.reduce((acc, p) => {
-      if (p.status) {
-        acc[p.status] = (acc[p.status] || 0) + (p.budget || 0);
+  const projectsByPaymentStatus = useMemo(() => {
+    const statusCounts = PAYMENT_STATUS_OPTIONS.map(opt => ({ name: opt.label, count: 0, value: 0 }));
+    filteredProjects.forEach(p => {
+      const status = statusCounts.find(s => s.name === p.payment_status);
+      if (status) {
+        status.count++;
+        status.value += p.budget || 0;
       }
-      return acc;
-    }, {} as Record<string, number>);
+    });
+    return statusCounts;
+  }, [filteredProjects]);
 
-    const paymentStatusCounts = projects.reduce((acc, p) => {
-      if (p.payment_status) {
-        acc[p.payment_status] = (acc[p.payment_status] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
-
-    const paymentStatusValues = projects.reduce((acc, p) => {
-      if (p.payment_status) {
-        acc[p.payment_status] = (acc[p.payment_status] || 0) + (p.budget || 0);
-      }
-      return acc;
-    }, {} as Record<string, number>);
-
-    const ownerStats = projects.reduce((acc, p) => {
-        if (p.created_by) {
-            if (!acc[p.created_by.id]) acc[p.created_by.id] = { ...p.created_by, projectCount: 0, totalValue: 0 };
-            acc[p.created_by.id].projectCount++;
-            acc[p.created_by.id].totalValue += p.budget || 0;
+  const topCollaborators = useMemo(() => {
+    const collaboratorStats: { [key: string]: CollaboratorStat } = {};
+    filteredProjects.forEach(p => {
+      if (p.created_by && typeof p.created_by === 'object') {
+        const createdBy = p.created_by;
+        if (!collaboratorStats[createdBy.id]) {
+          collaboratorStats[createdBy.id] = { ...createdBy, projectCount: 0, totalValue: 0 };
         }
+        collaboratorStats[createdBy.id].projectCount++;
+        collaboratorStats[createdBy.id].totalValue += p.budget || 0;
+      }
+      (p.assignedTo || []).forEach(collaborator => {
+        if (!collaboratorStats[collaborator.id]) {
+          collaboratorStats[collaborator.id] = { ...collaborator, projectCount: 0, totalValue: 0 };
+        }
+        collaboratorStats[collaborator.id].projectCount++;
+      });
+    });
+    return Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount).slice(0, 5);
+  }, [filteredProjects]);
+
+  const currencySymbol = getCurrencySymbol(currency);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0 }).format(value);
+  };
+
+  const unpaidProjects = projects.filter(p => p.payment_status === 'Unpaid');
+    const unpaidStats = unpaidProjects.reduce((acc, p) => {
+        acc.count++;
+        acc.value += p.budget || 0;
         return acc;
-    }, {} as Record<string, UserStatData>);
-    const topOwnerByCount = Object.values(ownerStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
-    const topOwnerByValue = Object.values(ownerStats).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
-
-    const collaboratorStats = projects.reduce((acc, p) => {
-        p.assignedTo.forEach(user => {
-            if (!acc[user.id]) acc[user.id] = { ...user, projectCount: 0, totalValue: 0 };
-            acc[user.id].projectCount++;
-            acc[user.id].totalValue += p.budget || 0;
-        });
-        return acc;
-    }, {} as Record<string, UserStatData>);
-    const topCollaboratorByCount = Object.values(collaboratorStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
-    const topCollaboratorByValue = Object.values(collaboratorStats).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
-
-    const pendingProjects = projects.filter(p => p.payment_status === 'Pending');
-    const pendingStats = pendingProjects.reduce((acc, p) => {
-        p.assignedTo.forEach(user => {
-            if (!acc[user.id]) acc[user.id] = { ...user, projectCount: 0, totalValue: 0 };
-            acc[user.id].projectCount++;
-            acc[user.id].totalValue += p.budget || 0;
-        });
-        return acc;
-    }, {} as Record<string, UserStatData>);
-    const topUserByPendingCount = Object.values(pendingStats).sort((a, b) => b.projectCount - a.projectCount)[0] || null;
-    const topUserByPendingValue = Object.values(pendingStats).sort((a, b) => b.totalValue - a.totalValue)[0] || null;
-
-    return {
-      totalProjects,
-      totalValue,
-      projectStatusCounts, projectStatusValues,
-      paymentStatusCounts, paymentStatusValues,
-      topOwnerByCount, topOwnerByValue,
-      topCollaboratorByCount, topCollaboratorByValue,
-      topUserByPendingCount, topUserByPendingValue,
-    };
-  }, [projects]);
-
-  const topOwner = viewMode === 'quantity' ? stats.topOwnerByCount : stats.topOwnerByValue;
-  const topCollaborator = viewMode === 'quantity' ? stats.topCollaboratorByCount : stats.topCollaboratorByValue;
-  const topPendingUser = viewMode === 'quantity' ? stats.topUserByPendingCount : stats.topUserByPendingValue;
+    }, { count: 0, value: 0 });
 
   return (
-    <div>
-      {canViewValue && (
-        <div className="flex justify-end mb-4">
-          <ToggleGroup 
-            type="single" 
-            value={viewMode} 
-            onValueChange={(value) => { if (value) setViewMode(value as 'quantity' | 'value')}}
-            className="h-8"
-          >
-            <ToggleGroupItem value="quantity" className="text-xs px-3">By Quantity</ToggleGroupItem>
-            <ToggleGroupItem value="value" className="text-xs px-3">By Value</ToggleGroupItem>
-          </ToggleGroup>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Dashboard</h2>
+        <div className="flex items-center space-x-2">
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Time Range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={currency} onValueChange={setCurrency}>
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="Currency" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="USD">USD</SelectItem>
+              <SelectItem value="EUR">EUR</SelectItem>
+              <SelectItem value="GBP">GBP</SelectItem>
+              <SelectItem value="JPY">JPY</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      )}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Projects"
-          value={stats.totalProjects}
-          icon={<Briefcase className="h-4 w-4 text-muted-foreground" />}
-        />
-        {canViewValue && (
-          <StatCard
-            title="Total Project Value"
-            value={`Rp\u00A0${new Intl.NumberFormat('id-ID').format(stats.totalValue)}`}
-            icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-          />
-        )}
-        <StatCard
-          title="Project Status"
-          icon={<ListChecks className="h-4 w-4 text-muted-foreground" />}
-          value={
-            <div className="space-y-1 text-sm pt-2">
-              {PROJECT_STATUS_OPTIONS.map(option => {
-                const count = stats.projectStatusCounts[option.value] || 0;
-                const value = stats.projectStatusValues[option.value] || 0;
-                const metric = viewMode === 'quantity' ? count : value;
-                if (metric === 0) return null;
-                return (
-                  <div key={option.value} className="flex justify-between">
-                    <span>{option.label}</span>
-                    <span className="font-semibold">
-                      {viewMode === 'quantity' ? count : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}`}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          }
-        />
-        <StatCard
-          title="Payment Status"
-          icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
-          value={
-            <div className="space-y-1 text-sm pt-2">
-              {PAYMENT_STATUS_OPTIONS.map(option => {
-                const count = stats.paymentStatusCounts[option.value] || 0;
-                const value = stats.paymentStatusValues[option.value] || 0;
-                const metric = viewMode === 'quantity' ? count : value;
-                if (metric === 0) return null;
-                return (
-                  <div key={option.value} className="flex justify-between">
-                    <span>{option.label}</span>
-                    <span className="font-semibold">
-                      {viewMode === 'quantity' ? count : `Rp\u00A0${new Intl.NumberFormat('id-ID').format(value)}`}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          }
-        />
-        <StatCard
-          title="Top Project Owner"
-          icon={<UserIcon className="h-4 w-4 text-muted-foreground" />}
-          value={
-            <UserStat 
-              user={topOwner}
-              metric={viewMode === 'quantity' ? topOwner?.projectCount ?? 0 : topOwner?.totalValue ?? 0}
-              metricType={viewMode}
-            />
-          }
-        />
-        <StatCard
-          title="Top Collaborator"
-          icon={<Users className="h-4 w-4 text-muted-foreground" />}
-          value={
-            <UserStat 
-              user={topCollaborator}
-              metric={viewMode === 'quantity' ? topCollaborator?.projectCount ?? 0 : topCollaborator?.totalValue ?? 0}
-              metricType={viewMode}
-            />
-          }
-        />
-        <StatCard
-          title="Most Pending Payment"
-          icon={<Hourglass className="h-4 w-4 text-muted-foreground" />}
-          value={
-            <UserStat 
-              user={topPendingUser}
-              metric={viewMode === 'quantity' ? topPendingUser?.projectCount ?? 0 : topPendingUser?.totalValue ?? 0}
-              metricType={viewMode}
-            />
-          }
-        />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard title="Total Projects" value={totalProjects.toString()} />
+        <StatCard title="Total Project Value" value={formatCurrency(totalValue)} />
+        <StatCard title="Collected" value={formatCurrency(paidValue)} percentage={totalValue > 0 ? Math.round((paidValue / totalValue) * 100) : 0} />
+        <StatCard title="Outstanding" value={formatCurrency(unpaidValue)} percentage={totalValue > 0 ? Math.round((unpaidValue / totalValue) * 100) : 0} />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Projects by Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={projectsByStatus}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Collaborators</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {topCollaborators.map(c => (
+                <li key={c.id} className="flex justify-between items-center">
+                  <span>{c.name}</span>
+                  <span className="font-semibold">{c.projectCount} projects</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

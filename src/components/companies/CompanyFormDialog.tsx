@@ -1,115 +1,103 @@
-import { useState, useEffect, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Building, Image as ImageIcon } from "lucide-react";
+import { toast } from 'sonner';
 import { Company } from '@/types';
-import AddressAutocompleteInput from '../AddressAutocompleteInput';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Label } from '../ui/label';
+import { Loader2 } from 'lucide-react';
 
 interface CompanyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: CompanyFormValues, file: File | null) => void;
   company: Company | null;
-  isSaving: boolean;
 }
 
-const companySchema = z.object({
-  name: z.string().min(1, "Company name is required"),
-  legal_name: z.string().optional(),
-  address: z.string().optional(),
-  billing_address: z.string().optional(),
-});
-
-export type CompanyFormValues = z.infer<typeof companySchema>;
-
-const CompanyFormDialog = ({ open, onOpenChange, onSave, company, isSaving }: CompanyFormDialogProps) => {
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const form = useForm<CompanyFormValues>({
-    resolver: zodResolver(companySchema),
-    defaultValues: { name: '', legal_name: '', address: '', billing_address: '' }
+const CompanyFormDialog = ({ open, onOpenChange, company }: CompanyFormDialogProps) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    legal_name: '',
+    address: '',
+    billing_address: '',
   });
+  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (open) {
-      if (company) {
-        form.reset({
-          name: company.name,
-          legal_name: company.legal_name || '',
-          address: company.address || '',
-          billing_address: company.billing_address || '',
-        });
-        setLogoPreview(company.logo_url || null);
-      } else {
-        form.reset({ name: '', legal_name: '', address: '', billing_address: '' });
-        setLogoPreview(null);
-      }
-      setLogoFile(null);
+    if (company) {
+      setFormData({
+        name: company.name || '',
+        legal_name: company.legal_name || '',
+        address: company.address || '',
+        billing_address: company.billing_address || '',
+      });
+    } else {
+      setFormData({
+        name: '',
+        legal_name: '',
+        address: '',
+        billing_address: '',
+      });
     }
-  }, [company, open, form]);
+  }, [company, open]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      setLogoPreview(URL.createObjectURL(file));
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({ ...prev, [id]: value }));
   };
 
-  const onSubmit = (values: CompanyFormValues) => {
-    onSave(values, logoFile);
+  const handleSubmit = async () => {
+    setIsSaving(true);
+    const { data, error } = await supabase
+      .from('companies')
+      .upsert({ id: company?.id, ...formData });
+
+    if (error) {
+      toast.error(`Failed to save company.`, { description: error.message });
+    } else {
+      toast.success(`Company ${company ? 'updated' : 'created'} successfully.`);
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      onOpenChange(false);
+    }
+    setIsSaving(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
-          <DialogDescription>Fill in the details for the company profile.</DialogDescription>
+          <DialogDescription>
+            {company ? `Editing details for ${company.name}` : 'Enter the details for the new company.'}
+          </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20 rounded-md">
-                <AvatarImage src={logoPreview || undefined} className="object-contain" />
-                <AvatarFallback className="rounded-md"><Building className="h-8 w-8 text-muted-foreground" /></AvatarFallback>
-              </Avatar>
-              <div className="space-y-2">
-                <Label>Company Logo</Label>
-                <Input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="text-xs" />
-              </div>
-            </div>
-            <FormField control={form.control} name="name" render={({ field }) => (
-              <FormItem><FormLabel>Company Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="legal_name" render={({ field }) => (
-              <FormItem><FormLabel>Legal Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="address" render={({ field }) => (
-              <FormItem><FormLabel>Address</FormLabel><FormControl><AddressAutocompleteInput value={field.value || ''} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="billing_address" render={({ field }) => (
-              <FormItem><FormLabel>Billing Address</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <DialogFooter className="pt-4 sticky bottom-0 bg-background">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name" className="text-right">Name</Label>
+            <Input id="name" value={formData.name} onChange={handleChange} className="col-span-3" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="legal_name" className="text-right">Legal Name</Label>
+            <Input id="legal_name" value={formData.legal_name} onChange={handleChange} className="col-span-3" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="address" className="text-right">Address</Label>
+            <Input id="address" value={formData.address} onChange={handleChange} className="col-span-3" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="billing_address" className="text-right">Billing Address</Label>
+            <Input id="billing_address" value={formData.billing_address} onChange={handleChange} className="col-span-3" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

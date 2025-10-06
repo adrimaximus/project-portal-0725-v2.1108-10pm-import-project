@@ -1,41 +1,45 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Project, User } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Project, UserProfile } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { generatePastelColor } from '@/lib/utils';
+import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 interface ChangeOwnerDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   project: Project;
-  onOwnerChange: (newOwnerId: string) => Promise<void>;
+  isOpen: boolean;
+  onClose: () => void;
+  onOwnerChanged: () => void;
 }
 
-const ChangeOwnerDialog = ({ open, onOpenChange, project, onOwnerChange }: ChangeOwnerDialogProps) => {
+const ChangeOwnerDialog = ({ project, isOpen, onClose, onOwnerChanged }: ChangeOwnerDialogProps) => {
   const { user: currentUser } = useAuth();
-  const [potentialOwners, setPotentialOwners] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   useEffect(() => {
-    if (!open || !currentUser) return;
+    if (!isOpen || !currentUser || !project.created_by || typeof project.created_by !== 'object') return;
 
-    const fetchPotentialOwners = async () => {
+    const fetchUsers = async () => {
       setIsLoading(true);
       let query;
-      const isAdmin = currentUser.role === 'admin' || currentUser.role === 'master admin';
-
-      if (isAdmin) {
+      if (currentUser.role === 'admin' || currentUser.role === 'master admin') {
         // Admin can transfer to any user except the current owner
         query = supabase.from('profiles').select('*').neq('id', project.created_by.id);
       } else {
         // Owner can only transfer to existing collaborators
-        const collaboratorIds = project.assignedTo.map(u => u.id).filter(id => id !== project.created_by.id);
+        const collaboratorIds = (project.assignedTo || []).map(u => u.id).filter(id => id !== (typeof project.created_by === 'object' ? project.created_by.id : project.created_by));
         if (collaboratorIds.length === 0) {
-          setPotentialOwners([]);
+          setUsers([]);
           setIsLoading(false);
           return;
         }
@@ -43,64 +47,101 @@ const ChangeOwnerDialog = ({ open, onOpenChange, project, onOwnerChange }: Chang
       }
 
       const { data, error } = await query;
-
       if (error) {
-        toast.error("Failed to fetch users.");
+        toast.error('Failed to fetch users.', { description: error.message });
       } else {
-        const users = data.map(profile => ({
-          id: profile.id,
-          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name',
-          avatar_url: profile.avatar_url,
-          email: profile.email,
-          initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'NN',
-        }));
-        setPotentialOwners(users);
+        setUsers(data as UserProfile[]);
       }
       setIsLoading(false);
     };
 
-    fetchPotentialOwners();
-  }, [open, currentUser, project]);
+    fetchUsers();
+  }, [isOpen, currentUser, project]);
 
-  const handleSelect = async (newOwnerId: string) => {
-    await onOwnerChange(newOwnerId);
+  const handleTransfer = async () => {
+    if (!selectedUser) {
+      toast.error('Please select a new owner.');
+      return;
+    }
+
+    setIsLoading(true);
+    const { error } = await supabase.rpc('transfer_project_ownership', {
+      p_project_id: project.id,
+      p_new_owner_id: selectedUser.id,
+    });
+
+    if (error) {
+      toast.error('Failed to transfer ownership.', { description: error.message });
+    } else {
+      toast.success(`Ownership transferred to ${selectedUser.name}.`);
+      onOwnerChanged();
+      onClose();
+    }
+    setIsLoading(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Transfer Project Ownership</DialogTitle>
-          <DialogDescription>Select a new owner for this project. The current owner will become a member.</DialogDescription>
+          <DialogDescription>
+            Select a new owner for the project "{project.name}". The current owner will become a member.
+          </DialogDescription>
         </DialogHeader>
-        <Command>
-          <CommandInput placeholder="Search for a user..." />
-          <CommandList>
-            {isLoading && <CommandEmpty>Loading users...</CommandEmpty>}
-            {!isLoading && potentialOwners.length === 0 && <CommandEmpty>No eligible users to transfer to.</CommandEmpty>}
-            <CommandGroup>
-              {potentialOwners.map(user => (
-                <CommandItem
-                  key={user.id}
-                  value={user.name}
-                  onSelect={() => handleSelect(user.id)}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar_url} />
-                      <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{user.name}</p>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
-                    </div>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+        <div className="py-4">
+          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={popoverOpen}
+                className="w-full justify-between"
+              >
+                {selectedUser ? selectedUser.name : "Select new owner..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+              <Command>
+                <CommandInput placeholder="Search user..." />
+                <CommandEmpty>No user found.</CommandEmpty>
+                <CommandGroup>
+                  {users.map((user) => (
+                    <CommandItem
+                      key={user.id}
+                      value={user.name}
+                      onSelect={() => {
+                        setSelectedUser(user);
+                        setPopoverOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedUser?.id === user.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                          <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+                        </Avatar>
+                        {user.name}
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleTransfer} disabled={isLoading || !selectedUser}>
+            {isLoading ? 'Transferring...' : 'Transfer Ownership'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
