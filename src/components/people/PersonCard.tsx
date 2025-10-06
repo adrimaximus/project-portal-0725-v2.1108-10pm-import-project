@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Person } from '@/types';
+import { Person as BasePerson } from '@/types';
 import { Card } from '@/components/ui/card';
-import { User as UserIcon, Instagram, Briefcase, Mail } from 'lucide-react';
+import { User as UserIcon, Instagram, Briefcase, Mail, Building } from 'lucide-react';
 import { generatePastelColor } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import WhatsappIcon from '../icons/WhatsappIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+type Person = BasePerson & { company_id?: string | null };
 
 interface PersonCardProps {
   person: Person;
@@ -38,24 +40,47 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
 
   useEffect(() => {
     const fetchCompanyDetails = async () => {
-      if (person.company) {
-        const { data, error } = await supabase
+      if (!person.company_id && !person.company) {
+        setCompanyLogoUrl(null);
+        setCompanyAddress(null);
+        return;
+      }
+
+      let companyData = null;
+      let error = null;
+
+      // 1. Prioritize fetching by company_id for a reliable link
+      if (person.company_id) {
+        const { data, error: idError } = await supabase
           .from('companies')
           .select('logo_url, address')
-          .eq('name', person.company)
+          .eq('id', person.company_id)
           .single();
-
-        if (error) {
-          console.error('Error fetching company details:', error.message);
-          setCompanyLogoUrl(null);
-          setCompanyAddress(null);
-        } else if (data) {
-          setCompanyLogoUrl(data.logo_url);
-          setCompanyAddress(data.address);
-        } else {
-          setCompanyLogoUrl(null);
-          setCompanyAddress(null);
+        if (!idError && data) {
+          companyData = data;
+        } else if (idError) {
+          console.warn(`Could not fetch company by ID "${person.company_id}":`, idError.message);
         }
+      }
+
+      // 2. Fallback to fetching by company name (case-insensitive) if not found by ID
+      if (!companyData && person.company) {
+        const { data, error: nameError } = await supabase
+          .from('companies')
+          .select('logo_url, address')
+          .ilike('name', person.company)
+          .single();
+        
+        if (!nameError && data) {
+          companyData = data;
+        } else if (nameError && nameError.code !== 'PGRST116') { // PGRST116: "single row not found"
+          console.warn(`Could not fetch company by name "${person.company}":`, nameError.message);
+        }
+      }
+
+      if (companyData) {
+        setCompanyLogoUrl(companyData.logo_url);
+        setCompanyAddress(companyData.address);
       } else {
         setCompanyLogoUrl(null);
         setCompanyAddress(null);
@@ -63,7 +88,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
     };
 
     fetchCompanyDetails();
-  }, [person.company]);
+  }, [person.company, person.company_id]);
 
   const handleImageError = () => {
     setImageError(true);
