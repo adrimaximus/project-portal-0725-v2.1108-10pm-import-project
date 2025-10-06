@@ -278,6 +278,7 @@ const TagsSettingsPage = () => {
         onSave={handleSave}
         tag={tagToEdit}
         isSaving={isSaving}
+        groups={tagGroups}
       />
 
       <AlertDialog open={!!tagToDelete} onOpenChange={(open) => !open && setTagToDelete(null)}>

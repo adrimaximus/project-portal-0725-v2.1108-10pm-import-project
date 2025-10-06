@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Loader2 } from 'lucide-react';
 import { Tag } from '@/types';
 import ColorPicker from '../goals/ColorPicker';
+import { GroupSelect } from './GroupSelect';
 
 interface TagFormDialogProps {
   open: boolean;
@@ -16,6 +17,7 @@ interface TagFormDialogProps {
   onSave: (tag: Omit<Tag, 'id' | 'user_id'>) => void;
   tag: Tag | null;
   isSaving: boolean;
+  groups: string[];
 }
 
 const tagSchema = z.object({
@@ -26,7 +28,7 @@ const tagSchema = z.object({
 
 type TagFormValues = z.infer<typeof tagSchema>;
 
-const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving }: TagFormDialogProps) => {
+const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: TagFormDialogProps) => {
   const isEditMode = !!tag;
 
   const form = useForm<TagFormValues>({
@@ -64,7 +66,13 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving }: TagFormDia
             <FormField control={form.control} name="type" render={({ field }) => (
               <FormItem>
                 <FormLabel>Group</FormLabel>
-                <FormControl><Input {...field} placeholder="e.g., general" /></FormControl>
+                <FormControl>
+                  <GroupSelect 
+                    value={field.value || 'general'} 
+                    onChange={field.onChange} 
+                    groups={groups} 
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )} />
