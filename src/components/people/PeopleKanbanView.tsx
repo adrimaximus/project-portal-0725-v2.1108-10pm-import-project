@@ -1,302 +1,183 @@
-import React, { useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay, DragStartEvent, MouseSensor, TouchSensor } from '@dnd-kit/core';
 import { Person, Tag, User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { useMemo, useState } from 'react';
+import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import PeopleKanbanColumn from './PeopleKanbanColumn';
 import PeopleKanbanCard from './PeopleKanbanCard';
-import KanbanColumnEditor from './KanbanColumnEditor';
-import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '../ui/button';
+import { Settings2 } from 'lucide-react';
+import KanbanSettingsDialog from './KanbanSettingsDialog';
 
-type PeopleKanbanViewProps = {
+interface PeopleKanbanViewProps {
   people: Person[];
   tags: Tag[];
-  onEditPerson: (person: Person) => void;
-  onDeletePerson: (person: Person) => void;
-};
+}
 
-type KanbanViewHandle = {
-  openSettings: () => void;
-};
-
-const PeopleKanbanView = forwardRef<KanbanViewHandle, PeopleKanbanViewProps>(({ people, tags, onEditPerson, onDeletePerson }, ref) => {
+const PeopleKanbanView = ({ people, tags }: PeopleKanbanViewProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    })
-  );
-  const dragHappened = useRef(false);
   const [activePerson, setActivePerson] = useState<Person | null>(null);
-  
-  const [collapseOverrides, setCollapseOverrides] = useState<Record<string, boolean>>({});
-  
-  const [columnOrder, setColumnOrder] = useState<string[]>([]);
-  const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
-
-  const personGroups = useMemo(() => {
-    const groups: Record<string, Person[]> = {};
-    const allCols = [uncategorizedTag, ...tags];
-    allCols.forEach(col => {
-      groups[col.id] = [];
-    });
-    people.forEach(person => {
-      const tagId = person.tags?.[0]?.id;
-      const isTagColumnVisible = tagId && visibleColumnIds.includes(tagId);
-      const columnId = tagId && isTagColumnVisible && Object.prototype.hasOwnProperty.call(groups, tagId) 
-        ? tagId 
-        : 'uncategorized';
-      
-      if (groups[columnId]) {
-        groups[columnId].push(person);
-      }
-    });
-    for (const groupId in groups) {
-      groups[groupId].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
+  const kanbanSettings = useMemo(() => {
+    const defaultSettings = {
+      groupBy: 'tags',
+      visibleColumns: tags.map(t => t.id),
+    };
+    if (user?.people_kanban_settings) {
+      return { ...defaultSettings, ...user.people_kanban_settings };
     }
-    return groups;
-  }, [people, tags, visibleColumnIds]);
-
-  useImperativeHandle(ref, () => ({
-    openSettings: () => setIsSettingsOpen(true),
-  }));
+    return defaultSettings;
+  }, [user, tags]);
 
   const { mutate: updateKanbanSettings } = useMutation({
     mutationFn: async (settings: Partial<User['people_kanban_settings']>) => {
       if (!user) return;
-      const currentSettings = user.people_kanban_settings || {};
-      const newSettings = { ...currentSettings, ...settings };
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .update({ people_kanban_settings: newSettings })
+        .update({ people_kanban_settings: { ...kanbanSettings, ...settings } })
         .eq('id', user.id);
       if (error) throw error;
-      return newSettings;
+      return data;
     },
-    onSuccess: (newSettings) => {
-      queryClient.setQueryData(['userProfile', user?.id], (oldUser: User | undefined) => {
-        if (oldUser) {
-          return { ...oldUser, people_kanban_settings: newSettings };
-        }
-        return oldUser;
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', user?.id] });
+      toast.success('Kanban settings updated.');
     },
-    onError: (error: any) => {
-      toast.error("Failed to save view settings.", { description: error.message });
+    onError: (error) => {
+      toast.error(`Failed to update settings: ${error.message}`);
     },
   });
 
-  useEffect(() => {
-    const settings = user?.people_kanban_settings;
-    const savedOrder = settings?.columnOrder;
-    const savedVisible = settings?.visibleColumnIds;
-    const savedOverrides = settings?.collapseOverrides || {};
+  const uncategorizedTag: Tag = { id: 'uncategorized', name: 'Uncategorized', color: '#9ca3af' };
+  const allGroups = useMemo(() => [uncategorizedTag, ...tags], [tags]);
+  const visibleGroups = useMemo(() => allGroups.filter(g => kanbanSettings.visibleColumns.includes(g.id)), [allGroups, kanbanSettings.visibleColumns]);
 
-    const allDbTagIds = tags.map(t => t.id);
-    
-    let initialOrder: string[];
-    if (savedOrder && savedOrder.length > 0) {
-      initialOrder = [...savedOrder];
-      const savedOrderSet = new Set(initialOrder);
-      const newTags = allDbTagIds.filter(id => !savedOrderSet.has(id));
-      initialOrder.push(...newTags);
-    } else {
-      initialOrder = ['uncategorized', ...allDbTagIds];
+  const groups = useMemo(() => {
+    const grouped: { [key: string]: Person[] } = {};
+    visibleGroups.forEach(group => {
+      grouped[group.id] = [];
+    });
+
+    people.forEach(person => {
+      const personTags = person.tags?.map(t => t.id) || [];
+      let assigned = false;
+      visibleGroups.forEach(group => {
+        if (personTags.includes(group.id)) {
+          grouped[group.id].push(person);
+          assigned = true;
+        }
+      });
+      if (!assigned && grouped['uncategorized']) {
+        grouped['uncategorized'].push(person);
+      }
+    });
+
+    for (const groupId in grouped) {
+      grouped[groupId].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
     }
-    if (!initialOrder.includes('uncategorized')) {
-      initialOrder.unshift('uncategorized');
-    }
-    setColumnOrder(initialOrder);
+    return grouped;
+  }, [people, visibleGroups]);
 
-    const initialVisible = savedVisible !== undefined ? savedVisible : ['uncategorized', ...allDbTagIds];
-    setVisibleColumnIds(initialVisible);
-    setCollapseOverrides(savedOverrides);
-
-  }, [tags, user]);
-
-  const handleSettingsChange = (newOrder: string[], newVisible: string[]) => {
-    setColumnOrder(newOrder);
-    setVisibleColumnIds(newVisible);
-    updateKanbanSettings({ columnOrder: newOrder, visibleColumnIds: newVisible });
-  };
-
-  const toggleColumnCollapse = (columnId: string) => {
-    const peopleInColumn = personGroups[columnId] || [];
-    const isCurrentlyCollapsed = collapseOverrides[columnId] ?? (peopleInColumn.length === 0);
-    const newOverrides = { ...collapseOverrides, [columnId]: !isCurrentlyCollapsed };
-    setCollapseOverrides(newOverrides);
-    updateKanbanSettings({ collapseOverrides: newOverrides });
-  };
-
-  const columns = useMemo(() => {
-    const tagMap = new Map([...tags, uncategorizedTag].map(t => [t.id, t]));
-    return columnOrder
-      .filter(id => visibleColumnIds.includes(id))
-      .map(id => tagMap.get(id))
-      .filter(Boolean) as Tag[];
-  }, [tags, columnOrder, visibleColumnIds, uncategorizedTag]);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor),
+    useSensor(MouseSensor)
+  );
 
   const handleDragStart = (event: DragStartEvent) => {
-    dragHappened.current = true;
     const { active } = event;
-    setActivePerson(people.find(p => p.id === active.id) || null);
+    const person = people.find(p => p.id === active.id);
+    if (person) setActivePerson(person);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     setActivePerson(null);
-    setTimeout(() => { dragHappened.current = false; }, 0);
-
     const { active, over } = event;
+
     if (!over) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
-    
-    const sourceContainerId = active.data.current?.sortable.containerId as string;
-    const overIsItem = !!over.data.current?.sortable;
-    const destContainerId = overIsItem ? over.data.current?.sortable.containerId as string : overId;
 
-    if (!sourceContainerId || !destContainerId) return;
+    const activePerson = people.find(p => p.id === activeId);
+    if (!activePerson) return;
 
-    const previousPeople = queryClient.getQueryData<Person[]>(['people']) || [];
-    
-    let newPeopleState: Person[] = JSON.parse(JSON.stringify(previousPeople));
-    const activeIndex = newPeopleState.findIndex(p => p.id === activeId);
-    if (activeIndex === -1) return;
+    const oldTagId = activePerson.tags?.[0]?.id || 'uncategorized';
+    const newTagId = over.data.current?.sortable?.containerId || overId;
 
-    const [movedItem] = newPeopleState.splice(activeIndex, 1);
-
-    if (sourceContainerId !== destContainerId) {
-      const destTag = tags.find(t => t.id === destContainerId);
-      let newTags = (movedItem.tags || []).filter(t => t.id !== sourceContainerId);
-      if (destTag && destTag.id !== 'uncategorized') {
-        newTags.push(destTag);
-      }
-      newTags.sort((a, b) => a.name.localeCompare(b.name));
-      movedItem.tags = newTags;
-    }
-
-    const overIndex = newPeopleState.findIndex(p => p.id === overId);
-    if (overIsItem && overIndex !== -1) {
-      newPeopleState.splice(overIndex, 0, movedItem);
-    } else {
-      const itemsInDest = newPeopleState.filter(p => (p.tags?.[0]?.id || 'uncategorized') === destContainerId);
-      if (itemsInDest.length > 0) {
-        const lastItem = itemsInDest[itemsInDest.length - 1];
-        const lastItemIndex = newPeopleState.findIndex(p => p.id === lastItem.id);
-        newPeopleState.splice(lastItemIndex + 1, 0, movedItem);
-      } else {
-        newPeopleState.push(movedItem);
-      }
-    }
-
-    const finalGroups = newPeopleState.reduce((acc, p) => {
-      const tagId = p.tags?.[0]?.id || 'uncategorized';
-      if (!acc[tagId]) acc[tagId] = [];
-      acc[tagId].push(p);
-      return acc;
-    }, {} as Record<string, Person[]>);
-
-    for (const tagId in finalGroups) {
-      finalGroups[tagId].forEach((p, index) => {
-        const originalPerson = newPeopleState.find(op => op.id === p.id);
-        if (originalPerson) {
-          originalPerson.kanban_order = index;
-        }
+    if (oldTagId !== newTagId) {
+      // Update tag
+      const { error } = await supabase.rpc('update_person_tags', {
+        p_person_id: activeId,
+        p_tag_to_remove_id: oldTagId === 'uncategorized' ? null : oldTagId,
+        p_tag_to_add_id: newTagId === 'uncategorized' ? null : newTagId,
       });
-    }
 
-    queryClient.setQueryData(['people'], newPeopleState);
+      if (error) {
+        toast.error(`Failed to move person: ${error.message}`);
+      } else {
+        toast.success(`Moved to ${tags.find(t => t.id === newTagId)?.name || 'Uncategorized'}`);
+        queryClient.invalidateQueries({ queryKey: ['people'] });
+      }
+    } else {
+      // Reorder within the same column
+      const items = groups[newTagId];
+      const oldIndex = items.findIndex(p => p.id === activeId);
+      const newIndex = items.findIndex(p => p.id === overId);
 
-    try {
-      if (sourceContainerId !== destContainerId) {
-        const { error: tagError } = await supabase.rpc('update_person_tags', {
-          p_person_id: activeId,
-          p_tag_to_remove_id: sourceContainerId === 'uncategorized' ? null : sourceContainerId,
-          p_tag_to_add_id: destContainerId === 'uncategorized' ? null : destContainerId,
-        });
-        if (tagError) throw tagError;
-      }
+      if (oldIndex !== newIndex) {
+        const newOrder = Array.from(items.map(p => p.id));
+        const [movedItem] = newOrder.splice(oldIndex, 1);
+        newOrder.splice(newIndex, 0, movedItem);
 
-      const sourceColumnIds = (finalGroups[sourceContainerId] || []).map(p => p.id);
-      const destColumnIds = (finalGroups[destContainerId] || []).map(p => p.id);
-
-      const promises = [];
-      if (sourceContainerId !== destContainerId && sourceColumnIds.length > 0) {
-        promises.push(supabase.rpc('update_person_kanban_order', { p_person_ids: sourceColumnIds }));
+        const { error } = await supabase.rpc('update_person_kanban_order', { p_person_ids: newOrder });
+        if (error) {
+          toast.error(`Failed to reorder: ${error.message}`);
+        } else {
+          queryClient.invalidateQueries({ queryKey: ['people'] });
+        }
       }
-      if (destColumnIds.length > 0) {
-        promises.push(supabase.rpc('update_person_kanban_order', { p_person_ids: destColumnIds }));
-      }
-      
-      const results = await Promise.all(promises);
-      for (const result of results) {
-        if (result.error) throw result.error;
-      }
-    } catch (error: any) {
-      toast.error(`Failed to move person: ${error.message}`);
-      queryClient.setQueryData(['people'], previousPeople);
     }
   };
 
-  const allTagsForEditor = [uncategorizedTag, ...tags];
-
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActivePerson(null)}>
-      <div className="flex flex-row items-start gap-4 overflow-x-auto pb-4 h-full">
-        <div className={`transition-all duration-300 ease-in-out flex-shrink-0 ${isSettingsOpen ? 'w-64' : 'w-0'} overflow-hidden`}>
-          <div className="w-64 h-full bg-muted/50 rounded-lg border">
-            <KanbanColumnEditor
-              allTags={allTagsForEditor}
-              columnOrder={columnOrder}
-              visibleColumnIds={visibleColumnIds}
-              onSettingsChange={handleSettingsChange}
-              onClose={() => setIsSettingsOpen(false)}
-            />
+    <div className="flex flex-col h-full">
+      <div className="flex justify-end p-2">
+        <Button variant="ghost" onClick={() => setIsSettingsOpen(true)}>
+          <Settings2 className="mr-2 h-4 w-4" />
+          Customize View
+        </Button>
+      </div>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className="flex-1 overflow-x-auto p-4">
+          <div className="flex gap-4 h-full">
+            <SortableContext items={visibleGroups.map(g => g.id)} strategy={horizontalListSortingStrategy}>
+              {visibleGroups.map(group => (
+                <PeopleKanbanColumn key={group.id} id={group.id} title={group.name} people={groups[group.id] || []} />
+              ))}
+            </SortableContext>
           </div>
         </div>
-
-        {columns.map(tag => {
-          const peopleInColumn = personGroups[tag.id] || [];
-          const isColumnCollapsed = collapseOverrides[tag.id] ?? (peopleInColumn.length === 0);
-
-          return (
-            <PeopleKanbanColumn
-              key={tag.id}
-              tag={tag}
-              people={peopleInColumn}
-              dragHappened={dragHappened}
-              onEditPerson={onEditPerson}
-              onDeletePerson={onDeletePerson}
-              isCollapsed={isColumnCollapsed}
-              onToggleCollapse={toggleColumnCollapse}
-            />
-          );
-        })}
-      </div>
-      <DragOverlay dropAnimation={null}>
-        {activePerson ? (
-          <div className="w-72">
-            <PeopleKanbanCard person={activePerson} dragHappened={dragHappened} onEdit={() => {}} onDelete={() => {}} />
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        <DragOverlay>
+          {activePerson ? <PeopleKanbanCard person={activePerson} /> : null}
+        </DragOverlay>
+      </DndContext>
+      <KanbanSettingsDialog
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        allColumns={allGroups}
+        visibleColumns={kanbanSettings.visibleColumns}
+        onSave={(newVisibleColumns) => {
+          updateKanbanSettings({ visibleColumns: newVisibleColumns });
+        }}
+      />
+    </div>
   );
-});
+};
 
 export default PeopleKanbanView;

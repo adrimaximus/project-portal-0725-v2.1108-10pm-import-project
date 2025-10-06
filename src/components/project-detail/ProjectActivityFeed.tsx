@@ -1,69 +1,77 @@
 import { Activity } from "@/types";
 import { formatDistanceToNow } from "date-fns";
-import { id } from "date-fns/locale";
-import { History } from "lucide-react";
-import ActivityIcon from "./ActivityIcon";
+import {
+  Briefcase,
+  CheckCircle2,
+  CircleOff,
+  FileUp,
+  MessageSquare,
+  UserPlus,
+  UserX,
+  Wallet,
+  PenSquare,
+  Ticket,
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { getAvatarUrl } from "@/lib/utils";
 
-interface ProjectActivityFeedProps {
-  activities: Activity[];
-}
+const activityIcons: { [key: string]: React.ElementType } = {
+  PROJECT_STATUS_UPDATED: Briefcase,
+  TASK_COMPLETED: CheckCircle2,
+  TASK_REOPENED: CircleOff,
+  FILE_UPLOADED: FileUp,
+  TEAM_MEMBER_REMOVED: UserX,
+  OWNERSHIP_TRANSFERRED: UserPlus,
+  PAYMENT_STATUS_UPDATED: Wallet,
+  COMMENT_ADDED: MessageSquare,
+  TASK_CREATED: PenSquare,
+  TEAM_MEMBER_ADDED: UserPlus,
+  TICKET_CREATED: Ticket,
+};
 
-const ProjectActivityFeed = ({ activities }: ProjectActivityFeedProps) => {
+const ProjectActivityFeed = ({ activities }: { activities: Activity[] }) => {
   if (!activities || activities.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-8">
-        <History className="mx-auto h-12 w-12" />
-        <p className="mt-4">No activity yet.</p>
+      <div className="text-center py-8 text-muted-foreground">
+        No activity yet.
       </div>
     );
   }
 
-  const formatDescription = (text: string) => {
-    if (!text) return "";
-    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
-    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-    return text
-      .replace(/\\"/g, "") // Remove escaped quotes
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-card-foreground">$1</strong>')
-      .replace(/`(.*?)`/g, '<code class="bg-muted text-muted-foreground font-mono text-xs px-1 py-0.5 rounded">$1</code>')
-      .replace(urlRegex, (url) => {
-        const href = url.startsWith('www.') ? `https://${url}` : url;
-        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${url}</a>`;
-      })
-      .replace(mentionRegex, '<span class="text-primary font-semibold">@$1</span>');
-  };
-
   return (
     <div className="flow-root">
-      <ul className="-mb-8">
+      <ul role="list" className="-mb-8">
         {activities.map((activity, activityIdx) => {
-          const userName = activity.user?.name || "System";
-          const descriptionHtml = { __html: formatDescription(activity.details.description) };
-
+          const Icon = activityIcons[activity.type] || Briefcase;
           return (
             <li key={activity.id}>
               <div className="relative pb-8">
                 {activityIdx !== activities.length - 1 ? (
-                  <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-border" aria-hidden="true" />
+                  <span
+                    className="absolute left-5 top-5 -ml-px h-full w-0.5 bg-border"
+                    aria-hidden="true"
+                  />
                 ) : null}
-                <div className="relative flex items-start space-x-4">
-                  <div className="flex-shrink-0">
-                    <span className="h-8 w-8 rounded-full bg-background border flex items-center justify-center ring-8 ring-background">
-                      <ActivityIcon type={activity.type} />
-                    </span>
+                <div className="relative flex items-start space-x-3">
+                  <div>
+                    <div className="relative px-1">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary ring-8 ring-card">
+                        <Icon
+                          className="h-5 w-5 text-secondary-foreground"
+                          aria-hidden="true"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-                    <div>
-                      <p className="text-sm text-muted-foreground break-all">
-                        <span className="font-semibold text-card-foreground">{userName}</span>{' '}
-                        <span dangerouslySetInnerHTML={descriptionHtml} />
-                      </p>
+                  <div className="min-w-0 flex-1 py-1.5">
+                    <div className="text-sm text-foreground">
+                      <span className="font-medium">{activity.user.name}</span>{" "}
+                      {activity.details.description}
                     </div>
                     <div className="whitespace-nowrap text-right text-sm text-muted-foreground">
-                      <time dateTime={activity.timestamp}>
-                        {formatDistanceToNow(new Date(activity.timestamp), {
+                      <time dateTime={activity.created_at}>
+                        {formatDistanceToNow(new Date(activity.created_at), {
                           addSuffix: true,
-                          locale: id,
                         })}
                       </time>
                     </div>

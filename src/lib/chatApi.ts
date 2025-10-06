@@ -1,99 +1,65 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Conversation, Message, Attachment } from '@/types';
+import { DbConversation, DbMessage, Conversation, Message, Attachment, User } from '@/types';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
 
-const mapConversationData = (c: any): Omit<Conversation, 'messages'> => ({
+const mapMessageData = (m: DbMessage): Message => {
+  const sender: User = {
+    id: m.sender_id,
+    name: `${m.sender_first_name || ''} ${m.sender_last_name || ''}`.trim() || m.sender_email || 'Unknown User',
+    email: m.sender_email || '',
+    avatar_url: m.sender_avatar_url || null,
+    initials: getInitials(`${m.sender_first_name || ''} ${m.sender_last_name || ''}`.trim() || m.sender_email || 'UU'),
+  };
+
+  return {
+    id: m.id,
+    conversation_id: m.conversation_id,
+    sender,
+    text: m.content,
+    timestamp: m.created_at,
+    message_type: m.message_type,
+    is_deleted: m.is_deleted,
+    is_forwarded: m.is_forwarded,
+    attachment: m.attachment_url ? {
+      name: m.attachment_name || 'Attachment',
+      url: m.attachment_url,
+      type: m.attachment_type || 'application/octet-stream',
+      size: 0, // Note: size is not available from this query
+    } : undefined,
+    repliedMessage: m.reply_to_message_id ? {
+      content: m.replied_message_content || '',
+      senderName: m.replied_message_sender_name || 'Unknown User',
+      isDeleted: m.replied_message_is_deleted || false,
+    } : undefined,
+  };
+};
+
+const mapConversationData = (c: DbConversation): Omit<Conversation, 'messages' | 'unreadCount'> => ({
   id: c.conversation_id,
   userName: c.conversation_name || 'Chat',
-  userAvatar: getAvatarUrl(c.conversation_avatar, c.other_user_id || c.conversation_id),
-  lastMessage: c.last_message_content || "No messages yet.",
-  lastMessageTimestamp: c.last_message_at || new Date(0).toISOString(),
-  unreadCount: 0,
+  userAvatar: c.conversation_avatar,
   isGroup: c.is_group,
-  members: (c.participants || []).map((p: any) => ({
-    id: p.id, name: p.name, 
-    avatar_url: getAvatarUrl(p.avatar_url, p.id), 
-    initials: p.initials,
-  })),
+  members: c.participants,
+  lastMessage: c.last_message_content,
+  lastMessageTimestamp: c.last_message_at,
   created_by: c.created_by,
 });
 
-export const fetchConversations = async (): Promise<Omit<Conversation, 'messages'>[]> => {
+export const fetchConversations = async (): Promise<Omit<Conversation, 'messages' | 'unreadCount'>[]> => {
   const { data, error } = await supabase.rpc('get_user_conversations');
-  if (error) {
-    console.error("Error fetching conversations:", error);
-    throw new Error(error.message);
-  }
+  if (error) throw error;
   return data.map(mapConversationData);
 };
 
 export const fetchMessages = async (conversationId: string): Promise<Message[]> => {
-  const { data, error } = await supabase.rpc('get_conversation_messages', {
-    p_conversation_id: conversationId,
-  });
-
-  if (error) {
-    console.error("Message fetch error:", error);
-    throw new Error(error.message);
-  }
-
-  return (data || []).map((m: any) => {
-    const senderName = `${m.sender_first_name || ''} ${m.sender_last_name || ''}`.trim();
-    return {
-      id: m.id,
-      text: m.content,
-      timestamp: m.created_at,
-      sender: {
-        id: m.sender_id,
-        name: senderName || m.sender_email,
-        avatar_url: getAvatarUrl(m.sender_avatar_url, m.sender_id),
-        initials: getInitials(senderName, m.sender_email) || 'NN',
-        email: m.sender_email,
-      },
-      attachment: m.attachment_url ? { name: m.attachment_name, url: m.attachment_url, type: m.attachment_type } : undefined,
-      reply_to_message_id: m.reply_to_message_id,
-      repliedMessage: m.reply_to_message_id ? {
-        content: m.replied_message_content,
-        senderName: m.replied_message_sender_name,
-        isDeleted: m.replied_message_is_deleted,
-      } : null,
-    };
-  });
+  const { data, error } = await supabase.rpc('get_conversation_messages', { p_conversation_id: conversationId });
+  if (error) throw error;
+  return data.map(mapMessageData);
 };
 
-export const sendMessage = async ({ conversationId, senderId, text, attachment, replyToMessageId }: { conversationId: string, senderId: string, text: string, attachment: Attachment | null, replyToMessageId?: string | null }) => {
-  const { error } = await supabase
-    .from('messages')
-    .insert({
-      conversation_id: conversationId,
-      sender_id: senderId,
-      content: text,
-      attachment_url: attachment?.url,
-      attachment_name: attachment?.name,
-      attachment_type: attachment?.type,
-      reply_to_message_id: replyToMessageId,
-    });
+export const searchConversationsByMessage = async (searchTerm: string): Promise<string[]> => {
+  if (!searchTerm) return [];
+  const { data, error } = await supabase.rpc('search_conversations', { p_search_term: searchTerm });
   if (error) throw error;
-};
-
-export const createOrGetConversation = async (otherUserId: string) => {
-  const { data, error } = await supabase.rpc('create_or_get_conversation', { p_other_user_id: otherUserId, p_is_group: false });
-  if (error) throw error;
-  return data as string;
-};
-
-export const createGroupConversation = async (groupName: string, memberIds: string[]) => {
-  const { data, error } = await supabase.rpc('create_group_conversation', { p_group_name: groupName, p_participant_ids: memberIds });
-  if (error) throw error;
-  return data as string;
-};
-
-export const hideConversation = async (conversationId: string) => {
-  const { error } = await supabase.rpc('hide_conversation', { p_conversation_id: conversationId });
-  if (error) throw error;
-};
-
-export const leaveGroup = async (conversationId: string) => {
-  const { error } = await supabase.rpc('leave_group', { p_conversation_id: conversationId });
-  if (error) throw error;
+  return data.map((c: { conversation_id: string }) => c.conversation_id);
 };

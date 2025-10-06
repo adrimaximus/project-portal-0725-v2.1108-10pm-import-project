@@ -1,178 +1,124 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import PortalLayout from "@/components/PortalLayout";
+import { useProject } from "@/hooks/useProject";
+import { Button } from "@/components/ui/button";
+import {
+  ChevronLeft,
+  MoreVertical,
+  Archive,
+  ArchiveRestore,
+  Trash2,
+  Copy,
+} from "lucide-react";
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
 import ProjectMainContent from "@/components/project-detail/ProjectMainContent";
+import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import ProjectProgressCard from "@/components/project-detail/ProjectProgressCard";
-import ProjectTeamCard from "@/components/project-detail/ProjectTeamCard";
-import ProjectDetailsCard from "@/components/project-detail/ProjectDetailsCard";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useAuth } from "@/contexts/AuthContext";
-import { useProject } from "@/hooks/useProject";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useProjectMutations } from "@/hooks/useProjectMutations";
 import { toast } from "sonner";
-import { Project } from "@/types";
-
-const ProjectDetailSkeleton = () => (
-  <PortalLayout>
-    <div className="space-y-4">
-      <Skeleton className="h-16 w-full" />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <Skeleton className="h-96" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-48" />
-        </div>
-      </div>
-    </div>
-  </PortalLayout>
-);
+import { Project, ProjectStatus } from "@/types";
 
 const ProjectDetail = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [searchParams] = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedProject, setEditedProject] = useState<Project | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const mainContentRef = useRef<HTMLDivElement>(null);
+  const { data: project, isLoading, error } = useProject(slug);
+  const mutations = useProjectMutations(project?.id);
 
-  const { data: project, isLoading, error } = useProject(slug!);
-  const mutations = useProjectMutations(slug!);
-
-  const defaultTab = searchParams.get('tab') || 'overview';
-
-  useEffect(() => {
+  const handleStatusChange = (newStatus: ProjectStatus) => {
     if (project) {
-      setEditedProject(project);
+      mutations.updateProject.mutate({ ...project, status: newStatus });
     }
-  }, [project]);
+  };
 
-  useEffect(() => {
-    const taskParam = searchParams.get('task');
-    const tabParam = searchParams.get('tab');
-    if (taskParam && tabParam === 'tasks' && mainContentRef.current && !isLoading) {
-      setTimeout(() => {
-        mainContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    }
-  }, [searchParams, isLoading, project]);
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast.success("Link copied to clipboard");
+  };
 
-  useEffect(() => {
-    if (!isLoading && !error && !project) {
-      toast.error("Project not found or you do not have access.");
-      navigate("/projects");
-    }
-    if (error) {
-      toast.error("Failed to load project", { description: "Please check the URL or try again later." });
-      navigate("/projects");
-    }
-  }, [isLoading, error, project, navigate]);
-
-  if (authLoading || isLoading || !project || !editedProject) {
-    return <ProjectDetailSkeleton />;
+  if (isLoading) {
+    return (
+      <PortalLayout>
+        <div className="p-4 md:p-6">
+          <Skeleton className="h-8 w-48 mb-4" />
+          <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="md:col-span-2 lg:col-span-3 space-y-6">
+              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-96 w-full" />
+            </div>
+            <div className="space-y-6">
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+          </div>
+        </div>
+      </PortalLayout>
+    );
   }
 
-  const canEdit = user && (user.id === project.created_by.id || user.role === 'admin' || user.role === 'master admin');
+  if (error || !project) {
+    return (
+      <PortalLayout>
+        <div className="text-center py-10">
+          <h2 className="text-2xl font-bold">Project not found</h2>
+          <p className="text-muted-foreground">
+            The project you are looking for does not exist or you do not have
+            permission to view it.
+          </p>
+          <Button onClick={() => navigate("/projects")} className="mt-4">
+            Back to Projects
+          </Button>
+        </div>
+      </PortalLayout>
+    );
+  }
 
-  const handleFieldChange = (field: keyof Project, value: any) => {
-    setEditedProject(prev => prev ? { ...prev, [field]: value } : null);
-  };
-
-  const handleSaveChanges = () => {
-    if (!editedProject) return;
-    mutations.updateProject.mutate(editedProject, {
-      onSuccess: () => setIsEditing(false),
-    });
-  };
-
-  const handleCancelChanges = () => {
-    setEditedProject(project);
-    setIsEditing(false);
-  };
-
-  const handleToggleComplete = () => {
-    const newStatus = project.status === 'Completed' ? 'In Progress' : 'Completed';
-    if (editedProject) {
-      mutations.updateProject.mutate({ ...editedProject, status: newStatus });
-    }
-  };
-
-  const handleDeleteProject = () => {
-    mutations.deleteProject.mutate(project.id);
-    setIsDeleteDialogOpen(false);
-  };
+  const isArchived = project.status === "Archived";
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
-        <ProjectHeader
-          project={editedProject}
-          isEditing={isEditing}
-          isSaving={mutations.updateProject.isPending}
-          canEdit={canEdit}
-          onEditToggle={() => setIsEditing(true)}
-          onSaveChanges={handleSaveChanges}
-          onCancelChanges={handleCancelChanges}
-          onToggleComplete={handleToggleComplete}
-          onDeleteProject={() => setIsDeleteDialogOpen(true)}
-          onFieldChange={handleFieldChange}
-        />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-6">
-            <ProjectDetailsCard
-              project={editedProject}
-              isEditing={isEditing}
-              onFieldChange={handleFieldChange}
-            />
-            <div ref={mainContentRef}>
-              <ProjectMainContent
-                project={editedProject}
-                isEditing={isEditing}
-                onFieldChange={handleFieldChange}
-                mutations={mutations}
-                defaultTab={defaultTab}
-              />
-            </div>
-          </div>
-          <div className="lg:col-span-1 space-y-6">
-            <ProjectProgressCard project={editedProject} />
-            <ProjectTeamCard
-              project={editedProject}
-              isEditing={isEditing}
-              onFieldChange={handleFieldChange}
-            />
-          </div>
+      <div className="flex items-center justify-between p-4 md:p-6 border-b">
+        <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => handleStatusChange(isArchived ? "On Track" : "Archived")}>
+            {isArchived ? <ArchiveRestore className="mr-2 h-4 w-4" /> : <Archive className="mr-2 h-4 w-4" />}
+            {isArchived ? "Unarchive" : "Archive"}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleCopyLink}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy Link
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Project
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the project and all its associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProject}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <div className="p-4 md:p-6">
+        <ProjectHeader project={project} onStatusChange={handleStatusChange} />
+        <div className="mt-6 grid md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <ProjectMainContent project={project} />
+          <ProjectSidebar project={project} />
+        </div>
+      </div>
     </PortalLayout>
   );
 };

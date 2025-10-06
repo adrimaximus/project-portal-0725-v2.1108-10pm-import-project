@@ -9,7 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tag } from '@/types';
+import { Tag, FeatureFlag } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,7 +31,7 @@ const TagsSettingsPage = () => {
   const [groupToRename, setGroupToRename] = useState<string | null>(null);
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
 
-  const { data: tags = [], isLoading } = useQuery({
+  const { data: tags = [], isLoading: isLoadingTags } = useQuery({
     queryKey: ['tags', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -42,7 +42,37 @@ const TagsSettingsPage = () => {
     enabled: !!user,
   });
 
-  const tagGroups = [...new Set(tags.map(tag => tag.type || 'general'))];
+  const { data: featureFlags = [], isLoading: isLoadingFeatureFlags } = useQuery({
+    queryKey: ['feature_flags'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('feature_flags').select('*');
+      if (error) throw error;
+      return data as FeatureFlag[];
+    },
+  });
+
+  const defaultGroupsConfig = [
+    { name: 'project', featureFlag: 'module:projects' },
+    { name: 'task', featureFlag: 'module:projects' },
+    { name: 'goals', featureFlag: 'module:goals' },
+    { name: 'knowledge base', featureFlag: 'module:knowledge-base' },
+    { name: 'people', featureFlag: 'module:people' },
+    { name: 'company', featureFlag: 'module:people' },
+    { name: 'billing', featureFlag: 'module:billing' },
+  ];
+
+  const enabledFeatureFlags = new Set(
+    featureFlags.filter(ff => ff.is_enabled).map(ff => ff.id)
+  );
+
+  const activeDefaultGroups = defaultGroupsConfig
+    .filter(dg => enabledFeatureFlags.has(dg.featureFlag))
+    .map(dg => dg.name);
+
+  const userCreatedGroups = [...new Set(tags.map(tag => tag.type || 'general'))];
+  
+  const tagGroups = [...new Set(['general', ...activeDefaultGroups, ...userCreatedGroups])].sort();
+
   const groupCounts = tags.reduce((acc, tag) => {
     const group = tag.type || 'general';
     acc[group] = (acc[group] || 0) + 1;
@@ -132,6 +162,8 @@ const TagsSettingsPage = () => {
     }
     setGroupToDelete(null);
   };
+
+  const isLoading = isLoadingTags || isLoadingFeatureFlags;
 
   return (
     <PortalLayout>
@@ -254,7 +286,7 @@ const TagsSettingsPage = () => {
                         <TableCell className="font-medium capitalize">{group}</TableCell>
                         <TableCell>{groupCounts[group] || 0}</TableCell>
                         <TableCell className="text-right">
-                          {group !== 'general' && (
+                          {group !== 'general' && !activeDefaultGroups.includes(group) && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
