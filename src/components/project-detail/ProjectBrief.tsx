@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Download } from "lucide-react";
+import { Plus, Trash2, Download, Eye } from "lucide-react";
 import React, { useRef } from "react";
 import FileIcon from "../FileIcon";
 import { ProjectFile } from "@/types";
@@ -36,6 +36,17 @@ const ProjectBrief = ({ files, isEditing, onFilesAdd, onFileDelete }: ProjectBri
                 <span className="truncate text-sm font-medium">{file.name}</span>
               </div>
               <div className="flex items-center flex-shrink-0">
+                <a
+                  href={file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`Preview ${file.name}`}
+                >
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Eye className="h-4 w-4" />
+                    <span className="sr-only">Preview file</span>
+                  </Button>
+                </a>
                 <a
                   href={file.url}
                   download={file.name}
