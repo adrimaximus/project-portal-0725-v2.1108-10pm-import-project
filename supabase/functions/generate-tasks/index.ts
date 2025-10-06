@@ -26,24 +26,24 @@ serve(async (req) => {
       apiKey: apiKey,
     });
 
-    const serviceList = Array.isArray(services) && services.length > 0 ? services.join(', ') : 'Tidak ditentukan';
-    const existingTasksList = Array.isArray(existingTasks) && existingTasks.length > 0 ? `Tugas-tugas berikut sudah ada, jadi jangan buat lagi: ${existingTasks.join(', ')}.` : '';
+    const serviceList = Array.isArray(services) && services.length > 0 ? services.join(', ') : 'Not specified';
+    const existingTasksList = Array.isArray(existingTasks) && existingTasks.length > 0 ? `The following tasks already exist, so do not generate them again: ${existingTasks.join(', ')}.` : '';
 
-    const prompt = `Anda adalah asisten manajemen proyek yang ahli dalam strategi aktivasi merek dan pelaksanaan acara. Tugas utama Anda adalah menguraikan proyek menjadi tugas-tugas yang dapat ditindaklanjuti.
+    const prompt = `You are an expert project management assistant specializing in brand activation and event execution. Your primary goal is to break down a project into actionable tasks.
 
-      Fokus utama pada **Judul Proyek** dan **Deskripsi Proyek** untuk memahami tujuan inti. Gunakan detail lain sebagai konteks tambahan.
+      Focus heavily on the **Project Title** and **Project Description** to understand the core objectives. Use other details as supplementary context.
 
-      **Detail Proyek:**
-      - **Judul Proyek (Fokus Utama):** ${projectName}
-      - **Deskripsi Proyek (Fokus Utama):** ${description || 'Tidak ada gambaran umum.'}
-      - **Lokasi Acara:** ${venue || 'tidak ditentukan'}
-      - **Layanan yang Disediakan:** ${serviceList}
+      **Project Details:**
+      - **Project Title (Primary Focus):** ${projectName}
+      - **Project Description (Primary Focus):** ${description || 'No overview provided.'}
+      - **Event Venue:** ${venue || 'not specified'}
+      - **Services Provided:** ${serviceList}
 
       ${existingTasksList}
 
-      Berdasarkan informasi di atas, buatlah sebuah JSON array berisi 5 judul tugas baru dalam Bahasa Indonesia. Tugas harus sangat spesifik untuk proyek ini, ringkas, dan dapat ditindaklanjuti.
+      Based on the information above, generate a JSON array of 5 new, highly specific, concise, and actionable task titles in English.
 
-      Hanya kembalikan JSON array yang valid berisi 5 string unik. Contoh: ["Siapkan materi promosi", "Koordinasi dengan vendor sound system", "Buat jadwal acara", "Rancang tata letak booth", "Lakukan gladi bersih"]. Jangan sertakan teks lain, markdown, atau penjelasan.`;
+      Return ONLY a valid JSON array of 5 unique strings. For example: ["Prepare promotional materials", "Coordinate with sound system vendor", "Create event schedule", "Design booth layout", "Conduct a dress rehearsal"]. Do not include any other text, markdown, or explanation.`;
 
     const msg = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",
@@ -56,13 +56,13 @@ serve(async (req) => {
     const jsonMatch = responseText.match(/\[.*\]/s);
     if (!jsonMatch) {
       console.error("Raw AI response:", responseText);
-      throw new Error("Respons AI tidak berisi JSON array yang valid.");
+      throw new Error("AI response did not contain a valid JSON array.");
     }
 
     const tasks = JSON.parse(jsonMatch[0]);
 
     if (!Array.isArray(tasks) || tasks.length === 0) {
-      throw new Error("AI menghasilkan daftar tugas yang kosong atau tidak valid.");
+      throw new Error("AI generated an empty or invalid list of tasks.");
     }
 
     return new Response(

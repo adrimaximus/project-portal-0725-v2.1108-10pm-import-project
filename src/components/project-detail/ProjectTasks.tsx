@@ -96,7 +96,7 @@ const ProjectTasks = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Tugas</h3>
+        <h3 className="text-lg font-semibold">Tasks</h3>
         {tasks.length > 0 && (
           <TooltipProvider>
             <Tooltip>
@@ -119,17 +119,17 @@ const ProjectTasks = ({
       
       {tasks.length === 0 && !isAddingTask && (
         <div className="text-center py-4 border-2 border-dashed rounded-lg">
-          <p className="text-sm text-muted-foreground mb-4">Belum ada tugas. Mulai dengan menambahkan satu atau biarkan AI membantu.</p>
+          <p className="text-sm text-muted-foreground mb-4">No tasks yet. Get started by adding one or let AI help.</p>
           <Button onClick={() => handleGenerateTasks(true)} disabled={isGenerating}>
             {isGenerating ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Menghasilkan...
+                Generating...
               </>
             ) : (
               <>
                 <Sparkles className="mr-2 h-4 w-4" />
-                Hasilkan Tugas Awal dengan AI
+                Generate Initial Tasks with AI
               </>
             )}
           </Button>
@@ -194,7 +194,7 @@ const ProjectTasks = ({
                             </Avatar>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Dibuat oleh {createdByFullName}</p>
+                            <p>Created by {createdByFullName}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -208,7 +208,7 @@ const ProjectTasks = ({
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Belum ditugaskan</p>
+                          <p>Not assigned</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -226,7 +226,7 @@ const ProjectTasks = ({
                     <DialogTrigger asChild>
                       <DropdownMenuItem>
                         <UserPlus className="mr-2 h-4 w-4" />
-                        Tugaskan
+                        Assign
                       </DropdownMenuItem>
                     </DialogTrigger>
                     <DropdownMenuItem
@@ -234,13 +234,13 @@ const ProjectTasks = ({
                       onClick={() => onTaskDelete(task.id)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Hapus
+                      Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Tugaskan ke: {task.title}</DialogTitle>
+                    <DialogTitle>Assign to: {task.title}</DialogTitle>
                   </DialogHeader>
                   <MultiSelect
                     options={userOptions}
@@ -248,7 +248,7 @@ const ProjectTasks = ({
                     onChange={(selectedIds) => {
                       onTaskAssignUsers(task.id, selectedIds);
                     }}
-                    placeholder="Pilih anggota tim..."
+                    placeholder="Select team members..."
                   />
                 </DialogContent>
               </Dialog>
@@ -262,13 +262,13 @@ const ProjectTasks = ({
           <Input
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="Apa yang perlu dilakukan?"
+            placeholder="What needs to be done?"
             onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
             autoFocus
           />
-          <Button onClick={handleAddTask}>Tambah</Button>
+          <Button onClick={handleAddTask}>Add</Button>
           <Button variant="ghost" onClick={() => setIsAddingTask(false)}>
-            Batal
+            Cancel
           </Button>
         </div>
       ) : (
@@ -278,7 +278,7 @@ const ProjectTasks = ({
           onClick={() => setIsAddingTask(true)}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Tambah tugas
+          Add task
         </Button>
       )}
     </div>
