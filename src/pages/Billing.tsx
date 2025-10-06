@@ -27,7 +27,6 @@ type Member = {
   avatar_url: string;
   initials: string;
   email: string;
-  role: 'admin' | 'member';
 };
 
 type Owner = {
@@ -161,39 +160,11 @@ const Billing = () => {
     if (!sortColumn) return filteredInvoices;
 
     return [...filteredInvoices].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      switch (sortColumn) {
-        case 'clientName':
-          aValue = a.clientName || '';
-          bValue = b.clientName || '';
-          break;
-        case 'projectOwner':
-          aValue = a.projectOwner?.name || '';
-          bValue = b.projectOwner?.name || '';
-          break;
-        case 'assignedMembers':
-          const aAdmin = a.assignedMembers.find(m => m.role === 'admin');
-          const bAdmin = b.assignedMembers.find(m => m.role === 'admin');
-          aValue = aAdmin?.name || '';
-          bValue = bAdmin?.name || '';
-          break;
-        default:
-          aValue = a[sortColumn];
-          bValue = b[sortColumn];
-      }
+      const aValue = a[sortColumn];
+      const bValue = b[sortColumn];
 
       if (aValue === null || aValue === undefined) return 1;
       if (bValue === null || bValue === undefined) return -1;
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      }
-      
-      if (aValue instanceof Date && bValue instanceof Date) {
-        return sortDirection === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
-      }
 
       if (aValue < bValue) {
         return sortDirection === 'asc' ? -1 : 1;
@@ -249,7 +220,7 @@ const Billing = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
           <p className="text-muted-foreground">
-            View your invoices and manage your payment details, derived from your projects. A project will only appear here if it has a payment status, a budget, and a due date.
+            View your invoices and manage your payment details, derived from your projects.
           </p>
         </div>
 
@@ -326,21 +297,7 @@ const Billing = () => {
                         Project {renderSortIcon('projectName')}
                       </Button>
                     </TableHead>
-                    <TableHead>
-                      <Button variant="ghost" onClick={() => handleSort('clientName')} className="px-2">
-                        Client {renderSortIcon('clientName')}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button variant="ghost" onClick={() => handleSort('projectOwner')} className="px-2">
-                        Owner {renderSortIcon('projectOwner')}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button variant="ghost" onClick={() => handleSort('assignedMembers')} className="px-2">
-                        Project Admins {renderSortIcon('assignedMembers')}
-                      </Button>
-                    </TableHead>
+                    <TableHead>Client</TableHead>
                     <TableHead>
                       <Button variant="ghost" onClick={() => handleSort('status')} className="px-2">
                         Status {renderSortIcon('status')}
@@ -361,13 +318,14 @@ const Billing = () => {
                         Due Date {renderSortIcon('dueDate')}
                       </Button>
                     </TableHead>
+                    <TableHead>Owner</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedInvoices.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="h-24 text-center">
+                      <TableCell colSpan={9} className="h-24 text-center">
                         No invoices found.
                       </TableCell>
                     </TableRow>
@@ -393,6 +351,14 @@ const Billing = () => {
                           </div>
                         </TableCell>
                         <TableCell>
+                          <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
+                            {invoice.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
+                        <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
+                        <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
+                        <TableCell>
                           {invoice.projectOwner && (
                             <TooltipProvider>
                               <Tooltip>
@@ -409,35 +375,6 @@ const Billing = () => {
                             </TooltipProvider>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex -space-x-2">
-                            {invoice.assignedMembers
-                              .filter(member => member.role === 'admin')
-                              .map(admin => (
-                                <TooltipProvider key={admin.id}>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Avatar className="h-8 w-8 border-2 border-background">
-                                        <AvatarImage src={admin.avatar_url} alt={admin.name} />
-                                        <AvatarFallback>{admin.initials}</AvatarFallback>
-                                      </Avatar>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>{admin.name}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={cn("border-transparent", getPaymentStatusStyles(invoice.status).tw)}>
-                            {invoice.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
-                        <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
-                        <TableCell>{format(invoice.dueDate, 'MMM dd, yyyy')}</TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
