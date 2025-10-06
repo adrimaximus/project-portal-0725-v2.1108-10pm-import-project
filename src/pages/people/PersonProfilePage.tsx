@@ -82,6 +82,22 @@ const PersonProfilePage = () => {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
 
+  // Helper to parse address, which can be a JSON string or an object
+  const addressObject = useMemo(() => {
+    if (!person?.address) return null;
+    if (typeof person.address === 'object' && person.address !== null) {
+      return person.address as { name?: string; address?: string };
+    }
+    if (typeof person.address === 'string') {
+      try {
+        return JSON.parse(person.address);
+      } catch (e) {
+        return { address: person.address };
+      }
+    }
+    return null;
+  }, [person?.address]);
+
   const { data: companyProperties = [] } = useQuery({
     queryKey: ['company_properties'],
     queryFn: async () => {
@@ -238,7 +254,28 @@ const PersonProfilePage = () => {
               <CardContent className="space-y-3 text-sm">
                 {firstEmail && <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><a href={`mailto:${firstEmail}`} className="truncate hover:underline">{firstEmail}</a></div>}
                 {whatsappLink && <div className="flex items-center gap-3"><WhatsappIcon className="h-4 w-4 text-muted-foreground" /><a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-primary">{firstPhone}</a></div>}
-                {person.address?.formatted_address && <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" /><span>{person.address.formatted_address}</span></div>}
+                {addressObject && (addressObject.address || addressObject.name) && (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
+                    <div>
+                      {addressObject.name ? (
+                        <>
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressObject.address || addressObject.name)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold hover:underline"
+                          >
+                            {addressObject.name}
+                          </a>
+                          {addressObject.address && <p className="text-muted-foreground">{addressObject.address}</p>}
+                        </>
+                      ) : (
+                        <p>{addressObject.address}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {person.birthday && <div className="flex items-center gap-3"><Cake className="h-4 w-4 text-muted-foreground" /><span>{formatInJakarta(person.birthday, 'MMMM d, yyyy')}</span></div>}
               </CardContent>
             </Card>
