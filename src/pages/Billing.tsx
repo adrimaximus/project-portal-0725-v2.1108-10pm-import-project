@@ -306,14 +306,13 @@ const Billing = () => {
                     </Button>
                   </TableHead>
                   <TableHead>Owner</TableHead>
-                  <TableHead>Members</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sortedInvoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                       No invoices found.
                     </TableCell>
                   </TableRow>
@@ -359,25 +358,6 @@ const Billing = () => {
                             </Tooltip>
                           </TooltipProvider>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex -space-x-2">
-                          {invoice.assignedMembers.map((member) => (
-                            <TooltipProvider key={member.id}>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Avatar className="h-8 w-8 border-2 border-background">
-                                    <AvatarImage src={member.avatar_url} alt={member.name} />
-                                    <AvatarFallback>{member.initials}</AvatarFallback>
-                                  </Avatar>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{member.name}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ))}
-                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
