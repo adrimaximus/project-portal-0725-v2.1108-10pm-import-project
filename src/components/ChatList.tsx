@@ -94,7 +94,7 @@ const ChatList = () => {
         {conversations.map((c) => {
           const otherUser = !c.isGroup ? c.members?.find(m => m.id !== currentUser?.id) : null;
           const avatarSeed = otherUser?.id || c.id;
-          const finalAvatarUrl = getAvatarUrl(c.userAvatar, avatarSeed, c.isGroup);
+          const finalAvatarUrl = getAvatarUrl(c.userAvatar, avatarSeed);
 
           return (
             <div

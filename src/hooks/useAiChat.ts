@@ -12,6 +12,7 @@ const AI_ASSISTANT_USER: User = {
   name: 'AI Assistant',
   initials: 'AI',
   avatar_url: '/ai-avatar.png',
+  email: 'ai@assistant.com',
 };
 
 const initialMessage: Message = {

@@ -92,13 +92,16 @@ const FolderFormDialog = ({ open, onOpenChange, folder, onSuccess }: FolderFormD
       const fetchUsers = async () => {
         const { data } = await supabase.from('profiles').select('id, first_name, last_name, email, avatar_url');
         if (data) {
-          setAllUsers(data.map(p => ({
-            id: p.id,
-            name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email,
-            email: p.email,
-            avatar: p.avatar_url,
-            initials: getInitials(`${p.first_name || ''} ${p.last_name || ''}`.trim(), p.email)
-          })));
+          setAllUsers(data.map(p => {
+            const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email;
+            return {
+              id: p.id,
+              name: fullName,
+              email: p.email,
+              avatar_url: p.avatar_url,
+              initials: getInitials(fullName, p.email)
+            }
+          }));
         }
       };
       fetchUsers();

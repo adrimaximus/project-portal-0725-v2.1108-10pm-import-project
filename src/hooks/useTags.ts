@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Tag } from '@/types/goal';
+import { Tag } from '@/types';
 
 const fetchTags = async (): Promise<Tag[]> => {
   const { data, error } = await supabase.from('tags').select('*');

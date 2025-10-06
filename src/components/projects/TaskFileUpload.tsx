@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { X, UploadCloud, Download, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TaskAttachment } from '@/types/task';
+import { TaskAttachment } from '@/types';
 import FileIcon from '../FileIcon';
 
 interface TaskFileUploadProps {

@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Profile } from '@/types/user';
+import { User } from '@/types';
 import { getInitials, getAvatarUrl } from '@/lib/utils';
 
-const fetchProfiles = async (): Promise<Profile[]> => {
+const fetchProfiles = async (): Promise<User[]> => {
   const { data, error } = await supabase.from('profiles').select('*');
   if (error) throw new Error(error.message);
   return data.map(profile => {
@@ -22,7 +22,7 @@ const fetchProfiles = async (): Promise<Profile[]> => {
 };
 
 export const useProfiles = () => {
-  return useQuery<Profile[], Error>({
+  return useQuery<User[], Error>({
     queryKey: ['profiles'],
     queryFn: fetchProfiles,
   });

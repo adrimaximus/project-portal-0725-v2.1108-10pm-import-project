@@ -1,6 +1,6 @@
 import React from 'react';
 import { Project } from '@/types';
-import { Task } from '@/types/task';
+import { Task } from '@/types';
 import TableView from './TableView';
 import ListView from './ListView';
 import KanbanView from './KanbanView';

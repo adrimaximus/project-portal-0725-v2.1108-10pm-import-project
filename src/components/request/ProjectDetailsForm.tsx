@@ -55,12 +55,12 @@ const ProjectDetailsForm = ({ selectedServices, onBack }: ProjectDetailsFormProp
         toast.error("Failed to fetch users.");
         console.error('Error fetching users:', error);
       } else {
-        const users = data.map(profile => {
+        const users: User[] = data.map(profile => {
           const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
           return {
             id: profile.id,
             name: fullName || profile.email || 'No name',
-            avatar: profile.avatar_url,
+            avatar_url: profile.avatar_url,
             email: profile.email,
             initials: getInitials(fullName, profile.email) || 'NN',
             first_name: profile.first_name,

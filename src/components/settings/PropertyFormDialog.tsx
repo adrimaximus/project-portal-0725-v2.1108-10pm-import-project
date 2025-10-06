@@ -20,7 +20,7 @@ interface PropertyFormDialogProps {
 
 const propertySchema = z.object({
   label: z.string().min(1, "Label is required."),
-  type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image']),
+  type: z.enum(['text', 'email', 'phone', 'url', 'date', 'textarea', 'number', 'image', 'select', 'multi-select', 'checkbox']),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;

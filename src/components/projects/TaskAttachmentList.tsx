@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TaskAttachment } from "@/types/task";
+import { TaskAttachment } from "@/types";
 import FileIcon from "../FileIcon";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "../ui/button";

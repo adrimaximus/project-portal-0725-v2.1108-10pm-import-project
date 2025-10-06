@@ -79,7 +79,7 @@ export const useNotifications = () => {
             });
 
             // Play sound logic
-            const userPreferences = user.notification_preferences;
+            const userPreferences = (user as any).notification_preferences;
             console.log('[Dyad Debug] User preferences:', userPreferences);
 
             const isNotificationTypeEnabled = userPreferences?.[data.type] !== false; // default to true

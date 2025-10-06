@@ -27,7 +27,7 @@ import ProjectViewContainer from "@/components/projects/ProjectViewContainer";
 import { useTasks } from "@/hooks/useTasks";
 import { useTaskMutations, UpsertTaskPayload } from "@/hooks/useTaskMutations";
 import TaskFormDialog from "@/components/projects/TaskFormDialog";
-import { Task, TaskStatus } from "@/types/task";
+import { Task, TaskStatus } from "@/types";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { Input } from "@/components/ui/input";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
