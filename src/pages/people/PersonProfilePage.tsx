@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PortalLayout from '@/components/PortalLayout';
 import { usePerson } from '@/hooks/usePerson';
@@ -11,7 +11,7 @@ import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, Mo
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
 import PersonFormDialog from '@/components/people/PersonFormDialog';
-import { Person, ContactProperty, User } from '@/types';
+import { Person as BasePerson, ContactProperty, User } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import WhatsappIcon from '@/components/icons/WhatsappIcon';
@@ -32,6 +32,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+type Person = BasePerson & { company_id?: string | null };
 
 const fetchUserProfile = async (userId: string): Promise<User | null> => {
   const { data, error } = await supabase
@@ -73,11 +75,56 @@ const PersonProfileSkeleton = () => (
 const PersonProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: person, isLoading, error } = usePerson(id!);
+  const { data: basePerson, isLoading, error } = usePerson(id!);
+  const person = basePerson as Person | null;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const fetchCompanyLogo = async () => {
+      if (!person) return;
+      
+      setCompanyLogoUrl(null);
+
+      const companyNameFromField = person.company?.trim();
+      const companyNameFromJob = person.job_title?.includes(' at ') ? person.job_title.split(' at ')[1].trim() : null;
+      
+      const companyToSearch = companyNameFromField || companyNameFromJob;
+
+      let logoUrl: string | null = null;
+
+      if (person.company_id) {
+        const { data } = await supabase
+          .from('companies')
+          .select('logo_url')
+          .eq('id', person.company_id)
+          .single();
+        if (data && data.logo_url) {
+          logoUrl = data.logo_url;
+        }
+      }
+
+      if (!logoUrl && companyToSearch) {
+        const { data } = await supabase
+          .from('companies')
+          .select('logo_url')
+          .ilike('name', `%${companyToSearch}%`)
+          .limit(1);
+        if (data && data.length > 0) {
+          logoUrl = data[0].logo_url;
+        }
+      }
+      
+      setCompanyLogoUrl(logoUrl);
+    };
+
+    if (person) {
+      fetchCompanyLogo();
+    }
+  }, [person]);
 
   const { data: customProperties = [] } = useQuery({
     queryKey: ['contact_properties'],
@@ -191,9 +238,25 @@ const PersonProfilePage = () => {
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader><CardTitle>Work Information</CardTitle></CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-muted-foreground" /><span>{person.job_title || 'Not specified'} at {person.company || 'Not specified'}</span></div>
-                <div className="flex items-center gap-3"><Users className="h-4 w-4 text-muted-foreground" /><span>Department: {person.department || 'Not specified'}</span></div>
+              <CardContent className="space-y-4 text-sm">
+                <div className="flex items-start gap-4">
+                  {companyLogoUrl ? (
+                    <img src={companyLogoUrl} alt={`${person.company || ''} logo`} className="h-10 w-10 object-contain rounded-md flex-shrink-0" />
+                  ) : (
+                    <Briefcase className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" />
+                  )}
+                  <div>
+                    <p className="font-semibold">{person.job_title || 'Not specified'}</p>
+                    <p className="text-muted-foreground">{person.company || 'Not specified'}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <Users className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold">Department</p>
+                    <p className="text-muted-foreground">{person.department || 'Not specified'}</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
