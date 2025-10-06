@@ -5,12 +5,14 @@ import { Paperclip, Send, X, Loader2, UploadCloud, Smile } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
-import MentionInput, { UserSuggestion } from "./MentionInput";
+import MentionInput, { UserSuggestion, ProjectSuggestion } from "./MentionInput";
 import { useChatContext } from "@/contexts/ChatContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import { useTheme } from "@/contexts/ThemeProvider";
+import { useQuery } from "@tanstack/react-query";
+import * as chatApi from '@/lib/chatApi';
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
@@ -34,6 +36,42 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const lastTypingSentAtRef = useRef<number>(0);
   const { selectedConversation } = useChatContext();
   const { theme } = useTheme();
+
+  const [isProjectMentionActive, setIsProjectMentionActive] = useState(false);
+  const [projectSearchTerm, setProjectSearchTerm] = useState('');
+  const [debouncedProjectSearchTerm, setDebouncedProjectSearchTerm] = useState('');
+
+  const { data: projectSuggestionsData } = useQuery({
+    queryKey: ['project-search', debouncedProjectSearchTerm],
+    queryFn: () => chatApi.searchProjects(debouncedProjectSearchTerm),
+    enabled: isProjectMentionActive,
+  });
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedProjectSearchTerm(projectSearchTerm);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [projectSearchTerm]);
+
+  const handleSearchTermChange = (trigger: '@' | '/' | null, term: string) => {
+    if (trigger === '/') {
+      setIsProjectMentionActive(true);
+      setProjectSearchTerm(term);
+    } else {
+      setIsProjectMentionActive(false);
+      setProjectSearchTerm('');
+    }
+  };
+
+  const projectSuggestions: ProjectSuggestion[] = (projectSuggestionsData || []).map(p => ({
+    id: p.id,
+    display: p.name,
+    slug: p.slug,
+  }));
 
   const userSuggestions: UserSuggestion[] = (selectedConversation?.members || []).map(m => ({
     id: m.id,
@@ -135,6 +173,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
             userSuggestions={userSuggestions}
+            projectSuggestions={projectSuggestions}
+            onSearchTermChange={handleSearchTermChange}
             disabled={isSending}
             className="pr-24"
           />
