@@ -20,7 +20,7 @@ const ChatPageContent = () => {
 
   if (isMobile) {
     return (
-      <div className="flex-1">
+      <div className="flex-1 h-full">
         {!selectedConversation ? (
           <ChatList />
         ) : (
@@ -31,7 +31,7 @@ const ChatPageContent = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] flex-1 overflow-hidden">
+    <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full overflow-hidden">
       <ChatList />
       <ChatWindow ref={chatInputRef} />
     </div>
