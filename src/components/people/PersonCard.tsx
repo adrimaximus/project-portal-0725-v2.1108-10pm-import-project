@@ -40,14 +40,15 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
 
   useEffect(() => {
     const fetchCompanyDetails = async () => {
+      // Reset state on person change to avoid showing stale data
+      setCompanyLogoUrl(null);
+      setCompanyAddress(null);
+
       if (!person.company_id && !person.company) {
-        setCompanyLogoUrl(null);
-        setCompanyAddress(null);
         return;
       }
 
-      let companyData = null;
-      let error = null;
+      let companyData: { logo_url: string | null; address: string | null } | null = null;
 
       // 1. Prioritize fetching by company_id for a reliable link
       if (person.company_id) {
@@ -58,32 +59,32 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
           .single();
         if (!idError && data) {
           companyData = data;
-        } else if (idError) {
+        } else if (idError && idError.code !== 'PGRST116') { // Ignore "row not found" errors
           console.warn(`Could not fetch company by ID "${person.company_id}":`, idError.message);
         }
       }
 
       // 2. Fallback to fetching by company name (case-insensitive) if not found by ID
       if (!companyData && person.company) {
-        const { data, error: nameError } = await supabase
-          .from('companies')
-          .select('logo_url, address')
-          .ilike('name', person.company)
-          .single();
-        
-        if (!nameError && data) {
-          companyData = data;
-        } else if (nameError && nameError.code !== 'PGRST116') { // PGRST116: "single row not found"
-          console.warn(`Could not fetch company by name "${person.company}":`, nameError.message);
+        const trimmedCompanyName = person.company.trim();
+        if (trimmedCompanyName) {
+            const { data, error: nameError } = await supabase
+              .from('companies')
+              .select('logo_url, address')
+              .ilike('name', trimmedCompanyName)
+              .limit(1); // Use limit(1) to avoid errors with multiple matches and get the first one
+            
+            if (!nameError && data && data.length > 0) {
+              companyData = data[0];
+            } else if (nameError) {
+              console.warn(`Could not fetch company by name "${trimmedCompanyName}":`, nameError.message);
+            }
         }
       }
 
       if (companyData) {
         setCompanyLogoUrl(companyData.logo_url);
         setCompanyAddress(companyData.address);
-      } else {
-        setCompanyLogoUrl(null);
-        setCompanyAddress(null);
       }
     };
 
