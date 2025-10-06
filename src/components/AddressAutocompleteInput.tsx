@@ -52,23 +52,39 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
     }
   }, [value]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setInputValue(query);
-
+  const fetchPredictions = (query: string) => {
     if (service && query.length > 2) {
       service.getPlacePredictions(
         { input: query, componentRestrictions: { country: "id" } },
-        (res) => {
-          setPredictions(res || []);
-          if (res && res.length > 0) {
+        (res, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && res) {
+            setPredictions(res);
             setShowPredictions(true);
+          } else {
+            setPredictions([]);
+            setShowPredictions(false);
+            if (status !== google.maps.places.PlacesServiceStatus.OK && status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+              console.error("Google Maps Places API error:", status);
+              toast.error("Could not fetch address suggestions.");
+            }
           }
         }
       );
     } else {
       setPredictions([]);
       setShowPredictions(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setInputValue(query);
+    fetchPredictions(query);
+  };
+
+  const handleFocus = () => {
+    if (inputValue.length > 2) {
+      fetchPredictions(inputValue);
     }
   };
 
@@ -123,7 +139,7 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
         type="text"
         value={inputValue}
         onChange={handleChange}
-        onFocus={handleChange}
+        onFocus={handleFocus}
         disabled={disabled}
         placeholder="Search address..."
         className={`pr-10 ${className}`}
