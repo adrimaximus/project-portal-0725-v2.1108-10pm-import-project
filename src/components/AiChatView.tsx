@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAiChat } from "@/hooks/useAiChat";
 import ChatHeader from "./ChatHeader";
 import { ChatConversation } from "./ChatConversation";
-import { ChatInput } from "./ChatInput";
+import ChatInput from "./ChatInput";
 import { forwardRef, useMemo, useState } from "react";
 import { Conversation, Message } from "@/types";
 import { Link } from 'react-router-dom';
