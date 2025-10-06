@@ -64,7 +64,7 @@ const ChatList = () => {
       <ScrollArea className="flex-1">
         <div
           className={cn(
-            "flex items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group cursor-pointer",
+            "flex w-full items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group cursor-pointer",
             selectedConversation?.id === 'ai-assistant' && "bg-muted border-l-primary"
           )}
           onClick={() => selectConversation('ai-assistant')}
@@ -93,7 +93,7 @@ const ChatList = () => {
             <div
               key={c.id}
               className={cn(
-                "flex items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group",
+                "flex w-full items-center gap-3 p-3 hover:bg-muted border-l-4 border-transparent transition-colors group",
                 selectedConversation?.id === c.id && "bg-muted border-l-primary"
               )}
             >
