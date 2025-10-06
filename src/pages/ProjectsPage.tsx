@@ -343,53 +343,6 @@ const ProjectsPage = () => {
             <CardHeader className="p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <CardTitle>All Projects</CardTitle>
-                <div className="hidden sm:flex items-center gap-2">
-                  <Button onClick={() => navigate('/request')}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    New Project
-                  </Button>
-                  {(view === 'tasks' || view === 'tasks-kanban') && (
-                    <Button size="sm" onClick={handleCreateTask}>
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      New Task
-                    </Button>
-                  )}
-                  {isGCalConnected ? (
-                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => setIsImportDialogOpen(true)}>
-                        <span className="sr-only">Import from Calendar</span>
-                        <Download className="h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
-                        <span className="sr-only">Refresh data</span>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <div className="sm:hidden flex items-center gap-2">
-                <Button onClick={() => navigate('/request')} size="sm" className="flex-1">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  New Project
-                </Button>
-                {(view === 'tasks' || view === 'tasks-kanban') && (
-                  <Button size="sm" onClick={handleCreateTask} className="flex-1">
-                    <PlusCircle className="h-4 w-4" />
-                    New Task
-                  </Button>
-                )}
-                {isGCalConnected ? (
-                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => setIsImportDialogOpen(true)}>
-                        <span className="sr-only">Import from Calendar</span>
-                        <Download className="h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleRefresh}>
-                        <span className="sr-only">Refresh data</span>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
-                  )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -412,6 +365,12 @@ const ProjectsPage = () => {
               kanbanGroupBy={kanbanGroupBy} onKanbanGroupByChange={setKanbanGroupBy}
               hideCompletedTasks={hideCompletedTasks}
               onToggleHideCompleted={toggleHideCompleted}
+              onNewProjectClick={() => navigate('/request')}
+              onNewTaskClick={handleCreateTask}
+              isTaskView={isTaskView}
+              isGCalConnected={isGCalConnected}
+              onImportClick={() => setIsImportDialogOpen(true)}
+              onRefreshClick={handleRefresh}
             />
           </div>
           <CardContent className="flex-grow min-h-0 overflow-y-auto p-0 data-[view=kanban]:p-4 data-[view=kanban]:md:p-6 data-[view=tasks-kanban]:p-0" data-view={view}>

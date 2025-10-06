@@ -1,66 +1,118 @@
+import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { List, Table as TableIcon, Kanban, ListChecks, LayoutGrid, Eye, EyeOff } from "lucide-react";
-import { Button } from "../ui/button";
+import { List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 type ViewMode = 'table' | 'list' | 'kanban' | 'tasks' | 'tasks-kanban';
 
-interface ProjectsToolbarProps {
+type ProjectsToolbarProps = {
   view: ViewMode;
   onViewChange: (view: ViewMode | null) => void;
   kanbanGroupBy: 'status' | 'payment_status';
-  onKanbanGroupByChange: (groupBy: 'status' | 'payment_status') => void;
+  onKanbanGroupByChange: (value: 'status' | 'payment_status') => void;
   hideCompletedTasks: boolean;
   onToggleHideCompleted: () => void;
-}
+  onNewProjectClick: () => void;
+  onNewTaskClick: () => void;
+  isTaskView: boolean;
+  isGCalConnected: boolean | undefined;
+  onImportClick: () => void;
+  onRefreshClick: () => void;
+};
 
 const ProjectsToolbar = ({
-  view, onViewChange,
-  kanbanGroupBy, onKanbanGroupByChange,
-  hideCompletedTasks, onToggleHideCompleted
+  view,
+  onViewChange,
+  kanbanGroupBy,
+  onKanbanGroupByChange,
+  hideCompletedTasks,
+  onToggleHideCompleted,
+  onNewProjectClick,
+  onNewTaskClick,
+  isTaskView,
+  isGCalConnected,
+  onImportClick,
+  onRefreshClick,
 }: ProjectsToolbarProps) => {
-  const isTaskView = view === 'tasks' || view === 'tasks-kanban';
-
   return (
-    <div className="px-4 sm:px-6 pt-2 pb-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
-      <div className="flex items-center gap-4 w-full sm:w-auto">
-        <TooltipProvider>
-          <div className="w-full overflow-x-auto">
-            <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="View mode" className="w-full sm:w-auto justify-start">
-              <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>List View</p></TooltipContent></Tooltip>
-              <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="table" aria-label="Table view"><TableIcon className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Table View</p></TooltipContent></Tooltip>
-              <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="kanban" aria-label="Kanban view"><Kanban className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Kanban View</p></TooltipContent></Tooltip>
-              <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="tasks" aria-label="Tasks view"><ListChecks className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Tasks List View</p></TooltipContent></Tooltip>
-              <Tooltip><TooltipTrigger asChild><ToggleGroupItem value="tasks-kanban" aria-label="Tasks Kanban view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem></TooltipTrigger><TooltipContent><p>Tasks Kanban View</p></TooltipContent></Tooltip>
-            </ToggleGroup>
-          </div>
-        </TooltipProvider>
+    <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="w-full sm:w-auto flex-shrink-0 flex items-center gap-4">
+        <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view">
+          <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+          <ToggleGroupItem value="table" aria-label="Table view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+          <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
+          <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
+          <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
+        </ToggleGroup>
+
+        {view === 'kanban' && (
+          <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Group by..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="status">Status</SelectItem>
+              <SelectItem value="payment_status">Payment Status</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
         {isTaskView && (
-          <Button variant="outline" size="sm" onClick={onToggleHideCompleted} className="hidden sm:flex">
-            {hideCompletedTasks ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-            {hideCompletedTasks ? 'Show Done' : 'Hide Done'}
+          <div className="flex items-center space-x-2">
+            <Switch id="hide-completed" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
+            <Label htmlFor="hide-completed" className="text-sm">Hide Done</Label>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Action Buttons */}
+      <div className="hidden sm:flex items-center gap-2">
+        {isTaskView && (
+          <Button size="sm" onClick={onNewTaskClick}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            New Task
+          </Button>
+        )}
+        <Button size="icon" variant="outline" onClick={onNewProjectClick}>
+          <PlusCircle className="h-4 w-4" />
+          <span className="sr-only">New Project</span>
+        </Button>
+        {isGCalConnected ? (
+          <Button variant="outline" size="icon" onClick={onImportClick}>
+            <Download className="h-4 w-4" />
+            <span className="sr-only">Import from Calendar</span>
+          </Button>
+        ) : (
+          <Button variant="outline" size="icon" onClick={onRefreshClick}>
+            <RefreshCw className="h-4 w-4" />
+            <span className="sr-only">Refresh data</span>
           </Button>
         )}
       </div>
-      {view === 'kanban' && (
-        <div className="w-full sm:w-auto">
-          <ToggleGroup
-            type="single"
-            value={kanbanGroupBy}
-            onValueChange={(value) => { if (value) onKanbanGroupByChange(value as 'status' | 'payment_status') }}
-            className="h-10 w-full"
-          >
-            <ToggleGroupItem value="status" className="text-sm px-3 flex-1">By Project Status</ToggleGroupItem>
-            <ToggleGroupItem value="payment_status" className="text-sm px-3 flex-1">By Payment Status</ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-      )}
-      {isTaskView && (
-        <Button variant="outline" size="sm" onClick={onToggleHideCompleted} className="flex sm:hidden w-full">
-          {hideCompletedTasks ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-          {hideCompletedTasks ? 'Show Done' : 'Hide Done'}
+
+      {/* Mobile Action Buttons */}
+      <div className="sm:hidden flex items-center gap-2 w-full">
+        <Button onClick={onNewProjectClick} size="sm" className="flex-1">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          New Project
         </Button>
-      )}
+        {isTaskView && (
+          <Button size="sm" onClick={onNewTaskClick} className="flex-1">
+            <PlusCircle className="h-4 w-4 mr-2" />
+            New Task
+          </Button>
+        )}
+        {isGCalConnected ? (
+          <Button variant="ghost" size="icon" onClick={onImportClick}>
+            <Download className="h-4 w-4" />
+            <span className="sr-only">Import from Calendar</span>
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon" onClick={onRefreshClick}>
+            <RefreshCw className="h-4 w-4" />
+            <span className="sr-only">Refresh data</span>
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
