@@ -8,7 +8,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project } from "@/types";
 import { cn, getPaymentStatusStyles } from "@/lib/utils";
 import { format, addDays, isPast } from "date-fns";
-import { DollarSign, Clock, AlertTriangle, Download, Loader2, MoreVertical, Edit, ArrowUp, ArrowDown, Search, Kanban, Table as TableIcon } from "lucide-react";
+import { DollarSign, Clock, AlertTriangle, Download, Loader2, MoreVertical, Edit, ArrowUp, ArrowDown, Search, Kanban, Table as TableIcon, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
@@ -206,6 +206,22 @@ const Billing = () => {
 
   const overdueInvoicesCount = filteredInvoices.filter(inv => inv.status === 'Overdue').length;
 
+  const projectAdmins = useMemo(() => {
+    const adminMap = new Map<string, { admin: Member; projectCount: number }>();
+    invoices.forEach(invoice => {
+        invoice.assignedMembers
+            .filter(member => member.role === 'admin')
+            .forEach(admin => {
+                if (adminMap.has(admin.id)) {
+                    adminMap.get(admin.id)!.projectCount++;
+                } else {
+                    adminMap.set(admin.id, { admin, projectCount: 1 });
+                }
+            });
+    });
+    return Array.from(adminMap.values()).sort((a, b) => b.projectCount - a.projectCount);
+  }, [invoices]);
+
   const handleEdit = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setIsFormOpen(true);
@@ -257,7 +273,7 @@ const Billing = () => {
           <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Outstanding Balance</CardTitle>
@@ -288,6 +304,30 @@ const Billing = () => {
             <CardContent>
               <div className="text-2xl font-bold">{overdueInvoicesCount}</div>
               <p className="text-xs text-muted-foreground">Invoices past their due date</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Project Admins</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-24 overflow-y-auto pr-2">
+                {projectAdmins.length > 0 ? projectAdmins.map(({ admin, projectCount }) => (
+                  <div key={admin.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={admin.avatar_url} alt={admin.name} />
+                        <AvatarFallback>{admin.initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium truncate">{admin.name}</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground flex-shrink-0">{projectCount} project{projectCount > 1 ? 's' : ''}</span>
+                  </div>
+                )) : (
+                  <p className="text-sm text-muted-foreground text-center pt-4">No project admins found.</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
