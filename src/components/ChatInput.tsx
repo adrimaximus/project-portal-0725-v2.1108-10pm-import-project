@@ -1,9 +1,9 @@
-import { useRef, useState, forwardRef, useEffect } from "react";
+import { useRef, useState, forwardRef } from "react";
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
 import { Paperclip, Send, X, Loader2, UploadCloud, Smile } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Message, Project } from "@/types";
+import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
 import MentionInput from "./MentionInput";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -11,7 +11,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import { useTheme } from "@/contexts/ThemeProvider";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
@@ -35,31 +34,12 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const lastTypingSentAtRef = useRef<number>(0);
   const { selectedConversation } = useChatContext();
   const { theme } = useTheme();
-  const [projects, setProjects] = useState<Project[]>([]);
-
-  useEffect(() => {
-    const fetchProjects = async () => {
-        const { data, error } = await supabase.rpc('get_dashboard_projects', { p_limit: 100, p_offset: 0 });
-        if (error) {
-            console.error('Error fetching projects:', error);
-        } else if (data) {
-            setProjects(data);
-        }
-    };
-    fetchProjects();
-  }, []);
 
   const mentionableUsers = (selectedConversation?.members || []).map(m => ({
     id: m.id,
     display: m.name,
     avatar_url: m.avatar_url,
     initials: m.initials,
-  }));
-
-  const commandSuggestions = projects.map(p => ({
-    id: p.id,
-    display: p.name,
-    slug: p.slug,
   }));
 
   const onDrop = (acceptedFiles: File[]) => {
@@ -154,8 +134,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
             value={text}
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
-            mentionSuggestions={mentionableUsers}
-            commandSuggestions={commandSuggestions}
+            suggestions={mentionableUsers}
             disabled={isSending}
             className="pr-24"
           />
