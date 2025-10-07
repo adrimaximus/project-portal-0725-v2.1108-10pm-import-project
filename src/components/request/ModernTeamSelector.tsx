@@ -93,7 +93,7 @@ const ModernTeamSelector = ({ users, selectedUsers, onSelectionChange }: ModernT
                   />
                   <div className="flex items-center gap-2">
                      <Avatar className="h-6 w-6">
-                       <AvatarImage src={(user as any).avatar} alt={user.name} />
+                       <AvatarImage src={user.avatar_url} alt={user.name} />
                        <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                      </Avatar>
                      <span>{user.name}</span>
