@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { useJsApiLoader } from "@react-google-maps/api";
-import { Globe, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from "./ui/skeleton";
@@ -146,7 +146,7 @@ const AddressAutocompleteInput: React.FC<Props> = ({ value = "", onChange, disab
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Globe
+            <MapPin
               className={cn(
                 "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer transition-colors hover:text-foreground",
                 isGlobalSearch && "text-primary"
