@@ -97,9 +97,10 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project, onSave }:
       if (attachmentsToRemove.length > 0) {
         const attachmentsToDelete = project.invoice_attachments?.filter(att => attachmentsToRemove.includes(att.id));
         if (attachmentsToDelete && attachmentsToDelete.length > 0) {
-          const storagePaths = attachmentsToDelete.map(att => att.storage_path);
-          // Use the correct bucket for deletion
-          await supabase.storage.from('project-files').remove(storagePaths);
+          const storagePaths = attachmentsToDelete.map(att => att.storage_path).filter(Boolean);
+          if (storagePaths.length > 0) {
+            await supabase.storage.from('project-files').remove(storagePaths);
+          }
           const { error: deleteError } = await supabase.from('invoice_attachments').delete().in('id', attachmentsToRemove);
           if (deleteError) throw deleteError;
         }
