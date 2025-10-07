@@ -159,6 +159,8 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
           </BarChart>
         );
       }
+      default:
+        return null;
     }
   };
 
