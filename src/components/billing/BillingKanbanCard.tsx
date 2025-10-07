@@ -1,4 +1,4 @@
-import { Invoice } from '@/pages/Billing';
+import { Invoice } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MoreVertical, Edit } from 'lucide-react';

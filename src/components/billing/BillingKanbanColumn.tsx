@@ -1,4 +1,4 @@
-import { Invoice } from '@/pages/Billing';
+import { Invoice } from '@/types';
 import { PaymentStatus } from '@/types';
 import BillingKanbanCard from './BillingKanbanCard';
 import { Badge } from '@/components/ui/badge';

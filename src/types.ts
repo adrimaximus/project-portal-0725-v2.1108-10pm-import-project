@@ -369,3 +369,49 @@ export interface Notification {
     avatar?: string;
   };
 }
+
+// Billing
+export type Member = {
+  id: string;
+  name: string;
+  avatar_url: string;
+  initials: string;
+  email: string;
+  role: string;
+};
+
+export type Owner = {
+  id: string;
+  name: string;
+  avatar_url: string;
+  initials: string;
+  email: string;
+};
+
+export type Invoice = {
+  id: string;
+  projectId: string; // slug
+  projectName: string;
+  amount: number;
+  dueDate: Date; // This is the payment due date
+  status: PaymentStatus;
+  rawProjectId: string; // original uuid
+  projectStartDate: Date | null;
+  projectEndDate: Date | null;
+  poNumber: string | null;
+  paidDate: Date | null;
+  emailSendingDate: Date | null;
+  hardcopySendingDate: Date | null;
+  channel: string | null;
+  clientName: string | null;
+  clientLogo: string | null;
+  clientCompanyName: string | null;
+  projectOwner: Owner | null;
+  assignedMembers: Member[];
+};
+
+export interface ExtendedProject extends Project {
+  client_name?: string | null;
+  client_company_logo_url?: string | null;
+  client_company_name?: string | null;
+}

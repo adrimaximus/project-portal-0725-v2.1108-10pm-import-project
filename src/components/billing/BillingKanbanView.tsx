@@ -1,4 +1,4 @@
-import { Invoice } from '@/pages/Billing';
+import { Invoice } from '@/types';
 import { PAYMENT_STATUS_OPTIONS } from '@/types';
 import BillingKanbanColumn from './BillingKanbanColumn';
 import { useMemo } from 'react';
