@@ -16,7 +16,7 @@ const themes = [
       </div>
     </div>
   )},
-  { id: 'claude-modern', name: 'Claude Modern', description: 'A sleek, dark theme inspired by modern AI interfaces.', preview: (
+  { id: 'claude-modern', name: 'Simply Modern', description: 'A sleek, dark theme inspired by modern AI interfaces.', preview: (
     <div className="w-8 h-8 rounded-md bg-[#1A1A1A] border border-gray-700 flex items-center justify-center p-1">
       <div className="w-full space-y-1">
         <div className="h-1 w-3/4 rounded-full bg-gray-600"></div>
