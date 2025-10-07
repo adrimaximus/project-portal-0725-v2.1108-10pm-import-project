@@ -143,7 +143,7 @@ export const getPriorityStyles = (priority: string | null | undefined) => {
   switch (priority?.toLowerCase()) {
     case 'low':
       return { className: `${baseClasses} bg-gray-100 text-gray-800`, hex: '#6b7280' };
-    case 'medium':
+    case 'normal':
       return { className: `${baseClasses} bg-blue-100 text-blue-800`, hex: '#3b82f6' };
     case 'high':
       return { className: `${baseClasses} bg-yellow-100 text-yellow-800`, hex: '#f97316' };
