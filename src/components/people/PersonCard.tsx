@@ -32,7 +32,7 @@ const PersonCard = ({ person, onViewProfile }: PersonCardProps) => {
   const [imageError, setImageError] = useState(false);
 
   const avatarUrl = useMemo(
-    () => person.avatar_url || `https://api.dicebear.com/8.x/initials/svg?seed=${person.id}`,
+    () => person.avatar_url || `https://api.dicebear.com/8.x/initials/svg?seed=${person.id}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf&fontWeight=600`,
     [person.avatar_url, person.id]
   );
 
